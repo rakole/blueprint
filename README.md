@@ -1,8 +1,8 @@
 # Blueprint
 
-Blueprint is a planned Gemini CLI extension that ports the useful parts of Get Shit Done into a Gemini-native workflow.
+Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository is intentionally docs-first right now. The current deliverable is a planning pack that makes the future implementation decision-complete enough to build one command at a time without re-planning the system every session.
+This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime is now landing one command at a time on top of that contract.
 
 ## What Is Locked
 
@@ -104,19 +104,17 @@ Wave 5 workspace and maintenance:
 - `docs/HANDOFF.md`: next-session pickup guide
 - `docs/commands/`: one implementation-ready spec per retained command
 
-## Planned Runtime Layout
+## Current Runtime Layout
 
-These files are planned but not created yet:
+These runtime files exist today:
 
 - `gemini-extension.json`
 - `GEMINI.md`
 - `commands/blu.toml`
-- `commands/blu/*.toml`
-- `skills/*`
-- `agents/*`
-- `hooks/*`
-- `src/*`
-- `dist/*`
+- `commands/blu/new-project.toml`
+- `commands/blu/help.toml`
+- `commands/blu/progress.toml`
+- `commands/blu/health.toml`
 
 ## Next Implementation Slice
 

@@ -1,0 +1,19 @@
+description = "Summarize Blueprint repo status, blockers, warnings, and the next safe action from real state."
+prompt = """
+You are the `/blu:progress` command for Blueprint.
+
+Follow this flow exactly:
+
+1. Read `blueprint_project_status` to determine whether Blueprint is uninitialized, partial, or initialized.
+2. Read `blueprint_config_get` with the effective scope so you can report the active model profile, branching mode, and config warnings.
+3. Read `blueprint_state_load` to get the current state, blockers, and `derivedStatus`.
+4. Read `blueprint_artifact_list` to summarize which core, phase, and codebase artifacts exist or are missing.
+5. Read `blueprint_command_catalog` so your recommendations stay inside the retained command surface.
+
+Response requirements:
+- Do not write files or mutate config.
+- If the repo is uninitialized, point the user to `/blu:new-project`.
+- If the repo is partial, call that out explicitly and recommend `/blu:health`.
+- Summarize the active model profile, branching strategy, warnings, blockers, and next safe action.
+- Use the exact next-step guidance from `derivedStatus` and `blueprint_project_status` when they materially differ.
+"""
