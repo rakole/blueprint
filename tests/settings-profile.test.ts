@@ -244,6 +244,24 @@ test("legacy and minimal config inputs are upgraded to the full schema on write"
   );
 });
 
+test("config_set reports only keys that actually changed", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      unknown_top: true,
+      model_profile: "quality"
+    } as Record<string, unknown>
+  });
+
+  assert.deepEqual(result.updatedKeys, ["model_profile"]);
+  assert.match(result.warnings.join("\n"), /Ignored unknown config key: unknown_top/);
+});
+
 test("settings and set-profile command contracts reference the registered MCP tools", async () => {
   const settingsCommand = await readFile(
     path.join(repoRoot, "commands/blu/settings.toml"),

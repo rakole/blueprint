@@ -438,6 +438,36 @@ function flattenPatchKeys(
   return keys;
 }
 
+function collectChangedKeys(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  prefix: string[] = []
+): string[] {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changed: string[] = [];
+
+  for (const key of keys) {
+    const pathSegments = [...prefix, key];
+    const beforeValue = before[key];
+    const afterValue = after[key];
+
+    if (
+      isPlainObject(beforeValue) &&
+      isPlainObject(afterValue) &&
+      key !== "agent_skills"
+    ) {
+      changed.push(...collectChangedKeys(beforeValue, afterValue, pathSegments));
+      continue;
+    }
+
+    if (JSON.stringify(beforeValue) !== JSON.stringify(afterValue)) {
+      changed.push(pathSegments.join("."));
+    }
+  }
+
+  return changed;
+}
+
 async function readProjectConfig(
   projectRoot: string
 ): Promise<Record<string, unknown> | null> {
@@ -659,6 +689,7 @@ export async function blueprintConfigSet(
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
   });
+  const previousConfig = cloneConfig(baseResult.config);
   const nextConfig = cloneConfig(baseResult.config);
   const warnings = [...baseResult.warnings];
 
@@ -682,9 +713,15 @@ export async function blueprintConfigSet(
 
   await writeJsonFile(configPath, nextConfig as unknown as Record<string, unknown>);
 
+  const changedKeys = collectChangedKeys(
+    previousConfig as unknown as Record<string, unknown>,
+    nextConfig as unknown as Record<string, unknown>
+  );
+  const patchKeys = flattenPatchKeys(patch);
+
   return {
     scope,
-    updatedKeys: flattenPatchKeys(patch),
+    updatedKeys: patchKeys.filter((key) => changedKeys.includes(key)),
     config: nextConfig,
     provenance: {
       layersApplied: ["hardcoded", scope],
