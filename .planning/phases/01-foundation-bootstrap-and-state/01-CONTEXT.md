@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Turn the docs-first Blueprint pack into the smallest installable Gemini extension loop: an extension manifest, a `GEMINI.md` context file, the root `/blu` router, the first `/blu:new-project` command, and the MCP-backed project/config/state/artifact primitives that make that command deterministic. This phase does not expand into Wave 0 read-path commands or later lifecycle flows.
+Turn the docs-first Blueprint pack into the smallest installable Gemini extension loop: an extension manifest, a `GEMINI.md` context file, the root `/blu` router, the first `/blu:new-project` command, and the MCP-backed `blueprint_command_catalog` plus project/config/state/artifact primitives that make those command paths deterministic. This phase does not expand into Wave 0 read-path commands or later lifecycle flows.
 
 </domain>
 
@@ -14,7 +14,7 @@ Turn the docs-first Blueprint pack into the smallest installable Gemini extensio
 ## Implementation Decisions
 
 ### Bootstrap scope and sequence
-- **D-01 [auto]:** Keep Phase 1 limited to the minimum installable loop: `gemini-extension.json`, `GEMINI.md`, `/blu`, `/blu:new-project`, the MCP server bootstrap, and initial happy-path tests.
+- **D-01 [auto]:** Keep Phase 1 limited to the minimum installable loop: `gemini-extension.json`, `GEMINI.md`, `/blu`, `/blu:new-project`, the MCP server bootstrap, and initial fixture-based tests.
 - **D-02 [auto]:** Supporting build and test files may be added only when they are required to make that loop installable and testable; broader command scaffolding is deferred.
 
 ### Extension packaging and command surface
@@ -24,7 +24,7 @@ Turn the docs-first Blueprint pack into the smallest installable Gemini extensio
 
 ### MCP ownership and persistence
 - **D-06 [auto]:** All persistent project writes in Phase 1 must happen through MCP tool implementations, not through TOML prompt prose or ad hoc scripts.
-- **D-07 [auto]:** The first MCP surface is limited to the project, config, state, and artifact primitives required by `/blu:new-project`; roadmap, workstream, review, and maintenance tooling stay out of scope for this phase.
+- **D-07 [auto]:** The first MCP surface is limited to the read-only `blueprint_command_catalog` router metadata tool plus the project, config, state, and artifact primitives required by `/blu` and `/blu:new-project`; roadmap, workstream, review, and maintenance tooling stay out of scope for this phase.
 - **D-08 [auto]:** `.blueprint/config.json` must be written as a fully materialized normalized v2 config object that matches `docs/ARTIFACT-SCHEMA.md`, using hardcoded defaults plus optional user defaults.
 
 ### New-project behavior and artifact contract
@@ -32,7 +32,7 @@ Turn the docs-first Blueprint pack into the smallest installable Gemini extensio
 - **D-10 [auto]:** `.planning/` remains only the local GSD workspace for building Blueprint; nothing shipped in Phase 1 may write Blueprint runtime state into `.planning/`.
 
 ### Test and verification approach
-- **D-11 [auto]:** Phase 1 verification should focus on fixture-style happy-path tests for project initialization and normalized config/artifact creation before broader command coverage.
+- **D-11 [auto]:** Phase 1 verification should cover fixture-style project initialization happy-path tests, the main missing-precondition path, the highest-risk `new-project` edge case required by the command spec, and a deterministic packaging/install-path smoke proof before broader command coverage.
 
 ### the agent's Discretion
 - Exact internal module boundaries under `src/`
@@ -47,7 +47,7 @@ Turn the docs-first Blueprint pack into the smallest installable Gemini extensio
 - The immediate implementation slice already locked in project docs is: `gemini-extension.json`, `GEMINI.md`, `commands/blu.toml`, `commands/blu/new-project.toml`, `src/mcp/server.ts`, `src/mcp/tools/project.ts`, `src/mcp/tools/config.ts`, `src/mcp/tools/state.ts`, `src/mcp/tools/artifacts.ts`, and initial `new-project` tests.
 - Official Gemini CLI extension examples currently use a root `gemini-extension.json` with `contextFileName: "GEMINI.md"` and optionally an `mcpServers` block for extension-provided tools.
 - The install model remains `gemini extensions install https://github.com/<repo>`.
-- The root router should prefer inline routing when intent is clear and safe recommendations when it is not.
+- The root router should prefer inline routing when intent is clear and safe recommendations when it is not, using `blueprint_command_catalog`, `blueprint_project_status`, and `blueprint_config_get` for read-only routing context.
 
 </specifics>
 

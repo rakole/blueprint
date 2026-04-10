@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Blueprint is a planned Gemini CLI extension that keeps the useful parts of Get Shit Done while redesigning them for Gemini-native commands, skills, agents, hooks, and MCP tools. This repository is still pre-implementation: the product runtime does not exist yet, and the current goal is to use GSD locally to turn the locked docs pack into executable Blueprint code one phase at a time.
+Blueprint is a Gemini CLI extension in active implementation that keeps the useful parts of Get Shit Done while redesigning them for Gemini-native commands, skills, agents, hooks, and MCP tools. The current goal is to extend the shipped Phase 1 foundation into the rest of Wave 0 one command at a time.
 
 ## Core Value
 
@@ -19,23 +19,25 @@ Build a Gemini-native extension that preserves GSD's command-driven methodology 
 
 ## Current Milestone
 
-Turn the docs-first planning pack into the first executable Blueprint foundation loop:
-- extension scaffold
-- `/blu` root router and direct `/blu:<command>` entrypoints
-- `/blu:new-project`
-- shared MCP primitives for project, config, state, and artifact operations
+Expand the shipped Blueprint foundation loop into the remaining Wave 0 read-path commands:
+- `settings`
+- `set-profile`
+- `help`
+- `progress`
+- `health`
+- `map-codebase`
 
 ## Requirements
 
 ### Validated
 
-(None yet — Blueprint has not shipped runtime behavior)
+- [x] Ship the smallest working Blueprint loop with a real Gemini extension scaffold, router, and deterministic MCP-backed state primitives
+- [x] Keep GSD planning local to `.planning/` while Blueprint itself continues to use `.blueprint/` as the product runtime state directory
 
 ### Active
 
-- [ ] Ship the smallest working Blueprint loop with a real Gemini extension scaffold, router, and deterministic MCP-backed state primitives
 - [ ] Implement the retained Blueprint command surface in dependency order, starting with Wave 0 and expanding only after shared contracts are real
-- [ ] Keep GSD planning local to `.planning/` while Blueprint itself continues to use `.blueprint/` as the product runtime state directory
+- [ ] Extend the repo's read-path commands so Wave 0 can inspect and repair real `.blueprint/` state after initialization
 
 ### Out of Scope
 
@@ -48,7 +50,7 @@ Turn the docs-first planning pack into the first executable Blueprint foundation
 - The repository already contains a docs-first planning pack covering decisions, architecture, artifact schema, MCP tool contracts, lifecycle flow, implementation order, and per-command specs
 - The product name, router namespace, state boundaries, hook policy, and retained command set are already locked in `docs/`
 - We are using GSD locally to implement Blueprint, so `.planning/` is an implementation aid for this repo, not a statement that Blueprint-managed projects will use `.planning/`
-- The immediate implementation slice is `gemini-extension.json`, `GEMINI.md`, `commands/blu.toml`, `commands/blu/new-project.toml`, `src/mcp/server.ts`, and initial MCP tool/test coverage for `new-project`
+- Phase 1 shipped `gemini-extension.json`, `GEMINI.md`, `/blu`, `/blu:new-project`, `src/mcp/server.ts`, deterministic MCP primitives, and the initial `new-project` test suite
 
 ## Constraints
 
@@ -58,15 +60,21 @@ Turn the docs-first planning pack into the first executable Blueprint foundation
 - **Delivery strategy**: Build one command at a time after Wave 0 scaffolding; do not try to land the whole command surface in one pass
 - **Safety**: High-risk commands keep explicit confirmation flows, and `update` remains advisory rather than self-mutating
 
+## Current State
+
+- Phase 1 is complete and verified.
+- The repo now contains a buildable Gemini extension shell, a direct `/blu:new-project` command contract, and deterministic MCP-backed bootstrap tooling.
+- The next implementation target is Phase 2: use the shipped `.blueprint/` state to power `settings`, `set-profile`, `help`, `progress`, `health`, and `map-codebase`.
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Use GSD locally in `.planning/` while building Blueprint | Lets us run the current GSD workflow without changing Blueprint's product-state contract | — Pending |
-| Keep `/blu` and `/blu:<command>` as the only Blueprint command surface | Matches the locked Gemini-native UX and avoids slash-command chaining assumptions | — Pending |
-| Keep `.blueprint/` as Blueprint's runtime state directory | Preserves the product architecture locked in `docs/DECISIONS.md` and `docs/MIGRATION-FROM-GSD.md` | — Pending |
-| Use an extension-bundled MCP server as the deterministic state engine | Keeps persistent mutations explicit, validated, and reusable across commands | — Pending |
-| Start implementation with `new-project` and shared MCP primitives | Creates the smallest viable loop that later commands depend on | — Pending |
+| Use GSD locally in `.planning/` while building Blueprint | Lets us run the current GSD workflow without changing Blueprint's product-state contract | Confirmed in Phase 1 |
+| Keep `/blu` and `/blu:<command>` as the only Blueprint command surface | Matches the locked Gemini-native UX and avoids slash-command chaining assumptions | Confirmed in Phase 1 |
+| Keep `.blueprint/` as Blueprint's runtime state directory | Preserves the product architecture locked in `docs/DECISIONS.md` and `docs/MIGRATION-FROM-GSD.md` | Confirmed in Phase 1 |
+| Use an extension-bundled MCP server as the deterministic state engine | Keeps persistent mutations explicit, validated, and reusable across commands | Confirmed in Phase 1 |
+| Start implementation with `new-project` and shared MCP primitives | Creates the smallest viable loop that later commands depend on | Confirmed in Phase 1 |
 
 ## Non-Goals
 
@@ -91,4 +99,4 @@ This document evolves as local GSD planning turns the Blueprint docs pack into r
 3. Update `Context` with new command coverage, test learnings, and architecture constraints uncovered in code
 
 ---
-*Last updated: 2026-04-10 after local GSD project initialization*
+*Last updated: 2026-04-11 after Phase 1 completion*

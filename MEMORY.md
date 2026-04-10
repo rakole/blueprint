@@ -7,9 +7,9 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: docs-first planning only
-- Runtime status: no Gemini extension code has been created yet
-- Planning status: shared architecture docs plus per-command specs are present
+- Current milestone: Wave 0 foundation expansion on top of the shipped Phase 1 loop
+- Runtime status: Phase 1 foundation loop is implemented and verified
+- Planning status: shared architecture docs plus executable Phase 1 runtime artifacts are present
 - Implementation strategy: build one command at a time, starting with Wave 0
 
 ## Stable References
@@ -88,16 +88,12 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Next Implementation Slice
 
-- `gemini-extension.json`
-- `GEMINI.md`
-- `commands/blu.toml`
-- `commands/blu/new-project.toml`
-- `src/mcp/server.ts`
-- `src/mcp/tools/project.ts`
-- `src/mcp/tools/config.ts`
-- `src/mcp/tools/state.ts`
-- `src/mcp/tools/artifacts.ts`
-- initial tests for `new-project`
+- `src/mcp/tools/config.ts` extensions for settings/profile flows
+- `commands/blu/help.toml` or inline `/blu` help routing support
+- `commands/blu/progress.toml`
+- `commands/blu/health.toml`
+- `src/mcp` read-path helpers needed by help/progress/health
+- `map-codebase` command scaffolding and initial artifact tests
 
 ## Guardrail Snapshot
 
@@ -109,6 +105,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Session Notes
 
-- The repository currently contains planning docs only
-- No runtime scaffolding or tests exist yet
-- Future sessions should update this file when major architectural decisions change or a new implementation wave begins
+- The repo now contains a buildable Gemini extension shell, `/blu`, `/blu:new-project`, and Phase 1 MCP primitives
+- `npm run typecheck`, `npm run build`, and `npm test` all pass for the Phase 1 slice
+- Phase 1 review is clean and verification passed in `.planning/phases/01-foundation-bootstrap-and-state/01-REVIEW.md` and `01-VERIFICATION.md`
+- Future sessions should build Phase 2 on top of the shipped `.blueprint/` bootstrap rather than revisiting the completed scaffold

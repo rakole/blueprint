@@ -4,8 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="moved to gsd based implementation">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="planning phase 1">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-01-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-01-PLAN.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-02-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-02-PLAN.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-03-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-03-PLAN.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-CONTEXT.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-CONTEXT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-RESEARCH.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-RESEARCH.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mcp/tools/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/mcp/tools/config.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,55 +28,55 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "rakole"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;rakole&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/rakole/blueprint.git",
-    "accountId": "9bd7cae8-71a6-4bf1-b85b-c71e32759c88"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/rakole/blueprint.git&quot;,
+    &quot;accountId&quot;: &quot;9bd7cae8-71a6-4bf1-b85b-c71e32759c88&quot;
   },
-  "recentNewPullRequestHead": {
-    "server": {
-      "useHttp": false,
-      "host": "github.com",
-      "port": null,
-      "suffix": null
+  &quot;recentNewPullRequestHead&quot;: {
+    &quot;server&quot;: {
+      &quot;useHttp&quot;: false,
+      &quot;host&quot;: &quot;github.com&quot;,
+      &quot;port&quot;: null,
+      &quot;suffix&quot;: null
     },
-    "owner": "rakole",
-    "repository": "blueprint"
+    &quot;owner&quot;: &quot;rakole&quot;,
+    &quot;repository&quot;: &quot;blueprint&quot;
   }
-}]]></component>
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="3CAVqplkgo2tRFgjWJE5LcItigN" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/rhishi/dev/repositories/blueprint/temp-commands",
-    "settings.editor.selected.configurable": "preferences.lookFeel",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;gsd/phase-01-foundation-bootstrap-and-state&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/rhishi/dev/repositories/blueprint/temp-commands&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/temp-commands" />
@@ -84,6 +93,7 @@
       <command value="git checkout -b move-to-gsd" />
       <command value="git checkout main" />
       <command value="git pull" />
+      <command value="git push" />
     </option>
   </component>
   <component name="SharedIndexes">
@@ -141,7 +151,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775845796194</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="planning phase 1">
+      <option name="closed" value="true" />
+      <created>1775846881034</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1775846881034</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -150,6 +168,7 @@
     <MESSAGE value="restart" />
     <MESSAGE value="restart the implementation" />
     <MESSAGE value="moved to gsd based implementation" />
-    <option name="LAST_COMMIT_MESSAGE" value="moved to gsd based implementation" />
+    <MESSAGE value="planning phase 1" />
+    <option name="LAST_COMMIT_MESSAGE" value="planning phase 1" />
   </component>
 </project>

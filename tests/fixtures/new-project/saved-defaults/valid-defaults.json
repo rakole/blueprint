@@ -1,0 +1,7 @@
+{
+  "mode": "auto",
+  "parallelization": {
+    "max_concurrent_agents": 5
+  },
+  "response_language": "en"
+}
