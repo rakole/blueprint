@@ -51,7 +51,7 @@ Each task was committed atomically:
 2. **Task 2: Create the root extension manifest and context file** - `879bbac` (feat)
 3. **Task 3: Author the root `/blu` router command contract** - `5320c99` (feat)
 
-**Plan metadata:** pending summary commit
+**Plan metadata:** `03cefcf` (docs: summarize plan)
 
 ## Files Created/Modified
 - `package.json` - Defines the Blueprint build, typecheck, and test scripts plus runtime dependencies.

@@ -53,7 +53,7 @@ Each task was committed atomically:
 2. **Task 2: Implement project and config primitives for deterministic bootstrap** - `2082166` (feat)
 3. **Task 3: Implement state and artifact helpers required by `new-project`** - `96bd3ef` (feat)
 
-**Plan metadata:** pending summary commit
+**Plan metadata:** `2fe1892` (docs: summarize plan)
 
 ## Files Created/Modified
 - `src/mcp/server.ts` - Registers the Blueprint Phase 1 MCP tool surface with the TypeScript SDK.

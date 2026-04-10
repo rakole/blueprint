@@ -55,7 +55,7 @@ Each task was committed atomically:
 2. **Task 2: Add fixture-based bootstrap and negative-path tests for project initialization** - `30786d8` (test)
 3. **Task 3: Verify post-init status, command-to-tool integration, and install-path readiness** - `9fcc160` (test)
 
-**Plan metadata:** pending summary commit
+**Plan metadata:** `2f6a31b` (docs: summarize plan)
 
 ## Files Created/Modified
 - `commands/blu/new-project.toml` - Defines the first direct Blueprint command and its required tool flow.
