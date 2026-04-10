@@ -47,9 +47,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Implement `settings` and `set-profile` on normalized config
-- [ ] 02-02: Implement `help`, `progress`, and `health` on shared state primitives
-- [ ] 02-03: Implement `map-codebase` artifact generation and related tests
+- [x] 02-01: Implement `settings` and `set-profile` on normalized config
+- [x] 02-02: Implement `help`, `progress`, and `health` on shared state primitives
+- [x] 02-03: Implement `map-codebase` artifact generation and related tests
 
 ### Phase 3: Phase Discovery
 **Goal**: Add the pre-planning discovery commands that capture context before plan creation.
