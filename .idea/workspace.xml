@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="restart the implementation" />
+    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="moved to gsd based implementation">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -58,7 +60,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "move-to-gsd",
+    "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/rhishi/dev/repositories/blueprint/temp-commands",
@@ -79,9 +81,9 @@
       <command value="git push -u origin main" />
       <command value="git checkout -b command_converter" />
       <command value="git checkout -b V2" />
+      <command value="git checkout -b move-to-gsd" />
       <command value="git checkout main" />
       <command value="git pull" />
-      <command value="git checkout -b move-to-gsd" />
     </option>
   </component>
   <component name="SharedIndexes">
@@ -131,7 +133,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775844767032</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="moved to gsd based implementation">
+      <option name="closed" value="true" />
+      <created>1775845796194</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1775845796194</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -139,6 +149,7 @@
     <MESSAGE value="adding codex specific agents file" />
     <MESSAGE value="restart" />
     <MESSAGE value="restart the implementation" />
-    <option name="LAST_COMMIT_MESSAGE" value="restart the implementation" />
+    <MESSAGE value="moved to gsd based implementation" />
+    <option name="LAST_COMMIT_MESSAGE" value="moved to gsd based implementation" />
   </component>
 </project>
