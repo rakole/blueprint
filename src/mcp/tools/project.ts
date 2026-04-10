@@ -14,7 +14,10 @@ import {
   blueprintConfigGet,
   seedProjectConfig
 } from "./config.js";
-import { blueprintStateUpdate, loadBlueprintState } from "./state.js";
+import {
+  blueprintStateLoad,
+  blueprintStateUpdate
+} from "./state.js";
 
 type CommandCatalogEntry = {
   command: string;
@@ -281,7 +284,7 @@ export async function blueprintProjectStatus(
     };
   }
 
-  const state = await loadBlueprintState(projectRoot);
+  const stateResult = await blueprintStateLoad({ cwd: projectRoot });
   let configWarnings: string[] = [];
 
   try {
@@ -298,9 +301,10 @@ export async function blueprintProjectStatus(
   return {
     status: inspection.readiness,
     initialized: true,
-    currentPhase: state.currentPhase,
-    currentMilestone: state.currentMilestone,
-    nextAction: state.nextAction || "Run /blu for the next Blueprint step",
+    currentPhase: stateResult.derivedStatus.currentPhase,
+    currentMilestone: stateResult.state.currentMilestone,
+    nextAction:
+      stateResult.derivedStatus.nextAction || "Run /blu for the next Blueprint step",
     health: {
       missingArtifacts: inspection.core.missing,
       warnings: configWarnings

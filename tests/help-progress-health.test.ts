@@ -172,6 +172,56 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
   assert.deepEqual(validation.issues, []);
 });
 
+test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    statePath,
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: 2
+- Active command: /blu:progress
+- Next action: Run /blu:progress to review Phase 2 and the next safe action
+- Last updated: 2026-04-10T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  await writeFile(
+    roadmapPath,
+    `# Roadmap: initialized-repo
+
+## Milestone
+
+- Active milestone: v3
+
+## Phases
+
+- [x] Phase 1: Foundation bootstrap
+- [ ] Phase 3: Discovery and definition
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.currentMilestone, "v3");
+  assert.equal(status.currentPhase, "3");
+  assert.match(status.nextAction, /Phase 3/);
+});
+
 test("project status reports malformed config as a health warning instead of throwing", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   const configPath = path.join(repoPath, ".blueprint/config.json");
