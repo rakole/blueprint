@@ -4,20 +4,20 @@ import path from "node:path";
 import * as z from "zod/v4";
 
 import {
-  BLUEPRINT_CONFIG_PATH,
   BLUEPRINT_DIR,
-  BLUEPRINT_STATE_PATH,
   blueprintArtifactScaffold,
   ensureRepoRoot,
   getBlueprintRoot,
-  resolveBlueprintPath,
-  toRepoRelativePath
+  inspectBlueprintArtifacts
 } from "./artifacts.js";
 import {
   blueprintConfigGet,
   seedProjectConfig
 } from "./config.js";
-import { blueprintStateUpdate, loadBlueprintState } from "./state.js";
+import {
+  blueprintStateLoad,
+  blueprintStateUpdate
+} from "./state.js";
 
 type CommandCatalogEntry = {
   command: string;
@@ -64,6 +64,7 @@ type ProjectStatusArgs = {
 };
 
 type ProjectStatusResult = {
+  status: "uninitialized" | "partial" | "initialized";
   initialized: boolean;
   currentPhase: string | null;
   currentMilestone: string | null;
@@ -84,15 +85,6 @@ const projectInitInputSchema = {
 const projectStatusInputSchema = {
   cwd: z.string().optional()
 };
-
-const CORE_PROJECT_ARTIFACTS = [
-  `${BLUEPRINT_DIR}/PROJECT.md`,
-  `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
-  `${BLUEPRINT_DIR}/ROADMAP.md`,
-  BLUEPRINT_STATE_PATH,
-  BLUEPRINT_CONFIG_PATH,
-  `${BLUEPRINT_DIR}/phases/`
-];
 
 const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
   commands: {
@@ -201,20 +193,6 @@ async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
   }
 }
 
-async function getMissingArtifacts(projectRoot: string): Promise<string[]> {
-  const missingArtifacts: string[] = [];
-
-  for (const artifact of CORE_PROJECT_ARTIFACTS) {
-    const artifactPath = resolveBlueprintPath(projectRoot, artifact);
-
-    if (!(await pathExists(artifactPath))) {
-      missingArtifacts.push(artifact);
-    }
-  }
-
-  return missingArtifacts;
-}
-
 export async function blueprintCommandCatalog(): Promise<CommandCatalogResult> {
   return readBundledCommandCatalog();
 }
@@ -280,41 +258,56 @@ export async function blueprintProjectStatus(
   args: ProjectStatusArgs = {}
 ): Promise<ProjectStatusResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const missingArtifacts = await getMissingArtifacts(projectRoot);
-  const initialized = missingArtifacts.length === 0;
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const initialized = inspection.readiness === "initialized";
+  const partial = inspection.readiness === "partial";
 
   if (!initialized) {
     const nextAction =
-      missingArtifacts.length === CORE_PROJECT_ARTIFACTS.length
+      inspection.readiness === "uninitialized"
         ? "Run /blu:new-project"
-        : "Re-run /blu:new-project only after you decide how to handle the partial .blueprint state";
+        : "Re-run /blu:new-project only after you decide how to handle the partial .blueprint state, or run /blu:health to inspect and repair it";
 
     return {
+      status: inspection.readiness,
       initialized: false,
       currentPhase: null,
       currentMilestone: null,
       nextAction,
       health: {
-        missingArtifacts,
-        warnings: missingArtifacts.length > 0 ? ["Blueprint is partially initialized."] : []
+        missingArtifacts: inspection.core.missing,
+        warnings:
+          partial
+            ? ["Blueprint is partially initialized."]
+            : ["Blueprint has not been initialized yet."]
       }
     };
   }
 
-  const state = await loadBlueprintState(projectRoot);
-  const effectiveConfig = await blueprintConfigGet({
-    scope: "effective",
-    cwd: projectRoot
-  });
+  const stateResult = await blueprintStateLoad({ cwd: projectRoot });
+  let configWarnings: string[] = [];
+
+  try {
+    const effectiveConfig = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    configWarnings = effectiveConfig.warnings;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    configWarnings = [`Blueprint config could not be read: ${message}`];
+  }
 
   return {
+    status: inspection.readiness,
     initialized: true,
-    currentPhase: state.currentPhase,
-    currentMilestone: state.currentMilestone,
-    nextAction: state.nextAction || "Run /blu for the next Blueprint step",
+    currentPhase: stateResult.derivedStatus.currentPhase,
+    currentMilestone: stateResult.state.currentMilestone,
+    nextAction:
+      stateResult.derivedStatus.nextAction || "Run /blu for the next Blueprint step",
     health: {
-      missingArtifacts,
-      warnings: effectiveConfig.warnings
+      missingArtifacts: inspection.core.missing,
+      warnings: configWarnings
     }
   };
 }

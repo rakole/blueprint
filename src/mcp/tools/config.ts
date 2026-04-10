@@ -13,12 +13,13 @@ import {
 } from "./artifacts.js";
 
 type ConfigScope = "project" | "defaults" | "effective";
+type ModelProfile = "quality" | "balanced" | "budget" | "inherit";
 
 type BlueprintConfig = {
   version: number;
   mode: string;
   granularity: string;
-  model_profile: string;
+  model_profile: ModelProfile;
   project_code: string | null;
   phase_naming: string;
   response_language: string | null;
@@ -99,6 +100,12 @@ type ConfigSetArgs = {
   patch?: Record<string, unknown>;
 };
 
+type ConfigSetProfileArgs = {
+  cwd?: string;
+  defaultsPath?: string;
+  profile: ModelProfile;
+};
+
 type SeedProjectConfigArgs = {
   cwd?: string;
   defaultsPath?: string;
@@ -121,12 +128,20 @@ type ConfigSetResult = {
   warnings: string[];
 };
 
+type ConfigSetProfileResult = {
+  profile: ModelProfile;
+  updatedKeys: ["model_profile"];
+  configPath: string;
+};
+
 type SeedProjectConfigResult = {
   config: BlueprintConfig;
   configPath: string;
   provenance: ConfigProvenance;
   warnings: string[];
 };
+
+const MODEL_PROFILES = ["quality", "balanced", "budget", "inherit"] as const;
 
 const HARD_CODED_CONFIG: BlueprintConfig = {
   version: 2,
@@ -205,6 +220,12 @@ const configSetInputSchema = {
   patch: z.record(z.string(), z.unknown()).optional()
 };
 
+const configSetProfileInputSchema = {
+  cwd: z.string().optional(),
+  defaultsPath: z.string().optional(),
+  profile: z.enum(MODEL_PROFILES)
+};
+
 function cloneConfig(config: BlueprintConfig): BlueprintConfig {
   return JSON.parse(JSON.stringify(config)) as BlueprintConfig;
 }
@@ -215,6 +236,69 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function getDefaultUserConfigPath(defaultsPath?: string): string {
   return defaultsPath ?? path.join(homedir(), ".gemini/blueprint/defaults.json");
+}
+
+function deepCloneObject(value: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+}
+
+function setNestedValue(
+  target: Record<string, unknown>,
+  pathSegments: string[],
+  value: unknown
+): void {
+  let current = target;
+
+  for (const segment of pathSegments.slice(0, -1)) {
+    const next = current[segment];
+
+    if (!isPlainObject(next)) {
+      current[segment] = {};
+    }
+
+    current = current[segment] as Record<string, unknown>;
+  }
+
+  current[pathSegments[pathSegments.length - 1]] = value;
+}
+
+function coerceLegacyConfigCandidate(
+  candidate: Record<string, unknown>,
+  warnings: string[]
+): Record<string, unknown> {
+  const nextCandidate = deepCloneObject(candidate);
+  const legacyTopLevelMappings = {
+    commit_docs: ["planning", "commit_docs"],
+    search_gitignored: ["planning", "search_gitignored"]
+  } as const;
+
+  for (const [legacyKey, targetPath] of Object.entries(legacyTopLevelMappings)) {
+    if (!(legacyKey in nextCandidate)) {
+      continue;
+    }
+
+    const legacyValue = nextCandidate[legacyKey];
+    delete nextCandidate[legacyKey];
+
+    if (typeof legacyValue !== "boolean") {
+      warnings.push(`Ignored invalid legacy config value for ${legacyKey}`);
+      continue;
+    }
+
+    setNestedValue(nextCandidate, [...targetPath], legacyValue);
+    warnings.push(`Migrated legacy config key ${legacyKey} to ${targetPath.join(".")}`);
+  }
+
+  if (typeof nextCandidate.parallelization === "boolean") {
+    nextCandidate.parallelization = {
+      enabled: nextCandidate.parallelization
+    };
+    warnings.push(
+      "Migrated legacy config key parallelization to parallelization.enabled"
+    );
+  }
+
+  return nextCandidate;
 }
 
 function isReservedKey(scope: Exclude<ConfigScope, "effective">, fullPath: string): boolean {
@@ -249,6 +333,26 @@ function applyConfigLayer(
 
     const currentValue = target[key];
 
+    if (fullPath === "version") {
+      if (value === HARD_CODED_CONFIG.version) {
+        target[key] = value;
+      } else {
+        warnings.push(
+          `Ignored unsupported config version ${String(value)}; using version ${HARD_CODED_CONFIG.version}`
+        );
+      }
+      continue;
+    }
+
+    if (fullPath === "model_profile") {
+      if (typeof value === "string" && MODEL_PROFILES.includes(value as ModelProfile)) {
+        target[key] = value;
+      } else {
+        warnings.push(`Ignored invalid config value for ${fullPath}`);
+      }
+      continue;
+    }
+
     if (fullPath === "agent_skills") {
       if (isPlainObject(value)) {
         target[key] = value;
@@ -259,6 +363,14 @@ function applyConfigLayer(
     }
 
     if (isPlainObject(currentValue)) {
+      if (fullPath === "parallelization" && typeof value === "boolean") {
+        currentValue.enabled = value;
+        warnings.push(
+          "Migrated shorthand config key parallelization to parallelization.enabled"
+        );
+        continue;
+      }
+
       if (!isPlainObject(value)) {
         warnings.push(`Ignored invalid config object for ${fullPath}`);
         continue;
@@ -296,9 +408,10 @@ function normalizeConfigLayer(
 
   const config = cloneConfig(HARD_CODED_CONFIG);
   const warnings: string[] = [];
+  const coercedCandidate = coerceLegacyConfigCandidate(candidate, warnings);
   applyConfigLayer(
     config as unknown as Record<string, unknown>,
-    candidate,
+    coercedCandidate,
     scope,
     warnings
   );
@@ -323,6 +436,36 @@ function flattenPatchKeys(
   }
 
   return keys;
+}
+
+function collectChangedKeys(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  prefix: string[] = []
+): string[] {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changed: string[] = [];
+
+  for (const key of keys) {
+    const pathSegments = [...prefix, key];
+    const beforeValue = before[key];
+    const afterValue = after[key];
+
+    if (
+      isPlainObject(beforeValue) &&
+      isPlainObject(afterValue) &&
+      key !== "agent_skills"
+    ) {
+      changed.push(...collectChangedKeys(beforeValue, afterValue, pathSegments));
+      continue;
+    }
+
+    if (JSON.stringify(beforeValue) !== JSON.stringify(afterValue)) {
+      changed.push(pathSegments.join("."));
+    }
+  }
+
+  return changed;
 }
 
 async function readProjectConfig(
@@ -546,6 +689,7 @@ export async function blueprintConfigSet(
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
   });
+  const previousConfig = cloneConfig(baseResult.config);
   const nextConfig = cloneConfig(baseResult.config);
   const warnings = [...baseResult.warnings];
 
@@ -569,9 +713,15 @@ export async function blueprintConfigSet(
 
   await writeJsonFile(configPath, nextConfig as unknown as Record<string, unknown>);
 
+  const changedKeys = collectChangedKeys(
+    previousConfig as unknown as Record<string, unknown>,
+    nextConfig as unknown as Record<string, unknown>
+  );
+  const patchKeys = flattenPatchKeys(patch);
+
   return {
     scope,
-    updatedKeys: flattenPatchKeys(patch),
+    updatedKeys: patchKeys.filter((key) => changedKeys.includes(key)),
     config: nextConfig,
     provenance: {
       layersApplied: ["hardcoded", scope],
@@ -593,6 +743,34 @@ export async function blueprintConfigSet(
     configPath:
       scope === "project" ? toRepoRelativePath(projectRoot, configPath) : configPath,
     warnings
+  };
+}
+
+export async function blueprintConfigSetProfile(
+  args: ConfigSetProfileArgs
+): Promise<ConfigSetProfileResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const projectConfig = await readProjectConfig(projectRoot);
+
+  if (!projectConfig) {
+    throw new Error(
+      "Blueprint project config is missing. Initialize the repo first with /blu:new-project."
+    );
+  }
+
+  const result = await blueprintConfigSet({
+    cwd: projectRoot,
+    defaultsPath: args.defaultsPath,
+    scope: "project",
+    patch: {
+      model_profile: args.profile
+    }
+  });
+
+  return {
+    profile: args.profile,
+    updatedKeys: ["model_profile"],
+    configPath: result.configPath
   };
 }
 
@@ -635,5 +813,12 @@ export const configToolDefinitions = [
     inputSchema: configSetInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintConfigSet(args as ConfigSetArgs)
+  },
+  {
+    name: "blueprint_config_set_profile",
+    description: "Persist a project-local Blueprint model profile without mutating saved defaults.",
+    inputSchema: configSetProfileInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintConfigSetProfile(args as ConfigSetProfileArgs)
   }
 ];

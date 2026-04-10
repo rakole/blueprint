@@ -3,14 +3,17 @@ import { promises as fs } from "node:fs";
 import * as z from "zod/v4";
 
 import {
+  BLUEPRINT_DIR,
+  blueprintPathExists,
   BLUEPRINT_STATE_PATH,
   ensureParentDirectory,
   ensureRepoRoot,
+  inspectBlueprintArtifacts,
   resolveBlueprintPath,
   toRepoRelativePath
 } from "./artifacts.js";
 
-type BlueprintState = {
+export type BlueprintState = {
   projectStatus: string;
   currentMilestone: string;
   currentPhase: string;
@@ -27,6 +30,31 @@ type StateUpdateArgs = {
 
 type StateUpdateResult = {
   updatedFields: string[];
+  statePath: string;
+};
+
+type StateLoadArgs = {
+  cwd?: string;
+};
+
+type StateLoadResult = {
+  state: BlueprintState;
+  blockers: string[];
+  derivedStatus: {
+    projectStatus: string;
+    currentPhase: string | null;
+    nextAction: string;
+    hasBlockers: boolean;
+  };
+};
+
+type StateSyncArgs = {
+  cwd?: string;
+};
+
+type StateSyncResult = {
+  syncedFields: string[];
+  warnings: string[];
   statePath: string;
 };
 
@@ -53,6 +81,12 @@ const stateUpdateInputSchema = {
       lastUpdated: z.string().optional()
     })
     .optional()
+};
+const stateLoadInputSchema = {
+  cwd: z.string().optional()
+};
+const stateSyncInputSchema = {
+  cwd: z.string().optional()
 };
 
 function renderStateDocument(state: BlueprintState): string {
@@ -100,6 +134,104 @@ function parseStateDocument(raw: string): BlueprintState {
   };
 }
 
+async function readRoadmapSignals(projectRoot: string): Promise<{
+  currentMilestone: string | null;
+  currentPhase: string | null;
+}> {
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  try {
+    const raw = await fs.readFile(roadmapPath, "utf8");
+    const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
+    const phaseMatches = [...raw.matchAll(/- \[([ xX])\] Phase\s+(\d+(?:\.\d+)?):/g)];
+    const currentPhase =
+      phaseMatches.find((match) => match[1] === " ")?.[2] ??
+      phaseMatches.at(-1)?.[2] ??
+      null;
+
+    return {
+      currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
+      currentPhase
+    };
+  } catch {
+    return {
+      currentMilestone: null,
+      currentPhase: null
+    };
+  }
+}
+
+function deriveNextAction(projectStatus: string, blockers: string[], currentPhase: string): string {
+  if (projectStatus === "uninitialized") {
+    return "Run /blu:new-project";
+  }
+
+  if (projectStatus === "partial") {
+    return "Run /blu:health to inspect the partial .blueprint state";
+  }
+
+  if (blockers.length > 0) {
+    return "Run /blu:health to inspect blockers and repair options";
+  }
+
+  return currentPhase
+    ? `Run /blu:progress to review Phase ${currentPhase} and the next safe action`
+    : "Run /blu:progress to review the next safe Blueprint action";
+}
+
+async function buildSyncedState(projectRoot: string): Promise<{
+  state: BlueprintState;
+  warnings: string[];
+}> {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const existingState = await loadBlueprintState(projectRoot);
+  const roadmapSignals = await readRoadmapSignals(projectRoot);
+  const warnings: string[] = [];
+
+  if (!inspection.blueprintRootExists) {
+    throw new Error(
+      "Cannot sync Blueprint state before .blueprint/ exists. Run /blu:new-project instead."
+    );
+  }
+
+  if (!(await blueprintPathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH)))) {
+    warnings.push("STATE.md was missing and has been reconstructed from surviving artifacts.");
+  }
+
+  if (!(await blueprintPathExists(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`)))) {
+    warnings.push("ROADMAP.md is missing; state sync fell back to the last known milestone and phase.");
+  }
+
+  const projectStatus = inspection.readiness;
+  const currentPhase = roadmapSignals.currentPhase ?? existingState.currentPhase;
+  const currentMilestone =
+    roadmapSignals.currentMilestone ?? existingState.currentMilestone;
+  const structuralBlockers = inspection.core.missing.map(
+    (artifact) => `Missing ${artifact}`
+  );
+  const nonStructuralBlockers = existingState.blockers.filter(
+    (blocker) => !blocker.startsWith("Missing .blueprint/")
+  );
+  const blockers =
+    projectStatus === "partial"
+      ? [...new Set([...nonStructuralBlockers, ...structuralBlockers])]
+      : nonStructuralBlockers;
+
+  return {
+    state: {
+      projectStatus,
+      currentMilestone,
+      currentPhase,
+      activeCommand:
+        projectStatus === "partial" ? "/blu:health" : existingState.activeCommand,
+      nextAction: deriveNextAction(projectStatus, blockers, currentPhase),
+      blockers,
+      lastUpdated: new Date().toISOString()
+    },
+    warnings
+  };
+}
+
 export async function loadBlueprintState(cwd?: string): Promise<BlueprintState> {
   const projectRoot = await ensureRepoRoot(cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
@@ -110,6 +242,31 @@ export async function loadBlueprintState(cwd?: string): Promise<BlueprintState> 
   } catch {
     return { ...DEFAULT_STATE };
   }
+}
+
+export async function blueprintStateLoad(
+  args: StateLoadArgs = {}
+): Promise<StateLoadResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const state =
+    inspection.readiness === "uninitialized"
+      ? await loadBlueprintState(projectRoot)
+      : (await buildSyncedState(projectRoot)).state;
+  const currentPhase = inspection.readiness === "uninitialized" ? null : state.currentPhase;
+  const blockers = state.blockers;
+  const nextAction = state.nextAction;
+
+  return {
+    state,
+    blockers,
+    derivedStatus: {
+      projectStatus: inspection.readiness,
+      currentPhase,
+      nextAction,
+      hasBlockers: blockers.length > 0
+    }
+  };
 }
 
 export async function blueprintStateUpdate(
@@ -138,12 +295,50 @@ export async function blueprintStateUpdate(
   };
 }
 
+export async function blueprintStateSync(
+  args: StateSyncArgs = {}
+): Promise<StateSyncResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  const currentState = await loadBlueprintState(projectRoot);
+  const synced = await buildSyncedState(projectRoot);
+  const nextState = synced.state;
+  const syncedFields = (Object.keys(nextState) as (keyof BlueprintState)[]).filter(
+    (field) =>
+      JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
+  );
+
+  await ensureParentDirectory(statePath);
+  await fs.writeFile(statePath, renderStateDocument(nextState), "utf8");
+
+  return {
+    syncedFields,
+    warnings: synced.warnings,
+    statePath: toRepoRelativePath(projectRoot, statePath)
+  };
+}
+
 export const stateToolDefinitions = [
+  {
+    name: "blueprint_state_load",
+    description: "Load Blueprint STATE.md together with derived project status signals.",
+    inputSchema: stateLoadInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintStateLoad(args as StateLoadArgs)
+  },
   {
     name: "blueprint_state_update",
     description: "Patch Blueprint STATE.md deterministically and return the updated fields.",
     inputSchema: stateUpdateInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintStateUpdate(args as StateUpdateArgs)
+  },
+  {
+    name: "blueprint_state_sync",
+    description:
+      "Rebuild Blueprint STATE.md from surviving state, roadmap, and artifact signals.",
+    inputSchema: stateSyncInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintStateSync(args as StateSyncArgs)
   }
 ];

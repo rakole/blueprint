@@ -1,0 +1,3 @@
+# Conventions
+
+Deterministic state.

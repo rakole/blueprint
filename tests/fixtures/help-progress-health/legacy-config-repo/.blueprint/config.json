@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "commit_docs": false,
+  "parallelization": true,
+  "workflow": {
+    "use_workspaces": true
+  }
+}

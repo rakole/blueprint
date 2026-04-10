@@ -22,6 +22,40 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...artifactToolDefinitions
 ];
 
+const REQUIRED_CONFIG_TOOL_NAMES = [
+  "blueprint_config_get",
+  "blueprint_config_set",
+  "blueprint_config_set_profile"
+] as const;
+const REQUIRED_READ_PATH_TOOL_NAMES = [
+  "blueprint_project_status",
+  "blueprint_state_load",
+  "blueprint_state_sync",
+  "blueprint_artifact_list",
+  "blueprint_artifact_validate"
+] as const;
+const REQUIRED_MAPPING_TOOL_NAMES = [
+  "blueprint_artifact_summary_digest"
+] as const;
+
+for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
+  if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
+    throw new Error(`Missing required config tool registration: ${toolName}`);
+  }
+}
+
+for (const toolName of REQUIRED_READ_PATH_TOOL_NAMES) {
+  if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
+    throw new Error(`Missing required read-path tool registration: ${toolName}`);
+  }
+}
+
+for (const toolName of REQUIRED_MAPPING_TOOL_NAMES) {
+  if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
+    throw new Error(`Missing required mapping tool registration: ${toolName}`);
+  }
+}
+
 export const blueprintToolRegistry = Object.fromEntries(
   TOOL_DEFINITIONS.map((definition) => [definition.name, definition])
 );

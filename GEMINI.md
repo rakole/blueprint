@@ -6,13 +6,22 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- The first mutating command in scope is `/blu:new-project`.
+- Current Wave 0 direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, and `/blu:health`.
 
 ## State Boundaries
 
 - Project-local Blueprint state lives in `.blueprint/`.
 - Global operational Blueprint state lives in `~/.gemini/blueprint/`.
 - `.planning/` is not Blueprint runtime state and must not be used for shipped command persistence.
+
+## Current Runtime Surface
+
+- `/blu:new-project` bootstraps deterministic `.blueprint/` artifacts and normalized repo config.
+- `/blu:settings` reads or updates normalized Blueprint config through MCP tools.
+- `/blu:set-profile` changes only the project-local `model_profile`.
+- `/blu:help` returns read-only routing guidance from the retained command catalog and repo readiness.
+- `/blu:progress` summarizes repo status, blockers, warnings, and the next safe action from real `.blueprint/` state.
+- `/blu:health` diagnoses Blueprint artifacts and enters repair flows only after explicit confirmation.
 
 ## Mutation Rules
 
