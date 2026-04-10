@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "mode": "interactive",
+  "model_profile": "balanced",
+  "commit_docs": false,
+  "search_gitignored": true,
+  "parallelization": false,
+  "workflow": {
+    "research": false,
+    "use_workspaces": true,
+    "use_workstreams": true
+  },
+  "hooks": {
+    "context_warnings": true
+  }
+}
