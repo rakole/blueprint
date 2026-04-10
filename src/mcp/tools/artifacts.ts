@@ -168,7 +168,17 @@ export function resolveBlueprintPath(
     );
   }
 
-  return resolveRepoRelativePath(projectRoot, relativePath);
+  const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
+  const relativeToBlueprintRoot = path.relative(getBlueprintRoot(projectRoot), absolutePath);
+
+  if (
+    relativeToBlueprintRoot.startsWith("..") ||
+    path.isAbsolute(relativeToBlueprintRoot)
+  ) {
+    throw new Error(`Path traversal is not allowed: ${relativePath}`);
+  }
+
+  return absolutePath;
 }
 
 export async function ensureParentDirectory(targetPath: string): Promise<void> {
