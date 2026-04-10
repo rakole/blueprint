@@ -72,6 +72,23 @@ assertExists('skills');
 assertExists('agents');
 assertExists('policies');
 
+const codexInstructionFiles = [
+  'AGENTS.md',
+  '.blueprint/AGENTS.md',
+  'agents/AGENTS.md',
+  'commands/AGENTS.md',
+  'hooks/AGENTS.md',
+  'mcp/AGENTS.md',
+  'policies/AGENTS.md',
+  'scripts/AGENTS.md',
+  'skills/AGENTS.md',
+  'themes/AGENTS.md'
+];
+
+for (const file of codexInstructionFiles) {
+  assertExists(file);
+}
+
 if (!manifest.plan || typeof manifest.plan.directory !== 'string' || !manifest.plan.directory.trim()) {
   fail('Manifest must define plan.directory.');
 }
@@ -102,7 +119,7 @@ for (const file of skillFiles) {
   }
 }
 
-const agentFiles = listFiles('agents', '.md');
+const agentFiles = listFiles('agents', '.md').filter((file) => !file.endsWith('/AGENTS.md'));
 if (agentFiles.length === 0) {
   fail('Expected at least one agent markdown file.');
 }
@@ -123,6 +140,7 @@ process.stdout.write(
   [
     'Blueprint scaffold check passed.',
     `Manifest: ${manifest.name}@${manifest.version}`,
+    `Codex instructions: ${codexInstructionFiles.length}`,
     `Commands: ${commandFiles.length}`,
     `Skills: ${skillFiles.length}`,
     `Agents: ${agentFiles.length}`

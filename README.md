@@ -6,6 +6,7 @@ This repository currently gives us the extension shell and the major extension p
 
 - `gemini-extension.json`
 - `GEMINI.md`
+- `AGENTS.md` and scoped `AGENTS.md` files for Codex
 - namespaced custom commands in `commands/`
 - hooks in `hooks/hooks.json`
 - agent skills in `skills/`
@@ -51,3 +52,4 @@ Runs a lightweight local validator that checks the manifest and the scaffolded e
 - The current hook only injects a small Bootstrap message to prove hook wiring works.
 - The `mcp/` and `themes/` directories are present as future expansion points; there is no MCP server implementation yet.
 - The extension theme is defined inline in `gemini-extension.json`.
+- Gemini guidance lives in `GEMINI.md`; Codex guidance lives in the root and scoped `AGENTS.md` files.
