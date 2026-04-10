@@ -5,6 +5,7 @@ import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
+import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
@@ -179,4 +180,62 @@ test("new-project falls back to hardcoded defaults when saved defaults are malfo
   assert.equal(result.configProvenance.defaultsApplied, false);
   assert.equal(config.mode, "interactive");
   assert.match(result.warnings.join("\n"), /falling back to hardcoded defaults/i);
+});
+
+test("project status reports initialization and a clear next action after bootstrap", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(status.initialized, true);
+  assert.equal(status.currentPhase, "1");
+  assert.ok(status.nextAction.length > 0);
+});
+
+test("command contract references the same Phase 1 tool names as the MCP server", async () => {
+  const commandFile = await readFile(
+    path.join(repoRoot, "commands/blu/new-project.toml"),
+    "utf8"
+  );
+  const requiredTools = [
+    "blueprint_project_init",
+    "blueprint_project_status",
+    "blueprint_config_get",
+    "blueprint_config_set",
+    "blueprint_state_update",
+    "blueprint_artifact_scaffold"
+  ];
+
+  for (const toolName of requiredTools) {
+    assert.ok(
+      blueprintToolNames.includes(toolName),
+      `${toolName} should be registered in the MCP server`
+    );
+    assert.match(commandFile, new RegExp(toolName));
+  }
+
+  assert.match(commandFile, /--auto/);
+  assert.match(commandFile, /\.blueprint\/config\.json/);
+});
+
+test("manifest, command files, and build output line up for installation", async () => {
+  const manifest = await readJsonFile<{
+    contextFileName: string;
+    mcpServers: Record<string, { args?: string[] }>;
+  }>(path.join(repoRoot, "gemini-extension.json"));
+  const mcpArgs = manifest.mcpServers.blueprint.args ?? [];
+  const mcpEntrypoint = mcpArgs[0] ?? "";
+
+  assert.equal(manifest.contextFileName, "GEMINI.md");
+  assert.equal(await pathExists(path.join(repoRoot, "commands/blu.toml")), true);
+  assert.equal(
+    await pathExists(path.join(repoRoot, "commands/blu/new-project.toml")),
+    true
+  );
+  assert.match(mcpEntrypoint, /dist\/mcp\/server\.js$/);
+  assert.equal(await pathExists(path.join(repoRoot, "dist/mcp/server.js")), true);
 });
