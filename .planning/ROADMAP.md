@@ -10,7 +10,7 @@ Blueprint moves from a locked docs-first planning pack to an executable Gemini e
 - Integer phases (1, 2, 3): planned milestone work
 - Decimal phases (2.1, 2.2): urgent insertions if new work must land between planned phases
 
-- [ ] **Phase 1: Foundation Bootstrap and State** - Create the extension scaffold, router entrypoints, and deterministic MCP-backed bootstrap flow
+- [x] **Phase 1: Foundation Bootstrap and State** - Create the extension scaffold, router entrypoints, and deterministic MCP-backed bootstrap flow
 - [ ] **Phase 2: Router, Health, and Mapping** - Make foundational read-path and brownfield foundation commands executable
 - [ ] **Phase 3: Phase Discovery** - Add context capture, targeted research, and UI-spec flows
 - [ ] **Phase 4: Plan, Execute, and Verify** - Complete the core implementation loop for planned work
@@ -32,9 +32,9 @@ Blueprint moves from a locked docs-first planning pack to an executable Gemini e
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Scaffold `gemini-extension.json`, `GEMINI.md`, and the root `/blu` command entrypoint
-- [ ] 01-02: Bootstrap `src/mcp/server.ts` plus project/config/state/artifact tool surfaces
-- [ ] 01-03: Implement `/blu:new-project` command wiring and initial happy-path tests
+- [x] 01-01: Scaffold `gemini-extension.json`, `GEMINI.md`, and the root `/blu` command entrypoint
+- [x] 01-02: Bootstrap `src/mcp/server.ts` plus project/config/state/artifact tool surfaces
+- [x] 01-03: Implement `/blu:new-project` command wiring and initial happy-path tests
 
 ### Phase 2: Router, Health, and Mapping
 **Goal**: Make the rest of Wave 0 usable against real repo state.
@@ -148,7 +148,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Bootstrap and State | 0/3 | Planned    |  |
+| 1. Foundation Bootstrap and State | 3/3 | Complete | 2026-04-11 |
 | 2. Router, Health, and Mapping | 0/3 | Not started | - |
 | 3. Phase Discovery | 0/3 | Not started | - |
 | 4. Plan, Execute, and Verify | 0/4 | Not started | - |

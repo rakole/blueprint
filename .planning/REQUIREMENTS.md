@@ -7,9 +7,9 @@
 
 ### Foundation
 
-- [ ] **FND-01**: Developer can install Blueprint from GitHub as a Gemini extension and load the extension successfully
-- [ ] **FND-02**: User can invoke the root `/blu` router and direct `/blu:<command>` entrypoints without relying on slash-command chaining
-- [ ] **FND-03**: User can run `/blu:new-project` to create deterministic `.blueprint/PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, and normalized config for a fresh repo
+- [x] **FND-01**: Developer can install Blueprint from GitHub as a Gemini extension and load the extension successfully
+- [x] **FND-02**: User can invoke the root `/blu` router and direct `/blu:<command>` entrypoints without relying on slash-command chaining
+- [x] **FND-03**: User can run `/blu:new-project` to create deterministic `.blueprint/PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, and normalized config for a fresh repo
 - [ ] **FND-04**: User can change Blueprint repo settings and model profile without manually editing raw JSON
 - [ ] **FND-05**: User can ask Blueprint for help, progress, and health and get next-step guidance from the current repo state
 - [ ] **FND-06**: User can map an existing codebase into stable `.blueprint/codebase/` artifacts before planning brownfield work
@@ -68,9 +68,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
-| FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Complete |
+| FND-02 | Phase 1 | Complete |
+| FND-03 | Phase 1 | Complete |
 | FND-04 | Phase 2 | Pending |
 | FND-05 | Phase 2 | Pending |
 | FND-06 | Phase 2 | Pending |
@@ -100,4 +100,4 @@
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after initial definition*
+*Last updated: 2026-04-11 after Phase 1 verification*
