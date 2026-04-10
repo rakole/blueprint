@@ -191,6 +191,39 @@ test("project status reports malformed config as a health warning instead of thr
   );
 });
 
+test("state load clears stale structural blockers after the repo is healthy again", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    statePath,
+    `# Blueprint State
+
+- Project status: partial
+- Current milestone: v2
+- Current phase: 2
+- Active command: /blu:health
+- Next action: Run /blu:health to inspect blockers and repair options
+- Last updated: 2026-04-10T00:00:00.000Z
+
+## Blockers
+
+- Missing .blueprint/REQUIREMENTS.md
+`,
+    "utf8"
+  );
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(state.derivedStatus.projectStatus, "initialized");
+  assert.equal(state.derivedStatus.hasBlockers, false);
+  assert.deepEqual(state.blockers, []);
+  assert.match(state.derivedStatus.nextAction, /\/blu:progress/);
+});
+
 test("artifact validation flags malformed legacy config and incomplete bundles with repair guidance", async (t) => {
   const repoPath = await createRepoFromFixture("legacy-config-repo");
   t.after(async () => {

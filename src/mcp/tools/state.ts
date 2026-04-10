@@ -202,15 +202,16 @@ async function buildSyncedState(projectRoot: string): Promise<{
   const currentPhase = roadmapSignals.currentPhase ?? existingState.currentPhase;
   const currentMilestone =
     roadmapSignals.currentMilestone ?? existingState.currentMilestone;
+  const structuralBlockers = inspection.core.missing.map(
+    (artifact) => `Missing ${artifact}`
+  );
+  const nonStructuralBlockers = existingState.blockers.filter(
+    (blocker) => !blocker.startsWith("Missing .blueprint/")
+  );
   const blockers =
     projectStatus === "partial"
-      ? [
-          ...new Set([
-            ...existingState.blockers,
-            ...inspection.core.missing.map((artifact) => `Missing ${artifact}`)
-          ])
-        ]
-      : existingState.blockers;
+      ? [...new Set([...nonStructuralBlockers, ...structuralBlockers])]
+      : nonStructuralBlockers;
 
   return {
     state: {
