@@ -1,0 +1,139 @@
+# `/blu:execute-phase`
+| Field | Value |
+|---|---|
+| Wave | `1` |
+| Family | `Core Lifecycle` |
+| Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Upstream GSD intent | Execute all plans in a phase with wave-based parallelization |
+
+
+## Purpose
+
+
+`execute-phase` carries forward the GSD intent to execute all plans in a phase with wave-based parallelization. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+
+
+## Command Path And Examples
+
+- Gemini command path: `/blu:execute-phase`
+- Root router form: `/blu execute-phase`
+- Argument hint: `<phase-number> [--wave N] [--gaps-only] [--interactive]`
+- `/blu:execute-phase 3 --wave 2`
+- `/blu execute-phase`
+
+## Inputs, Project State, And Prerequisite Artifacts
+
+
+- At least one plan must already exist for the phase.
+
+
+## Outputs
+
+
+- User-facing result: a concise completion summary plus the next logical action when applicable.
+- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+
+
+## Blueprint And Global State Reads
+
+
+- `.blueprint/config.json`
+
+
+## Blueprint And Global State Writes
+
+
+- `one or more XX-YY-SUMMARY.md files`
+- `optional execution reports in .blueprint/reports/`
+
+
+## Required MCP Tools
+
+
+- `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
+- `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}`
+- `blueprint_state_update` -> `{updatedFields, statePath}`
+
+
+## Skills And Subagents
+
+
+- Primary skill: `blueprint-phase-execution`
+- Optional subagents:
+- `blueprint-executor`
+
+
+## Dependencies
+
+
+- Shared contract docs:
+- `docs/DECISIONS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/ARTIFACT-SCHEMA.md`
+- `docs/MCP-TOOLS.md`
+- `docs/IMPLEMENTATION-ORDER.md`
+- Related command docs:
+- `docs/commands/plan-phase.md`
+
+
+## External Shell Or Git Dependencies
+
+
+- External dependencies:
+- git
+
+
+## Shell Risk Profile
+
+- High: drives real repo mutation during implementation.
+
+## User Prompts And Confirmation Gates
+
+
+- Confirm branch or wave-specific execution details before starting.
+- Respect normalized config for `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` when deciding whether wave execution is parallel, worktree-isolated, or branch-scoped.
+
+
+## Edge Cases
+
+
+- The target phase is omitted or ambiguous while multiple active phases exist.
+- Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
+
+
+## Failure Modes And Recovery
+
+
+- Explain exactly which phase artifact is missing and which command creates it.
+- Write follow-up state back into `.blueprint/` instead of dropping context on failure.
+- If config forces sequential execution or disables worktree isolation, explain that behavior explicitly instead of implying an execution failure.
+
+
+## Acceptance Criteria
+
+
+- Reads and writes only the selected phase scope.
+- Updates `STATE.md` whenever the next-step signal changes.
+- Creates or updates only the declared artifacts for this command.
+- Uses only documented MCP tools for persistent state changes.
+- Leaves unrelated repo files untouched.
+- Honors normalized `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from effective config instead of ad hoc command-local heuristics.
+
+
+## Test Cases
+
+
+- Single-phase happy path fixture.
+- Missing-artifact recovery fixture.
+- Parallelization and worktree-isolation fixture.
+- Direct `execute-phase` happy-path fixture.
+
+
+## Upstream Reference
+
+
+- Upstream command file: `commands/gsd/execute-phase.md`
+- Upstream workflow status: GSD has an upstream workflow file
