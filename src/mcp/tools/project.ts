@@ -282,10 +282,18 @@ export async function blueprintProjectStatus(
   }
 
   const state = await loadBlueprintState(projectRoot);
-  const effectiveConfig = await blueprintConfigGet({
-    scope: "effective",
-    cwd: projectRoot
-  });
+  let configWarnings: string[] = [];
+
+  try {
+    const effectiveConfig = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    configWarnings = effectiveConfig.warnings;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    configWarnings = [`Blueprint config could not be read: ${message}`];
+  }
 
   return {
     status: inspection.readiness,
@@ -295,7 +303,7 @@ export async function blueprintProjectStatus(
     nextAction: state.nextAction || "Run /blu for the next Blueprint step",
     health: {
       missingArtifacts: inspection.core.missing,
-      warnings: effectiveConfig.warnings
+      warnings: configWarnings
     }
   };
 }

@@ -172,6 +172,25 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
   assert.deepEqual(validation.issues, []);
 });
 
+test("project status reports malformed config as a health warning instead of throwing", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(configPath, "{ invalid json", "utf8");
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.initialized, true);
+  assert.match(
+    status.health.warnings.join("\n"),
+    /Blueprint config could not be read:/
+  );
+});
+
 test("artifact validation flags malformed legacy config and incomplete bundles with repair guidance", async (t) => {
   const repoPath = await createRepoFromFixture("legacy-config-repo");
   t.after(async () => {
