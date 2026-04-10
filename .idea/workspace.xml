@@ -6,15 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="planning phase 1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.planning/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-01-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-01-PLAN.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-02-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-02-PLAN.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-03-PLAN.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-03-PLAN.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-CONTEXT.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-CONTEXT.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-RESEARCH.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/phases/01-foundation-bootstrap-and-state/01-RESEARCH.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/mcp/tools/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/mcp/tools/config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/STATE.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/STATE.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -159,7 +151,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775846881034</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="planning phase 1">
+      <option name="closed" value="true" />
+      <created>1775849706717</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1775849706717</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
