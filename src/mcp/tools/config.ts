@@ -602,6 +602,7 @@ export async function seedProjectConfig(
   const projectRoot = await ensureRepoRoot(args.cwd);
   const composed = await composeConfig(projectRoot, args.defaultsPath);
   const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
+  const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
 
   await writeJsonFile(
     projectConfigPath,
@@ -610,8 +611,12 @@ export async function seedProjectConfig(
 
   return {
     config: composed.config,
-    configPath: toRepoRelativePath(projectRoot, projectConfigPath),
-    provenance: composed.provenance,
+    configPath: relativeConfigPath,
+    provenance: {
+      ...composed.provenance,
+      projectPath: relativeConfigPath,
+      projectApplied: true
+    },
     warnings: composed.warnings
   };
 }
