@@ -8,13 +8,14 @@
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
-- Keep Phase 1 limited to the smallest installable loop: manifest, `GEMINI.md`, `/blu`, `/blu:new-project`, MCP server bootstrap, and initial happy-path tests.
+- Keep Phase 1 limited to the smallest installable loop: manifest, `GEMINI.md`, `/blu`, `/blu:new-project`, MCP server bootstrap, and initial fixture-based tests.
 - Use a minimal `gemini-extension.json` that follows current Gemini CLI extension examples and keeps extra surface area out of scope.
 - Treat `/blu` as a safe root router and `/blu:new-project` as the first mutating direct command.
 - Route persistent writes through MCP tools only.
+- Allow the read-only `blueprint_command_catalog` tool in Phase 1 because the root router depends on retained-command metadata, while keeping later-wave mutating tool families out of scope.
 - Seed `.blueprint/config.json` as a normalized full v2 config object that matches `docs/ARTIFACT-SCHEMA.md`.
 - Keep `.planning/` local to Blueprint development and `.blueprint/` as the shipped runtime state directory.
-- Verify Phase 1 primarily through fixture-style happy-path tests.
+- Verify Phase 1 through fixture-style happy-path tests, the main missing-precondition path, the highest-risk `new-project` edge case required by the command spec, and a deterministic packaging/install-path smoke proof.
 
 ### the agent's Discretion
 - Internal module boundaries under `src/`
@@ -32,7 +33,9 @@
 
 Phase 1 does not need a broad Gemini integration surface. The strongest pattern across the locked Blueprint docs and current public Gemini CLI extension examples is a thin extension shell: a root `gemini-extension.json`, a `GEMINI.md` context file, command TOMLs in `commands/`, and optional extension-managed MCP server wiring. That lines up cleanly with Blueprint's architectural rule that commands own UX while MCP owns deterministic state changes.
 
-The repo docs already lock most of the important decisions. What still matters for planning is sequencing and failure avoidance. The safest implementation path is to create a minimal installable scaffold first, then add just enough MCP tools to make `/blu:new-project` real, then add tests that prove `.blueprint/` artifacts and normalized config are deterministic. Anything beyond that increases surface area before the shared primitives are stable.
+The repo docs already lock most of the important decisions. What still matters for planning is sequencing and failure avoidance. The safest implementation path is to create a minimal installable scaffold first, then add just enough MCP tools to make `/blu` and `/blu:new-project` real, then add tests that prove `.blueprint/` artifacts, normalized config, required negative paths, and packaging/install-path readiness are deterministic. Anything beyond that increases surface area before the shared primitives are stable.
+
+The only Phase 1 exception to the `new-project`-focused tool set is the read-only `blueprint_command_catalog` surface needed by the root router. That still fits the locked architecture because it adds routing metadata, not a broader mutating tool family.
 
 **Primary recommendation:** Plan Phase 1 as a tight three-plan sequence: extension shell first, MCP primitives second, `/blu:new-project` plus fixture tests third.
 </research_summary>

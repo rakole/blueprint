@@ -29,7 +29,8 @@
     "code_review": true,
     "code_review_depth": "standard",
     "use_worktrees": true,
-    "subagent_timeout": 300000
+    "subagent_timeout": 300000,
+    "_auto_chain_active": false
   },
   "hooks": {
     "context_warnings": true
