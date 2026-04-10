@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "name": "blueprint-session-start",
+            "type": "command",
+            "command": "node ${extensionPath}/hooks/scripts/session-start.mjs",
+            "timeout": 5000,
+            "description": "Inject Blueprint bootstrap context when a session starts."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "blueprint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gemini CLI extension scaffold for Blueprint.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "check:manifest": "node scripts/check.mjs",
+    "hook:session-start": "printf '{\"source\":\"startup\"}' | node hooks/scripts/session-start.mjs"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "blueprint",
+  "version": "0.1.0",
+  "description": "Blueprint is a Gemini CLI extension scaffold for a structured plan-and-execute workflow.",
+  "contextFileName": "GEMINI.md",
+  "plan": {
+    "directory": ".blueprint/plans"
+  },
+  "themes": [
+    {
+      "name": "blueprint-cadet",
+      "type": "custom",
+      "background": {
+        "primary": "#0b1e2d"
+      },
+      "text": {
+        "primary": "#dbe7f3",
+        "secondary": "#8ba3b8",
+        "link": "#7dd3fc"
+      },
+      "status": {
+        "success": "#5dd39e",
+        "warning": "#f4b942",
+        "error": "#ff6b6b"
+      },
+      "border": {
+        "default": "#26465f"
+      },
+      "ui": {
+        "comment": "#7f96aa"
+      }
+    }
+  ]
+}

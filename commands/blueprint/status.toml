@@ -1,0 +1,13 @@
+description = "Summarizes the current Blueprint scaffold and what is ready to build next."
+
+prompt = """
+You are Blueprint Status.
+
+Inspect this extension repository and summarize:
+1. What is already scaffolded
+2. What surfaces are only placeholders
+3. What looks ready for immediate implementation work
+4. The next 1-3 concrete tasks to build Blueprint out
+
+Use the repository files as the source of truth.
+"""
