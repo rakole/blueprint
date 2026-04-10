@@ -244,27 +244,16 @@ export async function blueprintStateLoad(
 ): Promise<StateLoadResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const state = await loadBlueprintState(projectRoot);
-  const currentPhase =
-    inspection.readiness === "initialized" || inspection.readiness === "partial"
-      ? state.currentPhase
-      : null;
-  const blockers =
-    inspection.readiness === "partial" && inspection.core.missing.length > 0
-      ? [...new Set([...state.blockers, ...inspection.core.missing.map((artifact) => `Missing ${artifact}`)])]
-      : state.blockers;
-  const nextAction = deriveNextAction(
-    inspection.readiness,
-    blockers,
-    currentPhase ?? state.currentPhase
-  );
+  const state =
+    inspection.readiness === "uninitialized"
+      ? await loadBlueprintState(projectRoot)
+      : (await buildSyncedState(projectRoot)).state;
+  const currentPhase = inspection.readiness === "uninitialized" ? null : state.currentPhase;
+  const blockers = state.blockers;
+  const nextAction = state.nextAction;
 
   return {
-    state: {
-      ...state,
-      projectStatus: inspection.readiness,
-      nextAction
-    },
+    state,
     blockers,
     derivedStatus: {
       projectStatus: inspection.readiness,

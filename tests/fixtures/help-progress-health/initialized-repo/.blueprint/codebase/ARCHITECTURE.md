@@ -1,0 +1,3 @@
+# Architecture
+
+MCP-backed commands.

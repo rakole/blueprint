@@ -263,7 +263,7 @@ export async function blueprintProjectStatus(
     const nextAction =
       inspection.readiness === "uninitialized"
         ? "Run /blu:new-project"
-        : "Run /blu:health to inspect and repair the partial .blueprint state";
+        : "Re-run /blu:new-project only after you decide how to handle the partial .blueprint state, or run /blu:health to inspect and repair it";
 
     return {
       status: inspection.readiness,
