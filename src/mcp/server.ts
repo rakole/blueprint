@@ -22,6 +22,18 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...artifactToolDefinitions
 ];
 
+const REQUIRED_CONFIG_TOOL_NAMES = [
+  "blueprint_config_get",
+  "blueprint_config_set",
+  "blueprint_config_set_profile"
+] as const;
+
+for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
+  if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
+    throw new Error(`Missing required config tool registration: ${toolName}`);
+  }
+}
+
 export const blueprintToolRegistry = Object.fromEntries(
   TOOL_DEFINITIONS.map((definition) => [definition.name, definition])
 );
