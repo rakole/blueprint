@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { pathToFileURL } from "node:url";
 import type { ZodType } from "zod/v4";
 
 import { artifactToolDefinitions } from "./tools/artifacts.js";
@@ -71,7 +72,7 @@ export async function startServer(): Promise<void> {
 const entrypoint = process.argv[1];
 const isEntrypoint =
   typeof entrypoint === "string" &&
-  import.meta.url === new URL(entrypoint, "file:").href;
+  import.meta.url === pathToFileURL(entrypoint).href;
 
 if (isEntrypoint) {
   startServer().catch((error) => {

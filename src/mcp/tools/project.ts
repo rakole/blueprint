@@ -255,7 +255,7 @@ export async function blueprintProjectInit(
       currentMilestone: "v1",
       currentPhase: "1",
       activeCommand: "/blu:new-project",
-      nextAction: "Run /blu:discuss-phase 1",
+      nextAction: "Run /blu for the next Blueprint step",
       blockers: [],
       lastUpdated: new Date().toISOString()
     }
@@ -287,7 +287,7 @@ export async function blueprintProjectStatus(
     const nextAction =
       missingArtifacts.length === CORE_PROJECT_ARTIFACTS.length
         ? "Run /blu:new-project"
-        : "Run /blu:health to repair the partial Blueprint state";
+        : "Re-run /blu:new-project only after you decide how to handle the partial .blueprint state";
 
     return {
       initialized: false,
@@ -311,7 +311,7 @@ export async function blueprintProjectStatus(
     initialized: true,
     currentPhase: state.currentPhase,
     currentMilestone: state.currentMilestone,
-    nextAction: state.nextAction || "Run /blu:discuss-phase 1",
+    nextAction: state.nextAction || "Run /blu for the next Blueprint step",
     health: {
       missingArtifacts,
       warnings: effectiveConfig.warnings
