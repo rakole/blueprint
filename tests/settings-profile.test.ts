@@ -145,6 +145,25 @@ test("config_set_profile changes only model_profile and leaves saved defaults un
   assert.equal(defaultsAfter, defaultsBefore);
 });
 
+test("config_set_profile rejects repos without initialized project config", async (t) => {
+  const repoPath = await createRepoFromFixture("missing-config-repo");
+  const tempRoot = path.dirname(repoPath);
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintConfigSetProfile({
+      cwd: repoPath,
+      profile: "budget"
+    }),
+    /Blueprint project config is missing/
+  );
+
+  assert.equal(await pathExists(configPath), false);
+});
+
 test("config_set rejects reserved repo keys for hooks and removed workflow flags", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   t.after(async () => {

@@ -712,8 +712,17 @@ export async function blueprintConfigSet(
 export async function blueprintConfigSetProfile(
   args: ConfigSetProfileArgs
 ): Promise<ConfigSetProfileResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const projectConfig = await readProjectConfig(projectRoot);
+
+  if (!projectConfig) {
+    throw new Error(
+      "Blueprint project config is missing. Initialize the repo first with /blu:new-project."
+    );
+  }
+
   const result = await blueprintConfigSet({
-    cwd: args.cwd,
+    cwd: projectRoot,
     defaultsPath: args.defaultsPath,
     scope: "project",
     patch: {
