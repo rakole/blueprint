@@ -41,9 +41,12 @@ Minimum locked sections:
 Purpose:
 - canonical requirements list
 - requirement identifiers used by phase plans and milestone audits
+- durable traceability target for roadmap phases and verification artifacts
 
 Minimum locked sections:
 - requirements table
+- requirement identifiers such as `REQ-*`
+- traceability or mapping notes
 - acceptance notes
 - deferred items
 
@@ -59,6 +62,8 @@ Minimum locked fields per phase:
 - phase name
 - goal
 - dependency note
+- mapped requirements
+- success criteria
 - status
 
 ### `STATE.md`
@@ -220,6 +225,7 @@ Notes are project-local in Blueprint v1 planning.
 Planned contents:
 - `STACK.md`
 - `ARCHITECTURE.md`
+- `STRUCTURE.md`
 - `CONVENTIONS.md`
 - `TESTING.md`
 - `INTEGRATIONS.md`

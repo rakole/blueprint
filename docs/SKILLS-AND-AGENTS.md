@@ -1,44 +1,54 @@
 # Blueprint Skills And Agents
 
-## Planned Skills
+## Shipped Skills
 
-| Skill | Purpose | Primary Commands |
+| Skill | Status | Purpose | Primary Commands |
+|---|---|---|---|
+| `blueprint-router` | `implemented` | Root routing, command selection, and next-step guidance | `help`, `progress`, `/blu` |
+| `blueprint-bootstrap` | `implemented` | Repo bootstrap and project initialization | `new-project` |
+| `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health` |
+| `blueprint-map` | `implemented` | Brownfield codebase mapping | `map-codebase` |
+
+## Planned Later Skills
+
+| Skill | Status | Purpose | Primary Commands |
+|---|---|---|---|
+| `blueprint-phase-discovery` | `planned` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
+| `blueprint-phase-planning` | `planned` | Plan synthesis and plan checks | `plan-phase`, `plan-milestone-gaps` |
+| `blueprint-phase-execution` | `planned` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
+| `blueprint-phase-validation` | `planned` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
+| `blueprint-roadmap-admin` | `planned` | Roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
+| `blueprint-capture` | `planned` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
+| `blueprint-debug` | `planned` | Debug investigations and recovery plans | `debug` |
+| `blueprint-review` | `planned` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
+| `blueprint-docs` | `planned` | Documentation generation and verification | `docs-update` |
+| `blueprint-maintenance` | `planned` | Git, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
+
+## Shipped Agent Contracts
+
+| Agent | Status | Purpose |
 |---|---|---|
-| `blueprint-router` | Root routing, command selection, and next-step guidance | `help`, `progress`, `next`, `do` |
-| `blueprint-bootstrap` | Repo bootstrap and project initialization | `new-project` |
-| `blueprint-governance` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health`, `pause-work`, `resume-work` |
-| `blueprint-phase-discovery` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
-| `blueprint-phase-planning` | Plan synthesis and plan checks | `plan-phase`, `plan-milestone-gaps` |
-| `blueprint-phase-execution` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
-| `blueprint-phase-validation` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
-| `blueprint-roadmap-admin` | Roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
-| `blueprint-capture` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
-| `blueprint-debug` | Debug investigations and recovery plans | `debug` |
-| `blueprint-review` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
-| `blueprint-docs` | Documentation generation and verification | `docs-update` |
-| `blueprint-map` | Brownfield codebase mapping | `map-codebase` |
-| `blueprint-maintenance` | Git, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
+| `blueprint-project-researcher` | `implemented` | Gather initial repo and product context during `new-project` |
+| `blueprint-roadmapper` | `implemented` | Build roadmap candidates and milestone structure |
+| `blueprint-mapper` | `implemented` | Create codebase mapping outputs |
+| `blueprint-planner` | `implemented` | Create plan files |
+| `blueprint-checker` | `implemented` | Verify plan quality before execution |
+| `blueprint-executor` | `implemented` | Execute plan tasks and produce summaries |
+| `blueprint-verifier` | `implemented` | Verify execution results and UAT evidence |
 
-## Planned Agents
+## Planned Later Agents
 
-| Agent | Purpose |
-|---|---|
-| `blueprint-project-researcher` | Gather initial repo and product context during `new-project` |
-| `blueprint-roadmapper` | Build roadmap candidates and milestone structure |
-| `blueprint-researcher` | Phase-specific technical research |
-| `blueprint-ui-designer` | Produce `UI-SPEC` contracts |
-| `blueprint-planner` | Create plan files |
-| `blueprint-checker` | Verify plan quality before execution |
-| `blueprint-executor` | Execute plan tasks and produce summaries |
-| `blueprint-verifier` | Verify execution results and UAT evidence |
-| `blueprint-mapper` | Create codebase mapping outputs |
-| `blueprint-reviewer` | Produce code review findings |
-| `blueprint-fixer` | Apply targeted fixes from review output |
-| `blueprint-debugger` | Run structured debugging investigations |
-| `blueprint-doc-writer` | Draft repo documentation |
-| `blueprint-doc-verifier` | Fact-check generated docs against the repo |
-| `blueprint-ui-auditor` | Perform retroactive UI audits |
-| `blueprint-security-auditor` | Verify threat mitigations and security coverage |
+| Agent | Status | Purpose |
+|---|---|---|
+| `blueprint-researcher` | `planned` | Phase-specific technical research |
+| `blueprint-ui-designer` | `planned` | Produce `UI-SPEC` contracts |
+| `blueprint-reviewer` | `planned` | Produce code review findings |
+| `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
+| `blueprint-debugger` | `planned` | Run structured debugging investigations |
+| `blueprint-doc-writer` | `planned` | Draft repo documentation |
+| `blueprint-doc-verifier` | `planned` | Fact-check generated docs against the repo |
+| `blueprint-ui-auditor` | `planned` | Perform retroactive UI audits |
+| `blueprint-security-auditor` | `planned` | Verify threat mitigations and security coverage |
 
 ## Command To Agent Expectations
 

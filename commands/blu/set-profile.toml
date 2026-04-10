@@ -2,6 +2,8 @@ description = "Switch the active Blueprint project model profile without touchin
 prompt = """
 You are the `/blu:set-profile` command for Blueprint.
 
+Use `skills/blueprint-governance.md` as the primary orchestration contract.
+
 Argument contract:
 - Accept `<profile (quality|balanced|budget|inherit)>`.
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Blueprint moves from a locked docs-first planning pack to an executable Gemini extension in eight phases. The roadmap starts with the smallest foundation loop that can make future commands real, then expands outward through lifecycle commands, roadmap administration, capture flows, quality tooling, and finally workspace and maintenance operations.
+Blueprint moves from a locked docs-first planning pack to an executable Gemini extension in staged phases. The roadmap starts with the smallest foundation loop that can make future commands real, inserts a drift-repair checkpoint after the shipped Wave 0 work, and then expands outward through lifecycle commands, roadmap administration, capture flows, quality tooling, and finally workspace and maintenance operations.
 
 ## Phases
 
@@ -11,12 +11,13 @@ Blueprint moves from a locked docs-first planning pack to an executable Gemini e
 - Decimal phases (2.1, 2.2): urgent insertions if new work must land between planned phases
 
 - [x] **Phase 1: Foundation Bootstrap and State** - Create the extension scaffold, router entrypoints, and deterministic MCP-backed bootstrap flow
-- [ ] **Phase 2: Router, Health, and Mapping** - Make foundational read-path and brownfield foundation commands executable
+- [x] **Phase 2: Router, Health, and Mapping** - Make foundational read-path and brownfield foundation commands executable
+- [x] **Phase 2.1: Drift Recovery Gate** - Re-baseline docs, runtime surfaces, and Wave 0 parity before Phase 3 exposure
 - [ ] **Phase 3: Phase Discovery** - Add context capture, targeted research, and UI-spec flows
 - [ ] **Phase 4: Plan, Execute, and Verify** - Complete the core implementation loop for planned work
 - [ ] **Phase 5: Roadmap and Milestones** - Add roadmap mutation and milestone administration flows
 - [ ] **Phase 6: Capture and Lightweight Execution** - Add notes, todos, backlog, and lightweight execution/routing tools
-- [ ] **Phase 7: Quality and Shipping** - Add review, docs, security, UI, tests, and shipping flows
+- [ ] **Phase 7: Quality and Shipping** - Add review, verification-adjacent quality, and shipping workflows
 - [ ] **Phase 8: Workspaces and Maintenance** - Add global workspace management and maintenance commands within locked safety boundaries
 
 ## Phase Details
@@ -51,9 +52,26 @@ Plans:
 - [x] 02-02: Implement `help`, `progress`, and `health` on shared state primitives
 - [x] 02-03: Implement `map-codebase` artifact generation and related tests
 
+### Phase 2.1: Drift Recovery Gate
+**Goal**: Repair Phase 1 and Phase 2 drift so runtime truth, docs, and routing rules agree before more command surface is exposed.
+**Depends on**: Phase 2
+**Requirements**: DRIFT-01, DRIFT-02, DRIFT-03, DRIFT-04
+**Success Criteria** (what must be TRUE):
+  1. Control docs, handoff docs, and implementation state all describe the actual shipped Wave 0 runtime
+  2. `/blu`, `help`, and `progress` surface only commands whose manifests, primary skills, and required MCP tools exist
+  3. Shipped Wave 0 skills and agent contracts exist in the runtime and the codebase mapping bundle includes `STRUCTURE.md`
+  4. Later commands stay blocked until their missing roadmap/phase substrate exists
+**Plans**: 4 plans
+
+Plans:
+- [x] 02.1-01: Create `docs/DRIFT.MD` and truth-sync control docs plus implementation state
+- [x] 02.1-02: Add runtime Wave 0 skills and agent contracts, then harden command discovery against planned-only commands
+- [x] 02.1-03: Re-baseline shipped Wave 0 command specs and manifests to restore GSD intent without breaking Blueprint deltas
+- [x] 02.1-04: Add consistency, routing, and parity regression coverage before allowing later phases
+
 ### Phase 3: Phase Discovery
 **Goal**: Add the pre-planning discovery commands that capture context before plan creation.
-**Depends on**: Phase 2
+**Depends on**: Phase 2.1
 **Requirements**: LIFE-01, LIFE-02, LIFE-03
 **Success Criteria** (what must be TRUE):
   1. User can capture phase framing in durable context artifacts
@@ -144,12 +162,15 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 2.1 → 3 → 4 → 5 → 6 → 7 → 8
+
+Phase 3 and beyond remain blocked from runtime exposure until their missing substrate is implemented deliberately.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Bootstrap and State | 3/3 | Complete | 2026-04-11 |
-| 2. Router, Health, and Mapping | 0/3 | Not started | - |
+| 2. Router, Health, and Mapping | 3/3 | Complete | 2026-04-11 |
+| 2.1. Drift Recovery Gate | 4/4 | Complete | 2026-04-11 |
 | 3. Phase Discovery | 0/3 | Not started | - |
 | 4. Plan, Execute, and Verify | 0/4 | Not started | - |
 | 5. Roadmap and Milestones | 0/3 | Not started | - |

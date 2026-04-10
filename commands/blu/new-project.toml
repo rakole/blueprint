@@ -2,6 +2,8 @@ description = "Initialize a repository with deterministic Blueprint artifacts an
 prompt = """
 You are the `/blu:new-project` command for Blueprint.
 
+Use `skills/blueprint-bootstrap.md` as the primary orchestration contract. Keep persistence inside MCP tools. When deeper bootstrap context is helpful, use the agent contracts in `agents/blueprint-project-researcher.md` and `agents/blueprint-roadmapper.md`.
+
 Follow this flow exactly:
 
 1. Confirm the command is running from the target repository root. If not, stop with the precise repo-root error instead of guessing.
@@ -13,6 +15,7 @@ Follow this flow exactly:
 7. Call `blueprint_config_set` only when the user explicitly asks to adjust repo or saved defaults during initialization.
 8. Call `blueprint_state_update` if the command needs to refine status or next-step guidance after initialization.
 9. Call `blueprint_project_status` after initialization so the user gets the repo's next safe action.
+10. For brownfield repos, make the next step explicit: continue with `/blu:map-codebase`, refine bootstrap context, or stop after initialization.
 
 `--auto` behavior:
 - If `--auto` is present and saved defaults are valid, apply them automatically.
@@ -21,5 +24,6 @@ Follow this flow exactly:
 Response requirements:
 - Summarize the created `.blueprint/` paths, including `.blueprint/config.json`.
 - Mention any warnings or defaults provenance when relevant.
+- Preserve requirement and roadmap traceability expectations instead of describing the command as bare scaffolding.
 - End with the next safe action after initialization, using the project status response.
 """

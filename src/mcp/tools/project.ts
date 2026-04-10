@@ -5,19 +5,24 @@ import * as z from "zod/v4";
 
 import {
   BLUEPRINT_DIR,
+  artifactToolDefinitions,
   blueprintArtifactScaffold,
   ensureRepoRoot,
   getBlueprintRoot,
   inspectBlueprintArtifacts
 } from "./artifacts.js";
 import {
+  configToolDefinitions,
   blueprintConfigGet,
   seedProjectConfig
 } from "./config.js";
 import {
+  stateToolDefinitions,
   blueprintStateLoad,
   blueprintStateUpdate
 } from "./state.js";
+
+type CommandStatus = "planned" | "implemented" | "blocked" | "repairing";
 
 type CommandCatalogEntry = {
   command: string;
@@ -26,6 +31,17 @@ type CommandCatalogEntry = {
   family: string;
   risk: string;
   primarySkill: string;
+  declaredStatus: CommandStatus;
+  status: CommandStatus;
+  implemented: boolean;
+  blockedBy: string[];
+  manifestPath: string | null;
+  skillPath: string | null;
+  specPath: string | null;
+  requiredTools: string[];
+  requiredToolsSatisfied: boolean;
+  optionalAgents: string[];
+  availableOptionalAgents: string[];
 };
 
 type CommandCatalogResult = {
@@ -86,6 +102,20 @@ const projectStatusInputSchema = {
   cwd: z.string().optional()
 };
 
+const ROOT_COMMAND_MANIFEST = "commands/blu.toml";
+const COMMAND_SPEC_PREFIX = "docs/commands";
+const PROJECT_TOOL_NAMES = [
+  "blueprint_command_catalog",
+  "blueprint_project_init",
+  "blueprint_project_status"
+] as const;
+const AVAILABLE_TOOL_NAMES = new Set([
+  ...PROJECT_TOOL_NAMES,
+  ...configToolDefinitions.map((definition) => definition.name),
+  ...stateToolDefinitions.map((definition) => definition.name),
+  ...artifactToolDefinitions.map((definition) => definition.name)
+]);
+
 const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
   commands: {
     "new-project": {
@@ -94,7 +124,25 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
       wave: 0,
       family: "Foundation",
       risk: "Medium",
-      primarySkill: "blueprint-bootstrap"
+      primarySkill: "blueprint-bootstrap",
+      declaredStatus: "implemented",
+      status: "implemented",
+      implemented: true,
+      blockedBy: [],
+      manifestPath: "commands/blu/new-project.toml",
+      skillPath: "skills/blueprint-bootstrap.md",
+      specPath: "docs/commands/new-project.md",
+      requiredTools: [
+        "blueprint_project_init",
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_config_set",
+        "blueprint_state_update",
+        "blueprint_artifact_scaffold"
+      ],
+      requiredToolsSatisfied: true,
+      optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+      availableOptionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"]
     }
   },
   waves: {
@@ -105,7 +153,11 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
   }
 };
 
-async function pathExists(targetPath: string): Promise<boolean> {
+function bundledUrl(relativePath: string): URL {
+  return new URL(`../../../${relativePath}`, import.meta.url);
+}
+
+async function pathExists(targetPath: string | URL): Promise<boolean> {
   try {
     await fs.access(targetPath);
     return true;
@@ -139,8 +191,153 @@ async function inferProjectName(
   return (await readPackageProjectName(projectRoot)) ?? path.basename(projectRoot);
 }
 
+function extractMarkdownSection(markdown: string, heading: string): string {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+
+  return match?.[1] ?? "";
+}
+
+function parseRequiredTools(markdown: string): string[] {
+  const section = extractMarkdownSection(markdown, "Required MCP Tools");
+
+  return [...section.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
+}
+
+function parseOptionalAgents(markdown: string, primarySkill: string): string[] {
+  const section = extractMarkdownSection(markdown, "Skills And Subagents");
+  const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
+
+  return values.filter((value) => value !== primarySkill);
+}
+
+function commandManifestPath(commandName: string): string {
+  return `commands/blu/${commandName}.toml`;
+}
+
+function commandSkillPath(primarySkill: string): string {
+  return `skills/${primarySkill}.md`;
+}
+
+function commandAgentPath(agentName: string): string {
+  return `agents/${agentName}.md`;
+}
+
+type ParsedCatalogRow = {
+  commandName: string;
+  wave: number;
+  family: string;
+  primarySkill: string;
+  declaredStatus: CommandStatus;
+  risk: string;
+};
+
+function parseCatalogRow(cells: string[]): ParsedCatalogRow | null {
+  if (cells.length < 7) {
+    return null;
+  }
+
+  const commandName = cells[0].replaceAll("`", "");
+  const wave = Number.parseInt(cells[1], 10);
+  const family = cells[2].replaceAll("`", "");
+  const primarySkill = cells[3].replaceAll("`", "");
+  const declaredStatus = cells[4].replaceAll("`", "") as CommandStatus;
+  const risk = cells[6].replaceAll("`", "");
+
+  if (
+    !commandName ||
+    Number.isNaN(wave) ||
+    !["planned", "implemented", "blocked", "repairing"].includes(declaredStatus)
+  ) {
+    return null;
+  }
+
+  return {
+    commandName,
+    wave,
+    family,
+    primarySkill,
+    declaredStatus,
+    risk
+  };
+}
+
+async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<CommandCatalogEntry> {
+  const specPath = `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
+  const manifestPath = commandManifestPath(parsedRow.commandName);
+  const skillPath = commandSkillPath(parsedRow.primarySkill);
+  const specUrl = bundledUrl(specPath);
+  const manifestUrl = bundledUrl(manifestPath);
+  const skillUrl = bundledUrl(skillPath);
+  const manifestExists = await pathExists(manifestUrl);
+  const skillExists = await pathExists(skillUrl);
+  const specExists = await pathExists(specUrl);
+  const specMarkdown = specExists ? await fs.readFile(specUrl, "utf8") : "";
+  const requiredTools = parseRequiredTools(specMarkdown);
+  const optionalAgents = parseOptionalAgents(specMarkdown, parsedRow.primarySkill);
+  const availableOptionalAgents: string[] = [];
+  const blockedBy: string[] = [];
+
+  if (!specExists) {
+    blockedBy.push(`Missing command spec: ${specPath}`);
+  }
+
+  if (!manifestExists) {
+    blockedBy.push(`Missing command manifest: ${manifestPath}`);
+  }
+
+  if (!skillExists) {
+    blockedBy.push(`Missing primary skill: ${skillPath}`);
+  }
+
+  const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
+  const requiredToolsSatisfied = missingTools.length === 0;
+
+  for (const toolName of missingTools) {
+    blockedBy.push(`Missing required MCP tool: ${toolName}`);
+  }
+
+  for (const agentName of optionalAgents) {
+    if (await pathExists(bundledUrl(commandAgentPath(agentName)))) {
+      availableOptionalAgents.push(agentName);
+    }
+  }
+
+  let status = parsedRow.declaredStatus;
+
+  if (manifestExists && skillExists && requiredToolsSatisfied) {
+    status = "implemented";
+  } else if (manifestExists || skillExists) {
+    status = "repairing";
+  } else if (blockedBy.length > 0) {
+    status = "blocked";
+  }
+
+  return {
+    command: `/blu:${parsedRow.commandName}`,
+    route: `/blu ${parsedRow.commandName}`,
+    wave: parsedRow.wave,
+    family: parsedRow.family,
+    risk: parsedRow.risk,
+    primarySkill: parsedRow.primarySkill,
+    declaredStatus: parsedRow.declaredStatus,
+    status,
+    implemented: status === "implemented",
+    blockedBy,
+    manifestPath: manifestExists ? manifestPath : null,
+    skillPath: skillExists ? skillPath : null,
+    specPath: specExists ? specPath : null,
+    requiredTools,
+    requiredToolsSatisfied,
+    optionalAgents,
+    availableOptionalAgents
+  };
+}
+
 async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
-  const commandCatalogPath = new URL("../../../docs/COMMAND-CATALOG.md", import.meta.url);
+  const commandCatalogPath = bundledUrl("docs/COMMAND-CATALOG.md");
 
   try {
     const markdown = await fs.readFile(commandCatalogPath, "utf8");
@@ -160,29 +357,20 @@ async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
         .slice(1, -1)
         .map((cell) => cell.trim());
 
-      if (cells.length < 6) {
+      const parsedRow = parseCatalogRow(cells);
+
+      if (!parsedRow) {
         continue;
       }
 
-      const commandName = cells[0].replaceAll("`", "");
-      const wave = Number.parseInt(cells[1], 10);
-      const family = cells[2].replaceAll("`", "");
-      const primarySkill = cells[3].replaceAll("`", "");
-      const risk = cells[5].replaceAll("`", "");
+      const entry = await buildCommandCatalogEntry(parsedRow);
 
-      commands[commandName] = {
-        command: `/blu:${commandName}`,
-        route: `/blu ${commandName}`,
-        wave,
-        family,
-        risk,
-        primarySkill
-      };
+      commands[parsedRow.commandName] = entry;
 
-      const waveKey = String(wave);
+      const waveKey = String(parsedRow.wave);
       waves[waveKey] ??= [];
-      waves[waveKey].push(commandName);
-      aliases[commandName] = [`/blu ${commandName}`];
+      waves[waveKey].push(parsedRow.commandName);
+      aliases[parsedRow.commandName] = [`/blu ${parsedRow.commandName}`];
     }
 
     return Object.keys(commands).length > 0

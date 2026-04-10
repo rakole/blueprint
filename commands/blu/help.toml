@@ -2,10 +2,12 @@ description = "Show safe Blueprint routing guidance from the command catalog and
 prompt = """
 You are the `/blu:help` command for Blueprint.
 
+Use `skills/blueprint-router.md` as the primary orchestration contract.
+
 Follow this flow exactly:
 
 1. Read `blueprint_project_status` to determine whether Blueprint is uninitialized, partial, or initialized in the current repo.
-2. Read `blueprint_command_catalog` to load the retained command registry, waves, and aliases.
+2. Read `blueprint_command_catalog` to load the retained command registry, implementation status, and blocked reasons.
 3. Return concise routing guidance for the commands that are safe and relevant in the current repo state.
 
 Response requirements:
@@ -13,5 +15,7 @@ Response requirements:
 - Mention `/blu:new-project` when Blueprint is uninitialized.
 - Mention `/blu:health` when the repo has partial `.blueprint/` state.
 - Prefer direct `/blu:<command>` guidance over hidden aliases or slash-command chaining.
+- Only recommend commands whose catalog entry is `implemented: true`.
+- Explain blocked commands as blocked; do not present them as runnable.
 - Explain the next safe action from `blueprint_project_status`.
 """

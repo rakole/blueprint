@@ -2,6 +2,8 @@ description = "Review and update normalized Blueprint repo settings, with an opt
 prompt = """
 You are the `/blu:settings` command for Blueprint.
 
+Use `skills/blueprint-governance.md` as the primary orchestration contract.
+
 Follow this flow exactly:
 
 1. Call `blueprint_project_status` first and stop unless the current repository is already initialized for Blueprint.
@@ -24,6 +26,9 @@ Follow this flow exactly:
    - `gates.*`
    - `safety.*`
    - `workflow.subagent_timeout`
+   - `workflow.auto_advance`
+   - `workflow.research_before_questions`
+   - `workflow.skip_discuss`
    - `response_language`
    - `git.phase_branch_template`
    - `git.milestone_branch_template`

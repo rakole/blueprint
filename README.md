@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime is now landing one command at a time on top of that contract.
+This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists and is being tightened through an explicit drift-repair checkpoint before any Phase 3 expansion.
 
 ## What Is Locked
 
@@ -12,7 +12,13 @@ This repository still carries the planning pack that locked the product and arch
 - Global mutable state location: `~/.gemini/blueprint/`
 - Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in `~/.gemini/blueprint/defaults.json`
 - Runtime architecture: Gemini commands, Gemini skills, Gemini subagents, advisory hooks, and an extension-bundled MCP server
-- Delivery approach: no conversion yet; planning docs first, then granular command-by-command implementation
+- Delivery approach: docs-first planning pack first, then granular command-by-command implementation with repair checkpoints when runtime and docs drift
+
+## Current Checkpoint
+
+- Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
+- Recovery gate: no Phase 3+ implementation or command exposure until `docs/DRIFT.MD` is closed
+- Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
 ## Retained Commands
 
@@ -89,14 +95,15 @@ Wave 5 workspace and maintenance:
 ## Current Repo Contents
 
 - `docs/DECISIONS.md`: locked project decisions
+- `docs/DRIFT.MD`: canonical repair ledger for the current checkpoint
 - `docs/ARCHITECTURE.md`: extension structure and runtime boundaries
 - `docs/ARTIFACT-SCHEMA.md`: `.blueprint/`, normalized config schema, and global-state schema
 - `docs/MCP-TOOLS.md`: proposed MCP tool contracts, including scoped config reads and writes
-- `docs/SKILLS-AND-AGENTS.md`: planned Gemini skills and subagents
+- `docs/SKILLS-AND-AGENTS.md`: shipped and planned Gemini skills and subagents
 - `docs/HOOKS-POLICIES.md`: advisory hooks and safety policy
 - `docs/MIGRATION-FROM-GSD.md`: command and behavior mapping from GSD to Blueprint
-- `docs/GSD-RUNTIME-MIGRATION.md`: runtime-porting matrix for retained workflows and hooks
-- `docs/COMMAND-CATALOG.md`: one-page retained-command index with wave, skill, write surface, and risk
+- `docs/GSD-RUNTIME-MIGRATION.md`: runtime-porting matrix for retained workflows and explicit Blueprint deltas
+- `docs/COMMAND-CATALOG.md`: retained-command index with wave, skill, status, write surface, and risk
 - `docs/GEMINI-CONSTRAINTS.md`: Gemini CLI restrictions that shaped the Blueprint design
 - `docs/IMPLEMENTATION-ORDER.md`: dependency-ordered command queue
 - `docs/PHASE-LIFECYCLE.md`: artifact flow across discuss, research, planning, execution, validation, and verification
@@ -112,17 +119,45 @@ These runtime files exist today:
 - `GEMINI.md`
 - `commands/blu.toml`
 - `commands/blu/new-project.toml`
+- `commands/blu/settings.toml`
+- `commands/blu/set-profile.toml`
 - `commands/blu/help.toml`
 - `commands/blu/progress.toml`
 - `commands/blu/health.toml`
+- `commands/blu/map-codebase.toml`
+- `skills/blueprint-router.md`
+- `skills/blueprint-bootstrap.md`
+- `skills/blueprint-governance.md`
+- `skills/blueprint-map.md`
+- `agents/blueprint-project-researcher.md`
+- `agents/blueprint-roadmapper.md`
+- `agents/blueprint-mapper.md`
+- `agents/blueprint-planner.md`
+- `agents/blueprint-checker.md`
+- `agents/blueprint-executor.md`
+- `agents/blueprint-verifier.md`
+- `src/mcp/server.ts`
+- `src/mcp/tools/project.ts`
+- `src/mcp/tools/config.ts`
+- `src/mcp/tools/state.ts`
+- `src/mcp/tools/artifacts.ts`
+
+## Command Status
+
+Blueprint uses one runtime-facing vocabulary across docs and the command catalog:
+
+- `implemented`: manifest, primary skill, and required MCP tools are present
+- `repairing`: partially shipped and under active drift repair
+- `blocked`: not safe to expose because required runtime pieces are missing
+- `planned`: documented future intent only
 
 ## Next Implementation Slice
 
-The recommended first code slice is:
+The current slice is the Phase 2.1 drift-repair checkpoint:
 
-1. Root extension scaffold
-2. `/blu` router
-3. `/blu:new-project`
-4. Shared MCP primitives for project, config, state, roadmap, and artifacts
+1. Truth-sync control docs with the real Wave 0 runtime
+2. Keep command discovery implementation-aware so planned-only commands stay blocked
+3. Preserve Blueprint-only deltas while restoring lost GSD intent for shipped Wave 0 commands
+4. Hold later command exposure until roadmap and phase substrate exists
 
-The detailed breakdown lives in `docs/HANDOFF.md` and `docs/IMPLEMENTATION-ORDER.md`.
+The repair ledger lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

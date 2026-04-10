@@ -7,14 +7,15 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Wave 0 foundation expansion on top of the shipped Phase 1 loop
-- Runtime status: Phase 1 foundation loop is implemented and verified
-- Planning status: shared architecture docs plus executable Phase 1 runtime artifacts are present
-- Implementation strategy: build one command at a time, starting with Wave 0
+- Current milestone: Phase 2.1 drift recovery on top of the shipped Wave 0 foundation
+- Runtime status: Wave 0 commands are implemented, but docs and routing are being re-baselined before any Phase 3 expansion
+- Planning status: shared architecture docs, executable Wave 0 runtime artifacts, and an explicit repair ledger are present
+- Implementation strategy: build one command at a time, repair drift before broadening the surface, and keep later commands blocked until their substrate exists
 
 ## Stable References
 
 - Durable repo instructions: `AGENTS.md`
+- Drift ledger: `docs/DRIFT.MD`
 - Shared architecture decisions: `docs/DECISIONS.md`
 - MCP contracts: `docs/MCP-TOOLS.md`
 - Command inventory: `docs/COMMAND-CATALOG.md`
@@ -28,6 +29,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Agents own bounded deep work
 - Hooks remain advisory rather than state-owning
 - Scripts are not the primary persistence layer
+- `blueprint_command_catalog` is runtime-aware and should be treated as the source of routable-command truth
 
 ## Planned MCP Responsibilities
 
@@ -50,6 +52,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - workspace registry
 - update metadata
 - patch registry
+- `.planning/` in this repo is implementation bookkeeping for the GSD build-out and must not be surfaced as Blueprint runtime state
 
 ## Retained Commands
 
@@ -61,6 +64,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Important Docs
 
 - `README.md`
+- `docs/DRIFT.MD`
 - `docs/DECISIONS.md`
 - `docs/ARCHITECTURE.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -75,25 +79,24 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Recommended Read Order Before Coding
 
 1. `AGENTS.md`
-2. `docs/DECISIONS.md`
-3. `docs/ARCHITECTURE.md`
-4. `docs/ARTIFACT-SCHEMA.md`
-5. `docs/MCP-TOOLS.md`
-6. `docs/GEMINI-CONSTRAINTS.md`
-7. `docs/PHASE-LIFECYCLE.md`
-8. `docs/SKILLS-AND-AGENTS.md`
-9. `docs/IMPLEMENTATION-ORDER.md`
-10. `docs/COMMAND-CATALOG.md`
-11. `docs/commands/<command>.md`
+2. `docs/DRIFT.MD`
+3. `docs/DECISIONS.md`
+4. `docs/ARCHITECTURE.md`
+5. `docs/ARTIFACT-SCHEMA.md`
+6. `docs/MCP-TOOLS.md`
+7. `docs/GEMINI-CONSTRAINTS.md`
+8. `docs/PHASE-LIFECYCLE.md`
+9. `docs/SKILLS-AND-AGENTS.md`
+10. `docs/IMPLEMENTATION-ORDER.md`
+11. `docs/COMMAND-CATALOG.md`
+12. `docs/commands/<command>.md`
 
 ## Next Implementation Slice
 
-- `src/mcp/tools/config.ts` extensions for settings/profile flows
-- `commands/blu/help.toml` or inline `/blu` help routing support
-- `commands/blu/progress.toml`
-- `commands/blu/health.toml`
-- `src/mcp` read-path helpers needed by help/progress/health
-- `map-codebase` command scaffolding and initial artifact tests
+- close the drift checklist in `docs/DRIFT.MD`
+- keep planned-only commands blocked in the runtime catalog
+- finish Wave 0 parity notes against local upstream GSD assets
+- implement roadmap and phase MCP substrate before exposing lifecycle and roadmap commands
 
 ## Guardrail Snapshot
 
@@ -105,7 +108,8 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Session Notes
 
-- The repo now contains a buildable Gemini extension shell, `/blu`, `/blu:new-project`, and Phase 1 MCP primitives
-- `npm run typecheck`, `npm run build`, and `npm test` all pass for the Phase 1 slice
-- Phase 1 review is clean and verification passed in `.planning/phases/01-foundation-bootstrap-and-state/01-REVIEW.md` and `01-VERIFICATION.md`
-- Future sessions should build Phase 2 on top of the shipped `.blueprint/` bootstrap rather than revisiting the completed scaffold
+- The repo contains a buildable Gemini extension shell plus the full shipped Wave 0 command set
+- Runtime `skills/` and `agents/` surfaces now exist for the shipped Wave 0 contracts
+- The router/help/progress path must filter to commands whose catalog entry is `implemented`
+- `map-codebase` now owns a seven-document codebase bundle: `STACK`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `INTEGRATIONS`, and `CONCERNS`
+- Future sessions should not start Phase 3 or expose later commands until the drift checklist is closed and the missing substrate exists
