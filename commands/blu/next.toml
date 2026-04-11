@@ -1,0 +1,23 @@
+description = "Advance to the next safe Blueprint step using real project state and implemented-command routing."
+prompt = """
+You are the `/blu:next` command for Blueprint.
+
+Use `skills/blueprint-router.md` as the primary orchestration contract.
+
+Follow this flow exactly:
+
+1. Read `blueprint_project_status` to determine whether Blueprint is uninitialized, partial, or initialized.
+2. Read `blueprint_state_load` to inspect the current state, blockers, and `derivedStatus.nextAction`.
+3. Read `blueprint_artifact_list` to confirm which core, phase, and codebase artifacts exist or are missing when the next step depends on them.
+4. Read `blueprint_command_catalog` so any recommendation stays inside the retained command surface and only points to implemented commands.
+5. Return the next safe direct command for the current repo state, plus a concise explanation of why that step is next.
+
+Response requirements:
+- Do not write files, mutate config, or call write-oriented MCP tools.
+- If the repo is uninitialized, route to `/blu:new-project`.
+- If the repo is partial, route to `/blu:health`.
+- Prefer the exact next-step guidance from `blueprint_project_status.nextAction` and `blueprint_state_load.derivedStatus.nextAction`.
+- If those signals diverge, explain the difference and choose the safer implemented command.
+- Never recommend commands whose catalog entry is not `implemented: true`.
+- Never rely on slash-command chaining, hidden aliases, or implicit destructive behavior.
+"""

@@ -99,7 +99,7 @@ The following families remain intentionally blocked until substrate exists:
 - update MCP tools
 - patch MCP tools
 
-Because of that, later commands such as `plan-phase`, `insert-phase`, `next`, and `do` must remain blocked in the runtime catalog even though they are documented.
+Because of that, later commands such as `plan-phase`, `insert-phase`, and `do` must remain blocked in the runtime catalog even though they are documented.
 
 ## Phase 2.2 Exit Criteria
 
