@@ -17,7 +17,7 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
 - Gemini-specific constraint notes to keep implementation aligned with the host CLI
-- runtime command manifests for the shipped Wave 0, Phase 3 discovery, and `next` router surfaces
+- runtime command manifests for the shipped Wave 0, Phase 3 discovery, `next`, and `pause-work` surfaces
 - shipped Wave 0 and Phase 3 discovery skill files in `skills/`
 - shipped Wave 0 and Phase 3 discovery agent contract files in `agents/`
 - implementation-aware command catalog metadata in `blueprint_command_catalog`
@@ -29,7 +29,7 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 Finish any remaining Phase 3 closeout checks, then continue into Phase 4 Validate and Verify:
 
 1. Implement `validate-phase`, then `verify-work`
-2. Keep `pause-work` and `resume-work` blocked until their required manifests, skills, and MCP tools exist
+2. Keep `resume-work` blocked until its required manifest and runtime substrate exist
 3. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
 
 ## First Implementation Slice

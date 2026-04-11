@@ -34,6 +34,8 @@ Stay close to upstream GSD governance flows for settings, profile selection, and
 - `blueprint_config_set`
 - `blueprint_config_set_profile`
 - `blueprint_state_load`
+- `blueprint_pause_handoff_get`
+- `blueprint_pause_handoff_write`
 - `blueprint_state_sync`
 - `blueprint_artifact_list`
 - `blueprint_artifact_validate`
@@ -46,3 +48,5 @@ Stay close to upstream GSD governance flows for settings, profile selection, and
 4. `health --repair` must explain exact writes before it performs them.
 5. If Blueprint is uninitialized, route to `/blu:new-project` instead of pretending repair equals bootstrap.
 6. Keep all config persistence in MCP.
+7. `pause-work` must persist a single durable handoff in `.blueprint/reports/` through MCP and require explicit confirmation before replacing it.
+8. `pause-work` should preserve resumable context without silently creating a git commit; keep the next implemented follow-up on `/blu:progress`.

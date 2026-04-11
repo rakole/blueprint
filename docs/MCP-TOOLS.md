@@ -35,6 +35,8 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 |---|---|---|
 | `blueprint_state_load` | Load current state and derived signals | `{state, blockers, derivedStatus}` |
 | `blueprint_state_update` | Patch `STATE.md` deterministically | `{updatedFields, statePath}` |
+| `blueprint_pause_handoff_get` | Read the latest `pause-work` handoff report | `{found, path, handoff, reason}` |
+| `blueprint_pause_handoff_write` | Persist the latest `pause-work` handoff report with overwrite protection | `{path, written, created, overwritten, status, handoff}` |
 | `blueprint_state_sync` | Reconstruct state from artifacts | `{syncedFields, warnings}` |
 
 ### Roadmap and Phase Management
@@ -99,6 +101,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 
 - `new-project`, `settings`, `set-profile`, `progress`, `health` lean on project, config, and state tools.
 - `/blu`, `help`, and `progress` must filter to catalog entries where `implemented` is `true`.
+- `pause-work` uses `blueprint_pause_handoff_get` and `blueprint_pause_handoff_write` to keep the latest resumable handoff in `.blueprint/reports/` while `blueprint_state_update` keeps `STATE.md` aligned.
 - `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
 - lifecycle commands lean on phase, artifact, and state tools.
