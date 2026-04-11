@@ -7,9 +7,9 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Phase 4 Plan, Execute, and Verify after Phase 3 completed on 2026-04-11
+- Current milestone: Phase 3 discovery parity closeout after the 2026-04-11 runtime shipment; Phase 4 remains the next broader rollout
 - Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`) are implemented, and routing still filters to implemented commands only
-- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, repaired research-phase parity guarantees, and Phase 3 execution summaries are present
+- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, and Phase 3 execution summaries are present
 - Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, and keep later commands blocked until their substrate exists
 
 ## Stable References

@@ -9,6 +9,7 @@ import {
   ensureParentDirectory,
   ensureRepoRoot,
   inspectBlueprintArtifacts,
+  validateResearchArtifactContent,
   resolveBlueprintPath,
   toRepoRelativePath
 } from "./artifacts.js";
@@ -60,6 +61,29 @@ type StateSyncResult = {
   statePath: string;
 };
 
+type CommandCatalogEntry = {
+  implemented: boolean;
+};
+
+type CommandCatalogResult = {
+  commands: Record<string, CommandCatalogEntry>;
+};
+
+type CurrentPhaseArtifactStatus = {
+  currentPhase: string | null;
+  phaseDir: string | null;
+  phasePrefix: string | null;
+  contextPath: string | null;
+  researchPath: string | null;
+  uiSpecPath: string | null;
+  hasContext: boolean;
+  hasResearch: boolean;
+  hasUiSpec: boolean;
+  researchValid: boolean | null;
+  blockers: string[];
+  warnings: string[];
+};
+
 const DEFAULT_STATE: BlueprintState = {
   projectStatus: "uninitialized",
   currentMilestone: "v1",
@@ -91,6 +115,8 @@ const stateLoadInputSchema = {
 const stateSyncInputSchema = {
   cwd: z.string().optional()
 };
+
+let implementedCommandNamesPromise: Promise<Set<string>> | null = null;
 
 function renderStateDocument(state: BlueprintState): string {
   const blockers =
@@ -137,6 +163,209 @@ function parseStateDocument(raw: string): BlueprintState {
   };
 }
 
+function normalizePhaseNumber(value: string): string {
+  return value
+    .split(".")
+    .map((segment) => {
+      const trimmed = segment.trim().replace(/^0+(?=\d)/, "");
+      return trimmed.length > 0 ? trimmed : "0";
+    })
+    .join(".");
+}
+
+function formatPhasePrefix(value: string): string {
+  const normalized = normalizePhaseNumber(value);
+  const [head, ...rest] = normalized.split(".");
+
+  return [head.padStart(2, "0"), ...rest].join(".");
+}
+
+async function listImmediateDirectories(rootPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(rootPath, { withFileTypes: true });
+
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function extractPhaseNumberFromDirectory(phaseDir: string): string | null {
+  return phaseDir.match(/^(\d+(?:\.\d+)?)/)?.[1] ?? null;
+}
+
+async function getImplementedCommandNames(): Promise<Set<string>> {
+  if (!implementedCommandNamesPromise) {
+    implementedCommandNamesPromise = (async () => {
+      try {
+        const projectModule = (await import("./project.js")) as {
+          blueprintCommandCatalog: () => Promise<CommandCatalogResult>;
+        };
+        const catalog = await projectModule.blueprintCommandCatalog();
+
+        return new Set(
+          Object.entries(catalog.commands)
+            .filter(([, entry]) => entry.implemented)
+            .map(([commandName]) => `/blu:${commandName}`)
+        );
+      } catch {
+        return new Set();
+      }
+    })();
+  }
+
+  return implementedCommandNamesPromise;
+}
+
+async function inspectCurrentPhaseArtifacts(
+  projectRoot: string,
+  inspectionPhases: string[],
+  currentPhase: string | null
+): Promise<CurrentPhaseArtifactStatus> {
+  const warnings: string[] = [];
+  const blockers: string[] = [];
+
+  if (!currentPhase) {
+    warnings.push("No current phase could be determined; Blueprint will fall back to progress.");
+
+    return {
+      currentPhase: null,
+      phaseDir: null,
+      phasePrefix: null,
+      contextPath: null,
+      researchPath: null,
+      uiSpecPath: null,
+      hasContext: false,
+      hasResearch: false,
+      hasUiSpec: false,
+      researchValid: null,
+      blockers,
+      warnings
+    };
+  }
+
+  const normalizedPhase = normalizePhaseNumber(currentPhase);
+  const phaseDirs = await listImmediateDirectories(
+    resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`)
+  );
+  const matchingPhaseDirs = phaseDirs.filter((phaseDir) => {
+    const phaseNumber = extractPhaseNumberFromDirectory(phaseDir);
+
+    return phaseNumber !== null && normalizePhaseNumber(phaseNumber) === normalizedPhase;
+  });
+
+  if (matchingPhaseDirs.length === 0) {
+    blockers.push(
+      `Current phase ${currentPhase} is missing a matching directory under ${BLUEPRINT_DIR}/phases/.`
+    );
+    warnings.push(
+      `Blueprint could not resolve a current-phase directory for ${currentPhase}; next action will stay on health until the phase tree is repaired.`
+    );
+
+    return {
+      currentPhase,
+      phaseDir: null,
+      phasePrefix: formatPhasePrefix(normalizedPhase),
+      contextPath: null,
+      researchPath: null,
+      uiSpecPath: null,
+      hasContext: false,
+      hasResearch: false,
+      hasUiSpec: false,
+      researchValid: null,
+      blockers,
+      warnings
+    };
+  }
+
+  if (matchingPhaseDirs.length > 1) {
+    blockers.push(
+      `Current phase ${currentPhase} has multiple matching directories under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs
+        .map((phaseDir) => `${BLUEPRINT_DIR}/phases/${phaseDir}/`)
+        .join(", ")}.`
+    );
+    warnings.push(
+      `Blueprint could not choose a single current-phase directory for ${currentPhase}; next action will stay on health until the ambiguity is resolved.`
+    );
+
+    return {
+      currentPhase,
+      phaseDir: null,
+      phasePrefix: formatPhasePrefix(normalizedPhase),
+      contextPath: null,
+      researchPath: null,
+      uiSpecPath: null,
+      hasContext: false,
+      hasResearch: false,
+      hasUiSpec: false,
+      researchValid: null,
+      blockers,
+      warnings
+    };
+  }
+
+  const phaseDir = matchingPhaseDirs[0];
+  const phasePrefix = formatPhasePrefix(normalizedPhase);
+  const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
+  const phaseArtifacts = new Set(
+    inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`))
+  );
+  const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
+  const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
+  const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
+  const hasContext = phaseArtifacts.has(contextPath);
+  const hasResearch = phaseArtifacts.has(researchPath);
+  const hasUiSpec = phaseArtifacts.has(uiSpecPath);
+  const hasLaterArtifacts = [...phaseArtifacts].some(
+    (artifact) =>
+      artifact.endsWith(`${phasePrefix}-DISCUSSION-LOG.md`) ||
+      artifact.endsWith(`${phasePrefix}-DISCUSS-CHECKPOINT.json`) ||
+      artifact.endsWith(`${phasePrefix}-RESEARCH.md`) ||
+      artifact.endsWith(`${phasePrefix}-UI-SPEC.md`)
+  );
+  let researchValid: boolean | null = null;
+
+  if (hasResearch) {
+    try {
+      const raw = await fs.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
+      const validation = validateResearchArtifactContent(raw);
+      researchValid = validation.valid;
+
+      for (const issue of validation.issues) {
+        warnings.push(`${researchPath}: ${issue}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`${researchPath}: ${message}`);
+      researchValid = false;
+    }
+  }
+
+  if (!hasContext && hasLaterArtifacts) {
+    warnings.push(
+      `Current phase ${currentPhase} has later discovery artifacts without a CONTEXT artifact; run /blu:discuss-phase ${currentPhase} to repair the phase scaffold.`
+    );
+  }
+
+  return {
+    currentPhase,
+    phaseDir,
+    phasePrefix,
+    contextPath,
+    researchPath,
+    uiSpecPath,
+    hasContext,
+    hasResearch,
+    hasUiSpec,
+    researchValid,
+    blockers,
+    warnings
+  };
+}
+
 async function readRoadmapSignals(projectRoot: string): Promise<{
   currentMilestone: string | null;
   currentPhase: string | null;
@@ -164,22 +393,55 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
   }
 }
 
-function deriveNextAction(projectStatus: string, blockers: string[], currentPhase: string): string {
-  if (projectStatus === "uninitialized") {
+async function deriveNextAction(args: {
+  projectStatus: string;
+  blockers: string[];
+  currentPhase: string | null;
+  phaseArtifacts: CurrentPhaseArtifactStatus;
+}): Promise<string> {
+  if (args.projectStatus === "uninitialized") {
     return "Run /blu:new-project";
   }
 
-  if (projectStatus === "partial") {
+  if (args.projectStatus === "partial") {
     return "Run /blu:health to inspect the partial .blueprint state";
   }
 
-  if (blockers.length > 0) {
+  if (args.blockers.length > 0) {
     return "Run /blu:health to inspect blockers and repair options";
   }
 
-  return currentPhase
-    ? `Run /blu:progress to review Phase ${currentPhase} and the next safe action`
-    : "Run /blu:progress to review the next safe Blueprint action";
+  const implementedCommands = await getImplementedCommandNames();
+  const discussPhaseCommand = "/blu:discuss-phase";
+  const researchPhaseCommand = "/blu:research-phase";
+  const uiPhaseCommand = "/blu:ui-phase";
+
+  if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
+    return "Run /blu:progress to review the next safe Blueprint action";
+  }
+
+  if (!args.phaseArtifacts.hasContext && implementedCommands.has(discussPhaseCommand)) {
+    return `Run ${discussPhaseCommand} ${args.currentPhase} to rebuild the current phase context`;
+  }
+
+  if (
+    args.phaseArtifacts.hasContext &&
+    !args.phaseArtifacts.hasResearch &&
+    implementedCommands.has(researchPhaseCommand)
+  ) {
+    return `Run ${researchPhaseCommand} ${args.currentPhase} to capture phase research`;
+  }
+
+  if (
+    args.phaseArtifacts.hasResearch &&
+    args.phaseArtifacts.researchValid === true &&
+    !args.phaseArtifacts.hasUiSpec &&
+    implementedCommands.has(uiPhaseCommand)
+  ) {
+    return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
+  }
+
+  return "Run /blu:progress to review the next safe Blueprint action";
 }
 
 async function buildSyncedState(projectRoot: string): Promise<{
@@ -207,18 +469,30 @@ async function buildSyncedState(projectRoot: string): Promise<{
 
   const projectStatus = inspection.readiness;
   const currentPhase = roadmapSignals.currentPhase ?? existingState.currentPhase;
-  const currentMilestone =
-    roadmapSignals.currentMilestone ?? existingState.currentMilestone;
+  const currentMilestone = roadmapSignals.currentMilestone ?? existingState.currentMilestone;
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
   const nonStructuralBlockers = existingState.blockers.filter(
     (blocker) => !blocker.startsWith("Missing .blueprint/")
   );
+  const currentPhaseArtifacts = await inspectCurrentPhaseArtifacts(
+    projectRoot,
+    inspection.phases,
+    currentPhase
+  );
   const blockers =
     projectStatus === "partial"
-      ? [...new Set([...nonStructuralBlockers, ...structuralBlockers])]
-      : nonStructuralBlockers;
+      ? [
+          ...new Set([
+            ...nonStructuralBlockers,
+            ...structuralBlockers,
+            ...currentPhaseArtifacts.blockers
+          ])
+        ]
+      : [...new Set([...nonStructuralBlockers, ...currentPhaseArtifacts.blockers])];
+
+  warnings.push(...currentPhaseArtifacts.warnings);
 
   return {
     state: {
@@ -227,7 +501,12 @@ async function buildSyncedState(projectRoot: string): Promise<{
       currentPhase,
       activeCommand:
         projectStatus === "partial" ? "/blu:health" : existingState.activeCommand,
-      nextAction: deriveNextAction(projectStatus, blockers, currentPhase),
+      nextAction: await deriveNextAction({
+        projectStatus,
+        blockers,
+        currentPhase,
+        phaseArtifacts: currentPhaseArtifacts
+      }),
       blockers,
       lastUpdated: new Date().toISOString()
     },

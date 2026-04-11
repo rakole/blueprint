@@ -1,9 +1,9 @@
 # Blueprint Hooks And Policies
 
-## Planned Hooks
+## Shipped Hooks
 
-No hook code ships in the current discovery-repair branch.
-This document locks the future hook boundary so Phase 3 runtime work does not accidentally imply shipped hooks that do not exist yet.
+Blueprint now ships three advisory hooks under `src/hooks/`, bundled through `hooks/hooks.json`.
+This document locks their boundary so Phase 3 runtime work does not accidentally turn them into hidden state-owning machinery.
 
 Blueprint keeps only advisory hooks in v1 planning.
 
@@ -75,9 +75,9 @@ These actions should happen only through bounded MCP-backed flows where required
 - `.blueprint/` mutations should prefer MCP tools over raw shell writes.
 - commands that scaffold or rewrite artifacts must validate required fields before returning success.
 
-## Future Hook Implementation Notes
+## Current Hook Implementation Notes
 
-- Hook code should live under `src/hooks/` and be bundled to `hooks/`.
+- Hook code lives under `src/hooks/` and is bundled to `hooks/`.
 - Hook configuration should be centralized in `hooks/hooks.json`.
 - Repo config must not enable or disable hooks; `.blueprint/config.json` is not a second hook-control surface.
-- Hook behavior should be testable using stdin/stdout fixtures once hook code lands.
+- Hook behavior should remain testable through stdin/stdout fixtures as runtime contracts evolve.

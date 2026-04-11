@@ -482,13 +482,6 @@ function buildLocateRecovery(reason: string | null): string[] {
     return [];
   }
 
-  if (reason.includes("ROADMAP.md")) {
-    return [
-      "Restore .blueprint/ROADMAP.md or reinitialize the project with /blu:new-project.",
-      "Run /blu:health after restoring artifacts to confirm Blueprint state is consistent."
-    ];
-  }
-
   if (reason.includes("no matching directory")) {
     return [
       "Create or restore the numbered phase directory under .blueprint/phases/ so it matches ROADMAP.md.",
@@ -500,6 +493,13 @@ function buildLocateRecovery(reason: string | null): string[] {
     return [
       "Rename duplicate phase directories so only one directory matches the requested phase number.",
       "Run /blu:health to confirm the phase tree is normalized before retrying discovery commands."
+    ];
+  }
+
+  if (reason.includes("ROADMAP.md")) {
+    return [
+      "Restore .blueprint/ROADMAP.md or reinitialize the project with /blu:new-project.",
+      "Run /blu:health after restoring artifacts to confirm Blueprint state is consistent."
     ];
   }
 

@@ -9,51 +9,37 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("control-plane docs describe the shipped Wave 0 runtime instead of a docs-only state", async () => {
-  const [agents, readme, gemini, handoff, memory, roadmap, state, drift] =
+test("control-plane docs describe the shipped Phase 3 runtime and active closeout state", async () => {
+  const [agents, readme, gemini, handoff, memory, drift, migration, hooks] =
     await Promise.all([
       readRepoFile("AGENTS.md"),
       readRepoFile("README.md"),
       readRepoFile("GEMINI.md"),
       readRepoFile("docs/HANDOFF.md"),
       readRepoFile("MEMORY.md"),
-      readRepoFile(".planning/ROADMAP.md"),
-      readRepoFile(".planning/STATE.md"),
-      readRepoFile("docs/DRIFT.MD")
+      readRepoFile("docs/DRIFT.MD"),
+      readRepoFile("docs/GSD-RUNTIME-MIGRATION.md"),
+      readRepoFile("docs/HOOKS-POLICIES.md")
     ]);
 
   assert.doesNotMatch(agents, /No Gemini extension runtime has been implemented yet/);
   assert.doesNotMatch(handoff, /No runtime code or Gemini extension scaffolding has been created yet/);
   assert.match(agents, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/);
-  assert.match(
-    agents,
-    /Phase 3 discovery is unblocked for implementation work|Phase 3 discovery shipped on 2026-04-11 and is under active repair/
-  );
+  assert.match(agents, /Phase 3 discovery shipped on 2026-04-11 and is under active repair/);
   assert.match(readme, /Wave 0 shipped commands/);
   assert.match(readme, /Phase 3 discovery commands are also shipped/);
-  assert.match(readme, /Phase 2\.1 and Phase 2\.2 both closed on 2026-04-11/);
-  assert.match(readme, /next implementation slice is Phase 4 Plan, Execute, and Verify/);
+  assert.match(readme, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
   assert.match(gemini, /Phase 3 discovery is now the next implementation slice|Phase 4/);
   assert.match(gemini, /\/blu:map-codebase/);
   assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
-  assert.match(handoff, /Phase 3 discovery is implemented/i);
-  assert.match(
-    memory,
-    /Current milestone: Phase 3 Phase Discovery|Current milestone: Phase 4 Plan, Execute, and Verify/
-  );
-  assert.match(roadmap, /Phase 2\.1: Drift Recovery Gate/);
-  assert.match(roadmap, /Phase 2\.2: Urgent Drift-Repair Follow-Up/);
-  assert.match(state, /Phase: 03|Phase: 04/);
-  assert.match(
-    state,
-    /Phase 2\.2 closed; ready to start Phase 3|Executing Phase 03|Phase 03 complete|Phase 4 ready to start/
-  );
+  assert.match(handoff, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
+  assert.match(memory, /Current milestone: Phase 3 discovery parity closeout/i);
   assert.match(drift, /Checkpoint: Phase 2\.2 future-contract drift repair/);
   assert.match(drift, /State: closed on 2026-04-11/);
-  assert.match(
-    drift,
-    /Phase 3 discovery is unblocked for implementation work|Phase 3 discovery was later shipped on 2026-04-11/
-  );
+  assert.match(drift, /repairs discovery parity gaps/i);
+  assert.match(migration, /Phase 3 discovery shipped on 2026-04-11 and remains in parity closeout/i);
+  assert.doesNotMatch(hooks, /No hook code ships/);
+  assert.match(hooks, /Blueprint now ships three advisory hooks/);
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
@@ -80,33 +66,18 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(drift, /`DRIFT-01` through `DRIFT-07`/);
 });
 
-test("drift requirements are backfilled and phase-mapped across roadmap and state docs", async () => {
-  const [requirements, roadmap, state] = await Promise.all([
-    readRepoFile(".planning/REQUIREMENTS.md"),
-    readRepoFile(".planning/ROADMAP.md"),
-    readRepoFile(".planning/STATE.md")
+test("runtime docs keep .planning and hook control out of Blueprint runtime ownership", async () => {
+  const [agents, memory, artifactSchema, hooks, mcpTools] = await Promise.all([
+    readRepoFile("AGENTS.md"),
+    readRepoFile("MEMORY.md"),
+    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
+    readRepoFile("docs/HOOKS-POLICIES.md"),
+    readRepoFile("docs/MCP-TOOLS.md")
   ]);
 
-  for (const requirementId of [
-    "DRIFT-01",
-    "DRIFT-02",
-    "DRIFT-03",
-    "DRIFT-04",
-    "DRIFT-05",
-    "DRIFT-06",
-    "DRIFT-07"
-  ]) {
-    assert.match(requirements, new RegExp(requirementId));
-  }
-
-  assert.match(requirements, /\[x\] \*\*FND-04\*\*/);
-  assert.match(requirements, /\[x\] \*\*FND-05\*\*/);
-  assert.match(requirements, /\[x\] \*\*FND-06\*\*/);
-  assert.match(requirements, /\| DRIFT-01 \| Phase 2\.1 \| Complete \|/);
-  assert.match(requirements, /\| DRIFT-07 \| Phase 2\.2 \| Complete \|/);
-  assert.match(roadmap, /\*\*Requirements\*\*: DRIFT-01, DRIFT-02, DRIFT-03, DRIFT-04/);
-  assert.match(roadmap, /\*\*Requirements\*\*: DRIFT-05, DRIFT-06, DRIFT-07/);
-  assert.match(roadmap, /\| 2\.2\. Urgent Drift-Repair Follow-Up \| 4\/4 \| Complete \| 2026-04-11 \|/);
-  assert.match(state, /Phase 2\.2 is complete: control docs and planning state are truth-synced/);
-  assert.match(state, /Phase 2\.2 is complete: .*Phase 3 is unblocked/);
+  assert.match(agents, /it is not Blueprint runtime state/);
+  assert.match(memory, /implementation bookkeeping for the GSD build-out/);
+  assert.match(artifactSchema, /repo-level `hooks\.\*` keys/);
+  assert.match(hooks, /Repo config must not enable or disable hooks/);
+  assert.match(mcpTools, /Tools must not write into the installed extension directory/);
 });

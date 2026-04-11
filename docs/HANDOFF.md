@@ -4,7 +4,7 @@
 
 The repository contains both the original planning pack and a shipped runtime for Wave 0 plus the Phase 3 discovery commands.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery is implemented, including a repaired `research-phase` contract with validated research writes and advisory hook coverage. Runtime routing remains limited to `implemented` commands.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, including validated `research-phase` writes, catalog-aware next-step recovery, and advisory hook coverage. Runtime routing remains limited to `implemented` commands.
 
 ## What Future Sessions Already Have
 
@@ -26,7 +26,7 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 
 ## Recommended Next Session
 
-Start Phase 4 Plan, Execute, and Verify implementation:
+Finish any remaining Phase 3 closeout checks, then continue into Phase 4 Plan, Execute, and Verify:
 
 1. Implement `plan-phase` on top of the shipped Phase 3 artifact contracts
 2. Implement `execute-phase`, then `validate-phase`, then `verify-work`
