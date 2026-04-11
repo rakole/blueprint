@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: planning
 stopped_at: Phase 2.2 active checkpoint
-last_updated: "2026-04-11T04:37:58Z"
-last_activity: 2026-04-11 -- Reopened Phase 2.2 drift ledger and aligned future command contracts
+last_updated: "2026-04-11T06:15:56Z"
+last_activity: 2026-04-11 -- Phase 02.2 shipped via PR #9
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 32
-  completed_plans: 10
-  percent: 31.3
+  completed_plans: 14
+  percent: 43.8
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 02.2 (urgent-drift-repair-follow-up) — ACTIVE
-Plan: 0 of 4
-Status: Phase 2.1 closed on 2026-04-11; Phase 2.2 is the active checkpoint until control-plane and contract-repair exit criteria pass
-Last activity: 2026-04-11 -- Reopened the drift ledger and aligned future command ownership docs
+Plan: 4 of 4
+Status: Phase 2.1 closed on 2026-04-11; Phase 2.2 is the active checkpoint and has been shipped as PR #9 pending merge
+Last activity: 2026-04-11 -- Phase 02.2 shipped via PR #9
 
 Progress: [███░░░░░░░] 31.3%
 
@@ -36,7 +36,7 @@ Progress: [███░░░░░░░] 31.3%
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 14
 - Average duration: 0 min
 - Total execution time: 0.0 hours
 
@@ -47,7 +47,7 @@ Progress: [███░░░░░░░] 31.3%
 | 1 | 3 | - | - |
 | 2 | 3 | - | - |
 | 2.1 | 4 | - | - |
-| 2.2 | 0 | 0 min | 0 min |
+| 2.2 | 4 | 0 min | 0 min |
 | 3 | 0 | 0 min | 0 min |
 | 4 | 0 | 0 min | 0 min |
 | 5 | 0 | 0 min | 0 min |
@@ -57,7 +57,7 @@ Progress: [███░░░░░░░] 31.3%
 
 **Recent Trend:**
 
-- Last 5 plans: 02.1-01, 02.1-02, 02.1-03, 02.1-04, verification
+- Last 5 plans: 02.1-04, verification, 02.2-01, 02.2-02, 02.2-03/04
 - Trend: Stable
 
 ## Accumulated Context
@@ -87,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T04:37:58Z
+Last session: 2026-04-11T06:15:56Z
 Stopped at: Phase 2.2 active checkpoint
 Resume file: .planning/phases/02.2-urgent-drift-repair-follow-up/02.2-CONTEXT.md
