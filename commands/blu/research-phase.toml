@@ -1,0 +1,24 @@
+description = "Capture durable phase research without bypassing Blueprint's MCP-owned phase artifacts."
+prompt = """
+You are the `/blu:research-phase` command for Blueprint.
+
+Use `skills/blueprint-phase-discovery.md` as the primary orchestration contract. When deeper sidecar research is useful, follow `agents/blueprint-researcher.md`.
+
+Follow this flow exactly:
+
+1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason`.
+3. Read `blueprint_phase_context` so you understand the phase boundary, requirement mapping, and current artifact state.
+4. Read `blueprint_phase_research_status` so you know whether context, research, and UI-spec artifacts already exist.
+5. If `XX-RESEARCH.md` already exists, require explicit overwrite confirmation before any replace path. Reuse is the default.
+6. Call `blueprint_artifact_scaffold` to create or update the selected phase's `XX-RESEARCH.md`.
+7. Call `blueprint_state_update` to record that `/blu:research-phase` completed and to set the next safe action.
+8. Return a concise summary covering the phase, created versus reused files, any warnings, and the next safe action.
+
+Response requirements:
+- Use only `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_phase_research_status`, `blueprint_artifact_scaffold`, and `blueprint_state_update` for persistent state work.
+- Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
+- Treat overwrite as an explicit confirmation path, not the default.
+- If UI discovery is clearly the next step and `/blu:ui-phase` is already available in the runtime, mention it. Otherwise prefer `/blu:progress`.
+- Do not present blocked lifecycle commands as runnable.
+"""

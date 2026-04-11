@@ -63,7 +63,8 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
 2. Write only `XX-RESEARCH.md` through `blueprint_artifact_scaffold`.
 3. Require explicit overwrite confirmation before replacing existing research.
-4. Route toward `/blu:progress` unless a clearly implemented follow-up command is safe to mention.
+4. If UI discovery is clearly next and `/blu:ui-phase` is already available, route there. Otherwise route toward `/blu:progress`.
+5. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
 
 ### `ui-phase`
 
