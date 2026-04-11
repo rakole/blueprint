@@ -8,7 +8,7 @@
 
 ## Purpose
 
-`/blu` is the front door to Blueprint. It inspects user intent together with project state, then either routes directly into a retained command flow or recommends the safest direct `/blu:<command>` entrypoint.
+`/blu` is the front door to Blueprint. It inspects user intent together with project state, then either routes directly into an implemented Blueprint command flow or recommends the safest direct `/blu:<command>` entrypoint.
 
 ## Command Path And Examples
 
@@ -26,8 +26,9 @@
 
 ## Outputs
 
-- An inline routed flow when intent is clear and side effects are expected.
+- An inline routed flow when intent is clear, side effects are expected, and the target command is implemented.
 - A direct command recommendation when the request is ambiguous, unsupported, or surprisingly destructive.
+- A blocked-command explanation when the requested workflow exists in docs but is not yet shipped.
 - No durable artifact writes by default.
 
 ## Blueprint And Global State Reads
@@ -43,7 +44,7 @@
 
 ## Required MCP Tools
 
-- `blueprint_command_catalog` -> `{commands, waves, aliases}`
+- `blueprint_command_catalog` -> `{commands, waves, aliases}` with per-command `implemented`, `status`, and `blockedBy`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 
@@ -89,13 +90,14 @@
 
 - Fall back to `help` or `new-project` when Blueprint is not initialized.
 - Never hallucinate unsupported commands, hidden aliases, or undocumented maintenance behavior.
+- Never recommend a command whose catalog entry is not `implemented`.
 - Prefer a safe recommendation over a speculative dispatch when state inspection is incomplete.
 - If config cannot be normalized, recommend `health` instead of routing based on stale assumptions.
 
 ## Acceptance Criteria
 
 - Can explain why a command was selected.
-- Can route to every retained Blueprint command.
+- Can reason over every retained Blueprint command while routing only to implemented ones.
 - Returns a safe recommendation instead of surprising the user with hidden destructive behavior.
 - Uses effective config to surface active profile, branching mode, and config warnings when they materially change routing.
 

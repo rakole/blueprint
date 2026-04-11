@@ -2,6 +2,8 @@ description = "Map a brownfield repository into the stable .blueprint/codebase b
 prompt = """
 You are the `/blu:map-codebase` command for Blueprint.
 
+Use `skills/blueprint-map.md` as the primary orchestration contract. When deeper mapper decomposition is helpful, follow `agents/blueprint-mapper.md`.
+
 Follow this flow exactly:
 
 1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`.
@@ -12,9 +14,9 @@ Follow this flow exactly:
    - inspect tests with `rg --files tests test`
    - inspect docs with `rg --files docs .`
    - inspect tracked files with `git ls-files`
-4. Call `blueprint_artifact_list` before writing anything so you can see whether `.blueprint/codebase/STACK.md`, `.blueprint/codebase/ARCHITECTURE.md`, `.blueprint/codebase/CONVENTIONS.md`, `.blueprint/codebase/TESTING.md`, `.blueprint/codebase/INTEGRATIONS.md`, and `.blueprint/codebase/CONCERNS.md` already exist.
+4. Call `blueprint_artifact_list` before writing anything so you can see whether `.blueprint/codebase/STACK.md`, `.blueprint/codebase/ARCHITECTURE.md`, `.blueprint/codebase/STRUCTURE.md`, `.blueprint/codebase/CONVENTIONS.md`, `.blueprint/codebase/TESTING.md`, `.blueprint/codebase/INTEGRATIONS.md`, and `.blueprint/codebase/CONCERNS.md` already exist.
 5. If existing codebase docs appear heavily edited, require explicit confirmation before any replace path. Use reuse as the default.
-6. Call `blueprint_artifact_scaffold` to create or reuse the six `.blueprint/codebase/*.md` files. Do not replace existing codebase docs unless the user explicitly confirms a replace path.
+6. Call `blueprint_artifact_scaffold` to create or reuse the seven `.blueprint/codebase/*.md` files. Do not replace existing codebase docs unless the user explicitly confirms a replace path.
 7. Call `blueprint_artifact_summary_digest` with the repo evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`.
 8. Summarize which files were created, which were reused, and which warnings matter.
 9. End with the next logical Blueprint action, usually discovery or planning, based on the mapped repo state.

@@ -10,9 +10,19 @@
 - [x] **FND-01**: Developer can install Blueprint from GitHub as a Gemini extension and load the extension successfully
 - [x] **FND-02**: User can invoke the root `/blu` router and direct `/blu:<command>` entrypoints without relying on slash-command chaining
 - [x] **FND-03**: User can run `/blu:new-project` to create deterministic `.blueprint/PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, and normalized config for a fresh repo
-- [ ] **FND-04**: User can change Blueprint repo settings and model profile without manually editing raw JSON
-- [ ] **FND-05**: User can ask Blueprint for help, progress, and health and get next-step guidance from the current repo state
-- [ ] **FND-06**: User can map an existing codebase into stable `.blueprint/codebase/` artifacts before planning brownfield work
+- [x] **FND-04**: User can change Blueprint repo settings and model profile without manually editing raw JSON
+- [x] **FND-05**: User can ask Blueprint for help, progress, and health and get next-step guidance from the current repo state
+- [x] **FND-06**: User can map an existing codebase into stable `.blueprint/codebase/` artifacts before planning brownfield work
+
+### Drift Repair
+
+- [x] **DRIFT-01**: Control docs, handoff docs, and implementation state describe the actual shipped Wave 0 runtime
+- [x] **DRIFT-02**: `/blu`, `help`, and `progress` only surface commands whose manifests, primary skills, and required MCP tools exist
+- [x] **DRIFT-03**: Shipped Wave 0 skills and agent contracts exist in the runtime, and `map-codebase` owns the seven-document bundle including `STRUCTURE.md`
+- [x] **DRIFT-04**: Later commands stay blocked until their missing roadmap and phase substrate exists
+- [ ] **DRIFT-05**: Future retained command docs preserve thin-command, skill-led, agent-explicit, MCP-owned architecture
+- [ ] **DRIFT-06**: Command metadata stays consistent across the catalog, skills inventory, migration matrix, and per-command specs
+- [ ] **DRIFT-07**: Regression tests catch control-plane and contract drift before later phases proceed
 
 ### Lifecycle
 
@@ -71,9 +81,16 @@
 | FND-01 | Phase 1 | Complete |
 | FND-02 | Phase 1 | Complete |
 | FND-03 | Phase 1 | Complete |
-| FND-04 | Phase 2 | Pending |
-| FND-05 | Phase 2 | Pending |
-| FND-06 | Phase 2 | Pending |
+| FND-04 | Phase 2 | Complete |
+| FND-05 | Phase 2 | Complete |
+| FND-06 | Phase 2 | Complete |
+| DRIFT-01 | Phase 2.1 | Complete |
+| DRIFT-02 | Phase 2.1 | Complete |
+| DRIFT-03 | Phase 2.1 | Complete |
+| DRIFT-04 | Phase 2.1 | Complete |
+| DRIFT-05 | Phase 2.2 | Pending |
+| DRIFT-06 | Phase 2.2 | Pending |
+| DRIFT-07 | Phase 2.2 | Pending |
 | LIFE-01 | Phase 3 | Pending |
 | LIFE-02 | Phase 3 | Pending |
 | LIFE-03 | Phase 3 | Pending |
@@ -94,10 +111,10 @@
 | OPS-02 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
+- v1 requirements: 31 total
+- Mapped to phases: 31
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-11 after Phase 1 verification*
+*Last updated: 2026-04-11 after Phase 2.2 contract repair alignment*

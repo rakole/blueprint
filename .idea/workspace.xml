@@ -4,10 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="planning phase 1">
+    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="drift fix from gsd implementation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/REQUIREMENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/REQUIREMENTS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.planning/ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/ROADMAP.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.planning/STATE.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/STATE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AGENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/AGENTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MEMORY.md" beforeDir="false" afterPath="$PROJECT_DIR$/MEMORY.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DRIFT.MD" beforeDir="false" afterPath="$PROJECT_DIR$/docs/DRIFT.MD" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/GSD-RUNTIME-MIGRATION.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/GSD-RUNTIME-MIGRATION.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/HANDOFF.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/HANDOFF.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/SKILLS-AND-AGENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/SKILLS-AND-AGENTS.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,7 +75,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;gsd/phase-02-router-health-and-mapping&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;#7 on gsd/phase-02-router-health-and-mapping&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Users/rhishi/dev/repositories/blueprint/temp-commands&quot;,
@@ -165,7 +173,23 @@
       <option name="project" value="LOCAL" />
       <updated>1775849706717</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="planning phase 1">
+      <option name="closed" value="true" />
+      <created>1775856888422</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1775856888422</updated>
+    </task>
+    <task id="LOCAL-00009" summary="drift fix from gsd implementation">
+      <option name="closed" value="true" />
+      <created>1775860086083</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1775860086083</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -175,6 +199,7 @@
     <MESSAGE value="restart the implementation" />
     <MESSAGE value="moved to gsd based implementation" />
     <MESSAGE value="planning phase 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="planning phase 1" />
+    <MESSAGE value="drift fix from gsd implementation" />
+    <option name="LAST_COMMIT_MESSAGE" value="drift fix from gsd implementation" />
   </component>
 </project>

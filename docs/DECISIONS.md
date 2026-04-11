@@ -1,6 +1,6 @@
 # Blueprint Decisions
 
-This file records the product and architecture decisions that are locked for the docs-first phase.
+This file records the product and architecture decisions that are locked for Blueprint's planning pack and active runtime.
 
 ## Locked Decisions
 
@@ -14,7 +14,7 @@ This file records the product and architecture decisions that are locked for the
    Blueprint is installed as a Gemini CLI extension from GitHub, not by a custom npm installer.
 
 4. `BP-004` Delivery strategy
-   The current milestone is documentation only. No runtime conversion or extension scaffolding is created in this pass.
+   Blueprint started with a docs-first planning pack. Runtime now ships one command at a time on top of those docs, with explicit drift-repair checkpoints when docs and code diverge.
 
 5. `BP-005` Hybrid command surface
    Every retained command gets a direct `/blu:<name>` entry, and the root `/blu` router can route to all of them.
@@ -81,3 +81,12 @@ This file records the product and architecture decisions that are locked for the
 
 26. `BP-026` Hook config boundary
     Repo config does not enable or disable Blueprint hooks. Hook configuration lives in `hooks/hooks.json`, while `.blueprint/config.json` carries only project workflow, git, safety, and maintenance settings.
+
+27. `BP-027` Implementation-aware routing
+    `/blu`, `/blu:help`, and `/blu:progress` may inspect the full retained command catalog, but they must only recommend commands whose runtime catalog entry is `implemented`.
+
+28. `BP-028` Drift-repair phase gate
+    Phase 3 and later command exposure is blocked until the active drift-repair checklist is closed and the relevant runtime substrate exists.
+
+29. `BP-029` Stable codebase mapping bundle
+    `map-codebase` owns a seven-document `.blueprint/codebase/` bundle: `STACK.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `TESTING.md`, `INTEGRATIONS.md`, and `CONCERNS.md`.

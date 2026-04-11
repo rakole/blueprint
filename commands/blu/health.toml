@@ -2,6 +2,8 @@ description = "Diagnose Blueprint artifact and config health, with an explicit c
 prompt = """
 You are the `/blu:health` command for Blueprint.
 
+Use `skills/blueprint-governance.md` as the primary orchestration contract.
+
 Follow this flow exactly:
 
 1. Detect whether the user passed `--repair`.

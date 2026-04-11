@@ -166,7 +166,8 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
   assert.equal(state.derivedStatus.currentPhase, "2");
   assert.equal(state.derivedStatus.hasBlockers, false);
   assert.ok(artifacts.artifacts.core.includes(".blueprint/STATE.md"));
-  assert.equal(artifacts.artifacts.codebase.length, 6);
+  assert.equal(artifacts.artifacts.codebase.length, 7);
+  assert.ok(artifacts.artifacts.codebase.includes(".blueprint/codebase/STRUCTURE.md"));
   assert.ok(artifacts.reports.includes(".blueprint/reports/health-report.md"));
   assert.equal(validation.valid, true);
   assert.deepEqual(validation.issues, []);
@@ -347,11 +348,14 @@ test("runtime-facing docs mention shipped command coverage instead of a docs-onl
   assert.match(geminiFile, /\/blu:help/);
   assert.match(geminiFile, /\/blu:progress/);
   assert.match(geminiFile, /\/blu:health/);
+  assert.match(geminiFile, /\/blu:map-codebase/);
   assert.match(geminiFile, /\.planning\//);
   assert.match(readmeFile, /active implementation/i);
   assert.match(readmeFile, /## Current Runtime Layout/);
   assert.match(readmeFile, /commands\/blu\/help\.toml/);
   assert.match(readmeFile, /commands\/blu\/progress\.toml/);
   assert.match(readmeFile, /commands\/blu\/health\.toml/);
+  assert.match(readmeFile, /commands\/blu\/map-codebase\.toml/);
+  assert.match(readmeFile, /skills\/blueprint-router\.md/);
   assert.doesNotMatch(readmeFile, /## Planned Runtime Layout/);
 });

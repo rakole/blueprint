@@ -219,6 +219,7 @@ test("map-codebase command file references the registered mapping tool names", a
 
   assert.match(commandFile, /STACK\.md/);
   assert.match(commandFile, /ARCHITECTURE\.md/);
+  assert.match(commandFile, /STRUCTURE\.md/);
   assert.match(commandFile, /CONCERNS\.md/);
   assert.match(commandFile, /heavily edited/i);
   assert.match(commandFile, /replace/);

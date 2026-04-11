@@ -17,7 +17,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_command_catalog` | Return the retained command registry and router metadata | `{commands, waves, aliases}` |
+| `blueprint_command_catalog` | Return the retained command registry plus runtime availability metadata | `{commands, waves, aliases}` where each command includes `declaredStatus`, `status`, `implemented`, `blockedBy`, `manifestPath`, `skillPath`, `specPath`, `requiredTools`, `requiredToolsSatisfied`, `optionalAgents`, and `availableOptionalAgents` |
 | `blueprint_project_init` | Create the initial `.blueprint/` scaffold and seed normalized repo config from hardcoded defaults plus optional user defaults | `{projectRoot, createdPaths, seededState, configPath, configProvenance}` |
 | `blueprint_project_status` | Summarize project readiness and next actions | `{initialized, currentPhase, currentMilestone, nextAction, health}` |
 
@@ -88,6 +88,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 ## Command Ownership Notes
 
 - `new-project`, `settings`, `set-profile`, `progress`, `health` lean on project, config, and state tools.
+- `/blu`, `help`, and `progress` must filter to catalog entries where `implemented` is `true`.
 - lifecycle commands lean on phase, artifact, and state tools.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.

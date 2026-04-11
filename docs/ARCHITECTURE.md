@@ -6,7 +6,7 @@ Blueprint is a Gemini-native extension that preserves GSD's command-driven metho
 
 ## Extension Shape
 
-Planned runtime layout:
+Current runtime layout, with later surfaces still allowed:
 
 ```text
 blueprint/
@@ -45,12 +45,14 @@ blueprint/
 
 - Skills hold the high-level orchestration instructions for command families.
 - Skills replace the "thin markdown command plus deep workflow file" split used by GSD.
-- The key Blueprint skill families are bootstrap, roadmap, discuss, plan, execute, verify, review, docs, debug, mapping, capture, and maintenance.
+- Shipped Wave 0 skills today are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, and `blueprint-map`.
+- Later skill families stay planned until the commands that need them are actually shipped.
 
 ### 3. Subagents
 
 - Subagents handle bounded deep work: research, planning, execution, verification, code review, fixing, debugging, mapping, docs, UI, and security.
 - Agents are invoked only for bounded sidecar work or where the command contract explicitly requires them.
+- Shipped contract files currently cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, and `blueprint-verifier`.
 
 ### 4. MCP Server
 
@@ -77,8 +79,10 @@ blueprint/
 - User calls `/blu`.
 - Router inspects intent plus project state via `blueprint_command_catalog` and `blueprint_project_status`.
 - Router either:
-  - dispatches inline to the retained command contract, or
+  - dispatches inline to an `implemented` command contract, or
   - offers the best direct command when user intent is ambiguous.
+
+Blocked commands remain visible as catalog metadata, but they must not be presented as runnable.
 
 ## State Boundaries
 
@@ -108,7 +112,7 @@ Global state is intentionally narrow. Blueprint should not quietly accumulate pr
 
 ### 1. Docs-first
 
-No extension conversion starts until the docs pack makes the next command decision-complete.
+The planning pack lands before new command surfaces, and later runtime expansion pauses when drift repair is required.
 
 ### 2. Gemini-native, not transliterated
 

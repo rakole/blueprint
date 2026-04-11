@@ -2,7 +2,9 @@
 
 ## Current State
 
-The repository now contains a docs-first planning pack. No runtime code or Gemini extension scaffolding has been created yet.
+The repository contains both the original planning pack and a shipped Wave 0 runtime for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, and `map-codebase`.
+
+Phase 2.1 drift recovery completed on 2026-04-11. The current checkpoint is Phase 2.2 future-contract drift repair: keep control-plane docs, requirement traceability, and future command contracts aligned before any Phase 3 work lands.
 
 ## What Future Sessions Already Have
 
@@ -15,33 +17,31 @@ The repository now contains a docs-first planning pack. No runtime code or Gemin
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
 - Gemini-specific constraint notes to keep implementation aligned with the host CLI
+- runtime command manifests for the shipped Wave 0 surface
+- shipped Wave 0 skill files in `skills/`
+- shipped Wave 0 agent contract files in `agents/`
+- implementation-aware command catalog metadata in `blueprint_command_catalog`
+- seven-document codebase mapping bundle, including `.blueprint/codebase/STRUCTURE.md`
 
 ## Recommended Next Session
 
-Start Wave 0 implementation with:
+Continue the Phase 2.2 checklist in `docs/DRIFT.MD`:
 
-1. `gemini-extension.json`
-2. `GEMINI.md`
-3. `commands/blu.toml`
-4. `commands/blu/new-project.toml`
-5. MCP server skeleton with project, config, state, roadmap, and artifact tool stubs
-6. normalized config loader covering hardcoded defaults, `~/.gemini/blueprint/defaults.json`, repo config, and migration to schema v2
+1. Keep `AGENTS.md`, `README.md`, `GEMINI.md`, `MEMORY.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and `.planning/REQUIREMENTS.md` aligned on Phase 2.1 closure and active Phase 2.2 work
+2. Keep future command ownership metadata synchronized across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, `docs/GSD-RUNTIME-MIGRATION.md`, and `docs/commands/`
+3. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
+4. Do not begin Phase 3 or expose later commands until the Phase 2.2 exit criteria are satisfied
 
 ## First Implementation Slice
 
-Target these files first:
+After Phase 2.2 closes, the next implementation slice should target the missing substrate rather than more command manifests:
 
-- `gemini-extension.json`
-- `GEMINI.md`
-- `commands/blu.toml`
-- `commands/blu/new-project.toml`
-- `src/mcp/server.ts`
-- `src/mcp/tools/project.ts`
-- `src/mcp/tools/config.ts`
-- `src/mcp/tools/state.ts`
-- `src/mcp/tools/artifacts.ts`
-- initial tests for `new-project`
-- config precedence, normalization, and repair fixtures
+- roadmap MCP tools
+- phase MCP tools
+- review MCP tools
+- workspace and workstream MCP tools
+- update and patch MCP tools
+- the commands that depend on those families, in dependency order
 
 ## Shared Risks To Watch
 
@@ -56,16 +56,17 @@ Target these files first:
 When implementing a command, consult in this order:
 
 1. `docs/DECISIONS.md`
-2. `docs/ARCHITECTURE.md`
-3. `docs/ARTIFACT-SCHEMA.md`
-4. `docs/MCP-TOOLS.md`
-5. `docs/GEMINI-CONSTRAINTS.md`
-6. `docs/PHASE-LIFECYCLE.md`
-7. `docs/SKILLS-AND-AGENTS.md`
-8. `docs/IMPLEMENTATION-ORDER.md`
-9. `docs/COMMAND-CATALOG.md`
-10. `docs/commands/<command>.md`
+2. `docs/DRIFT.MD`
+3. `docs/ARCHITECTURE.md`
+4. `docs/ARTIFACT-SCHEMA.md`
+5. `docs/MCP-TOOLS.md`
+6. `docs/GEMINI-CONSTRAINTS.md`
+7. `docs/PHASE-LIFECYCLE.md`
+8. `docs/SKILLS-AND-AGENTS.md`
+9. `docs/IMPLEMENTATION-ORDER.md`
+10. `docs/COMMAND-CATALOG.md`
+11. `docs/commands/<command>.md`
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when Wave 0 is executable end-to-end with deterministic `.blueprint/` output and passing fixture tests.
+The next milestone is successful when the Phase 2.2 checklist is closed, future command contracts stay aligned under regression coverage, and later commands remain blocked until their substrate exists.

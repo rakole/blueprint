@@ -30,6 +30,30 @@ Rules for using these tags here:
 - The seven commands whose specs explicitly say GSD has no dedicated upstream workflow file are treated as Blueprint-native flow contracts and are not marked `needs-upstream-audit` for a missing workflow file.
 - This document must not invent new Blueprint skills, MCP tools, agents, or hook surfaces.
 
+## Phase 2.1 Closure Snapshot
+
+The current drift-repair checkpoint locks the following Wave 0 runtime expectations:
+
+- `/blu`, `help`, and `progress` must consult the runtime-aware command catalog and only recommend commands whose entry is `implemented`.
+- `new-project` keeps MCP-owned bootstrap writes, but the `blueprint-bootstrap` skill must preserve higher-level bootstrap intent instead of collapsing into bare scaffolding.
+- `map-codebase` owns a seven-document bundle: `STACK.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `TESTING.md`, `INTEGRATIONS.md`, and `CONCERNS.md`.
+- Remaining explicit Blueprint deltas for shipped Wave 0 commands are limited to `/blu` naming, `.blueprint` state, Gemini-native routing, advisory hooks, no slash-command chaining, no repo-level hook config, and no self-update.
+- Current bounded runtime restrictions that still need future review are explicit here: `new-project` does not yet persist separate bootstrap-research artifacts, and `map-codebase` still expects a Blueprint-initialized repo before writing into `.blueprint/codebase/`.
+
+Wave 0 behaviors that remain narrower than upstream must be called out explicitly here rather than left implicit in command docs.
+
+## Phase 2.2 Contract Repair Snapshot
+
+The active Phase 2.2 checkpoint keeps future retained-command docs aligned without changing runtime exposure rules:
+
+- Phase 2.1 completed on 2026-04-11; Phase 2.2 is the active control-plane and contract-repair checkpoint.
+- Future command metadata must stay consistent across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, this migration matrix, and the per-command specs in `docs/commands/`.
+- `next` and `do` remain owned by `blueprint-router`.
+- `pause-work` and `resume-work` remain owned by `blueprint-governance`.
+- `plan-milestone-gaps` remains owned by `blueprint-roadmap-admin`.
+- High-risk planned flows such as `quick`, `code-review-fix`, `audit-fix`, `ship`, `undo`, `new-workspace`, `remove-workspace`, and `reapply-patches` must continue to name their bounded-agent and MCP-owned persistence contracts explicitly; do not flatten them into command-only prose.
+- Phase 2.2 does not change `blueprint_command_catalog` status semantics or make blocked commands routable.
+
 ## Command Workflow Migration Matrix
 
 The command tables below map each retained Blueprint command to its intended runtime destination. Exact skills, agents, and MCP tools come from the existing Blueprint command specs; hook involvement is derived from the locked hook policy and each command's declared write surface.
@@ -38,13 +62,13 @@ The command tables below map each retained Blueprint command to its intended run
 
 | Blueprint command | Upstream command ref | Upstream workflow status | Blueprint command owner | Exact primary skill | Exact MCP destination | Optional agents | Hook involvement | Disposition / notes | Evidence state |
 |---|---|---|---|---|---|---|---|---|---|
-| `new-project` | `commands/gsd/new-project.md` | GSD has an upstream workflow file | `docs/commands/new-project.md` | `blueprint-bootstrap` | `blueprint_project_init`<br>`blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_config_set`<br>`blueprint_state_update`<br>`blueprint_artifact_scaffold` | `blueprint-project-researcher`<br>`blueprint-roadmapper` | `read-before-edit`; `.blueprint` write guard | Port retained command intent through the command spec, primary skill, and MCP tools; seed normalized repo config from hardcoded defaults plus optional `~/.gemini/blueprint/defaults.json`. | `locked`; `spec-derived`; `needs-upstream-audit` |
+| `new-project` | `commands/gsd/new-project.md` | GSD has an upstream workflow file | `docs/commands/new-project.md` | `blueprint-bootstrap` | `blueprint_project_init`<br>`blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_config_set`<br>`blueprint_state_update`<br>`blueprint_artifact_scaffold` | `blueprint-project-researcher`<br>`blueprint-roadmapper` | `read-before-edit`; `.blueprint` write guard | Keep MCP-owned bootstrap writes, but preserve higher-level bootstrap intent through `blueprint-bootstrap`: durable requirements, roadmap traceability, and explicit brownfield next-step handling. | `locked`; `spec-derived`; `needs-upstream-audit` |
 | `settings` | `commands/gsd/settings.md` | GSD has an upstream workflow file | `docs/commands/settings.md` | `blueprint-governance` | `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_config_set` | none | `read-before-edit`; `.blueprint` write guard | Port retained command intent through the command spec, primary skill, and MCP tools; Blueprint settings own both repo config and optional user-default persistence. | `locked`; `spec-derived`; `needs-upstream-audit` |
 | `set-profile` | `commands/gsd/set-profile.md` | GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract | `docs/commands/set-profile.md` | `blueprint-governance` | `blueprint_config_get`<br>`blueprint_config_set_profile` | none | `read-before-edit`; `.blueprint` write guard | Blueprint-native flow contract for model profile selection; do not fabricate a missing upstream workflow file. | `locked`; `spec-derived` |
-| `help` | `commands/gsd/help.md` | GSD has an upstream workflow file | `docs/commands/help.md` | `blueprint-router` | `blueprint_command_catalog`<br>`blueprint_project_status` | none | none | Gemini-native router flow; do not port slash-command chaining assumptions. | `locked`; `spec-derived`; `needs-upstream-audit` |
-| `progress` | `commands/gsd/progress.md` | GSD has an upstream workflow file | `docs/commands/progress.md` | `blueprint-router` | `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` | none | none | Gemini-native router flow; preserve read-only next-step guidance while surfacing active profile, branching mode, and config warnings from normalized config. | `locked`; `spec-derived`; `needs-upstream-audit` |
+| `help` | `commands/gsd/help.md` | GSD has an upstream workflow file | `docs/commands/help.md` | `blueprint-router` | `blueprint_command_catalog`<br>`blueprint_project_status` | none | none | Gemini-native router flow; do not port slash-command chaining assumptions, and never present blocked commands as runnable. | `locked`; `spec-derived`; `needs-upstream-audit` |
+| `progress` | `commands/gsd/progress.md` | GSD has an upstream workflow file | `docs/commands/progress.md` | `blueprint-router` | `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` | none | none | Gemini-native router flow; preserve read-only next-step guidance while surfacing active profile, branching mode, and config warnings from normalized config, and keep recommendations inside implemented runtime surface. | `locked`; `spec-derived`; `needs-upstream-audit` |
 | `health` | `commands/gsd/health.md` | GSD has an upstream workflow file | `docs/commands/health.md` | `blueprint-governance` | `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_config_set`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_artifact_validate`<br>`blueprint_state_sync` | none | `read-before-edit`; `.blueprint` write guard | Port retained command intent through the command spec, primary skill, and MCP tools; health owns config migration and repair for the normalized Blueprint schema. | `locked`; `spec-derived`; `needs-upstream-audit` |
-| `map-codebase` | `commands/gsd/map-codebase.md` | GSD has an upstream workflow file | `docs/commands/map-codebase.md` | `blueprint-map` | `blueprint_project_status`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest` | `blueprint-mapper` | `read-before-edit`; `.blueprint` write guard | Retained as the only brownfield-mapping command; do not revive omitted `scan` or `intel` as new user commands. | `locked`; `spec-derived`; `needs-upstream-audit` |
+| `map-codebase` | `commands/gsd/map-codebase.md` | GSD has an upstream workflow file | `docs/commands/map-codebase.md` | `blueprint-map` | `blueprint_project_status`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest` | `blueprint-mapper` | `read-before-edit`; `.blueprint` write guard | Retained as the only brownfield-mapping command; restore the seven-document bundle including `STRUCTURE.md`, keep explicit reuse/replace semantics, and do not revive omitted `scan` or `intel` as new user commands. | `locked`; `spec-derived`; `needs-upstream-audit` |
 
 ### Wave 1: Core lifecycle
 
