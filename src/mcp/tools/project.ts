@@ -16,6 +16,7 @@ import {
   blueprintConfigGet,
   seedProjectConfig
 } from "./config.js";
+import { phaseToolDefinitions } from "./phase.js";
 import {
   stateToolDefinitions,
   blueprintStateLoad,
@@ -113,6 +114,7 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...PROJECT_TOOL_NAMES,
   ...configToolDefinitions.map((definition) => definition.name),
   ...stateToolDefinitions.map((definition) => definition.name),
+  ...phaseToolDefinitions.map((definition) => definition.name),
   ...artifactToolDefinitions.map((definition) => definition.name)
 ]);
 

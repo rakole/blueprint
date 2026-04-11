@@ -5,6 +5,7 @@ import type { ZodType } from "zod/v4";
 
 import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
+import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
 import { stateToolDefinitions } from "./tools/state.js";
 
@@ -19,6 +20,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...projectToolDefinitions,
   ...configToolDefinitions,
   ...stateToolDefinitions,
+  ...phaseToolDefinitions,
   ...artifactToolDefinitions
 ];
 
