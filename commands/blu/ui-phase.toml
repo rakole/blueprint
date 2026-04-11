@@ -1,0 +1,26 @@
+description = "Create a phase-scoped UI spec or explicit skip rationale through Blueprint's config-aware discovery flow."
+prompt = """
+You are the `/blu:ui-phase` command for Blueprint.
+
+Use `skills/blueprint-phase-discovery.md` as the primary orchestration contract. When deeper UI design work is useful, follow `agents/blueprint-ui-designer.md`.
+
+Follow this flow exactly:
+
+1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason`.
+3. Read `blueprint_phase_research_status` so you know which discovery artifacts already exist for the phase.
+4. Read `blueprint_config_get` with the `effective` scope so you can honor `workflow.ui_phase` and `workflow.ui_safety_gate`.
+5. If `XX-UI-SPEC.md` already exists, require explicit overwrite confirmation before any replace path. Reuse is the default.
+6. If `workflow.ui_phase=false`, write an explicit skip rationale into `XX-UI-SPEC.md` instead of generating a UI contract.
+7. If `workflow.ui_safety_gate=true` and the phase appears backend-only or intentionally skips UI work, require an explicit rationale before writing the skip path.
+8. Call `blueprint_artifact_scaffold` to create or update the selected phase's `XX-UI-SPEC.md`. Do not create a second UI-skip artifact.
+9. Call `blueprint_state_update` to record that `/blu:ui-phase` completed and to set the next safe action.
+10. Return a concise summary covering the phase, config gates, created versus reused files, any warnings, and the next safe action.
+
+Response requirements:
+- Use only `blueprint_phase_locate`, `blueprint_phase_research_status`, `blueprint_config_get`, `blueprint_artifact_scaffold`, and `blueprint_state_update` for persistent state work.
+- Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
+- Treat overwrite as an explicit confirmation path, not the default.
+- Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
+- Do not present blocked lifecycle commands as runnable.
+"""

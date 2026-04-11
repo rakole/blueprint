@@ -72,6 +72,7 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 2. Respect `workflow.ui_phase` and `workflow.ui_safety_gate`.
 3. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
 4. Require explicit overwrite confirmation before replacing an existing UI spec.
+5. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
 
 ## Non-Negotiables
 
