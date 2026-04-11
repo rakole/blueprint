@@ -84,10 +84,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 02.2-01: Reopen `docs/DRIFT.MD` and truth-sync control-plane docs plus `.planning` state around the active checkpoint
-- [ ] 02.2-02: Backfill `DRIFT-01` through `DRIFT-07` traceability and repair future command ownership metadata
-- [ ] 02.2-03: Refresh future-phase migration and parity notes without changing runtime command exposure
-- [ ] 02.2-04: Add regression coverage for control-plane and command-contract drift
+- [x] 02.2-01: Reopen `docs/DRIFT.MD` and truth-sync control-plane docs plus `.planning` state around the active checkpoint
+- [x] 02.2-02: Backfill `DRIFT-01` through `DRIFT-07` traceability and repair future command ownership metadata
+- [x] 02.2-03: Refresh future-phase migration and parity notes without changing runtime command exposure
+- [x] 02.2-04: Add regression coverage for control-plane and command-contract drift
 
 ### Phase 3: Phase Discovery
 **Goal**: Add the pre-planning discovery commands that capture context before plan creation.
@@ -191,7 +191,7 @@ Phase 3 and beyond remain blocked from runtime exposure until their missing subs
 | 1. Foundation Bootstrap and State | 3/3 | Complete | 2026-04-11 |
 | 2. Router, Health, and Mapping | 3/3 | Complete | 2026-04-11 |
 | 2.1. Drift Recovery Gate | 4/4 | Complete | 2026-04-11 |
-| 2.2. Urgent Drift-Repair Follow-Up | 0/4 | Active | - |
+| 2.2. Urgent Drift-Repair Follow-Up | 4/4 | Active | - |
 | 3. Phase Discovery | 0/3 | Not started | - |
 | 4. Plan, Execute, and Verify | 0/4 | Not started | - |
 | 5. Roadmap and Milestones | 0/3 | Not started | - |
