@@ -48,12 +48,14 @@ Current Blueprint delta:
 
 ## Workflow Rules
 
-1. Inspect saved defaults before asking for changes.
-2. If the repo is clearly brownfield and mapping has not happened yet, recommend `/blu:map-codebase` before deeper planning.
-3. Use `blueprint_project_init` for the first persistent bootstrap write.
-4. Keep follow-up config changes inside `blueprint_config_set`.
-5. Re-read project status after initialization and end with the next safe implemented command.
-6. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
+1. Classify the repo as greenfield, scaffold-only, or brownfield before the first write.
+2. Inspect saved defaults before asking for changes, and treat `--auto` as a non-interactive bootstrap mode rather than a way to skip overwrite safety.
+3. Gather or synthesize enough context that `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` are no longer placeholder-only shells.
+4. Use `blueprint_project_init` for the first persistent bootstrap write.
+5. Keep follow-up config changes inside `blueprint_config_set`.
+6. If the repo is brownfield and mapping has not happened yet, route to `/blu:map-codebase` or mark the roadmap as provisional until mapping is complete.
+7. Re-read project status after initialization and end with the next safe implemented command.
+8. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
 
 ## Output Style
 

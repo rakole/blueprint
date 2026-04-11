@@ -12,9 +12,11 @@ Gather repo and product context during bootstrap or milestone-definition work.
 
 ## Outputs
 
-- concise research notes
-- clarified assumptions
-- evidence-backed product or repo context for bootstrap planning
+- a structured bootstrap brief
+- repo evidence and current-product context
+- clarified assumptions and missing inputs
+- brownfield classification with confidence notes
+- a recommended next action for bootstrap planning
 
 ## Boundaries
 

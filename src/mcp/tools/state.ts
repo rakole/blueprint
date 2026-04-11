@@ -9,9 +9,10 @@ import {
   ensureParentDirectory,
   ensureRepoRoot,
   inspectBlueprintArtifacts,
-  validateResearchArtifactContent,
+  inspectBootstrapArtifacts,
   resolveBlueprintPath,
-  toRepoRelativePath
+  toRepoRelativePath,
+  validateResearchArtifactContent
 } from "./artifacts.js";
 
 export type BlueprintState = {
@@ -82,6 +83,11 @@ type CurrentPhaseArtifactStatus = {
   researchValid: boolean | null;
   blockers: string[];
   warnings: string[];
+};
+
+type BootstrapRoutingSignals = {
+  brownfieldDetected: boolean;
+  codebaseMapped: boolean;
 };
 
 const DEFAULT_STATE: BlueprintState = {
@@ -258,12 +264,18 @@ async function inspectCurrentPhaseArtifacts(
   });
 
   if (matchingPhaseDirs.length === 0) {
-    blockers.push(
-      `Current phase ${currentPhase} is missing a matching directory under ${BLUEPRINT_DIR}/phases/.`
-    );
-    warnings.push(
-      `Blueprint could not resolve a current-phase directory for ${currentPhase}; next action will stay on health until the phase tree is repaired.`
-    );
+    if (inspectionPhases.length === 0) {
+      warnings.push(
+        `Current phase ${currentPhase} does not have a phase directory yet; Blueprint will fall back to the safest next implemented command until discovery artifacts exist.`
+      );
+    } else {
+      blockers.push(
+        `Current phase ${currentPhase} is missing a matching directory under ${BLUEPRINT_DIR}/phases/.`
+      );
+      warnings.push(
+        `Blueprint could not resolve a current-phase directory for ${currentPhase}; next action will stay on health until the phase tree is repaired.`
+      );
+    }
 
     return {
       currentPhase,
@@ -398,6 +410,7 @@ async function deriveNextAction(args: {
   blockers: string[];
   currentPhase: string | null;
   phaseArtifacts: CurrentPhaseArtifactStatus;
+  bootstrapRouting: BootstrapRoutingSignals;
 }): Promise<string> {
   if (args.projectStatus === "uninitialized") {
     return "Run /blu:new-project";
@@ -409,6 +422,10 @@ async function deriveNextAction(args: {
 
   if (args.blockers.length > 0) {
     return "Run /blu:health to inspect blockers and repair options";
+  }
+
+  if (args.bootstrapRouting.brownfieldDetected && !args.bootstrapRouting.codebaseMapped) {
+    return "Run /blu:map-codebase before treating the roadmap as durable";
   }
 
   const implementedCommands = await getImplementedCommandNames();
@@ -434,6 +451,14 @@ async function deriveNextAction(args: {
 
   if (
     args.phaseArtifacts.hasResearch &&
+    args.phaseArtifacts.researchValid === false &&
+    implementedCommands.has(researchPhaseCommand)
+  ) {
+    return `Run ${researchPhaseCommand} ${args.currentPhase} to repair invalid phase research`;
+  }
+
+  if (
+    args.phaseArtifacts.hasResearch &&
     args.phaseArtifacts.researchValid === true &&
     !args.phaseArtifacts.hasUiSpec &&
     implementedCommands.has(uiPhaseCommand)
@@ -441,7 +466,9 @@ async function deriveNextAction(args: {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
 
-  return "Run /blu:progress to review the next safe Blueprint action";
+  return args.currentPhase
+    ? `Run /blu:progress to review Phase ${args.currentPhase} and the next safe action`
+    : "Run /blu:progress to review the next safe Blueprint action";
 }
 
 async function buildSyncedState(projectRoot: string): Promise<{
@@ -449,6 +476,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
   warnings: string[];
 }> {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const existingState = await loadBlueprintState(projectRoot);
   const roadmapSignals = await readRoadmapSignals(projectRoot);
   const warnings: string[] = [];
@@ -481,6 +509,10 @@ async function buildSyncedState(projectRoot: string): Promise<{
     inspection.phases,
     currentPhase
   );
+  const bootstrapRouting: BootstrapRoutingSignals = {
+    brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
+    codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
+  };
   const blockers =
     projectStatus === "partial"
       ? [
@@ -505,7 +537,8 @@ async function buildSyncedState(projectRoot: string): Promise<{
         projectStatus,
         blockers,
         currentPhase,
-        phaseArtifacts: currentPhaseArtifacts
+        phaseArtifacts: currentPhaseArtifacts,
+        bootstrapRouting
       }),
       blockers,
       lastUpdated: new Date().toISOString()
