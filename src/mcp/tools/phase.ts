@@ -8,6 +8,7 @@ import {
   BLUEPRINT_PHASES_PATH,
   ensureParentDirectory,
   ensureRepoRoot,
+  validatePlanArtifactContent,
   validateResearchArtifactContent,
   resolveBlueprintPath,
   toRepoRelativePath
@@ -25,6 +26,8 @@ type PhaseLookupArgs = {
 
 type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
 
+type PlanIndexArgs = PhaseLookupArgs;
+
 type PhaseArtifactReadArgs = PhaseLookupArgs & {
   artifact: PhaseArtifactKind;
 };
@@ -38,6 +41,17 @@ type PhaseArtifactWriteArgs = PhaseLookupArgs & {
 
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
   checkpoint: Record<string, unknown>;
+};
+
+type PhasePlanReadArgs = PhaseLookupArgs & {
+  planId: string;
+};
+
+type PhasePlanWriteArgs = PhaseLookupArgs & {
+  planId?: string;
+  content: string;
+  overwrite?: boolean;
+  validationMode?: "strict" | "warn";
 };
 
 type ResolvedPhaseLocation = {
@@ -171,6 +185,74 @@ type PhaseCheckpointDeleteResult = {
   reason: string | null;
 };
 
+type PhasePlanRecord = {
+  planId: string;
+  path: string;
+  title: string | null;
+  wave: number | null;
+  status: string | null;
+  objective: string | null;
+  dependsOn: string[];
+  requirements: string[];
+  filesModified: string[];
+  readFirst: string[];
+  acceptanceCriteria: string[];
+  autonomous: boolean | null;
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+};
+
+type PhasePlanIndexResult = {
+  phaseFound: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  plans: PhasePlanRecord[];
+  waves: Record<string, string[]>;
+  missingPlans: string[];
+  warnings: string[];
+};
+
+type PhasePlanReadResult = {
+  phaseFound: boolean;
+  found: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  planId: string | null;
+  path: string | null;
+  content: string | null;
+  metadata: Omit<PhasePlanRecord, "path" | "valid" | "issues" | "warnings" | "planId"> | null;
+  validation: {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+  } | null;
+  reason: string | null;
+};
+
+type PhasePlanWriteResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  planId: string;
+  path: string;
+  written: boolean;
+  created: boolean;
+  overwritten: boolean;
+  status: "created" | "updated" | "reused" | "invalid";
+  validation: {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+  };
+  warnings: string[];
+};
+
 type RoadmapReadResult = {
   roadmap: {
     path: string;
@@ -213,11 +295,28 @@ const phaseArtifactInputSchema = {
   phase: z.string().optional(),
   artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
 };
+const phasePlanInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional()
+};
 
 const phaseArtifactWriteInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional(),
   artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
+  content: z.string(),
+  overwrite: z.boolean().optional(),
+  validationMode: z.enum(["strict", "warn"]).optional()
+};
+const phasePlanReadInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  planId: z.string()
+};
+const phasePlanWriteInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  planId: z.string().optional(),
   content: z.string(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
@@ -538,6 +637,61 @@ function artifactPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phas
 
 function checkpointPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">): string {
   return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
+}
+
+function normalizePlanId(value: string): string {
+  const trimmed = value.trim();
+
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(`Plan id must be numeric: ${value}`);
+  }
+
+  return trimmed.padStart(2, "0");
+}
+
+function parsePlanArtifactPath(
+  pathValue: string,
+  phasePrefix: string
+): string | null {
+  const match = pathValue.match(
+    new RegExp(`${phasePrefix.replace(".", "\\.")}-(\\d+)-PLAN\\.md$`)
+  );
+
+  return match ? normalizePlanId(match[1]) : null;
+}
+
+function planPathFor(
+  located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">,
+  planId: string
+): string {
+  return buildArtifactPath(located.phaseDir, located.phasePrefix, `-${normalizePlanId(planId)}-PLAN.md`);
+}
+
+function toPhasePlanRecord(
+  planId: string,
+  pathValue: string,
+  content: string,
+  expectedPhase: string
+): PhasePlanRecord {
+  const validation = validatePlanArtifactContent(content, expectedPhase);
+
+  return {
+    planId,
+    path: pathValue,
+    title: validation.metadata.title,
+    wave: validation.metadata.wave,
+    status: validation.metadata.status,
+    objective: validation.metadata.objective,
+    dependsOn: validation.metadata.dependsOn,
+    requirements: validation.metadata.requirements,
+    filesModified: validation.metadata.filesModified,
+    readFirst: validation.metadata.readFirst,
+    acceptanceCriteria: validation.metadata.acceptanceCriteria,
+    autonomous: validation.metadata.autonomous,
+    valid: validation.valid,
+    issues: validation.issues,
+    warnings: validation.warnings
+  };
 }
 
 function normalizeTextContent(content: string): string {
@@ -988,6 +1142,275 @@ export async function blueprintPhaseArtifactWrite(
   };
 }
 
+export async function blueprintPhasePlanIndex(
+  args: PlanIndexArgs = {}
+): Promise<PhasePlanIndexResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      plans: [],
+      waves: {},
+      missingPlans: [],
+      warnings: located.reason ? [located.reason] : []
+    };
+  }
+
+  const planPaths = located.artifacts
+    .filter((artifact) => artifact.endsWith("-PLAN.md"))
+    .sort((left, right) => left.localeCompare(right));
+  const plans: PhasePlanRecord[] = [];
+  const waves: Record<string, string[]> = {};
+  const warnings: string[] = [];
+  const knownPlanIds = new Set<string>();
+
+  for (const planPath of planPaths) {
+    const planId = parsePlanArtifactPath(planPath, resolved.phasePrefix);
+
+    if (!planId) {
+      warnings.push(`Ignoring non-canonical plan artifact name: ${planPath}`);
+      continue;
+    }
+
+    knownPlanIds.add(planId);
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const record = toPhasePlanRecord(planId, planPath, content, resolved.phaseNumber);
+    plans.push(record);
+
+    const waveKey = String(record.wave ?? "unassigned");
+    waves[waveKey] ??= [];
+    waves[waveKey].push(planPath);
+  }
+
+  const missingPlans =
+    plans.length === 0
+      ? [planPathFor(resolved, "01")]
+      : plans.flatMap((plan) =>
+          plan.dependsOn.flatMap((dependency) => {
+            try {
+              const normalizedDependency = normalizePlanId(dependency);
+
+              return knownPlanIds.has(normalizedDependency)
+                ? []
+                : [planPathFor(resolved, normalizedDependency)];
+            } catch {
+              warnings.push(`${plan.path}: invalid depends_on reference: ${dependency}`);
+              return [];
+            }
+          })
+        );
+
+  for (const plan of plans) {
+    for (const issue of plan.issues) {
+      warnings.push(`${plan.path}: ${issue}`);
+    }
+    for (const warning of plan.warnings) {
+      warnings.push(`${plan.path}: ${warning}`);
+    }
+  }
+
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    plans,
+    waves,
+    missingPlans: [...new Set(missingPlans)],
+    warnings
+  };
+}
+
+export async function blueprintPhasePlanRead(
+  args: PhasePlanReadArgs
+): Promise<PhasePlanReadResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      found: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      planId: null,
+      path: null,
+      content: null,
+      metadata: null,
+      validation: null,
+      reason: located.reason
+    };
+  }
+
+  const planId = normalizePlanId(args.planId);
+  const pathValue = planPathFor(resolved, planId);
+  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+
+  if (!(await pathExists(absolutePath))) {
+    return {
+      phaseFound: true,
+      found: false,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: pathValue,
+      content: null,
+      metadata: null,
+      validation: null,
+      reason: `${pathValue} does not exist yet.`
+    };
+  }
+
+  const content = await fs.readFile(absolutePath, "utf8");
+  const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
+
+  return {
+    phaseFound: true,
+    found: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    planId,
+    path: pathValue,
+    content,
+    metadata: {
+      title: validation.metadata.title,
+      wave: validation.metadata.wave,
+      status: validation.metadata.status,
+      objective: validation.metadata.objective,
+      dependsOn: validation.metadata.dependsOn,
+      requirements: validation.metadata.requirements,
+      filesModified: validation.metadata.filesModified,
+      readFirst: validation.metadata.readFirst,
+      acceptanceCriteria: validation.metadata.acceptanceCriteria,
+      autonomous: validation.metadata.autonomous
+    },
+    validation: {
+      valid: validation.valid,
+      issues: validation.issues,
+      warnings: validation.warnings
+    },
+    reason: null
+  };
+}
+
+export async function blueprintPhasePlanWrite(
+  args: PhasePlanWriteArgs
+): Promise<PhasePlanWriteResult> {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const existingIndex = await blueprintPhasePlanIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const nextPlanNumber =
+    existingIndex.plans.length === 0
+      ? 1
+      : Math.max(
+          ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
+        ) + 1;
+  const planId = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
+  const pathValue = planPathFor(resolved, planId);
+  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+  const normalizedContent = normalizeTextContent(args.content);
+  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber);
+  const exists = await pathExists(absolutePath);
+  const warnings: string[] = [];
+
+  if (exists) {
+    const existingContent = await fs.readFile(absolutePath, "utf8");
+
+    if (existingContent === normalizedContent) {
+      warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "reused",
+        validation: {
+          valid: validation.valid,
+          issues: validation.issues,
+          warnings: validation.warnings
+        },
+        warnings
+      };
+    }
+
+    if (!(args.overwrite ?? false)) {
+      throw new Error(
+        `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+      );
+    }
+  }
+
+  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      validation: {
+        valid: false,
+        issues: validation.issues,
+        warnings: validation.warnings
+      },
+      warnings: []
+    };
+  }
+
+  await ensureParentDirectory(absolutePath);
+  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+
+  if (exists) {
+    warnings.push(`Replaced existing plan artifact: ${pathValue}`);
+  }
+
+  return {
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    planId,
+    path: pathValue,
+    written: true,
+    created: !exists,
+    overwritten: exists,
+    status: exists ? "updated" : "created",
+    validation: {
+      valid: validation.valid,
+      issues: validation.issues,
+      warnings: validation.warnings
+    },
+    warnings: [...warnings, ...validation.warnings]
+  };
+}
+
 export async function blueprintPhaseCheckpointGet(
   args: PhaseLookupArgs = {}
 ): Promise<PhaseCheckpointGetResult> {
@@ -1170,6 +1593,14 @@ export const phaseToolDefinitions = [
       blueprintPhaseResearchStatus(args as PhaseLookupArgs)
   },
   {
+    name: "blueprint_phase_plan_index",
+    description:
+      "Index phase plan artifacts, dependency waves, and missing plan prerequisites without mutating repo state.",
+    inputSchema: phasePlanInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhasePlanIndex(args as PlanIndexArgs)
+  },
+  {
     name: "blueprint_phase_artifact_read",
     description:
       "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
@@ -1184,6 +1615,22 @@ export const phaseToolDefinitions = [
     inputSchema: phaseArtifactWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactWrite(args as PhaseArtifactWriteArgs)
+  },
+  {
+    name: "blueprint_phase_plan_read",
+    description:
+      "Read a phase-scoped PLAN artifact together with parsed metadata and validation signals.",
+    inputSchema: phasePlanReadInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhasePlanRead(args as PhasePlanReadArgs)
+  },
+  {
+    name: "blueprint_phase_plan_write",
+    description:
+      "Persist substantive phase-scoped PLAN artifact content with overwrite protection and validation.",
+    inputSchema: phasePlanWriteInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhasePlanWrite(args as PhasePlanWriteArgs)
   },
   {
     name: "blueprint_phase_checkpoint_get",

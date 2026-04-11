@@ -184,3 +184,20 @@ test("phase discovery skill and bounded agent contracts are marked implemented i
     /\| `blueprint-ui-designer` \| `implemented` \| Produce `UI-SPEC` contracts \|/
   );
 });
+
+test("phase planning skill and bounded planning agents are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-phase-planning` \| `implemented` \| Plan synthesis, plan checks, and phase plan persistence \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-planner` \| `implemented` \| Create plan files \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-checker` \| `implemented` \| Verify plan quality before execution \|/
+  );
+});

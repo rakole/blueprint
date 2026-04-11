@@ -54,7 +54,9 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 | `blueprint_phase_checkpoint_get` | Read the saved discuss-phase checkpoint for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}` |
 | `blueprint_phase_checkpoint_put` | Persist a discuss-phase checkpoint JSON object for a phase | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
 | `blueprint_phase_checkpoint_delete` | Delete a saved discuss-phase checkpoint after successful completion | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}` |
-| `blueprint_phase_plan_index` | Index plan files and execution readiness | `{plans, waves, missingPlans}` |
+| `blueprint_phase_plan_index` | Index plan files and execution readiness across waves | `{plans, waves, missingPlans}` |
+| `blueprint_phase_plan_read` | Read a phase-scoped PLAN artifact together with parsed metadata and validation signals | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}` |
+| `blueprint_phase_plan_write` | Persist substantive phase-scoped PLAN artifact content with overwrite protection and validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}` |
 | `blueprint_phase_mark_complete` | Update state and roadmap for completed phase or milestone | `{updatedPaths, status}` |
 
 ### Artifact Management
@@ -94,6 +96,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 
 - `new-project`, `settings`, `set-profile`, `progress`, `health` lean on project, config, and state tools.
 - `/blu`, `help`, and `progress` must filter to catalog entries where `implemented` is `true`.
+- `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - lifecycle commands lean on phase, artifact, and state tools.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.

@@ -13,10 +13,11 @@ const IMPLEMENTED_COMMANDS = [
   "map-codebase",
   "discuss-phase",
   "research-phase",
-  "ui-phase"
+  "ui-phase",
+  "plan-phase"
 ] as const;
 
-const BLOCKED_COMMANDS = ["next", "do", "plan-phase", "insert-phase"] as const;
+const BLOCKED_COMMANDS = ["next", "do", "insert-phase"] as const;
 
 test("runtime command catalog only marks shipped Wave 0 commands as implemented", async () => {
   const catalog = await blueprintCommandCatalog();
@@ -71,13 +72,22 @@ test("blocked lifecycle and roadmap commands stay unroutable until substrate exi
     assert.notEqual(entry.status, "implemented");
     assert.ok(entry.blockedBy.length > 0);
   }
+});
 
-  assert.match(
-    catalog.commands["plan-phase"].blockedBy.join("\n"),
-    /Missing command manifest|Missing primary skill|Missing required MCP tool/
-  );
-  assert.match(
-    catalog.commands["insert-phase"].blockedBy.join("\n"),
-    /Missing command manifest|Missing primary skill|Missing required MCP tool/
-  );
+test("plan-phase is implemented once manifest, skill, and plan MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["plan-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.availableOptionalAgents.sort(), [
+    "blueprint-checker",
+    "blueprint-planner"
+  ]);
+  assert.deepEqual(entry.blockedBy, []);
 });
