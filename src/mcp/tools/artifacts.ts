@@ -42,12 +42,54 @@ export const SUPPORTED_SCAFFOLD_ARTIFACTS = [
 export type SupportedScaffoldArtifact =
   (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
 export type BlueprintReadiness = "uninitialized" | "partial" | "initialized";
+export type BootstrapRepoShape = "greenfield" | "scaffold-only" | "brownfield";
+export type BootstrapRequirementRow = {
+  id: string;
+  requirement: string;
+  status: string;
+  notes: string;
+};
+export type BootstrapRoadmapPhase = {
+  phase: string;
+  title: string;
+  status?: "planned" | "in_progress" | "done";
+  objective: string;
+  requirementIds?: string[];
+  notes?: string[];
+};
+export type BootstrapSeed = {
+  vision?: string;
+  audience?: {
+    primary?: string[];
+    secondary?: string[];
+  };
+  constraints?: string[];
+  currentMilestone?: string;
+  nonGoals?: string[];
+  requirements?: BootstrapRequirementRow[];
+  roadmapPhases?: BootstrapRoadmapPhase[];
+  brownfieldMode?: BootstrapRepoShape;
+  assumptions?: string[];
+};
+export type BootstrapAssessment = {
+  repoShape: BootstrapRepoShape;
+  codebaseMapped: boolean;
+  provisionalRoadmap: boolean;
+  recommendedNextAction: string;
+  reasons: string[];
+};
+export type BootstrapArtifactDiagnostics = {
+  placeholderArtifacts: string[];
+  traceabilityWarnings: string[];
+  brownfield: BootstrapAssessment;
+};
 
 type ArtifactScaffoldArgs = {
   cwd?: string;
   artifacts?: string[];
   overwrite?: boolean;
   projectName?: string;
+  bootstrapSeed?: BootstrapSeed;
 };
 
 type ArtifactListArgs = {
@@ -105,7 +147,12 @@ type ArtifactSummaryDigestResult = {
   inputsUsed: string[];
 };
 
-type ArtifactRenderer = (projectName: string) => string;
+type BootstrapRenderContext = {
+  projectName: string;
+  bootstrapSeed?: BootstrapSeed;
+  bootstrapAssessment: BootstrapAssessment;
+};
+type ArtifactRenderer = (context: BootstrapRenderContext) => string;
 type PhaseArtifactRequest = {
   artifact: string;
   phaseDir: string;
@@ -114,64 +161,342 @@ type PhaseArtifactRequest = {
   kind: "CONTEXT" | "DISCUSSION-LOG" | "RESEARCH" | "UI-SPEC";
 };
 
-const ARTIFACT_RENDERERS: Record<SupportedScaffoldArtifact, ArtifactRenderer> = {
-  ".blueprint/PROJECT.md": (projectName) => `# ${projectName}
+const BOOTSTRAP_SOURCE_DIRECTORIES = new Set([
+  "src",
+  "app",
+  "lib",
+  "server",
+  "client",
+  "packages",
+  "tests"
+]);
+const BOOTSTRAP_MANIFEST_FILES = new Set([
+  "package.json",
+  "pyproject.toml",
+  "Cargo.toml",
+  "go.mod",
+  "Gemfile",
+  "pom.xml",
+  "build.gradle",
+  "composer.json",
+  "mix.exs"
+]);
+const BOOTSTRAP_IGNORED_ROOT_ENTRIES = new Set([
+  ".git",
+  ".blueprint",
+  "README",
+  "README.md",
+  "LICENSE",
+  "LICENSE.md",
+  ".gitignore",
+  ".gitattributes",
+  ".editorconfig",
+  ".nvmrc"
+]);
+const BOOTSTRAP_PLACEHOLDER_SIGNALS: Record<string, string[]> = {
+  ".blueprint/PROJECT.md": [
+    "Describe the product outcome Blueprint should help this repository reach.",
+    "Define the smallest useful milestone that should land first."
+  ],
+  ".blueprint/REQUIREMENTS.md": [
+    "Replace this placeholder with the first real requirement."
+  ],
+  ".blueprint/ROADMAP.md": [
+    "Replace this starter roadmap with real phase goals before execution."
+  ]
+};
+
+function normalizeList(values: string[] | undefined, fallback: string[]): string[] {
+  const normalized = (values ?? [])
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function escapeTableCell(value: string): string {
+  return value.replaceAll("|", "\\|").trim();
+}
+
+function titleCaseBootstrapShape(value: BootstrapRepoShape): string {
+  return value
+    .split("-")
+    .map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`)
+    .join(" ");
+}
+
+function buildDefaultBootstrapSeed(
+  projectName: string,
+  assessment: BootstrapAssessment,
+  seed?: BootstrapSeed
+): Required<BootstrapSeed> {
+  const defaultVision =
+    assessment.repoShape === "brownfield"
+      ? `Bring ${projectName} under Blueprint with a trustworthy understanding of the existing repo, durable requirements, and a roadmap that stays provisional until the codebase is mapped.`
+      : `Establish ${projectName} with a durable Blueprint bootstrap draft so later discovery, planning, and execution commands inherit clear project intent and requirement traceability.`;
+  const defaultPrimaryAudience =
+    assessment.repoShape === "brownfield"
+      ? ["Maintainers aligning an existing codebase with Blueprint-managed planning."]
+      : ["Maintainers shaping the first milestone and execution path for the repo."];
+  const defaultSecondaryAudience = [
+    "Future contributors who need durable project context before they plan or implement changes."
+  ];
+  const defaultConstraints = [
+    "Project state lives in `.blueprint/`.",
+    "Persistent mutations must flow through Blueprint MCP tools.",
+    assessment.repoShape === "brownfield"
+      ? "Existing repo behavior should be preserved while Blueprint planning is introduced."
+      : "Bootstrap artifacts should be specific enough to guide later commands without pretending every product decision is already final."
+  ];
+  const defaultMilestone =
+    seed?.currentMilestone?.trim() ||
+    (assessment.repoShape === "brownfield" ? "v1-existing-repo-alignment" : "v1");
+  const defaultNonGoals = [
+    "Hidden runtime conventions.",
+    "Undocumented aliases.",
+    assessment.repoShape === "brownfield"
+      ? "Treating the roadmap as fully durable before `/blu:map-codebase` captures the existing repo."
+      : "Prompt-only bootstrap artifacts that skip requirement or roadmap traceability."
+  ];
+  const defaultRequirements: BootstrapRequirementRow[] =
+    assessment.repoShape === "brownfield"
+      ? [
+          {
+            id: "RQ-01",
+            requirement:
+              "Document the repo's current product direction, technical boundaries, and maintenance constraints before downstream planning.",
+            status: "Pending",
+            notes: "Brownfield bootstrap requirement."
+          },
+          {
+            id: "RQ-02",
+            requirement:
+              "Create a requirement set whose IDs remain traceable from the roadmap and later phase artifacts.",
+            status: "Pending",
+            notes: "Traceability must survive later lifecycle commands."
+          },
+          {
+            id: "RQ-03",
+            requirement:
+              "Map the existing codebase before treating later roadmap phases as durable execution commitments.",
+            status: "Pending",
+            notes: "Unmapped brownfield repos should route to `/blu:map-codebase`."
+          }
+        ]
+      : [
+          {
+            id: "RQ-01",
+            requirement:
+              `Define the product outcome and first-milestone goals for ${projectName}.`,
+            status: "Pending",
+            notes: "Bootstrap draft requirement."
+          },
+          {
+            id: "RQ-02",
+            requirement:
+              "Record durable constraints, non-goals, and acceptance boundaries before detailed planning starts.",
+            status: "Pending",
+            notes: "Keeps later discovery and planning grounded."
+          },
+          {
+            id: "RQ-03",
+            requirement:
+              "Prepare the repo for Blueprint lifecycle commands with stable requirement and roadmap traceability.",
+            status: "Pending",
+            notes: "Foundation requirement for later phases."
+          }
+        ];
+  const defaultRoadmapPhases: BootstrapRoadmapPhase[] =
+    assessment.repoShape === "brownfield"
+      ? [
+          {
+            phase: "1",
+            title: "Map Existing Codebase",
+            objective:
+              "Capture the current repo architecture, constraints, and risk areas before locking in later delivery phases.",
+            requirementIds: ["RQ-01", "RQ-03"],
+            notes: [
+              "Route to `/blu:map-codebase` immediately after bootstrap.",
+              "Treat later phases as provisional until mapping is complete."
+            ]
+          },
+          {
+            phase: "2",
+            title: "Align Requirements And Roadmap",
+            objective:
+              "Refine milestone scope and convert bootstrap findings into durable phased work once mapping evidence exists.",
+            requirementIds: ["RQ-02", "RQ-03"]
+          }
+        ]
+      : [
+          {
+            phase: "1",
+            title: "Discovery And Definition",
+            objective:
+              "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
+            requirementIds: ["RQ-01", "RQ-02"]
+          },
+          {
+            phase: "2",
+            title: "Foundation Bootstrap",
+            objective:
+              "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
+            requirementIds: ["RQ-02", "RQ-03"]
+          }
+        ];
+  const defaultAssumptions =
+    assessment.repoShape === "brownfield"
+      ? [
+          "The repo already contains implementation context that should be mapped before the roadmap is treated as durable.",
+          "Bootstrap artifacts should stay explicit about which parts are draft assumptions."
+        ]
+      : [
+          "The first milestone should stay small enough to validate Blueprint's workflow on this repo.",
+          "Bootstrap artifacts can start as draft planning inputs as long as they are no longer placeholder-only shells."
+        ];
+
+  return {
+    vision: seed?.vision?.trim() || defaultVision,
+    audience: {
+      primary: normalizeList(seed?.audience?.primary, defaultPrimaryAudience),
+      secondary: normalizeList(seed?.audience?.secondary, defaultSecondaryAudience)
+    },
+    constraints: normalizeList(seed?.constraints, defaultConstraints),
+    currentMilestone: defaultMilestone,
+    nonGoals: normalizeList(seed?.nonGoals, defaultNonGoals),
+    requirements:
+      seed?.requirements?.filter(
+        (requirement) =>
+          requirement.id.trim().length > 0 && requirement.requirement.trim().length > 0
+      ) ?? defaultRequirements,
+    roadmapPhases:
+      seed?.roadmapPhases?.filter(
+        (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
+      ) ?? defaultRoadmapPhases,
+    brownfieldMode: seed?.brownfieldMode ?? assessment.repoShape,
+    assumptions: normalizeList(seed?.assumptions, defaultAssumptions)
+  };
+}
+
+function renderProjectArtifact(context: BootstrapRenderContext): string {
+  const seed = buildDefaultBootstrapSeed(
+    context.projectName,
+    context.bootstrapAssessment,
+    context.bootstrapSeed
+  );
+  const primaryAudience = normalizeList(seed.audience.primary, []);
+  const secondaryAudience = normalizeList(seed.audience.secondary, []);
+
+  return `# ${context.projectName}
 
 ## Vision
 
-Describe the product outcome Blueprint should help this repository reach.
+${seed.vision}
 
 ## Audience
 
-- Primary users:
-- Secondary users:
+${primaryAudience.map((value) => `- Primary: ${value}`).join("\n")}
+${secondaryAudience.map((value) => `- Secondary: ${value}`).join("\n")}
 
 ## Constraints
 
-- Installed as a Gemini CLI extension
-- Project state lives in \`.blueprint/\`
-- Persistent mutations must flow through Blueprint MCP tools
+${seed.constraints.map((value) => `- ${value}`).join("\n")}
 
 ## Current Milestone
 
-Define the smallest useful milestone that should land first.
+${seed.currentMilestone}
 
 ## Non-Goals
 
-- Hidden runtime conventions
-- Undocumented aliases
-- Prompt-only persistence
-`,
-  ".blueprint/REQUIREMENTS.md": (projectName) => `# Requirements: ${projectName}
+${seed.nonGoals.map((value) => `- ${value}`).join("\n")}
+
+## Assumptions
+
+${seed.assumptions.map((value) => `- ${value}`).join("\n")}
+`;
+}
+
+function renderRequirementsArtifact(context: BootstrapRenderContext): string {
+  const seed = buildDefaultBootstrapSeed(
+    context.projectName,
+    context.bootstrapAssessment,
+    context.bootstrapSeed
+  );
+  const rows = seed.requirements
+    .map(
+      (requirement) =>
+        `| ${escapeTableCell(requirement.id)} | ${escapeTableCell(requirement.requirement)} | ${escapeTableCell(requirement.status)} | ${escapeTableCell(requirement.notes)} |`
+    )
+    .join("\n");
+
+  return `# Requirements: ${context.projectName}
 
 ## Requirements Table
 
 | ID | Requirement | Status | Notes |
 |----|-------------|--------|-------|
-| RQ-01 | Replace this placeholder with the first real requirement. | Pending | Seeded by \`/blu:new-project\` |
+${rows}
 
-## Acceptance Notes
+## Traceability Notes
 
-- Convert placeholders into explicit requirements before planning.
+- Keep every requirement ID referenced from \`.blueprint/ROADMAP.md\` before execution planning begins.
+- Preserve requirement IDs across later phase artifacts instead of silently renumbering them.
+- ${context.bootstrapAssessment.repoShape === "brownfield"
+    ? "Treat brownfield roadmap coverage as provisional until `/blu:map-codebase` has captured the existing repo."
+    : "Use these requirements as the durable baseline for later discovery and planning."}
 
-## Deferred Items
+## Open Questions
 
-- Add future work after the initial milestone is defined.
-`,
-  ".blueprint/ROADMAP.md": (projectName) => `# Roadmap: ${projectName}
+${seed.assumptions.map((value) => `- Revisit: ${value}`).join("\n")}
+`;
+}
+
+function renderRoadmapArtifact(context: BootstrapRenderContext): string {
+  const seed = buildDefaultBootstrapSeed(
+    context.projectName,
+    context.bootstrapAssessment,
+    context.bootstrapSeed
+  );
+  const phases = seed.roadmapPhases
+    .map((phase) => {
+      const marker = phase.status === "done" ? "x" : " ";
+      const requirementClause =
+        phase.requirementIds && phase.requirementIds.length > 0
+          ? ` (Requirements: ${phase.requirementIds.join(", ")})`
+          : "";
+      const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
+
+      return `- [${marker}] Phase ${phase.phase}: ${phase.title}${requirementClause}
+  - Objective: ${phase.objective}${notes ? `\n${notes}` : ""}`;
+    })
+    .join("\n");
+
+  return `# Roadmap: ${context.projectName}
 
 ## Milestone
 
-- Active milestone: v1
+- Active milestone: ${seed.currentMilestone}
+
+## Bootstrap Status
+
+- Repository shape: ${titleCaseBootstrapShape(context.bootstrapAssessment.repoShape)}
+- Codebase mapping: ${context.bootstrapAssessment.codebaseMapped ? "ready" : "pending"}
+- Roadmap confidence: ${context.bootstrapAssessment.provisionalRoadmap ? "provisional until /blu:map-codebase" : "ready for progress review"}
 
 ## Phases
 
-- [ ] Phase 1: Discovery and definition
+${phases}
 
 ## Notes
 
-- Replace this starter roadmap with real phase goals before execution.
-`,
+${seed.assumptions.map((value) => `- ${value}`).join("\n")}
+`;
+}
+
+const ARTIFACT_RENDERERS: Record<SupportedScaffoldArtifact, ArtifactRenderer> = {
+  ".blueprint/PROJECT.md": renderProjectArtifact,
+  ".blueprint/REQUIREMENTS.md": renderRequirementsArtifact,
+  ".blueprint/ROADMAP.md": renderRoadmapArtifact,
   ".blueprint/phases/": () => "",
   ".blueprint/codebase/STACK.md": () => `# Stack
 
@@ -228,7 +553,45 @@ const artifactScaffoldInputSchema = {
   cwd: z.string().optional(),
   projectName: z.string().optional(),
   overwrite: z.boolean().optional(),
-  artifacts: z.array(z.string()).optional()
+  artifacts: z.array(z.string()).optional(),
+  bootstrapSeed: z
+    .object({
+      vision: z.string().optional(),
+      audience: z
+        .object({
+          primary: z.array(z.string()).optional(),
+          secondary: z.array(z.string()).optional()
+        })
+        .optional(),
+      constraints: z.array(z.string()).optional(),
+      currentMilestone: z.string().optional(),
+      nonGoals: z.array(z.string()).optional(),
+      requirements: z
+        .array(
+          z.object({
+            id: z.string(),
+            requirement: z.string(),
+            status: z.string(),
+            notes: z.string()
+          })
+        )
+        .optional(),
+      roadmapPhases: z
+        .array(
+          z.object({
+            phase: z.string(),
+            title: z.string(),
+            status: z.enum(["planned", "in_progress", "done"]).optional(),
+            objective: z.string(),
+            requirementIds: z.array(z.string()).optional(),
+            notes: z.array(z.string()).optional()
+          })
+        )
+        .optional(),
+      brownfieldMode: z.enum(["greenfield", "scaffold-only", "brownfield"]).optional(),
+      assumptions: z.array(z.string()).optional()
+    })
+    .optional()
 };
 const artifactListInputSchema = {
   cwd: z.string().optional()
@@ -645,6 +1008,143 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
   };
 }
 
+async function assessBootstrapRepoShape(
+  projectRoot: string,
+  inspection?: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>
+): Promise<BootstrapAssessment> {
+  const entries = await fs.readdir(projectRoot, { withFileTypes: true });
+  const substantiveEntries = entries.filter(
+    (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
+  );
+  const hasSourceDirectories = substantiveEntries.some(
+    (entry) => entry.isDirectory() && BOOTSTRAP_SOURCE_DIRECTORIES.has(entry.name)
+  );
+  const hasBuildManifest = substantiveEntries.some(
+    (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
+  );
+  const codebasePresentCount = inspection?.codebase.present.length ?? 0;
+  const codebaseMapped = codebasePresentCount === CODEBASE_ARTIFACTS.length;
+  let repoShape: BootstrapRepoShape = "greenfield";
+  const reasons: string[] = [];
+
+  if (
+    hasSourceDirectories ||
+    (hasBuildManifest && substantiveEntries.length >= 2) ||
+    substantiveEntries.length >= 4
+  ) {
+    repoShape = "brownfield";
+    reasons.push("Repo already contains substantive implementation or build structure.");
+  } else if (hasBuildManifest || substantiveEntries.length >= 2) {
+    repoShape = "scaffold-only";
+    reasons.push("Repo contains initial scaffolding but not enough evidence for a mapped brownfield flow.");
+  } else {
+    reasons.push("Repo shape still looks close to an empty or freshly created project.");
+  }
+
+  const provisionalRoadmap = repoShape === "brownfield" && !codebaseMapped;
+  const recommendedNextAction = provisionalRoadmap
+    ? "Run /blu:map-codebase"
+    : "Run /blu:progress";
+
+  if (provisionalRoadmap) {
+    reasons.push("Brownfield repos should map the existing codebase before later roadmap phases are treated as durable.");
+  }
+
+  return {
+    repoShape,
+    codebaseMapped,
+    provisionalRoadmap,
+    recommendedNextAction,
+    reasons
+  };
+}
+
+function extractRequirementIds(content: string): string[] {
+  return [...content.matchAll(/\|\s*([A-Z][A-Z0-9-]*-\d+)\s*\|/g)].map((match) => match[1]);
+}
+
+function extractRoadmapRequirementRefs(content: string): string[] {
+  const references = [
+    ...content.matchAll(/Requirements?:\s*([A-Z0-9,\- ]+)/g)
+  ].flatMap((match) =>
+    match[1]
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => /^[A-Z][A-Z0-9-]*-\d+$/.test(value))
+  );
+
+  return [...new Set(references)];
+}
+
+export async function inspectBootstrapArtifacts(
+  projectRoot: string
+): Promise<BootstrapArtifactDiagnostics> {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const brownfield = await assessBootstrapRepoShape(projectRoot, inspection);
+  const placeholderArtifacts: string[] = [];
+  const traceabilityWarnings: string[] = [];
+  const projectArtifactPaths = [
+    `${BLUEPRINT_DIR}/PROJECT.md`,
+    `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
+    `${BLUEPRINT_DIR}/ROADMAP.md`
+  ] as const;
+  const contents = new Map<string, string>();
+
+  for (const artifact of projectArtifactPaths) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+
+    if (!(await pathExists(absolutePath))) {
+      continue;
+    }
+
+    const raw = await fs.readFile(absolutePath, "utf8");
+    contents.set(artifact, raw);
+
+    if (
+      BOOTSTRAP_PLACEHOLDER_SIGNALS[artifact]?.some((signal) => raw.includes(signal))
+    ) {
+      placeholderArtifacts.push(artifact);
+    }
+  }
+
+  const requirementsContent = contents.get(`${BLUEPRINT_DIR}/REQUIREMENTS.md`) ?? "";
+  const roadmapContent = contents.get(`${BLUEPRINT_DIR}/ROADMAP.md`) ?? "";
+  const requirementIds = extractRequirementIds(requirementsContent);
+  const roadmapRequirementRefs = extractRoadmapRequirementRefs(roadmapContent);
+
+  if (requirementIds.length === 0 && requirementsContent.length > 0) {
+    traceabilityWarnings.push(
+      "REQUIREMENTS.md does not yet contain durable requirement IDs."
+    );
+  }
+
+  if (requirementIds.length > 0 && roadmapRequirementRefs.length === 0) {
+    traceabilityWarnings.push(
+      "ROADMAP.md does not reference any requirement IDs from REQUIREMENTS.md."
+    );
+  }
+
+  for (const requirementId of requirementIds) {
+    if (!roadmapRequirementRefs.includes(requirementId)) {
+      traceabilityWarnings.push(
+        `ROADMAP.md is missing traceability for requirement ${requirementId}.`
+      );
+    }
+  }
+
+  if (brownfield.provisionalRoadmap) {
+    traceabilityWarnings.push(
+      "Brownfield roadmap remains provisional until `/blu:map-codebase` captures the existing codebase."
+    );
+  }
+
+  return {
+    placeholderArtifacts: [...new Set(placeholderArtifacts)],
+    traceabilityWarnings: [...new Set(traceabilityWarnings)],
+    brownfield
+  };
+}
+
 function normalizeRequestedArtifacts(
   requestedArtifacts?: string[]
 ): string[] {
@@ -689,11 +1189,17 @@ export async function blueprintArtifactScaffold(
 ): Promise<ArtifactScaffoldResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const projectName = inferProjectName(projectRoot, args.projectName);
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const overwrite = args.overwrite ?? false;
   const artifacts = normalizeRequestedArtifacts(args.artifacts);
   const createdFiles: string[] = [];
   const reusedFiles: string[] = [];
   const warnings: string[] = [];
+  const renderContext: BootstrapRenderContext = {
+    projectName,
+    bootstrapSeed: args.bootstrapSeed,
+    bootstrapAssessment: bootstrapDiagnostics.brownfield
+  };
 
   await fs.mkdir(getBlueprintRoot(projectRoot), { recursive: true });
 
@@ -735,7 +1241,7 @@ export async function blueprintArtifactScaffold(
       continue;
     }
 
-    await writeTextFile(absolutePath, renderArtifact(projectName));
+    await writeTextFile(absolutePath, renderArtifact(renderContext));
 
     if (exists) {
       warnings.push(

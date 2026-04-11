@@ -9,6 +9,7 @@ import {
   ensureParentDirectory,
   ensureRepoRoot,
   inspectBlueprintArtifacts,
+  inspectBootstrapArtifacts,
   resolveBlueprintPath,
   toRepoRelativePath
 } from "./artifacts.js";
@@ -56,6 +57,11 @@ type StateSyncResult = {
   syncedFields: string[];
   warnings: string[];
   statePath: string;
+};
+
+type BootstrapRoutingSignals = {
+  brownfieldDetected: boolean;
+  codebaseMapped: boolean;
 };
 
 const DEFAULT_STATE: BlueprintState = {
@@ -161,7 +167,12 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
   }
 }
 
-function deriveNextAction(projectStatus: string, blockers: string[], currentPhase: string): string {
+function deriveNextAction(
+  projectStatus: string,
+  blockers: string[],
+  currentPhase: string,
+  bootstrapRouting: BootstrapRoutingSignals
+): string {
   if (projectStatus === "uninitialized") {
     return "Run /blu:new-project";
   }
@@ -174,6 +185,10 @@ function deriveNextAction(projectStatus: string, blockers: string[], currentPhas
     return "Run /blu:health to inspect blockers and repair options";
   }
 
+  if (bootstrapRouting.brownfieldDetected && !bootstrapRouting.codebaseMapped) {
+    return "Run /blu:map-codebase before treating the roadmap as durable";
+  }
+
   return currentPhase
     ? `Run /blu:progress to review Phase ${currentPhase} and the next safe action`
     : "Run /blu:progress to review the next safe Blueprint action";
@@ -184,6 +199,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
   warnings: string[];
 }> {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const existingState = await loadBlueprintState(projectRoot);
   const roadmapSignals = await readRoadmapSignals(projectRoot);
   const warnings: string[] = [];
@@ -216,6 +232,10 @@ async function buildSyncedState(projectRoot: string): Promise<{
     projectStatus === "partial"
       ? [...new Set([...nonStructuralBlockers, ...structuralBlockers])]
       : nonStructuralBlockers;
+  const bootstrapRouting: BootstrapRoutingSignals = {
+    brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
+    codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
+  };
 
   return {
     state: {
@@ -224,7 +244,12 @@ async function buildSyncedState(projectRoot: string): Promise<{
       currentPhase,
       activeCommand:
         projectStatus === "partial" ? "/blu:health" : existingState.activeCommand,
-      nextAction: deriveNextAction(projectStatus, blockers, currentPhase),
+      nextAction: deriveNextAction(
+        projectStatus,
+        blockers,
+        currentPhase,
+        bootstrapRouting
+      ),
       blockers,
       lastUpdated: new Date().toISOString()
     },

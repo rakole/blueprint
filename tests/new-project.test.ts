@@ -74,6 +74,12 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   const config = await readJsonFile<Record<string, unknown>>(
     path.join(repoPath, ".blueprint/config.json")
   );
+  const projectDoc = await readFile(path.join(repoPath, ".blueprint/PROJECT.md"), "utf8");
+  const requirementsDoc = await readFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    "utf8"
+  );
+  const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
 
   for (const relativePath of [
     ".blueprint/PROJECT.md",
@@ -104,6 +110,26 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   assert.ok("safety" in config);
   assert.ok("maintenance" in config);
   assert.equal("hooks" in config, false);
+  assert.equal(result.brownfield.repoShape, "greenfield");
+  assert.match(result.nextAction, /\/blu:progress/);
+  assert.deepEqual(result.bootstrapDiagnostics.placeholderArtifacts, []);
+  assert.equal(result.bootstrapDiagnostics.traceabilityWarnings.length, 0);
+  assert.doesNotMatch(
+    projectDoc,
+    /Describe the product outcome Blueprint should help this repository reach\./
+  );
+  assert.doesNotMatch(
+    requirementsDoc,
+    /Replace this placeholder with the first real requirement\./
+  );
+  assert.doesNotMatch(
+    roadmapDoc,
+    /Replace this starter roadmap with real phase goals before execution\./
+  );
+  assert.match(requirementsDoc, /\| RQ-01 \|/);
+  assert.match(requirementsDoc, /## Traceability Notes/);
+  assert.match(roadmapDoc, /Requirements: RQ-01, RQ-02/);
+  assert.match(roadmapDoc, /Roadmap confidence: ready for progress review/);
 });
 
 test("new-project fails from a nested directory with a precise repo-root error", async (t) => {
@@ -193,7 +219,77 @@ test("project status reports initialization and a clear next action after bootst
 
   assert.equal(status.initialized, true);
   assert.equal(status.currentPhase, "1");
-  assert.ok(status.nextAction.length > 0);
+  assert.match(status.nextAction, /\/blu:progress/);
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.deepEqual(status.bootstrap.placeholderArtifacts, []);
+});
+
+test("new-project accepts an explicit bootstrap seed and writes traceable artifacts", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision: "Ship a focused Gemini-native planning workflow for solo maintainers.",
+      currentMilestone: "v2",
+      requirements: [
+        {
+          id: "BP-01",
+          requirement: "Capture the solo-maintainer workflow clearly.",
+          status: "Pending",
+          notes: "Custom seed requirement."
+        },
+        {
+          id: "BP-02",
+          requirement: "Keep roadmap phases traceable to bootstrap requirements.",
+          status: "Pending",
+          notes: "Custom traceability requirement."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Define Workflow",
+          objective: "Turn the custom bootstrap seed into a clear initial milestone.",
+          requirementIds: ["BP-01", "BP-02"]
+        }
+      ],
+      assumptions: ["The initial milestone should stay narrow enough for a single maintainer."]
+    }
+  });
+
+  const requirementsDoc = await readFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    "utf8"
+  );
+  const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(requirementsDoc, /\| BP-01 \| Capture the solo-maintainer workflow clearly\./);
+  assert.match(roadmapDoc, /Phase 1: Define Workflow \(Requirements: BP-01, BP-02\)/);
+  assert.equal(status.currentMilestone, "v2");
+  assert.equal(status.currentPhase, "1");
+});
+
+test("brownfield repos route to map-codebase after bootstrap until the repo is mapped", async (t) => {
+  const repoPath = await createRepoFromFixture("brownfield-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintProjectInit({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(result.brownfield.repoShape, "brownfield");
+  assert.match(result.nextAction, /\/blu:map-codebase/);
+  assert.match(status.nextAction, /\/blu:map-codebase/);
+  assert.equal(status.bootstrap.brownfieldDetected, true);
+  assert.equal(status.bootstrap.codebaseMapped, false);
+  assert.match(roadmapDoc, /Roadmap confidence: provisional until \/blu:map-codebase/);
 });
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {

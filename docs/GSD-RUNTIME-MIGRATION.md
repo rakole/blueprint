@@ -35,10 +35,10 @@ Rules for using these tags here:
 The current drift-repair checkpoint locks the following Wave 0 runtime expectations:
 
 - `/blu`, `help`, and `progress` must consult the runtime-aware command catalog and only recommend commands whose entry is `implemented`.
-- `new-project` keeps MCP-owned bootstrap writes, but the `blueprint-bootstrap` skill must preserve higher-level bootstrap intent instead of collapsing into bare scaffolding.
+- `new-project` keeps MCP-owned bootstrap writes, and the `blueprint-bootstrap` skill now requires substantive bootstrap drafts, durable requirement traceability, and explicit brownfield next-step handling rather than bare scaffolding.
 - `map-codebase` owns a seven-document bundle: `STACK.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `TESTING.md`, `INTEGRATIONS.md`, and `CONCERNS.md`.
 - Remaining explicit Blueprint deltas for shipped Wave 0 commands are limited to `/blu` naming, `.blueprint` state, Gemini-native routing, advisory hooks, no slash-command chaining, no repo-level hook config, and no self-update.
-- Current bounded runtime restrictions that still need future review are explicit here: `new-project` does not yet persist separate bootstrap-research artifacts, and `map-codebase` still expects a Blueprint-initialized repo before writing into `.blueprint/codebase/`.
+- Current bounded runtime restrictions that still need future review are explicit here: `new-project` now persists substantive bootstrap artifacts through the existing MCP tool surface, but it still does not claim a separate audited upstream research stage, and `map-codebase` still expects a Blueprint-initialized repo before writing into `.blueprint/codebase/`.
 
 Wave 0 behaviors that remain narrower than upstream must be called out explicitly here rather than left implicit in command docs.
 

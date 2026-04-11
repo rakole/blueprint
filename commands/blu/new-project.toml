@@ -9,21 +9,27 @@ Follow this flow exactly:
 1. Confirm the command is running from the target repository root. If not, stop with the precise repo-root error instead of guessing.
 2. Detect whether the user passed `--auto`.
 3. Read `blueprint_config_get` to inspect saved defaults and effective warnings before mutating anything.
-4. If `.blueprint/` already exists, require explicit overwrite confirmation before continuing.
-5. Call `blueprint_project_init` to create `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/config.json`, and `.blueprint/phases/`.
-6. Call `blueprint_artifact_scaffold` only when you need to create or reuse additional bootstrap artifacts deliberately.
-7. Call `blueprint_config_set` only when the user explicitly asks to adjust repo or saved defaults during initialization.
-8. Call `blueprint_state_update` if the command needs to refine status or next-step guidance after initialization.
-9. Call `blueprint_project_status` after initialization so the user gets the repo's next safe action.
-10. For brownfield repos, make the next step explicit: continue with `/blu:map-codebase`, refine bootstrap context, or stop after initialization.
+4. Classify the repo as greenfield, scaffold-only, or brownfield before the first persistent write.
+5. If `.blueprint/` already exists, require explicit overwrite confirmation before continuing.
+6. Gather or synthesize enough bootstrap context to avoid placeholder-only project artifacts.
+7. Call `blueprint_project_init` for the first persistent bootstrap write so `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/config.json`, and `.blueprint/phases/` are created through MCP.
+8. Call `blueprint_artifact_scaffold` only when you need to create or reuse additional bootstrap artifacts deliberately.
+9. Call `blueprint_config_set` only when the user explicitly asks to adjust repo or saved defaults during initialization.
+10. Call `blueprint_state_update` if the command needs to refine status or next-step guidance after initialization.
+11. Call `blueprint_project_status` after initialization so the user gets the repo's next safe action.
+12. For brownfield repos, make the next step explicit: if the codebase is not mapped yet, route to `/blu:map-codebase` and treat the roadmap as provisional until mapping is complete.
 
 `--auto` behavior:
+- If `--auto` is present, treat the command as non-interactive after the normal overwrite gate.
 - If `--auto` is present and saved defaults are valid, apply them automatically.
 - If saved defaults are malformed, explain that Blueprint fell back to hardcoded defaults.
+- `--auto` must still classify repo shape before the first write.
 
 Response requirements:
 - Summarize the created `.blueprint/` paths, including `.blueprint/config.json`.
 - Mention any warnings or defaults provenance when relevant.
+- Explain whether the bootstrap artifacts are greenfield-ready or brownfield-provisional.
 - Preserve requirement and roadmap traceability expectations instead of describing the command as bare scaffolding.
+- Call out any explicit assumptions that shaped the bootstrap draft.
 - End with the next safe action after initialization, using the project status response.
 """
