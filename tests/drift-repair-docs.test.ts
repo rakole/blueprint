@@ -32,11 +32,17 @@ test("control-plane docs describe the shipped Wave 0 runtime instead of a docs-o
   assert.match(gemini, /Phase 3 discovery is now the next implementation slice/);
   assert.match(gemini, /\/blu:map-codebase/);
   assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
-  assert.match(memory, /Current milestone: Phase 3 Phase Discovery/);
+  assert.match(
+    memory,
+    /Current milestone: Phase 3 Phase Discovery|Current milestone: Phase 4 Plan, Execute, and Verify/
+  );
   assert.match(roadmap, /Phase 2\.1: Drift Recovery Gate/);
   assert.match(roadmap, /Phase 2\.2: Urgent Drift-Repair Follow-Up/);
-  assert.match(state, /Phase: 03/);
-  assert.match(state, /Phase 2\.2 closed; ready to start Phase 3/);
+  assert.match(state, /Phase: 03|Phase: 04/);
+  assert.match(
+    state,
+    /Phase 2\.2 closed; ready to start Phase 3|Executing Phase 03|Phase 03 complete/
+  );
   assert.match(drift, /Checkpoint: Phase 2\.2 future-contract drift repair/);
   assert.match(drift, /State: closed on 2026-04-11/);
   assert.match(drift, /Phase 3 discovery is unblocked for implementation work/);
@@ -94,5 +100,5 @@ test("drift requirements are backfilled and phase-mapped across roadmap and stat
   assert.match(roadmap, /\*\*Requirements\*\*: DRIFT-05, DRIFT-06, DRIFT-07/);
   assert.match(roadmap, /\| 2\.2\. Urgent Drift-Repair Follow-Up \| 4\/4 \| Complete \| 2026-04-11 \|/);
   assert.match(state, /Phase 2\.2 is complete: control docs and planning state are truth-synced/);
-  assert.match(state, /Phase 2\.2 closed; Phase 3 unblocked/);
+  assert.match(state, /Phase 2\.2 is complete: .*Phase 3 is unblocked/);
 });

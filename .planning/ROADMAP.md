@@ -14,7 +14,7 @@ Blueprint moves from a locked docs-first planning pack to an executable Gemini e
 - [x] **Phase 2: Router, Health, and Mapping** - Make foundational read-path and brownfield foundation commands executable
 - [x] **Phase 2.1: Drift Recovery Gate** - Re-baseline docs, runtime surfaces, and Wave 0 parity before Phase 3 exposure
 - [x] **Phase 2.2: Urgent Drift-Repair Follow-Up** - Closed on 2026-04-11 after completing the locked truth-sync, runtime-awareness, parity, and phase-freeze work needed to unblock Phase 3
-- [ ] **Phase 3: Phase Discovery** - Add context capture, targeted research, and UI-spec flows
+- [x] **Phase 3: Phase Discovery** - Completed on 2026-04-11 after shipping `discuss-phase`, `research-phase`, and `ui-phase`
 - [ ] **Phase 4: Plan, Execute, and Verify** - Complete the core implementation loop for planned work
 - [ ] **Phase 5: Roadmap and Milestones** - Add roadmap mutation and milestone administration flows
 - [ ] **Phase 6: Capture and Lightweight Execution** - Add notes, todos, backlog, and lightweight execution/routing tools
@@ -100,9 +100,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Implement `discuss-phase` and phase context artifact handling
-- [ ] 03-02: Implement `research-phase` orchestration and research artifacts
-- [ ] 03-03: Implement `ui-phase` generation and UI-safety integration
+- [x] 03-01: Implement `discuss-phase` and phase context artifact handling
+- [x] 03-02: Implement `research-phase` orchestration and research artifacts
+- [x] 03-03: Implement `ui-phase` generation and UI-safety integration
 
 ### Phase 4: Plan, Execute, and Verify
 **Goal**: Complete the core loop that turns scoped work into executed and verified change.
@@ -184,7 +184,7 @@ Plans:
 **Execution Order:**
 Phases execute in numeric order: 1 → 2 → 2.1 → 2.2 → 3 → 4 → 5 → 6 → 7 → 8
 
-Phase 3 is now the next implementation slice. Runtime exposure still remains limited to `implemented` commands until new manifests, skills, and required MCP tools are actually present.
+Phase 4 is now the next implementation slice. Runtime exposure still remains limited to `implemented` commands until new manifests, skills, and required MCP tools are actually present.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -192,7 +192,7 @@ Phase 3 is now the next implementation slice. Runtime exposure still remains lim
 | 2. Router, Health, and Mapping | 3/3 | Complete | 2026-04-11 |
 | 2.1. Drift Recovery Gate | 4/4 | Complete | 2026-04-11 |
 | 2.2. Urgent Drift-Repair Follow-Up | 4/4 | Complete | 2026-04-11 |
-| 3. Phase Discovery | 0/3 | Not started | - |
+| 3. Phase Discovery | 3/3 | Complete | 2026-04-11 |
 | 4. Plan, Execute, and Verify | 0/4 | Not started | - |
 | 5. Roadmap and Milestones | 0/3 | Not started | - |
 | 6. Capture and Lightweight Execution | 0/3 | Not started | - |

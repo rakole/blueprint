@@ -16,7 +16,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `code-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW.md` | `Low: review artifact generation only.` |
 | `complete-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `milestone completion report; .blueprint/STATE.md` | `Medium: advances milestone status and archival expectations.` |
 | `debug` | 3 | `Capture And Lightweight Execution` | `blueprint-debug` | `planned` | `debug report in .blueprint/reports/; optional todo follow-ups` | `Medium: exploratory shell commands and test runs are likely.` |
-| `discuss-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-CONTEXT.md; optional phase XX-DISCUSSION-LOG.md` | `Medium: can replace or extend phase context artifacts.` |
+| `discuss-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-CONTEXT.md; optional phase XX-DISCUSSION-LOG.md` | `Medium: can replace or extend phase context artifacts.` |
 | `do` | 3 | `Capture And Lightweight Execution` | `blueprint-router` | `blocked` | `none` | `Low: routing only.` |
 | `docs-update` | 4 | `Quality And Shipping` | `blueprint-docs` | `planned` | `repo documentation files; docs-update report in .blueprint/reports/` | `Medium: writes repo docs outside `.blueprint/`.` |
 | `execute-phase` | 1 | `Core Lifecycle` | `blueprint-phase-execution` | `planned` | `one or more XX-YY-SUMMARY.md files; optional execution reports in .blueprint/reports/` | `High: drives real repo mutation during implementation.` |
@@ -42,7 +42,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `reapply-patches` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `patch replay report in .blueprint/reports/ or global patch logs; repo file changes when replay succeeds` | `High: patch replay may touch many repo files.` |
 | `remove-phase` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `.blueprint/ROADMAP.md; renamed or archived phase directories` | `High: renumbering can invalidate downstream roadmap references.` |
 | `remove-workspace` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `updated global workspace registry; workspace directory removal` | `High: directory deletion and worktree cleanup.` |
-| `research-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-RESEARCH.md; .blueprint/STATE.md` | `Low: writes research artifacts only.` |
+| `research-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-RESEARCH.md; .blueprint/STATE.md` | `Low: writes research artifacts only.` |
 | `resume-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `planned` | `none` | `Low: restores state without planned repo mutation.` |
 | `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `updated backlog index; updated roadmap and any promoted phase stubs` | `Medium: can promote backlog items into active roadmap scope.` |
 | `review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEWS.md or equivalent peer-review artifact` | `Medium: external tool orchestration without default repo mutation.` |
@@ -50,7 +50,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |
 | `settings` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json; optional ~/.gemini/blueprint/defaults.json` | `Low: config-only mutation inside repo config plus optional user defaults.` |
 | `ship` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `ship report in .blueprint/reports/; optional PR body file or state note` | `High: remote and git mutation path.` |
-| `ui-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-UI-SPEC.md (UI contract or explicit skip rationale); .blueprint/STATE.md` | `Low: writes a UI contract or documented skip rationale only.` |
+| `ui-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-UI-SPEC.md (UI contract or explicit skip rationale); .blueprint/STATE.md` | `Low: writes a UI contract or documented skip rationale only.` |
 | `ui-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-UI-REVIEW.md` | `Low: review artifact only.` |
 | `undo` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `git history through revert operations; undo report in .blueprint/reports/` | `High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.` |
 | `update` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `update plan metadata under ~/.gemini/blueprint/updates/; human-readable update checklist report` | `Low: advisory only; no in-session self-update.` |

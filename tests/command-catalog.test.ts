@@ -10,7 +10,10 @@ const IMPLEMENTED_COMMANDS = [
   "help",
   "progress",
   "health",
-  "map-codebase"
+  "map-codebase",
+  "discuss-phase",
+  "research-phase",
+  "ui-phase"
 ] as const;
 
 const BLOCKED_COMMANDS = ["next", "do", "plan-phase", "insert-phase"] as const;
@@ -37,7 +40,7 @@ test("runtime command catalog only marks shipped Wave 0 commands as implemented"
   }
 });
 
-test("implemented Wave 0 commands have their declared optional agent contracts available", async () => {
+test("implemented commands expose their declared optional agent contracts when shipped", async () => {
   const catalog = await blueprintCommandCatalog();
 
   assert.deepEqual(catalog.commands["new-project"].availableOptionalAgents.sort(), [
@@ -46,6 +49,15 @@ test("implemented Wave 0 commands have their declared optional agent contracts a
   ]);
   assert.deepEqual(catalog.commands["map-codebase"].availableOptionalAgents, [
     "blueprint-mapper"
+  ]);
+  assert.deepEqual(catalog.commands["discuss-phase"].availableOptionalAgents, [
+    "blueprint-researcher"
+  ]);
+  assert.deepEqual(catalog.commands["research-phase"].availableOptionalAgents, [
+    "blueprint-researcher"
+  ]);
+  assert.deepEqual(catalog.commands["ui-phase"].availableOptionalAgents, [
+    "blueprint-ui-designer"
   ]);
 });
 
