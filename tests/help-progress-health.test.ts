@@ -122,7 +122,6 @@ test("read-path tools distinguish partial Blueprint repos and expose repair bloc
   assert.ok(artifacts.missing.includes(".blueprint/config.json"));
   assert.equal(validation.valid, false);
   assert.match(validation.issues.join("\n"), /Missing core artifact: \.blueprint\/STATE\.md/);
-  assert.match(validation.issues.join("\n"), /Phase artifact bundle is incomplete/);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu:health --repair/);
 });
 
@@ -287,9 +286,73 @@ test("artifact validation flags malformed legacy config and incomplete bundles w
   assert.match(validation.issues.join("\n"), /Config warning: Migrated legacy config key commit_docs/);
   assert.match(validation.issues.join("\n"), /Config warning: Migrated legacy config key parallelization/);
   assert.match(validation.issues.join("\n"), /Config warning: Ignored disallowed config key: workflow\.use_workspaces/);
-  assert.match(validation.issues.join("\n"), /Phase artifact bundle is incomplete/);
   assert.match(validation.issues.join("\n"), /Codebase artifact bundle is incomplete/);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu:health --repair/);
+});
+
+test("artifact validation does not flag an in-progress discovery phase as structurally broken", async (t) => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-discovery-validation-"));
+  const repoPath = path.join(tempRoot, "repo");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Discovery Validation
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery**
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 3
+- Active command: /blu:discuss-phase
+- Next action: Run /blu:discuss-phase to finish discovery
+- Last updated: 2026-04-11T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `# Phase 03 Context
+
+## Decisions
+- Discovery is still in progress.
+`,
+    "utf8"
+  );
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.issues, []);
 });
 
 test("help progress and health command files reference registered MCP tool names", async () => {

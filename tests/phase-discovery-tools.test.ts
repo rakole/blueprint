@@ -7,6 +7,11 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
 import {
+  blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactWrite,
+  blueprintPhaseCheckpointDelete,
+  blueprintPhaseCheckpointGet,
+  blueprintPhaseCheckpointPut,
   blueprintPhaseContext,
   blueprintPhaseLocate,
   blueprintPhaseResearchStatus,
@@ -138,7 +143,12 @@ test("phase discovery MCP tools are registered in the Blueprint server", () => {
     "blueprint_roadmap_read",
     "blueprint_phase_locate",
     "blueprint_phase_context",
-    "blueprint_phase_research_status"
+    "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
+    "blueprint_phase_checkpoint_get",
+    "blueprint_phase_checkpoint_put",
+    "blueprint_phase_checkpoint_delete"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
   }
@@ -219,4 +229,129 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.equal(after.hasResearch, true);
   assert.equal(after.hasUiSpec, true);
   assert.match(uiSpec, /Outcome Mode/);
+});
+
+test("phase artifact read and write persist substantive discovery content with overwrite protection", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initialContent = `# Phase 03 Context
+
+## Decisions
+- Persist substantive context content through phase-scoped MCP writes.
+`;
+  const replacementContent = `# Phase 03 Context
+
+## Decisions
+- Persist substantive context content through phase-scoped MCP writes.
+- Replace placeholder scaffolds only after explicit confirmation.
+`;
+
+  const firstWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: initialContent
+  });
+  const firstRead = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "context"
+  });
+  const missingDiscussionLog = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "discussion-log"
+  });
+  const unchangedWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "context",
+    content: initialContent
+  });
+
+  assert.equal(firstWrite.written, true);
+  assert.equal(firstWrite.created, true);
+  assert.equal(firstWrite.overwritten, false);
+  assert.equal(firstRead.found, true);
+  assert.match(firstRead.content ?? "", /Persist substantive context content/);
+  assert.equal(missingDiscussionLog.found, false);
+  assert.match(missingDiscussionLog.reason ?? "", /does not exist yet/i);
+  assert.equal(unchangedWrite.written, false);
+  assert.match(unchangedWrite.warnings.join("\n"), /content was unchanged/i);
+
+  await assert.rejects(
+    blueprintPhaseArtifactWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "context",
+      content: replacementContent
+    }),
+    /explicit overwrite confirmation/i
+  );
+
+  const overwritten = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: replacementContent,
+    overwrite: true
+  });
+  const finalRead = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context"
+  });
+
+  assert.equal(overwritten.written, true);
+  assert.equal(overwritten.created, false);
+  assert.equal(overwritten.overwritten, true);
+  assert.match(overwritten.warnings.join("\n"), /Replaced existing context artifact/i);
+  assert.match(finalRead.content ?? "", /Replace placeholder scaffolds only after explicit confirmation/);
+});
+
+test("discuss checkpoint tools support create, resume, no-op update, and cleanup flows", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const firstGet = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: "3" });
+  const created = await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "03",
+    checkpoint: {
+      mode: "assumptions",
+      unresolvedQuestions: ["Should research run before questions?"],
+      answeredQuestions: 1
+    }
+  });
+  const resumed = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: "3" });
+  const unchanged = await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      mode: "assumptions",
+      unresolvedQuestions: ["Should research run before questions?"],
+      answeredQuestions: 1
+    }
+  });
+  const deleted = await blueprintPhaseCheckpointDelete({ cwd: repoPath, phase: "03" });
+  const afterDelete = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: "3" });
+
+  assert.equal(firstGet.phaseFound, true);
+  assert.equal(firstGet.found, false);
+  assert.match(firstGet.path ?? "", /03-DISCUSS-CHECKPOINT\.json$/);
+  assert.equal(created.updated, true);
+  assert.equal(resumed.found, true);
+  assert.equal(resumed.checkpoint?.mode, "assumptions");
+  assert.deepEqual(resumed.checkpoint?.unresolvedQuestions, [
+    "Should research run before questions?"
+  ]);
+  assert.equal(unchanged.updated, false);
+  assert.match(unchanged.warnings.join("\n"), /content was unchanged/i);
+  assert.equal(deleted.deleted, true);
+  assert.equal(afterDelete.found, false);
 });

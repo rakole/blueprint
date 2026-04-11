@@ -7,10 +7,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Phase 4 Plan, Execute, and Verify after Phase 3 completed on 2026-04-11
+- Current milestone: Phase 3 discovery repair before broader Phase 4 rollout
 - Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`) are implemented, and routing still filters to implemented commands only
-- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, and Phase 3 execution summaries are present
-- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, and keep later commands blocked until their substrate exists
+- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, and an active discovery-repair branch are present
+- Implementation strategy: finish substantive discovery persistence and checkpoint safety first, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, and keep later commands blocked until their substrate exists
 
 ## Stable References
 
@@ -27,7 +27,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Commands own UX and routing
 - Skills own orchestration
 - Agents own bounded deep work
-- Hooks remain advisory rather than state-owning
+- Hooks remain advisory rather than state-owning, and hook code is still deferred
 - Scripts are not the primary persistence layer
 - `blueprint_command_catalog` is runtime-aware and should be treated as the source of routable-command truth
 
@@ -93,7 +93,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Next Implementation Slice
 
-- implement `plan-phase`, then `execute-phase`, then `validate-phase` and `verify-work`
+- finish discovery repair verification and doc truth-sync before resuming `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work`
 - keep `next`, `pause-work`, and `resume-work` blocked until their runtime substrate exists
 - preserve the shipped Phase 3 discovery artifact contracts and implemented-only routing behavior
 - keep command-catalog rollout aligned with each shipped Phase 4 command
@@ -114,7 +114,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - The router/help/progress path must filter to commands whose catalog entry is `implemented`
 - `map-codebase` now owns a seven-document codebase bundle: `STACK`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `INTEGRATIONS`, and `CONCERNS`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11
-- Phase 3 discovery is now implemented end-to-end with deterministic phase MCP tools, bounded researcher/UI agent contracts, and command-catalog/doc parity tests
+- Phase 3 discovery is now implemented with deterministic phase MCP tools, bounded researcher/UI agent contracts, and command-catalog/doc parity tests, and the active repair slice is hardening substantive artifact writes plus checkpoint behavior
 - Canonical future-command ownership is `next` and `do` on `blueprint-router`, `pause-work` and `resume-work` on `blueprint-governance`, and `plan-milestone-gaps` on `blueprint-roadmap-admin`
 - `ui-phase` keeps a single declared phase artifact: `XX-UI-SPEC.md`, which may hold either a UI contract or an explicit skip rationale
 - Future sessions may proceed with Phase 4 implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist

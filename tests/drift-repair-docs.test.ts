@@ -25,27 +25,28 @@ test("control-plane docs describe the shipped Wave 0 runtime instead of a docs-o
   assert.doesNotMatch(agents, /No Gemini extension runtime has been implemented yet/);
   assert.doesNotMatch(handoff, /No runtime code or Gemini extension scaffolding has been created yet/);
   assert.match(agents, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/);
-  assert.match(agents, /Phase 3 discovery is unblocked for implementation work/);
-  assert.match(readme, /Wave 0 shipped commands/);
+  assert.match(agents, /Phase 3 discovery shipped on 2026-04-11 and is under active repair/);
+  assert.match(readme, /Shipped direct commands/);
   assert.match(readme, /Phase 2\.1 and Phase 2\.2 both closed on 2026-04-11/);
-  assert.match(readme, /next implementation slice is Phase 3 Phase Discovery/);
-  assert.match(gemini, /Phase 3 discovery is now the next implementation slice/);
+  assert.match(readme, /Current repair slice: replace scaffold-only Phase 3 discovery persistence/);
+  assert.match(gemini, /The current repair focus is making the shipped discovery commands fully substantive before Phase 4 expands/);
   assert.match(gemini, /\/blu:map-codebase/);
   assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
   assert.match(
     memory,
-    /Current milestone: Phase 3 Phase Discovery|Current milestone: Phase 4 Plan, Execute, and Verify/
+    /Current milestone: Phase 3 discovery repair before broader Phase 4 rollout|Current milestone: Phase 4 Plan, Execute, and Verify/
   );
   assert.match(roadmap, /Phase 2\.1: Drift Recovery Gate/);
   assert.match(roadmap, /Phase 2\.2: Urgent Drift-Repair Follow-Up/);
   assert.match(state, /Phase: 03|Phase: 04/);
   assert.match(
     state,
-    /Phase 2\.2 closed; ready to start Phase 3|Executing Phase 03|Phase 03 complete/
+    /Phase 2\.2 closed; ready to start Phase 3|Executing Phase 03|Phase 03 shipped via PR #10|Phase 03 complete/
   );
   assert.match(drift, /Checkpoint: Phase 2\.2 future-contract drift repair/);
   assert.match(drift, /State: closed on 2026-04-11/);
-  assert.match(drift, /Phase 3 discovery is unblocked for implementation work/);
+  assert.match(drift, /Phase 3 discovery was later shipped on 2026-04-11/);
+  assert.match(drift, /current follow-up work is repairing discovery parity gaps/i);
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
@@ -101,4 +102,5 @@ test("drift requirements are backfilled and phase-mapped across roadmap and stat
   assert.match(roadmap, /\| 2\.2\. Urgent Drift-Repair Follow-Up \| 4\/4 \| Complete \| 2026-04-11 \|/);
   assert.match(state, /Phase 2\.2 is complete: control docs and planning state are truth-synced/);
   assert.match(state, /Phase 2\.2 is complete: .*Phase 3 is unblocked/);
+  assert.match(state, /Phase 3 is complete: discovery commands are implemented/);
 });
