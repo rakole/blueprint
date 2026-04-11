@@ -16,7 +16,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `code-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW.md` | `Low: review artifact generation only.` |
 | `complete-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `milestone completion report; .blueprint/STATE.md` | `Medium: advances milestone status and archival expectations.` |
 | `debug` | 3 | `Capture And Lightweight Execution` | `blueprint-debug` | `planned` | `debug report in .blueprint/reports/; optional todo follow-ups` | `Medium: exploratory shell commands and test runs are likely.` |
-| `discuss-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-CONTEXT.md; optional phase XX-DISCUSSION-LOG.md` | `Medium: can replace or extend phase context artifacts.` |
+| `discuss-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-CONTEXT.md; optional phase XX-DISCUSSION-LOG.md` | `Medium: can replace or extend phase context artifacts.` |
 | `do` | 3 | `Capture And Lightweight Execution` | `blueprint-router` | `blocked` | `none` | `Low: routing only.` |
 | `docs-update` | 4 | `Quality And Shipping` | `blueprint-docs` | `planned` | `repo documentation files; docs-update report in .blueprint/reports/` | `Medium: writes repo docs outside `.blueprint/`.` |
 | `execute-phase` | 1 | `Core Lifecycle` | `blueprint-phase-execution` | `planned` | `one or more XX-YY-SUMMARY.md files; optional execution reports in .blueprint/reports/` | `High: drives real repo mutation during implementation.` |

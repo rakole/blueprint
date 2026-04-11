@@ -10,7 +10,8 @@ const IMPLEMENTED_COMMANDS = [
   "help",
   "progress",
   "health",
-  "map-codebase"
+  "map-codebase",
+  "discuss-phase"
 ] as const;
 
 const BLOCKED_COMMANDS = ["next", "do", "plan-phase", "insert-phase"] as const;
@@ -47,6 +48,7 @@ test("implemented Wave 0 commands have their declared optional agent contracts a
   assert.deepEqual(catalog.commands["map-codebase"].availableOptionalAgents, [
     "blueprint-mapper"
   ]);
+  assert.deepEqual(catalog.commands["discuss-phase"].availableOptionalAgents, []);
 });
 
 test("blocked lifecycle and roadmap commands stay unroutable until substrate exists", async () => {
