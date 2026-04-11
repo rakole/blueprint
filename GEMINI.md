@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- The current repair focus is making the shipped discovery and execution commands fully substantive before Phase 4 expands.
+- The current repair focus is making the shipped discovery, execution, and validation commands fully substantive before Phase 4 expands, while `verify-work` remains planned.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, and `/blu:next`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, and `/blu:next`.
 
 ## State Boundaries
 
@@ -36,7 +36,8 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:ui-phase` now persists substantive `XX-UI-SPEC.md` content or an explicit skip rationale in that same file.
 - `/blu:plan-phase` now persists substantive `XX-YY-PLAN.md` content through the plan MCP substrate.
 - `/blu:execute-phase` now persists `XX-YY-SUMMARY.md` execution evidence through the summary MCP substrates and keeps the next action explicit.
-- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`.
+- `/blu:validate-phase` now persists `XX-VERIFICATION.md` verification evidence through the validation MCP substrates and keeps `verify-work` as the next planned slice.
+- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery` and `blueprint-phase-validation`.
 - Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.
 
 ## Mutation Rules

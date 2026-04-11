@@ -79,11 +79,15 @@ type CurrentPhaseArtifactStatus = {
   contextPath: string | null;
   researchPath: string | null;
   uiSpecPath: string | null;
+  verificationPath: string | null;
+  uatPath: string | null;
   planIds: string[];
   summaryIds: string[];
   hasContext: boolean;
   hasResearch: boolean;
   hasUiSpec: boolean;
+  hasVerification: boolean;
+  hasUat: boolean;
   hasPlans: boolean;
   hasSummaries: boolean;
   hasPendingExecution: boolean;
@@ -267,11 +271,15 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      verificationPath: null,
+      uatPath: null,
       planIds: [],
       summaryIds: [],
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasVerification: false,
+      hasUat: false,
       hasPlans: false,
       hasSummaries: false,
       hasPendingExecution: false,
@@ -312,11 +320,15 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      verificationPath: null,
+      uatPath: null,
       planIds: [],
       summaryIds: [],
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasVerification: false,
+      hasUat: false,
       hasPlans: false,
       hasSummaries: false,
       hasPendingExecution: false,
@@ -343,11 +355,15 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      verificationPath: null,
+      uatPath: null,
       planIds: [],
       summaryIds: [],
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasVerification: false,
+      hasUat: false,
       hasPlans: false,
       hasSummaries: false,
       hasPendingExecution: false,
@@ -366,9 +382,13 @@ async function inspectCurrentPhaseArtifacts(
   const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
+  const verificationPath = `${phaseRoot}/${phasePrefix}-VERIFICATION.md`;
+  const uatPath = `${phaseRoot}/${phasePrefix}-UAT.md`;
   const hasContext = phaseArtifacts.has(contextPath);
   const hasResearch = phaseArtifacts.has(researchPath);
   const hasUiSpec = phaseArtifacts.has(uiSpecPath);
+  const hasVerification = phaseArtifacts.has(verificationPath);
+  const hasUat = phaseArtifacts.has(uatPath);
   const planPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-PLAN.md"));
   const summaryPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-SUMMARY.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
@@ -383,7 +403,9 @@ async function inspectCurrentPhaseArtifacts(
       artifact.endsWith(`${phasePrefix}-RESEARCH.md`) ||
       artifact.endsWith(`${phasePrefix}-UI-SPEC.md`) ||
       artifact.endsWith("-PLAN.md") ||
-      artifact.endsWith("-SUMMARY.md")
+      artifact.endsWith("-SUMMARY.md") ||
+      artifact.endsWith(`${phasePrefix}-VERIFICATION.md`) ||
+      artifact.endsWith(`${phasePrefix}-UAT.md`)
   );
   let researchValid: boolean | null = null;
 
@@ -430,11 +452,15 @@ async function inspectCurrentPhaseArtifacts(
     contextPath,
     researchPath,
     uiSpecPath,
+    verificationPath,
+    uatPath,
     planIds,
     summaryIds,
     hasContext,
     hasResearch,
     hasUiSpec,
+    hasVerification,
+    hasUat,
     hasPlans,
     hasSummaries,
     hasPendingExecution,
@@ -502,6 +528,7 @@ async function deriveNextAction(args: {
   const planPhaseCommand = "/blu:plan-phase";
   const executePhaseCommand = "/blu:execute-phase";
   const validatePhaseCommand = "/blu:validate-phase";
+  const verifyWorkCommand = "/blu:verify-work";
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return "Run /blu:progress to review the next safe Blueprint action";
@@ -564,9 +591,18 @@ async function deriveNextAction(args: {
   if (
     args.phaseArtifacts.hasPlans &&
     !args.phaseArtifacts.hasPendingExecution &&
+    !args.phaseArtifacts.hasVerification &&
     implementedCommands.has(validatePhaseCommand)
   ) {
     return `Run ${validatePhaseCommand} ${args.currentPhase} to validate the completed phase execution`;
+  }
+
+  if (
+    args.phaseArtifacts.hasVerification &&
+    !args.phaseArtifacts.hasUat &&
+    implementedCommands.has(verifyWorkCommand)
+  ) {
+    return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
 
   return args.currentPhase
