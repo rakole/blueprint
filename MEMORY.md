@@ -8,7 +8,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Project Status
 
 - Current milestone: Phase 3 discovery parity closeout after the 2026-04-11 runtime shipment; Phase 4 remains the next broader rollout
-- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`) are implemented, and routing still filters to implemented commands only
+- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`) and the read-only router command `next` are implemented, and routing still filters to implemented commands only
 - Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, and Phase 3 execution summaries are present
 - Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, and keep later commands blocked until their substrate exists
 
@@ -94,7 +94,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Next Implementation Slice
 
 - implement `plan-phase`, then `execute-phase`, then `validate-phase` and `verify-work`
-- keep `next`, `pause-work`, and `resume-work` blocked until their runtime substrate exists
+- keep `pause-work` and `resume-work` blocked until their runtime substrate exists
 - preserve the shipped Phase 3 discovery artifact contracts and implemented-only routing behavior
 - keep command-catalog rollout aligned with each shipped Phase 4 command
 - keep regression coverage in place so the closed drift and discovery guarantees fail fast if they drift
@@ -116,6 +116,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11
 - Phase 3 discovery is now implemented end-to-end with deterministic phase MCP tools, bounded researcher/UI agent contracts, and command-catalog/doc parity tests
 - `research-phase` now uses validated MCP-owned research writes, explicit existing-research handling, and advisory hooks for read-before-edit, `.blueprint` write safety, and workflow drift
+- `/blu:next` now ships as a read-only router on top of `blueprint_project_status`, `blueprint_state_load`, `blueprint_artifact_list`, and `blueprint_command_catalog`
 - Canonical future-command ownership is `next` and `do` on `blueprint-router`, `pause-work` and `resume-work` on `blueprint-governance`, and `plan-milestone-gaps` on `blueprint-roadmap-admin`
 - `ui-phase` keeps a single declared phase artifact: `XX-UI-SPEC.md`, which may hold either a UI contract or an explicit skip rationale
 - Future sessions may proceed with Phase 4 implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist

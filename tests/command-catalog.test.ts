@@ -13,10 +13,11 @@ const IMPLEMENTED_COMMANDS = [
   "map-codebase",
   "discuss-phase",
   "research-phase",
-  "ui-phase"
+  "ui-phase",
+  "next"
 ] as const;
 
-const BLOCKED_COMMANDS = ["next", "do", "plan-phase", "insert-phase"] as const;
+const BLOCKED_COMMANDS = ["do", "plan-phase", "insert-phase"] as const;
 
 test("runtime command catalog only marks shipped Wave 0 commands as implemented", async () => {
   const catalog = await blueprintCommandCatalog();

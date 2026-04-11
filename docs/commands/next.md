@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`next` carries forward the GSD intent to automatically advance to the next logical step in the GSD workflow. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`next` carries forward the GSD intent to automatically advance to the next logical step in the GSD workflow. In Blueprint it stays Gemini-native, relies on documented read-only MCP tools, and keeps the repo-side contract explicit enough that routing remains implementation-aware instead of prompt-only guesswork.
 
 
 ## Command Path And Examples
@@ -25,6 +25,8 @@
 
 
 - None, but Blueprint context improves routing.
+- Uninitialized repos must fall back to `/blu:new-project`.
+- Partial repos must fall back to `/blu:health`.
 
 
 ## Outputs
@@ -37,7 +39,9 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- `.blueprint/STATE.md` through `blueprint_state_load`
+- `.blueprint/ROADMAP.md`, phase artifacts, and codebase bundle presence through `blueprint_project_status` and `blueprint_artifact_list`
+- runtime command availability through `blueprint_command_catalog`
 
 
 ## Blueprint And Global State Writes
@@ -112,8 +116,8 @@
 ## Failure Modes And Recovery
 
 
-- Explain exactly which phase artifact is missing and which command creates it.
-- Write follow-up state back into `.blueprint/` instead of dropping context on failure.
+- Explain exactly which phase artifact is missing and which implemented command creates it.
+- On failure, return the safest implemented recovery command instead of mutating project state implicitly.
 
 
 ## Acceptance Criteria
@@ -127,9 +131,10 @@
 ## Test Cases
 
 
-- Single-phase happy path fixture.
-- Missing-artifact recovery fixture.
-- Direct `next` happy-path fixture.
+- Uninitialized repo routes to `/blu:new-project`.
+- Partial Blueprint repo routes to `/blu:health`.
+- Initialized repo reuses the next implemented discovery command or falls back to `/blu:progress` safely.
+- Direct `next` command contract uses only registered read-oriented MCP tools.
 
 
 ## Upstream Reference

@@ -61,7 +61,7 @@ For the runtime-level porting matrix that maps retained workflow behavior and ho
 
 ### `help`, `progress`, `next`, and `do`
 
-These are planned as Gemini-native router flows. They do not depend on slash-command chaining inside the runtime.
+These remain Gemini-native router flows. They do not depend on slash-command chaining inside the runtime.
 
 ### `config.json` and saved defaults
 

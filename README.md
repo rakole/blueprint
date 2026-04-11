@@ -18,6 +18,7 @@ This repository still carries the planning pack that locked the product and arch
 
 - Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
 - Phase 3 discovery commands are also shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
+- The read-only lifecycle router `/blu:next` is now shipped on the existing project-status and state-routing substrate
 - Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
@@ -130,6 +131,7 @@ These runtime files exist today:
 - `commands/blu/discuss-phase.toml`
 - `commands/blu/research-phase.toml`
 - `commands/blu/ui-phase.toml`
+- `commands/blu/next.toml`
 - `skills/blueprint-router.md`
 - `skills/blueprint-bootstrap.md`
 - `skills/blueprint-governance.md`
@@ -168,7 +170,7 @@ The next broad rollout remains Phase 4 Plan, Execute, and Verify once the shippe
 
 1. Implement `plan-phase` on top of the shipped Phase 3 discovery artifact contracts
 2. Implement `execute-phase`, then `validate-phase`, then `verify-work`
-3. Keep `next`, `pause-work`, and `resume-work` blocked until their runtime substrate exists
+3. Keep `pause-work` and `resume-work` blocked until their runtime substrate exists
 4. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

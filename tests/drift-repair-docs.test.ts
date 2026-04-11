@@ -52,7 +52,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
 
   assert.match(catalog, /\| Command \| Wave \| Family \| Primary Skill \| Status \| Key Writes \| Risk \|/);
   assert.match(catalog, /`map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented`/);
-  assert.match(catalog, /`next` \| 1 \| `Core Lifecycle` \| `blueprint-router` \| `blocked`/);
+  assert.match(catalog, /`next` \| 1 \| `Core Lifecycle` \| `blueprint-router` \| `implemented`/);
   assert.match(catalog, /`do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `blocked`/);
   assert.match(catalog, /`pause-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `planned`/);
   assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `planned`/);

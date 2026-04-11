@@ -30,6 +30,7 @@ Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `
 - `docs/commands/root-router.md`
 - `docs/commands/help.md`
 - `docs/commands/progress.md`
+- `docs/commands/next.md`
 - `docs/GSD-RUNTIME-MIGRATION.md`
 - `docs/DRIFT.MD`
 
