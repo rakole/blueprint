@@ -26,7 +26,7 @@ Follow this flow exactly:
    - `gates.*`
    - `safety.*`
    - `workflow.subagent_timeout`
-   - `workflow.auto_advance`
+   - `workflow.discuss_mode`
    - `workflow.research_before_questions`
    - `workflow.skip_discuss`
    - `response_language`

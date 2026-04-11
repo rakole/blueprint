@@ -164,6 +164,7 @@ Normalization and precedence rules:
 - Repo config must not contain `workflow.use_workspaces`, `workflow.use_workstreams`, or repo-level `hooks.*` keys. Workspace and workstream behavior stays command-driven; hook activation stays extension-owned in `hooks/hooks.json`.
 - `~/.gemini/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.
+- Discovery runtime actively uses `workflow.discuss_mode`, `workflow.skip_discuss`, and `workflow.research_before_questions`. `workflow.auto_advance` remains a reserved compatibility field until a later lifecycle rollout makes it real.
 
 ## Phase Tree
 
@@ -179,12 +180,35 @@ Core phase artifacts:
 
 Auxiliary phase artifacts:
 - `XX-DISCUSSION-LOG.md`
+- `XX-DISCUSS-CHECKPOINT.json` (temporary resumability state for `discuss-phase`; should be deleted after successful context capture)
 - `XX-REVIEW.md`
 - `XX-REVIEW-FIX.md`
 - `XX-REVIEWS.md`
 - `XX-SECURITY.md`
 - `XX-UI-SPEC.md` (used for either a UI design contract or an explicit rationale that UI work was intentionally skipped)
 - `XX-UI-REVIEW.md`
+
+### `XX-RESEARCH.md`
+
+`XX-RESEARCH.md` is the planner-facing research contract for a single phase.
+
+Minimum required structure:
+- `**Confidence:** LOW|MEDIUM|HIGH`
+- `## Phase Requirements`
+- `## Summary`
+- `## User Constraints`
+- `## Standard Stack`
+- `## Architecture Patterns`
+- `## Don't Hand-Roll`
+- `## Common Pitfalls`
+- `## Code Examples`
+- `## Recommendations`
+- `## Sources`
+
+Validation expectations:
+- recommendations should be prescriptive rather than descriptive
+- sources must include a URL, repo path, or cited file reference
+- scaffold-only placeholders are not considered valid completed research
 
 ## Supporting Trees
 

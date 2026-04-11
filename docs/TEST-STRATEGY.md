@@ -32,7 +32,7 @@ One fixture suite per retained command:
 
 ### 3. Hook fixture tests
 
-For advisory hooks:
+For advisory hooks once hook code exists:
 
 - stdin fixture in
 - structured advisory out
@@ -70,7 +70,8 @@ Cover:
 - extension installs from a clean checkout
 - bundled code is present
 - command files resolve
-- hooks and MCP server paths resolve from the installed extension
+- MCP server paths resolve from the installed extension
+- hook paths resolve too once hooks actually ship
 
 ## End-to-End Smoke Flow
 

@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`ui-phase` carries forward the GSD intent to generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`ui-phase` carries forward the GSD intent to generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and now writes substantive UI-spec or skip-rationale content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
 
 
 ## Command Path And Examples
@@ -55,6 +55,8 @@
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -126,6 +128,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses `XX-UI-SPEC.md` as the single phase-scoped durable output, whether the result is a full UI contract or a documented skip rationale.
 - Respects effective-config UI gates before generating or skipping UI output.
+- Persists substantive UI guidance or skip rationale into `XX-UI-SPEC.md`, not only scaffold placeholders.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 

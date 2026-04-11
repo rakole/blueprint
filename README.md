@@ -17,7 +17,8 @@ This repository still carries the planning pack that locked the product and arch
 ## Current Status
 
 - Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
-- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; the next implementation slice is Phase 3 Phase Discovery
+- Phase 3 discovery commands are also shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
+- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; the next implementation slice is Phase 4 Plan, Execute, and Verify
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
@@ -126,22 +127,31 @@ These runtime files exist today:
 - `commands/blu/progress.toml`
 - `commands/blu/health.toml`
 - `commands/blu/map-codebase.toml`
+- `commands/blu/discuss-phase.toml`
+- `commands/blu/research-phase.toml`
+- `commands/blu/ui-phase.toml`
 - `skills/blueprint-router.md`
 - `skills/blueprint-bootstrap.md`
 - `skills/blueprint-governance.md`
 - `skills/blueprint-map.md`
+- `skills/blueprint-phase-discovery.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`
+- `agents/blueprint-researcher.md`
+- `agents/blueprint-ui-designer.md`
 - `agents/blueprint-planner.md`
 - `agents/blueprint-checker.md`
 - `agents/blueprint-executor.md`
 - `agents/blueprint-verifier.md`
+- `hooks/hooks.json`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`
 - `src/mcp/tools/config.ts`
 - `src/mcp/tools/state.ts`
 - `src/mcp/tools/artifacts.ts`
+- `src/mcp/tools/phase.ts`
+- `src/hooks/`
 
 ## Command Status
 
@@ -154,11 +164,11 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 
 ## Next Implementation Slice
 
-The next slice is Phase 3 Phase Discovery:
+The next slice is Phase 4 Plan, Execute, and Verify:
 
-1. Implement `discuss-phase` on the existing `.blueprint/` schema and phase-artifact contracts
-2. Implement `research-phase` with explicit research artifacts and bounded agent usage
-3. Implement `ui-phase` with the same thin-command, skill-led, MCP-owned contract style preserved in Phase 2.2
+1. Implement `plan-phase` on top of the shipped Phase 3 discovery artifact contracts
+2. Implement `execute-phase`, then `validate-phase`, then `verify-work`
+3. Keep `next`, `pause-work`, and `resume-work` blocked until their runtime substrate exists
 4. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

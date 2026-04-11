@@ -38,7 +38,14 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 - `blueprint_phase_context`
 - `blueprint_roadmap_read`
 - `blueprint_phase_research_status`
+- `blueprint_phase_artifact_read`
+- `blueprint_phase_artifact_write`
+- `blueprint_phase_checkpoint_get`
+- `blueprint_phase_checkpoint_put`
+- `blueprint_phase_checkpoint_delete`
 - `blueprint_artifact_list`
+- `blueprint_command_catalog`
+- `blueprint_state_load`
 - `blueprint_artifact_scaffold`
 - `blueprint_state_update`
 - `blueprint_config_get`
@@ -61,10 +68,13 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 ### `research-phase`
 
 1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
-2. Write only `XX-RESEARCH.md` through `blueprint_artifact_scaffold`.
-3. Require explicit overwrite confirmation before replacing existing research.
-4. If UI discovery is clearly next and `/blu:ui-phase` is already available, route there. Otherwise route toward `/blu:progress`.
-5. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+2. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
+3. Use `blueprint_artifact_scaffold` only to seed a missing research file.
+4. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
+5. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
+6. Require explicit overwrite confirmation before replacing existing research.
+7. Use `blueprint_command_catalog` before recommending `/blu:ui-phase`; otherwise route toward `/blu:progress`.
+8. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
 
 ### `ui-phase`
 

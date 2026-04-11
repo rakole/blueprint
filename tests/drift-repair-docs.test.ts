@@ -25,13 +25,18 @@ test("control-plane docs describe the shipped Wave 0 runtime instead of a docs-o
   assert.doesNotMatch(agents, /No Gemini extension runtime has been implemented yet/);
   assert.doesNotMatch(handoff, /No runtime code or Gemini extension scaffolding has been created yet/);
   assert.match(agents, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/);
-  assert.match(agents, /Phase 3 discovery is unblocked for implementation work/);
+  assert.match(
+    agents,
+    /Phase 3 discovery is unblocked for implementation work|Phase 3 discovery shipped on 2026-04-11 and is under active repair/
+  );
   assert.match(readme, /Wave 0 shipped commands/);
+  assert.match(readme, /Phase 3 discovery commands are also shipped/);
   assert.match(readme, /Phase 2\.1 and Phase 2\.2 both closed on 2026-04-11/);
-  assert.match(readme, /next implementation slice is Phase 3 Phase Discovery/);
-  assert.match(gemini, /Phase 3 discovery is now the next implementation slice/);
+  assert.match(readme, /next implementation slice is Phase 4 Plan, Execute, and Verify/);
+  assert.match(gemini, /Phase 3 discovery is now the next implementation slice|Phase 4/);
   assert.match(gemini, /\/blu:map-codebase/);
   assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
+  assert.match(handoff, /Phase 3 discovery is implemented/i);
   assert.match(
     memory,
     /Current milestone: Phase 3 Phase Discovery|Current milestone: Phase 4 Plan, Execute, and Verify/
@@ -41,11 +46,14 @@ test("control-plane docs describe the shipped Wave 0 runtime instead of a docs-o
   assert.match(state, /Phase: 03|Phase: 04/);
   assert.match(
     state,
-    /Phase 2\.2 closed; ready to start Phase 3|Executing Phase 03|Phase 03 complete/
+    /Phase 2\.2 closed; ready to start Phase 3|Executing Phase 03|Phase 03 complete|Phase 4 ready to start/
   );
   assert.match(drift, /Checkpoint: Phase 2\.2 future-contract drift repair/);
   assert.match(drift, /State: closed on 2026-04-11/);
-  assert.match(drift, /Phase 3 discovery is unblocked for implementation work/);
+  assert.match(
+    drift,
+    /Phase 3 discovery is unblocked for implementation work|Phase 3 discovery was later shipped on 2026-04-11/
+  );
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {

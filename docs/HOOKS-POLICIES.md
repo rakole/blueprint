@@ -2,6 +2,9 @@
 
 ## Planned Hooks
 
+No hook code ships in the current discovery-repair branch.
+This document locks the future hook boundary so Phase 3 runtime work does not accidentally imply shipped hooks that do not exist yet.
+
 Blueprint keeps only advisory hooks in v1 planning.
 
 ### 1. Read-before-edit advisory
@@ -77,4 +80,4 @@ These actions should happen only through bounded MCP-backed flows where required
 - Hook code should live under `src/hooks/` and be bundled to `hooks/`.
 - Hook configuration should be centralized in `hooks/hooks.json`.
 - Repo config must not enable or disable hooks; `.blueprint/config.json` is not a second hook-control surface.
-- Hook behavior should be testable using stdin/stdout fixtures.
+- Hook behavior should be testable using stdin/stdout fixtures once hook code lands.

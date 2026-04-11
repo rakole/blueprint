@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`research-phase` carries forward the GSD intent to research how to implement a phase (standalone - usually use /gsd-plan-phase instead). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`research-phase` carries forward the GSD intent to research how to implement a phase (standalone - usually use /gsd-plan-phase instead). In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
 
 
 ## Command Path And Examples
@@ -30,14 +30,14 @@
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise summary of whether existing research was viewed, reused, created, or updated, plus the next logical action when applicable.
+- Repo side effects: writes validated `XX-RESEARCH.md` content and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `.blueprint/STATE.md`
 
 
 ## Blueprint And Global State Writes
@@ -52,9 +52,13 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
-- `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
+- `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
-- `blueprint_state_update` -> `{updatedFields, statePath}`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}`
+- `blueprint_command_catalog` -> `{commands, waves, aliases}`
+- `blueprint_state_update` -> `{updatedFields, statePath, warnings}`
 
 
 ## Skills And Subagents
@@ -94,6 +98,7 @@
 
 
 - Confirm overwrite when research already exists.
+- Force an explicit `view`, `skip`, or `update` path when `XX-RESEARCH.md` already exists.
 
 
 ## Edge Cases
@@ -107,6 +112,7 @@
 
 
 - Explain exactly which phase artifact is missing and which command creates it.
+- Surface `blueprint_phase_locate.recovery` guidance for missing roadmap or phase-directory failures.
 - Write follow-up state back into `.blueprint/` instead of dropping context on failure.
 
 
@@ -116,6 +122,8 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Persists populated research content through MCP rather than raw prompt-side file writes.
+- Uses a research schema with citations, confidence, recommendations, and planner-friendly sections.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 
@@ -126,6 +134,8 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `research-phase` happy-path fixture.
+- Existing research `view`, `skip`, and `update` fixture.
+- Invalid research-content rejection fixture.
 
 
 ## Upstream Reference

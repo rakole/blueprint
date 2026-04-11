@@ -48,7 +48,12 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 | `blueprint_roadmap_promote_backlog` | Promote backlog items into roadmap phases | `{promotedItems, createdPhaseDirs}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
 | `blueprint_phase_context` | Summarize phase boundary and existing artifacts | `{phase, requirements, missingArtifacts}` |
-| `blueprint_phase_research_status` | Report research and UI-spec readiness | `{hasContext, hasResearch, hasUiSpec}` |
+| `blueprint_phase_research_status` | Report research and UI-spec readiness plus research validation signals | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
+| `blueprint_phase_artifact_read` | Read substantive discovery artifact content for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
+| `blueprint_phase_artifact_write` | Persist substantive phase-scoped discovery artifact content with overwrite protection and research validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
+| `blueprint_phase_checkpoint_get` | Read the saved discuss-phase checkpoint for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}` |
+| `blueprint_phase_checkpoint_put` | Persist a discuss-phase checkpoint JSON object for a phase | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
+| `blueprint_phase_checkpoint_delete` | Delete a saved discuss-phase checkpoint after successful completion | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}` |
 | `blueprint_phase_plan_index` | Index plan files and execution readiness | `{plans, waves, missingPlans}` |
 | `blueprint_phase_mark_complete` | Update state and roadmap for completed phase or milestone | `{updatedPaths, status}` |
 
@@ -56,7 +61,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_artifact_scaffold` | Create or seed artifacts from templates | `{createdFiles, reusedFiles, warnings}` |
+| `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding, not as the final persistence layer for filled-in discovery artifacts | `{createdFiles, reusedFiles, warnings}` |
 | `blueprint_artifact_list` | Enumerate known artifacts for repo or phase | `{artifacts, reports, missing}` |
 | `blueprint_artifact_validate` | Validate structure and required fields | `{valid, issues, suggestedRepairs}` |
 | `blueprint_artifact_mutate_index` | Update backlog, notes, todos, and similar index files | `{targetPath, createdEntryIds, updatedCounts}` |

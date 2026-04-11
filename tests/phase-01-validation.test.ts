@@ -170,7 +170,10 @@ test("state_update patches STATE.md deterministically and reports updated fields
   const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
 
   assert.equal(result.statePath, ".blueprint/STATE.md");
-  assert.deepEqual(result.updatedFields, ["nextAction", "blockers"]);
+  assert.ok(result.updatedFields.includes("nextAction"));
+  assert.ok(result.updatedFields.includes("blockers"));
+  assert.ok(result.updatedFields.includes("lastUpdated"));
+  assert.deepEqual(result.warnings, []);
   assert.match(stateDocument, /- Next action: Run \/blu:health/);
   assert.match(stateDocument, /## Blockers/);
   assert.match(stateDocument, /- Need roadmap review/);
