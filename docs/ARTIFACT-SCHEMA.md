@@ -188,6 +188,28 @@ Auxiliary phase artifacts:
 - `XX-UI-SPEC.md` (used for either a UI design contract or an explicit rationale that UI work was intentionally skipped)
 - `XX-UI-REVIEW.md`
 
+### `XX-RESEARCH.md`
+
+`XX-RESEARCH.md` is the planner-facing research contract for a single phase.
+
+Minimum required structure:
+- `**Confidence:** LOW|MEDIUM|HIGH`
+- `## Phase Requirements`
+- `## Summary`
+- `## User Constraints`
+- `## Standard Stack`
+- `## Architecture Patterns`
+- `## Don't Hand-Roll`
+- `## Common Pitfalls`
+- `## Code Examples`
+- `## Recommendations`
+- `## Sources`
+
+Validation expectations:
+- recommendations should be prescriptive rather than descriptive
+- sources must include a URL, repo path, or cited file reference
+- scaffold-only placeholders are not considered valid completed research
+
 ## Supporting Trees
 
 ### `reports/`

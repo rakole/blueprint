@@ -2,9 +2,9 @@
 
 ## Current State
 
-The repository contains both the original planning pack and a shipped runtime for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `research-phase`, and `ui-phase`.
+The repository contains both the original planning pack and a shipped runtime for Wave 0 plus the Phase 3 discovery commands.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped later that day, and the current repair focus is upgrading the discovery trio from scaffold-heavy persistence to substantive artifact writes while runtime routing remains limited to `implemented` commands.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery is implemented, including a repaired `research-phase` contract with validated research writes and advisory hook coverage. Runtime routing remains limited to `implemented` commands.
 
 ## What Future Sessions Already Have
 
@@ -12,32 +12,35 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 - locked omit list
 - locked state locations
 - locked MCP boundary
-- locked hook-policy boundaries plus explicit hook deferral
+- locked hook and policy boundaries
 - dependency-ordered implementation queue
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
 - Gemini-specific constraint notes to keep implementation aligned with the host CLI
-- runtime command manifests for the shipped Wave 0 plus Phase 3 discovery surface
-- shipped skill files in `skills/`, including `blueprint-phase-discovery`
-- shipped agent contract files in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`
+- runtime command manifests for the shipped Wave 0 and Phase 3 discovery surfaces
+- shipped Wave 0 and Phase 3 discovery skill files in `skills/`
+- shipped Wave 0 and Phase 3 discovery agent contract files in `agents/`
 - implementation-aware command catalog metadata in `blueprint_command_catalog`
 - seven-document codebase mapping bundle, including `.blueprint/codebase/STRUCTURE.md`
+- advisory hook entrypoints under `src/hooks/` plus `hooks/hooks.json`
 
 ## Recommended Next Session
 
-Continue the Phase 3 discovery repair:
+Start Phase 4 Plan, Execute, and Verify implementation:
 
-1. keep `discuss-phase`, `research-phase`, and `ui-phase` on substantive artifact-write paths
-2. preserve checkpoint-aware recovery for `discuss-phase`
-3. keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is truthfully `implemented`
-4. defer hooks and broader Phase 4 rollout until the discovery repair is complete
+1. Implement `plan-phase` on top of the shipped Phase 3 artifact contracts
+2. Implement `execute-phase`, then `validate-phase`, then `verify-work`
+3. Keep `next`, `pause-work`, and `resume-work` blocked until their required manifests, skills, and MCP tools exist
+4. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
 
-## Current Repair Slice
+## First Implementation Slice
 
-- `discuss-phase` parity and checkpoint behavior
-- `research-phase` substantive artifact persistence
-- `ui-phase` substantive UI-spec and skip-rationale persistence
-- only after those remain green should later lifecycle or roadmap substrate expand
+Phase 4 should land in dependency order:
+
+- `plan-phase`
+- `execute-phase`
+- `validate-phase`
+- `verify-work`
 
 ## Shared Risks To Watch
 
@@ -45,7 +48,7 @@ Continue the Phase 3 discovery repair:
 - `update` must remain advisory; do not let implementation drift toward self-updating the extension.
 - workspace removal, patch replay, and undo need especially strict mutation boundaries.
 - keep `.blueprint/` artifacts stable while adding command code; later commands depend on early schema choices.
-- keep hook enablement in `hooks/hooks.json` once hook code exists; do not reintroduce repo-level hook toggles while building config support.
+- keep hook enablement in `hooks/hooks.json`; do not reintroduce repo-level hook toggles while building config support.
 
 ## Documentation Order To Reuse
 
@@ -65,4 +68,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the shipped Phase 3 discovery commands are fully substantive and checkpoint-safe without regressing the closed Phase 2.2 contract guarantees, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the Phase 4 lifecycle commands are implemented without regressing the closed drift and Phase 3 discovery guarantees, and later commands remain blocked until their substrate exists.

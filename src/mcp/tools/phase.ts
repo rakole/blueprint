@@ -8,6 +8,7 @@ import {
   BLUEPRINT_PHASES_PATH,
   ensureParentDirectory,
   ensureRepoRoot,
+  validateResearchArtifactContent,
   resolveBlueprintPath,
   toRepoRelativePath
 } from "./artifacts.js";
@@ -32,6 +33,7 @@ type PhaseArtifactWriteArgs = PhaseLookupArgs & {
   artifact: PhaseArtifactKind;
   content: string;
   overwrite?: boolean;
+  validationMode?: "strict" | "warn";
 };
 
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
@@ -65,6 +67,8 @@ type PhaseLocateResult = {
   milestone: string | null;
   resolvedFrom: "explicit" | "state" | "roadmap";
   reason: string | null;
+  recovery: string[];
+  warnings: string[];
 };
 
 type PhaseContextResult = {
@@ -85,6 +89,7 @@ type PhaseContextResult = {
   } | null;
   requirements: string[];
   missingArtifacts: string[];
+  warnings: string[];
 };
 
 type PhaseResearchStatusResult = {
@@ -94,6 +99,10 @@ type PhaseResearchStatusResult = {
   contextPath: string | null;
   researchPath: string | null;
   uiSpecPath: string | null;
+  researchValid: boolean | null;
+  researchIssues: string[];
+  suggestedRepairs: string[];
+  warnings: string[];
 };
 
 type PhaseArtifactReadResult = {
@@ -119,6 +128,13 @@ type PhaseArtifactWriteResult = {
   written: boolean;
   created: boolean;
   overwritten: boolean;
+  status: "created" | "updated" | "reused" | "invalid";
+  validation: {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+    suggestedRepairs: string[];
+  } | null;
   warnings: string[];
 };
 
@@ -161,6 +177,8 @@ type RoadmapReadResult = {
     phaseCount: number;
   };
   milestone: string | null;
+  warnings: string[];
+  recovery: string[];
   phases: Array<{
     phaseNumber: string;
     phasePrefix: string;
@@ -201,7 +219,8 @@ const phaseArtifactWriteInputSchema = {
   phase: z.string().optional(),
   artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
   content: z.string(),
-  overwrite: z.boolean().optional()
+  overwrite: z.boolean().optional(),
+  validationMode: z.enum(["strict", "warn"]).optional()
 };
 
 const phaseCheckpointPutInputSchema = {
@@ -343,11 +362,17 @@ async function listPhaseArtifacts(
 async function findPhaseDirectory(
   projectRoot: string,
   phaseNumber: string
-): Promise<string | null> {
+): Promise<{
+  phaseDir: string | null;
+  reason: "missing" | "ambiguous" | null;
+}> {
   const phasesRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
 
   if (!(await pathExists(phasesRoot))) {
-    return null;
+    return {
+      phaseDir: null,
+      reason: "missing"
+    };
   }
 
   const entries = await fs.readdir(phasesRoot, { withFileTypes: true });
@@ -360,11 +385,24 @@ async function findPhaseDirectory(
       return prefix === target;
     });
 
-  if (matches.length !== 1) {
-    return null;
+  if (matches.length === 0) {
+    return {
+      phaseDir: null,
+      reason: "missing"
+    };
   }
 
-  return toRepoRelativePath(projectRoot, path.join(phasesRoot, matches[0]));
+  if (matches.length > 1) {
+    return {
+      phaseDir: null,
+      reason: "ambiguous"
+    };
+  }
+
+  return {
+    phaseDir: toRepoRelativePath(projectRoot, path.join(phasesRoot, matches[0])),
+    reason: null
+  };
 }
 
 async function readRoadmap(
@@ -375,6 +413,13 @@ async function readRoadmap(
   phases: ParsedRoadmapPhase[];
 }> {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  if (!(await pathExists(roadmapPath))) {
+    throw new Error(
+      `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu:new-project before using phase discovery commands.`
+    );
+  }
+
   const raw = await fs.readFile(roadmapPath, "utf8");
   const parsed = parseRoadmapDocument(raw);
 
@@ -430,6 +475,38 @@ function buildArtifactPath(phaseDir: string, phasePrefix: string, suffix: string
 
 function findArtifact(artifacts: string[], suffix: string): string | null {
   return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
+}
+
+function buildLocateRecovery(reason: string | null): string[] {
+  if (!reason) {
+    return [];
+  }
+
+  if (reason.includes("ROADMAP.md")) {
+    return [
+      "Restore .blueprint/ROADMAP.md or reinitialize the project with /blu:new-project.",
+      "Run /blu:health after restoring artifacts to confirm Blueprint state is consistent."
+    ];
+  }
+
+  if (reason.includes("no matching directory")) {
+    return [
+      "Create or restore the numbered phase directory under .blueprint/phases/ so it matches ROADMAP.md.",
+      "Run /blu:discuss-phase after the directory exists to rebuild missing discovery artifacts."
+    ];
+  }
+
+  if (reason.includes("multiple matching directories")) {
+    return [
+      "Rename duplicate phase directories so only one directory matches the requested phase number.",
+      "Run /blu:health to confirm the phase tree is normalized before retrying discovery commands."
+    ];
+  }
+
+  return [
+    "Confirm the requested phase exists in .blueprint/ROADMAP.md and has a matching numbered directory.",
+    "Use /blu:progress if you need the safest currently implemented next action."
+  ];
 }
 
 function fallbackPhaseName(phaseDir: string): string {
@@ -502,12 +579,33 @@ export async function blueprintRoadmapRead(
   args: RoadmapReadArgs = {}
 ): Promise<RoadmapReadResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
+  let roadmap;
+
+  try {
+    roadmap = await readRoadmap(projectRoot);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+
+    return {
+      roadmap: {
+        path: `${BLUEPRINT_DIR}/ROADMAP.md`,
+        phaseCount: 0
+      },
+      milestone: null,
+      warnings: [reason],
+      recovery: buildLocateRecovery(reason),
+      phases: []
+    };
+  }
   const phases = await Promise.all(
-    roadmap.phases.map(async (phase) => ({
-      ...phase,
-      phaseDir: await findPhaseDirectory(projectRoot, phase.phaseNumber)
-    }))
+    roadmap.phases.map(async (phase) => {
+      const locatedPhaseDir = await findPhaseDirectory(projectRoot, phase.phaseNumber);
+
+      return {
+        ...phase,
+        phaseDir: locatedPhaseDir.phaseDir
+      };
+    })
   );
 
   return {
@@ -516,6 +614,8 @@ export async function blueprintRoadmapRead(
       phaseCount: phases.length
     },
     milestone: roadmap.milestone,
+    warnings: [],
+    recovery: [],
     phases
   };
 }
@@ -524,7 +624,27 @@ export async function blueprintPhaseLocate(
   args: PhaseLookupArgs = {}
 ): Promise<PhaseLocateResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
+  let roadmap;
+
+  try {
+    roadmap = await readRoadmap(projectRoot);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+
+    return {
+      found: false,
+      phaseNumber: null,
+      phasePrefix: null,
+      phaseName: null,
+      phaseDir: null,
+      artifacts: [],
+      milestone: null,
+      resolvedFrom: "roadmap",
+      reason,
+      recovery: buildLocateRecovery(reason),
+      warnings: []
+    };
+  }
   const { phaseNumber, resolvedFrom } = await resolveRequestedPhase(
     projectRoot,
     args.phase,
@@ -541,7 +661,9 @@ export async function blueprintPhaseLocate(
       artifacts: [],
       milestone: roadmap.milestone,
       resolvedFrom,
-      reason: "No phase could be inferred from the request, state, or roadmap."
+      reason: "No phase could be inferred from the request, state, or roadmap.",
+      recovery: buildLocateRecovery("No phase could be inferred from the request, state, or roadmap."),
+      warnings: []
     };
   }
 
@@ -559,13 +681,23 @@ export async function blueprintPhaseLocate(
       artifacts: [],
       milestone: roadmap.milestone,
       resolvedFrom,
-      reason: `Phase ${phaseNumber} was not found in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      reason: `Phase ${phaseNumber} was not found in ${BLUEPRINT_DIR}/ROADMAP.md.`,
+      recovery: buildLocateRecovery(
+        `Phase ${phaseNumber} was not found in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      ),
+      warnings: []
     };
   }
 
-  const phaseDir = await findPhaseDirectory(projectRoot, matchedPhase.phaseNumber);
+  const phaseDirectoryResolution = await findPhaseDirectory(projectRoot, matchedPhase.phaseNumber);
+  const phaseDir = phaseDirectoryResolution.phaseDir;
 
   if (!phaseDir) {
+    const reason =
+      phaseDirectoryResolution.reason === "ambiguous"
+        ? `Phase ${matchedPhase.phaseNumber} has multiple matching directories in ${BLUEPRINT_PHASES_PATH}/.`
+        : `Phase ${matchedPhase.phaseNumber} exists in ${BLUEPRINT_DIR}/ROADMAP.md but has no matching directory in ${BLUEPRINT_PHASES_PATH}/.`;
+
     return {
       found: false,
       phaseNumber: matchedPhase.phaseNumber,
@@ -575,7 +707,9 @@ export async function blueprintPhaseLocate(
       artifacts: [],
       milestone: roadmap.milestone,
       resolvedFrom,
-      reason: `Phase ${matchedPhase.phaseNumber} exists in ${BLUEPRINT_DIR}/ROADMAP.md but has no matching directory in ${BLUEPRINT_PHASES_PATH}/.`
+      reason,
+      recovery: buildLocateRecovery(reason),
+      warnings: []
     };
   }
 
@@ -593,7 +727,9 @@ export async function blueprintPhaseLocate(
     artifacts: phaseArtifacts,
     milestone: roadmap.milestone,
     resolvedFrom,
-    reason: null
+    reason: null,
+    recovery: [],
+    warnings: []
   };
 }
 
@@ -608,7 +744,8 @@ export async function blueprintPhaseContext(
     return {
       phase: null,
       requirements: [],
-      missingArtifacts: []
+      missingArtifacts: [],
+      warnings: located.reason ? [located.reason] : []
     };
   }
 
@@ -639,7 +776,15 @@ export async function blueprintPhaseContext(
     requirements: matchedPhase?.requirements ?? [],
     missingArtifacts: [contextPath, researchPath, uiSpecPath].filter(
       (artifact) => !artifacts.includes(artifact)
-    )
+    ),
+    warnings: [
+      ...(!findArtifact(artifacts, "-CONTEXT.md")
+        ? ["Research quality will be limited until XX-CONTEXT.md exists."]
+        : []),
+      ...(matchedPhase && matchedPhase.requirements.length === 0
+        ? ["Phase requirements are missing from ROADMAP.md for this phase."]
+        : [])
+    ]
   };
 }
 
@@ -648,14 +793,38 @@ export async function blueprintPhaseResearchStatus(
 ): Promise<PhaseResearchStatusResult> {
   const context = await blueprintPhaseContext(args);
   const artifacts = context.phase?.artifacts;
+  const researchPath = artifacts?.research ?? null;
+  let researchValid: boolean | null = null;
+  let researchIssues: string[] = [];
+  const warnings = [...context.warnings];
+
+  if (researchPath) {
+    const projectRoot = await ensureRepoRoot(args.cwd);
+    const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const validation = validateResearchArtifactContent(raw);
+
+    researchValid = validation.valid;
+    researchIssues = validation.issues;
+    warnings.push(...validation.warnings);
+  }
 
   return {
     hasContext: Boolean(artifacts?.context),
     hasResearch: Boolean(artifacts?.research),
     hasUiSpec: Boolean(artifacts?.uiSpec),
     contextPath: artifacts?.context ?? null,
-    researchPath: artifacts?.research ?? null,
-    uiSpecPath: artifacts?.uiSpec ?? null
+    researchPath,
+    uiSpecPath: artifacts?.uiSpec ?? null,
+    researchValid,
+    researchIssues,
+    suggestedRepairs:
+      researchIssues.length > 0
+        ? [
+            "Update the phase research through /blu:research-phase so it matches the required research schema before planning."
+          ]
+        : [],
+    warnings
   };
 }
 
@@ -722,6 +891,10 @@ export async function blueprintPhaseArtifactWrite(
   const normalizedContent = normalizeTextContent(args.content);
   const exists = await pathExists(absolutePath);
   const warnings: string[] = [];
+  const validation =
+    args.artifact === "research"
+      ? validateResearchArtifactContent(normalizedContent)
+      : null;
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
@@ -739,6 +912,16 @@ export async function blueprintPhaseArtifactWrite(
         written: false,
         created: false,
         overwritten: false,
+        status: "reused",
+        validation:
+          validation
+            ? {
+                valid: validation.valid,
+                issues: validation.issues,
+                warnings: validation.warnings,
+                suggestedRepairs: []
+              }
+            : null,
         warnings
       };
     }
@@ -748,6 +931,30 @@ export async function blueprintPhaseArtifactWrite(
         `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
       );
     }
+  }
+
+  if (validation && !validation.valid && (args.validationMode ?? "strict") === "strict") {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      artifact: args.artifact,
+      path: artifactPath,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      validation: {
+        valid: false,
+        issues: validation.issues,
+        warnings: validation.warnings,
+        suggestedRepairs: [
+          "Add the required research sections, confidence marker, and at least one cited source before retrying."
+        ]
+      },
+      warnings: []
+    };
   }
 
   await ensureParentDirectory(absolutePath);
@@ -767,7 +974,17 @@ export async function blueprintPhaseArtifactWrite(
     written: true,
     created: !exists,
     overwritten: exists,
-    warnings
+    status: exists ? "updated" : "created",
+    validation:
+      validation
+        ? {
+            valid: validation.valid,
+            issues: validation.issues,
+            warnings: validation.warnings,
+            suggestedRepairs: []
+          }
+        : null,
+    warnings: [...warnings, ...(validation?.warnings ?? [])]
   };
 }
 
