@@ -339,6 +339,6 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.validation.issues.join("\n"), /frontmatter|required section/i);
-  assert.match(afterStatus.nextAction, /\/blu:progress/);
+  assert.match(afterStatus.nextAction, /\/blu:execute-phase 3/);
   assert.match(writtenBody, /Plan 02/);
 });

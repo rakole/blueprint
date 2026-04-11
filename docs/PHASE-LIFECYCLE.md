@@ -15,7 +15,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 4. `plan-phase`
    Uses the plan index plus dedicated plan read/write tools to persist one or more `XX-YY-PLAN.md` files and updates `STATE.md`.
 5. `execute-phase`
-   Produces implementation changes plus `XX-YY-SUMMARY.md` execution evidence.
+   Uses the plan index/read tools plus dedicated summary index/read/write tools to produce implementation changes and `XX-YY-SUMMARY.md` execution evidence.
 6. `validate-phase`
    Writes `XX-VERIFICATION.md` and records validation gaps or pass signals.
 7. `verify-work`

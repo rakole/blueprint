@@ -79,10 +79,14 @@ type CurrentPhaseArtifactStatus = {
   contextPath: string | null;
   researchPath: string | null;
   uiSpecPath: string | null;
+  planIds: string[];
+  summaryIds: string[];
   hasContext: boolean;
   hasResearch: boolean;
   hasUiSpec: boolean;
   hasPlans: boolean;
+  hasSummaries: boolean;
+  hasPendingExecution: boolean;
   researchValid: boolean | null;
   blockers: string[];
   warnings: string[];
@@ -194,6 +198,17 @@ function formatPhasePrefix(value: string): string {
   return [head.padStart(2, "0"), ...rest].join(".");
 }
 
+function extractPhasePlanIds(artifacts: Iterable<string>, phasePrefix: string, kind: "PLAN" | "SUMMARY"): string[] {
+  const suffix = kind === "PLAN" ? "PLAN" : "SUMMARY";
+  const matcher = new RegExp(`/${phasePrefix.replace(".", "\\.")}-(\\d+)-${suffix}\\.md$`);
+
+  return [...new Set(
+    [...artifacts]
+      .map((artifact) => artifact.match(matcher)?.[1]?.padStart(2, "0") ?? null)
+      .filter((value): value is string => value !== null)
+  )].sort();
+}
+
 async function listImmediateDirectories(rootPath: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(rootPath, { withFileTypes: true });
@@ -252,10 +267,14 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      planIds: [],
+      summaryIds: [],
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
       hasPlans: false,
+      hasSummaries: false,
+      hasPendingExecution: false,
       researchValid: null,
       blockers,
       warnings
@@ -293,10 +312,14 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      planIds: [],
+      summaryIds: [],
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
       hasPlans: false,
+      hasSummaries: false,
+      hasPendingExecution: false,
       researchValid: null,
       blockers,
       warnings
@@ -320,10 +343,14 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      planIds: [],
+      summaryIds: [],
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
       hasPlans: false,
+      hasSummaries: false,
+      hasPendingExecution: false,
       researchValid: null,
       blockers,
       warnings
@@ -343,14 +370,20 @@ async function inspectCurrentPhaseArtifacts(
   const hasResearch = phaseArtifacts.has(researchPath);
   const hasUiSpec = phaseArtifacts.has(uiSpecPath);
   const planPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const summaryPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-SUMMARY.md"));
+  const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
+  const summaryIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "SUMMARY");
   const hasPlans = planPaths.length > 0;
+  const hasSummaries = summaryPaths.length > 0;
+  const hasPendingExecution = planIds.some((planId) => !summaryIds.includes(planId));
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) =>
       artifact.endsWith(`${phasePrefix}-DISCUSSION-LOG.md`) ||
       artifact.endsWith(`${phasePrefix}-DISCUSS-CHECKPOINT.json`) ||
       artifact.endsWith(`${phasePrefix}-RESEARCH.md`) ||
       artifact.endsWith(`${phasePrefix}-UI-SPEC.md`) ||
-      artifact.endsWith("-PLAN.md")
+      artifact.endsWith("-PLAN.md") ||
+      artifact.endsWith("-SUMMARY.md")
   );
   let researchValid: boolean | null = null;
 
@@ -397,10 +430,14 @@ async function inspectCurrentPhaseArtifacts(
     contextPath,
     researchPath,
     uiSpecPath,
+    planIds,
+    summaryIds,
     hasContext,
     hasResearch,
     hasUiSpec,
     hasPlans,
+    hasSummaries,
+    hasPendingExecution,
     researchValid,
     blockers,
     warnings
@@ -463,6 +500,8 @@ async function deriveNextAction(args: {
   const researchPhaseCommand = "/blu:research-phase";
   const uiPhaseCommand = "/blu:ui-phase";
   const planPhaseCommand = "/blu:plan-phase";
+  const executePhaseCommand = "/blu:execute-phase";
+  const validatePhaseCommand = "/blu:validate-phase";
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return "Run /blu:progress to review the next safe Blueprint action";
@@ -512,6 +551,22 @@ async function deriveNextAction(args: {
     implementedCommands.has(planPhaseCommand)
   ) {
     return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
+  }
+
+  if (
+    args.phaseArtifacts.hasPlans &&
+    args.phaseArtifacts.hasPendingExecution &&
+    implementedCommands.has(executePhaseCommand)
+  ) {
+    return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;
+  }
+
+  if (
+    args.phaseArtifacts.hasPlans &&
+    !args.phaseArtifacts.hasPendingExecution &&
+    implementedCommands.has(validatePhaseCommand)
+  ) {
+    return `Run ${validatePhaseCommand} ${args.currentPhase} to validate the completed phase execution`;
   }
 
   return args.currentPhase

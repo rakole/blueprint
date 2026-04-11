@@ -201,3 +201,16 @@ test("phase planning skill and bounded planning agents are marked implemented in
     /\| `blueprint-checker` \| `implemented` \| Verify plan quality before execution \|/
   );
 });
+
+test("phase execution skill and bounded execution agent are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-phase-execution` \| `implemented` \| Plan execution and summary generation \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-executor` \| `implemented` \| Execute plan tasks and produce summaries \|/
+  );
+});
