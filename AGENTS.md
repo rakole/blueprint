@@ -12,9 +12,9 @@ It is not a literal port of GSD internals.
 
 ## Current Phase
 
-- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `research-phase`, `ui-phase`, `next`, `plan-phase`, and `execute-phase`
+- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, and `validate-phase`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
-- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase` and `execute-phase` are now implemented on top of the plan and summary MCP substrates, and the next broader rollout starts with `validate-phase` and `verify-work`
+- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, and the next broader rollout continues with `verify-work`
 - `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
@@ -85,7 +85,6 @@ It is not a literal port of GSD internals.
 
 Continue the Phase 4 validation slice with:
 
-- substantive artifact persistence for `validate-phase`
 - validation-aware verification flow for `verify-work`
 - unchanged implemented-only routing guarantees in `src/mcp/tools/project.ts`
 - the closed Phase 2.2 drift guarantees and shipped Phase 3 regression coverage preserved while validation parity gaps close

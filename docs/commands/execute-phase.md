@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`execute-phase` carries forward the GSD intent to execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a Gemini-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and leaves `validate-phase` and `verify-work` as the next slice.
+`execute-phase` carries forward the GSD intent to execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a Gemini-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and hands off to the shipped `validate-phase` flow while `verify-work` remains the next slice.
 
 
 ## Command Path And Examples

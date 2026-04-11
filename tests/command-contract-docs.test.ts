@@ -214,3 +214,16 @@ test("phase execution skill and bounded execution agent are marked implemented i
     /\| `blueprint-executor` \| `implemented` \| Execute plan tasks and produce summaries \|/
   );
 });
+
+test("phase validation skill and bounded verifier agent are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-phase-validation` \| `implemented` \| Verification, UAT, tests, and gap closure \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-verifier` \| `implemented` \| Verify execution results and UAT evidence \|/
+  );
+});

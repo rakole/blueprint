@@ -7,10 +7,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Phase 3 discovery parity closeout after the 2026-04-11 runtime shipment; Phase 4 validation rollout is next and starts from implemented `plan-phase` and `execute-phase`
-- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the governance handoff command `pause-work`, and the read-only router/execution-prep commands `next`, `plan-phase`, and `execute-phase` are implemented, and routing still filters to implemented commands only
-- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, and Phase 4 execution summaries are present
-- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, keep later commands blocked until their substrate exists, and move the next slice to `validate-phase` and `verify-work`
+- Current milestone: Phase 4 validation rollout is underway after the 2026-04-11 runtime shipment; `validate-phase` and `pause-work` are implemented and `verify-work` is the next slice after `plan-phase` and `execute-phase`
+- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the governance handoff command `pause-work`, the read-only router/execution-prep commands `next`, `plan-phase`, and `execute-phase`, and `validate-phase` are implemented, and routing still filters to implemented commands only
+- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, implemented validation artifacts, and Phase 4 execution summaries are present
+- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, keep later commands blocked until their substrate exists, and move the next slice to `verify-work`
 
 ## Stable References
 
@@ -93,7 +93,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Next Implementation Slice
 
-- implement `validate-phase`, then `verify-work`
+- implement `verify-work`
 - keep `resume-work` blocked until its runtime substrate exists
 - preserve the shipped Phase 3 discovery artifact contracts and implemented-only routing behavior
 - keep `plan-phase` routed through the plan index plus dedicated plan read/write MCP tools
@@ -123,4 +123,5 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Canonical future-command ownership is `next` and `do` on `blueprint-router`, `pause-work` and `resume-work` on `blueprint-governance`, and `plan-milestone-gaps` on `blueprint-roadmap-admin`
 - `ui-phase` keeps a single declared phase artifact: `XX-UI-SPEC.md`, which may hold either a UI contract or an explicit skip rationale
 - `plan-phase` now uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to persist real `XX-YY-PLAN.md` content
-- Future sessions may proceed with Phase 4 validation and verification implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist
+- `validate-phase` now uses `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, and `blueprint_phase_validation_write` to persist real `XX-VERIFICATION.md` content
+- Future sessions may proceed with Phase 4 verification implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist

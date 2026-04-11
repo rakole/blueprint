@@ -53,6 +53,8 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 | `blueprint_phase_research_status` | Report research and UI-spec readiness plus research validation signals | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
 | `blueprint_phase_artifact_read` | Read substantive discovery artifact content for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
 | `blueprint_phase_artifact_write` | Persist substantive phase-scoped discovery artifact content with overwrite protection and research validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
+| `blueprint_phase_validation_read` | Read a phase-scoped validation artifact and its execution-summary coverage | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}` |
+| `blueprint_phase_validation_write` | Persist a phase-scoped VERIFICATION or UAT artifact with overwrite protection and execution-aware prerequisite checks | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}` |
 | `blueprint_phase_checkpoint_get` | Read the saved discuss-phase checkpoint for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}` |
 | `blueprint_phase_checkpoint_put` | Persist a discuss-phase checkpoint JSON object for a phase | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
 | `blueprint_phase_checkpoint_delete` | Delete a saved discuss-phase checkpoint after successful completion | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}` |
@@ -104,6 +106,8 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - `pause-work` uses `blueprint_pause_handoff_get` and `blueprint_pause_handoff_write` to keep the latest resumable handoff in `.blueprint/reports/` while `blueprint_state_update` keeps `STATE.md` aligned.
 - `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
+- `validate-phase` uses `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, and `blueprint_phase_validation_write` to read execution evidence, persist `XX-VERIFICATION.md`, and keep validation state aligned.
+- `verify-work` stays on `blueprint_artifact_mutate_index` until its runtime substrate ships.
 - lifecycle commands lean on phase, artifact, and state tools.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.

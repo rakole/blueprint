@@ -13,12 +13,12 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-phase-discovery` | `implemented` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
 | `blueprint-phase-execution` | `implemented` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
+| `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
 
 ## Planned Later Skills
 
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
-| `blueprint-phase-validation` | `planned` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
 | `blueprint-roadmap-admin` | `planned` | Roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 | `blueprint-capture` | `planned` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
 | `blueprint-debug` | `planned` | Debug investigations and recovery plans | `debug` |
