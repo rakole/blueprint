@@ -9,7 +9,13 @@ import {
   blueprintArtifactScaffold,
   blueprintArtifactList
 } from "../src/mcp/tools/artifacts.js";
-import { blueprintPhaseContext } from "../src/mcp/tools/phase.js";
+import {
+  blueprintPhaseArtifactWrite,
+  blueprintPhaseCheckpointDelete,
+  blueprintPhaseCheckpointGet,
+  blueprintPhaseCheckpointPut,
+  blueprintPhaseContext
+} from "../src/mcp/tools/phase.js";
 
 const repoRoot = process.cwd();
 
@@ -69,6 +75,12 @@ test("discuss-phase command references only registered phase-discovery tool name
     "blueprint_phase_context",
     "blueprint_roadmap_read",
     "blueprint_artifact_list",
+    "blueprint_config_get",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
+    "blueprint_phase_checkpoint_get",
+    "blueprint_phase_checkpoint_put",
+    "blueprint_phase_checkpoint_delete",
     "blueprint_artifact_scaffold",
     "blueprint_state_update"
   ];
@@ -79,10 +91,14 @@ test("discuss-phase command references only registered phase-discovery tool name
   }
 
   assert.match(commandFile, /explicit overwrite confirmation/i);
+  assert.match(commandFile, /workflow\.discuss_mode/);
+  assert.match(commandFile, /workflow\.skip_discuss/);
+  assert.match(commandFile, /workflow\.research_before_questions/);
+  assert.match(commandFile, /power mode|chain mode|auto-advance/i);
   assert.match(commandFile, /\/blu:progress/);
 });
 
-test("phase artifact scaffolding creates and reuses discuss-phase artifacts deterministically", async (t) => {
+test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -102,6 +118,46 @@ test("phase artifact scaffolding creates and reuses discuss-phase artifacts dete
       ".blueprint/phases/03-phase-discovery/03-DISCUSSION-LOG.md"
     ]
   });
+  const checkpointCreated = await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      mode: "discuss",
+      pendingTopics: ["Scope boundaries", "UI expectations"]
+    }
+  });
+  const checkpointResumed = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "03"
+  });
+  const contextWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: `# Phase 03 Context
+
+## Decisions
+- Discovery commands should persist real decisions, not only scaffold text.
+- Resume from saved checkpoints before restarting long discussions.
+`,
+    overwrite: true
+  });
+  const discussionWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "discussion-log",
+    content: `# Phase 03 Discussion Log
+
+## Notes
+- Confirmed that overwrite stays explicit.
+- Confirmed that checkpoint cleanup happens after successful context capture.
+`,
+    overwrite: true
+  });
+  const checkpointDeleted = await blueprintPhaseCheckpointDelete({
+    cwd: repoPath,
+    phase: "3"
+  });
   const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
   const listed = await blueprintArtifactList({ cwd: repoPath });
   const contextBody = await readFile(
@@ -117,6 +173,15 @@ test("phase artifact scaffolding creates and reuses discuss-phase artifacts dete
     ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
     ".blueprint/phases/03-phase-discovery/03-DISCUSSION-LOG.md"
   ]);
+  assert.equal(checkpointCreated.updated, true);
+  assert.equal(checkpointResumed.found, true);
+  assert.deepEqual(checkpointResumed.checkpoint?.pendingTopics, [
+    "Scope boundaries",
+    "UI expectations"
+  ]);
+  assert.equal(contextWrite.written, true);
+  assert.equal(discussionWrite.written, true);
+  assert.equal(checkpointDeleted.deleted, true);
   assert.equal(
     context.phase?.artifacts.discussionLog,
     ".blueprint/phases/03-phase-discovery/03-DISCUSSION-LOG.md"
@@ -124,5 +189,5 @@ test("phase artifact scaffolding creates and reuses discuss-phase artifacts dete
   assert.ok(
     listed.artifacts.phases.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
   );
-  assert.match(contextBody, /Phase 03: Phase Discovery - Context/);
+  assert.match(contextBody, /persist real decisions, not only scaffold text/i);
 });

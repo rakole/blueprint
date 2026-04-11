@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`discuss-phase` carries forward the GSD intent to gather phase context through adaptive questioning before planning. The initial Blueprint Phase 3 slice ships the core context-capture path first; later continuations such as automatic chaining or file-based bulk-question flows remain out of scope until their downstream runtime substrate exists. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`discuss-phase` carries forward the GSD intent to gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now persists substantive context content and resumable checkpoint state through dedicated MCP tools, while still deferring upstream-style power-mode, chain-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
@@ -36,15 +36,14 @@
 
 ## Blueprint And Global State Reads
 
-
-- none
+- effective Blueprint config through `blueprint_config_get`
 
 
 ## Blueprint And Global State Writes
 
-
 - `phase XX-CONTEXT.md`
 - `optional phase XX-DISCUSSION-LOG.md`
+- `optional phase XX-DISCUSS-CHECKPOINT.json`
 - `.blueprint/STATE.md`
 
 
@@ -55,6 +54,12 @@
 - `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
+- `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}`
+- `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
+- `blueprint_phase_checkpoint_delete` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -95,6 +100,7 @@
 
 
 - Confirm overwrite when a context artifact already exists.
+- Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
 - Do not advertise follow-on execution or planning flows as runnable until those commands are implemented in the runtime catalog.
 
 
@@ -103,6 +109,8 @@
 
 - The target phase is omitted or ambiguous while multiple active phases exist.
 - Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
+- `workflow.discuss_mode` may switch the command into an evidence-first assumptions flow rather than an interview-style loop.
+- `workflow.skip_discuss=true` should shorten the discussion path instead of pretending no context capture is needed.
 
 
 ## Failure Modes And Recovery
@@ -118,6 +126,8 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Persists real phase decisions into `XX-CONTEXT.md`, not only scaffold placeholders.
+- Uses checkpoint persistence only as a resumability aid and deletes the checkpoint after successful completion.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 

@@ -53,7 +53,9 @@
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}`
-- `blueprint_phase_artifact_write` -> `{status, artifactPath, validation, warnings}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
+- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
 - `blueprint_state_update` -> `{updatedFields, statePath, warnings}`

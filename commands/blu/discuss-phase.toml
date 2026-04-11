@@ -11,14 +11,26 @@ Follow this flow exactly:
 3. Read `blueprint_phase_context` so you know the phase requirements, existing discovery artifacts, and any missing artifacts.
 4. Read `blueprint_roadmap_read` so your summary stays aligned with the active milestone and the roadmap's phase naming.
 5. Read `blueprint_artifact_list` before writing so you can report the current phase artifact inventory accurately.
-6. If the selected phase already has `XX-CONTEXT.md`, require explicit overwrite confirmation before any replace path. Reuse is the default.
-7. Call `blueprint_artifact_scaffold` to create or update the selected phase's `XX-CONTEXT.md`. Create `XX-DISCUSSION-LOG.md` only when the conversation meaningfully adds ongoing notes that should stay durable.
-8. Call `blueprint_state_update` to record that `/blu:discuss-phase` completed and to set the next safe action inside the implemented Blueprint surface.
-9. Return a concise summary covering the phase, created versus reused files, any warnings, and the next safe action.
+6. Read `blueprint_config_get` with `scope: "effective"` and honor these runtime behaviors:
+   - `workflow.discuss_mode="discuss"`: run focused gray-area questioning and capture actual decisions
+   - `workflow.discuss_mode="assumptions"`: surface evidence-backed assumptions, ask only for corrections, then capture the corrected decisions
+   - `workflow.skip_discuss=true`: prefer a single-pass, repo-evidence-driven context capture instead of a long interactive loop
+   - `workflow.research_before_questions=true`: inspect relevant local discovery/codebase artifacts before asking the user to choose between options
+7. Read the current phase's existing artifacts through `blueprint_phase_artifact_read` and inspect any saved checkpoint through `blueprint_phase_checkpoint_get`.
+8. If `XX-CONTEXT.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default.
+9. If a checkpoint exists and the user has not explicitly asked to discard it, prefer resuming from that checkpoint instead of starting over.
+10. Use `blueprint_artifact_scaffold` only to seed missing `XX-CONTEXT.md` or `XX-DISCUSSION-LOG.md` files. Do not treat scaffold output as the final artifact content.
+11. Persist the actual context content through `blueprint_phase_artifact_write` with `artifact: "context"`.
+12. Write `XX-DISCUSSION-LOG.md` through `blueprint_phase_artifact_write` with `artifact: "discussion-log"` only when durable audit notes add value beyond the main context artifact.
+13. During long discovery flows, persist resumable state through `blueprint_phase_checkpoint_put`. After successfully writing the final context artifact, delete that checkpoint through `blueprint_phase_checkpoint_delete`.
+14. Call `blueprint_state_update` to record that `/blu:discuss-phase` completed and to set the next safe action inside the implemented Blueprint surface.
+15. Return a concise summary covering the phase, reused versus replaced artifacts, checkpoint behavior, any warnings, and the next safe action.
 
 Response requirements:
-- Use only `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_scaffold`, and `blueprint_state_update` for persistent state work.
+- Use only `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_config_get`, `blueprint_phase_artifact_read`, `blueprint_phase_artifact_write`, `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, `blueprint_phase_checkpoint_delete`, `blueprint_artifact_scaffold`, and `blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
+- Capture real phase decisions, not just placeholder headings or scaffold text.
+- Do not claim upstream-only power mode, batch mode, chain mode, or auto-advance behavior in this runtime.
 - Do not advertise blocked lifecycle commands as runnable; prefer `/blu:progress` when follow-up routing is uncertain.
 """

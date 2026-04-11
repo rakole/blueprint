@@ -5,7 +5,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactWrite,
+  blueprintPhaseResearchStatus
+} from "../src/mcp/tools/phase.js";
 
 const repoRoot = process.cwd();
 
@@ -61,6 +65,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "blueprint_phase_locate",
     "blueprint_phase_research_status",
     "blueprint_config_get",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
     "blueprint_artifact_scaffold",
     "blueprint_state_update"
   ];
@@ -76,27 +82,66 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.doesNotMatch(commandFile, /UI-SKIP/);
 });
 
-test("phase artifact scaffolding keeps UI output in a single reusable file", async (t) => {
+test("ui-phase keeps UI output in a single reusable file for either contract or skip rationale", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const first = await blueprintArtifactScaffold({
+  const first = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"]
-  });
-  const second = await blueprintArtifactScaffold({
-    cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"]
-  });
-  const body = await readFile(
-    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"),
-    "utf8"
-  );
+    phase: "3",
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
 
-  assert.deepEqual(first.createdFiles, [".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"]);
-  assert.deepEqual(second.reusedFiles, [".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"]);
-  assert.match(body, /Outcome Mode/);
-  assert.match(body, /UI contract or explicit skip rationale/i);
+## Outcome Mode
+- UI contract
+
+## Constraints
+- Keep a single durable file for either outcome.
+`
+  });
+  const second = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- UI contract
+
+## Constraints
+- Keep a single durable file for either outcome.
+`
+  });
+  const replaced = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- Explicit skip rationale
+
+## Rationale
+- No frontend surface changes are in scope for this phase.
+`,
+    overwrite: true
+  });
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const body = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "ui-spec"
+  });
+
+  assert.equal(first.written, true);
+  assert.equal(first.path, ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md");
+  assert.equal(second.written, false);
+  assert.match(second.warnings.join("\n"), /content was unchanged/i);
+  assert.equal(replaced.overwritten, true);
+  assert.equal(status.hasUiSpec, true);
+  assert.equal(body.found, true);
+  assert.match(body.content ?? "", /Outcome Mode/);
+  assert.match(body.content ?? "", /Explicit skip rationale/i);
 });

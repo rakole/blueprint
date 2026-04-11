@@ -12,9 +12,10 @@ It is not a literal port of GSD internals.
 
 ## Current Phase
 
-- Wave 0 runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, and `map-codebase`
+- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `research-phase`, and `ui-phase`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
-- Phase 3 discovery is unblocked for implementation work, but `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
+- Phase 3 discovery shipped on 2026-04-11 and is under active repair to close scaffold-only persistence and parity gaps before broader Phase 4 rollout
+- `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
 
@@ -82,13 +83,12 @@ It is not a literal port of GSD internals.
 
 ## Immediate Next Slice
 
-Begin Phase 3 Phase Discovery with:
+Complete the Phase 3 discovery repair with:
 
-- `discuss-phase`
-- `research-phase`
-- `ui-phase`
-- unchanged runtime status semantics in `src/mcp/tools/project.ts`
-- the closed Phase 2.2 drift guarantees and regression coverage preserved while new Phase 3 runtime pieces land
+- substantive artifact persistence for `discuss-phase`, `research-phase`, and `ui-phase`
+- checkpoint-aware recovery for `discuss-phase`
+- unchanged implemented-only routing guarantees in `src/mcp/tools/project.ts`
+- the closed Phase 2.2 drift guarantees and shipped Phase 3 regression coverage preserved while discovery parity gaps close
 
 ## Working Norms
 

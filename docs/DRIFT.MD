@@ -4,8 +4,8 @@
 
 - Checkpoint: Phase 2.2 future-contract drift repair
 - State: closed on 2026-04-11 after Phase 2.1 completed earlier that day
-- Result: all Phase 2.2 exit criteria validated; Phase 3 discovery is unblocked for implementation work
-- Scope: repair control-plane and future-command contract drift before any Phase 3 expansion
+- Result: all Phase 2.2 exit criteria validated; Phase 3 discovery was later shipped on 2026-04-11, and the current follow-up work is repairing discovery parity gaps without widening runtime exposure
+- Scope: repair control-plane and future-command contract drift before any broader post-Phase-3 expansion
 - Runtime posture: salvage the working Wave 0 runtime, keep blocked command exposure unchanged, and do not invent new runtime substrate in this checkpoint
 
 ## Phase 2.1 Closure
@@ -46,6 +46,15 @@ Phase 2.2 reopens this ledger for follow-up repair work without undoing those re
 - `/blu:health`
 - `/blu:map-codebase`
 
+## Post-Close Follow-Up
+
+Phase 2.2 remains closed. The relevant follow-up for this branch is narrower than a new drift checkpoint:
+
+- `discuss-phase`, `research-phase`, and `ui-phase` are now shipped
+- the initial Phase 3 implementation leaned too heavily on scaffold-only discovery artifacts
+- current repair work is replacing placeholder persistence with substantive artifact writes and checkpoint-aware recovery
+- later lifecycle, roadmap, review, workspace, update, and patch commands remain blocked until their own substrate exists
+
 ## Evidence Of Phase 2.2 Drift
 
 | Drift Area | Evidence | Repair Direction |
@@ -84,7 +93,6 @@ These are intentional and should not be “fixed away”:
 The following families remain intentionally blocked until substrate exists:
 
 - roadmap MCP tools
-- phase MCP tools
 - review MCP tools
 - workspace MCP tools
 - workstream MCP tools
@@ -105,7 +113,8 @@ Because of that, later commands such as `plan-phase`, `insert-phase`, `next`, an
 ## Closure Decision
 
 - Phase 2.2 closed on 2026-04-11 after the drift suite and full test suite both passed.
-- Phase 3 discovery work is now unblocked for implementation planning and delivery.
+- Phase 3 discovery later shipped on 2026-04-11.
+- Current follow-up work repairs discovery parity gaps without changing the implemented-only routing rule.
 - `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`.
 - Documented future commands remain non-routable until their manifest, primary skill, and required MCP tools exist.
 

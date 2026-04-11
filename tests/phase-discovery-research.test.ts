@@ -7,6 +7,7 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
 import {
+  blueprintPhaseArtifactRead,
   blueprintPhaseArtifactWrite,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
@@ -100,7 +101,7 @@ function validResearchContent(summary: string): string {
 ## Code Examples
 
 \`\`\`ts
-await blueprintPhaseArtifactWrite({ phase: "3", artifactKind: "RESEARCH", content });
+await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content });
 \`\`\`
 
 ## Recommendations
@@ -124,7 +125,9 @@ test("research-phase command references only registered tool names and safe rout
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
     "blueprint_phase_artifact_write",
+    "blueprint_artifact_scaffold",
     "blueprint_state_load",
     "blueprint_state_update"
   ];
@@ -155,29 +158,34 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   const created = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
-    artifactKind: "RESEARCH",
+    artifact: "research",
     content: validResearchContent("Create a real research artifact instead of a scaffold."),
     overwrite: true
   });
   const afterCreate = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "03" });
+  const createdArtifact = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "research"
+  });
 
   const reused = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
-    artifactKind: "RESEARCH",
-    content: validResearchContent("This should not overwrite without confirmation.")
+    artifact: "research",
+    content: validResearchContent("Create a real research artifact instead of a scaffold.")
   });
   const updated = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
-    artifactKind: "RESEARCH",
+    artifact: "research",
     content: validResearchContent("Update the artifact after an explicit overwrite path."),
     overwrite: true
   });
   const invalid = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
-    artifactKind: "RESEARCH",
+    artifact: "research",
     content: "# Phase 03: Phase Discovery - Research\n\n## Summary\n- Missing required sections.\n",
     overwrite: true
   });
@@ -191,6 +199,7 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.equal(afterCreate.hasResearch, true);
   assert.equal(afterCreate.researchValid, true);
   assert.deepEqual(afterCreate.researchIssues, []);
+  assert.equal(createdArtifact.found, true);
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
   assert.equal(invalid.status, "invalid");

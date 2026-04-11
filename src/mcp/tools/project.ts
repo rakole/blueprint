@@ -309,12 +309,18 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
 
   let status = parsedRow.declaredStatus;
 
-  if (manifestExists && skillExists && requiredToolsSatisfied) {
-    status = "implemented";
-  } else if (manifestExists || skillExists) {
-    status = "repairing";
-  } else if (blockedBy.length > 0) {
+  if (!(manifestExists && skillExists && requiredToolsSatisfied)) {
+    if (manifestExists || skillExists) {
+      status = "repairing";
+    } else if (blockedBy.length > 0) {
+      status = "blocked";
+    }
+  } else if (parsedRow.declaredStatus === "blocked") {
     status = "blocked";
+  } else if (parsedRow.declaredStatus === "planned") {
+    status = "planned";
+  } else if (parsedRow.declaredStatus === "repairing") {
+    status = "repairing";
   }
 
   return {

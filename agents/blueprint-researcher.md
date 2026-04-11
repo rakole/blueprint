@@ -47,3 +47,4 @@ Produce bounded phase-specific research that can be persisted into `XX-RESEARCH.
 - Prefer evidence from the repo and cited docs over speculation.
 - Mark inferred claims clearly when evidence is incomplete.
 - Do not write outside the assigned phase artifacts unless the parent command explicitly asks for it.
+- Do not return placeholders or TODO bullets that still require manual expansion before writing.

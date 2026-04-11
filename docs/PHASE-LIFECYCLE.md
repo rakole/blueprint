@@ -7,7 +7,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 ## Happy-Path Sequence
 
 1. `discuss-phase`
-   Writes `XX-CONTEXT.md` and captures phase framing.
+   Writes `XX-CONTEXT.md`, may persist `XX-DISCUSS-CHECKPOINT.json` during long discovery, and should delete that checkpoint after successful context capture.
 2. `research-phase`
    Writes `XX-RESEARCH.md` when technical uncertainty or integration risk exists.
 3. `ui-phase`

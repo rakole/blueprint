@@ -925,26 +925,50 @@ function collectPhaseBundleIssues(
       continue;
     }
 
-    const expectedPrefix = `${BLUEPRINT_PHASES_PATH}/${directoryName}/${phasePrefix}`;
-    const hasContext = phaseArtifacts.some((artifact) =>
+    const phaseRoot = `${BLUEPRINT_PHASES_PATH}/${directoryName}/`;
+    const expectedPrefix = `${phaseRoot}${phasePrefix}`;
+    const artifactsForPhase = phaseArtifacts.filter((artifact) =>
+      artifact.startsWith(phaseRoot)
+    );
+
+    if (artifactsForPhase.length === 0) {
+      continue;
+    }
+
+    const hasContext = artifactsForPhase.some((artifact) =>
       artifact.endsWith(`${expectedPrefix}-CONTEXT.md`)
     );
-    const hasResearch = phaseArtifacts.some((artifact) =>
+    const hasDiscussionLog = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-DISCUSSION-LOG.md`)
+    );
+    const hasResearch = artifactsForPhase.some((artifact) =>
       artifact.endsWith(`${expectedPrefix}-RESEARCH.md`)
     );
-    const hasPlan = phaseArtifacts.some((artifact) =>
+    const hasUiSpec = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-UI-SPEC.md`)
+    );
+    const hasPlan = artifactsForPhase.some((artifact) =>
       artifact.includes(`${expectedPrefix}-`) && artifact.endsWith("-PLAN.md")
     );
+    const hasSummary = artifactsForPhase.some((artifact) =>
+      artifact.includes(`${expectedPrefix}-`) && artifact.endsWith("-SUMMARY.md")
+    );
+    const hasCheckpoint = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-DISCUSS-CHECKPOINT.json`)
+    );
 
-    if (!hasContext || !hasResearch || !hasPlan) {
-      const missingParts = [
-        !hasContext ? "CONTEXT" : null,
-        !hasResearch ? "RESEARCH" : null,
-        !hasPlan ? "PLAN" : null
-      ].filter((value): value is string => value !== null);
-
+    if (
+      !hasContext &&
+      (hasDiscussionLog || hasResearch || hasUiSpec || hasPlan || hasSummary || hasCheckpoint)
+    ) {
       issues.push(
-        `Phase artifact bundle is incomplete for ${directoryName}: missing ${missingParts.join(", ")}`
+        `Phase artifact flow is inconsistent for ${directoryName}: missing CONTEXT before later discovery or execution artifacts.`
+      );
+    }
+
+    if (hasSummary && !hasPlan) {
+      issues.push(
+        `Phase artifact flow is inconsistent for ${directoryName}: SUMMARY artifacts exist without a PLAN artifact.`
       );
     }
   }
