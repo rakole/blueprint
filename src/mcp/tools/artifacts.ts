@@ -1808,13 +1808,28 @@ function collectPhaseBundleIssues(
     const hasSummary = artifactsForPhase.some((artifact) =>
       artifact.includes(`${expectedPrefix}-`) && artifact.endsWith("-SUMMARY.md")
     );
+    const hasVerification = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-VERIFICATION.md`)
+    );
+    const hasUat = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-UAT.md`)
+    );
     const hasCheckpoint = artifactsForPhase.some((artifact) =>
       artifact.endsWith(`${expectedPrefix}-DISCUSS-CHECKPOINT.json`)
     );
 
     if (
       !hasContext &&
-      (hasDiscussionLog || hasResearch || hasUiSpec || hasPlan || hasSummary || hasCheckpoint)
+      (
+        hasDiscussionLog ||
+        hasResearch ||
+        hasUiSpec ||
+        hasPlan ||
+        hasSummary ||
+        hasVerification ||
+        hasUat ||
+        hasCheckpoint
+      )
     ) {
       issues.push(
         `Phase artifact flow is inconsistent for ${directoryName}: missing CONTEXT before later discovery or execution artifacts.`
@@ -1824,6 +1839,18 @@ function collectPhaseBundleIssues(
     if (hasSummary && !hasPlan) {
       issues.push(
         `Phase artifact flow is inconsistent for ${directoryName}: SUMMARY artifacts exist without a PLAN artifact.`
+      );
+    }
+
+    if (hasVerification && !hasSummary) {
+      issues.push(
+        `Phase artifact flow is inconsistent for ${directoryName}: VERIFICATION artifacts exist without a SUMMARY artifact.`
+      );
+    }
+
+    if (hasUat && !hasVerification) {
+      issues.push(
+        `Phase artifact flow is inconsistent for ${directoryName}: UAT artifacts exist without a VERIFICATION artifact.`
       );
     }
 

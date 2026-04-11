@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a Gemini-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next planned slice.
 
 
 ## Command Path And Examples
@@ -37,7 +37,9 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- effective Blueprint config through `blueprint_config_get`
+- execution summaries through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
+- existing validation artifacts through `blueprint_phase_validation_read`
 
 
 ## Blueprint And Global State Writes
@@ -51,8 +53,13 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
+- `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
+- `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -72,16 +79,20 @@
 - `docs/ARCHITECTURE.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
+- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/PHASE-LIFECYCLE.md`
+- `docs/SKILLS-AND-AGENTS.md`
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/execute-phase.md`
+- `docs/commands/verify-work.md`
 
 
 ## External Shell Or Git Dependencies
 
 
 - External dependencies:
-- project test runners
+- none
 
 
 ## Shell Risk Profile
@@ -112,9 +123,11 @@
 
 
 - Reads and writes only the selected phase scope.
+- Reads completed execution summaries and any existing validation artifact before replacement.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Persists verification evidence through `blueprint_phase_validation_write` rather than direct file writes.
 - Leaves unrelated repo files untouched.
 
 

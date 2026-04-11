@@ -16,7 +16,8 @@ const IMPLEMENTED_COMMANDS = [
   "ui-phase",
   "next",
   "plan-phase",
-  "execute-phase"
+  "execute-phase",
+  "validate-phase"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
@@ -62,6 +63,9 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["ui-phase"].availableOptionalAgents, [
     "blueprint-ui-designer"
   ]);
+  assert.deepEqual(catalog.commands["validate-phase"].availableOptionalAgents, [
+    "blueprint-verifier"
+  ]);
 });
 
 test("blocked lifecycle and roadmap commands stay unroutable until substrate exists", async () => {
@@ -106,5 +110,20 @@ test("execute-phase is implemented once manifest, skill, and execution summary M
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.availableOptionalAgents.sort(), ["blueprint-executor"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("validate-phase is implemented once manifest, skill, and validation MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["validate-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.availableOptionalAgents.sort(), ["blueprint-verifier"]);
   assert.deepEqual(entry.blockedBy, []);
 });
