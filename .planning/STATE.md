@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: planning
 stopped_at: Phase 2.2 active checkpoint
-last_updated: "2026-04-11T06:08:07Z"
-last_activity: 2026-04-11 -- Verified the Phase 2.2 drift-repair baseline and backfilled execution summaries
+last_updated: "2026-04-11T06:15:56Z"
+last_activity: 2026-04-11 -- Phase 02.2 shipped via PR #9
 progress:
   total_phases: 10
   completed_phases: 3
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 Phase: 02.2 (urgent-drift-repair-follow-up) — ACTIVE
 Plan: 4 of 4
-Status: Phase 2.1 closed on 2026-04-11; Phase 2.2 is the active checkpoint while execution evidence is being ratified
-Last activity: 2026-04-11 -- Verified the Phase 2.2 drift-repair baseline and backfilled execution summaries
+Status: Phase 2.1 closed on 2026-04-11; Phase 2.2 is the active checkpoint and has been shipped as PR #9 pending merge
+Last activity: 2026-04-11 -- Phase 02.2 shipped via PR #9
 
 Progress: [███░░░░░░░] 31.3%
 
@@ -87,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T06:08:07Z
+Last session: 2026-04-11T06:15:56Z
 Stopped at: Phase 2.2 active checkpoint
 Resume file: .planning/phases/02.2-urgent-drift-repair-follow-up/02.2-CONTEXT.md
