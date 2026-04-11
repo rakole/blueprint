@@ -19,7 +19,7 @@ Follow this flow exactly:
    - `workflow.nyquist_validation=false`: explicitly report that Nyquist-style coverage was informational only because normalized config disabled it.
 8. Use `blueprint-verifier` to audit the completed summaries, identify validation coverage gaps, and draft durable verification conclusions plus any follow-up recommendations. Keep the output phase-scoped and grounded in the existing summaries.
 9. Persist the actual verification content through `blueprint_phase_validation_write` with `artifact: "verification"`. Do not write `XX-VERIFICATION.md` directly.
-10. Call `blueprint_artifact_validate` after the write path and then `blueprint_state_update` so `STATE.md` reflects the active phase, the validation command, and the next safe implemented action. If `verify-work` is not implemented yet, route to `/blu:progress` instead of suggesting it as runnable.
+10. Call `blueprint_artifact_validate` after the write path and then `blueprint_state_update` so `STATE.md` reflects the active phase, the validation command, and the next safe implemented action. Successful validation should normally route to `/blu:verify-work`; if runtime availability changes, fall back to `/blu:progress` instead of suggesting a blocked command.
 11. Return a concise summary covering whether validation was reconstructed or revised, how many summaries were audited, which config gates shaped the audit, any remaining coverage gaps, and the next safe implemented action.
 
 Response requirements:

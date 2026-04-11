@@ -17,9 +17,9 @@ This file describes the intended artifact flow through a single Blueprint phase 
 5. `execute-phase`
    Uses the plan index/read tools plus dedicated summary index/read/write tools to produce implementation changes and `XX-YY-SUMMARY.md` execution evidence.
 6. `validate-phase`
-   Writes `XX-VERIFICATION.md` and records validation gaps or pass signals.
+   Reads the saved execution summaries first, then writes `XX-VERIFICATION.md` with validation gaps, pass signals, and a clear next safe action.
 7. `verify-work`
-   Writes `XX-UAT.md` and confirms conversational or scripted user-acceptance evidence.
+   Reads the saved execution summaries first, then writes resumable `XX-UAT.md` evidence with explicit follow-up fixes when needed.
 
 ## Optional Quality Passes
 
@@ -35,8 +35,8 @@ This file describes the intended artifact flow through a single Blueprint phase 
 A phase should not be treated as complete just because execution finished. Completion requires enough evidence for the next command to route safely:
 
 - execution summaries exist
-- validation state is known
-- UAT state is known or explicitly deferred
+- validation state is known and grounded in saved summaries
+- UAT state is known, resumable, or explicitly deferred
 - any review or security follow-up is visible in artifacts
 - `STATE.md` names the next action clearly
 
@@ -46,6 +46,7 @@ A phase should not be treated as complete just because execution finished. Compl
 - The pause handoff captures the stopping point, completed work, remaining work, decisions, blockers, pending human actions, modified files, context notes, and the first next action for resumption.
 - `resume-work` should reconstruct context from `STATE.md`, phase artifacts, and the canonical `pause-work` handoff schema.
 - failed execution, validation, or review steps should still leave durable artifacts explaining blockers rather than disappearing into chat history.
+- validation and UAT artifacts should remain resumable so a later run can continue from the saved evidence instead of starting from scratch.
 
 ## Related Specs
 

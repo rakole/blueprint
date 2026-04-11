@@ -3,32 +3,36 @@ name: blueprint-phase-validation
 status: implemented
 commands:
   - /blu:validate-phase
+  - /blu:verify-work
 ---
 
 # Blueprint Phase Validation Skill
 
 ## Purpose
 
-Orchestrate Blueprint's post-execution validation flow so completed phase summaries are audited, durable `XX-VERIFICATION.md` evidence is persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
+Orchestrate Blueprint's post-execution validation and conversational UAT flow so completed phase summaries are audited, durable validation artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
 
 ## Parity Goal
 
-Carry forward the useful upstream `validate-phase` intent while preserving Blueprint deltas:
+Carry forward the useful upstream validation intent while preserving Blueprint deltas:
 
-- validation stays Gemini-native and MCP-owned instead of script-owned
 - execution summaries remain the source of truth for what was actually delivered
-- one durable verification artifact is written per validated phase
-- missing validation evidence can be reconstructed from saved summary artifacts
-- follow-up routing stays inside the implemented Blueprint surface until `verify-work` actually ships
+- validation and UAT stay Gemini-native and MCP-owned instead of script-owned
+- conversational UAT is resumable through `XX-UAT.md`
+- follow-up fixes stay explicit instead of hidden in prompt-only prose
+- persistent writes remain phase-scoped inside `.blueprint/`
+- follow-up routing stays inside the implemented Blueprint surface
 
 ## Required Inputs
 
 - `docs/commands/validate-phase.md`
+- `docs/commands/verify-work.md`
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/DRIFT.MD`
+- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/PHASE-LIFECYCLE.md`
 - saved `XX-YY-SUMMARY.md` artifacts for the target phase
 
 ## Required MCP Tools
@@ -49,20 +53,29 @@ Carry forward the useful upstream `validate-phase` intent while preserving Bluep
 
 ## Workflow Rules
 
-1. Resolve the target phase before validating anything and stop if the phase cannot be inferred safely.
-2. Treat saved execution summaries as the validation source of truth; if no summaries exist yet, route back to `/blu:execute-phase`.
-3. Read the saved summaries before drafting conclusions so the verification artifact reflects durable execution evidence rather than chat memory.
-4. Existing `XX-VERIFICATION.md` artifacts are audit baselines, not throwaway drafts. Reuse is the default and overwrite requires explicit confirmation.
-5. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the audit depth and coverage expectations.
-6. Use `blueprint-verifier` for bounded gap analysis instead of collapsing the whole audit into a vague summary.
-7. Persist verification evidence through `blueprint_phase_validation_write`; do not write raw verification files directly.
-8. After validation writes, refresh artifact health and update `STATE.md` so the next safe implemented action stays accurate.
-9. Prefer `/blu:progress` as the safe follow-up until `verify-work` is genuinely implemented.
-10. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
+### `validate-phase`
 
-## Output Style
+1. Resolve the target phase and require execution summaries before validation begins.
+2. Read summary index and relevant summary artifacts first so validation is grounded in the saved execution evidence.
+3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
+4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
+5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
+6. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact.
+7. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu:verify-work`, and fall back to `/blu:progress` only if runtime availability changes.
 
-- Explain whether the validation artifact was newly reconstructed, reused, or revised.
-- Explain how many execution summaries were audited and what evidence they covered.
-- Call out any remaining validation gaps or follow-up recommendations explicitly.
-- Keep the user anchored on the next safe implemented action after validation.
+### `verify-work`
+
+1. Resolve the target phase and require both execution summaries and a `XX-VERIFICATION.md` artifact before UAT begins.
+2. Read summary index, summary artifacts, and any existing validation or UAT artifact so conversational UAT is grounded in saved execution evidence.
+3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
+4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
+5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
+6. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact.
+7. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
+8. Update `STATE.md` with the UAT result and the next safe implemented action.
+
+## Non-Negotiables
+
+- All persistent writes must go through MCP tools only.
+- Do not mutate arbitrary repo files from validation commands.
+- Do not present planned-only lifecycle commands as runnable just because they are documented.

@@ -106,8 +106,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - `pause-work` uses `blueprint_pause_handoff_get` and `blueprint_pause_handoff_write` to keep the latest resumable handoff in `.blueprint/reports/` while `blueprint_state_update` keeps `STATE.md` aligned.
 - `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
-- `validate-phase` uses `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, and `blueprint_phase_validation_write` to read execution evidence, persist `XX-VERIFICATION.md`, and keep validation state aligned.
-- `verify-work` stays on `blueprint_artifact_mutate_index` until its runtime substrate ships.
+- `validate-phase` and `verify-work` use `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, `blueprint_phase_validation_write`, `blueprint_config_get`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` to persist summary-aware verification and UAT evidence.
 - lifecycle commands lean on phase, artifact, and state tools.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.

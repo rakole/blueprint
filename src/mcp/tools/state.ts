@@ -719,6 +719,8 @@ async function inspectCurrentPhaseArtifacts(
       artifact.endsWith(`${phasePrefix}-DISCUSS-CHECKPOINT.json`) ||
       artifact.endsWith(`${phasePrefix}-RESEARCH.md`) ||
       artifact.endsWith(`${phasePrefix}-UI-SPEC.md`) ||
+      artifact.endsWith(`${phasePrefix}-VERIFICATION.md`) ||
+      artifact.endsWith(`${phasePrefix}-UAT.md`) ||
       artifact.endsWith("-PLAN.md") ||
       artifact.endsWith("-SUMMARY.md") ||
       artifact.endsWith(`${phasePrefix}-VERIFICATION.md`) ||
@@ -760,6 +762,18 @@ async function inspectCurrentPhaseArtifacts(
       const message = error instanceof Error ? error.message : String(error);
       warnings.push(`${planPath}: ${message}`);
     }
+  }
+
+  if (hasVerification && !hasSummaries) {
+    warnings.push(
+      `Current phase ${currentPhase} has a VERIFICATION artifact without execution summaries; validate the summary trail before trusting completion state.`
+    );
+  }
+
+  if (hasUat && !hasVerification) {
+    warnings.push(
+      `Current phase ${currentPhase} has a UAT artifact without a VERIFICATION artifact; confirm validation evidence is not missing.`
+    );
   }
 
   return {

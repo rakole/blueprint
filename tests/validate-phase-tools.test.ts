@@ -182,7 +182,7 @@ test("validate-phase tools are registered in the Blueprint server", () => {
   }
 });
 
-test("validation tools persist VERIFICATION artifacts and advance routing without exposing verify-work early", async (t) => {
+test("validation tools persist VERIFICATION artifacts and advance routing toward verify-work", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -201,7 +201,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing withou
 
 ## Remaining Gaps
 
-- Add broader UAT once verify-work ships.
+- Continue with conversational UAT through verify-work.
 `
   });
   const read = await blueprintPhaseValidationRead({
@@ -221,7 +221,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing withou
 
 ## Remaining Gaps
 
-- Add broader UAT once verify-work ships.
+- Continue with conversational UAT through verify-work.
 `
   });
   const invalid = await blueprintPhaseValidationWrite({
@@ -251,7 +251,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing withou
   assert.ok(listed.artifacts.phases.includes(verificationPath));
   assert.doesNotMatch(validation.issues.join("\n"), /VERIFICATION artifacts exist without a SUMMARY artifact/i);
   assert.doesNotMatch(validation.issues.join("\n"), /UAT artifacts exist without a VERIFICATION artifact/i);
-  assert.match(afterStatus.nextAction, /\/blu:progress/);
-  assert.match(state.derivedStatus.nextAction, /\/blu:progress/);
+  assert.match(afterStatus.nextAction, /\/blu:verify-work 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu:verify-work 3/);
   assert.match(verificationBody, /Coverage Summary/);
 });

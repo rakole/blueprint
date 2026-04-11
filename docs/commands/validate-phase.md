@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a Gemini-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next planned slice.
+`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a Gemini-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next safe implemented step when validation succeeds.
 
 
 ## Command Path And Examples

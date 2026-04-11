@@ -210,6 +210,41 @@ Validation expectations:
 - sources must include a URL, repo path, or cited file reference
 - scaffold-only placeholders are not considered valid completed research
 
+### `XX-VERIFICATION.md`
+
+`XX-VERIFICATION.md` is the phase-scoped validation contract for a completed phase.
+
+Minimum expected structure:
+- `**Coverage:**` brief summary of which summaries or plan slices were validated
+- `## Validation Summary`
+- `## Evidence Reviewed`
+- `## Gaps Found`
+- `## Suggested Repairs`
+- `## Next Safe Action`
+
+Validation expectations:
+- must be grounded in the saved execution summaries for the phase
+- should describe gaps and pass signals explicitly rather than only restating artifact content
+- should be resumable by the next `validate-phase` run if the artifact already exists
+
+### `XX-UAT.md`
+
+`XX-UAT.md` is the phase-scoped conversational UAT contract for a completed phase.
+
+Minimum expected structure:
+- `**Status:** PASS|FAIL|PARTIAL`
+- `## UAT Summary`
+- `## Questions Asked`
+- `## Observed Behavior`
+- `## Unresolved Gaps`
+- `## Follow-Up Fixes`
+- `## Next Safe Action`
+
+UAT expectations:
+- must be grounded in the saved execution summaries for the phase
+- should preserve resumable conversational state rather than acting like a one-shot transcript
+- should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
+
 ## Supporting Trees
 
 ### `reports/`
