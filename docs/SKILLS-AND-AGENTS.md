@@ -2,11 +2,13 @@
 
 ## Shipped Skills
 
+Primary command lists are canonical ownership metadata and must stay consistent with `docs/COMMAND-CATALOG.md` and `docs/commands/*.md`.
+
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
-| `blueprint-router` | `implemented` | Root routing, command selection, and next-step guidance | `help`, `progress`, `/blu` |
+| `blueprint-router` | `implemented` | Root routing, command selection, and next-step guidance | `help`, `progress`, `/blu`, `next`, `do` |
 | `blueprint-bootstrap` | `implemented` | Repo bootstrap and project initialization | `new-project` |
-| `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health` |
+| `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health`, `pause-work`, `resume-work` |
 | `blueprint-map` | `implemented` | Brownfield codebase mapping | `map-codebase` |
 
 ## Planned Later Skills
@@ -14,10 +16,10 @@
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
 | `blueprint-phase-discovery` | `planned` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
-| `blueprint-phase-planning` | `planned` | Plan synthesis and plan checks | `plan-phase`, `plan-milestone-gaps` |
+| `blueprint-phase-planning` | `planned` | Plan synthesis and plan checks | `plan-phase` |
 | `blueprint-phase-execution` | `planned` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `planned` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
-| `blueprint-roadmap-admin` | `planned` | Roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
+| `blueprint-roadmap-admin` | `planned` | Roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 | `blueprint-capture` | `planned` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
 | `blueprint-debug` | `planned` | Debug investigations and recovery plans | `debug` |
 | `blueprint-review` | `planned` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
@@ -54,14 +56,20 @@
 
 - `new-project` may use `blueprint-project-researcher` and `blueprint-roadmapper`.
 - `map-codebase` uses `blueprint-mapper`.
+- `next` and `do` remain router-owned and do not require dedicated subagents.
+- `pause-work` and `resume-work` remain governance-owned and do not require dedicated subagents.
 - `discuss-phase` may use `blueprint-researcher` selectively.
 - `research-phase` uses `blueprint-researcher`.
 - `ui-phase` uses `blueprint-ui-designer`.
+- `list-phase-assumptions` may use `blueprint-researcher`.
 - `plan-phase` uses `blueprint-planner` and `blueprint-checker`.
 - `execute-phase` uses `blueprint-executor`.
+- `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
 - `validate-phase` and `verify-work` use `blueprint-verifier`.
+- `plan-milestone-gaps` and `new-milestone` use `blueprint-roadmapper`.
 - `code-review` uses `blueprint-reviewer`.
 - `code-review-fix` and `audit-fix` use `blueprint-fixer`.
+- `audit-fix` may also use `blueprint-reviewer` and `blueprint-verifier`.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `ui-review` uses `blueprint-ui-auditor`.

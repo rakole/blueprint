@@ -13,6 +13,7 @@ Blueprint moves from a locked docs-first planning pack to an executable Gemini e
 - [x] **Phase 1: Foundation Bootstrap and State** - Create the extension scaffold, router entrypoints, and deterministic MCP-backed bootstrap flow
 - [x] **Phase 2: Router, Health, and Mapping** - Make foundational read-path and brownfield foundation commands executable
 - [x] **Phase 2.1: Drift Recovery Gate** - Re-baseline docs, runtime surfaces, and Wave 0 parity before Phase 3 exposure
+- [ ] **Phase 2.2: Urgent Drift-Repair Follow-Up** - Complete the locked truth-sync, runtime-awareness, parity, and phase-freeze work before any Phase 3 execution
 - [ ] **Phase 3: Phase Discovery** - Add context capture, targeted research, and UI-spec flows
 - [ ] **Phase 4: Plan, Execute, and Verify** - Complete the core implementation loop for planned work
 - [ ] **Phase 5: Roadmap and Milestones** - Add roadmap mutation and milestone administration flows
@@ -69,9 +70,28 @@ Plans:
 - [x] 02.1-03: Re-baseline shipped Wave 0 command specs and manifests to restore GSD intent without breaking Blueprint deltas
 - [x] 02.1-04: Add consistency, routing, and parity regression coverage before allowing later phases
 
+### Phase 2.2: Urgent Drift-Repair Follow-Up (INSERTED)
+
+**Goal:** Repair future command contract drift and control-plane truth so later phases stay aligned with Blueprint architecture without changing runtime status semantics or expanding command exposure.
+**Locked Scope:** Do not discard working Phase 1/2 code without an explicit Blueprint reason; keep `docs/DRIFT.md` as the repair source of truth; truth-sync the control docs and planning state; backfill drift-repair requirement traceability; keep `blueprint_command_catalog` runtime-aware without changing its status semantics; keep planned-only commands hidden from `/blu`, `/blu:help`, and `/blu:progress`; preserve only the explicit Blueprint divergences; and keep Phase 3 blocked until the Phase 2.2 contract-repair exit criteria pass.
+**Requirements**: DRIFT-05, DRIFT-06, DRIFT-07
+**Depends on:** Phase 2.1
+**Success Criteria** (what must be TRUE):
+  1. Control docs and planning state describe Phase 2.1 as complete on 2026-04-11 and Phase 2.2 as the active checkpoint
+  2. Future command ownership, wave, family, and primary skill metadata stay consistent across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, `docs/GSD-RUNTIME-MIGRATION.md`, and `docs/commands/*.md`
+  3. Regression tests fail on control-plane or future-command contract drift
+  4. `blueprint_command_catalog` keeps its current implemented-versus-blocked semantics and later commands remain unroutable
+**Plans:** 4 plans
+
+Plans:
+- [ ] 02.2-01: Reopen `docs/DRIFT.MD` and truth-sync control-plane docs plus `.planning` state around the active checkpoint
+- [ ] 02.2-02: Backfill `DRIFT-01` through `DRIFT-07` traceability and repair future command ownership metadata
+- [ ] 02.2-03: Refresh future-phase migration and parity notes without changing runtime command exposure
+- [ ] 02.2-04: Add regression coverage for control-plane and command-contract drift
+
 ### Phase 3: Phase Discovery
 **Goal**: Add the pre-planning discovery commands that capture context before plan creation.
-**Depends on**: Phase 2.1
+**Depends on**: Phase 2.2
 **Requirements**: LIFE-01, LIFE-02, LIFE-03
 **Success Criteria** (what must be TRUE):
   1. User can capture phase framing in durable context artifacts
@@ -162,7 +182,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 2.1 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 2.1 → 2.2 → 3 → 4 → 5 → 6 → 7 → 8
 
 Phase 3 and beyond remain blocked from runtime exposure until their missing substrate is implemented deliberately.
 
@@ -171,6 +191,7 @@ Phase 3 and beyond remain blocked from runtime exposure until their missing subs
 | 1. Foundation Bootstrap and State | 3/3 | Complete | 2026-04-11 |
 | 2. Router, Health, and Mapping | 3/3 | Complete | 2026-04-11 |
 | 2.1. Drift Recovery Gate | 4/4 | Complete | 2026-04-11 |
+| 2.2. Urgent Drift-Repair Follow-Up | 0/4 | Active | - |
 | 3. Phase Discovery | 0/3 | Not started | - |
 | 4. Plan, Execute, and Verify | 0/4 | Not started | - |
 | 5. Roadmap and Milestones | 0/3 | Not started | - |

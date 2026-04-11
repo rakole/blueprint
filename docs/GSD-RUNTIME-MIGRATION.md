@@ -30,7 +30,7 @@ Rules for using these tags here:
 - The seven commands whose specs explicitly say GSD has no dedicated upstream workflow file are treated as Blueprint-native flow contracts and are not marked `needs-upstream-audit` for a missing workflow file.
 - This document must not invent new Blueprint skills, MCP tools, agents, or hook surfaces.
 
-## Wave 0 Repair Checkpoint
+## Phase 2.1 Closure Snapshot
 
 The current drift-repair checkpoint locks the following Wave 0 runtime expectations:
 
@@ -41,6 +41,18 @@ The current drift-repair checkpoint locks the following Wave 0 runtime expectati
 - Current bounded runtime restrictions that still need future review are explicit here: `new-project` does not yet persist separate bootstrap-research artifacts, and `map-codebase` still expects a Blueprint-initialized repo before writing into `.blueprint/codebase/`.
 
 Wave 0 behaviors that remain narrower than upstream must be called out explicitly here rather than left implicit in command docs.
+
+## Phase 2.2 Contract Repair Snapshot
+
+The active Phase 2.2 checkpoint keeps future retained-command docs aligned without changing runtime exposure rules:
+
+- Phase 2.1 completed on 2026-04-11; Phase 2.2 is the active control-plane and contract-repair checkpoint.
+- Future command metadata must stay consistent across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, this migration matrix, and the per-command specs in `docs/commands/`.
+- `next` and `do` remain owned by `blueprint-router`.
+- `pause-work` and `resume-work` remain owned by `blueprint-governance`.
+- `plan-milestone-gaps` remains owned by `blueprint-roadmap-admin`.
+- High-risk planned flows such as `quick`, `code-review-fix`, `audit-fix`, `ship`, `undo`, `new-workspace`, `remove-workspace`, and `reapply-patches` must continue to name their bounded-agent and MCP-owned persistence contracts explicitly; do not flatten them into command-only prose.
+- Phase 2.2 does not change `blueprint_command_catalog` status semantics or make blocked commands routable.
 
 ## Command Workflow Migration Matrix
 

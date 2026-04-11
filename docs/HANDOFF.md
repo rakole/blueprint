@@ -4,7 +4,7 @@
 
 The repository contains both the original planning pack and a shipped Wave 0 runtime for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, and `map-codebase`.
 
-The current checkpoint is Phase 2.1 drift repair: bring docs, command discovery, skills, agents, and tests back into agreement before any Phase 3 work lands.
+Phase 2.1 drift recovery completed on 2026-04-11. The current checkpoint is Phase 2.2 future-contract drift repair: keep control-plane docs, requirement traceability, and future command contracts aligned before any Phase 3 work lands.
 
 ## What Future Sessions Already Have
 
@@ -25,16 +25,16 @@ The current checkpoint is Phase 2.1 drift repair: bring docs, command discovery,
 
 ## Recommended Next Session
 
-Continue the drift-repair checklist in `docs/DRIFT.MD`:
+Continue the Phase 2.2 checklist in `docs/DRIFT.MD`:
 
-1. Finish any remaining truth-sync gaps across `AGENTS.md`, `README.md`, `GEMINI.md`, `MEMORY.md`, `.planning/ROADMAP.md`, and `.planning/STATE.md`
-2. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
-3. Audit remaining Wave 0 behavior against local upstream GSD assets and document only explicit Blueprint deltas
-4. Do not begin Phase 3 or expose later commands until the drift checklist is closed
+1. Keep `AGENTS.md`, `README.md`, `GEMINI.md`, `MEMORY.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and `.planning/REQUIREMENTS.md` aligned on Phase 2.1 closure and active Phase 2.2 work
+2. Keep future command ownership metadata synchronized across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, `docs/GSD-RUNTIME-MIGRATION.md`, and `docs/commands/`
+3. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
+4. Do not begin Phase 3 or expose later commands until the Phase 2.2 exit criteria are satisfied
 
 ## First Implementation Slice
 
-After the drift checkpoint closes, the next implementation slice should target the missing substrate rather than more command manifests:
+After Phase 2.2 closes, the next implementation slice should target the missing substrate rather than more command manifests:
 
 - roadmap MCP tools
 - phase MCP tools
@@ -69,4 +69,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the drift checklist is closed, the shipped Wave 0 runtime is parity-audited and regression-tested, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the Phase 2.2 checklist is closed, future command contracts stay aligned under regression coverage, and later commands remain blocked until their substrate exists.

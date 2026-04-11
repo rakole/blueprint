@@ -4,39 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="planning phase 1">
+    <list default="true" id="9284c6eb-6c58-4533-a472-8ad27bf60b50" name="Changes" comment="drift fix from gsd implementation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.planning/REQUIREMENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/REQUIREMENTS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.planning/ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/ROADMAP.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.planning/STATE.md" beforeDir="false" afterPath="$PROJECT_DIR$/.planning/STATE.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/AGENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/AGENTS.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/GEMINI.md" beforeDir="false" afterPath="$PROJECT_DIR$/GEMINI.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MEMORY.md" beforeDir="false" afterPath="$PROJECT_DIR$/MEMORY.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/health.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/health.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/help.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/help.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/map-codebase.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/map-codebase.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/new-project.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/new-project.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/progress.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/progress.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/set-profile.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/set-profile.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/commands/blu/settings.toml" beforeDir="false" afterPath="$PROJECT_DIR$/commands/blu/settings.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ARCHITECTURE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ARCHITECTURE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/ARTIFACT-SCHEMA.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ARTIFACT-SCHEMA.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/COMMAND-CATALOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/COMMAND-CATALOG.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/DECISIONS.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/DECISIONS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DRIFT.MD" beforeDir="false" afterPath="$PROJECT_DIR$/docs/DRIFT.MD" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/GSD-RUNTIME-MIGRATION.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/GSD-RUNTIME-MIGRATION.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/HANDOFF.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/HANDOFF.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/MCP-TOOLS.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/MCP-TOOLS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/SKILLS-AND-AGENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/SKILLS-AND-AGENTS.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/commands/help.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/commands/help.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/commands/map-codebase.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/commands/map-codebase.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/commands/new-project.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/commands/new-project.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/commands/progress.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/commands/progress.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/commands/root-router.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/commands/root-router.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/mcp/tools/artifacts.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/mcp/tools/artifacts.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/mcp/tools/project.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/mcp/tools/project.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/help-progress-health.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/help-progress-health.test.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/map-codebase.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/map-codebase.test.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -96,7 +75,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;#6 on gsd/phase-02-router-health-and-mapping&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;#7 on gsd/phase-02-router-health-and-mapping&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Users/rhishi/dev/repositories/blueprint/temp-commands&quot;,
@@ -202,7 +181,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775856888422</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="drift fix from gsd implementation">
+      <option name="closed" value="true" />
+      <created>1775860086083</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1775860086083</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -212,6 +199,7 @@
     <MESSAGE value="restart the implementation" />
     <MESSAGE value="moved to gsd based implementation" />
     <MESSAGE value="planning phase 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="planning phase 1" />
+    <MESSAGE value="drift fix from gsd implementation" />
+    <option name="LAST_COMMIT_MESSAGE" value="drift fix from gsd implementation" />
   </component>
 </project>
