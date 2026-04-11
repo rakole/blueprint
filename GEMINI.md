@@ -13,7 +13,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, and `/blu:ui-phase`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, and `/blu:next`.
 
 ## State Boundaries
 
@@ -28,6 +28,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:set-profile` changes only the project-local `model_profile`.
 - `/blu:help` returns read-only routing guidance from an implementation-aware command catalog and repo readiness.
 - `/blu:progress` summarizes repo status, blockers, warnings, and the next safe action from real `.blueprint/` state while filtering to implemented commands.
+- `/blu:next` turns the current derived next action into a safe direct-command recommendation without introducing hidden writes.
 - `/blu:health` diagnoses Blueprint artifacts and enters repair flows only after explicit confirmation.
 - `/blu:map-codebase` creates or reuses the seven-document `.blueprint/codebase/` bundle, including `STRUCTURE.md`.
 - `/blu:discuss-phase` now captures substantive `XX-CONTEXT.md` content and can persist resumable discussion checkpoints.
