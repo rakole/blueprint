@@ -10,13 +10,14 @@ commands:
 
 ## Purpose
 
-Orchestrate Blueprint's validation and conversational UAT flow so phase-scoped verification evidence stays durable, resumable, and summary-aware.
+Orchestrate Blueprint's post-execution validation and conversational UAT flow so completed phase summaries are audited, durable validation artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
 
 ## Parity Goal
 
 Carry forward the useful upstream validation intent while preserving Blueprint deltas:
 
-- validation is evidence-first and reads execution summaries before writing new phase state
+- execution summaries remain the source of truth for what was actually delivered
+- validation and UAT stay Gemini-native and MCP-owned instead of script-owned
 - conversational UAT is resumable through `XX-UAT.md`
 - follow-up fixes stay explicit instead of hidden in prompt-only prose
 - persistent writes remain phase-scoped inside `.blueprint/`
@@ -32,21 +33,19 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 - `docs/MCP-TOOLS.md`
 - `docs/GSD-RUNTIME-MIGRATION.md`
 - `docs/PHASE-LIFECYCLE.md`
+- saved `XX-YY-SUMMARY.md` artifacts for the target phase
 
 ## Required MCP Tools
 
 - `blueprint_phase_locate`
-- `blueprint_phase_context`
 - `blueprint_phase_summary_index`
 - `blueprint_phase_summary_read`
-- `blueprint_phase_artifact_read`
-- `blueprint_phase_artifact_write`
-- `blueprint_artifact_scaffold`
-- `blueprint_artifact_list`
+- `blueprint_phase_validation_read`
+- `blueprint_phase_validation_write`
+- `blueprint_config_get`
 - `blueprint_artifact_validate`
 - `blueprint_state_load`
 - `blueprint_state_update`
-- `blueprint_command_catalog`
 
 ## Optional Agents
 
@@ -59,19 +58,19 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 1. Resolve the target phase and require execution summaries before validation begins.
 2. Read summary index and relevant summary artifacts first so validation is grounded in the saved execution evidence.
 3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
-4. Use `blueprint_artifact_scaffold` only to seed a missing verification file.
+4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
 5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
-6. Persist finished validation evidence through `blueprint_phase_artifact_write` with the `verification` artifact.
-7. Update `STATE.md` with the validation result and the next safe implemented action.
+6. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact.
+7. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu:verify-work`, and fall back to `/blu:progress` only if runtime availability changes.
 
 ### `verify-work`
 
-1. Resolve the target phase and require execution summaries before UAT begins.
-2. Read summary index and relevant summary artifacts first so conversational UAT is grounded in the saved execution evidence.
+1. Resolve the target phase and require both execution summaries and a `XX-VERIFICATION.md` artifact before UAT begins.
+2. Read summary index, summary artifacts, and any existing validation or UAT artifact so conversational UAT is grounded in saved execution evidence.
 3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
-4. Use `blueprint_artifact_scaffold` only to seed a missing UAT file.
+4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
 5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
-6. Persist finished UAT evidence through `blueprint_phase_artifact_write` with the `uat` artifact.
+6. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact.
 7. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
 8. Update `STATE.md` with the UAT result and the next safe implemented action.
 

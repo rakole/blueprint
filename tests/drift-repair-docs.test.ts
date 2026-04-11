@@ -26,7 +26,10 @@ test("control-plane docs describe the shipped Phase 3 runtime, Phase 4 execution
   assert.doesNotMatch(handoff, /No runtime code or Gemini extension scaffolding has been created yet/);
   assert.match(agents, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/);
   assert.match(agents, /Phase 3 discovery shipped on 2026-04-11 and is under active repair/);
-  assert.match(agents, /`execute-phase` are now implemented on top of the plan and summary MCP substrates|`plan-phase` and `execute-phase` are now implemented/);
+  assert.match(
+    agents,
+    /`execute-phase` are now implemented on top of the plan and summary MCP substrates|`plan-phase` and `execute-phase` are now implemented|`plan-phase`, `execute-phase`, and `validate-phase` are now implemented/
+  );
   assert.match(readme, /Wave 0 shipped commands/);
   assert.match(readme, /Phase 3 discovery commands are also shipped/);
   assert.match(readme, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
@@ -36,7 +39,10 @@ test("control-plane docs describe the shipped Phase 3 runtime, Phase 4 execution
   assert.match(gemini, /\/blu:map-codebase/);
   assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
   assert.match(handoff, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
-  assert.match(memory, /Current milestone: Phase 3 discovery parity closeout .* Phase 4 validation rollout is next/i);
+  assert.match(
+    memory,
+    /Current milestone: Phase 3 discovery parity closeout .* Phase 4 validation rollout is next|Current milestone: Phase 4 validation rollout is underway/i
+  );
   assert.match(drift, /Checkpoint: Phase 2\.2 future-contract drift repair/);
   assert.match(drift, /State: closed on 2026-04-11/);
   assert.match(drift, /repairs discovery parity gaps/i);

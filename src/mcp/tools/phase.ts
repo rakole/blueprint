@@ -24,13 +24,8 @@ type PhaseLookupArgs = {
   phase?: string;
 };
 
-type PhaseArtifactKind =
-  | "context"
-  | "discussion-log"
-  | "research"
-  | "ui-spec"
-  | "verification"
-  | "uat";
+type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
+type PhaseValidationArtifactKind = "verification" | "uat";
 
 type PlanIndexArgs = PhaseLookupArgs;
 
@@ -43,6 +38,16 @@ type PhaseArtifactWriteArgs = PhaseLookupArgs & {
   content: string;
   overwrite?: boolean;
   validationMode?: "strict" | "warn";
+};
+
+type PhaseValidationReadArgs = PhaseLookupArgs & {
+  artifact: PhaseValidationArtifactKind;
+};
+
+type PhaseValidationWriteArgs = PhaseLookupArgs & {
+  artifact: PhaseValidationArtifactKind;
+  content: string;
+  overwrite?: boolean;
 };
 
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
@@ -167,6 +172,36 @@ type PhaseArtifactWriteResult = {
     warnings: string[];
     suggestedRepairs: string[];
   } | null;
+  warnings: string[];
+};
+
+type PhaseValidationReadResult = {
+  phaseFound: boolean;
+  found: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  artifact: PhaseValidationArtifactKind;
+  path: string | null;
+  content: string | null;
+  summaryPaths: string[];
+  reason: string | null;
+};
+
+type PhaseValidationWriteResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  artifact: PhaseValidationArtifactKind;
+  path: string;
+  summaryPaths: string[];
+  written: boolean;
+  created: boolean;
+  overwritten: boolean;
+  status: "created" | "updated" | "reused" | "invalid";
+  issues: string[];
   warnings: string[];
 };
 
@@ -345,7 +380,9 @@ const PHASE_ARTIFACT_SUFFIXES: Record<PhaseArtifactKind, string> = {
   context: "-CONTEXT.md",
   "discussion-log": "-DISCUSSION-LOG.md",
   research: "-RESEARCH.md",
-  "ui-spec": "-UI-SPEC.md",
+  "ui-spec": "-UI-SPEC.md"
+};
+const PHASE_VALIDATION_ARTIFACT_SUFFIXES: Record<PhaseValidationArtifactKind, string> = {
   verification: "-VERIFICATION.md",
   uat: "-UAT.md"
 };
@@ -363,14 +400,12 @@ const phaseLookupInputSchema = {
 const phaseArtifactInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional(),
-  artifact: z.enum([
-    "context",
-    "discussion-log",
-    "research",
-    "ui-spec",
-    "verification",
-    "uat"
-  ])
+  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
+};
+const phaseValidationArtifactInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  artifact: z.enum(["verification", "uat"])
 };
 const phasePlanInputSchema = {
   cwd: z.string().optional(),
@@ -380,17 +415,17 @@ const phasePlanInputSchema = {
 const phaseArtifactWriteInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional(),
-  artifact: z.enum([
-    "context",
-    "discussion-log",
-    "research",
-    "ui-spec",
-    "verification",
-    "uat"
-  ]),
+  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
   content: z.string(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
+};
+const phaseValidationWriteInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  artifact: z.enum(["verification", "uat"]),
+  content: z.string(),
+  overwrite: z.boolean().optional()
 };
 const phasePlanReadInputSchema = {
   cwd: z.string().optional(),
@@ -728,6 +763,17 @@ function artifactPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phas
     located.phaseDir,
     located.phasePrefix,
     PHASE_ARTIFACT_SUFFIXES[artifact]
+  );
+}
+
+function validationArtifactPathFor(
+  located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">,
+  artifact: PhaseValidationArtifactKind
+): string {
+  return buildArtifactPath(
+    located.phaseDir,
+    located.phasePrefix,
+    PHASE_VALIDATION_ARTIFACT_SUFFIXES[artifact]
   );
 }
 
@@ -1299,6 +1345,179 @@ export async function blueprintPhaseArtifactWrite(
           }
         : null,
     warnings: [...warnings, ...(validation?.warnings ?? [])]
+  };
+}
+
+export async function blueprintPhaseValidationRead(
+  args: PhaseValidationReadArgs
+): Promise<PhaseValidationReadResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+  const summaryPaths = located.artifacts
+    .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
+    .sort((left, right) => left.localeCompare(right));
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      found: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      artifact: args.artifact,
+      path: null,
+      content: null,
+      summaryPaths,
+      reason: located.reason
+    };
+  }
+
+  const artifactPath = validationArtifactPathFor(resolved, args.artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+
+  if (!(await pathExists(absolutePath))) {
+    return {
+      phaseFound: true,
+      found: false,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      artifact: args.artifact,
+      path: artifactPath,
+      content: null,
+      summaryPaths,
+      reason: `${artifactPath} does not exist yet.`
+    };
+  }
+
+  return {
+    phaseFound: true,
+    found: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: artifactPath,
+    content: await fs.readFile(absolutePath, "utf8"),
+    summaryPaths,
+    reason: null
+  };
+}
+
+export async function blueprintPhaseValidationWrite(
+  args: PhaseValidationWriteArgs
+): Promise<PhaseValidationWriteResult> {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+
+  if (!summaryIndex.phaseFound) {
+    throw new Error(
+      `Phase ${resolved.phaseNumber} could not be resolved for validation persistence.`
+    );
+  }
+
+  if (summaryIndex.summaries.length === 0) {
+    throw new Error(
+      `Phase ${resolved.phaseNumber} does not have execution summaries yet. Run /blu:execute-phase ${resolved.phaseNumber} before writing ${args.artifact} artifacts.`
+    );
+  }
+
+  const artifactPath = validationArtifactPathFor(resolved, args.artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+  const normalizedContent = normalizeTextContent(args.content);
+  const exists = await pathExists(absolutePath);
+  const issues =
+    normalizedContent.trim().length === 0
+      ? [`${args.artifact} content must not be empty.`]
+      : [];
+  const warnings: string[] = [];
+
+  if (args.artifact === "uat") {
+    const verificationPath = validationArtifactPathFor(resolved, "verification");
+
+    if (!(await pathExists(resolveBlueprintPath(projectRoot, verificationPath)))) {
+      throw new Error(
+        `Phase ${resolved.phaseNumber} must be validated before UAT. Run /blu:validate-phase ${resolved.phaseNumber} first.`
+      );
+    }
+  }
+
+  if (exists) {
+    const existingContent = await fs.readFile(absolutePath, "utf8");
+
+    if (existingContent === normalizedContent) {
+      warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        artifact: args.artifact,
+        path: artifactPath,
+        summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "reused",
+        issues,
+        warnings
+      };
+    }
+
+    if (!(args.overwrite ?? false)) {
+      throw new Error(
+        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+      );
+    }
+  }
+
+  if (issues.length > 0) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      artifact: args.artifact,
+      path: artifactPath,
+      summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues,
+      warnings
+    };
+  }
+
+  await ensureParentDirectory(absolutePath);
+  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+
+  if (exists) {
+    warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
+  }
+
+  return {
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: artifactPath,
+    summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+    written: true,
+    created: !exists,
+    overwritten: exists,
+    status: exists ? "updated" : "created",
+    issues,
+    warnings
   };
 }
 
@@ -1997,7 +2216,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_read",
     description:
-      "Read a phase-scoped artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, UI-SPEC, VERIFICATION, or UAT.",
+      "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
     inputSchema: phaseArtifactInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactRead(args as PhaseArtifactReadArgs)
@@ -2005,10 +2224,26 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_write",
     description:
-      "Persist substantive phase-scoped artifact content with overwrite protection.",
+      "Persist substantive phase-scoped discovery artifact content with overwrite protection.",
     inputSchema: phaseArtifactWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactWrite(args as PhaseArtifactWriteArgs)
+  },
+  {
+    name: "blueprint_phase_validation_read",
+    description:
+      "Read a phase-scoped validation artifact such as VERIFICATION or UAT together with execution-summary coverage.",
+    inputSchema: phaseValidationArtifactInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseValidationRead(args as PhaseValidationReadArgs)
+  },
+  {
+    name: "blueprint_phase_validation_write",
+    description:
+      "Persist a phase-scoped VERIFICATION or UAT artifact with overwrite protection and execution-aware prerequisite checks.",
+    inputSchema: phaseValidationWriteInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseValidationWrite(args as PhaseValidationWriteArgs)
   },
   {
     name: "blueprint_phase_plan_read",

@@ -11,9 +11,9 @@ import {
   blueprintProjectStatus
 } from "../src/mcp/tools/project.js";
 import {
-  blueprintPhaseArtifactRead,
-  blueprintPhaseArtifactWrite,
-  blueprintPhaseLocate
+  blueprintPhaseLocate,
+  blueprintPhaseValidationRead,
+  blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
@@ -119,7 +119,7 @@ autonomous: true
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| EXEC-01 | Persist verification and UAT evidence after execution. | Use phase-scoped artifact writes for verification and UAT. |
+| EXEC-01 | Persist verification and UAT evidence after execution. | Use dedicated validation writes for verification and UAT. |
 
 ## Summary
 
@@ -148,7 +148,7 @@ autonomous: true
 ## Code Examples
 
 \`\`\`ts
-await blueprintPhaseArtifactWrite({ cwd: repoPath, phase: "4", artifact: "verification", content });
+await blueprintPhaseValidationWrite({ cwd: repoPath, phase: "4", artifact: "verification", content });
 \`\`\`
 
 ## Recommendations
@@ -191,7 +191,7 @@ test("phase validation docs and catalog metadata promote validate-phase and veri
   );
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-phase-validation` \| `implemented` \| Validation, conversational UAT, and gap closure \| `validate-phase`, `verify-work`, `add-tests` \|/
+    /\| `blueprint-phase-validation` \| `implemented` \| Verification, UAT, tests, and gap closure \| `validate-phase`, `verify-work`, `add-tests` \|/
   );
   assert.match(
     skillsMarkdown,
@@ -208,12 +208,11 @@ test("validate-phase and verify-work manifests reference registered validation t
 
   for (const toolName of [
     "blueprint_phase_locate",
-    "blueprint_phase_context",
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
-    "blueprint_phase_artifact_read",
-    "blueprint_phase_artifact_write",
-    "blueprint_artifact_list",
+    "blueprint_phase_validation_read",
+    "blueprint_phase_validation_write",
+    "blueprint_config_get",
     "blueprint_artifact_validate",
     "blueprint_state_load",
     "blueprint_state_update"
@@ -223,8 +222,8 @@ test("validate-phase and verify-work manifests reference registered validation t
     assert.match(verifyManifest, new RegExp(toolName));
   }
 
-  assert.match(validateManifest, /artifact:\s*\\\"verification\\\"/);
-  assert.match(verifyManifest, /artifact:\s*\\\"uat\\\"/);
+  assert.match(validateManifest, /artifact: "verification"/);
+  assert.match(verifyManifest, /artifact: "uat"/);
   assert.match(validateManifest, /\/blu:progress/);
   assert.match(verifyManifest, /\/blu:progress/);
   assert.match(skillFile, /status: implemented/);
@@ -240,7 +239,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
   const beforeValidationStatus = await blueprintProjectStatus({ cwd: repoPath });
   const beforeValidationState = await blueprintStateLoad({ cwd: repoPath });
-  const verificationCreated = await blueprintPhaseArtifactWrite({
+  const verificationCreated = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
     artifact: "verification",
@@ -252,12 +251,12 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 `,
     overwrite: true
   });
-  const verificationRead = await blueprintPhaseArtifactRead({
+  const verificationRead = await blueprintPhaseValidationRead({
     cwd: repoPath,
     phase: "04",
     artifact: "verification"
   });
-  const verificationReused = await blueprintPhaseArtifactWrite({
+  const verificationReused = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
     artifact: "verification",
@@ -268,7 +267,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 - The validated feature set is ready for UAT.
 `
   });
-  const verificationUpdated = await blueprintPhaseArtifactWrite({
+  const verificationUpdated = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
     artifact: "verification",
@@ -282,7 +281,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   });
   const beforeUatStatus = await blueprintProjectStatus({ cwd: repoPath });
   const beforeUatState = await blueprintStateLoad({ cwd: repoPath });
-  const uatCreated = await blueprintPhaseArtifactWrite({
+  const uatCreated = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
     artifact: "uat",
@@ -294,7 +293,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 `,
     overwrite: true
   });
-  const uatRead = await blueprintPhaseArtifactRead({
+  const uatRead = await blueprintPhaseValidationRead({
     cwd: repoPath,
     phase: "4",
     artifact: "uat"
@@ -342,9 +341,9 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(validateDoc, /blueprint_phase_locate/);
   assert.match(validateDoc, /blueprint_phase_summary_index/);
   assert.match(validateDoc, /blueprint_phase_summary_read/);
-  assert.match(validateDoc, /blueprint_phase_artifact_read/);
-  assert.match(validateDoc, /blueprint_phase_artifact_write/);
-  assert.match(validateDoc, /blueprint_artifact_list/);
+  assert.match(validateDoc, /blueprint_phase_validation_read/);
+  assert.match(validateDoc, /blueprint_phase_validation_write/);
+  assert.match(validateDoc, /blueprint_config_get/);
   assert.match(validateDoc, /blueprint_artifact_validate/);
   assert.match(validateDoc, /blueprint_state_update/);
   assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
@@ -354,9 +353,9 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(verifyDoc, /blueprint_phase_locate/);
   assert.match(verifyDoc, /blueprint_phase_summary_index/);
   assert.match(verifyDoc, /blueprint_phase_summary_read/);
-  assert.match(verifyDoc, /blueprint_phase_artifact_read/);
-  assert.match(verifyDoc, /blueprint_phase_artifact_write/);
-  assert.match(verifyDoc, /blueprint_artifact_list/);
+  assert.match(verifyDoc, /blueprint_phase_validation_read/);
+  assert.match(verifyDoc, /blueprint_phase_validation_write/);
+  assert.match(verifyDoc, /blueprint_config_get/);
   assert.match(verifyDoc, /blueprint_state_update/);
   assert.match(verifyDoc, /phase XX-UAT\.md/);
   assert.match(verifyDoc, /Direct `verify-work` happy-path fixture\./);

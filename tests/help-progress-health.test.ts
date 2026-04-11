@@ -359,6 +359,33 @@ test("project status recommends execute-phase once plans exist and summaries are
   assert.match(state.derivedStatus.nextAction, /\/blu:execute-phase 3/);
 });
 
+test("project status recommends validate-phase once execution summaries exist without verification", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary
+
+## Result
+
+- Execution finished and produced durable summary evidence.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "3");
+  assert.equal(state.derivedStatus.currentPhase, "3");
+  assert.match(status.nextAction, /\/blu:validate-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu:validate-phase 3/);
+});
+
 test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   const statePath = path.join(repoPath, ".blueprint/STATE.md");

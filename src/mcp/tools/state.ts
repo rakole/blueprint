@@ -405,7 +405,9 @@ async function inspectCurrentPhaseArtifacts(
       artifact.endsWith(`${phasePrefix}-VERIFICATION.md`) ||
       artifact.endsWith(`${phasePrefix}-UAT.md`) ||
       artifact.endsWith("-PLAN.md") ||
-      artifact.endsWith("-SUMMARY.md")
+      artifact.endsWith("-SUMMARY.md") ||
+      artifact.endsWith(`${phasePrefix}-VERIFICATION.md`) ||
+      artifact.endsWith(`${phasePrefix}-UAT.md`)
   );
   let researchValid: boolean | null = null;
 

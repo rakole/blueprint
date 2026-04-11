@@ -21,7 +21,7 @@ This repository still carries the planning pack that locked the product and arch
 - The read-only lifecycle router `/blu:next` is now shipped on the existing project-status and state-routing substrate
 - Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
 - Phase 4 execution now ships through `/blu:execute-phase`, which uses the plan and summary MCP substrates to produce execution evidence
-- Phase 4 validation now ships through `/blu:validate-phase` and `/blu:verify-work`, which use summary-aware phase artifacts to persist verification and UAT evidence
+- Phase 4 validation now ships through `/blu:validate-phase` and `/blu:verify-work`, which use summary-aware validation MCP tools to persist verification and UAT evidence
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 

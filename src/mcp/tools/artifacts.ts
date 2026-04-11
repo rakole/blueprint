@@ -1802,17 +1802,17 @@ function collectPhaseBundleIssues(
     const hasUiSpec = artifactsForPhase.some((artifact) =>
       artifact.endsWith(`${expectedPrefix}-UI-SPEC.md`)
     );
-    const hasVerification = artifactsForPhase.some((artifact) =>
-      artifact.endsWith(`${expectedPrefix}-VERIFICATION.md`)
-    );
-    const hasUat = artifactsForPhase.some((artifact) =>
-      artifact.endsWith(`${expectedPrefix}-UAT.md`)
-    );
     const hasPlan = artifactsForPhase.some((artifact) =>
       artifact.includes(`${expectedPrefix}-`) && artifact.endsWith("-PLAN.md")
     );
     const hasSummary = artifactsForPhase.some((artifact) =>
       artifact.includes(`${expectedPrefix}-`) && artifact.endsWith("-SUMMARY.md")
+    );
+    const hasVerification = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-VERIFICATION.md`)
+    );
+    const hasUat = artifactsForPhase.some((artifact) =>
+      artifact.endsWith(`${expectedPrefix}-UAT.md`)
     );
     const hasCheckpoint = artifactsForPhase.some((artifact) =>
       artifact.endsWith(`${expectedPrefix}-DISCUSS-CHECKPOINT.json`)
@@ -1824,10 +1824,10 @@ function collectPhaseBundleIssues(
         hasDiscussionLog ||
         hasResearch ||
         hasUiSpec ||
-        hasVerification ||
-        hasUat ||
         hasPlan ||
         hasSummary ||
+        hasVerification ||
+        hasUat ||
         hasCheckpoint
       )
     ) {
@@ -1844,13 +1844,13 @@ function collectPhaseBundleIssues(
 
     if (hasVerification && !hasSummary) {
       issues.push(
-        `Phase artifact flow is inconsistent for ${directoryName}: VERIFICATION exists without SUMMARY execution evidence.`
+        `Phase artifact flow is inconsistent for ${directoryName}: VERIFICATION artifacts exist without a SUMMARY artifact.`
       );
     }
 
     if (hasUat && !hasVerification) {
       issues.push(
-        `Phase artifact flow is inconsistent for ${directoryName}: UAT exists without a VERIFICATION artifact.`
+        `Phase artifact flow is inconsistent for ${directoryName}: UAT artifacts exist without a VERIFICATION artifact.`
       );
     }
 

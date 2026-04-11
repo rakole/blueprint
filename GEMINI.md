@@ -36,8 +36,8 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:ui-phase` now persists substantive `XX-UI-SPEC.md` content or an explicit skip rationale in that same file.
 - `/blu:plan-phase` now persists substantive `XX-YY-PLAN.md` content through the plan MCP substrate.
 - `/blu:execute-phase` now persists `XX-YY-SUMMARY.md` execution evidence through the summary MCP substrates and keeps the next action explicit.
-- `/blu:validate-phase` now persists `XX-VERIFICATION.md` validation evidence through the phase artifact MCP substrate.
-- `/blu:verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the phase artifact MCP substrate and keeps follow-up fixes explicit.
+- `/blu:validate-phase` now persists `XX-VERIFICATION.md` validation evidence through the validation MCP substrate.
+- `/blu:verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the validation MCP substrate and keeps follow-up fixes explicit.
 - Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`.
 - Shipped orchestration skills live in `skills/`, including `blueprint-phase-validation`.
 - Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.

@@ -1,29 +1,35 @@
-description = "Run conversational UAT for a completed phase with resumable phase-scoped evidence and optional follow-up capture."
+description = "Run conversational UAT for a validated phase with resumable phase-scoped evidence and explicit follow-up capture."
 prompt = """
 You are the `/blu:verify-work` command for Blueprint.
 
-Use `skills/blueprint-phase-validation.md` as the primary orchestration contract. When deeper validation work is useful, follow `blueprint-verifier` as the bounded subagent.
+Use `skills/blueprint-phase-validation.md` as the primary orchestration contract. When deeper UAT analysis is useful, follow `agents/blueprint-verifier.md`.
 
 Follow this flow exactly:
 
 1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `blueprint_phase_context`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_artifact_read`, `blueprint_artifact_list`, `blueprint_artifact_validate`, `blueprint_command_catalog`, and `blueprint_state_load` so you know the phase boundary, execution evidence, current UAT state, artifact health, and the current safe follow-up state.
+3. Read `blueprint_phase_summary_index`, `blueprint_phase_validation_read` with `artifact: "verification"`, `blueprint_phase_validation_read` with `artifact: "uat"`, `blueprint_config_get` with `scope: "effective"`, `blueprint_artifact_validate`, and `blueprint_state_load` so you know the execution evidence, existing validation and UAT state, normalized validation gates, repo artifact health, and the current safe follow-up state.
 4. Treat execution summaries as the prerequisite evidence for conversational UAT. If the target phase has no execution summaries yet, stop and route to `/blu:execute-phase` first.
-5. If `XX-UAT.md` already exists, inspect it and take an explicit path:
+5. If the phase does not have a `XX-VERIFICATION.md` artifact yet, stop and route to `/blu:validate-phase` first.
+6. Read every available execution summary through `blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
+7. If `XX-UAT.md` already exists, inspect it and take an explicit path:
    - `view`: summarize the existing UAT state and stop without mutating files
    - `resume`: continue the conversational UAT from the saved artifact without replacing it
    - `update`: only continue to replacement after explicit confirmation
    Reuse and resume are the default when the user does not ask for a replacement.
-6. Use `blueprint_artifact_scaffold` only to seed a missing `XX-UAT.md`; do not treat the scaffold as completed UAT.
-7. Use `blueprint-verifier` for bounded sidecar UAT work when the artifact needs to be created or updated. Require the result to include the observed user-facing behavior, pass/fail notes, any unresolved gaps, and optional follow-up fix capture.
-8. Persist the actual UAT content through `blueprint_phase_artifact_write` with `artifact: \"uat\"`. Do not use `blueprint_artifact_mutate_index` for this command.
-9. If verification reveals follow-up fixes, capture them in the same UAT artifact or in the next explicit follow-up note/state update; do not silently mutate unrelated code.
-10. After the final write path, call `blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, the UAT outcome, and the next safe implemented action.
-11. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, any gaps or follow-up captures, and the next safe implemented action.
+8. Honor normalized config when describing the UAT pass:
+   - `workflow.verifier=true`: use `blueprint-verifier` for bounded conversational UAT analysis.
+   - `workflow.verifier=false`: explicitly report that the dedicated verifier pass was skipped because normalized config disabled it.
+   - `workflow.nyquist_validation=true`: call out any remaining acceptance gaps explicitly.
+   - `workflow.nyquist_validation=false`: explicitly report that gap classification was informational only because normalized config disabled it.
+9. Use `blueprint-verifier` for bounded sidecar UAT work when the artifact needs to be created or updated. Require the result to include the observed user-facing behavior, pass/fail notes, unresolved gaps, and optional follow-up fix capture.
+10. Persist the actual UAT content through `blueprint_phase_validation_write` with `artifact: "uat"`. Do not write `XX-UAT.md` directly.
+11. If verification reveals follow-up fixes, capture them in the same UAT artifact or in the next explicit follow-up note/state update; do not silently mutate unrelated code.
+12. Call `blueprint_artifact_validate` after the write path and then `blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
+13. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, which config gates shaped the pass, any gaps or follow-up captures, and the next safe implemented action.
 
 Response requirements:
-- Use only `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_artifact_read`, `blueprint_phase_artifact_write`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_validate`, `blueprint_command_catalog`, and `blueprint_state_update` for persistent state work.
+- Use only `blueprint_phase_locate`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, `blueprint_phase_validation_write`, `blueprint_config_get`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep conversational UAT phase-scoped and summary-aware; do not validate unrelated repo files.

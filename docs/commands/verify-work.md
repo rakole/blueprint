@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`verify-work` carries forward the GSD intent to validate built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads execution evidence first, persists resumable phase-scoped `XX-UAT.md` content through MCP, and keeps optional follow-up fixes explicit instead of hiding them in chat.
+`verify-work` carries forward the GSD intent to validate built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads saved execution and validation evidence first, persists resumable phase-scoped `XX-UAT.md` content through dedicated validation MCP tools, and keeps optional follow-up fixes explicit instead of hiding them in chat.
 
 
 ## Command Path And Examples
@@ -24,6 +24,7 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 - The target phase must already have execution summaries.
+- The target phase must already have a `XX-VERIFICATION.md` artifact from `validate-phase`.
 - Existing UAT artifacts should be resumed or reused unless the user explicitly asks for a replacement.
 
 
@@ -35,9 +36,9 @@
 
 ## Blueprint And Global State Reads
 
-- `.blueprint/STATE.md`
-- selected phase `XX-YY-SUMMARY.md` artifacts through MCP
-- existing `XX-UAT.md` through MCP when present
+- effective Blueprint config through `blueprint_config_get`
+- selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
+- existing validation and UAT artifacts through `blueprint_phase_validation_read`
 
 
 ## Blueprint And Global State Writes
@@ -50,15 +51,12 @@
 ## Required MCP Tools
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
-- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
-- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
-- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
-- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
-- `blueprint_command_catalog` -> `{commands, waves, aliases}` with per-command `implemented`, `status`, and `blockedBy`
+- `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
+- `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -117,9 +115,11 @@
 ## Acceptance Criteria
 
 - Reads and writes only the selected phase scope.
+- Reads completed execution summaries plus the existing validation artifact before replacement.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Uses execution summaries as the source of truth for conversational UAT coverage.
+- Persists UAT evidence through `blueprint_phase_validation_write` rather than direct file writes.
 - Keeps `XX-UAT.md` resumable and explicit about unresolved gaps or follow-up captures.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
