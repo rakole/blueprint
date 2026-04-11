@@ -26,6 +26,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` must be substantive bootstrap drafts rather than scaffold-only placeholders.
 - Brownfield repos should be left ready for `map-codebase`, and project bootstrap should preserve durable requirement and roadmap traceability.
 
 ## Blueprint And Global State Reads
@@ -78,9 +79,13 @@
 ## User Prompts And Confirmation Gates
 
 - When interactive and `~/.gemini/blueprint/defaults.json` exists, offer those saved defaults before asking project-specific setup questions.
-- `--auto` should apply saved defaults automatically when they are available and valid.
+- `--auto` is a non-interactive bootstrap mode: apply saved defaults automatically when they are available and valid, skip follow-up questioning, and surface any assumptions explicitly in the written artifacts.
 - Confirm overwrite if `.blueprint/` already exists.
-- For brownfield repos, explicitly decide whether the next safe step is immediate mapping, direct bootstrap, or both in sequence.
+- `--auto` must not bypass the overwrite confirmation gate.
+- For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
+- if the repo is unmapped, route to `map-codebase`
+- if bootstrap artifacts are generated before mapping, mark the roadmap as provisional until mapping is complete
+- if `.blueprint/codebase/` already exists, allow normal bootstrap follow-through
 
 ## Edge Cases
 
@@ -100,7 +105,10 @@
 - Leaves unrelated repo files untouched.
 - Creates or updates only the declared artifacts for this command.
 - Seeds `.blueprint/config.json` as a fully materialized normalized v2 config using hardcoded defaults, optional user defaults, and the current command inputs.
-- Documents durable requirement and roadmap traceability expectations instead of treating initialization as bare scaffolding.
+- Produces authored `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` bootstrap drafts instead of placeholder shells.
+- Keeps requirement IDs traceable from `REQUIREMENTS.md` into `ROADMAP.md`.
+- Makes repo-shape assumptions explicit instead of silently inventing them.
+- For brownfield repos, sets the next safe action to `map-codebase` whenever roadmap confidence is still provisional.
 
 ## Test Cases
 
@@ -108,6 +116,8 @@
 - Partially initialized Blueprint repo fixture.
 - New-project fixture with saved defaults present.
 - Direct `new-project` happy-path fixture.
+- Brownfield fixture that routes to `map-codebase`.
+- Bootstrap seed fixture that verifies authored requirements and roadmap traceability.
 
 ## Upstream Reference
 

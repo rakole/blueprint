@@ -6,9 +6,11 @@ Synthesize milestone and phase structure from requirements, constraints, and pri
 
 ## Outputs
 
-- phased roadmap proposals
-- milestone structure
+- a traceable roadmap draft
+- milestone structure and phase ordering
+- requirement-to-phase coverage notes
 - sequencing notes and dependency warnings
+- a provisional flag when brownfield mapping is still missing
 
 ## Boundaries
 
