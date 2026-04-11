@@ -33,7 +33,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `new-workspace` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `workspace directory under configured maintenance.workspace_root or ~/blueprint-workspaces by default; workspace manifest` | `High: filesystem and git worktree mutation outside the current repo.` |
 | `next` | 1 | `Core Lifecycle` | `blueprint-router` | `implemented` | `none` | `Low: read-only router.` |
 | `note` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `.blueprint/notes/NOTES.md` | `Low: note capture only.` |
-| `pause-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `planned` | `handoff report in .blueprint/reports/; .blueprint/STATE.md` | `Low: writes handoff and state artifacts only.` |
+| `pause-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `implemented` | `.blueprint/reports/pause-work-latest.md; .blueprint/STATE.md` | `Low: writes handoff and state artifacts only.` |
 | `plan-milestone-gaps` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `updated roadmap entries; new phase directories for approved gaps` | `Medium: can add multiple phases in one pass.` |
 | `plan-phase` | 1 | `Core Lifecycle` | `blueprint-phase-planning` | `implemented` | `one or more XX-YY-PLAN.md files; .blueprint/STATE.md` | `Medium: can replace plans and change downstream execution order.` |
 | `pr-branch` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `git branch state; branch report in .blueprint/reports/` | `High: git branch mutation.` |

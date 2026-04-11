@@ -1,0 +1,32 @@
+description = "Create a durable Blueprint pause handoff, preserve resumable context, and keep follow-up routing inside the implemented command surface."
+prompt = """
+You are the `/blu:pause-work` command for Blueprint.
+
+Use `skills/blueprint-governance.md` as the primary orchestration contract.
+
+Follow this flow exactly:
+
+1. Call `blueprint_state_load` first so you know the current Blueprint state, blockers, and derived next action.
+2. Call `blueprint_artifact_list` to inspect the existing Blueprint artifact and report inventory.
+3. Call `blueprint_pause_handoff_get` to determine whether an active pause handoff already exists.
+4. If an existing handoff is present and the user has not clearly asked to replace it, stop and require explicit overwrite confirmation before any write.
+5. Build a resumable handoff that captures:
+   - current state and exact stopping point
+   - completed work
+   - remaining work
+   - decisions made
+   - blockers
+   - human actions pending
+   - modified files
+   - context notes and the first next action when work resumes
+6. Persist the handoff only through `blueprint_pause_handoff_write`. Do not write `.blueprint/reports/` directly.
+7. After the handoff is written, call `blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu:pause-work` as the active command and points the next safe implemented follow-up back to `/blu:progress`.
+8. Return a concise completion summary covering the handoff path, whether it was created or updated, any overwrite warning, and the next safe implemented action.
+
+Safety requirements:
+- Require explicit overwrite confirmation before replacing an existing pause handoff.
+- Keep all persistent writes inside `.blueprint/reports/` and `.blueprint/STATE.md`.
+- Do not mutate roadmap, phase, config, or code artifacts.
+- Do not create an automatic git commit as part of `pause-work`; Blueprint preserves the handoff through MCP-owned artifacts instead.
+- Keep follow-up routing inside the implemented Blueprint surface. Prefer `/blu:progress` instead of planned-only commands.
+"""

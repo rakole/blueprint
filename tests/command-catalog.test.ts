@@ -17,7 +17,8 @@ const IMPLEMENTED_COMMANDS = [
   "next",
   "plan-phase",
   "execute-phase",
-  "validate-phase"
+  "validate-phase",
+  "pause-work"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
