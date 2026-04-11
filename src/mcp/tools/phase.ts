@@ -24,7 +24,13 @@ type PhaseLookupArgs = {
   phase?: string;
 };
 
-type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
+type PhaseArtifactKind =
+  | "context"
+  | "discussion-log"
+  | "research"
+  | "ui-spec"
+  | "verification"
+  | "uat";
 
 type PlanIndexArgs = PhaseLookupArgs;
 
@@ -107,6 +113,8 @@ type PhaseContextResult = {
       discussionLog: string | null;
       research: string | null;
       uiSpec: string | null;
+      verification: string | null;
+      uat: string | null;
       plans: string[];
       summaries: string[];
     };
@@ -337,7 +345,9 @@ const PHASE_ARTIFACT_SUFFIXES: Record<PhaseArtifactKind, string> = {
   context: "-CONTEXT.md",
   "discussion-log": "-DISCUSSION-LOG.md",
   research: "-RESEARCH.md",
-  "ui-spec": "-UI-SPEC.md"
+  "ui-spec": "-UI-SPEC.md",
+  verification: "-VERIFICATION.md",
+  uat: "-UAT.md"
 };
 const PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
 
@@ -353,7 +363,14 @@ const phaseLookupInputSchema = {
 const phaseArtifactInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional(),
-  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
+  artifact: z.enum([
+    "context",
+    "discussion-log",
+    "research",
+    "ui-spec",
+    "verification",
+    "uat"
+  ])
 };
 const phasePlanInputSchema = {
   cwd: z.string().optional(),
@@ -363,7 +380,14 @@ const phasePlanInputSchema = {
 const phaseArtifactWriteInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional(),
-  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
+  artifact: z.enum([
+    "context",
+    "discussion-log",
+    "research",
+    "ui-spec",
+    "verification",
+    "uat"
+  ]),
   content: z.string(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
@@ -1057,6 +1081,8 @@ export async function blueprintPhaseContext(
         discussionLog: findArtifact(artifacts, "-DISCUSSION-LOG.md"),
         research: findArtifact(artifacts, "-RESEARCH.md"),
         uiSpec: findArtifact(artifacts, "-UI-SPEC.md"),
+        verification: findArtifact(artifacts, "-VERIFICATION.md"),
+        uat: findArtifact(artifacts, "-UAT.md"),
         plans: artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")),
         summaries: artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"))
       }
@@ -1971,7 +1997,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_read",
     description:
-      "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
+      "Read a phase-scoped artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, UI-SPEC, VERIFICATION, or UAT.",
     inputSchema: phaseArtifactInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactRead(args as PhaseArtifactReadArgs)
@@ -1979,7 +2005,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_write",
     description:
-      "Persist substantive phase-scoped discovery artifact content with overwrite protection.",
+      "Persist substantive phase-scoped artifact content with overwrite protection.",
     inputSchema: phaseArtifactWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactWrite(args as PhaseArtifactWriteArgs)

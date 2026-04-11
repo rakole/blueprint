@@ -240,6 +240,6 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.ok(context.phase?.artifacts.all.includes(summaryPath));
   assert.ok(listed.artifacts.phases.includes(planPath));
   assert.ok(listed.artifacts.phases.includes(summaryPath));
-  assert.match(afterStatus.nextAction, /\/blu:progress/);
+  assert.match(afterStatus.nextAction, /\/blu:validate-phase 3/);
   assert.match(summaryBody, /summary artifact/i);
 });

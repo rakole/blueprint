@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. Blueprint ships it as a summary-aware validation command: it reads execution summaries first, persists durable phase-scoped verification evidence through MCP, and updates `STATE.md` so the next safe action stays explicit.
 
 
 ## Command Path And Examples
@@ -23,25 +23,24 @@
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
-
-- The target phase must already have execution evidence.
+- The target phase must already have execution summaries.
+- Existing verification artifacts should be reused unless the user explicitly asks to replace them.
 
 
 ## Outputs
 
-
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: writes `XX-VERIFICATION.md` through MCP and updates `.blueprint/STATE.md` when the next safe action changes.
 
 
 ## Blueprint And Global State Reads
 
-
-- none
+- `.blueprint/STATE.md`
+- selected phase `XX-YY-SUMMARY.md` artifacts through MCP
+- existing `XX-VERIFICATION.md` through MCP when present
 
 
 ## Blueprint And Global State Writes
-
 
 - `phase XX-VERIFICATION.md`
 - `.blueprint/STATE.md`
@@ -49,15 +48,21 @@
 
 ## Required MCP Tools
 
-
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
+- `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
+- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
+- `blueprint_command_catalog` -> `{commands, waves, aliases}` with per-command `implemented`, `status`, and `blockedBy`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
 ## Skills And Subagents
-
 
 - Primary skill: `blueprint-phase-validation`
 - Optional subagents:
@@ -66,22 +71,22 @@
 
 ## Dependencies
 
-
 - Shared contract docs:
 - `docs/DECISIONS.md`
 - `docs/ARCHITECTURE.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
+- `docs/PHASE-LIFECYCLE.md`
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/execute-phase.md`
+- `docs/commands/verify-work.md`
 
 
 ## External Shell Or Git Dependencies
 
-
 - External dependencies:
-- project test runners
+- none
 
 
 ## Shell Risk Profile
@@ -90,19 +95,16 @@
 
 ## User Prompts And Confirmation Gates
 
-
-- Confirm any follow-up fix suggestions before creating them.
+- Confirm any overwrite before replacing an existing verification artifact.
 
 
 ## Edge Cases
 
-
 - The target phase is omitted or ambiguous while multiple active phases exist.
-- Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
+- Expected execution summaries exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
 
 
 ## Failure Modes And Recovery
-
 
 - Explain exactly which phase artifact is missing and which command creates it.
 - Write follow-up state back into `.blueprint/` instead of dropping context on failure.
@@ -110,24 +112,23 @@
 
 ## Acceptance Criteria
 
-
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Uses execution summaries as the source of truth for validation coverage and gaps.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 
 
 ## Test Cases
 
-
 - Single-phase happy path fixture.
-- Missing-artifact recovery fixture.
+- Missing-summary recovery fixture.
+- Existing-verification overwrite fixture.
 - Direct `validate-phase` happy-path fixture.
 
 
 ## Upstream Reference
-
 
 - Upstream command file: `commands/gsd/validate-phase.md`
 - Upstream workflow status: GSD has an upstream workflow file

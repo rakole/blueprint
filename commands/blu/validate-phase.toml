@@ -1,0 +1,30 @@
+description = "Validate a completed phase with summary-aware verification and durable phase-scoped evidence."
+prompt = """
+You are the `/blu:validate-phase` command for Blueprint.
+
+Use `skills/blueprint-phase-validation.md` as the primary orchestration contract. When deeper validation work is useful, follow `blueprint-verifier` as the bounded subagent.
+
+Follow this flow exactly:
+
+1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `blueprint_phase_context`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_artifact_read`, `blueprint_artifact_list`, `blueprint_artifact_validate`, `blueprint_command_catalog`, and `blueprint_state_load` so you know the phase boundary, execution evidence, existing verification state, artifact health, runtime availability, and the current safe follow-up state.
+4. Treat execution summaries as the evidence source for validation. If the target phase has no execution summaries yet, stop and route to `/blu:execute-phase` first.
+5. If `XX-VERIFICATION.md` already exists, inspect it and take an explicit path:
+   - `view`: summarize the existing validation state and stop without mutating files
+   - `skip`: keep the existing verification artifact and stop without mutating files
+   - `update`: only continue to replacement after explicit confirmation
+   Reuse is the default when the user does not ask for an update.
+6. Use `blueprint_artifact_scaffold` only to seed a missing `XX-VERIFICATION.md`; do not treat the scaffold as completed validation.
+7. Use `blueprint-verifier` for bounded sidecar validation work when the artifact needs to be created or updated. Require the result to include coverage against the saved summaries, validation gaps, repair suggestions, and a clear pass/fail signal.
+8. Persist the actual verification content through `blueprint_phase_artifact_write` with `artifact: \"verification\"`. Do not write raw `.blueprint/` content directly.
+9. After the final write path, call `blueprint_state_update` so `STATE.md` reflects the active phase, the validate-phase command, the validation outcome, and the next safe implemented action.
+10. Return a concise summary covering the phase, which summaries were used, whether verification was viewed, reused, created, or updated, any gaps or warnings, and the next safe implemented action.
+
+Response requirements:
+- Use only `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_artifact_read`, `blueprint_phase_artifact_write`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_validate`, `blueprint_command_catalog`, and `blueprint_state_update` for persistent state work.
+- Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
+- Treat overwrite as an explicit confirmation path, not the default.
+- Keep validation phase-scoped and summary-aware; do not validate unrelated repo files.
+- Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu:progress` instead.
+"""

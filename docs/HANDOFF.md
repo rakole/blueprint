@@ -2,9 +2,9 @@
 
 ## Current State
 
-The repository contains both the original planning pack and a shipped runtime for Wave 0 plus the Phase 3 discovery commands.
+The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, and the Phase 4 validation/UAT commands.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, including validated `research-phase` writes, catalog-aware next-step recovery, advisory hook coverage, and implemented `plan-phase` and `execute-phase` flows on the plan and summary MCP substrates. Runtime routing remains limited to `implemented` commands.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, including validated `research-phase` writes, catalog-aware next-step recovery, advisory hook coverage, and implemented `plan-phase` and `execute-phase` flows on the plan and summary MCP substrates. Phase 4 validation now ships through `validate-phase` and `verify-work` with summary-aware phase artifact persistence. Runtime routing remains limited to `implemented` commands.
 
 ## What Future Sessions Already Have
 
@@ -17,8 +17,8 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
 - Gemini-specific constraint notes to keep implementation aligned with the host CLI
-- runtime command manifests for the shipped Wave 0, Phase 3 discovery, and `next` router surfaces
-- shipped Wave 0 and Phase 3 discovery skill files in `skills/`
+- runtime command manifests for the shipped Wave 0, Phase 3 discovery, Phase 4 validation, and `next` router surfaces
+- shipped Wave 0, Phase 3 discovery, and Phase 4 validation skill files in `skills/`
 - shipped Wave 0 and Phase 3 discovery agent contract files in `agents/`
 - implementation-aware command catalog metadata in `blueprint_command_catalog`
 - seven-document codebase mapping bundle, including `.blueprint/codebase/STRUCTURE.md`
@@ -26,18 +26,18 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 
 ## Recommended Next Session
 
-Finish any remaining Phase 3 closeout checks, then continue into Phase 4 Validate and Verify:
+Phase 4 validation and UAT are now shipped, so future sessions should focus on the next unshipped command slice while keeping blocked surfaces blocked:
 
-1. Implement `validate-phase`, then `verify-work`
-2. Keep `pause-work` and `resume-work` blocked until their required manifests, skills, and MCP tools exist
-3. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
+1. Keep `pause-work` and `resume-work` blocked until their required manifests, skills, and MCP tools exist
+2. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
+3. Use the shipped validation and UAT commands when closing out phase evidence instead of reintroducing prompt-only verification
 
 ## First Implementation Slice
 
-Phase 4 should land in dependency order:
+The next unshipped slice should land in dependency order after validation/UAT closeout:
 
-- `validate-phase`
-- `verify-work`
+- `pause-work`
+- `resume-work`
 
 ## Shared Risks To Watch
 
@@ -65,4 +65,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the Phase 4 validation commands are implemented without regressing the closed drift and Phase 3 discovery guarantees, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the shipped Phase 4 validation commands keep their summary-aware and resumable guarantees intact, and later commands remain blocked until their substrate exists.

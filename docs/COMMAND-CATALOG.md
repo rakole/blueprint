@@ -54,6 +54,6 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `ui-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-UI-REVIEW.md` | `Low: review artifact only.` |
 | `undo` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `git history through revert operations; undo report in .blueprint/reports/` | `High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.` |
 | `update` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `update plan metadata under ~/.gemini/blueprint/updates/; human-readable update checklist report` | `Low: advisory only; no in-session self-update.` |
-| `validate-phase` | 1 | `Core Lifecycle` | `blueprint-phase-validation` | `planned` | `phase XX-VERIFICATION.md; .blueprint/STATE.md` | `Low: writes validation artifacts and gap reports.` |
-| `verify-work` | 1 | `Core Lifecycle` | `blueprint-phase-validation` | `planned` | `phase XX-UAT.md; .blueprint/STATE.md` | `Low: writes UAT and verification artifacts.` |
+| `validate-phase` | 1 | `Core Lifecycle` | `blueprint-phase-validation` | `implemented` | `phase XX-VERIFICATION.md; .blueprint/STATE.md` | `Low: writes summary-aware validation artifacts and gap reports.` |
+| `verify-work` | 1 | `Core Lifecycle` | `blueprint-phase-validation` | `implemented` | `phase XX-UAT.md; .blueprint/STATE.md; optional explicit follow-up fix capture` | `Low: writes resumable UAT artifacts and follow-up state.` |
 | `workstreams` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `.blueprint/workstreams/WORKSTREAMS.md; per-workstream state files` | `Medium: project-local state mutation with switching semantics.` |

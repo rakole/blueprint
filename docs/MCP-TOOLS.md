@@ -49,8 +49,8 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
 | `blueprint_phase_context` | Summarize phase boundary and existing artifacts | `{phase, requirements, missingArtifacts}` |
 | `blueprint_phase_research_status` | Report research and UI-spec readiness plus research validation signals | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
-| `blueprint_phase_artifact_read` | Read substantive discovery artifact content for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
-| `blueprint_phase_artifact_write` | Persist substantive phase-scoped discovery artifact content with overwrite protection and research validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
+| `blueprint_phase_artifact_read` | Read substantive phase-scoped artifact content for discovery, validation, or UAT work | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
+| `blueprint_phase_artifact_write` | Persist substantive phase-scoped artifact content with overwrite protection and validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
 | `blueprint_phase_checkpoint_get` | Read the saved discuss-phase checkpoint for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}` |
 | `blueprint_phase_checkpoint_put` | Persist a discuss-phase checkpoint JSON object for a phase | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
 | `blueprint_phase_checkpoint_delete` | Delete a saved discuss-phase checkpoint after successful completion | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}` |
@@ -101,6 +101,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - `/blu`, `help`, and `progress` must filter to catalog entries where `implemented` is `true`.
 - `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
+- `validate-phase` and `verify-work` use `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_artifact_read`, `blueprint_phase_artifact_write`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` to persist phase-scoped verification and UAT evidence.
 - lifecycle commands lean on phase, artifact, and state tools.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.
