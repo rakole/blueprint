@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026, and Phase 3 discovery work is now unblocked.
+This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026, and Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout.
 
 ## What Is Locked
 
@@ -18,7 +18,7 @@ This repository still carries the planning pack that locked the product and arch
 
 - Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
 - Phase 3 discovery commands are also shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
-- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; the next implementation slice is Phase 4 Plan, Execute, and Verify
+- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
@@ -164,7 +164,7 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 
 ## Next Implementation Slice
 
-The next slice is Phase 4 Plan, Execute, and Verify:
+The next broad rollout remains Phase 4 Plan, Execute, and Verify once the shipped Phase 3 discovery guarantees stay green:
 
 1. Implement `plan-phase` on top of the shipped Phase 3 discovery artifact contracts
 2. Implement `execute-phase`, then `validate-phase`, then `verify-work`

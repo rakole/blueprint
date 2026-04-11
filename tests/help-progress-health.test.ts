@@ -161,15 +161,37 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
   assert.equal(status.initialized, true);
   assert.equal(status.currentPhase, "2");
   assert.equal(status.currentMilestone, "v2");
+  assert.match(status.nextAction, /\/blu:ui-phase 2/);
   assert.equal(state.derivedStatus.projectStatus, "initialized");
   assert.equal(state.derivedStatus.currentPhase, "2");
   assert.equal(state.derivedStatus.hasBlockers, false);
+  assert.match(state.derivedStatus.nextAction, /\/blu:ui-phase 2/);
   assert.ok(artifacts.artifacts.core.includes(".blueprint/STATE.md"));
   assert.equal(artifacts.artifacts.codebase.length, 7);
   assert.ok(artifacts.artifacts.codebase.includes(".blueprint/codebase/STRUCTURE.md"));
   assert.ok(artifacts.reports.includes(".blueprint/reports/health-report.md"));
   assert.equal(validation.valid, true);
   assert.deepEqual(validation.issues, []);
+});
+
+test("project status chooses the next implemented discovery command from current phase artifacts", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/02-router-health-and-mapping");
+  const contextPath = path.join(phaseRoot, "02-CONTEXT.md");
+  const researchPath = path.join(phaseRoot, "02-RESEARCH.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const uiStep = await blueprintProjectStatus({ cwd: repoPath });
+  await rm(researchPath);
+  const researchStep = await blueprintProjectStatus({ cwd: repoPath });
+  await rm(contextPath);
+  const discussStep = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(uiStep.nextAction, /\/blu:ui-phase 2/);
+  assert.match(researchStep.nextAction, /\/blu:research-phase 2/);
+  assert.match(discussStep.nextAction, /\/blu:discuss-phase 2/);
 });
 
 test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {
@@ -219,7 +241,7 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
   assert.equal(status.status, "initialized");
   assert.equal(status.currentMilestone, "v3");
   assert.equal(status.currentPhase, "3");
-  assert.match(status.nextAction, /Phase 3/);
+  assert.match(status.nextAction, /\/blu:health/);
 });
 
 test("project status reports malformed config as a health warning instead of throwing", async (t) => {
@@ -271,7 +293,7 @@ test("state load clears stale structural blockers after the repo is healthy agai
   assert.equal(state.derivedStatus.projectStatus, "initialized");
   assert.equal(state.derivedStatus.hasBlockers, false);
   assert.deepEqual(state.blockers, []);
-  assert.match(state.derivedStatus.nextAction, /\/blu:progress/);
+  assert.match(state.derivedStatus.nextAction, /\/blu:ui-phase 2/);
 });
 
 test("artifact validation flags malformed legacy config and incomplete bundles with repair guidance", async (t) => {

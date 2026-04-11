@@ -238,3 +238,40 @@ test("phase locate returns structured recovery when ROADMAP.md is missing", asyn
   assert.match(located.reason ?? "", /Missing prerequisite artifact/);
   assert.ok(located.recovery.length > 0);
 });
+
+test("phase locate returns structured recovery when the roadmap phase directory is missing", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await rm(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
+    recursive: true,
+    force: true
+  });
+
+  const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "3" });
+
+  assert.equal(located.found, false);
+  assert.match(located.reason ?? "", /no matching directory/i);
+  assert.ok(located.recovery.length > 0);
+  assert.match(located.recovery.join("\n"), /restore the numbered phase directory|rebuild missing discovery artifacts/i);
+});
+
+test("phase locate returns structured recovery when multiple phase directories match", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery-copy"), {
+    recursive: true
+  });
+
+  const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "03" });
+
+  assert.equal(located.found, false);
+  assert.match(located.reason ?? "", /multiple matching directories/i);
+  assert.ok(located.recovery.length > 0);
+  assert.match(located.recovery.join("\n"), /rename duplicate phase directories|phase tree is normalized/i);
+});
