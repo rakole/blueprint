@@ -188,6 +188,7 @@ test("phase locate reports missing roadmap phases without escaping the Blueprint
 
   assert.equal(missing.found, false);
   assert.match(missing.reason ?? "", /not found/i);
+  assert.ok(missing.recovery.length > 0);
   assert.equal(missing.phaseDir, null);
 });
 
@@ -218,5 +219,22 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.equal(after.hasContext, true);
   assert.equal(after.hasResearch, true);
   assert.equal(after.hasUiSpec, true);
+  assert.equal(after.researchValid, false);
+  assert.match(after.researchIssues.join("\n"), /placeholder/i);
   assert.match(uiSpec, /Outcome Mode/);
+});
+
+test("phase locate returns structured recovery when ROADMAP.md is missing", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await rm(path.join(repoPath, ".blueprint/ROADMAP.md"));
+
+  const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "3" });
+
+  assert.equal(located.found, false);
+  assert.match(located.reason ?? "", /Missing prerequisite artifact/);
+  assert.ok(located.recovery.length > 0);
 });

@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "name": "blueprint-read-before-edit",
+            "type": "command",
+            "command": "node ${extensionPath}/dist/hooks/read-before-edit.js"
+          },
+          {
+            "name": "blueprint-blueprint-write-guard",
+            "type": "command",
+            "command": "node ${extensionPath}/dist/hooks/blueprint-write-guard.js"
+          },
+          {
+            "name": "blueprint-workflow-advisory",
+            "type": "command",
+            "command": "node ${extensionPath}/dist/hooks/workflow-advisory.js"
+          }
+        ]
+      }
+    ]
+  }
+}

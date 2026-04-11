@@ -48,7 +48,8 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 | `blueprint_roadmap_promote_backlog` | Promote backlog items into roadmap phases | `{promotedItems, createdPhaseDirs}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
 | `blueprint_phase_context` | Summarize phase boundary and existing artifacts | `{phase, requirements, missingArtifacts}` |
-| `blueprint_phase_research_status` | Report research and UI-spec readiness | `{hasContext, hasResearch, hasUiSpec}` |
+| `blueprint_phase_research_status` | Report research and UI-spec readiness plus research validation signals | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
+| `blueprint_phase_artifact_write` | Persist validated phase-scoped research content | `{status, artifactPath, validation, warnings}` |
 | `blueprint_phase_plan_index` | Index plan files and execution readiness | `{plans, waves, missingPlans}` |
 | `blueprint_phase_mark_complete` | Update state and roadmap for completed phase or milestone | `{updatedPaths, status}` |
 

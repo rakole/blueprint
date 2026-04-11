@@ -6,7 +6,10 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
-import { blueprintPhaseResearchStatus } from "../src/mcp/tools/phase.js";
+import {
+  blueprintPhaseArtifactWrite,
+  blueprintPhaseResearchStatus
+} from "../src/mcp/tools/phase.js";
 
 const repoRoot = process.cwd();
 
@@ -56,16 +59,73 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
+function validResearchContent(summary: string): string {
+  return `# Phase 03: Phase Discovery - Research
+
+**Researched:** 2026-04-11
+**Domain:** research-phase parity repair
+**Confidence:** HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| LIFE-02 | User can run targeted phase research when technical uncertainty exists. | Use validated MCP-owned research writes and bounded agent output. |
+
+## Summary
+
+- ${summary}
+
+## User Constraints
+
+- Keep writes inside .blueprint/ and leave later lifecycle commands blocked until their substrate exists.
+
+## Standard Stack
+
+- TypeScript
+- node:test via tsx --test
+
+## Architecture Patterns
+
+- Keep commands thin and move durable writes into MCP tools.
+
+## Don't Hand-Roll
+
+- Reuse phase resolution and artifact validation helpers instead of writing raw files directly.
+
+## Common Pitfalls
+
+- Letting scaffold placeholders masquerade as completed research.
+
+## Code Examples
+
+\`\`\`ts
+await blueprintPhaseArtifactWrite({ phase: "3", artifactKind: "RESEARCH", content });
+\`\`\`
+
+## Recommendations
+
+- Persist only validated research content through \`blueprint_phase_artifact_write\`.
+
+## Sources
+
+- [Gemini CLI hooks reference](https://geminicli.com/docs/hooks/reference/) - confirms advisory hook event payloads.
+- \`src/mcp/tools/phase.ts\` - existing phase resolution and recovery substrate.
+`;
+}
+
 test("research-phase command references only registered tool names and safe routing text", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu/research-phase.toml"),
     "utf8"
   );
   const requiredTools = [
+    "blueprint_command_catalog",
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_phase_research_status",
-    "blueprint_artifact_scaffold",
+    "blueprint_phase_artifact_write",
+    "blueprint_state_load",
     "blueprint_state_update"
   ];
 
@@ -74,49 +134,66 @@ test("research-phase command references only registered tool names and safe rout
     assert.match(commandFile, new RegExp(toolName));
   }
 
-  assert.match(commandFile, /overwrite confirmation/i);
+  assert.match(commandFile, /explicit confirmation/i);
+  assert.match(commandFile, /view/);
+  assert.match(commandFile, /skip/);
+  assert.match(commandFile, /update/);
   assert.match(commandFile, /\/blu:progress/);
   assert.doesNotMatch(commandFile, /\/blu:plan-phase/);
 });
 
-test("phase research status reports artifact permutations across context, research, and UI spec", async (t) => {
+test("phase artifact write creates, reuses, updates, and validates research content", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const empty = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
-
   await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
   });
-  const contextOnly = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "03" });
-
-  await blueprintArtifactScaffold({
+  const created = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-RESEARCH.md"]
+    phase: "3",
+    artifactKind: "RESEARCH",
+    content: validResearchContent("Create a real research artifact instead of a scaffold."),
+    overwrite: true
   });
-  const withResearch = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const afterCreate = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "03" });
 
-  await blueprintArtifactScaffold({
+  const reused = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"]
+    phase: "3",
+    artifactKind: "RESEARCH",
+    content: validResearchContent("This should not overwrite without confirmation.")
   });
-  const withUi = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const updated = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifactKind: "RESEARCH",
+    content: validResearchContent("Update the artifact after an explicit overwrite path."),
+    overwrite: true
+  });
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifactKind: "RESEARCH",
+    content: "# Phase 03: Phase Discovery - Research\n\n## Summary\n- Missing required sections.\n",
+    overwrite: true
+  });
   const researchBody = await readFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
     "utf8"
   );
 
-  assert.equal(empty.hasContext, false);
-  assert.equal(empty.hasResearch, false);
-  assert.equal(empty.hasUiSpec, false);
-  assert.equal(contextOnly.hasContext, true);
-  assert.equal(contextOnly.hasResearch, false);
-  assert.equal(contextOnly.hasUiSpec, false);
-  assert.equal(withResearch.hasResearch, true);
-  assert.equal(withResearch.researchPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md");
-  assert.equal(withUi.hasUiSpec, true);
-  assert.match(researchBody, /Recommendations/);
+  assert.equal(created.status, "created");
+  assert.equal(afterCreate.hasContext, true);
+  assert.equal(afterCreate.hasResearch, true);
+  assert.equal(afterCreate.researchValid, true);
+  assert.deepEqual(afterCreate.researchIssues, []);
+  assert.equal(reused.status, "reused");
+  assert.equal(updated.status, "updated");
+  assert.equal(invalid.status, "invalid");
+  assert.match(invalid.validation.issues.join("\n"), /required section|Confidence|source/i);
+  assert.match(researchBody, /Update the artifact after an explicit overwrite path/);
 });

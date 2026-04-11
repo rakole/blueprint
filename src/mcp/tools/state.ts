@@ -25,12 +25,14 @@ export type BlueprintState = {
 
 type StateUpdateArgs = {
   cwd?: string;
+  base?: "stored" | "synced";
   patch?: Partial<BlueprintState>;
 };
 
 type StateUpdateResult = {
   updatedFields: string[];
   statePath: string;
+  warnings: string[];
 };
 
 type StateLoadArgs = {
@@ -70,6 +72,7 @@ const DEFAULT_STATE: BlueprintState = {
 
 const stateUpdateInputSchema = {
   cwd: z.string().optional(),
+  base: z.enum(["stored", "synced"]).optional(),
   patch: z
     .object({
       projectStatus: z.string().optional(),
@@ -274,14 +277,22 @@ export async function blueprintStateUpdate(
 ): Promise<StateUpdateResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
-  const currentState = await loadBlueprintState(projectRoot);
+  const useSyncedBase = args.base === "synced";
+  const synced = useSyncedBase ? await buildSyncedState(projectRoot) : null;
+  const currentState = synced?.state ?? (await loadBlueprintState(projectRoot));
   const patch = args.patch ?? {};
   const nextState: BlueprintState = {
     ...currentState,
     ...patch,
-    blockers: patch.blockers ?? currentState.blockers
+    blockers: patch.blockers ?? currentState.blockers,
+    lastUpdated: patch.lastUpdated ?? new Date().toISOString()
   };
-  const updatedFields = Object.keys(patch).filter((key) => {
+  const updatedFields = [
+    ...new Set([
+      ...Object.keys(patch),
+      ...(patch.lastUpdated ? [] : ["lastUpdated"])
+    ])
+  ].filter((key) => {
     const field = key as keyof BlueprintState;
     return JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field]);
   });
@@ -291,7 +302,8 @@ export async function blueprintStateUpdate(
 
   return {
     updatedFields,
-    statePath: toRepoRelativePath(projectRoot, statePath)
+    statePath: toRepoRelativePath(projectRoot, statePath),
+    warnings: synced?.warnings ?? []
   };
 }
 
