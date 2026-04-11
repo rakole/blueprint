@@ -7,10 +7,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Phase 2.2 future-contract drift repair after Phase 2.1 completed on 2026-04-11
-- Runtime status: Wave 0 commands are implemented, but docs and routing are being re-baselined before any Phase 3 expansion
-- Planning status: shared architecture docs, executable Wave 0 runtime artifacts, and an explicit repair ledger are present
-- Implementation strategy: build one command at a time, repair drift before broadening the surface, and keep later commands blocked until their substrate exists
+- Current milestone: Phase 3 Phase Discovery after Phase 2.1 and Phase 2.2 both completed on 2026-04-11
+- Runtime status: Wave 0 commands are implemented; Phase 2.2 contract repair is closed, and routing still filters to implemented commands only
+- Planning status: shared architecture docs, executable Wave 0 runtime artifacts, a closed drift ledger, and Phase 3 planning artifacts are present
+- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 contract guarantees, and keep later commands blocked until their substrate exists
 
 ## Stable References
 
@@ -93,10 +93,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Next Implementation Slice
 
-- keep the Phase 2.2 ledger in `docs/DRIFT.MD` as the active repair source of truth
+- implement `discuss-phase`, then `research-phase`, then `ui-phase`
 - keep planned-only commands blocked in the runtime catalog without changing status semantics
 - keep command ownership metadata aligned across the catalog, skills inventory, migration matrix, and command specs
-- keep regression coverage in place so control-plane and contract drift fail fast before Phase 3 planning resumes
+- keep regression coverage in place so the closed Phase 2.2 guarantees fail fast if they drift
 
 ## Guardrail Snapshot
 
@@ -112,6 +112,6 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Runtime `skills/` and `agents/` surfaces now exist for the shipped Wave 0 contracts
 - The router/help/progress path must filter to commands whose catalog entry is `implemented`
 - `map-codebase` now owns a seven-document codebase bundle: `STACK`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `INTEGRATIONS`, and `CONCERNS`
-- Phase 2.1 closed on 2026-04-11; Phase 2.2 is the active checkpoint for control-plane and future-command contract repair
+- Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11
 - Canonical future-command ownership is `next` and `do` on `blueprint-router`, `pause-work` and `resume-work` on `blueprint-governance`, and `plan-milestone-gaps` on `blueprint-roadmap-admin`
-- Future sessions should not start Phase 3 or expose later commands until the Phase 2.2 exit criteria are satisfied and the missing substrate exists
+- Future sessions may proceed with Phase 3 implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist

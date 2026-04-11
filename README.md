@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists. Phase 2.1 drift recovery completed on April 11, 2026, and the repo is now in the active Phase 2.2 future-contract drift-repair checkpoint before any Phase 3 expansion.
+This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026, and Phase 3 discovery work is now unblocked.
 
 ## What Is Locked
 
@@ -14,11 +14,11 @@ This repository still carries the planning pack that locked the product and arch
 - Runtime architecture: Gemini commands, Gemini skills, Gemini subagents, advisory hooks, and an extension-bundled MCP server
 - Delivery approach: docs-first planning pack first, then granular command-by-command implementation with repair checkpoints when runtime and docs drift
 
-## Current Checkpoint
+## Current Status
 
 - Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
-- Phase 2.1 closed on 2026-04-11; Phase 2.2 is the active checkpoint
-- Recovery gate: no Phase 3+ implementation or command exposure until the Phase 2.2 exit criteria in `docs/DRIFT.MD` pass
+- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; the next implementation slice is Phase 3 Phase Discovery
+- Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
 ## Retained Commands
@@ -96,7 +96,7 @@ Wave 5 workspace and maintenance:
 ## Current Repo Contents
 
 - `docs/DECISIONS.md`: locked project decisions
-- `docs/DRIFT.MD`: live repair ledger for the active Phase 2.2 checkpoint
+- `docs/DRIFT.MD`: closed ledger for the Phase 2.2 drift-repair checkpoint and the Phase 3 unblock decision
 - `docs/ARCHITECTURE.md`: extension structure and runtime boundaries
 - `docs/ARTIFACT-SCHEMA.md`: `.blueprint/`, normalized config schema, and global-state schema
 - `docs/MCP-TOOLS.md`: proposed MCP tool contracts, including scoped config reads and writes
@@ -154,12 +154,11 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 
 ## Next Implementation Slice
 
-The current slice is the Phase 2.2 future-contract drift-repair checkpoint:
+The next slice is Phase 3 Phase Discovery:
 
-1. Truth-sync control docs and `.planning/` state around Phase 2.1 closure and active Phase 2.2 work
-2. Backfill `DRIFT-01` through `DRIFT-07` traceability in `.planning/REQUIREMENTS.md`
-3. Keep future command ownership, wave, and family metadata aligned across the catalog, skills inventory, migration matrix, and command specs
-4. Add regression tests that fail when control-plane or future-command contract docs drift
-5. Hold later command exposure until roadmap and phase substrate exists
+1. Implement `discuss-phase` on the existing `.blueprint/` schema and phase-artifact contracts
+2. Implement `research-phase` with explicit research artifacts and bounded agent usage
+3. Implement `ui-phase` with the same thin-command, skill-led, MCP-owned contract style preserved in Phase 2.2
+4. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
 
-The repair ledger lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.
+The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

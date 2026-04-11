@@ -13,7 +13,7 @@ Blueprint moves from a locked docs-first planning pack to an executable Gemini e
 - [x] **Phase 1: Foundation Bootstrap and State** - Create the extension scaffold, router entrypoints, and deterministic MCP-backed bootstrap flow
 - [x] **Phase 2: Router, Health, and Mapping** - Make foundational read-path and brownfield foundation commands executable
 - [x] **Phase 2.1: Drift Recovery Gate** - Re-baseline docs, runtime surfaces, and Wave 0 parity before Phase 3 exposure
-- [ ] **Phase 2.2: Urgent Drift-Repair Follow-Up** - Complete the locked truth-sync, runtime-awareness, parity, and phase-freeze work before any Phase 3 execution
+- [x] **Phase 2.2: Urgent Drift-Repair Follow-Up** - Closed on 2026-04-11 after completing the locked truth-sync, runtime-awareness, parity, and phase-freeze work needed to unblock Phase 3
 - [ ] **Phase 3: Phase Discovery** - Add context capture, targeted research, and UI-spec flows
 - [ ] **Phase 4: Plan, Execute, and Verify** - Complete the core implementation loop for planned work
 - [ ] **Phase 5: Roadmap and Milestones** - Add roadmap mutation and milestone administration flows
@@ -70,7 +70,7 @@ Plans:
 - [x] 02.1-03: Re-baseline shipped Wave 0 command specs and manifests to restore GSD intent without breaking Blueprint deltas
 - [x] 02.1-04: Add consistency, routing, and parity regression coverage before allowing later phases
 
-### Phase 2.2: Urgent Drift-Repair Follow-Up (INSERTED)
+### Phase 2.2: Urgent Drift-Repair Follow-Up (INSERTED, COMPLETED 2026-04-11)
 
 **Goal:** Repair future command contract drift and control-plane truth so later phases stay aligned with Blueprint architecture without changing runtime status semantics or expanding command exposure.
 **Locked Scope:** Do not discard working Phase 1/2 code without an explicit Blueprint reason; keep `docs/DRIFT.md` as the repair source of truth; truth-sync the control docs and planning state; backfill drift-repair requirement traceability; keep `blueprint_command_catalog` runtime-aware without changing its status semantics; keep planned-only commands hidden from `/blu`, `/blu:help`, and `/blu:progress`; preserve only the explicit Blueprint divergences; and keep Phase 3 blocked until the Phase 2.2 contract-repair exit criteria pass.
@@ -184,14 +184,14 @@ Plans:
 **Execution Order:**
 Phases execute in numeric order: 1 → 2 → 2.1 → 2.2 → 3 → 4 → 5 → 6 → 7 → 8
 
-Phase 3 and beyond remain blocked from runtime exposure until their missing substrate is implemented deliberately.
+Phase 3 is now the next implementation slice. Runtime exposure still remains limited to `implemented` commands until new manifests, skills, and required MCP tools are actually present.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Bootstrap and State | 3/3 | Complete | 2026-04-11 |
 | 2. Router, Health, and Mapping | 3/3 | Complete | 2026-04-11 |
 | 2.1. Drift Recovery Gate | 4/4 | Complete | 2026-04-11 |
-| 2.2. Urgent Drift-Repair Follow-Up | 4/4 | Active | - |
+| 2.2. Urgent Drift-Repair Follow-Up | 4/4 | Complete | 2026-04-11 |
 | 3. Phase Discovery | 0/3 | Not started | - |
 | 4. Plan, Execute, and Verify | 0/4 | Not started | - |
 | 5. Roadmap and Milestones | 0/3 | Not started | - |

@@ -42,17 +42,19 @@ The current drift-repair checkpoint locks the following Wave 0 runtime expectati
 
 Wave 0 behaviors that remain narrower than upstream must be called out explicitly here rather than left implicit in command docs.
 
-## Phase 2.2 Contract Repair Snapshot
+## Phase 2.2 Closure Snapshot
 
-The active Phase 2.2 checkpoint keeps future retained-command docs aligned without changing runtime exposure rules:
+The closed Phase 2.2 checkpoint keeps future retained-command docs aligned without changing runtime exposure rules:
 
-- Phase 2.1 completed on 2026-04-11; Phase 2.2 is the active control-plane and contract-repair checkpoint.
+- Phase 2.1 and Phase 2.2 both completed on 2026-04-11.
+- Phase 3 discovery is unblocked for implementation work.
 - Future command metadata must stay consistent across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, this migration matrix, and the per-command specs in `docs/commands/`.
 - `next` and `do` remain owned by `blueprint-router`.
 - `pause-work` and `resume-work` remain owned by `blueprint-governance`.
 - `plan-milestone-gaps` remains owned by `blueprint-roadmap-admin`.
 - High-risk planned flows such as `quick`, `code-review-fix`, `audit-fix`, `ship`, `undo`, `new-workspace`, `remove-workspace`, and `reapply-patches` must continue to name their bounded-agent and MCP-owned persistence contracts explicitly; do not flatten them into command-only prose.
-- Phase 2.2 does not change `blueprint_command_catalog` status semantics or make blocked commands routable.
+- Phase 2.2 did not change `blueprint_command_catalog` status semantics or make blocked commands routable.
+- Closing Phase 2.2 does not make documented future commands runnable; runtime exposure still depends on real manifests, primary skills, and required MCP tools.
 
 ## Command Workflow Migration Matrix
 

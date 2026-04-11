@@ -3,9 +3,10 @@
 ## Status
 
 - Checkpoint: Phase 2.2 future-contract drift repair
-- State: active as of 2026-04-11 after Phase 2.1 completed on the same date
+- State: closed on 2026-04-11 after Phase 2.1 completed earlier that day
+- Result: all Phase 2.2 exit criteria validated; Phase 3 discovery is unblocked for implementation work
 - Scope: repair control-plane and future-command contract drift before any Phase 3 expansion
-- Stance: salvage the working Wave 0 runtime, do not expand blocked command exposure, and do not invent new runtime substrate in this checkpoint
+- Runtime posture: salvage the working Wave 0 runtime, keep blocked command exposure unchanged, and do not invent new runtime substrate in this checkpoint
 
 ## Phase 2.1 Closure
 
@@ -69,7 +70,7 @@ These are intentional and should not be “fixed away”:
 - no repo-level hook config in `.blueprint/config.json`
 - no in-session extension self-mutation
 
-## Active Repair Order
+## Phase 2.2 Work Completed
 
 - [x] Reopen `docs/DRIFT.MD` as the live Phase 2.2 ledger instead of a closed Phase 2.1 note
 - [x] Truth-sync `AGENTS.md`, `README.md`, `GEMINI.md`, `docs/HANDOFF.md`, `MEMORY.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and `.planning/REQUIREMENTS.md`
@@ -101,10 +102,17 @@ Because of that, later commands such as `plan-phase`, `insert-phase`, `next`, an
 - [x] `blueprint_command_catalog` status semantics remain unchanged
 - [x] Phase 3+ command exposure remains frozen while substrate is still missing
 
-## Future Phase Freeze
+## Closure Decision
 
-No Phase 3+ implementation or command exposure should proceed until:
+- Phase 2.2 closed on 2026-04-11 after the drift suite and full test suite both passed.
+- Phase 3 discovery work is now unblocked for implementation planning and delivery.
+- `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`.
+- Documented future commands remain non-routable until their manifest, primary skill, and required MCP tools exist.
 
-1. the Phase 2.2 checklist is intentionally closed
-2. routing still surfaces only `implemented` commands
-3. the next slice of roadmap and phase substrate is deliberately planned
+## Post-Close Guardrails
+
+Phase 2.2 closure does not relax these runtime protections:
+
+1. routing still surfaces only `implemented` commands
+2. blocked command families remain blocked until substrate exists
+3. Phase 3 implementation may proceed, but Phase 3+ commands do not become runnable through docs alone

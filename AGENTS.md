@@ -13,8 +13,8 @@ It is not a literal port of GSD internals.
 ## Current Phase
 
 - Wave 0 runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, and `map-codebase`
-- Phase 2.1 drift recovery completed on 2026-04-11, and the repository is now in the Phase 2.2 future-contract drift-repair checkpoint
-- Do not expose or recommend Phase 3+ commands until the Phase 2.2 exit criteria in `docs/DRIFT.MD` are satisfied
+- Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
+- Phase 3 discovery is unblocked for implementation work, but `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
 
@@ -61,10 +61,10 @@ It is not a literal port of GSD internals.
 - Do not make `update` self-mutating; it must remain advisory
 - Do not rely on hooks for core state transitions
 - Keep `.blueprint/` schema stable while implementing Wave 0 and Wave 1
-- Do not change `blueprint_command_catalog` status semantics during Phase 2.2; agent protection stays in docs and regression tests only
+- Do not change `blueprint_command_catalog` status semantics while Phase 3 is being implemented; later commands become routable only when manifests, primary skills, and required MCP tools exist
 - Require explicit confirmation for high-risk commands such as `undo`, `ship`, `new-workspace`, `remove-workspace`, `cleanup`, and `reapply-patches`
 - Do not recommend planned-only commands from `/blu`, `/blu:help`, or `/blu:progress`
-- Do not start Phase 3+ implementation work while the drift checklist in `docs/DRIFT.MD` is open
+- Do not treat documented Phase 3+ commands as runnable until their runtime catalog entry is `implemented`
 
 ## Preferred Read Order
 
@@ -82,14 +82,13 @@ It is not a literal port of GSD internals.
 
 ## Immediate Next Slice
 
-Continue the Phase 2.2 contract-repair checkpoint with:
+Begin Phase 3 Phase Discovery with:
 
-- `docs/DRIFT.MD`
-- truth-sync updates in `README.md`, `GEMINI.md`, `docs/HANDOFF.md`, `MEMORY.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and `.planning/REQUIREMENTS.md`
-- repaired future-command ownership and family metadata across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, `docs/GSD-RUNTIME-MIGRATION.md`, and `docs/commands/`
-- regression tests that fail on control-plane or command-contract drift
+- `discuss-phase`
+- `research-phase`
+- `ui-phase`
 - unchanged runtime status semantics in `src/mcp/tools/project.ts`
-- frozen later command exposure until the Phase 2.2 exit criteria pass
+- the closed Phase 2.2 drift guarantees and regression coverage preserved while new Phase 3 runtime pieces land
 
 ## Working Norms
 

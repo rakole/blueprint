@@ -2,6 +2,12 @@
 
 Blueprint is a Gemini-native planning and execution system for repository work.
 
+## Checkpoint Status
+
+- Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
+- Phase 3 discovery is now the next implementation slice.
+- Runtime routing must still surface only commands whose catalog entry is `implemented`.
+
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.

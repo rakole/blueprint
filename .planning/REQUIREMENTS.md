@@ -20,9 +20,9 @@
 - [x] **DRIFT-02**: `/blu`, `help`, and `progress` only surface commands whose manifests, primary skills, and required MCP tools exist
 - [x] **DRIFT-03**: Shipped Wave 0 skills and agent contracts exist in the runtime, and `map-codebase` owns the seven-document bundle including `STRUCTURE.md`
 - [x] **DRIFT-04**: Later commands stay blocked until their missing roadmap and phase substrate exists
-- [ ] **DRIFT-05**: Future retained command docs preserve thin-command, skill-led, agent-explicit, MCP-owned architecture
-- [ ] **DRIFT-06**: Command metadata stays consistent across the catalog, skills inventory, migration matrix, and per-command specs
-- [ ] **DRIFT-07**: Regression tests catch control-plane and contract drift before later phases proceed
+- [x] **DRIFT-05**: Future retained command docs preserve thin-command, skill-led, agent-explicit, MCP-owned architecture
+- [x] **DRIFT-06**: Command metadata stays consistent across the catalog, skills inventory, migration matrix, and per-command specs
+- [x] **DRIFT-07**: Regression tests catch control-plane and contract drift before later phases proceed
 
 ### Lifecycle
 
@@ -88,9 +88,9 @@
 | DRIFT-02 | Phase 2.1 | Complete |
 | DRIFT-03 | Phase 2.1 | Complete |
 | DRIFT-04 | Phase 2.1 | Complete |
-| DRIFT-05 | Phase 2.2 | Pending |
-| DRIFT-06 | Phase 2.2 | Pending |
-| DRIFT-07 | Phase 2.2 | Pending |
+| DRIFT-05 | Phase 2.2 | Complete |
+| DRIFT-06 | Phase 2.2 | Complete |
+| DRIFT-07 | Phase 2.2 | Complete |
 | LIFE-01 | Phase 3 | Pending |
 | LIFE-02 | Phase 3 | Pending |
 | LIFE-03 | Phase 3 | Pending |
@@ -117,4 +117,4 @@
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-11 after Phase 2.2 contract repair alignment*
+*Last updated: 2026-04-11 after Phase 2.2 closure verification*
