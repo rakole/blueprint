@@ -42,7 +42,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `reapply-patches` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `patch replay report in .blueprint/reports/ or global patch logs; repo file changes when replay succeeds` | `High: patch replay may touch many repo files.` |
 | `remove-phase` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `.blueprint/ROADMAP.md; renamed or archived phase directories` | `High: renumbering can invalidate downstream roadmap references.` |
 | `remove-workspace` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `updated global workspace registry; workspace directory removal` | `High: directory deletion and worktree cleanup.` |
-| `research-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-RESEARCH.md; .blueprint/STATE.md` | `Low: writes research artifacts only.` |
+| `research-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-RESEARCH.md; .blueprint/STATE.md` | `Low: writes research artifacts only.` |
 | `resume-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `planned` | `none` | `Low: restores state without planned repo mutation.` |
 | `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `updated backlog index; updated roadmap and any promoted phase stubs` | `Medium: can promote backlog items into active roadmap scope.` |
 | `review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEWS.md or equivalent peer-review artifact` | `Medium: external tool orchestration without default repo mutation.` |
