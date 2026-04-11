@@ -167,3 +167,20 @@ test("phase 2.2 drift fixes stay locked for the known ownership mismatches", asy
     assert.equal(migrationSkills.get(command), skill, `Migration doc drifted for ${command}`);
   }
 });
+
+test("phase discovery skill and bounded agent contracts are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-phase-discovery` \| `implemented` \| Pre-planning discovery and requirements shaping \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-researcher` \| `implemented` \| Phase-specific technical research \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-ui-designer` \| `implemented` \| Produce `UI-SPEC` contracts \|/
+  );
+});

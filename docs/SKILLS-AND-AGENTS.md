@@ -10,12 +10,12 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-bootstrap` | `implemented` | Repo bootstrap and project initialization | `new-project` |
 | `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health`, `pause-work`, `resume-work` |
 | `blueprint-map` | `implemented` | Brownfield codebase mapping | `map-codebase` |
+| `blueprint-phase-discovery` | `implemented` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
 
 ## Planned Later Skills
 
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
-| `blueprint-phase-discovery` | `planned` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
 | `blueprint-phase-planning` | `planned` | Plan synthesis and plan checks | `plan-phase` |
 | `blueprint-phase-execution` | `planned` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `planned` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
@@ -37,13 +37,13 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-checker` | `implemented` | Verify plan quality before execution |
 | `blueprint-executor` | `implemented` | Execute plan tasks and produce summaries |
 | `blueprint-verifier` | `implemented` | Verify execution results and UAT evidence |
+| `blueprint-researcher` | `implemented` | Phase-specific technical research |
+| `blueprint-ui-designer` | `implemented` | Produce `UI-SPEC` contracts |
 
 ## Planned Later Agents
 
 | Agent | Status | Purpose |
 |---|---|---|
-| `blueprint-researcher` | `planned` | Phase-specific technical research |
-| `blueprint-ui-designer` | `planned` | Produce `UI-SPEC` contracts |
 | `blueprint-reviewer` | `planned` | Produce code review findings |
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
 | `blueprint-debugger` | `planned` | Run structured debugging investigations |
