@@ -4,7 +4,7 @@
 
 The repository contains both the original planning pack and a shipped runtime for Wave 0 plus the Phase 3 discovery commands.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, including validated `research-phase` writes, catalog-aware next-step recovery, advisory hook coverage, and an implemented `plan-phase` on the plan artifact MCP substrate. Runtime routing remains limited to `implemented` commands.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, including validated `research-phase` writes, catalog-aware next-step recovery, advisory hook coverage, and implemented `plan-phase` and `execute-phase` flows on the plan and summary MCP substrates. Runtime routing remains limited to `implemented` commands.
 
 ## What Future Sessions Already Have
 
@@ -26,18 +26,16 @@ Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both complet
 
 ## Recommended Next Session
 
-Finish any remaining Phase 3 closeout checks, then continue into Phase 4 Execute, Validate, and Verify:
+Finish any remaining Phase 3 closeout checks, then continue into Phase 4 Validate and Verify:
 
-1. Implement `execute-phase` on top of the shipped plan artifact contracts
-2. Implement `validate-phase`, then `verify-work`
-3. Keep `pause-work` and `resume-work` blocked until their required manifests, skills, and MCP tools exist
-4. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
+1. Implement `validate-phase`, then `verify-work`
+2. Keep `pause-work` and `resume-work` blocked until their required manifests, skills, and MCP tools exist
+3. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
 
 ## First Implementation Slice
 
 Phase 4 should land in dependency order:
 
-- `execute-phase`
 - `validate-phase`
 - `verify-work`
 
@@ -67,4 +65,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the Phase 4 lifecycle commands are implemented without regressing the closed drift and Phase 3 discovery guarantees, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the Phase 4 validation commands are implemented without regressing the closed drift and Phase 3 discovery guarantees, and later commands remain blocked until their substrate exists.

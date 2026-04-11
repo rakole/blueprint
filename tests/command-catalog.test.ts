@@ -15,7 +15,8 @@ const IMPLEMENTED_COMMANDS = [
   "research-phase",
   "ui-phase",
   "next",
-  "plan-phase"
+  "plan-phase",
+  "execute-phase"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
@@ -90,5 +91,20 @@ test("plan-phase is implemented once manifest, skill, and plan MCP tools exist",
     "blueprint-checker",
     "blueprint-planner"
   ]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("execute-phase is implemented once manifest, skill, and execution summary MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["execute-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.availableOptionalAgents.sort(), ["blueprint-executor"]);
   assert.deepEqual(entry.blockedBy, []);
 });

@@ -76,6 +76,156 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
   return repoPath;
 }
 
+async function createExecutionReadyRepo(): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-execute-phase-routing-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Execution Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 2: Discovery**
+- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 3
+- Active command: /blu:progress
+- Next action: Run /blu:progress
+- Last updated: 2026-04-11T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `# Phase 03: Phase Discovery - Context
+
+## Decisions
+- Execution should activate once plans exist and summaries are absent.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
+    `# Phase 03: Phase Discovery - Research
+
+**Researched:** 2026-04-11
+**Domain:** execute-phase runtime
+**Confidence:** HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| EXEC-01 | Execute plans with durable summary persistence. | Use plan and summary indexes to select pending work. |
+
+## Summary
+
+- Plans are ready for execution and no summary artifacts exist yet.
+
+## User Constraints
+
+- Keep writes inside .blueprint/.
+
+## Standard Stack
+
+- TypeScript
+- node:test via tsx --test
+
+## Architecture Patterns
+
+- Commands stay thin; MCP tools own persistence.
+
+## Don't Hand-Roll
+
+- Reuse the existing plan and summary index flow.
+
+## Common Pitfalls
+
+- Treating a missing summary as completed execution.
+
+## Code Examples
+
+\`\`\`ts
+await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
+\`\`\`
+
+## Recommendations
+
+- Route to /blu:execute-phase once the phase has plans and no summaries.
+
+## Sources
+
+- \`src/mcp/tools/phase.ts\`
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"),
+    `# Phase 03: Phase Discovery - UI Spec
+
+## Outcome Mode
+
+- Explicit skip rationale
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
+    `---
+phase: 3
+plan_id: "01"
+title: "Execution Plan 01"
+wave: 1
+status: planned
+objective: "Exercise the execute-phase router."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan 01
+
+## Goal
+
+Exercise the execute-phase router.
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
   const repoPath = await createRepoFromFixture("uninitialized-repo");
   t.after(async () => {
@@ -192,6 +342,21 @@ test("project status chooses the next implemented discovery command from current
   assert.match(uiStep.nextAction, /\/blu:ui-phase 2/);
   assert.match(researchStep.nextAction, /\/blu:research-phase 2/);
   assert.match(discussStep.nextAction, /\/blu:discuss-phase 2/);
+});
+
+test("project status recommends execute-phase once plans exist and summaries are still absent", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "3");
+  assert.equal(state.derivedStatus.currentPhase, "3");
+  assert.match(status.nextAction, /\/blu:execute-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu:execute-phase 3/);
 });
 
 test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {

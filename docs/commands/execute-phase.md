@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`execute-phase` carries forward the GSD intent to execute all plans in a phase with wave-based parallelization. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`execute-phase` carries forward the GSD intent to execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a Gemini-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and leaves `validate-phase` and `verify-work` as the next slice.
 
 
 ## Command Path And Examples
@@ -24,20 +24,24 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- At least one plan must already exist for the phase.
+- At least one plan must already exist for the selected phase.
+- `--wave`, `--gaps-only`, and `--interactive` are honored when present.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise completion summary, recorded execution evidence, and the next logical action when applicable.
+- Repo side effects: writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
 
 
 ## Blueprint And Global State Reads
 
 
 - `.blueprint/config.json`
+- `.blueprint/STATE.md`
+- selected phase plan files through MCP reads
+- selected phase summary files through MCP reads
 
 
 ## Blueprint And Global State Writes
@@ -45,6 +49,7 @@
 
 - `one or more XX-YY-SUMMARY.md files`
 - `optional execution reports in .blueprint/reports/`
+- `.blueprint/STATE.md` when the next-step signal changes
 
 
 ## Required MCP Tools
@@ -52,8 +57,12 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
+- `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
+- `blueprint_phase_summary_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
-- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -74,9 +83,14 @@
 - `docs/ARCHITECTURE.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
+- `docs/PHASE-LIFECYCLE.md`
+- `docs/SKILLS-AND-AGENTS.md`
+- `docs/GSD-RUNTIME-MIGRATION.md`
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/plan-phase.md`
+- `docs/commands/validate-phase.md`
+- `docs/commands/verify-work.md`
 
 
 ## External Shell Or Git Dependencies
@@ -118,7 +132,7 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
-- Uses only documented MCP tools for persistent state changes.
+- Uses only documented MCP tools for persistent state changes, including the plan read and summary read/write tools.
 - Leaves unrelated repo files untouched.
 - Honors normalized `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from effective config instead of ad hoc command-local heuristics.
 
@@ -129,7 +143,7 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Parallelization and worktree-isolation fixture.
-- Direct `execute-phase` happy-path fixture.
+- Wave-filtered direct `execute-phase` happy-path fixture.
 
 
 ## Upstream Reference
