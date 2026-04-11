@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`research-phase` carries forward the GSD intent to research how to implement a phase (standalone - usually use /gsd-plan-phase instead). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`research-phase` carries forward the GSD intent to research how to implement a phase (standalone - usually use /gsd-plan-phase instead). In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and now writes substantive research content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
 
 
 ## Command Path And Examples
@@ -53,6 +53,8 @@
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -116,6 +118,7 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Persists substantive research findings into `XX-RESEARCH.md`, not only scaffold placeholders.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 

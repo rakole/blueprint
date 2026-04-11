@@ -5,14 +5,15 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 ## Checkpoint Status
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
-- Phase 3 discovery is now the next implementation slice.
+- Phase 3 discovery shipped on 2026-04-11.
+- The current repair focus is making the shipped discovery commands fully substantive before Phase 4 expands.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current Wave 0 direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, and `/blu:map-codebase`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, and `/blu:ui-phase`.
 
 ## State Boundaries
 
@@ -29,8 +30,11 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:progress` summarizes repo status, blockers, warnings, and the next safe action from real `.blueprint/` state while filtering to implemented commands.
 - `/blu:health` diagnoses Blueprint artifacts and enters repair flows only after explicit confirmation.
 - `/blu:map-codebase` creates or reuses the seven-document `.blueprint/codebase/` bundle, including `STRUCTURE.md`.
-- Shipped orchestration skills live in `skills/`.
-- Shipped agent contracts for Wave 0 parity work live in `agents/`.
+- `/blu:discuss-phase` now captures substantive `XX-CONTEXT.md` content and can persist resumable discussion checkpoints.
+- `/blu:research-phase` now persists substantive `XX-RESEARCH.md` content instead of relying on scaffold placeholders.
+- `/blu:ui-phase` now persists substantive `XX-UI-SPEC.md` content or an explicit skip rationale in that same file.
+- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`.
+- Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.
 
 ## Mutation Rules
 

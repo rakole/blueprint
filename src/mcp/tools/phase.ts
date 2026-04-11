@@ -6,6 +6,7 @@ import * as z from "zod/v4";
 import {
   BLUEPRINT_DIR,
   BLUEPRINT_PHASES_PATH,
+  ensureParentDirectory,
   ensureRepoRoot,
   resolveBlueprintPath,
   toRepoRelativePath
@@ -19,6 +20,29 @@ type RoadmapReadArgs = {
 type PhaseLookupArgs = {
   cwd?: string;
   phase?: string;
+};
+
+type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
+
+type PhaseArtifactReadArgs = PhaseLookupArgs & {
+  artifact: PhaseArtifactKind;
+};
+
+type PhaseArtifactWriteArgs = PhaseLookupArgs & {
+  artifact: PhaseArtifactKind;
+  content: string;
+  overwrite?: boolean;
+};
+
+type PhaseCheckpointPutArgs = PhaseLookupArgs & {
+  checkpoint: Record<string, unknown>;
+};
+
+type ResolvedPhaseLocation = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
 };
 
 type ParsedRoadmapPhase = {
@@ -72,6 +96,65 @@ type PhaseResearchStatusResult = {
   uiSpecPath: string | null;
 };
 
+type PhaseArtifactReadResult = {
+  phaseFound: boolean;
+  found: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  artifact: PhaseArtifactKind;
+  path: string | null;
+  content: string | null;
+  reason: string | null;
+};
+
+type PhaseArtifactWriteResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  artifact: PhaseArtifactKind;
+  path: string;
+  written: boolean;
+  created: boolean;
+  overwritten: boolean;
+  warnings: string[];
+};
+
+type PhaseCheckpointGetResult = {
+  phaseFound: boolean;
+  found: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  path: string | null;
+  checkpoint: Record<string, unknown> | null;
+  reason: string | null;
+};
+
+type PhaseCheckpointPutResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  path: string;
+  updated: boolean;
+  warnings: string[];
+};
+
+type PhaseCheckpointDeleteResult = {
+  phaseFound: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  path: string | null;
+  deleted: boolean;
+  reason: string | null;
+};
+
 type RoadmapReadResult = {
   roadmap: {
     path: string;
@@ -90,6 +173,14 @@ type RoadmapReadResult = {
   }>;
 };
 
+const PHASE_ARTIFACT_SUFFIXES: Record<PhaseArtifactKind, string> = {
+  context: "-CONTEXT.md",
+  "discussion-log": "-DISCUSSION-LOG.md",
+  research: "-RESEARCH.md",
+  "ui-spec": "-UI-SPEC.md"
+};
+const PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
+
 const roadmapReadInputSchema = {
   cwd: z.string().optional()
 };
@@ -97,6 +188,26 @@ const roadmapReadInputSchema = {
 const phaseLookupInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional()
+};
+
+const phaseArtifactInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
+};
+
+const phaseArtifactWriteInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
+  content: z.string(),
+  overwrite: z.boolean().optional()
+};
+
+const phaseCheckpointPutInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  checkpoint: z.record(z.string(), z.unknown())
 };
 
 function normalizePhaseNumber(value: string): string {
@@ -321,6 +432,72 @@ function findArtifact(artifacts: string[], suffix: string): string | null {
   return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
 }
 
+function fallbackPhaseName(phaseDir: string): string {
+  return slugToTitle(path.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
+}
+
+function toResolvedPhaseLocation(
+  located: PhaseLocateResult
+): ResolvedPhaseLocation | null {
+  if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
+    return null;
+  }
+
+  return {
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName ?? fallbackPhaseName(located.phaseDir),
+    phaseDir: located.phaseDir
+  };
+}
+
+function artifactPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">, artifact: PhaseArtifactKind): string {
+  return buildArtifactPath(
+    located.phaseDir,
+    located.phasePrefix,
+    PHASE_ARTIFACT_SUFFIXES[artifact]
+  );
+}
+
+function checkpointPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">): string {
+  return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
+}
+
+function normalizeTextContent(content: string): string {
+  return content.endsWith("\n") ? content : `${content}\n`;
+}
+
+function ensureCheckpointObject(
+  checkpoint: unknown,
+  checkpointPath: string
+): Record<string, unknown> {
+  if (typeof checkpoint !== "object" || checkpoint === null || Array.isArray(checkpoint)) {
+    throw new Error(`${checkpointPath} must contain a JSON object.`);
+  }
+
+  return checkpoint as Record<string, unknown>;
+}
+
+async function resolveLocatedPhaseForMutation(
+  args: PhaseLookupArgs
+): Promise<{
+  projectRoot: string;
+  resolved: ResolvedPhaseLocation;
+}> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    throw new Error(located.reason ?? "Phase could not be resolved for a deterministic write.");
+  }
+
+  return {
+    projectRoot,
+    resolved
+  };
+}
+
 export async function blueprintRoadmapRead(
   args: RoadmapReadArgs = {}
 ): Promise<RoadmapReadResult> {
@@ -482,6 +659,266 @@ export async function blueprintPhaseResearchStatus(
   };
 }
 
+export async function blueprintPhaseArtifactRead(
+  args: PhaseArtifactReadArgs
+): Promise<PhaseArtifactReadResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      found: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      artifact: args.artifact,
+      path: null,
+      content: null,
+      reason: located.reason
+    };
+  }
+
+  const artifactPath = artifactPathFor(resolved, args.artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+
+  if (!(await pathExists(absolutePath))) {
+    return {
+      phaseFound: true,
+      found: false,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      artifact: args.artifact,
+      path: artifactPath,
+      content: null,
+      reason: `${artifactPath} does not exist yet.`
+    };
+  }
+
+  return {
+    phaseFound: true,
+    found: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: artifactPath,
+    content: await fs.readFile(absolutePath, "utf8"),
+    reason: null
+  };
+}
+
+export async function blueprintPhaseArtifactWrite(
+  args: PhaseArtifactWriteArgs
+): Promise<PhaseArtifactWriteResult> {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const artifactPath = artifactPathFor(resolved, args.artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+  const normalizedContent = normalizeTextContent(args.content);
+  const exists = await pathExists(absolutePath);
+  const warnings: string[] = [];
+
+  if (exists) {
+    const existingContent = await fs.readFile(absolutePath, "utf8");
+
+    if (existingContent === normalizedContent) {
+      warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        artifact: args.artifact,
+        path: artifactPath,
+        written: false,
+        created: false,
+        overwritten: false,
+        warnings
+      };
+    }
+
+    if (!(args.overwrite ?? false)) {
+      throw new Error(
+        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+      );
+    }
+  }
+
+  await ensureParentDirectory(absolutePath);
+  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+
+  if (exists) {
+    warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
+  }
+
+  return {
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: artifactPath,
+    written: true,
+    created: !exists,
+    overwritten: exists,
+    warnings
+  };
+}
+
+export async function blueprintPhaseCheckpointGet(
+  args: PhaseLookupArgs = {}
+): Promise<PhaseCheckpointGetResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      found: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      path: null,
+      checkpoint: null,
+      reason: located.reason
+    };
+  }
+
+  const checkpointPath = checkpointPathFor(resolved);
+  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+
+  if (!(await pathExists(absolutePath))) {
+    return {
+      phaseFound: true,
+      found: false,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      path: checkpointPath,
+      checkpoint: null,
+      reason: `${checkpointPath} does not exist.`
+    };
+  }
+
+  const parsed = ensureCheckpointObject(
+    JSON.parse(await fs.readFile(absolutePath, "utf8")) as unknown,
+    checkpointPath
+  );
+
+  return {
+    phaseFound: true,
+    found: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    path: checkpointPath,
+    checkpoint: parsed,
+    reason: null
+  };
+}
+
+export async function blueprintPhaseCheckpointPut(
+  args: PhaseCheckpointPutArgs
+): Promise<PhaseCheckpointPutResult> {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const checkpointPath = checkpointPathFor(resolved);
+  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+  const nextCheckpoint = ensureCheckpointObject(args.checkpoint, checkpointPath);
+  const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}\n`;
+  const warnings: string[] = [];
+
+  if (await pathExists(absolutePath)) {
+    const existingRaw = await fs.readFile(absolutePath, "utf8");
+
+    if (existingRaw === nextRaw) {
+      warnings.push(`Preserved existing discussion checkpoint because the content was unchanged.`);
+
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        path: checkpointPath,
+        updated: false,
+        warnings
+      };
+    }
+  }
+
+  await ensureParentDirectory(absolutePath);
+  await fs.writeFile(absolutePath, nextRaw, "utf8");
+
+  return {
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    path: checkpointPath,
+    updated: true,
+    warnings
+  };
+}
+
+export async function blueprintPhaseCheckpointDelete(
+  args: PhaseLookupArgs = {}
+): Promise<PhaseCheckpointDeleteResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      path: null,
+      deleted: false,
+      reason: located.reason
+    };
+  }
+
+  const checkpointPath = checkpointPathFor(resolved);
+  const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
+
+  if (!(await pathExists(absolutePath))) {
+    return {
+      phaseFound: true,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      path: checkpointPath,
+      deleted: false,
+      reason: `${checkpointPath} did not exist.`
+    };
+  }
+
+  await fs.rm(absolutePath, { force: true });
+
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    path: checkpointPath,
+    deleted: true,
+    reason: null
+  };
+}
+
 export const phaseToolDefinitions = [
   {
     name: "blueprint_roadmap_read",
@@ -514,5 +951,45 @@ export const phaseToolDefinitions = [
     inputSchema: phaseLookupInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseResearchStatus(args as PhaseLookupArgs)
+  },
+  {
+    name: "blueprint_phase_artifact_read",
+    description:
+      "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
+    inputSchema: phaseArtifactInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseArtifactRead(args as PhaseArtifactReadArgs)
+  },
+  {
+    name: "blueprint_phase_artifact_write",
+    description:
+      "Persist substantive phase-scoped discovery artifact content with overwrite protection.",
+    inputSchema: phaseArtifactWriteInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseArtifactWrite(args as PhaseArtifactWriteArgs)
+  },
+  {
+    name: "blueprint_phase_checkpoint_get",
+    description:
+      "Read the saved discuss-phase checkpoint for a phase without mutating repo state.",
+    inputSchema: phaseLookupInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseCheckpointGet(args as PhaseLookupArgs)
+  },
+  {
+    name: "blueprint_phase_checkpoint_put",
+    description:
+      "Persist a discuss-phase checkpoint JSON object for a phase.",
+    inputSchema: phaseCheckpointPutInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseCheckpointPut(args as PhaseCheckpointPutArgs)
+  },
+  {
+    name: "blueprint_phase_checkpoint_delete",
+    description:
+      "Delete the saved discuss-phase checkpoint for a phase after successful completion.",
+    inputSchema: phaseLookupInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseCheckpointDelete(args as PhaseLookupArgs)
   }
 ];

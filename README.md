@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026, and Phase 3 discovery work is now unblocked.
+This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime and the Phase 3 discovery commands now exist. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026, Phase 3 discovery shipped later that day, and the current repair focus is making those discovery commands fully substantive before any broader Phase 4 rollout.
 
 ## What Is Locked
 
@@ -11,13 +11,14 @@ This repository still carries the planning pack that locked the product and arch
 - Project state location: `.blueprint/`
 - Global mutable state location: `~/.gemini/blueprint/`
 - Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in `~/.gemini/blueprint/defaults.json`
-- Runtime architecture: Gemini commands, Gemini skills, Gemini subagents, advisory hooks, and an extension-bundled MCP server
+- Runtime architecture: Gemini commands, Gemini skills, Gemini subagents, an extension-bundled MCP server, and a deferred advisory-hook policy
 - Delivery approach: docs-first planning pack first, then granular command-by-command implementation with repair checkpoints when runtime and docs drift
 
 ## Current Status
 
-- Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
-- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; the next implementation slice is Phase 3 Phase Discovery
+- Shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
+- Phase 2.1 and Phase 2.2 both closed on 2026-04-11, and Phase 3 discovery shipped on 2026-04-11
+- Current repair slice: replace scaffold-only Phase 3 discovery persistence with substantive artifact writes and checkpoint-aware recovery
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
@@ -96,7 +97,7 @@ Wave 5 workspace and maintenance:
 ## Current Repo Contents
 
 - `docs/DECISIONS.md`: locked project decisions
-- `docs/DRIFT.MD`: closed ledger for the Phase 2.2 drift-repair checkpoint and the Phase 3 unblock decision
+- `docs/DRIFT.MD`: closed ledger for the Phase 2.2 drift-repair checkpoint plus notes on the shipped Phase 3 discovery follow-up
 - `docs/ARCHITECTURE.md`: extension structure and runtime boundaries
 - `docs/ARTIFACT-SCHEMA.md`: `.blueprint/`, normalized config schema, and global-state schema
 - `docs/MCP-TOOLS.md`: proposed MCP tool contracts, including scoped config reads and writes
@@ -126,10 +127,14 @@ These runtime files exist today:
 - `commands/blu/progress.toml`
 - `commands/blu/health.toml`
 - `commands/blu/map-codebase.toml`
+- `commands/blu/discuss-phase.toml`
+- `commands/blu/research-phase.toml`
+- `commands/blu/ui-phase.toml`
 - `skills/blueprint-router.md`
 - `skills/blueprint-bootstrap.md`
 - `skills/blueprint-governance.md`
 - `skills/blueprint-map.md`
+- `skills/blueprint-phase-discovery.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`
@@ -137,11 +142,20 @@ These runtime files exist today:
 - `agents/blueprint-checker.md`
 - `agents/blueprint-executor.md`
 - `agents/blueprint-verifier.md`
+- `agents/blueprint-researcher.md`
+- `agents/blueprint-ui-designer.md`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`
 - `src/mcp/tools/config.ts`
 - `src/mcp/tools/state.ts`
 - `src/mcp/tools/artifacts.ts`
+- `src/mcp/tools/phase.ts`
+
+Deferred but not yet shipped in this repair branch:
+
+- `src/hooks/`
+- `hooks/`
+- bundled hook code and hook fixture coverage
 
 ## Command Status
 
@@ -152,13 +166,13 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 - `blocked`: not safe to expose because required runtime pieces are missing
 - `planned`: documented future intent only
 
-## Next Implementation Slice
+## Current Repair Slice
 
-The next slice is Phase 3 Phase Discovery:
+The current slice hardens the shipped Phase 3 discovery runtime:
 
-1. Implement `discuss-phase` on the existing `.blueprint/` schema and phase-artifact contracts
-2. Implement `research-phase` with explicit research artifacts and bounded agent usage
-3. Implement `ui-phase` with the same thin-command, skill-led, MCP-owned contract style preserved in Phase 2.2
-4. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
+1. replace scaffold-only `discuss-phase`, `research-phase`, and `ui-phase` persistence with substantive artifact writes
+2. add checkpoint-aware recovery for `discuss-phase`
+3. keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is truthfully `implemented`
+4. defer hooks and any broader Phase 4 rollout until the discovery repair is complete
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

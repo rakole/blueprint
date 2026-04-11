@@ -6,7 +6,7 @@ Blueprint is a Gemini-native extension that preserves GSD's command-driven metho
 
 ## Extension Shape
 
-Current runtime layout, with later surfaces still allowed:
+Current shipped runtime layout, with deferred surfaces called out explicitly:
 
 ```text
 blueprint/
@@ -20,18 +20,16 @@ blueprint/
     *.md
   agents/
     *.md
-  hooks/
-    hooks.json
-    *.js
-  policies/
-    *.md
   src/
     mcp/
-    hooks/
-    shared/
-  dist/
-    ...
 ```
+
+Deferred, not yet shipped in the current repair branch:
+- `hooks/`
+- `policies/`
+- `src/hooks/`
+- `src/shared/`
+- `dist/`
 
 ## Runtime Layers
 
@@ -45,14 +43,14 @@ blueprint/
 
 - Skills hold the high-level orchestration instructions for command families.
 - Skills replace the "thin markdown command plus deep workflow file" split used by GSD.
-- Shipped Wave 0 skills today are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, and `blueprint-map`.
+- Shipped skills today are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, and `blueprint-phase-discovery`.
 - Later skill families stay planned until the commands that need them are actually shipped.
 
 ### 3. Subagents
 
 - Subagents handle bounded deep work: research, planning, execution, verification, code review, fixing, debugging, mapping, docs, UI, and security.
 - Agents are invoked only for bounded sidecar work or where the command contract explicitly requires them.
-- Shipped contract files currently cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, and `blueprint-verifier`.
+- Shipped contract files currently cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, `blueprint-verifier`, `blueprint-researcher`, and `blueprint-ui-designer`.
 
 ### 4. MCP Server
 
@@ -62,8 +60,8 @@ blueprint/
 
 ### 5. Hooks
 
-- Hooks are advisory only in v1.
-- Hooks should improve safety and reduce repeated model mistakes, but they should not become a hidden execution engine.
+- Hooks are advisory only in v1, and hook code is still deferred in the current repair branch.
+- Hooks should improve safety and reduce repeated model mistakes, but they should not become a hidden execution engine or a hidden prerequisite for Phase 3 discovery.
 
 ## Command Dispatch Model
 

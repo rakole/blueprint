@@ -5,8 +5,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
-import { blueprintPhaseResearchStatus } from "../src/mcp/tools/phase.js";
+import {
+  blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactWrite,
+  blueprintPhaseResearchStatus
+} from "../src/mcp/tools/phase.js";
 
 const repoRoot = process.cwd();
 
@@ -65,6 +68,8 @@ test("research-phase command references only registered tool names and safe rout
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
     "blueprint_artifact_scaffold",
     "blueprint_state_update"
   ];
@@ -79,7 +84,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.doesNotMatch(commandFile, /\/blu:plan-phase/);
 });
 
-test("phase research status reports artifact permutations across context, research, and UI spec", async (t) => {
+test("phase research status reports substantive context, research, and UI-spec artifact permutations", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -87,27 +92,49 @@ test("phase research status reports artifact permutations across context, resear
 
   const empty = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
 
-  await blueprintArtifactScaffold({
+  await blueprintPhaseArtifactWrite({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+    phase: "3",
+    artifact: "context",
+    content: `# Phase 03 Context
+
+## Decisions
+- Research is required before planning because the implementation surface is still uncertain.
+`
   });
   const contextOnly = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "03" });
 
-  await blueprintArtifactScaffold({
+  const researchWrite = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-RESEARCH.md"]
+    phase: "03",
+    artifact: "research",
+    content: `# Phase 03 Research
+
+## Findings
+- Dedicated phase-artifact writes remove dependence on scaffold placeholders.
+
+## Recommendations
+- Preserve overwrite confirmation when replacing substantive research.
+`
   });
   const withResearch = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
 
-  await blueprintArtifactScaffold({
+  await blueprintPhaseArtifactWrite({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"]
+    phase: "3",
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- Skip rationale
+`
   });
   const withUi = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
-  const researchBody = await readFile(
-    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
-    "utf8"
-  );
+  const researchBody = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "03",
+    artifact: "research"
+  });
 
   assert.equal(empty.hasContext, false);
   assert.equal(empty.hasResearch, false);
@@ -115,8 +142,20 @@ test("phase research status reports artifact permutations across context, resear
   assert.equal(contextOnly.hasContext, true);
   assert.equal(contextOnly.hasResearch, false);
   assert.equal(contextOnly.hasUiSpec, false);
+  assert.equal(researchWrite.written, true);
   assert.equal(withResearch.hasResearch, true);
   assert.equal(withResearch.researchPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md");
   assert.equal(withUi.hasUiSpec, true);
-  assert.match(researchBody, /Recommendations/);
+  assert.equal(researchBody.found, true);
+  assert.match(researchBody.content ?? "", /Recommendations/);
+
+  await assert.rejects(
+    blueprintPhaseArtifactWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "research",
+      content: "# Replaced\n"
+    }),
+    /overwrite confirmation/i
+  );
 });
