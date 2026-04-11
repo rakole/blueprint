@@ -12,8 +12,10 @@ import {
   inspectBootstrapArtifacts,
   resolveBlueprintPath,
   toRepoRelativePath,
+  validatePlanArtifactContent,
   validateResearchArtifactContent
 } from "./artifacts.js";
+import { blueprintConfigGet } from "./config.js";
 
 export type BlueprintState = {
   projectStatus: string;
@@ -80,6 +82,7 @@ type CurrentPhaseArtifactStatus = {
   hasContext: boolean;
   hasResearch: boolean;
   hasUiSpec: boolean;
+  hasPlans: boolean;
   researchValid: boolean | null;
   blockers: string[];
   warnings: string[];
@@ -88,6 +91,11 @@ type CurrentPhaseArtifactStatus = {
 type BootstrapRoutingSignals = {
   brownfieldDetected: boolean;
   codebaseMapped: boolean;
+};
+
+type WorkflowRoutingSignals = {
+  researchEnabled: boolean;
+  uiPhaseEnabled: boolean;
 };
 
 const DEFAULT_STATE: BlueprintState = {
@@ -247,6 +255,7 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasPlans: false,
       researchValid: null,
       blockers,
       warnings
@@ -287,6 +296,7 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasPlans: false,
       researchValid: null,
       blockers,
       warnings
@@ -313,6 +323,7 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasPlans: false,
       researchValid: null,
       blockers,
       warnings
@@ -331,12 +342,15 @@ async function inspectCurrentPhaseArtifacts(
   const hasContext = phaseArtifacts.has(contextPath);
   const hasResearch = phaseArtifacts.has(researchPath);
   const hasUiSpec = phaseArtifacts.has(uiSpecPath);
+  const planPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const hasPlans = planPaths.length > 0;
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) =>
       artifact.endsWith(`${phasePrefix}-DISCUSSION-LOG.md`) ||
       artifact.endsWith(`${phasePrefix}-DISCUSS-CHECKPOINT.json`) ||
       artifact.endsWith(`${phasePrefix}-RESEARCH.md`) ||
-      artifact.endsWith(`${phasePrefix}-UI-SPEC.md`)
+      artifact.endsWith(`${phasePrefix}-UI-SPEC.md`) ||
+      artifact.endsWith("-PLAN.md")
   );
   let researchValid: boolean | null = null;
 
@@ -362,6 +376,20 @@ async function inspectCurrentPhaseArtifacts(
     );
   }
 
+  for (const planPath of planPaths) {
+    try {
+      const raw = await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+      const validation = validatePlanArtifactContent(raw, normalizedPhase);
+
+      for (const issue of validation.issues) {
+        warnings.push(`${planPath}: ${issue}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`${planPath}: ${message}`);
+    }
+  }
+
   return {
     currentPhase,
     phaseDir,
@@ -372,6 +400,7 @@ async function inspectCurrentPhaseArtifacts(
     hasContext,
     hasResearch,
     hasUiSpec,
+    hasPlans,
     researchValid,
     blockers,
     warnings
@@ -411,6 +440,7 @@ async function deriveNextAction(args: {
   currentPhase: string | null;
   phaseArtifacts: CurrentPhaseArtifactStatus;
   bootstrapRouting: BootstrapRoutingSignals;
+  workflow: WorkflowRoutingSignals;
 }): Promise<string> {
   if (args.projectStatus === "uninitialized") {
     return "Run /blu:new-project";
@@ -432,6 +462,7 @@ async function deriveNextAction(args: {
   const discussPhaseCommand = "/blu:discuss-phase";
   const researchPhaseCommand = "/blu:research-phase";
   const uiPhaseCommand = "/blu:ui-phase";
+  const planPhaseCommand = "/blu:plan-phase";
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return "Run /blu:progress to review the next safe Blueprint action";
@@ -442,6 +473,7 @@ async function deriveNextAction(args: {
   }
 
   if (
+    args.workflow.researchEnabled &&
     args.phaseArtifacts.hasContext &&
     !args.phaseArtifacts.hasResearch &&
     implementedCommands.has(researchPhaseCommand)
@@ -460,10 +492,26 @@ async function deriveNextAction(args: {
   if (
     args.phaseArtifacts.hasResearch &&
     args.phaseArtifacts.researchValid === true &&
+    args.workflow.uiPhaseEnabled &&
     !args.phaseArtifacts.hasUiSpec &&
     implementedCommands.has(uiPhaseCommand)
   ) {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
+  }
+
+  const researchReady =
+    !args.workflow.researchEnabled ||
+    (args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid !== false);
+  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUiSpec;
+
+  if (
+    args.phaseArtifacts.hasContext &&
+    researchReady &&
+    uiReady &&
+    !args.phaseArtifacts.hasPlans &&
+    implementedCommands.has(planPhaseCommand)
+  ) {
+    return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
   }
 
   return args.currentPhase
@@ -513,6 +561,23 @@ async function buildSyncedState(projectRoot: string): Promise<{
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
     codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
   };
+  let workflowRouting: WorkflowRoutingSignals = {
+    researchEnabled: true,
+    uiPhaseEnabled: true
+  };
+
+  try {
+    const effectiveConfig = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    workflowRouting = {
+      researchEnabled: effectiveConfig.config.workflow.research,
+      uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase
+    };
+  } catch {
+    // Keep the hard-coded Blueprint defaults when config cannot be read.
+  }
   const blockers =
     projectStatus === "partial"
       ? [
@@ -538,7 +603,8 @@ async function buildSyncedState(projectRoot: string): Promise<{
         blockers,
         currentPhase,
         phaseArtifacts: currentPhaseArtifacts,
-        bootstrapRouting
+        bootstrapRouting,
+        workflow: workflowRouting
       }),
       blockers,
       lastUpdated: new Date().toISOString()

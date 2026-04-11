@@ -13,7 +13,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 3. `ui-phase`
    Writes `XX-UI-SPEC.md` for frontend-heavy work, or records an explicit UI-skip rationale in `XX-UI-SPEC.md` when UI work is intentionally out of scope.
 4. `plan-phase`
-   Writes one or more `XX-YY-PLAN.md` files and updates `STATE.md`.
+   Uses the plan index plus dedicated plan read/write tools to persist one or more `XX-YY-PLAN.md` files and updates `STATE.md`.
 5. `execute-phase`
    Produces implementation changes plus `XX-YY-SUMMARY.md` execution evidence.
 6. `validate-phase`

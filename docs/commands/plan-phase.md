@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`plan-phase` carries forward the GSD intent to create detailed phase plan (PLAN.md) with verification loop. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`plan-phase` carries forward the GSD intent to create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying Gemini-native.
 
 
 ## Command Path And Examples
@@ -24,19 +24,20 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- The target phase must exist and usually should already have context.
+- The target phase must exist and usually should already have context and research.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Writes the declared Blueprint artifacts and updates `.blueprint/STATE.md` through MCP.
 
 
 ## Blueprint And Global State Reads
 
 
+- `.blueprint/STATE.md`
 - `.blueprint/config.json`
 
 
@@ -55,8 +56,11 @@
 - `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
+- `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_plan_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -100,6 +104,7 @@
 
 
 - Confirm destructive replanning when plans already exist.
+- Prefer reusing the existing plan index and reading existing plan files before creating replacements.
 
 
 ## Edge Cases
@@ -107,6 +112,7 @@
 
 - The target phase is omitted or ambiguous while multiple active phases exist.
 - Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
+- Existing plan files conflict with the current roadmap or are missing required wave coverage.
 
 
 ## Failure Modes And Recovery
@@ -123,6 +129,7 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Uses the plan index plus dedicated plan read/write tools to persist actual plan content instead of scaffold-only placeholders.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Derives research, plan-check, Nyquist, UI-gate, and planning-confirmation behavior from normalized effective config instead of re-deriving defaults inside the command.
@@ -134,6 +141,7 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Config-conditioned planning fixture with research or UI gating disabled.
+- Existing-plan overwrite and plan-index refresh fixture.
 - Direct `plan-phase` happy-path fixture.
 
 
