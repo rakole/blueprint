@@ -24,7 +24,9 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- The target phase must exist and include UI work.
+- The target phase must exist.
+- Frontend-heavy phases should produce a UI contract.
+- Backend-only or intentionally skipped phases should record the rationale in `XX-UI-SPEC.md` instead of inventing a second phase artifact.
 
 
 ## Outputs
@@ -37,13 +39,13 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- effective Blueprint config through `blueprint_config_get`
 
 
 ## Blueprint And Global State Writes
 
 
-- `phase XX-UI-SPEC.md`
+- `phase XX-UI-SPEC.md` for either a UI contract or an explicit UI-skip rationale
 - `.blueprint/STATE.md`
 
 
@@ -52,6 +54,7 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -94,6 +97,9 @@
 
 
 - Confirm replacement when a UI spec already exists.
+- Honor effective-config gates before writing:
+- `workflow.ui_phase=false` should produce a documented skip rationale instead of a generated UI contract.
+- `workflow.ui_safety_gate=true` should require an explicit rationale when UI work is skipped.
 
 
 ## Edge Cases
@@ -118,6 +124,8 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Uses `XX-UI-SPEC.md` as the single phase-scoped durable output, whether the result is a full UI contract or a documented skip rationale.
+- Respects effective-config UI gates before generating or skipping UI output.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 

@@ -10,14 +10,14 @@
 ## Purpose
 
 
-`discuss-phase` carries forward the GSD intent to gather phase context through adaptive questioning before planning. Use --auto to skip interactive questions (Claude picks recommended defaults). Use --chain for interactive discuss followed by automatic plan+execute. Use --power for bulk question generation into a file-based UI (answer at your own pace).. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`discuss-phase` carries forward the GSD intent to gather phase context through adaptive questioning before planning. The initial Blueprint Phase 3 slice ships the core context-capture path first; later continuations such as automatic chaining or file-based bulk-question flows remain out of scope until their downstream runtime substrate exists. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
 - Gemini command path: `/blu:discuss-phase`
 - Root router form: `/blu discuss-phase`
-- Argument hint: `<phase> [--auto] [--chain] [--batch] [--analyze] [--text] [--power]`
+- Argument hint: `<phase>`
 - `/blu:discuss-phase 3`
 - `/blu discuss-phase`
 
@@ -95,6 +95,7 @@
 
 
 - Confirm overwrite when a context artifact already exists.
+- Do not advertise follow-on execution or planning flows as runnable until those commands are implemented in the runtime catalog.
 
 
 ## Edge Cases

@@ -19,7 +19,7 @@
 
 Phase 3 should be delivered as a strict Wave 1 substrate slice: introduce missing phase MCP tools first, then ship each discovery command with explicit command contracts, deterministic artifact writes, and regression tests that keep router exposure aligned with runtime truth.
 
-Current runtime blockers are concrete and already visible in `blueprint_command_catalog`: missing command manifests, missing `blueprint-phase-discovery` skill, and missing phase tool family (`blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, `blueprint_phase_research_status`).
+Current runtime blockers are concrete and already visible in `blueprint_command_catalog`: missing command manifests, missing `blueprint-phase-discovery` skill, and missing phase tool family (`blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, `blueprint_phase_research_status`). Contract-completeness blockers also remain: the bounded-agent files for `blueprint-researcher` and `blueprint-ui-designer` are still absent, and the Phase 3 plans should not treat those as optional paperwork after Phase 3 implementation has already begun.
 
 The key implementation pattern is to keep commands thin and put all durable state behavior in MCP tools. For this phase, that means adding a dedicated `src/mcp/tools/phase.ts` family and extending artifact scaffolding for phase artifacts instead of embedding direct file writes in command prompts.
 
@@ -29,6 +29,7 @@ The key implementation pattern is to keep commands thin and put all durable stat
 - Keep `.blueprint/` as runtime source of truth and avoid introducing `.planning/` semantics into product runtime.
 - Keep command contracts aligned across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, and per-command specs as each command moves from planned to implemented.
 - Keep Phase 4+ commands blocked after this phase; only Phase 3 discovery commands should become implemented in this slice.
+- Keep `XX-UI-SPEC.md` as the single locked phase-scoped UI artifact; a skipped UI path should write rationale there rather than inventing a second artifact.
 
 ## Recommended Delivery Shape
 
@@ -38,13 +39,14 @@ The key implementation pattern is to keep commands thin and put all durable stat
 - Expand artifact scaffolding for `XX-CONTEXT.md`, `XX-DISCUSSION-LOG.md`, `XX-RESEARCH.md`, `XX-UI-SPEC.md` templates.
 
 2. Command-by-command shipping:
-- Plan `03-01`: `discuss-phase` + phase substrate.
-- Plan `03-02`: `research-phase` orchestration and tests.
-- Plan `03-03`: `ui-phase` orchestration, UI-safety integration, and catalog/documentation status flip for Phase 3 commands.
+- Plan `03-01`: `discuss-phase` + phase substrate + command-catalog rollout update for `discuss-phase`.
+- Plan `03-02`: `research-phase` orchestration + bounded researcher agent contract + command-catalog rollout update for `research-phase`.
+- Plan `03-03`: `ui-phase` orchestration + bounded UI agent contract + final discovery-skill/documentation rollout updates.
 
 3. Regression lock:
 - Add focused tests for phase tools and each command manifest contract.
-- Update command-catalog regression expected implemented set to include only shipped Phase 3 commands.
+- Update command-catalog regression expected implemented set as each discovery command becomes real.
+- Flip the shared `blueprint-phase-discovery` skill-family status only after the shared skill file and the three core discovery commands are all present.
 
 ## Architecture Patterns
 
@@ -68,12 +70,15 @@ Each command should scaffold/validate before orchestration:
 - `workflow.ui_phase=false` -> skip generation with explicit reason
 - `workflow.ui_safety_gate=true` -> require explicit UI-skip rationale when no UI work is detected
 - defaults and precedence come from `blueprint_config_get` effective scope
+- the explicit skip rationale lives in `XX-UI-SPEC.md`, preserving the locked artifact schema
 
 ## Anti-Patterns To Avoid
 
 - Writing phase artifacts directly from command prompt text without MCP ownership.
 - Marking command catalog rows implemented without manifest + skill + required tool substrate.
+- Deferring command-catalog rollout updates until the end of Phase 3 after individual commands have already become runtime-implemented.
 - Letting Phase 3 command shipping silently expose other blocked Wave 1 commands (`plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `next`, `pause-work`, `resume-work`).
+- Inventing a separate UI-skip artifact instead of using the locked `XX-UI-SPEC.md` surface.
 - Reusing generic artifact scaffolding templates that omit phase-numbered filenames or required sections.
 
 ## Validation Architecture
@@ -120,4 +125,3 @@ Each command should scaffold/validate before orchestration:
 - `src/mcp/tools/artifacts.ts`
 - `src/mcp/tools/state.ts`
 - `tests/command-catalog.test.ts`
-

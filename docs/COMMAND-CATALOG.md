@@ -50,7 +50,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |
 | `settings` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json; optional ~/.gemini/blueprint/defaults.json` | `Low: config-only mutation inside repo config plus optional user defaults.` |
 | `ship` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `ship report in .blueprint/reports/; optional PR body file or state note` | `High: remote and git mutation path.` |
-| `ui-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-UI-SPEC.md; .blueprint/STATE.md` | `Low: writes a UI design contract only.` |
+| `ui-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` | `phase XX-UI-SPEC.md (UI contract or explicit skip rationale); .blueprint/STATE.md` | `Low: writes a UI contract or documented skip rationale only.` |
 | `ui-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-UI-REVIEW.md` | `Low: review artifact only.` |
 | `undo` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `git history through revert operations; undo report in .blueprint/reports/` | `High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.` |
 | `update` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `update plan metadata under ~/.gemini/blueprint/updates/; human-readable update checklist report` | `Low: advisory only; no in-session self-update.` |

@@ -2,7 +2,7 @@
 
 ## Shipped Skills
 
-Primary command lists are canonical ownership metadata and must stay consistent with `docs/COMMAND-CATALOG.md` and `docs/commands/*.md`.
+Primary command lists are canonical ownership metadata and must stay consistent with `docs/COMMAND-CATALOG.md` and `docs/commands/*.md`. The `Status` column here is skill-family/file rollout metadata; command-level availability remains canonical in `docs/COMMAND-CATALOG.md` and the live `blueprint_command_catalog`.
 
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|

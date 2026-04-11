@@ -96,6 +96,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - implement `discuss-phase`, then `research-phase`, then `ui-phase`
 - keep planned-only commands blocked in the runtime catalog without changing status semantics
 - keep command ownership metadata aligned across the catalog, skills inventory, migration matrix, and command specs
+- keep command-catalog rollout aligned with each shipped Phase 3 command, while the shared discovery-skill family status flips only once the Phase 3 discovery slice is fully landed
 - keep regression coverage in place so the closed Phase 2.2 guarantees fail fast if they drift
 
 ## Guardrail Snapshot
@@ -114,4 +115,5 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `map-codebase` now owns a seven-document codebase bundle: `STACK`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `INTEGRATIONS`, and `CONCERNS`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11
 - Canonical future-command ownership is `next` and `do` on `blueprint-router`, `pause-work` and `resume-work` on `blueprint-governance`, and `plan-milestone-gaps` on `blueprint-roadmap-admin`
+- `ui-phase` keeps a single declared phase artifact: `XX-UI-SPEC.md`, which may hold either a UI contract or an explicit skip rationale
 - Future sessions may proceed with Phase 3 implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist

@@ -11,7 +11,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 2. `research-phase`
    Writes `XX-RESEARCH.md` when technical uncertainty or integration risk exists.
 3. `ui-phase`
-   Writes `XX-UI-SPEC.md` for frontend-heavy work, or records an explicit UI-skip rationale.
+   Writes `XX-UI-SPEC.md` for frontend-heavy work, or records an explicit UI-skip rationale in `XX-UI-SPEC.md` when UI work is intentionally out of scope.
 4. `plan-phase`
    Writes one or more `XX-YY-PLAN.md` files and updates `STATE.md`.
 5. `execute-phase`

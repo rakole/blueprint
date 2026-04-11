@@ -183,7 +183,7 @@ Auxiliary phase artifacts:
 - `XX-REVIEW-FIX.md`
 - `XX-REVIEWS.md`
 - `XX-SECURITY.md`
-- `XX-UI-SPEC.md`
+- `XX-UI-SPEC.md` (used for either a UI design contract or an explicit rationale that UI work was intentionally skipped)
 - `XX-UI-REVIEW.md`
 
 ## Supporting Trees
