@@ -259,6 +259,31 @@ Used for non-phase-specific outputs and command logs:
 - update and patch reports
 - quick-task reports
 
+### `reports/pause-work-latest.md`
+
+Purpose:
+- durable human-readable and machine-parseable pause handoff for the current Blueprint work context
+- canonical resumability input for future `resume-work`
+
+Locked fields and sections:
+- frontmatter keys:
+  `report_type`, `schema_version`, `status`, `timestamp`, `project_status`, `current_milestone`, `current_phase`, `active_command`
+- `## Current State`
+- `## Completed Work`
+- `## Remaining Work`
+- `## Decisions`
+- `## Blockers`
+- `## Human Actions Pending`
+- `## Modified Files`
+- `## Blueprint Snapshot`
+- `## Next Action`
+- `## Context Notes`
+
+Contract notes:
+- `pause-work` owns this file and writes it only through MCP.
+- Replacing an existing handoff requires explicit confirmation.
+- The file should stay single-source-of-truth for the latest paused state rather than creating hidden sidecar state outside `.blueprint/`.
+
 ### `backlog/`
 
 Planned contents:

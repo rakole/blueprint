@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`pause-work` carries forward the GSD intent to create context handoff when pausing work mid-phase. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`pause-work` carries forward the GSD intent to create context handoff when pausing work mid-phase. In Blueprint it stays Gemini-native, persists the handoff through dedicated MCP tools, and keeps follow-up routing inside the implemented Blueprint surface.
 
 
 ## Command Path And Examples
@@ -43,7 +43,7 @@
 ## Blueprint And Global State Writes
 
 
-- `handoff report in .blueprint/reports/`
+- `.blueprint/reports/pause-work-latest.md`
 - `.blueprint/STATE.md`
 
 
@@ -52,6 +52,8 @@
 
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_pause_handoff_get` -> `{found, path, handoff, reason}`
+- `blueprint_pause_handoff_write` -> `{path, written, created, overwritten, status, handoff}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -96,7 +98,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm replacement when an active handoff already exists.
+- Confirm replacement when `.blueprint/reports/pause-work-latest.md` already exists and the user has not clearly asked to replace it.
 
 
 ## Edge Cases
@@ -109,7 +111,7 @@
 ## Failure Modes And Recovery
 
 
-- Explain exactly which phase artifact is missing and which command creates it.
+- Explain exactly which Blueprint prerequisite is missing and which command creates or repairs it.
 - Write follow-up state back into `.blueprint/` instead of dropping context on failure.
 
 
@@ -120,6 +122,8 @@
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Captures resumable context including current state, completed work, remaining work, decisions, blockers, pending human actions, modified files, context notes, and the first next action.
+- Does not create an automatic git commit; Blueprint keeps pause persistence in MCP-owned artifacts rather than silent VCS writes.
 - Leaves unrelated repo files untouched.
 
 
@@ -135,4 +139,5 @@
 
 
 - Upstream command file: `commands/gsd/pause-work.md`
-- Upstream workflow status: GSD has an upstream workflow file
+- Upstream workflow status: GSD has an upstream workflow file and Blueprint audited it before shipping this contract.
+- Blueprint delta: preserve the upstream resumability intent, but keep persistence in `.blueprint/` and do not perform an automatic WIP git commit.

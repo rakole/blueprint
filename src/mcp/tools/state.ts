@@ -4,6 +4,7 @@ import * as z from "zod/v4";
 
 import {
   BLUEPRINT_DIR,
+  BLUEPRINT_REPORTS_PATH,
   blueprintPathExists,
   BLUEPRINT_STATE_PATH,
   ensureParentDirectory,
@@ -52,6 +53,68 @@ type StateLoadResult = {
     nextAction: string;
     hasBlockers: boolean;
   };
+};
+
+type PauseHandoffRecord = {
+  reportType: "pause-work";
+  schemaVersion: 1;
+  status: "paused";
+  timestamp: string;
+  projectStatus: string;
+  currentMilestone: string | null;
+  currentPhase: string | null;
+  activeCommand: string;
+  currentState: string;
+  completedWork: string[];
+  remainingWork: string[];
+  decisions: string[];
+  blockers: string[];
+  humanActionsPending: string[];
+  modifiedFiles: string[];
+  contextNotes: string;
+  nextAction: string;
+  artifactSnapshot: {
+    core: string[];
+    phaseArtifacts: string[];
+    reports: string[];
+    missing: string[];
+  };
+};
+
+type PauseHandoffGetArgs = {
+  cwd?: string;
+};
+
+type PauseHandoffWriteArgs = {
+  cwd?: string;
+  currentState: string;
+  completedWork?: string[];
+  remainingWork?: string[];
+  decisions?: string[];
+  blockers?: string[];
+  humanActionsPending?: string[];
+  modifiedFiles?: string[];
+  contextNotes?: string;
+  nextAction?: string;
+  overwrite?: boolean;
+};
+
+type PauseHandoffGetResult = {
+  found: boolean;
+  path: string | null;
+  handoff: PauseHandoffRecord | null;
+  reason: string | null;
+  warnings: string[];
+};
+
+type PauseHandoffWriteResult = {
+  path: string;
+  written: boolean;
+  created: boolean;
+  overwritten: boolean;
+  status: "created" | "updated" | "reused";
+  handoff: PauseHandoffRecord;
+  warnings: string[];
 };
 
 type StateSyncArgs = {
@@ -116,6 +179,10 @@ const DEFAULT_STATE: BlueprintState = {
   lastUpdated: new Date(0).toISOString()
 };
 
+const PAUSE_HANDOFF_REPORT_PATH = `${BLUEPRINT_REPORTS_PATH}/pause-work-latest.md`;
+const PAUSE_WORK_COMMAND = "/blu:pause-work";
+const PAUSE_HANDOFF_BLOCKER_PREFIX = "Paused handoff is active at ";
+
 const stateUpdateInputSchema = {
   cwd: z.string().optional(),
   base: z.enum(["stored", "synced"]).optional(),
@@ -134,11 +201,261 @@ const stateUpdateInputSchema = {
 const stateLoadInputSchema = {
   cwd: z.string().optional()
 };
+const pauseHandoffGetInputSchema = {
+  cwd: z.string().optional()
+};
+const pauseHandoffWriteInputSchema = {
+  cwd: z.string().optional(),
+  currentState: z.string(),
+  completedWork: z.array(z.string()).optional(),
+  remainingWork: z.array(z.string()).optional(),
+  decisions: z.array(z.string()).optional(),
+  blockers: z.array(z.string()).optional(),
+  humanActionsPending: z.array(z.string()).optional(),
+  modifiedFiles: z.array(z.string()).optional(),
+  contextNotes: z.string().optional(),
+  nextAction: z.string().optional(),
+  overwrite: z.boolean().optional()
+};
 const stateSyncInputSchema = {
   cwd: z.string().optional()
 };
 
 let implementedCommandNamesPromise: Promise<Set<string>> | null = null;
+
+function normalizeTextContent(content: string): string {
+  return `${content.replace(/\r\n/g, "\n").trimEnd()}\n`;
+}
+
+function normalizeLines(values: string[] | undefined): string[] {
+  return [...new Set(
+    (values ?? [])
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+  )];
+}
+
+function normalizeParagraph(value: string | undefined, fallback = "None recorded."): string {
+  const normalized = value?.trim().replace(/\r\n/g, "\n");
+  return normalized && normalized.length > 0 ? normalized : fallback;
+}
+
+function parseFrontmatter(raw: string): Record<string, string> {
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n?/);
+
+  if (!match) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    match[1]
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && line.includes(":"))
+      .map((line) => {
+        const separator = line.indexOf(":");
+        return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+      })
+  );
+}
+
+function extractMarkdownSection(markdown: string, heading: string): string {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+
+  return match?.[1]?.trim() ?? "";
+}
+
+function parseBulletSection(markdown: string, heading: string): string[] {
+  const section = extractMarkdownSection(markdown, heading);
+
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter((line) => line.length > 0 && line.toLowerCase() !== "none");
+}
+
+function renderBulletSection(title: string, values: string[]): string {
+  const lines = values.length === 0 ? "- none" : values.map((value) => `- ${value}`).join("\n");
+  return `## ${title}\n\n${lines}\n`;
+}
+
+function renderPauseHandoff(record: PauseHandoffRecord): string {
+  const phaseValue = record.currentPhase ?? "none";
+  const milestoneValue = record.currentMilestone ?? "none";
+  const reports = record.artifactSnapshot.reports.join(", ") || "none";
+  const coreArtifacts = record.artifactSnapshot.core.join(", ") || "none";
+  const phaseArtifacts = record.artifactSnapshot.phaseArtifacts.join(", ") || "none";
+  const missingArtifacts = record.artifactSnapshot.missing.join(", ") || "none";
+
+  return normalizeTextContent(`---
+report_type: ${record.reportType}
+schema_version: ${record.schemaVersion}
+status: ${record.status}
+timestamp: ${record.timestamp}
+project_status: ${record.projectStatus}
+current_milestone: ${milestoneValue}
+current_phase: ${phaseValue}
+active_command: ${record.activeCommand}
+---
+
+# Pause Work Handoff
+
+## Current State
+
+${record.currentState}
+
+${renderBulletSection("Completed Work", record.completedWork)}
+${renderBulletSection("Remaining Work", record.remainingWork)}
+${renderBulletSection("Decisions", record.decisions)}
+${renderBulletSection("Blockers", record.blockers)}
+${renderBulletSection("Human Actions Pending", record.humanActionsPending)}
+${renderBulletSection("Modified Files", record.modifiedFiles)}
+## Blueprint Snapshot
+
+- Core artifacts: ${coreArtifacts}
+- Phase artifacts: ${phaseArtifacts}
+- Existing reports: ${reports}
+- Missing artifacts: ${missingArtifacts}
+
+## Next Action
+
+${record.nextAction}
+
+## Context Notes
+
+${record.contextNotes}
+`);
+}
+
+function parseSnapshotLine(section: string, label: string): string[] {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = section.match(new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "m"));
+  const value = match?.[1]?.trim() ?? "none";
+
+  return value === "none"
+    ? []
+    : value
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+}
+
+function parsePauseHandoff(raw: string): PauseHandoffRecord {
+  const frontmatter = parseFrontmatter(raw);
+  const snapshot = extractMarkdownSection(raw, "Blueprint Snapshot");
+
+  return {
+    reportType: "pause-work",
+    schemaVersion: 1,
+    status: "paused",
+    timestamp: frontmatter.timestamp ?? new Date(0).toISOString(),
+    projectStatus: frontmatter.project_status ?? DEFAULT_STATE.projectStatus,
+    currentMilestone:
+      frontmatter.current_milestone && frontmatter.current_milestone !== "none"
+        ? frontmatter.current_milestone
+        : null,
+    currentPhase:
+      frontmatter.current_phase && frontmatter.current_phase !== "none"
+        ? frontmatter.current_phase
+        : null,
+    activeCommand: frontmatter.active_command ?? PAUSE_WORK_COMMAND,
+    currentState: normalizeParagraph(extractMarkdownSection(raw, "Current State")),
+    completedWork: parseBulletSection(raw, "Completed Work"),
+    remainingWork: parseBulletSection(raw, "Remaining Work"),
+    decisions: parseBulletSection(raw, "Decisions"),
+    blockers: parseBulletSection(raw, "Blockers"),
+    humanActionsPending: parseBulletSection(raw, "Human Actions Pending"),
+    modifiedFiles: parseBulletSection(raw, "Modified Files"),
+    nextAction: normalizeParagraph(extractMarkdownSection(raw, "Next Action")),
+    contextNotes: normalizeParagraph(extractMarkdownSection(raw, "Context Notes")),
+    artifactSnapshot: {
+      core: parseSnapshotLine(snapshot, "Core artifacts"),
+      phaseArtifacts: parseSnapshotLine(snapshot, "Phase artifacts"),
+      reports: parseSnapshotLine(snapshot, "Existing reports"),
+      missing: parseSnapshotLine(snapshot, "Missing artifacts")
+    }
+  };
+}
+
+async function loadPauseHandoffReport(projectRoot: string): Promise<PauseHandoffGetResult> {
+  const absolutePath = resolveBlueprintPath(projectRoot, PAUSE_HANDOFF_REPORT_PATH);
+
+  if (!(await blueprintPathExists(absolutePath))) {
+    return {
+      found: false,
+      path: PAUSE_HANDOFF_REPORT_PATH,
+      handoff: null,
+      reason: `${PAUSE_HANDOFF_REPORT_PATH} does not exist.`,
+      warnings: []
+    };
+  }
+
+  const raw = await fs.readFile(absolutePath, "utf8");
+
+  return {
+    found: true,
+    path: PAUSE_HANDOFF_REPORT_PATH,
+    handoff: parsePauseHandoff(raw),
+    reason: null,
+    warnings: []
+  };
+}
+
+function parseTimestamp(value: string | null | undefined): number {
+  const parsed = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+function isPauseHandoffActive(
+  handoff: PauseHandoffRecord | null,
+  existingState: BlueprintState
+): boolean {
+  if (!handoff) {
+    return false;
+  }
+
+  return (
+    existingState.activeCommand === PAUSE_WORK_COMMAND ||
+    parseTimestamp(handoff.timestamp) >= parseTimestamp(existingState.lastUpdated)
+  );
+}
+
+function comparablePauseHandoffRecord(record: PauseHandoffRecord): Record<string, unknown> {
+  return {
+    reportType: record.reportType,
+    schemaVersion: record.schemaVersion,
+    status: record.status,
+    projectStatus: record.projectStatus,
+    currentMilestone: record.currentMilestone,
+    currentPhase: record.currentPhase,
+    activeCommand: record.activeCommand,
+    currentState: record.currentState,
+    completedWork: record.completedWork,
+    remainingWork: record.remainingWork,
+    decisions: record.decisions,
+    blockers: record.blockers,
+    humanActionsPending: record.humanActionsPending,
+    modifiedFiles: record.modifiedFiles,
+    contextNotes: record.contextNotes,
+    nextAction: record.nextAction
+  };
+}
+
+function buildPauseHandoffNextAction(
+  currentPhase: string | null,
+  handoff: PauseHandoffRecord
+): string {
+  const phaseLabel = currentPhase ?? handoff.currentPhase;
+
+  return phaseLabel
+    ? `Run /blu:progress to review the saved pause handoff for Phase ${phaseLabel} and the next safe implemented action`
+    : "Run /blu:progress to review the saved pause handoff and the next safe implemented action";
+}
 
 function renderStateDocument(state: BlueprintState): string {
   const blockers =
@@ -631,6 +948,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const existingState = await loadBlueprintState(projectRoot);
+  const pauseHandoff = await loadPauseHandoffReport(projectRoot);
   const roadmapSignals = await readRoadmapSignals(projectRoot);
   const warnings: string[] = [];
 
@@ -655,7 +973,9 @@ async function buildSyncedState(projectRoot: string): Promise<{
     (artifact) => `Missing ${artifact}`
   );
   const nonStructuralBlockers = existingState.blockers.filter(
-    (blocker) => !blocker.startsWith("Missing .blueprint/")
+    (blocker) =>
+      !blocker.startsWith("Missing .blueprint/") &&
+      !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX)
   );
   const currentPhaseArtifacts = await inspectCurrentPhaseArtifacts(
     projectRoot,
@@ -693,8 +1013,16 @@ async function buildSyncedState(projectRoot: string): Promise<{
           ])
         ]
       : [...new Set([...nonStructuralBlockers, ...currentPhaseArtifacts.blockers])];
+  const activePauseHandoff =
+    projectStatus === "initialized" &&
+    isPauseHandoffActive(pauseHandoff.handoff, existingState);
+
+  if (activePauseHandoff && pauseHandoff.path) {
+    blockers.push(`${PAUSE_HANDOFF_BLOCKER_PREFIX}${pauseHandoff.path}.`);
+  }
 
   warnings.push(...currentPhaseArtifacts.warnings);
+  warnings.push(...pauseHandoff.warnings);
 
   return {
     state: {
@@ -702,18 +1030,129 @@ async function buildSyncedState(projectRoot: string): Promise<{
       currentMilestone,
       currentPhase,
       activeCommand:
-        projectStatus === "partial" ? "/blu:health" : existingState.activeCommand,
-      nextAction: await deriveNextAction({
-        projectStatus,
-        blockers,
-        currentPhase,
-        phaseArtifacts: currentPhaseArtifacts,
-        bootstrapRouting,
-        workflow: workflowRouting
-      }),
+        projectStatus === "partial"
+          ? "/blu:health"
+          : activePauseHandoff
+            ? PAUSE_WORK_COMMAND
+            : existingState.activeCommand,
+      nextAction:
+        activePauseHandoff && pauseHandoff.handoff
+          ? buildPauseHandoffNextAction(currentPhase, pauseHandoff.handoff)
+          : await deriveNextAction({
+              projectStatus,
+              blockers,
+              currentPhase,
+              phaseArtifacts: currentPhaseArtifacts,
+              bootstrapRouting,
+              workflow: workflowRouting
+            }),
       blockers,
       lastUpdated: new Date().toISOString()
     },
+    warnings
+  };
+}
+
+export async function blueprintPauseHandoffGet(
+  args: PauseHandoffGetArgs = {}
+): Promise<PauseHandoffGetResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  return loadPauseHandoffReport(projectRoot);
+}
+
+export async function blueprintPauseHandoffWrite(
+  args: PauseHandoffWriteArgs
+): Promise<PauseHandoffWriteResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+
+  if (inspection.readiness !== "initialized") {
+    throw new Error(
+      "pause-work requires an initialized Blueprint project before a handoff can be written."
+    );
+  }
+
+  const stateResult = await blueprintStateLoad({ cwd: projectRoot });
+  const currentPhase = stateResult.derivedStatus.currentPhase ?? stateResult.state.currentPhase;
+  const phasePrefix = currentPhase ? formatPhasePrefix(currentPhase) : null;
+  const reportSnapshot = {
+    core: inspection.core.present,
+    phaseArtifacts:
+      phasePrefix === null
+        ? []
+        : inspection.phases.filter((artifact) =>
+            artifact.includes(`/${phasePrefix}`)
+          ),
+    reports: [...new Set([...inspection.reports, PAUSE_HANDOFF_REPORT_PATH])].sort(),
+    missing: inspection.core.missing
+  };
+  const handoff: PauseHandoffRecord = {
+    reportType: "pause-work",
+    schemaVersion: 1,
+    status: "paused",
+    timestamp: new Date().toISOString(),
+    projectStatus: stateResult.derivedStatus.projectStatus,
+    currentMilestone: stateResult.state.currentMilestone,
+    currentPhase,
+    activeCommand: PAUSE_WORK_COMMAND,
+    currentState: normalizeParagraph(args.currentState),
+    completedWork: normalizeLines(args.completedWork),
+    remainingWork: normalizeLines(args.remainingWork),
+    decisions: normalizeLines(args.decisions),
+    blockers: normalizeLines(args.blockers),
+    humanActionsPending: normalizeLines(args.humanActionsPending),
+    modifiedFiles: normalizeLines(args.modifiedFiles),
+    contextNotes: normalizeParagraph(args.contextNotes),
+    nextAction: normalizeParagraph(args.nextAction, stateResult.derivedStatus.nextAction),
+    artifactSnapshot: reportSnapshot
+  };
+  const absolutePath = resolveBlueprintPath(projectRoot, PAUSE_HANDOFF_REPORT_PATH);
+  const content = renderPauseHandoff(handoff);
+  const exists = await blueprintPathExists(absolutePath);
+  const warnings: string[] = [];
+
+  if (exists) {
+    const existingContent = await fs.readFile(absolutePath, "utf8");
+    const existingHandoff = parsePauseHandoff(existingContent);
+
+    if (
+      JSON.stringify(comparablePauseHandoffRecord(existingHandoff)) ===
+      JSON.stringify(comparablePauseHandoffRecord(handoff))
+    ) {
+      warnings.push("Preserved existing pause handoff because the content was unchanged.");
+
+      return {
+        path: PAUSE_HANDOFF_REPORT_PATH,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "reused",
+        handoff: existingHandoff,
+        warnings
+      };
+    }
+
+    if (!(args.overwrite ?? false)) {
+      throw new Error(
+        `${PAUSE_HANDOFF_REPORT_PATH} already exists. Re-run only after explicit overwrite confirmation.`
+      );
+    }
+  }
+
+  await ensureParentDirectory(absolutePath);
+  await fs.writeFile(absolutePath, content, "utf8");
+
+  if (exists) {
+    warnings.push(`Replaced existing pause handoff: ${PAUSE_HANDOFF_REPORT_PATH}`);
+  }
+
+  return {
+    path: PAUSE_HANDOFF_REPORT_PATH,
+    written: true,
+    created: !exists,
+    overwritten: exists,
+    status: exists ? "updated" : "created",
+    handoff,
     warnings
   };
 }
@@ -827,6 +1266,22 @@ export const stateToolDefinitions = [
     inputSchema: stateUpdateInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintStateUpdate(args as StateUpdateArgs)
+  },
+  {
+    name: "blueprint_pause_handoff_get",
+    description:
+      "Read the latest Blueprint pause-work handoff report without mutating repo state.",
+    inputSchema: pauseHandoffGetInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPauseHandoffGet(args as PauseHandoffGetArgs)
+  },
+  {
+    name: "blueprint_pause_handoff_write",
+    description:
+      "Persist the latest Blueprint pause-work handoff report with overwrite protection.",
+    inputSchema: pauseHandoffWriteInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPauseHandoffWrite(args as PauseHandoffWriteArgs)
   },
   {
     name: "blueprint_state_sync",

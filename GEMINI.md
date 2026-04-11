@@ -13,7 +13,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, and `/blu:next`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, and `/blu:pause-work`.
 
 ## State Boundaries
 
@@ -36,10 +36,10 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:ui-phase` now persists substantive `XX-UI-SPEC.md` content or an explicit skip rationale in that same file.
 - `/blu:plan-phase` now persists substantive `XX-YY-PLAN.md` content through the plan MCP substrate.
 - `/blu:execute-phase` now persists `XX-YY-SUMMARY.md` execution evidence through the summary MCP substrates and keeps the next action explicit.
-- `/blu:validate-phase` now persists `XX-VERIFICATION.md` validation evidence through the validation MCP substrate.
-- `/blu:verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the validation MCP substrate and keeps follow-up fixes explicit.
-- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`.
-- Shipped orchestration skills live in `skills/`, including `blueprint-phase-validation`.
+- `/blu:validate-phase` now persists `XX-VERIFICATION.md` verification evidence through the validation MCP substrates.
+- `/blu:verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the same validation MCP substrates and keeps follow-up fixes explicit.
+- `/blu:pause-work` now persists a canonical handoff report in `.blueprint/reports/pause-work-latest.md` and keeps the next implemented follow-up on `/blu:progress`.
+- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery` and `blueprint-phase-validation`.
 - Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.
 
 ## Mutation Rules

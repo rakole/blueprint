@@ -24,7 +24,7 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A prior handoff or populated state file should exist.
+- A prior `pause-work` handoff or populated state file should exist.
 
 
 ## Outputs
@@ -52,6 +52,7 @@
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_pause_handoff_get` -> `{found, path, handoff, reason}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -98,7 +99,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- None unless multiple handoffs are equally valid.
+- None unless multiple valid handoff candidates exist later or the latest handoff clearly conflicts with current phase state.
 
 
 ## Edge Cases
@@ -111,7 +112,7 @@
 ## Failure Modes And Recovery
 
 
-- Explain exactly which phase artifact is missing and which command creates it.
+- Explain exactly which handoff or phase artifact is missing and which command creates or repairs it.
 - Write follow-up state back into `.blueprint/` instead of dropping context on failure.
 
 
@@ -121,6 +122,7 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Reconstructs context from `STATE.md` plus the canonical `pause-work` handoff schema in `.blueprint/reports/pause-work-latest.md`.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 
