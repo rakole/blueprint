@@ -28,6 +28,8 @@ It exists to keep the remaining roadmap-admin work aligned with:
 
 ## Mandatory Read Order
 
+**While creating commands, skills, agents or any other artifacts, make sure we do not dilute original gsd intent, method, process, thought, steps, workflow**
+
 Every agent must read these before claiming work:
 
 1. `AGENTS.md`
