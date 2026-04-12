@@ -66,7 +66,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(catalog, /`execute-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-execution` \| `implemented`/);
   assert.match(catalog, /`do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `blocked`/);
   assert.match(catalog, /`pause-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
-  assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `planned`/);
+  assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
   assert.match(catalog, /`plan-milestone-gaps` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `planned`/);
   assert.match(catalog, /STRUCTURE\.md/);
   assert.match(artifactSchema, /`STRUCTURE\.md`/);
