@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`secure-phase` carries forward the GSD intent to retroactively verify threat mitigations for a completed phase. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`secure-phase` carries forward the GSD intent to retroactively verify threat mitigations for a completed phase. Blueprint ships it as a Gemini-native security audit command: it reads saved phase evidence, drafts a phase-scoped security review, and persists the result through the dedicated review MCP tool instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -31,13 +31,13 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Writes only the declared phase-scoped security artifact for this command.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- Phase resolution and artifact inventory through the documented phase and artifact MCP tools
 
 
 ## Blueprint And Global State Writes
@@ -102,8 +102,8 @@
 ## Failure Modes And Recovery
 
 
-- Preserve generated reports when git or external CLI steps fail.
-- Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- Preserve generated security artifacts when the audit needs revision or external context is incomplete.
+- Fall back to explicit evidence gaps and the safest implemented next step instead of guessing missing mitigations.
 
 
 ## Acceptance Criteria

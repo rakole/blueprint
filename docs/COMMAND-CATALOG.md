@@ -46,7 +46,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `resume-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `implemented` | `.blueprint/STATE.md` | `Low: restores state from the canonical pause handoff and updates the next safe action.` |
 | `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `updated backlog index; updated roadmap and any promoted phase stubs` | `Medium: can promote backlog items into active roadmap scope.` |
 | `review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEWS.md or equivalent peer-review artifact` | `Medium: external tool orchestration without default repo mutation.` |
-| `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
+| `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `implemented` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |
 | `settings` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json; optional ~/.gemini/blueprint/defaults.json` | `Low: config-only mutation inside repo config plus optional user defaults.` |
 | `ship` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `ship report in .blueprint/reports/; optional PR body file or state note` | `High: remote and git mutation path.` |

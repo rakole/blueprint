@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu:add-backlog`, and the first shipped Wave 4 docs command `/blu:docs-update`. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu:add-backlog`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -21,6 +21,7 @@ This repository still carries the planning pack that locked the product and arch
 - The shipped lifecycle slice also includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, and the read-only next-step router `/blu:next`
 - The read-only phase-discovery assumptions command `/blu:list-phase-assumptions` is now shipped on the same discovery substrate
 - The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
+- The security audit command `/blu:secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
 - The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap removal command `/blu:remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
@@ -177,6 +178,7 @@ These runtime files exist today:
 - `commands/blu/execute-phase.toml`
 - `commands/blu/validate-phase.toml`
 - `commands/blu/verify-work.toml`
+- `commands/blu/secure-phase.toml`
 - `commands/blu/audit-milestone.toml`
 - `commands/blu/add-phase.toml`
 - `commands/blu/complete-milestone.toml`
@@ -199,6 +201,7 @@ These runtime files exist today:
 - `skills/blueprint-phase-execution/SKILL.md`
 - `skills/blueprint-phase-validation/SKILL.md`
 - `skills/blueprint-docs/SKILL.md`
+- `skills/blueprint-review/SKILL.md`
 - `skills/blueprint-roadmap-admin/SKILL.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
@@ -211,6 +214,7 @@ These runtime files exist today:
 - `agents/blueprint-verifier.md`
 - `agents/blueprint-doc-writer.md`
 - `agents/blueprint-doc-verifier.md`
+- `agents/blueprint-security-auditor.md`
 - `hooks/hooks.json`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`
@@ -218,6 +222,7 @@ These runtime files exist today:
 - `src/mcp/tools/state.ts`
 - `src/mcp/tools/artifacts.ts`
 - `src/mcp/tools/phase.ts`
+- `src/mcp/tools/review.ts`
 - `src/hooks/`
 
 ## Command Status

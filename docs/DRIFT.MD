@@ -45,3 +45,6 @@ This ledger tracks `DRIFT-01` through `DRIFT-07`.
 - runtime routing remains limited to implemented commands
 - later commands stay documented but non-routable until their actual runtime
   substrate ships
+- future-command ownership must stay aligned across
+  `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`,
+  `docs/GSD-RUNTIME-MIGRATION.md`, and `docs/commands/*.md`

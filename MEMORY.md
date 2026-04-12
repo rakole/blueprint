@@ -7,10 +7,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: post-shipment lifecycle and roadmap-admin closeout now includes the shipped Wave 2 milestone-closeout trio plus the first shipped Wave 3 capture command and first shipped Wave 4 docs command; `complete-milestone`, `milestone-summary`, `new-milestone`, `add-backlog`, and `docs-update` are implemented alongside the earlier lifecycle, governance, and roadmap-admin surfaces, while `insert-phase` remains blocked
-- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the lifecycle commands `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, the router command `next`, the governance handoff/resume commands `pause-work` and `resume-work`, the Wave 2 roadmap-admin commands `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`, the Wave 3 capture command `add-backlog`, and the Wave 4 docs command `docs-update` are implemented, and routing still filters to implemented commands only
-- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, implemented validation artifacts, and Phase 4 execution summaries are present
-- Implementation strategy: keep Wave 2 closeout contracts locked, preserve the closed Phase 2.2 and shipped Phase 3 guarantees, keep `insert-phase` and later surfaces blocked until their substrate exists, and only expand routing when manifests, primary skills, and required MCP tools all line up
+- Current milestone: post-shipment lifecycle and roadmap-admin closeout now also includes the shipped Wave 3 capture slice plus the shipped Wave 4 docs and review slices; `add-backlog`, `docs-update`, and `secure-phase` are implemented alongside the earlier lifecycle, governance, and roadmap-admin surfaces, while `insert-phase` remains blocked
+- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the lifecycle commands `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, the router command `next`, the governance handoff/resume commands `pause-work` and `resume-work`, the Wave 2 roadmap-admin commands `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`, the Wave 3 capture command `add-backlog`, the Wave 4 docs command `docs-update`, and the Wave 4 review command `secure-phase` are implemented, and routing still filters to implemented commands only
+- Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, implemented validation artifacts, implemented capture, docs, and review artifacts, and Phase 4 execution summaries are present
+- Implementation strategy: keep the shipped Wave 2 closeout plus `add-backlog`, `docs-update`, and `secure-phase` contracts locked, preserve the closed Phase 2.2 and shipped Phase 3 guarantees, keep `insert-phase` and later unshipped surfaces blocked until their substrate exists, and only expand routing when manifests, primary skills, and required MCP tools all line up
 - Roadmap-admin status: `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped as the current roadmap-admin slice, covering whole-number phase append, future-phase removal with renumbering, grouped gap-closure planning, milestone audit reporting, report-driven milestone closeout, summary generation, and carry-forward milestone reset
 
 ## Stable References
@@ -38,10 +38,11 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `blueprint_config_*`: read and update `.blueprint/config.json`
 - `blueprint_state_*`: load, update, and sync `STATE.md`
 - `blueprint_roadmap_*` and `blueprint_phase_*`: mutate roadmap state, inspect phase readiness, and persist validated phase-scoped research, plans, and checkpoints
+- `blueprint_review_*`: persist phase-scoped review artifacts and later review findings
 - `blueprint_artifact_*`: scaffold, capture-index mutate, list, validate, and summarize artifacts
+- `blueprint_review_*`: persist phase-scoped review artifacts and later review findings
 - `blueprint_workspace_*`: manage global workspace registry and workspace creation/removal
 - `blueprint_workstream_*`: manage project-local workstreams
-- `blueprint_review_*`: persist review scope and findings
 - `blueprint_update_*`: generate advisory update checks and checklists
 - `blueprint_patch_*`: record and replay patch metadata from the global registry
 
@@ -101,7 +102,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - preserve the shipped Phase 3 discovery artifact contracts, the read-only `list-phase-assumptions` contract, and implemented-only routing behavior
 - keep `plan-phase` routed through the plan index plus dedicated plan read/write MCP tools
 - keep `execute-phase` routed through the plan index plus dedicated summary read/write MCP tools
-- keep command-catalog rollout aligned with each shipped Wave 3 and Phase 4 command, starting with `add-backlog` and `docs-update`
+- keep `secure-phase` routed through `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record`
+- keep `docs-update` routed through its evidence-backed docs-report substrate
+- keep `add-backlog` routed through `blueprint_artifact_mutate_index` plus optional stub scaffolding
+- keep command-catalog rollout aligned with each shipped Wave 3 and Phase 4 command, including `add-backlog`, `docs-update`, and `secure-phase`
 - keep regression coverage in place so the closed drift and discovery guarantees fail fast if they drift
 
 ## Guardrail Snapshot
@@ -115,7 +119,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Session Notes
 
 - The repo contains a buildable Gemini extension shell plus the shipped Wave 0, lifecycle, governance, and roadmap-admin command sets
-- Runtime `skills/` and `agents/` surfaces now exist for the shipped Wave 0, capture, discovery, planning, execution, validation, and roadmap-admin contracts
+- Runtime `skills/` and `agents/` surfaces now exist for the shipped Wave 0, capture, discovery, planning, execution, validation, review, docs, and roadmap-admin contracts
 - The router/help/progress path must filter to commands whose catalog entry is `implemented`
 - `map-codebase` now owns a seven-document codebase bundle: `STACK`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `INTEGRATIONS`, and `CONCERNS`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11
@@ -128,6 +132,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `plan-phase` now uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to persist real `XX-YY-PLAN.md` content
 - `validate-phase` now uses `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, and `blueprint_phase_validation_write` to persist real `XX-VERIFICATION.md` content
 - `add-backlog` now uses `blueprint_artifact_mutate_index` to append canonical parking-lot entries in `.blueprint/backlog/BACKLOG.md`, detect duplicates deterministically, and optionally reserve a `999.x` phase stub before scaffolding it
+- `secure-phase` now uses `blueprint_review_record` plus the discoverable `blueprint-review` skill and `blueprint-security-auditor` contract to persist real `XX-SECURITY.md` content
 - `docs/build/WAVE-2-AGENT-WORKFLOW.md`, `docs/build/WAVE-2-PARALLEL-CLOSEOUT-PLAN.md`, and `docs/build/WAVE-2-AUTO-AGENT-META-PROMPT.md` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles
 - `docs-update` shipped on 2026-04-12 with a dedicated `blueprint-docs` skill, the `blueprint-doc-writer` and `blueprint-doc-verifier` agent contracts, a routable command manifest, and report persistence through `blueprint_artifact_report_write`
-- Future sessions should treat the Wave 2 milestone-closeout trio plus `docs-update` as shipped, keep `insert-phase` blocked until its own substrate exists, and only start a new slice once its manifest, primary skill, and required MCP tools are planned together
+- Future sessions should treat the Wave 2 milestone-closeout trio plus `add-backlog`, `docs-update`, and `secure-phase` as shipped, keep `insert-phase` blocked until its own substrate exists, and only start a new slice once its manifest, primary skill, and required MCP tools are planned together

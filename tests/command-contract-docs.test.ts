@@ -287,6 +287,26 @@ test("docs skill and bounded docs agents are marked implemented in docs", async 
   );
 });
 
+test("review skill and security auditor are marked implemented in docs for secure-phase", async () => {
+  const [skillsMarkdown, securePhaseDoc] = await Promise.all([
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/secure-phase.md")
+  ]);
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-review` \| `implemented` \| Reviews, review-fix loops, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-security-auditor` \| `implemented` \| Verify threat mitigations and security coverage \|/
+  );
+  assert.match(securePhaseDoc, /Primary skill: `blueprint-review`/);
+  assert.match(securePhaseDoc, /`blueprint_review_record`/);
+  assert.match(securePhaseDoc, /`blueprint-security-auditor`/);
+  assert.match(securePhaseDoc, /phase XX-SECURITY\.md/);
+});
+
 test("add-phase command docs keep the roadmap append contract explicit", async () => {
   const addPhaseDoc = await readRepoFile("docs/commands/add-phase.md");
 

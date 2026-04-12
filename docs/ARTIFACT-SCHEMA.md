@@ -248,6 +248,23 @@ UAT expectations:
 - should preserve resumable conversational state rather than acting like a one-shot transcript
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
 
+### `XX-SECURITY.md`
+
+`XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.
+
+Minimum expected structure:
+- `**Posture:** PASS|FOLLOW_UP|BLOCKED`
+- `## Security Summary`
+- `## Evidence Reviewed`
+- `## Findings`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Security audit expectations:
+- must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
+- should distinguish confirmed mitigations from missing or partial controls
+- should keep explicit follow-up hardening work visible instead of burying it in chat history
+
 ## Supporting Trees
 
 ### `reports/`

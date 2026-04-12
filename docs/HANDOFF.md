@@ -2,11 +2,11 @@
 
 ## Current State
 
-The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, the read-only `list-phase-assumptions` discovery command, the Phase 4 validation/UAT commands, the governance handoff/resume commands, the current Wave 2 roadmap/milestone commands including the milestone-closeout trio, and the first shipped Wave 4 docs command.
+The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, the read-only `list-phase-assumptions` discovery command, the Phase 4 validation/UAT commands, the governance handoff/resume commands, the first shipped Wave 4 review command `secure-phase`, the first shipped Wave 4 docs command `docs-update`, and the current Wave 2 roadmap/milestone commands including the milestone-closeout trio.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair, the current Wave 2 roadmap-admin slice (`add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, and `list-phase-assumptions`), and the Wave 4 docs command `docs-update` are also shipped. Runtime routing remains limited to `implemented` commands, and `insert-phase` remains blocked in this cycle.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair, the current Wave 2 roadmap-admin slice (`add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, and `list-phase-assumptions`), the Wave 4 docs command `docs-update`, and the Wave 4 review command `secure-phase` are also shipped. Runtime routing remains limited to `implemented` commands, and `insert-phase` remains blocked in this cycle.
 
-The governance handoff/resume pair now ships through `pause-work` and `resume-work`, with `pause-work` owning the durable handoff report and `resume-work` restoring the next safe implemented action from it.
+The governance handoff/resume pair now ships through `pause-work` and `resume-work`, with `pause-work` owning the durable handoff report and `resume-work` restoring the next safe implemented action from it. `secure-phase` now ships as the first review-family command on top of `blueprint_review_record`, the discoverable `blueprint-review` skill, and the bounded `blueprint-security-auditor` contract.
 
 ## What Future Sessions Already Have
 
@@ -19,10 +19,10 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
 - Gemini-specific constraint notes to keep implementation aligned with the host CLI
-- runtime command manifests for the shipped Wave 0, discovery, planning, execution, validation/UAT, governance, current roadmap-admin, and `docs-update` surfaces
+- runtime command manifests for the shipped Wave 0, discovery, planning, execution, validation/UAT, governance, current roadmap-admin, review, and docs surfaces
 - shipped `blueprint-roadmap-admin` skill file for the roadmap append, removal, gap-planning, and milestone audit slice
-- shipped Wave 0, discovery, planning, execution, validation, governance, roadmap-admin, and docs skill files in `skills/`
-- shipped mapping, discovery, planning, execution, validation, roadmap-support, and docs agent contract files in `agents/`
+- shipped Wave 0, discovery, planning, execution, validation, review, governance, roadmap-admin, and docs skill files in `skills/`
+- shipped mapping, discovery, planning, execution, validation, review, roadmap-support, and docs agent contract files in `agents/`
 - implementation-aware command catalog metadata in `blueprint_command_catalog`
 - seven-document codebase mapping bundle, including `.blueprint/codebase/STRUCTURE.md`
 - advisory hook entrypoints under `src/hooks/` plus `hooks/hooks.json`
@@ -30,7 +30,7 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 
 ## Recommended Next Session
 
-Wave 2 milestone closeout is now shipped, so future sessions should focus on preserving the closeout contracts while keeping blocked surfaces blocked:
+Wave 2 milestone closeout plus the first review and docs slices are now shipped, so future sessions should focus on preserving those contracts while keeping blocked surfaces blocked:
 
 1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
 2. Use the shipped validation, UAT, and milestone closeout sequence (`audit-milestone` -> `complete-milestone` -> `milestone-summary` -> `new-milestone`) instead of reintroducing prompt-only verification or ad hoc archival steps
@@ -69,4 +69,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the shipped lifecycle, governance, and roadmap-admin commands keep their current guarantees intact, the Wave 2 closeout trio stays aligned across docs and runtime, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the shipped lifecycle, governance, roadmap-admin, review, and docs commands keep their current guarantees intact, the Wave 2 closeout trio stays aligned across docs and runtime, and later commands remain blocked until their substrate exists.
