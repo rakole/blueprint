@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`add-phase` carries forward the GSD intent to add phase to end of current milestone in roadmap. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`add-phase` carries forward the GSD intent to add phase to end of current milestone in roadmap. In Blueprint it stays Gemini-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state.
 
 
 ## Command Path And Examples
@@ -19,19 +19,21 @@
 - Root router form: `/blu add-phase`
 - Argument hint: `<description>`
 - `/blu:add-phase Notifications`
-- `/blu add-phase`
+- `/blu add-phase Notifications`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
 - A Blueprint project and roadmap must already exist.
+- A non-empty phase description is required. The description becomes the new phase title and drives the scaffolded phase slug.
+- The next phase number is the next integer after the highest base phase number already present in the roadmap. Decimal suffixes are ignored for numbering, so `2.1` and `2.2` still advance the next append target to `3`.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
+- Repo side effects: Appends the new phase to `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phase-slug>/`, updates `.blueprint/STATE.md`, and may also mutate code or git state when the command owns that behavior.
 
 
 ## Blueprint And Global State Reads
@@ -43,7 +45,9 @@
 ## Blueprint And Global State Writes
 
 
-- `new phase directory in .blueprint/phases/`
+- `.blueprint/ROADMAP.md`
+- `.blueprint/phases/<phase-slug>/`
+- `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
@@ -89,7 +93,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the final phase description before append.
+- Confirm the final phase description and resulting next integer phase number before append.
 
 
 ## Edge Cases
@@ -102,6 +106,7 @@
 
 
 - Show roadmap and phase-directory drift before mutation.
+- Explain which base phase numbers were considered and which decimal suffixes were ignored when deriving the append target.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
@@ -110,6 +115,10 @@
 
 - Keeps roadmap, phase directories, and state synchronized.
 - Produces a durable report for milestone-level operations.
+- Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
+- Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
+- Updates `.blueprint/STATE.md` with the new next action.
+- Returns `/blu:discuss-phase <new phase number>` as the next safe Blueprint follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -118,7 +127,9 @@
 ## Test Cases
 
 
-- Roadmap mutation fixture.
+- Roadmap append fixture.
+- Decimal-phase numbering regression fixture.
+- Missing-description rejection fixture.
 - Renumbering or archival regression fixture.
 - Direct `add-phase` happy-path fixture.
 

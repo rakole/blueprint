@@ -811,7 +811,9 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
   try {
     const raw = await fs.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
-    const phaseMatches = [...raw.matchAll(/- \[([ xX])\] Phase\s+(\d+(?:\.\d+)?):/g)];
+    const phaseMatches = [
+      ...raw.matchAll(/- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/g)
+    ];
     const currentPhase =
       phaseMatches.find((match) => match[1] === " ")?.[2] ??
       phaseMatches.at(-1)?.[2] ??

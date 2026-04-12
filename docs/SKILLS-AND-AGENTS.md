@@ -14,12 +14,12 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
 | `blueprint-phase-execution` | `implemented` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
+| `blueprint-roadmap-admin` | `implemented` | Roadmap append plus future roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 
 ## Planned Later Skills
 
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
-| `blueprint-roadmap-admin` | `planned` | Roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 | `blueprint-capture` | `planned` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
 | `blueprint-debug` | `planned` | Debug investigations and recovery plans | `debug` |
 | `blueprint-review` | `planned` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
@@ -66,6 +66,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `execute-phase` uses `blueprint-executor`.
 - `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
 - `validate-phase` and `verify-work` use `blueprint-verifier`.
+- `add-phase` uses `blueprint-roadmap-admin`.
 - `plan-milestone-gaps` and `new-milestone` use `blueprint-roadmapper`.
 - `code-review` uses `blueprint-reviewer`.
 - `code-review-fix` and `audit-fix` use `blueprint-fixer`.

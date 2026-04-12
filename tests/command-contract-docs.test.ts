@@ -227,3 +227,16 @@ test("phase validation skill and bounded verifier agent are marked implemented i
     /\| `blueprint-verifier` \| `implemented` \| Verify execution results and UAT evidence \|/
   );
 });
+
+test("add-phase command docs keep the roadmap append contract explicit", async () => {
+  const addPhaseDoc = await readRepoFile("docs/commands/add-phase.md");
+
+  assert.match(addPhaseDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(addPhaseDoc, /blueprint_roadmap_read/);
+  assert.match(addPhaseDoc, /blueprint_roadmap_add_phase/);
+  assert.match(addPhaseDoc, /blueprint_artifact_scaffold/);
+  assert.match(addPhaseDoc, /blueprint_state_update/);
+  assert.match(addPhaseDoc, /non-empty phase description is required/i);
+  assert.match(addPhaseDoc, /next integer after the highest base phase number/i);
+  assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
+});
