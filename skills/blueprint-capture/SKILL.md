@@ -68,9 +68,17 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 6. When a stub is reserved, create its initial context scaffold through `blueprint_artifact_scaffold` rather than hand-writing the phase file.
 7. Keep follow-up guidance inside implemented commands only.
 
+### `add-todo`
+
+1. Require a non-empty todo description before any mutation.
+2. Use `blueprint_artifact_mutate_index` with `target: "todo"` for durable writes instead of raw append logic.
+3. Degrade to suggestion mode when the repo is not yet a Blueprint project.
+4. Treat normalized duplicate todo descriptions as already captured work and report the existing entry instead of creating a second copy.
+5. Keep follow-up guidance inside implemented commands only.
+
 ## Future Capture Guardrails
 
-- `note`, `add-todo`, `check-todos`, `review-backlog`, and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
+- `note`, `check-todos`, `review-backlog`, and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
 - Do not quietly promote backlog entries into roadmap phases without the dedicated promotion contract.
 - Do not write capture state outside `.blueprint/notes/`, `.blueprint/todos/`, `.blueprint/backlog/`, or explicitly reserved `.blueprint/phases/999.x-*/` stubs.
 

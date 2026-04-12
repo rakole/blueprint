@@ -207,6 +207,27 @@ test("capture skill and add-backlog docs are marked implemented in docs", async 
   );
 });
 
+test("add-todo docs and catalog metadata are marked implemented with the shipped capture tool", async () => {
+  const [catalogMarkdown, addTodoDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/add-todo.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `add-todo` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \| `\.blueprint\/todos\/TODO\.md` \| `Low: todo index update only\.` \|/
+  );
+  assert.match(addTodoDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(addTodoDoc, /Argument hint: `<description>`/);
+  assert.match(addTodoDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.doesNotMatch(addTodoDoc, /`blueprint_state_update`/);
+  assert.match(
+    migrationMarkdown,
+    /\| `add-todo` \| `commands\/gsd\/add-todo\.md` \| GSD has an upstream workflow file \| `docs\/commands\/add-todo\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
+  );
+});
+
 test("list-phase-assumptions docs stay read-only and use the discovery MCP tools", async () => {
   const [commandDoc, skillsMarkdown] = await Promise.all([
     readRepoFile("docs/commands/list-phase-assumptions.md"),
