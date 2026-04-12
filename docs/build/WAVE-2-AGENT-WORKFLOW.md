@@ -24,5 +24,6 @@ This workflow exists to close Wave 2 without drifting the shipped runtime while
 
 - Initialize and coordinate shared closeout work through
   `scripts/drift-fix-memory.mjs`.
+- Update `MEMORY.md` through the shared workflow before handing off.
 - Record task claims, blockers, notes, files changed, and tests run in the
   shared memory flow before marking work complete.

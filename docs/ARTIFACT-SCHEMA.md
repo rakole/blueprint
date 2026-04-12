@@ -342,10 +342,13 @@ Contract notes:
 
 ### `backlog/`
 
-Planned contents:
+Current contents:
 - `BACKLOG.md`
 
-Backlog items may also reserve phase-style directories using `999.x` numbering when promotion readiness matters.
+Contract notes:
+- `BACKLOG.md` is the canonical parking-lot index for backlog ideas captured through MCP.
+- Entries are stored as repeated markdown blocks with deterministic IDs such as `BACKLOG-001`.
+- Backlog items may also reserve phase-style directories using `999.x` numbering when promotion readiness matters.
 
 ### `todos/`
 

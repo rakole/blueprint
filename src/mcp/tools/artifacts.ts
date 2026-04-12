@@ -11,6 +11,12 @@ export const BLUEPRINT_CONFIG_PATH = `${BLUEPRINT_DIR}/config.json`;
 export const BLUEPRINT_PHASES_PATH = `${BLUEPRINT_DIR}/phases`;
 export const BLUEPRINT_REPORTS_PATH = `${BLUEPRINT_DIR}/reports`;
 export const BLUEPRINT_CODEBASE_PATH = `${BLUEPRINT_DIR}/codebase`;
+export const BLUEPRINT_BACKLOG_PATH = `${BLUEPRINT_DIR}/backlog`;
+export const BLUEPRINT_TODOS_PATH = `${BLUEPRINT_DIR}/todos`;
+export const BLUEPRINT_NOTES_PATH = `${BLUEPRINT_DIR}/notes`;
+export const BLUEPRINT_BACKLOG_INDEX_PATH = `${BLUEPRINT_BACKLOG_PATH}/BACKLOG.md`;
+export const BLUEPRINT_TODO_INDEX_PATH = `${BLUEPRINT_TODOS_PATH}/TODO.md`;
+export const BLUEPRINT_NOTES_INDEX_PATH = `${BLUEPRINT_NOTES_PATH}/NOTES.md`;
 export const SUPPORTED_BOOTSTRAP_ARTIFACTS = [
   `${BLUEPRINT_DIR}/PROJECT.md`,
   `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
@@ -96,6 +102,20 @@ type ArtifactListArgs = {
   cwd?: string;
 };
 
+type ArtifactMutateIndexTarget = "backlog" | "todo" | "note";
+
+type ArtifactMutateIndexArgs = {
+  cwd?: string;
+  target: ArtifactMutateIndexTarget;
+  action?: "append";
+  entry?: {
+    text: string;
+    status?: string;
+    addedAt?: string;
+    reservePhaseStub?: boolean;
+  };
+};
+
 type ArtifactScaffoldResult = {
   createdFiles: string[];
   reusedFiles: string[];
@@ -110,6 +130,28 @@ type ArtifactListResult = {
   };
   reports: string[];
   missing: string[];
+  warnings: string[];
+};
+
+type ArtifactMutateIndexReservedPhase = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseDir: string;
+  artifactPaths: string[];
+};
+
+type ArtifactMutateIndexResult = {
+  status: "created" | "updated" | "duplicate" | "project_missing" | "invalid";
+  targetPath: string;
+  createdEntryIds: string[];
+  duplicateEntryIds: string[];
+  updatedCounts: {
+    added: number;
+    updated: number;
+    duplicates: number;
+    preserved: number;
+  };
+  reservedPhase: ArtifactMutateIndexReservedPhase | null;
   warnings: string[];
 };
 
@@ -162,6 +204,14 @@ type ArtifactReportWriteResult = {
   overwritten: boolean;
   status: "created" | "updated" | "reused" | "invalid";
   warnings: string[];
+};
+
+type CaptureIndexRow = {
+  id: string;
+  added: string;
+  status: string | null;
+  description: string;
+  reservedPhase: string | null;
 };
 
 type BootstrapRenderContext = {
@@ -238,6 +288,48 @@ const BOOTSTRAP_PLACEHOLDER_SIGNALS: Record<string, string[]> = {
   ]
 };
 
+const CAPTURE_INDEX_TARGETS = ["backlog", "todo", "note"] as const;
+
+type CaptureIndexConfig = {
+  targetPath: string;
+  title: string;
+  sectionHeading: string;
+  idPrefix: string;
+  defaultStatus: string | null;
+  supportsReservedPhase: boolean;
+  emptyState: string;
+};
+
+const CAPTURE_INDEX_CONFIG: Record<ArtifactMutateIndexTarget, CaptureIndexConfig> = {
+  backlog: {
+    targetPath: BLUEPRINT_BACKLOG_INDEX_PATH,
+    title: "Backlog",
+    sectionHeading: "Parking Lot",
+    idPrefix: "BACKLOG",
+    defaultStatus: "backlog",
+    supportsReservedPhase: true,
+    emptyState: "No backlog items recorded yet."
+  },
+  todo: {
+    targetPath: BLUEPRINT_TODO_INDEX_PATH,
+    title: "Todos",
+    sectionHeading: "Open Items",
+    idPrefix: "TODO",
+    defaultStatus: "open",
+    supportsReservedPhase: false,
+    emptyState: "No todo items recorded yet."
+  },
+  note: {
+    targetPath: BLUEPRINT_NOTES_INDEX_PATH,
+    title: "Notes",
+    sectionHeading: "Entries",
+    idPrefix: "NOTE",
+    defaultStatus: null,
+    supportsReservedPhase: false,
+    emptyState: "No notes recorded yet."
+  }
+};
+
 function normalizeList(values: string[] | undefined, fallback: string[]): string[] {
   const normalized = (values ?? [])
     .map((value) => value.trim())
@@ -255,6 +347,224 @@ function titleCaseBootstrapShape(value: BootstrapRepoShape): string {
     .split("-")
     .map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`)
     .join(" ");
+}
+
+function normalizeCaptureText(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function captureDedupKey(value: string): string {
+  return normalizeCaptureText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function normalizeCaptureDate(value?: string): string {
+  if (!value || value.trim().length === 0) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  const trimmed = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsed = new Date(trimmed);
+
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Capture entry addedAt must be a valid ISO date or YYYY-MM-DD value: ${value}`);
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+function slugifyCaptureEntry(value: string): string {
+  const slug = value
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug.length > 0 ? slug : "backlog-item";
+}
+
+function nextCaptureEntryId(rows: CaptureIndexRow[], idPrefix: string): string {
+  const suffixes = rows
+    .map((row) => row.id.match(new RegExp(`^${idPrefix}-(\\d+)$`))?.[1])
+    .map((value) => (value ? Number.parseInt(value, 10) : Number.NaN))
+    .filter((value) => !Number.isNaN(value));
+  const nextValue = suffixes.length === 0 ? 1 : Math.max(...suffixes) + 1;
+
+  return `${idPrefix}-${String(nextValue).padStart(3, "0")}`;
+}
+
+function nextBacklogReservedPhase(rows: CaptureIndexRow[]): string {
+  const suffixes = rows
+    .map((row) => row.reservedPhase?.match(/^999\.(\d+)$/)?.[1])
+    .map((value) => (value ? Number.parseInt(value, 10) : Number.NaN))
+    .filter((value) => !Number.isNaN(value));
+  const nextSuffix = suffixes.length === 0 ? 1 : Math.max(...suffixes) + 1;
+
+  return `999.${nextSuffix}`;
+}
+
+function buildReservedBacklogPhase(
+  rows: CaptureIndexRow[],
+  description: string
+): ArtifactMutateIndexReservedPhase {
+  const phaseNumber = nextBacklogReservedPhase(rows);
+  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phaseNumber}-${slugifyCaptureEntry(description)}`;
+
+  return {
+    phaseNumber,
+    phasePrefix: phaseNumber,
+    phaseDir,
+    artifactPaths: [`${phaseDir}/${phaseNumber}-CONTEXT.md`]
+  };
+}
+
+function renderCaptureIndexRow(
+  target: ArtifactMutateIndexTarget,
+  row: CaptureIndexRow
+): string {
+  const config = CAPTURE_INDEX_CONFIG[target];
+  const lines = [`### ${row.id}`, `- Added: ${row.added}`];
+
+  if (config.defaultStatus !== null) {
+    lines.push(`- Status: ${row.status ?? config.defaultStatus}`);
+  }
+
+  if (config.supportsReservedPhase && row.reservedPhase) {
+    lines.push(`- Reserved Phase: ${row.reservedPhase}`);
+  }
+
+  lines.push(`- Description: ${row.description}`);
+
+  return lines.join("\n");
+}
+
+function renderCaptureIndexDocument(
+  target: ArtifactMutateIndexTarget,
+  rows: CaptureIndexRow[],
+  recoveryContent?: string | null
+): string {
+  const config = CAPTURE_INDEX_CONFIG[target];
+  const body =
+    rows.length === 0
+      ? `- ${config.emptyState}`
+      : rows.map((row) => renderCaptureIndexRow(target, row)).join("\n\n");
+  const recoverySection =
+    recoveryContent && recoveryContent.trim().length > 0
+      ? `\n\n## Recovery Notes\n\nThe previous index content did not match Blueprint's canonical format and was preserved below during repair.\n\n\`\`\`text\n${recoveryContent.trim()}\n\`\`\``
+      : "";
+
+  return `# ${config.title}
+
+## ${config.sectionHeading}
+
+${body}${recoverySection}
+`;
+}
+
+function parseCaptureRowBlock(
+  block: string,
+  target: ArtifactMutateIndexTarget
+): CaptureIndexRow | null {
+  const [heading, ...restLines] = block.trim().split("\n");
+  const headingMatch = heading?.match(/^### ([A-Z]+-\d+)$/);
+
+  if (!headingMatch) {
+    return null;
+  }
+
+  const fields = new Map<string, string>();
+
+  for (const line of restLines) {
+    const match = line.match(/^- ([A-Za-z ]+):\s*(.+)$/);
+
+    if (!match) {
+      continue;
+    }
+
+    fields.set(match[1].trim().toLowerCase(), match[2].trim());
+  }
+
+  const description = fields.get("description");
+  const added = fields.get("added");
+
+  if (!description || !added) {
+    return null;
+  }
+
+  const config = CAPTURE_INDEX_CONFIG[target];
+
+  return {
+    id: headingMatch[1],
+    added,
+    status: config.defaultStatus !== null ? fields.get("status") ?? config.defaultStatus : null,
+    description,
+    reservedPhase:
+      config.supportsReservedPhase ? fields.get("reserved phase") ?? null : null
+  };
+}
+
+function parseCaptureIndexDocument(
+  content: string,
+  target: ArtifactMutateIndexTarget
+): {
+  rows: CaptureIndexRow[];
+  malformed: boolean;
+  recoveryContent: string | null;
+} {
+  const config = CAPTURE_INDEX_CONFIG[target];
+  const section = extractMarkdownSection(content, config.sectionHeading);
+
+  if (content.trim().length === 0) {
+    return {
+      rows: [],
+      malformed: false,
+      recoveryContent: null
+    };
+  }
+
+  if (!section) {
+    return {
+      rows: [],
+      malformed: true,
+      recoveryContent: content
+    };
+  }
+
+  const trimmedSection = section.trim();
+
+  if (
+    trimmedSection.length === 0 ||
+    trimmedSection === `- ${config.emptyState}`
+  ) {
+    return {
+      rows: [],
+      malformed: false,
+      recoveryContent: null
+    };
+  }
+
+  const blocks = trimmedSection
+    .split(/\n(?=### )/g)
+    .map((block) => block.trim())
+    .filter((block) => block.length > 0);
+  const rows = blocks
+    .map((block) => parseCaptureRowBlock(block, target))
+    .filter((row): row is CaptureIndexRow => row !== null);
+  const malformed = rows.length !== blocks.length;
+
+  return {
+    rows,
+    malformed,
+    recoveryContent: malformed ? content : null
+  };
 }
 
 function buildDefaultBootstrapSeed(
@@ -655,6 +965,19 @@ const artifactScaffoldInputSchema = {
 };
 const artifactListInputSchema = {
   cwd: z.string().optional()
+};
+const artifactMutateIndexInputSchema = {
+  cwd: z.string().optional(),
+  target: z.enum(CAPTURE_INDEX_TARGETS),
+  action: z.enum(["append"]).optional(),
+  entry: z
+    .object({
+      text: z.string(),
+      status: z.string().optional(),
+      addedAt: z.string().optional(),
+      reservePhaseStub: z.boolean().optional()
+    })
+    .optional()
 };
 const artifactValidateInputSchema = {
   cwd: z.string().optional()
@@ -1809,6 +2132,152 @@ export async function blueprintArtifactList(
   };
 }
 
+export async function blueprintArtifactMutateIndex(
+  args: ArtifactMutateIndexArgs
+): Promise<ArtifactMutateIndexResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const config = CAPTURE_INDEX_CONFIG[args.target];
+  const targetPath = config.targetPath;
+  const warnings: string[] = [];
+
+  if (inspection.readiness === "uninitialized") {
+    return {
+      status: "project_missing",
+      targetPath,
+      createdEntryIds: [],
+      duplicateEntryIds: [],
+      updatedCounts: {
+        added: 0,
+        updated: 0,
+        duplicates: 0,
+        preserved: 0
+      },
+      reservedPhase: null,
+      warnings: [
+        "Blueprint capture commands require an initialized project. Run /blu:new-project before writing capture artifacts."
+      ]
+    };
+  }
+
+  if (inspection.readiness === "partial") {
+    warnings.push(
+      "Blueprint project is partial; capture index write will proceed without repairing unrelated missing artifacts."
+    );
+  }
+
+  if ((args.action ?? "append") !== "append") {
+    return {
+      status: "invalid",
+      targetPath,
+      createdEntryIds: [],
+      duplicateEntryIds: [],
+      updatedCounts: {
+        added: 0,
+        updated: 0,
+        duplicates: 0,
+        preserved: 0
+      },
+      reservedPhase: null,
+      warnings: ["Only the append capture mutation is implemented today."]
+    };
+  }
+
+  const normalizedText = normalizeCaptureText(args.entry?.text ?? "");
+
+  if (normalizedText.length === 0) {
+    return {
+      status: "invalid",
+      targetPath,
+      createdEntryIds: [],
+      duplicateEntryIds: [],
+      updatedCounts: {
+        added: 0,
+        updated: 0,
+        duplicates: 0,
+        preserved: 0
+      },
+      reservedPhase: null,
+      warnings: ["Capture entry text must not be blank."]
+    };
+  }
+
+  const absolutePath = resolveBlueprintPath(projectRoot, targetPath);
+  const exists = await pathExists(absolutePath);
+  const raw = exists ? await fs.readFile(absolutePath, "utf8") : "";
+  const parsed = parseCaptureIndexDocument(raw, args.target);
+
+  if (parsed.malformed) {
+    warnings.push(
+      `Recovered non-canonical capture index content while repairing ${targetPath}.`
+    );
+  }
+
+  const duplicateRows = parsed.rows.filter(
+    (row) => captureDedupKey(row.description) === captureDedupKey(normalizedText)
+  );
+
+  if (duplicateRows.length > 0) {
+    warnings.push(
+      `Preserved existing ${args.target} entry because the normalized description already exists.`
+    );
+
+    return {
+      status: "duplicate",
+      targetPath,
+      createdEntryIds: [],
+      duplicateEntryIds: duplicateRows.map((row) => row.id),
+      updatedCounts: {
+        added: 0,
+        updated: 0,
+        duplicates: duplicateRows.length,
+        preserved: parsed.rows.length
+      },
+      reservedPhase: null,
+      warnings
+    };
+  }
+
+  const reservedPhase =
+    args.target === "backlog" && (args.entry?.reservePhaseStub ?? false)
+      ? buildReservedBacklogPhase(parsed.rows, normalizedText)
+      : null;
+  const normalizedStatus = normalizeCaptureText(args.entry?.status ?? "");
+  const nextRow: CaptureIndexRow = {
+    id: nextCaptureEntryId(parsed.rows, config.idPrefix),
+    added: normalizeCaptureDate(args.entry?.addedAt),
+    status:
+      config.defaultStatus !== null
+        ? normalizedStatus.length > 0
+          ? normalizedStatus
+          : config.defaultStatus
+        : null,
+    description: normalizedText,
+    reservedPhase: reservedPhase?.phaseNumber ?? null
+  };
+  const rows = [...parsed.rows, nextRow];
+  const recoveryContent =
+    parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
+  const rendered = renderCaptureIndexDocument(args.target, rows, recoveryContent);
+
+  await writeTextFile(absolutePath, rendered);
+
+  return {
+    status: exists ? "updated" : "created",
+    targetPath,
+    createdEntryIds: [nextRow.id],
+    duplicateEntryIds: [],
+    updatedCounts: {
+      added: 1,
+      updated: 0,
+      duplicates: 0,
+      preserved: parsed.rows.length
+    },
+    reservedPhase,
+    warnings
+  };
+}
+
 function collectPhaseBundleIssues(
   phaseArtifacts: string[],
   phaseDirectories: string[]
@@ -2443,6 +2912,14 @@ export const artifactToolDefinitions = [
     inputSchema: artifactListInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactList(args as ArtifactListArgs)
+  },
+  {
+    name: "blueprint_artifact_mutate_index",
+    description:
+      "Append canonical capture entries to project-local Blueprint indexes such as backlog, todo, and notes.",
+    inputSchema: artifactMutateIndexInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintArtifactMutateIndex(args as ArtifactMutateIndexArgs)
   },
   {
     name: "blueprint_artifact_validate",

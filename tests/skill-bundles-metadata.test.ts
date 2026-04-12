@@ -7,6 +7,18 @@ const repoRoot = process.cwd();
 
 const SKILL_BUNDLES = [
   {
+    name: "blueprint-capture",
+    description: "Project-local capture and parking-lot workflows for Blueprint",
+    commands: [
+      "/blu:note",
+      "/blu:add-todo",
+      "/blu:check-todos",
+      "/blu:add-backlog",
+      "/blu:review-backlog",
+      "/blu:explore"
+    ]
+  },
+  {
     name: "blueprint-phase-discovery",
     description: "Pre-planning discovery and requirements shaping",
     commands: ["/blu:discuss-phase", "/blu:research-phase", "/blu:ui-phase", "/blu:list-phase-assumptions"]
