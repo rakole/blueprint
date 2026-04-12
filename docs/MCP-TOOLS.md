@@ -75,6 +75,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 | `blueprint_artifact_validate` | Validate structure and required fields | `{valid, issues, suggestedRepairs}` |
 | `blueprint_artifact_mutate_index` | Update backlog, notes, todos, and similar index files | `{targetPath, createdEntryIds, updatedCounts}` |
 | `blueprint_artifact_summary_digest` | Build digests from summaries, reviews, or milestone artifacts | `{digest, inputsUsed}` |
+| `blueprint_artifact_report_write` | Persist durable report artifacts such as milestone audits with overwrite protection | `{path, written, created, overwritten, status, warnings}` |
 
 ### Workspace and Workstream
 
@@ -104,6 +105,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - `new-project`, `settings`, `set-profile`, `progress`, `health` lean on project, config, and state tools.
 - `/blu`, `help`, and `progress` must filter to catalog entries where `implemented` is `true`.
 - `pause-work` uses `blueprint_pause_handoff_get` and `blueprint_pause_handoff_write` to keep the latest resumable handoff in `.blueprint/reports/` while `blueprint_state_update` keeps `STATE.md` aligned.
+- `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to compare milestone intent against completed evidence and build the durable audit report before any archival step.
 - `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
 - `validate-phase` and `verify-work` use `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, `blueprint_phase_validation_write`, `blueprint_config_get`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` to persist summary-aware verification and UAT evidence.

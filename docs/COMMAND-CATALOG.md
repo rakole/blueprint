@@ -9,7 +9,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `add-tests` | 4 | `Quality And Shipping` | `blueprint-phase-validation` | `planned` | `new or updated test files in the repo; verification notes in XX-VERIFICATION.md` | `High: repo code mutation plus verification updates.` |
 | `add-todo` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `.blueprint/todos/TODO.md; optional .blueprint/notes/NOTES.md updates when converting a note` | `Low: todo index update only.` |
 | `audit-fix` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `audit-fix report in .blueprint/reports/; code changes when not dry-running` | `High: classification plus automated remediation.` |
-| `audit-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `milestone audit report in .blueprint/reports/` | `Low: report generation only.` |
+| `audit-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `implemented` | `milestone audit report in .blueprint/reports/` | `Low: report generation only.` |
 | `check-todos` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `todo status fields when selection or completion changes` | `Low: todo selection and status update only.` |
 | `cleanup` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `archived phase directories; cleanup report in .blueprint/reports/` | `High: planning-directory archival and removal behavior.` |
 | `code-review-fix` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW-FIX.md; code changes` | `High: automated fixes plus optional iteration loop.` |

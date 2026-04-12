@@ -64,6 +64,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(catalog, /`map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented`/);
   assert.match(catalog, /`next` \| 1 \| `Core Lifecycle` \| `blueprint-router` \| `implemented`/);
   assert.match(catalog, /`execute-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-execution` \| `implemented`/);
+  assert.match(catalog, /`audit-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(catalog, /`do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `blocked`/);
   assert.match(catalog, /`pause-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
   assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `planned`/);
@@ -74,6 +75,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(skills, /`blueprint-router` .* `next`, `do`/);
   assert.match(skills, /`blueprint-governance` .* `pause-work`, `resume-work`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `plan-milestone-gaps`/);
+  assert.match(skills, /`blueprint-roadmap-admin` .* `audit-milestone`/);
   assert.match(skills, /`blueprint-phase-execution` .* `execute-phase`, `quick`, `fast`/);
   assert.match(drift, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
   assert.match(drift, /`DRIFT-01` through `DRIFT-07`/);

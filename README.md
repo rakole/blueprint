@@ -23,6 +23,7 @@ This repository still carries the planning pack that locked the product and arch
 - Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
 - Phase 4 execution now ships through `/blu:execute-phase`, which uses the plan and summary MCP substrates to produce execution evidence
 - Phase 4 validation now ships through `/blu:validate-phase` and `/blu:verify-work`, which use summary-aware validation MCP tools to persist verification and UAT evidence
+- Wave 2 milestone auditing now ships through `/blu:audit-milestone`, which compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
@@ -138,6 +139,7 @@ These runtime files exist today:
 - `commands/blu/execute-phase.toml`
 - `commands/blu/validate-phase.toml`
 - `commands/blu/verify-work.toml`
+- `commands/blu/audit-milestone.toml`
 - `commands/blu/next.toml`
 - `commands/blu/pause-work.toml`
 - `skills/blueprint-router.md`
@@ -148,6 +150,7 @@ These runtime files exist today:
 - `skills/blueprint-phase-planning.md`
 - `skills/blueprint-phase-execution.md`
 - `skills/blueprint-phase-validation.md`
+- `skills/blueprint-roadmap-admin.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`
@@ -180,7 +183,7 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 The next broad rollout remains the post-validation lifecycle and roadmap slices while the shipped Phase 3 and Phase 4 guarantees stay green:
 
 1. Keep `resume-work` blocked until its runtime substrate exists
-2. Continue the next unshipped command slice after `pause-work`, `validate-phase`, and `verify-work`
+2. Continue the next unshipped command slice after `pause-work`, `validate-phase`, `verify-work`, and `audit-milestone`
 3. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

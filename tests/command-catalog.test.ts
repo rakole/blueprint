@@ -19,12 +19,13 @@ const IMPLEMENTED_COMMANDS = [
   "execute-phase",
   "validate-phase",
   "verify-work",
-  "pause-work"
+  "pause-work",
+  "audit-milestone"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
 
-test("runtime command catalog only marks shipped Wave 0 commands as implemented", async () => {
+test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const implemented = Object.entries(catalog.commands)
     .filter(([, entry]) => entry.implemented)
@@ -134,4 +135,19 @@ test("validation slice commands are implemented once manifests, shared skill, an
     assert.deepEqual(entry.availableOptionalAgents, ["blueprint-verifier"]);
     assert.deepEqual(entry.blockedBy, []);
   }
+});
+
+test("audit-milestone is implemented once manifest, skill, and milestone audit MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["audit-milestone"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-verifier"]);
+  assert.deepEqual(entry.blockedBy, []);
 });
