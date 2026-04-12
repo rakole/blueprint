@@ -113,7 +113,7 @@ In other words: the shared security library protects the runtime; `secure-phase`
 
 - implement `blueprint-review` review substrate
 - add `blueprint-security-auditor`
-- implement `/blu:secure-phase` on top of the shared helpers and review recording tools
+- implement `/blu-secure-phase` on top of the shared helpers and review recording tools
 
 ## What Not To Port Directly
 

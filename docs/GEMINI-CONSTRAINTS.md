@@ -12,8 +12,8 @@ This file captures the Gemini CLI and extension constraints that materially shap
 - Stateful mutations should happen through an extension-bundled MCP server rather than prompt-only logic.
 - Hooks are advisory in v1. Blueprint should not depend on statusline injection, hidden settings mutation, or extension self-modification.
 - Repo config should not control hook activation; hook configuration belongs to extension-owned `hooks/hooks.json`.
-- `/blu:update` is advisory because Gemini extension installation and update flows happen outside the current interactive session.
-- `/blu:reapply-patches` must target the global patch registry instead of patching the installed extension copy directly.
+- `/blu-update` is advisory because Gemini extension installation and update flows happen outside the current interactive session.
+- `/blu-reapply-patches` must target the global patch registry instead of patching the installed extension copy directly.
 - Review, shipping, and peer-CLI orchestration must degrade gracefully when optional external tools are missing.
 
 ## Consequences For Implementation

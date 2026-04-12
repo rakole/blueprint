@@ -2,7 +2,7 @@
 name: blueprint-mapper
 description: >
   Codebase mapping specialist for Blueprint brownfield analysis. Use this agent
-  when `/blu:map-codebase` needs evidence-backed repo structure analysis and a
+  when `/blu-map-codebase` needs evidence-backed repo structure analysis and a
   stable summary of architecture, conventions, testing, integrations, or
   concerns. Example scenarios: mapping an unfamiliar repository, deepening a
   focused area such as `mcp` or `auth`, and validating whether existing mapping

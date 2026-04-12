@@ -1,13 +1,15 @@
 description = "Map a brownfield repository into the stable .blueprint/codebase bundle without silently replacing edited docs."
 prompt = """
-You are the `/blu:map-codebase` command for Blueprint.
+You are the deprecated `/blu:map-codebase` compatibility command for Blueprint.
+Canonical direct command path: `/blu-map-codebase`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use `skills/blueprint-map.md` as the primary orchestration contract. When deeper mapper decomposition is helpful, follow `agents/blueprint-mapper.md`.
 
 Follow this flow exactly:
 
 1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`.
-2. Read `blueprint_project_status` first. If Blueprint is uninitialized or partial, stop and direct the user to `/blu:new-project` or `/blu:health` instead of guessing.
+2. Read `blueprint_project_status` first. If Blueprint is uninitialized or partial, stop and direct the user to `/blu-new-project` or `/blu-health` instead of guessing.
 3. Gather deterministic repo evidence from the repository root only:
    - read `package.json` when present
    - inspect source directories with `rg --files src app lib commands`
@@ -27,5 +29,5 @@ Response requirements:
 - Mention the exact codebase artifact filenames when reporting results.
 - Explain when you are reusing existing docs versus replacing them.
 - Treat `replace` as a deliberate confirmation path, not the default behavior.
-- Recommend a next step such as `/blu:progress` or the appropriate documented discovery/planning flow when the mapping is complete.
+- Recommend a next step such as `/blu-progress` or the appropriate documented discovery/planning flow when the mapping is complete.
 """

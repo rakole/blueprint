@@ -1,4 +1,4 @@
-# `/blu:add-tests`
+# `/blu-add-tests`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:add-tests`
+- Gemini command path: `/blu-add-tests`
+- Compatibility during this release: `/blu:add-tests` (deprecated; remove next release)
 - Root router form: `/blu add-tests`
 - Argument hint: `<phase> [additional instructions]`
-- `/blu:add-tests 3`
+- `/blu-add-tests 3`
 - `/blu add-tests`
 
 ## Inputs, Project State, And Prerequisite Artifacts

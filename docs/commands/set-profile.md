@@ -1,4 +1,4 @@
-# `/blu:set-profile`
+# `/blu-set-profile`
 | Field | Value |
 |---|---|
 | Wave | `0` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:set-profile`
+- Gemini command path: `/blu-set-profile`
+- Compatibility during this release: `/blu:set-profile` (deprecated; remove next release)
 - Root router form: `/blu set-profile`
 - Argument hint: `<profile (quality|balanced|budget|inherit)>`
-- `/blu:set-profile quality`
+- `/blu-set-profile quality`
 - `/blu set-profile`
 
 ## Inputs, Project State, And Prerequisite Artifacts

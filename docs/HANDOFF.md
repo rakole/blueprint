@@ -32,7 +32,7 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 
 Wave 2 milestone closeout plus the first capture, review, and docs slices are now shipped, so future sessions should focus on preserving those contracts while keeping blocked surfaces blocked:
 
-1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
+1. Keep `/blu`, `/blu-help`, and `/blu-progress` limited to commands whose catalog entry is `implemented`
 2. Use the shipped validation, UAT, and milestone closeout sequence (`audit-milestone` -> `complete-milestone` -> `milestone-summary` -> `new-milestone`) instead of reintroducing prompt-only verification or ad hoc archival steps
 3. Keep the shipped `insert-phase` contract aligned across docs, manifest, skill, MCP substrate, and tests
 

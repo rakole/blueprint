@@ -1,4 +1,4 @@
-# `/blu:milestone-summary`
+# `/blu-milestone-summary`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:milestone-summary`
+- Gemini command path: `/blu-milestone-summary`
+- Compatibility during this release: `/blu:milestone-summary` (deprecated; remove next release)
 - Root router form: `/blu milestone-summary`
 - Argument hint: `[version]`
-- `/blu:milestone-summary v1.0`
+- `/blu-milestone-summary v1.0`
 - `/blu milestone-summary`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -108,8 +109,8 @@
 
 
 - Show roadmap and report drift before mutation.
-- If the completion report is missing, stop with concise guidance to run `/blu:complete-milestone` first.
-- If the audit report is missing, stop with concise guidance to run `/blu:audit-milestone` first.
+- If the completion report is missing, stop with concise guidance to run `/blu-complete-milestone` first.
+- If the audit report is missing, stop with concise guidance to run `/blu-audit-milestone` first.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
@@ -120,7 +121,7 @@
 - Produces a durable report for milestone-level operations.
 - Requires explicit confirmation before overwriting an existing milestone summary report.
 - Does not depend on any later-wave docs agent.
-- Returns `/blu:new-milestone` as the next safe implemented follow-up.
+- Returns `/blu-new-milestone` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

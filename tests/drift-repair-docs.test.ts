@@ -33,13 +33,13 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
   assert.match(readme, /Wave 0 shipped commands/);
   assert.match(readme, /Phase 3 discovery commands are shipped/);
   assert.match(readme, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
-  assert.match(readme, /shipped lifecycle slice also includes `\/blu:plan-phase`, `\/blu:execute-phase`, `\/blu:validate-phase`, `\/blu:verify-work`, and the read-only next-step router `\/blu:next`/i);
+  assert.match(readme, /shipped lifecycle slice also includes `\/blu-plan-phase`, `\/blu-execute-phase`, `\/blu-validate-phase`, `\/blu-verify-work`, and the read-only next-step router `\/blu-next`/i);
   assert.match(
     gemini,
-    /The live runtime now includes `\/blu:plan-phase`, `\/blu:execute-phase`, `\/blu:validate-phase`, `\/blu:verify-work`/i
+    /The live runtime now includes `\/blu-plan-phase`, `\/blu-execute-phase`, `\/blu-validate-phase`, `\/blu-verify-work`/i
   );
-  assert.match(gemini, /\/blu:execute-phase/);
-  assert.match(gemini, /\/blu:map-codebase/);
+  assert.match(gemini, /\/blu-execute-phase/);
+  assert.match(gemini, /\/blu-map-codebase/);
   assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
   assert.match(handoff, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
   assert.match(

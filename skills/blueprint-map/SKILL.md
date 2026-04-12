@@ -2,7 +2,7 @@
 name: blueprint-map
 description: >
   Blueprint brownfield codebase-mapping specialist. Use this skill when
-  `/blu:map-codebase` needs evidence-backed repository analysis, stable
+  `/blu-map-codebase` needs evidence-backed repository analysis, stable
   codebase-bundle output, or reuse-versus-refresh guidance for existing mapping
   docs. Example scenarios: producing the seven-document codebase bundle,
   deepening one area like `mcp` or `auth`, deciding whether existing mapping
@@ -10,7 +10,7 @@ description: >
   Blueprint lifecycle work.
 status: implemented
 commands:
-  - /blu:map-codebase
+  - /blu-map-codebase
 ---
 
 # Blueprint Map Skill

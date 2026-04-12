@@ -1,4 +1,4 @@
-# `/blu:review-backlog`
+# `/blu-review-backlog`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:review-backlog`
+- Gemini command path: `/blu-review-backlog`
+- Compatibility during this release: `/blu:review-backlog` (deprecated; remove next release)
 - Root router form: `/blu review-backlog`
 - Argument hint: `none`
-- `/blu:review-backlog`
+- `/blu-review-backlog`
 - `/blu review-backlog`
 
 ## Inputs, Project State, And Prerequisite Artifacts

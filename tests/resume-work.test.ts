@@ -46,8 +46,8 @@ async function createResumeWorkFixtureRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:execute-phase 3
+- Active command: /blu-progress
+- Next action: Run /blu-execute-phase 3
 - Last updated: 2026-04-10T00:00:00.000Z
 
 ## Blockers
@@ -112,7 +112,7 @@ Exercise the pause/resume handoff flow.
 
 test("resume-work spec metadata references the governance handoff contract and registered tools", async () => {
   const [manifestDoc, commandDoc, catalogDoc] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu/resume-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-resume-work.toml"), "utf8"),
     readFile(path.join(repoRoot, "docs/commands/resume-work.md"), "utf8"),
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8")
   ]);
@@ -123,16 +123,16 @@ test("resume-work spec metadata references the governance handoff contract and r
   assert.match(manifestDoc, /blueprint_artifact_list/);
   assert.match(manifestDoc, /blueprint_pause_handoff_get/);
   assert.match(manifestDoc, /blueprint_state_update/);
-  assert.match(manifestDoc, /\/blu:new-project/);
-  assert.match(manifestDoc, /\/blu:health/);
-  assert.match(manifestDoc, /\/blu:progress/);
-  assert.match(manifestDoc, /\/blu:resume-work/);
+  assert.match(manifestDoc, /\/blu-new-project/);
+  assert.match(manifestDoc, /\/blu-health/);
+  assert.match(manifestDoc, /\/blu-progress/);
+  assert.match(manifestDoc, /\/blu-resume-work/);
   assert.match(manifestDoc, /Keep persistent writes limited to `\.blueprint\/STATE\.md`/);
   assert.match(
     manifestDoc,
     /Preserve the canonical pause handoff report; do not rewrite or delete `\.blueprint\/reports\/pause-work-latest\.md`/
   );
-  assert.match(commandDoc, /# `\/blu:resume-work`/);
+  assert.match(commandDoc, /# `\/blu-resume-work`/);
   assert.match(commandDoc, /\| Wave \| `1` \|/);
   assert.match(commandDoc, /\| Family \| `Core Lifecycle` \|/);
   assert.match(commandDoc, /Root-routable \| Yes\. The root `\/blu` router may dispatch here directly\./);
@@ -165,14 +165,14 @@ test("resume-work spec metadata references the governance handoff contract and r
   }
 });
 
-test("pause and resume state flow surfaces /blu:resume-work while the handoff is active", async (t) => {
+test("pause and resume state flow surfaces /blu-resume-work while the handoff is active", async (t) => {
   const repoPath = await createResumeWorkFixtureRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
   const before = await blueprintStateLoad({ cwd: repoPath });
-  assert.match(before.derivedStatus.nextAction, /\/blu:execute-phase 3/);
+  assert.match(before.derivedStatus.nextAction, /\/blu-execute-phase 3/);
 
   const created = await blueprintPauseHandoffWrite({
     cwd: repoPath,
@@ -184,7 +184,7 @@ test("pause and resume state flow surfaces /blu:resume-work while the handoff is
     humanActionsPending: ["Choose when to resume the saved session."],
     modifiedFiles: ["src/mcp/tools/state.ts", "docs/commands/resume-work.md"],
     contextNotes: "The next session should restore the pause handoff first, then continue from the saved phase context.",
-    nextAction: "Start by restoring the saved handoff and then continue with /blu:resume-work."
+    nextAction: "Start by restoring the saved handoff and then continue with /blu-resume-work."
   });
 
   const paused = await blueprintStateLoad({ cwd: repoPath });
@@ -194,7 +194,7 @@ test("pause and resume state flow surfaces /blu:resume-work while the handoff is
   await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
-      activeCommand: "/blu:progress",
+      activeCommand: "/blu-progress",
       lastUpdated: resumeTimestamp
     }
   });
@@ -204,10 +204,10 @@ test("pause and resume state flow surfaces /blu:resume-work while the handoff is
   assert.equal(created.status, "created");
   assert.equal(handoff.found, true);
   assert.equal(handoff.handoff?.currentPhase, "3");
-  assert.equal(paused.state.activeCommand, "/blu:pause-work");
+  assert.equal(paused.state.activeCommand, "/blu-pause-work");
   assert.match(paused.blockers.join("\n"), /Paused handoff is active/);
-  assert.match(paused.derivedStatus.nextAction, /\/blu:resume-work/);
+  assert.match(paused.derivedStatus.nextAction, /\/blu-resume-work/);
   assert.match(paused.derivedStatus.nextAction, /restore the saved pause handoff for Phase 3/);
   assert.doesNotMatch(resumed.blockers.join("\n"), /Paused handoff is active/);
-  assert.match(resumed.derivedStatus.nextAction, /\/blu:execute-phase 3/);
+  assert.match(resumed.derivedStatus.nextAction, /\/blu-execute-phase 3/);
 });

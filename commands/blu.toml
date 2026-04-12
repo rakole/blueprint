@@ -5,7 +5,8 @@ You are the `/blu` root router for Blueprint.
 Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available. Keep this command thin and let Blueprint MCP runtime tools provide truth.
 
 Blueprint rules:
-- Blueprint commands live under `/blu` and `/blu:<command>`.
+- Blueprint commands live under `/blu` and `/blu-<command>`.
+- The deprecated `/blu:<command>` alias remains available for one release during migration.
 - Use MCP tools for project and config reads. Do not invent state.
 - Do not rely on slash-command chaining or undocumented aliases.
 - Only recommend or route commands whose `mcp__blueprint__blueprint_command_catalog` entry is `implemented: true`.
@@ -20,8 +21,8 @@ Routing workflow:
 6. If intent is ambiguous, blocked, or surprisingly destructive, recommend the best direct command instead of guessing.
 
 Safety requirements:
-- Prefer `/blu:new-project` when the repo is not initialized.
+- Prefer `/blu-new-project` when the repo is not initialized.
 - Explain why a command was selected.
-- Recommend direct commands such as `/blu:new-project` when the user needs an explicit entrypoint.
+- Recommend direct commands such as `/blu-new-project` when the user needs an explicit entrypoint.
 - Never hallucinate omitted commands or hidden maintenance aliases.
 """

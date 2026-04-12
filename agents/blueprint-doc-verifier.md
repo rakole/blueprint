@@ -2,7 +2,7 @@
 name: blueprint-doc-verifier
 description: >
   Documentation fact-check specialist for Blueprint docs-update runs. Use this
-  agent when `/blu:docs-update` needs a bounded pass that checks drafted or
+  agent when `/blu-docs-update` needs a bounded pass that checks drafted or
   existing docs against repo evidence before the parent command writes the final
   report or applies edits. Example scenarios: verifying shipped-command lists,
   checking architecture claims against the current repo, and flagging stale or
@@ -21,7 +21,7 @@ timeout_mins: 15
 ## Purpose
 
 Fact-check selected documentation against actual repo evidence so
-`/blu:docs-update` can report trustworthy results and avoid shipping stale or
+`/blu-docs-update` can report trustworthy results and avoid shipping stale or
 invented claims.
 
 ## Required Reads

@@ -33,6 +33,15 @@ import {
   resolveBlueprintSkillPath,
   type BlueprintInternalToolName
 } from "../runtime-vocabulary.js";
+import {
+  blueprintDirectCommand,
+  blueprintDirectCommandAliases,
+  blueprintPrimaryManifestPath,
+  blueprintRootCommand,
+  blueprintRouterCommand,
+  blueprintRunCommand,
+  blueprintRunDirectCommand
+} from "../command-paths.js";
 import { resolveAvailableOptionalAgents } from "../agent-definition.js";
 
 type CommandStatus = "planned" | "implemented" | "blocked" | "repairing";
@@ -165,7 +174,6 @@ const projectStatusInputSchema = {
   cwd: z.string().optional()
 };
 
-const ROOT_COMMAND_MANIFEST = "commands/blu.toml";
 const COMMAND_SPEC_PREFIX = "docs/commands";
 const PROJECT_TOOL_NAMES = [
   "blueprint_command_catalog",
@@ -184,8 +192,8 @@ const AVAILABLE_TOOL_NAMES = new Set([
 const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
   commands: {
     "new-project": {
-      command: "/blu:new-project",
-      route: "/blu new-project",
+      command: blueprintDirectCommand("new-project"),
+      route: blueprintRouterCommand("new-project"),
       wave: 0,
       family: "Foundation",
       risk: "Medium",
@@ -194,7 +202,7 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
       status: "implemented",
       implemented: true,
       blockedBy: [],
-      manifestPath: "commands/blu/new-project.toml",
+      manifestPath: blueprintPrimaryManifestPath("new-project"),
       skillPath: blueprintDiscoverableSkillPath("blueprint-bootstrap"),
       specPath: "docs/commands/new-project.md",
       requiredTools: [
@@ -214,7 +222,7 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
     "0": ["new-project"]
   },
   aliases: {
-    "new-project": ["/blu new-project"]
+    "new-project": blueprintDirectCommandAliases("new-project")
   }
 };
 
@@ -347,7 +355,7 @@ function buildBootstrapSeed(
             requirement:
               "Map the existing codebase before later roadmap phases are treated as durable implementation commitments.",
             status: "Pending",
-            notes: "Routes brownfield repos to `/blu:map-codebase`."
+            notes: `Routes brownfield repos to \`${blueprintDirectCommand("map-codebase")}\`.`
           }
         ]
       : [
@@ -381,7 +389,7 @@ function buildBootstrapSeed(
             objective:
               "Capture the current repo structure and risks before later phases are treated as durable.",
             requirementIds: ["RQ-01", "RQ-03"],
-            notes: ["Run `/blu:map-codebase` immediately after bootstrap."]
+            notes: [`${blueprintRunDirectCommand("map-codebase")} immediately after bootstrap.`]
           },
           {
             phase: "2",
@@ -440,7 +448,7 @@ function buildBootstrapSeed(
     brownfieldMode: assessment.repoShape,
     assumptions: [
       assessment.repoShape === "brownfield"
-        ? "Later roadmap phases stay provisional until `/blu:map-codebase` captures the current codebase."
+        ? `Later roadmap phases stay provisional until \`${blueprintDirectCommand("map-codebase")}\` captures the current codebase.`
         : "The first milestone should stay small enough to validate Blueprint's lifecycle on this repo."
     ]
   };
@@ -479,10 +487,6 @@ function parseOptionalAgents(markdown: string, primarySkill: string): string[] {
   const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
 
   return values.filter((value) => value !== primarySkill);
-}
-
-function commandManifestPath(commandName: string): string {
-  return `commands/blu/${commandName}.toml`;
 }
 
 type ParsedCatalogRow = {
@@ -526,10 +530,9 @@ function parseCatalogRow(cells: string[]): ParsedCatalogRow | null {
 
 async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<CommandCatalogEntry> {
   const specPath = `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
-  const manifestPath = commandManifestPath(parsedRow.commandName);
+  const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
   const specUrl = bundledUrl(specPath);
-  const manifestUrl = bundledUrl(manifestPath);
-  const manifestExists = await pathExists(manifestUrl);
+  const manifestExists = await pathExists(bundledUrl(manifestPath));
   const specExists = await pathExists(specUrl);
   const specMarkdown = specExists ? await fs.readFile(specUrl, "utf8") : "";
   const requiredTools = parseRequiredTools(specMarkdown);
@@ -587,8 +590,8 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   }
 
   return {
-    command: `/blu:${parsedRow.commandName}`,
-    route: `/blu ${parsedRow.commandName}`,
+    command: blueprintDirectCommand(parsedRow.commandName),
+    route: blueprintRouterCommand(parsedRow.commandName),
     wave: parsedRow.wave,
     family: parsedRow.family,
     risk: parsedRow.risk,
@@ -641,7 +644,7 @@ async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
       const waveKey = String(parsedRow.wave);
       waves[waveKey] ??= [];
       waves[waveKey].push(parsedRow.commandName);
-      aliases[parsedRow.commandName] = [`/blu ${parsedRow.commandName}`];
+      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
     }
 
     return Object.keys(commands).length > 0
@@ -698,11 +701,11 @@ export async function blueprintProjectInit(
       projectStatus: "initialized",
       currentMilestone: bootstrapSeed.currentMilestone ?? "v1",
       currentPhase: bootstrapSeed.roadmapPhases?.[0]?.phase ?? "1",
-      activeCommand: "/blu:new-project",
+      activeCommand: blueprintDirectCommand("new-project"),
       nextAction:
         bootstrapAssessment.provisionalRoadmap
-          ? "Run /blu:map-codebase before treating the roadmap as durable"
-          : "Run /blu:progress to review the next safe Blueprint action",
+          ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable`
+          : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
       blockers: [],
       lastUpdated: new Date().toISOString()
     }
@@ -729,8 +732,8 @@ export async function blueprintProjectInit(
     bootstrapDiagnostics,
     nextAction:
       bootstrapDiagnostics.brownfield.provisionalRoadmap
-        ? "Run /blu:map-codebase before treating the roadmap as durable"
-        : "Run /blu:progress to review the next safe Blueprint action",
+        ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable`
+        : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
     warnings: [...new Set(warnings)]
   };
 }
@@ -748,8 +751,8 @@ export async function blueprintProjectStatus(
   if (!initialized) {
     const nextAction =
       inspection.readiness === "uninitialized"
-        ? "Run /blu:new-project"
-        : "Re-run /blu:new-project only after you decide how to handle the partial .blueprint state, or run /blu:health to inspect and repair it";
+        ? blueprintRunDirectCommand("new-project")
+        : `Re-run ${blueprintDirectCommand("new-project")} only after you decide how to handle the partial .blueprint state, or ${blueprintRunDirectCommand("health")} to inspect and repair it`;
 
     return {
       status: inspection.readiness,
@@ -791,7 +794,7 @@ export async function blueprintProjectStatus(
     currentPhase: stateResult.derivedStatus.currentPhase,
     currentMilestone: stateResult.state.currentMilestone,
     nextAction:
-      stateResult.derivedStatus.nextAction || "Run /blu for the next Blueprint step",
+      stateResult.derivedStatus.nextAction || blueprintRunCommand(blueprintRootCommand(), "for the next Blueprint step"),
     bootstrap,
     health: {
       missingArtifacts: inspection.core.missing,

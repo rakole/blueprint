@@ -45,8 +45,8 @@ async function createPhaseRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -61,7 +61,7 @@ async function createPhaseRepo(): Promise<string> {
 }
 
 test("ui-phase command references registered tools and single-artifact UI handling", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu/ui-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-phase.toml"), "utf8");
   const requiredTools = [
     "blueprint_phase_locate",
     "blueprint_phase_research_status",

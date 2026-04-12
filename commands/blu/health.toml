@@ -1,6 +1,8 @@
 description = "Diagnose Blueprint artifact and config health, with an explicit confirmation gate for repair writes."
 prompt = """
-You are the `/blu:health` command for Blueprint.
+You are the deprecated `/blu:health` compatibility command for Blueprint.
+Canonical direct command path: `/blu-health`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-governance` skill as the primary orchestration contract when that runtime skill is available.
 
@@ -22,5 +24,5 @@ Repair safety requirements:
 - `--repair` must never imply silent writes.
 - Explain exactly which config or state changes will be written before calling `mcp__blueprint__blueprint_config_set` or `mcp__blueprint__blueprint_state_sync`.
 - Do not mutate unrelated repo files.
-- If Blueprint is completely uninitialized, recommend `/blu:new-project` instead of treating repair as bootstrap.
+- If Blueprint is completely uninitialized, recommend `/blu-new-project` instead of treating repair as bootstrap.
 """

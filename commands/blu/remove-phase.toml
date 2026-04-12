@@ -1,6 +1,8 @@
 description = "Remove a future Blueprint phase, renumber later roadmap entries and phase directories, and keep follow-up routing inside the implemented surface."
 prompt = """
-You are the `/blu:remove-phase` command for Blueprint.
+You are the deprecated `/blu:remove-phase` compatibility command for Blueprint.
+Canonical direct command path: `/blu-remove-phase`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available.
 
@@ -11,7 +13,7 @@ Follow this flow exactly:
 3. Read `mcp__blueprint__blueprint_artifact_list` for the requested phase so you can preview any existing phase artifacts or drift before removal.
 4. Summarize the target phase, the current milestone, and the expected renumbering impact, then require explicit confirmation before mutation. Review is the default safe path.
 5. Use `mcp__blueprint__blueprint_roadmap_remove_phase` with the confirmed phase number. It must enforce the future-phase guard, delete the removed phase directory, renumber subsequent roadmap phases and phase directories, and return the removed phase plus renumbered phase details.
-6. Use `mcp__blueprint__blueprint_state_update` with `base: "synced"` to record `/blu:remove-phase` as the active command while keeping the current milestone and phase synchronized. Point the next safe implemented follow-up at `/blu:progress`.
+6. Use `mcp__blueprint__blueprint_state_update` with `base: "synced"` to record `/blu-remove-phase` as the active command while keeping the current milestone and phase synchronized. Point the next safe implemented follow-up at `/blu-progress`.
 7. Return a concise summary covering the removed phase, any renumbered phases, warnings or drift notes, and the next safe Blueprint action.
 
 Response requirements:
@@ -20,5 +22,5 @@ Response requirements:
 - Do not remove current or past phases.
 - Do not hide renumbering behind implicit execution; always require explicit confirmation before the mutation step.
 - Do not advertise unimplemented roadmap commands as follow-up steps.
-- Keep the follow-up inside the shipped Blueprint surface; prefer `/blu:progress` after roadmap surgery.
+- Keep the follow-up inside the shipped Blueprint surface; prefer `/blu-progress` after roadmap surgery.
 """

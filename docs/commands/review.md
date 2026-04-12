@@ -1,4 +1,4 @@
-# `/blu:review`
+# `/blu-review`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:review`
+- Gemini command path: `/blu-review`
+- Compatibility during this release: `/blu:review` (deprecated; remove next release)
 - Root router form: `/blu review`
 - Argument hint: `--phase N [--gemini] [--claude] [--codex] [--opencode] [--all]`
-- `/blu:review --phase 3 --all`
+- `/blu-review --phase 3 --all`
 - `/blu review`
 
 ## Inputs, Project State, And Prerequisite Artifacts

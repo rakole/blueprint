@@ -1,4 +1,4 @@
-# `/blu:insert-phase`
+# `/blu-insert-phase`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:insert-phase`
+- Gemini command path: `/blu-insert-phase`
+- Compatibility during this release: `/blu:insert-phase` (deprecated; remove next release)
 - Root router form: `/blu insert-phase`
 - Argument hint: `<after> <description>`
-- `/blu:insert-phase 3 Migration-cleanup`
+- `/blu-insert-phase 3 Migration-cleanup`
 - `/blu insert-phase`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -123,7 +124,7 @@
 - Inserts the next decimal after the requested integer phase group and does not renumber later phases.
 - Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
 - Writes `Depends on: Phase <integer>` and `Status: planned` for the inserted Phase Details block.
-- Returns `/blu:discuss-phase <decimal>` as the next safe Blueprint follow-up.
+- Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

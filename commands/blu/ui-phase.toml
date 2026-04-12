@@ -1,6 +1,8 @@
 description = "Create a phase-scoped UI spec or explicit skip rationale through Blueprint's config-aware discovery flow."
 prompt = """
-You are the `/blu:ui-phase` command for Blueprint.
+You are the deprecated `/blu:ui-phase` compatibility command for Blueprint.
+Canonical direct command path: `/blu-ui-phase`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper UI design work is useful, use the `blueprint-ui-designer` subagent for bounded, phase-scoped UI guidance.
 
@@ -17,7 +19,7 @@ Follow this flow exactly:
 9. Use `mcp__blueprint__blueprint_artifact_scaffold` only to seed a missing `XX-UI-SPEC.md`. Do not create a second UI-skip artifact.
 10. If deeper UI design work is useful, the output from the `blueprint-ui-designer` subagent must be concrete enough to write directly into the final artifact.
 11. Persist the actual UI contract or skip rationale through `mcp__blueprint__blueprint_phase_artifact_write` with `artifact: "ui-spec"`.
-12. Call `mcp__blueprint__blueprint_state_update` to record that `/blu:ui-phase` completed and to set the next safe action.
+12. Call `mcp__blueprint__blueprint_state_update` to record that `/blu-ui-phase` completed and to set the next safe action.
 13. Return a concise summary covering the phase, config gates, reused versus replaced artifacts, any warnings, and the next safe action.
 
 Response requirements:

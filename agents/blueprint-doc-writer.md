@@ -2,7 +2,7 @@
 name: blueprint-doc-writer
 description: >
   Documentation drafting specialist for Blueprint docs-update runs. Use this
-  agent when `/blu:docs-update` needs scoped markdown revisions grounded in repo
+  agent when `/blu-docs-update` needs scoped markdown revisions grounded in repo
   evidence and saved Blueprint artifacts rather than a loose prose rewrite.
   Example scenarios: refreshing `README.md` after shipped command changes,
   tightening architecture docs to match current MCP/runtime boundaries, and
@@ -21,7 +21,7 @@ timeout_mins: 15
 
 ## Purpose
 
-Draft scoped documentation updates that the parent `/blu:docs-update` command
+Draft scoped documentation updates that the parent `/blu-docs-update` command
 can apply to repo docs without widening into unrelated files or unsupported
 claims.
 

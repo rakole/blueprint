@@ -1,6 +1,8 @@
 description = "Review and update normalized Blueprint repo settings, with an optional save-to-defaults step."
 prompt = """
-You are the `/blu:settings` command for Blueprint.
+You are the deprecated `/blu:settings` compatibility command for Blueprint.
+Canonical direct command path: `/blu-settings`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-governance` skill as the primary orchestration contract when that runtime skill is available.
 

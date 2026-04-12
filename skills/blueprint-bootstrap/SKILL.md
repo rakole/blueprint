@@ -2,14 +2,14 @@
 name: blueprint-bootstrap
 description: >
   Blueprint bootstrap and repo-initialization specialist. Use this skill when
-  `/blu:new-project` needs durable project setup, repo-shape classification, or
+  `/blu-new-project` needs durable project setup, repo-shape classification, or
   brownfield-aware bootstrap guidance before later lifecycle work. Example
   scenarios: classifying a repo as greenfield or brownfield, applying saved
   defaults during bootstrap, drafting substantive initial planning artifacts,
-  and deciding whether bootstrap should route to `/blu:map-codebase`.
+  and deciding whether bootstrap should route to `/blu-map-codebase`.
 status: implemented
 commands:
-  - /blu:new-project
+  - /blu-new-project
 ---
 
 # Blueprint Bootstrap Skill
@@ -60,7 +60,7 @@ Current Blueprint delta:
 3. Gather or synthesize enough context that `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` are no longer placeholder-only shells.
 4. Use `blueprint_project_init` for the first persistent bootstrap write.
 5. Keep follow-up config changes inside `blueprint_config_set`.
-6. If the repo is brownfield and mapping has not happened yet, route to `/blu:map-codebase` or mark the roadmap as provisional until mapping is complete.
+6. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
 7. Re-read project status after initialization and end with the next safe implemented command.
 8. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
 

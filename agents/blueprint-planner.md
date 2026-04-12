@@ -2,7 +2,7 @@
 name: blueprint-planner
 description: >
   Phase-planning specialist for Blueprint lifecycle work. Use this agent when
-  `/blu:plan-phase` needs execution-ready plan drafts grounded in phase
+  `/blu-plan-phase` needs execution-ready plan drafts grounded in phase
   context, discovery artifacts, and current Blueprint constraints. Example
   scenarios: drafting new `XX-YY-PLAN.md` content, splitting a phase into
   dependency-aware waves, and translating research or UI findings into concrete

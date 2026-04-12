@@ -1,4 +1,4 @@
-# `/blu:pause-work`
+# `/blu-pause-work`
 | Field | Value |
 |---|---|
 | Wave | `1` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:pause-work`
+- Gemini command path: `/blu-pause-work`
+- Compatibility during this release: `/blu:pause-work` (deprecated; remove next release)
 - Root router form: `/blu pause-work`
 - Argument hint: `none`
-- `/blu:pause-work`
+- `/blu-pause-work`
 - `/blu pause-work`
 
 ## Inputs, Project State, And Prerequisite Artifacts

@@ -754,7 +754,7 @@ export async function blueprintConfigSetProfile(
 
   if (!projectConfig) {
     throw new Error(
-      "Blueprint project config is missing. Initialize the repo first with /blu:new-project."
+      "Blueprint project config is missing. Initialize the repo first with /blu-new-project."
     );
   }
 

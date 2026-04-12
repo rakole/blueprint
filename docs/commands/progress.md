@@ -1,4 +1,4 @@
-# `/blu:progress`
+# `/blu-progress`
 | Field | Value |
 |---|---|
 | Wave | `0` |
@@ -12,10 +12,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:progress`
+- Gemini command path: `/blu-progress`
+- Compatibility during this release: `/blu:progress` (deprecated; remove next release)
 - Root router form: `/blu progress`
 - Argument hint: `none`
-- `/blu:progress`
+- `/blu-progress`
 - `/blu progress`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -85,8 +86,8 @@
 
 ## Failure Modes And Recovery
 
-- If the repo is uninitialized, route to `/blu:new-project`.
-- If the repo is partial, route to `/blu:health`.
+- If the repo is uninitialized, route to `/blu-new-project`.
+- If the repo is partial, route to `/blu-health`.
 - If the natural next command is blocked, explain the missing substrate and keep the recommendation inside the implemented Wave 0 surface.
 
 ## Acceptance Criteria

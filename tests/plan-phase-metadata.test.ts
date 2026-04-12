@@ -8,7 +8,7 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("plan-phase manifest references the config gates, planner/checker loop, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu/plan-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-plan-phase.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-planning` skill/);
   assert.match(commandFile, /`blueprint-planner` and `blueprint-checker` subagents/);
@@ -28,7 +28,7 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /workflow\.plan_check/);
   assert.match(commandFile, /explicit confirmation path/i);
   assert.match(commandFile, /planner\/checker revision loop|re-run the checker/i);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(
     commandFile,
     /skills\/blueprint-phase-planning\.md|agents\/blueprint-(planner|checker)\.md/
@@ -42,7 +42,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   );
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:plan-phase/);
+  assert.match(skillFile, /\/blu-plan-phase/);
   assert.match(skillFile, /workflow\.research/);
   assert.match(skillFile, /workflow\.ui_phase/);
   assert.match(skillFile, /workflow\.ui_safety_gate/);
@@ -51,5 +51,5 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /blueprint-checker/);
   assert.match(skillFile, /explicit overwrite confirmation/i);
   assert.match(skillFile, /revision loop/i);
-  assert.match(skillFile, /\/blu:progress/);
+  assert.match(skillFile, /\/blu-progress/);
 });

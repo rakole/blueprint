@@ -1,4 +1,4 @@
-# `/blu:add-backlog`
+# `/blu-add-backlog`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:add-backlog`
+- Gemini command path: `/blu-add-backlog`
+- Compatibility during this release: `/blu:add-backlog` (deprecated; remove next release)
 - Root router form: `/blu add-backlog`
 - Argument hint: `<description>`
-- `/blu:add-backlog Offline-mode`
+- `/blu-add-backlog Offline-mode`
 - `/blu add-backlog`
 
 ## Inputs, Project State, And Prerequisite Artifacts

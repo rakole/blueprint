@@ -1,4 +1,4 @@
-# `/blu:add-todo`
+# `/blu-add-todo`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:add-todo`
+- Gemini command path: `/blu-add-todo`
+- Compatibility during this release: `/blu:add-todo` (deprecated; remove next release)
 - Root router form: `/blu add-todo`
 - Argument hint: `<description>`
-- `/blu:add-todo Add-retry-telemetry`
+- `/blu-add-todo Add-retry-telemetry`
 - `/blu add-todo`
 
 ## Inputs, Project State, And Prerequisite Artifacts

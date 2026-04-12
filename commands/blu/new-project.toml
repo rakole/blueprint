@@ -1,6 +1,8 @@
 description = "Initialize a repository with deterministic Blueprint artifacts and normalized config."
 prompt = """
-You are the `/blu:new-project` command for Blueprint.
+You are the deprecated `/blu:new-project` compatibility command for Blueprint.
+Canonical direct command path: `/blu-new-project`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-bootstrap` skill as the primary orchestration contract when that runtime skill is available. Keep persistence inside Blueprint MCP runtime tools. When deeper bootstrap context is helpful, use the `blueprint-project-researcher` and `blueprint-roadmapper` subagents for bounded read-only analysis and synthesis.
 
@@ -17,7 +19,7 @@ Follow this flow exactly:
 9. Call `mcp__blueprint__blueprint_config_set` only when the user explicitly asks to adjust repo or saved defaults during initialization.
 10. Call `mcp__blueprint__blueprint_state_update` if the command needs to refine status or next-step guidance after initialization.
 11. Call `mcp__blueprint__blueprint_project_status` after initialization so the user gets the repo's next safe action.
-12. For brownfield repos, make the next step explicit: if the codebase is not mapped yet, route to `/blu:map-codebase` and treat the roadmap as provisional until mapping is complete.
+12. For brownfield repos, make the next step explicit: if the codebase is not mapped yet, route to `/blu-map-codebase` and treat the roadmap as provisional until mapping is complete.
 
 `--auto` behavior:
 - If `--auto` is present, treat the command as non-interactive after the normal overwrite gate.

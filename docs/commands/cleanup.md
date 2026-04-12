@@ -1,4 +1,4 @@
-# `/blu:cleanup`
+# `/blu-cleanup`
 | Field | Value |
 |---|---|
 | Wave | `5` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:cleanup`
+- Gemini command path: `/blu-cleanup`
+- Compatibility during this release: `/blu:cleanup` (deprecated; remove next release)
 - Root router form: `/blu cleanup`
 - Argument hint: `none`
-- `/blu:cleanup`
+- `/blu-cleanup`
 - `/blu cleanup`
 
 ## Inputs, Project State, And Prerequisite Artifacts

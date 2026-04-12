@@ -16,7 +16,7 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   assert.match(projectResearcher, /## Required Reads/);
   assert.match(projectResearcher, /greenfield`, `scaffold-only`, or `brownfield`/);
   assert.match(projectResearcher, /Confidence:/);
-  assert.match(projectResearcher, /\/blu:map-codebase/);
+  assert.match(projectResearcher, /\/blu-map-codebase/);
   assert.match(
     projectResearcher,
     /Do not draft or rewrite roadmap, requirements, or `\.blueprint\/` artifacts\s+directly/

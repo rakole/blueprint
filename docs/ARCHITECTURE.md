@@ -58,7 +58,7 @@ Planned later runtime surfaces, not registered today:
 ### 1. Commands
 
 - `/blu` is the root router.
-- `/blu:<command>` is the direct entrypoint for each retained command.
+- `/blu-<command>` is the direct entrypoint for each retained command. Deprecated `/blu:<command>` aliases remain for one release during migration.
 - Commands own user-facing UX, routing, confirmations, and recovery language.
 - Commands do not own durable state mutation.
 
@@ -94,7 +94,7 @@ Planned later runtime surfaces, not registered today:
 
 ### Direct command
 
-- User calls `/blu:plan-phase 3`.
+- User calls `/blu-plan-phase 3`.
 - Gemini loads the command file.
 - The command invokes the matching Blueprint skill by canonical skill name and documented MCP tools.
 - Optional bounded agents are used only where the command contract calls for them.
@@ -136,7 +136,7 @@ Global state is intentionally narrow. Blueprint should not quietly accumulate pr
 ## Routing And Exposure Rules
 
 - `blueprint_command_catalog` is the source of routable-command truth.
-- `/blu`, `/blu:help`, and `/blu:progress` may inspect the full retained command catalog, but they must only recommend commands whose entry is `implemented`.
+- `/blu`, `/blu-help`, and `/blu-progress` may inspect the full retained command catalog, but they must only recommend commands whose entry is `implemented`.
 - Documentation alone does not make a command runnable.
 - A command becomes routable only when its manifest, primary skill, and required MCP tools are all present.
 

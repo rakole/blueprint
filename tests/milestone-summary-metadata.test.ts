@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("milestone-summary manifest references saved report evidence and new-milestone routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/milestone-summary.toml"),
+    path.join(repoRoot, "commands/blu-milestone-summary.toml"),
     "utf8"
   );
 
@@ -21,7 +21,7 @@ test("milestone-summary manifest references saved report evidence and new-milest
   assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /milestone-summary-<milestone>/);
-  assert.match(commandFile, /\/blu:new-milestone/);
+  assert.match(commandFile, /\/blu-new-milestone/);
   assert.doesNotMatch(commandFile, /blueprint-doc-writer/);
 });
 
@@ -31,8 +31,8 @@ test("roadmap-admin skill keeps milestone-summary skill-led and Wave 2 local", a
     "utf8"
   );
 
-  assert.match(skillFile, /\/blu:milestone-summary/);
+  assert.match(skillFile, /\/blu-milestone-summary/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /Do not pull in `blueprint-doc-writer`/);
-  assert.match(skillFile, /\/blu:new-milestone/);
+  assert.match(skillFile, /\/blu-new-milestone/);
 });

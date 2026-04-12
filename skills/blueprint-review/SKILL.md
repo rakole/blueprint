@@ -6,12 +6,12 @@ description: >
   repo evidence, and explicit about follow-up risk.
 status: implemented
 commands:
-  - /blu:secure-phase
-  - /blu:code-review
-  - /blu:code-review-fix
-  - /blu:audit-fix
-  - /blu:ui-review
-  - /blu:review
+  - /blu-secure-phase
+  - /blu-code-review
+  - /blu-code-review-fix
+  - /blu-audit-fix
+  - /blu-ui-review
+  - /blu-review
 ---
 
 # Blueprint Review Skill
@@ -76,7 +76,7 @@ lands.
 6. Persist finished security evidence through `blueprint_review_record` with the
    `security` artifact.
 7. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu:validate-phase`, then `/blu:verify-work`, and otherwise `/blu:progress`
+   `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
    depending on which lifecycle artifacts already exist.
 
 ## Non-Negotiables

@@ -1,4 +1,4 @@
-# `/blu:pr-branch`
+# `/blu-pr-branch`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:pr-branch`
+- Gemini command path: `/blu-pr-branch`
+- Compatibility during this release: `/blu:pr-branch` (deprecated; remove next release)
 - Root router form: `/blu pr-branch`
 - Argument hint: `[target branch, default: main]`
-- `/blu:pr-branch develop`
+- `/blu-pr-branch develop`
 - `/blu pr-branch`
 
 ## Inputs, Project State, And Prerequisite Artifacts

@@ -1,4 +1,4 @@
-# `/blu:remove-phase`
+# `/blu-remove-phase`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:remove-phase`
+- Gemini command path: `/blu-remove-phase`
+- Compatibility during this release: `/blu:remove-phase` (deprecated; remove next release)
 - Root router form: `/blu remove-phase`
 - Argument hint: `<phase-number>`
-- `/blu:remove-phase 7`
+- `/blu-remove-phase 7`
 - `/blu remove-phase`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -121,7 +122,7 @@
 - Keeps roadmap, phase directories, and state synchronized.
 - Deletes the target phase directory and renumbers later directories plus phase-scoped artifact filenames.
 - Rejects current or past phases and phases that already have execution evidence.
-- Returns `/blu:progress` as the next safe implemented follow-up.
+- Returns `/blu-progress` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

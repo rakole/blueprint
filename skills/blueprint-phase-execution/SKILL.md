@@ -7,9 +7,8 @@ description: >
   persist honest execution evidence through MCP.
 status: implemented
 commands:
-  - /blu:execute-phase
-  - /blu:quick
-  - /blu:fast
+  - /blu-execute-phase
+  - /blu-quick
 ---
 
 # Blueprint Phase Execution Skill
@@ -65,7 +64,7 @@ Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` int
 
 1. Resolve the target phase before executing anything and stop if the phase cannot be inferred safely.
 2. Treat the plan index plus summary index as the execution source of truth; plans without summaries are pending work, and summaries without plans are a repair warning.
-3. If no plans exist yet, route to `/blu:plan-phase` before attempting execution.
+3. If no plans exist yet, route to `/blu-plan-phase` before attempting execution.
 4. Read the selected plan artifacts before delegating execution so wave ordering, dependencies, and acceptance criteria stay grounded in the saved plan set.
 5. Respect `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from normalized effective config when describing execution mode.
 6. Use `blueprint-executor` for bounded per-plan work instead of collapsing the entire phase into one task.
@@ -73,12 +72,13 @@ Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` int
 8. Existing summaries require explicit overwrite confirmation before replacement. Reuse is the default.
 9. Keep partial-wave, `--wave`, and `--gaps-only` runs honest: they may advance execution coverage, but they must not claim the whole phase is complete while pending plans remain.
 10. After summary writes, refresh validation signals and update `STATE.md` so the next safe implemented action stays accurate.
-11. Prefer `/blu:progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+11. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
 12. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
-13. For `/blu:quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.
-14. `/blu:quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
+13. For `/blu-quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.
+14. `/blu-quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
 15. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the canonical `quick-run-latest` report instead of inventing ad hoc state files.
-16. `/blu:quick` should prefer `/blu:progress` after completion unless a narrower implemented next step is obvious and safe.
+16. `/blu-quick` should prefer `/blu-progress` after completion unless a narrower implemented next step is obvious and safe.
+17. Do not recommend `/blu-fast` unless `blueprint_command_catalog` says it is implemented.
 
 ## Output Style
 
@@ -86,4 +86,4 @@ Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` int
 - Explain any overwrite or partial-run risk before writes.
 - Call out the effective execution mode, including parallelization, worktree, and branch-strategy decisions.
 - Keep the user anchored on the next safe implemented action after execution.
-- For `/blu:quick`, explain why the task qualified as a bounded quick run, which optional depth gates were used, what the quick-run report captured, and which implemented follow-up remains safest.
+- For `/blu-quick`, explain why the task qualified as a bounded quick run, which optional depth gates were used, what the quick-run report captured, and which implemented follow-up remains safest.

@@ -102,8 +102,8 @@ test("root router and Gemini context stay aligned with the Phase 1 routing contr
   }
 
   assert.match(routerFile, /slash-command chaining/i);
-  assert.match(routerFile, /\/blu:new-project/);
-  assert.match(geminiFile, /\/blu:new-project/);
+  assert.match(routerFile, /\/blu-new-project/);
+  assert.match(geminiFile, /\/blu-new-project/);
   assert.match(geminiFile, /\.blueprint\//);
   assert.match(geminiFile, /~\/\.gemini\/blueprint\//);
   assert.equal(manifest.name, "blueprint");
@@ -163,7 +163,7 @@ test("state_update patches STATE.md deterministically and reports updated fields
   const result = await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
-      nextAction: "Run /blu:health",
+      nextAction: "Run /blu-health",
       blockers: ["Need roadmap review"]
     }
   });
@@ -174,7 +174,7 @@ test("state_update patches STATE.md deterministically and reports updated fields
   assert.ok(result.updatedFields.includes("blockers"));
   assert.ok(result.updatedFields.includes("lastUpdated"));
   assert.deepEqual(result.warnings, []);
-  assert.match(stateDocument, /- Next action: Run \/blu:health/);
+  assert.match(stateDocument, /- Next action: Run \/blu-health/);
   assert.match(stateDocument, /## Blockers/);
   assert.match(stateDocument, /- Need roadmap review/);
 });
@@ -217,7 +217,7 @@ test("project status flags partial Blueprint state instead of pretending the rep
 
   assert.equal(status.initialized, false);
   assert.equal(status.currentPhase, null);
-  assert.match(status.nextAction, /Re-run \/blu:new-project only after you decide/);
+  assert.match(status.nextAction, /Re-run \/blu-new-project only after you decide/);
   assert.ok(status.health.missingArtifacts.includes(".blueprint/STATE.md"));
   assert.match(status.health.warnings.join("\n"), /partially initialized/i);
 });

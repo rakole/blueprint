@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("audit-milestone manifest references the roadmap audit tools, overwrite gate, and safe routing contract", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/audit-milestone.toml"),
+    path.join(repoRoot, "commands/blu-audit-milestone.toml"),
     "utf8"
   );
 
@@ -23,8 +23,8 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
   assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /\.blueprint\/reports\//);
-  assert.match(commandFile, /\/blu:plan-milestone-gaps/);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-plan-milestone-gaps/);
+  assert.match(commandFile, /\/blu-progress/);
 });
 
 test("audit-milestone skill captures milestone-evidence digest rules and report persistence", async () => {
@@ -34,7 +34,7 @@ test("audit-milestone skill captures milestone-evidence digest rules and report 
   );
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:audit-milestone/);
+  assert.match(skillFile, /\/blu-audit-milestone/);
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-verifier/);

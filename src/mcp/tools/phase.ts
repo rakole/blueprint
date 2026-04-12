@@ -878,7 +878,7 @@ function buildPhaseDetailBlock(
   dependsOnPhaseNumber: string | null = null
 ): string {
   return `### Phase ${phaseNumber}: ${phaseName}
-**Goal**: Capture the phase boundary and implementation goal during /blu:discuss-phase.
+**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
 **Requirements**: none yet
 **Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
 **Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
@@ -1168,7 +1168,7 @@ async function readRoadmap(
 
   if (!(await pathExists(roadmapPath))) {
     throw new Error(
-      `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu:new-project before using phase discovery commands.`
+      `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu-new-project before using phase discovery commands.`
     );
   }
 
@@ -1237,27 +1237,27 @@ function buildLocateRecovery(reason: string | null): string[] {
   if (reason.includes("no matching directory")) {
     return [
       "Create or restore the numbered phase directory under .blueprint/phases/ so it matches ROADMAP.md.",
-      "Run /blu:discuss-phase after the directory exists to rebuild missing discovery artifacts."
+      "Run /blu-discuss-phase after the directory exists to rebuild missing discovery artifacts."
     ];
   }
 
   if (reason.includes("multiple matching directories")) {
     return [
       "Rename duplicate phase directories so only one directory matches the requested phase number.",
-      "Run /blu:health to confirm the phase tree is normalized before retrying discovery commands."
+      "Run /blu-health to confirm the phase tree is normalized before retrying discovery commands."
     ];
   }
 
   if (reason.includes("ROADMAP.md")) {
     return [
-      "Restore .blueprint/ROADMAP.md or reinitialize the project with /blu:new-project.",
-      "Run /blu:health after restoring artifacts to confirm Blueprint state is consistent."
+      "Restore .blueprint/ROADMAP.md or reinitialize the project with /blu-new-project.",
+      "Run /blu-health after restoring artifacts to confirm Blueprint state is consistent."
     ];
   }
 
   return [
     "Confirm the requested phase exists in .blueprint/ROADMAP.md and has a matching numbered directory.",
-    "Use /blu:progress if you need the safest currently implemented next action."
+    "Use /blu-progress if you need the safest currently implemented next action."
   ];
 }
 
@@ -1509,7 +1509,7 @@ export async function blueprintRoadmapAddPhase(
 
   if (normalizedDescription.length === 0) {
     throw new Error(
-      "Phase description required. Re-run /blu:add-phase with a concise description."
+      "Phase description required. Re-run /blu-add-phase with a concise description."
     );
   }
 
@@ -1558,7 +1558,7 @@ export async function blueprintRoadmapInsertPhase(
 
   if (normalizedDescription.length === 0) {
     throw new Error(
-      "Phase description required. Re-run /blu:insert-phase with an integer phase number such as 3 and a concise description."
+      "Phase description required. Re-run /blu-insert-phase with an integer phase number such as 3 and a concise description."
     );
   }
 
@@ -1566,13 +1566,13 @@ export async function blueprintRoadmapInsertPhase(
 
   if (!afterPhaseNumber) {
     throw new Error(
-      "Phase number required. Re-run /blu:insert-phase with an integer phase number such as 3."
+      "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
     );
   }
 
   if (!isIntegerPhaseNumber(afterPhaseNumber)) {
     throw new Error(
-      `Phase ${afterPhaseNumber} cannot be used as an insertion target. Re-run /blu:insert-phase with an existing integer phase number such as ${basePhaseNumber(afterPhaseNumber)}.`
+      `Phase ${afterPhaseNumber} cannot be used as an insertion target. Re-run /blu-insert-phase with an existing integer phase number such as ${basePhaseNumber(afterPhaseNumber)}.`
     );
   }
 
@@ -1761,7 +1761,7 @@ export async function blueprintRoadmapRemovePhase(
 
   if (!targetPhaseNumber) {
     throw new Error(
-      "Phase number required. Re-run /blu:remove-phase with a phase number such as 7."
+      "Phase number required. Re-run /blu-remove-phase with a phase number such as 7."
     );
   }
 
@@ -2129,7 +2129,7 @@ export async function blueprintPhaseResearchStatus(
     suggestedRepairs:
       researchIssues.length > 0
         ? [
-            "Update the phase research through /blu:research-phase so it matches the required research schema before planning."
+            "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
           ]
         : [],
     warnings
@@ -2373,7 +2373,7 @@ export async function blueprintPhaseValidationWrite(
 
   if (summaryIndex.summaries.length === 0) {
     throw new Error(
-      `Phase ${resolved.phaseNumber} does not have execution summaries yet. Run /blu:execute-phase ${resolved.phaseNumber} before writing ${args.artifact} artifacts.`
+      `Phase ${resolved.phaseNumber} does not have execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} before writing ${args.artifact} artifacts.`
     );
   }
 
@@ -2392,7 +2392,7 @@ export async function blueprintPhaseValidationWrite(
 
     if (!(await pathExists(resolveBlueprintPath(projectRoot, verificationPath)))) {
       throw new Error(
-        `Phase ${resolved.phaseNumber} must be validated before UAT. Run /blu:validate-phase ${resolved.phaseNumber} first.`
+        `Phase ${resolved.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${resolved.phaseNumber} first.`
       );
     }
   }

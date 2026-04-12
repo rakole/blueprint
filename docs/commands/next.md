@@ -1,4 +1,4 @@
-# `/blu:next`
+# `/blu-next`
 | Field | Value |
 |---|---|
 | Wave | `1` |
@@ -15,18 +15,19 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:next`
+- Gemini command path: `/blu-next`
+- Compatibility during this release: `/blu:next` (deprecated; remove next release)
 - Root router form: `/blu next`
 - Argument hint: `none`
-- `/blu:next`
+- `/blu-next`
 - `/blu next`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
 - None, but Blueprint context improves routing.
-- Uninitialized repos must fall back to `/blu:new-project`.
-- Partial repos must fall back to `/blu:health`.
+- Uninitialized repos must fall back to `/blu-new-project`.
+- Partial repos must fall back to `/blu-health`.
 
 
 ## Outputs
@@ -131,9 +132,9 @@
 ## Test Cases
 
 
-- Uninitialized repo routes to `/blu:new-project`.
-- Partial Blueprint repo routes to `/blu:health`.
-- Initialized repo reuses the next implemented discovery command or falls back to `/blu:progress` safely.
+- Uninitialized repo routes to `/blu-new-project`.
+- Partial Blueprint repo routes to `/blu-health`.
+- Initialized repo reuses the next implemented discovery command or falls back to `/blu-progress` safely.
 - Direct `next` command contract uses only registered read-oriented MCP tools.
 
 

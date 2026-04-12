@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("insert-phase manifest references roadmap insertion tools, confirmation gate, and discuss-phase routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/insert-phase.toml"),
+    path.join(repoRoot, "commands/blu-insert-phase.toml"),
     "utf8"
   );
 
@@ -19,7 +19,7 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /Do not accept decimal insertion targets/i);
-  assert.match(commandFile, /\/blu:discuss-phase <phase>/);
+  assert.match(commandFile, /\/blu-discuss-phase <phase>/);
 });
 
 test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-phase follow-up", async () => {
@@ -28,10 +28,10 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "utf8"
   );
 
-  assert.match(skillFile, /\/blu:insert-phase/);
+  assert.match(skillFile, /\/blu-insert-phase/);
   assert.match(skillFile, /blueprint_roadmap_insert_phase/);
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /roadmap-driven/i);
   assert.match(skillFile, /conflicting decimal directory/i);
-  assert.match(skillFile, /\/blu:discuss-phase <phase>/);
+  assert.match(skillFile, /\/blu-discuss-phase <phase>/);
 });

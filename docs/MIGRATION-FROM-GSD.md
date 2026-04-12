@@ -4,7 +4,7 @@
 
 | GSD | Blueprint |
 |---|---|
-| `/gsd:<command>` or `/gsd-<command>` | `/blu:<command>` |
+| `/gsd:<command>` or `/gsd-<command>` | `/blu-<command>` |
 | `/gsd` mental model | `/blu` root router |
 | `.planning/` | `.blueprint/` |
 | installer-managed runtime conversion | Gemini extension installation |
@@ -73,11 +73,11 @@ Upstream-style repo config hook toggles do not carry over. Blueprint hooks stay 
 
 ### `update`
 
-`/blu:update` is advisory. It prepares a safe out-of-band update plan instead of self-updating the extension from the running session.
+`/blu-update` is advisory. It prepares a safe out-of-band update plan instead of self-updating the extension from the running session.
 
 ### `reapply-patches`
 
-`/blu:reapply-patches` operates on a global patch registry in `~/.gemini/blueprint/patches/`, not on a copied extension install tree.
+`/blu-reapply-patches` operates on a global patch registry in `~/.gemini/blueprint/patches/`, not on a copied extension install tree.
 
 ### `new-workspace` and `remove-workspace`
 

@@ -1,4 +1,4 @@
-# `/blu:secure-phase`
+# `/blu-secure-phase`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:secure-phase`
+- Gemini command path: `/blu-secure-phase`
+- Compatibility during this release: `/blu:secure-phase` (deprecated; remove next release)
 - Root router form: `/blu secure-phase`
 - Argument hint: `[phase number]`
-- `/blu:secure-phase 3`
+- `/blu-secure-phase 3`
 - `/blu secure-phase`
 
 ## Inputs, Project State, And Prerequisite Artifacts

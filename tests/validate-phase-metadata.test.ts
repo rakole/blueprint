@@ -8,7 +8,7 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("validate-phase manifest references the validation tools, config gates, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu/validate-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);
@@ -24,7 +24,7 @@ test("validate-phase manifest references the validation tools, config gates, and
   assert.match(commandFile, /workflow\.verifier/);
   assert.match(commandFile, /workflow\.nyquist_validation/);
   assert.match(commandFile, /XX-VERIFICATION\.md/);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
 });
 
@@ -35,11 +35,11 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   );
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:validate-phase/);
+  assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /execution summaries remain the source of truth/i);
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
-  assert.match(skillFile, /\/blu:progress/);
+  assert.match(skillFile, /\/blu-progress/);
 });

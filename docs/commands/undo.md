@@ -1,4 +1,4 @@
-# `/blu:undo`
+# `/blu-undo`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:undo`
+- Gemini command path: `/blu-undo`
+- Compatibility during this release: `/blu:undo` (deprecated; remove next release)
 - Root router form: `/blu undo`
 - Argument hint: `--last N | --phase NN | --plan NN-MM`
-- `/blu:undo --phase 03`
+- `/blu-undo --phase 03`
 - `/blu undo`
 
 ## Inputs, Project State, And Prerequisite Artifacts

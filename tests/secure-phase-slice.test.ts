@@ -48,8 +48,8 @@ async function createSecurePhaseRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v3
 - Current phase: 5
-- Active command: /blu:execute-phase
-- Next action: Run /blu:validate-phase 5
+- Active command: /blu-execute-phase
+- Next action: Run /blu-validate-phase 5
 - Last updated: 2026-04-12T00:00:00.000Z
 
 ## Blockers
@@ -121,7 +121,7 @@ test("blueprint_review_record writes a phase-scoped security artifact with follo
 
 ## Next Safe Action
 
-- Run /blu:validate-phase 5 if verification is still pending.
+- Run /blu-validate-phase 5 if verification is still pending.
 `;
 
   const written = await blueprintReviewRecord({
@@ -167,7 +167,7 @@ test("secure-phase is exposed as an implemented review command with the register
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu/secure-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-secure-phase.toml");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",

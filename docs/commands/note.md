@@ -1,4 +1,4 @@
-# `/blu:note`
+# `/blu-note`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:note`
+- Gemini command path: `/blu-note`
+- Compatibility during this release: `/blu:note` (deprecated; remove next release)
 - Root router form: `/blu note`
 - Argument hint: `<text>`
-- `/blu:note Investigate-sync-edge-cases`
+- `/blu-note Investigate-sync-edge-cases`
 - `/blu note`
 
 ## Inputs, Project State, And Prerequisite Artifacts

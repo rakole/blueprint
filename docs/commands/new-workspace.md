@@ -1,4 +1,4 @@
-# `/blu:new-workspace`
+# `/blu-new-workspace`
 | Field | Value |
 |---|---|
 | Wave | `5` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:new-workspace`
+- Gemini command path: `/blu-new-workspace`
+- Compatibility during this release: `/blu:new-workspace` (deprecated; remove next release)
 - Root router form: `/blu new-workspace`
 - Argument hint: `--name <name> [--repos repo1,repo2] [--path /target] [--strategy worktree|clone] [--branch name] [--auto]`
-- `/blu:new-workspace --name feature-a --repos .`
+- `/blu-new-workspace --name feature-a --repos .`
 - `/blu new-workspace`
 
 ## Inputs, Project State, And Prerequisite Artifacts

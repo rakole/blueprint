@@ -7,14 +7,14 @@ const repoRoot = process.cwd();
 
 test("note manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/note.toml"),
+    path.join(repoRoot, "commands/blu-note.toml"),
     "utf8"
   );
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
   assert.match(commandFile, /mcp__blueprint__blueprint_artifact_mutate_index/);
-  assert.match(commandFile, /\/blu:new-project/);
+  assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /project-local note capture/i);
   assert.match(commandFile, /Do not reintroduce upstream global-note behavior/);

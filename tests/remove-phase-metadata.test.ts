@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("remove-phase manifest references roadmap removal tools, confirmation gate, and safe routing contract", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/remove-phase.toml"),
+    path.join(repoRoot, "commands/blu-remove-phase.toml"),
     "utf8"
   );
 
@@ -19,7 +19,7 @@ test("remove-phase manifest references roadmap removal tools, confirmation gate,
   assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /future-phase guard|current or past phases/i);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-progress/);
 });
 
 test("roadmap-admin skill captures remove-phase guards and state follow-up", async () => {
@@ -29,9 +29,9 @@ test("roadmap-admin skill captures remove-phase guards and state follow-up", asy
   );
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:remove-phase/);
+  assert.match(skillFile, /\/blu-remove-phase/);
   assert.match(skillFile, /blueprint_roadmap_remove_phase/);
   assert.match(skillFile, /future-phase guard/i);
   assert.match(skillFile, /execution evidence/i);
-  assert.match(skillFile, /\/blu:progress/);
+  assert.match(skillFile, /\/blu-progress/);
 });

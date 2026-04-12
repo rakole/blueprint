@@ -49,8 +49,8 @@ async function createPhaseRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -323,7 +323,7 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
     "utf8"
   );
 
-  assert.match(beforeStatus.nextAction, /\/blu:plan-phase 3/);
+  assert.match(beforeStatus.nextAction, /\/blu-plan-phase 3/);
   assert.equal(created.status, "created");
   assert.equal(second.status, "created");
   assert.equal(index.plans.length, 2);
@@ -339,6 +339,6 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.validation.issues.join("\n"), /frontmatter|required section/i);
-  assert.match(afterStatus.nextAction, /\/blu:execute-phase 3/);
+  assert.match(afterStatus.nextAction, /\/blu-execute-phase 3/);
   assert.match(writtenBody, /Plan 02/);
 });

@@ -1,4 +1,4 @@
-# `/blu:workstreams`
+# `/blu-workstreams`
 | Field | Value |
 |---|---|
 | Wave | `5` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:workstreams`
+- Gemini command path: `/blu-workstreams`
+- Compatibility during this release: `/blu:workstreams` (deprecated; remove next release)
 - Root router form: `/blu workstreams`
 - Argument hint: `none`
-- `/blu:workstreams create backend-api`
+- `/blu-workstreams create backend-api`
 - `/blu workstreams`
 
 ## Inputs, Project State, And Prerequisite Artifacts

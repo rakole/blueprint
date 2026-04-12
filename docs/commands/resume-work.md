@@ -1,4 +1,4 @@
-# `/blu:resume-work`
+# `/blu-resume-work`
 | Field | Value |
 |---|---|
 | Wave | `1` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:resume-work`
+- Gemini command path: `/blu-resume-work`
+- Compatibility during this release: `/blu:resume-work` (deprecated; remove next release)
 - Root router form: `/blu resume-work`
 - Argument hint: `none`
-- `/blu:resume-work`
+- `/blu-resume-work`
 - `/blu resume-work`
 
 ## Inputs, Project State, And Prerequisite Artifacts

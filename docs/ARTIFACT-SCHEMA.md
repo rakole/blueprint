@@ -283,7 +283,7 @@ Used for non-phase-specific outputs and command logs:
 ### `reports/milestone-audit-<version>.md`
 
 Purpose:
-- durable audit report for `/blu:audit-milestone` before milestone archival
+- durable audit report for `/blu-audit-milestone` before milestone archival
 - evidence bridge between the original milestone intent and the completed phase set
 
 Minimum locked sections:
@@ -300,7 +300,7 @@ Contract notes:
 ### `reports/milestone-complete-<version>.md`
 
 Purpose:
-- durable closeout report for `/blu:complete-milestone`
+- durable closeout report for `/blu-complete-milestone`
 - evidence bridge between the milestone audit and the final archival summary
 
 Minimum locked sections:
@@ -317,8 +317,8 @@ Contract notes:
 ### `reports/milestone-summary-<version>.md`
 
 Purpose:
-- durable summary report for `/blu:milestone-summary`
-- carry-forward input for `/blu:new-milestone`
+- durable summary report for `/blu-milestone-summary`
+- carry-forward input for `/blu-new-milestone`
 
 Minimum locked sections:
 - milestone identifier and scope summary

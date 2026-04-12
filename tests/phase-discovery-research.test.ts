@@ -46,8 +46,8 @@ async function createPhaseRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -118,7 +118,7 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 
 test("research-phase command references only registered tool names and safe routing text", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/research-phase.toml"),
+    path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
   const requiredTools = [
@@ -144,8 +144,8 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /view/);
   assert.match(commandFile, /skip/);
   assert.match(commandFile, /update/);
-  assert.match(commandFile, /\/blu:progress/);
-  assert.doesNotMatch(commandFile, /\/blu:plan-phase/);
+  assert.match(commandFile, /\/blu-progress/);
+  assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
 });
 

@@ -108,8 +108,8 @@ async function createExecutionReadyRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -179,7 +179,7 @@ await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
 
 ## Recommendations
 
-- Route to /blu:execute-phase once the phase has plans and no summaries.
+- Route to /blu-execute-phase once the phase has plans and no summaries.
 
 ## Sources
 
@@ -269,8 +269,8 @@ async function createMilestoneCloseoutRepo(reportStage: "none" | "audit" | "comp
 - Project status: initialized
 - Current milestone: v2
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-12T00:00:00.000Z
 
 ## Blockers
@@ -343,7 +343,7 @@ await blueprintStateLoad({ cwd: repoPath });
 
 ## Recommendations
 
-- Route to \`/blu:audit-milestone v2\` when all milestone phases are complete and no milestone audit report exists.
+- Route to \`/blu-audit-milestone v2\` when all milestone phases are complete and no milestone audit report exists.
 - Advance sequentially through completion, summary, and \`new-milestone\` once each report appears.
 
 ## Sources
@@ -501,15 +501,15 @@ test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
 
   assert.equal(status.status, "uninitialized");
   assert.equal(status.initialized, false);
-  assert.match(status.nextAction, /\/blu:new-project/);
+  assert.match(status.nextAction, /\/blu-new-project/);
   assert.equal(state.derivedStatus.projectStatus, "uninitialized");
   assert.equal(state.derivedStatus.currentPhase, null);
-  assert.match(state.derivedStatus.nextAction, /\/blu:new-project/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
   assert.deepEqual(artifacts.artifacts.core, []);
   assert.ok(artifacts.missing.includes(".blueprint/STATE.md"));
   assert.equal(validation.valid, false);
   assert.match(validation.issues.join("\n"), /Missing \.blueprint\/ directory/);
-  assert.match(validation.suggestedRepairs.join("\n"), /\/blu:new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
 });
 
 test("read-path tools distinguish partial Blueprint repos and expose repair blockers", async (t) => {
@@ -525,7 +525,7 @@ test("read-path tools distinguish partial Blueprint repos and expose repair bloc
 
   assert.equal(status.status, "partial");
   assert.equal(status.initialized, false);
-  assert.match(status.nextAction, /\/blu:health/);
+  assert.match(status.nextAction, /\/blu-health/);
   assert.equal(state.derivedStatus.projectStatus, "partial");
   assert.equal(state.derivedStatus.currentPhase, "2");
   assert.equal(state.derivedStatus.hasBlockers, true);
@@ -534,7 +534,7 @@ test("read-path tools distinguish partial Blueprint repos and expose repair bloc
   assert.ok(artifacts.missing.includes(".blueprint/config.json"));
   assert.equal(validation.valid, false);
   assert.match(validation.issues.join("\n"), /Missing core artifact: \.blueprint\/STATE\.md/);
-  assert.match(validation.suggestedRepairs.join("\n"), /\/blu:health --repair/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-health --repair/);
 });
 
 test("state sync reconstructs STATE.md from surviving roadmap and artifact signals", async (t) => {
@@ -554,7 +554,7 @@ test("state sync reconstructs STATE.md from surviving roadmap and artifact signa
   assert.match(syncResult.warnings.join("\n"), /STATE\.md was missing/);
   assert.match(syncedDocument, /- Project status: partial/);
   assert.match(syncedDocument, /- Current phase: 2/);
-  assert.match(syncedDocument, /- Active command: \/blu:health/);
+  assert.match(syncedDocument, /- Active command: \/blu-health/);
   assert.match(loadedState.blockers.join("\n"), /Missing \.blueprint\/REQUIREMENTS\.md/);
 });
 
@@ -573,11 +573,11 @@ test("initialized Blueprint repos report healthy read-path status and artifact c
   assert.equal(status.initialized, true);
   assert.equal(status.currentPhase, "2");
   assert.equal(status.currentMilestone, "v2");
-  assert.match(status.nextAction, /\/blu:ui-phase 2/);
+  assert.match(status.nextAction, /\/blu-ui-phase 2/);
   assert.equal(state.derivedStatus.projectStatus, "initialized");
   assert.equal(state.derivedStatus.currentPhase, "2");
   assert.equal(state.derivedStatus.hasBlockers, false);
-  assert.match(state.derivedStatus.nextAction, /\/blu:ui-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
   assert.ok(artifacts.artifacts.core.includes(".blueprint/STATE.md"));
   assert.equal(artifacts.artifacts.codebase.length, 7);
   assert.ok(artifacts.artifacts.codebase.includes(".blueprint/codebase/STRUCTURE.md"));
@@ -601,9 +601,9 @@ test("project status chooses the next implemented discovery command from current
   await rm(contextPath);
   const discussStep = await blueprintProjectStatus({ cwd: repoPath });
 
-  assert.match(uiStep.nextAction, /\/blu:ui-phase 2/);
-  assert.match(researchStep.nextAction, /\/blu:research-phase 2/);
-  assert.match(discussStep.nextAction, /\/blu:discuss-phase 2/);
+  assert.match(uiStep.nextAction, /\/blu-ui-phase 2/);
+  assert.match(researchStep.nextAction, /\/blu-research-phase 2/);
+  assert.match(discussStep.nextAction, /\/blu-discuss-phase 2/);
 });
 
 test("project status recommends execute-phase once plans exist and summaries are still absent", async (t) => {
@@ -617,8 +617,8 @@ test("project status recommends execute-phase once plans exist and summaries are
 
   assert.equal(status.currentPhase, "3");
   assert.equal(state.derivedStatus.currentPhase, "3");
-  assert.match(status.nextAction, /\/blu:execute-phase 3/);
-  assert.match(state.derivedStatus.nextAction, /\/blu:execute-phase 3/);
+  assert.match(status.nextAction, /\/blu-execute-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
 });
 
 test("project status recommends validate-phase once execution summaries exist without verification", async (t) => {
@@ -644,8 +644,8 @@ test("project status recommends validate-phase once execution summaries exist wi
 
   assert.equal(status.currentPhase, "3");
   assert.equal(state.derivedStatus.currentPhase, "3");
-  assert.match(status.nextAction, /\/blu:validate-phase 3/);
-  assert.match(state.derivedStatus.nextAction, /\/blu:validate-phase 3/);
+  assert.match(status.nextAction, /\/blu-validate-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
 });
 
 test("project status routes milestone closeout through audit, completion, summary, and next milestone in order", async (t) => {
@@ -669,14 +669,14 @@ test("project status routes milestone closeout through audit, completion, summar
   const summaryStatus = await blueprintProjectStatus({ cwd: summaryRepo });
   const summaryState = await blueprintStateLoad({ cwd: summaryRepo });
 
-  assert.match(noReportsStatus.nextAction, /\/blu:audit-milestone v2/);
-  assert.match(noReportsState.derivedStatus.nextAction, /\/blu:audit-milestone v2/);
-  assert.match(auditStatus.nextAction, /\/blu:complete-milestone v2/);
-  assert.match(auditState.derivedStatus.nextAction, /\/blu:complete-milestone v2/);
-  assert.match(completeStatus.nextAction, /\/blu:milestone-summary v2/);
-  assert.match(completeState.derivedStatus.nextAction, /\/blu:milestone-summary v2/);
-  assert.match(summaryStatus.nextAction, /\/blu:new-milestone/);
-  assert.match(summaryState.derivedStatus.nextAction, /\/blu:new-milestone/);
+  assert.match(noReportsStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.match(noReportsState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.match(auditStatus.nextAction, /\/blu-complete-milestone v2/);
+  assert.match(auditState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
+  assert.match(completeStatus.nextAction, /\/blu-milestone-summary v2/);
+  assert.match(completeState.derivedStatus.nextAction, /\/blu-milestone-summary v2/);
+  assert.match(summaryStatus.nextAction, /\/blu-new-milestone/);
+  assert.match(summaryState.derivedStatus.nextAction, /\/blu-new-milestone/);
 });
 
 test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {
@@ -694,8 +694,8 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
 - Project status: initialized
 - Current milestone: v2
 - Current phase: 2
-- Active command: /blu:progress
-- Next action: Run /blu:progress to review Phase 2 and the next safe action
+- Active command: /blu-progress
+- Next action: Run /blu-progress to review Phase 2 and the next safe action
 - Last updated: 2026-04-10T00:00:00.000Z
 
 ## Blockers
@@ -726,7 +726,7 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
   assert.equal(status.status, "initialized");
   assert.equal(status.currentMilestone, "v3");
   assert.equal(status.currentPhase, "3");
-  assert.match(status.nextAction, /\/blu:health/);
+  assert.match(status.nextAction, /\/blu-health/);
 });
 
 test("project status reports malformed config as a health warning instead of throwing", async (t) => {
@@ -762,8 +762,8 @@ test("state load clears stale structural blockers after the repo is healthy agai
 - Project status: partial
 - Current milestone: v2
 - Current phase: 2
-- Active command: /blu:health
-- Next action: Run /blu:health to inspect blockers and repair options
+- Active command: /blu-health
+- Next action: Run /blu-health to inspect blockers and repair options
 - Last updated: 2026-04-10T00:00:00.000Z
 
 ## Blockers
@@ -778,7 +778,7 @@ test("state load clears stale structural blockers after the repo is healthy agai
   assert.equal(state.derivedStatus.projectStatus, "initialized");
   assert.equal(state.derivedStatus.hasBlockers, false);
   assert.deepEqual(state.blockers, []);
-  assert.match(state.derivedStatus.nextAction, /\/blu:ui-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
 });
 
 test("artifact validation flags malformed legacy config and incomplete bundles with repair guidance", async (t) => {
@@ -794,7 +794,7 @@ test("artifact validation flags malformed legacy config and incomplete bundles w
   assert.match(validation.issues.join("\n"), /Config warning: Migrated legacy config key parallelization/);
   assert.match(validation.issues.join("\n"), /Config warning: Ignored disallowed config key: workflow\.use_workspaces/);
   assert.match(validation.issues.join("\n"), /Codebase artifact bundle is incomplete/);
-  assert.match(validation.suggestedRepairs.join("\n"), /\/blu:health --repair/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-health --repair/);
 });
 
 test("artifact validation does not flag an in-progress discovery phase as structurally broken", async (t) => {
@@ -831,8 +831,8 @@ test("artifact validation does not flag an in-progress discovery phase as struct
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:discuss-phase
-- Next action: Run /blu:discuss-phase to finish discovery
+- Active command: /blu-discuss-phase
+- Next action: Run /blu-discuss-phase to finish discovery
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -865,11 +865,11 @@ test("artifact validation does not flag an in-progress discovery phase as struct
 test("help progress and health command files reference registered MCP tool names", async () => {
   const commandFiles = [
     {
-      file: "commands/blu/help.toml",
+      file: "commands/blu-help.toml",
       tools: ["blueprint_command_catalog", "blueprint_project_status"]
     },
     {
-      file: "commands/blu/add-phase.toml",
+      file: "commands/blu-add-phase.toml",
       tools: [
         "blueprint_roadmap_read",
         "blueprint_roadmap_add_phase",
@@ -878,7 +878,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu/insert-phase.toml",
+      file: "commands/blu-insert-phase.toml",
       tools: [
         "blueprint_roadmap_read",
         "blueprint_roadmap_insert_phase",
@@ -887,7 +887,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu/remove-phase.toml",
+      file: "commands/blu-remove-phase.toml",
       tools: [
         "blueprint_roadmap_read",
         "blueprint_artifact_list",
@@ -896,7 +896,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu/progress.toml",
+      file: "commands/blu-progress.toml",
       tools: [
         "blueprint_project_status",
         "blueprint_config_get",
@@ -906,7 +906,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu/health.toml",
+      file: "commands/blu-health.toml",
       tools: [
         "blueprint_project_status",
         "blueprint_config_get",
@@ -918,7 +918,7 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
-      file: "commands/blu/docs-update.toml",
+      file: "commands/blu-docs-update.toml",
       tools: [
         "blueprint_project_status",
         "blueprint_artifact_list",
@@ -940,7 +940,7 @@ test("help progress and health command files reference registered MCP tool names
     }
   }
 
-  const healthCommand = await readFile(path.join(repoRoot, "commands/blu/health.toml"), "utf8");
+  const healthCommand = await readFile(path.join(repoRoot, "commands/blu-health.toml"), "utf8");
   assert.match(healthCommand, /--repair/);
   assert.match(healthCommand, /explicit confirmation-style response/i);
 });
@@ -949,21 +949,21 @@ test("runtime-facing docs mention shipped command coverage instead of a docs-onl
   const geminiFile = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
   const readmeFile = await readFile(path.join(repoRoot, "README.md"), "utf8");
 
-  assert.match(geminiFile, /\/blu:settings/);
-  assert.match(geminiFile, /\/blu:set-profile/);
-  assert.match(geminiFile, /\/blu:help/);
-  assert.match(geminiFile, /\/blu:progress/);
-  assert.match(geminiFile, /\/blu:health/);
-  assert.match(geminiFile, /\/blu:map-codebase/);
+  assert.match(geminiFile, /\/blu-settings/);
+  assert.match(geminiFile, /\/blu-set-profile/);
+  assert.match(geminiFile, /\/blu-help/);
+  assert.match(geminiFile, /\/blu-progress/);
+  assert.match(geminiFile, /\/blu-health/);
+  assert.match(geminiFile, /\/blu-map-codebase/);
   assert.match(geminiFile, /\.planning\//);
   assert.match(readmeFile, /active implementation/i);
   assert.match(readmeFile, /## Current Runtime Layout/);
-  assert.match(readmeFile, /commands\/blu\/help\.toml/);
-  assert.match(readmeFile, /commands\/blu\/progress\.toml/);
-  assert.match(readmeFile, /commands\/blu\/health\.toml/);
-  assert.match(readmeFile, /commands\/blu\/map-codebase\.toml/);
-  assert.match(readmeFile, /commands\/blu\/docs-update\.toml/);
-  assert.match(geminiFile, /\/blu:docs-update/);
+  assert.match(readmeFile, /commands\/blu-help\.toml/);
+  assert.match(readmeFile, /commands\/blu-progress\.toml/);
+  assert.match(readmeFile, /commands\/blu-health\.toml/);
+  assert.match(readmeFile, /commands\/blu-map-codebase\.toml/);
+  assert.match(readmeFile, /commands\/blu-docs-update\.toml/);
+  assert.match(geminiFile, /\/blu-docs-update/);
   assert.match(readmeFile, /skills\/blueprint-router\.md/);
   assert.doesNotMatch(readmeFile, /## Planned Runtime Layout/);
 });

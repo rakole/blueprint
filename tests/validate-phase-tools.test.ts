@@ -45,8 +45,8 @@ async function createValidationReadyRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:execute-phase
-- Next action: Run /blu:validate-phase 3
+- Active command: /blu-execute-phase
+- Next action: Run /blu-validate-phase 3
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -240,7 +240,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   const state = await blueprintStateLoad({ cwd: repoPath });
   const verificationBody = await readFile(path.join(repoPath, verificationPath), "utf8");
 
-  assert.match(beforeStatus.nextAction, /\/blu:validate-phase 3/);
+  assert.match(beforeStatus.nextAction, /\/blu-validate-phase 3/);
   assert.equal(created.status, "created");
   assert.equal(read.found, true);
   assert.deepEqual(read.summaryPaths, [".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"]);
@@ -251,7 +251,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   assert.ok(listed.artifacts.phases.includes(verificationPath));
   assert.doesNotMatch(validation.issues.join("\n"), /VERIFICATION artifacts exist without a SUMMARY artifact/i);
   assert.doesNotMatch(validation.issues.join("\n"), /UAT artifacts exist without a VERIFICATION artifact/i);
-  assert.match(afterStatus.nextAction, /\/blu:verify-work 3/);
-  assert.match(state.derivedStatus.nextAction, /\/blu:verify-work 3/);
+  assert.match(afterStatus.nextAction, /\/blu-verify-work 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-verify-work 3/);
   assert.match(verificationBody, /Coverage Summary/);
 });

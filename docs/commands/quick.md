@@ -1,4 +1,4 @@
-# `/blu:quick`
+# `/blu-quick`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:quick`
+- Gemini command path: `/blu-quick`
+- Compatibility during this release: `/blu:quick` (deprecated; remove next release)
 - Root router form: `/blu quick`
 - Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
-- `/blu:quick --full`
+- `/blu-quick --full`
 - `/blu quick`
 
 ## Inputs, Project State, And Prerequisite Artifacts

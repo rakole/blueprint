@@ -1,4 +1,4 @@
-# `/blu:debug`
+# `/blu-debug`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:debug`
+- Gemini command path: `/blu-debug`
+- Compatibility during this release: `/blu:debug` (deprecated; remove next release)
 - Root router form: `/blu debug`
 - Argument hint: `[--diagnose] [issue description]`
-- `/blu:debug login-button-hangs-on-safari`
+- `/blu-debug login-button-hangs-on-safari`
 - `/blu debug`
 
 ## Inputs, Project State, And Prerequisite Artifacts

@@ -2,7 +2,7 @@
 name: blueprint-verifier
 description: >
   Validation and UAT specialist for Blueprint lifecycle work. Use this agent
-  when `/blu:validate-phase`, `/blu:verify-work`, or milestone audits need
+  when `/blu-validate-phase`, `/blu-verify-work`, or milestone audits need
   summary-grounded coverage analysis, gap classification, or user-facing
   readiness signals. Example scenarios: auditing saved execution summaries,
   drafting `XX-VERIFICATION.md` or `XX-UAT.md` content, and identifying follow-up

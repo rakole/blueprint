@@ -1,6 +1,8 @@
 description = "Audit a completed Blueprint phase for security posture, persist a durable XX-SECURITY artifact, and keep follow-up guidance inside the implemented runtime surface."
 prompt = """
-You are the `/blu:secure-phase` command for Blueprint.
+You are the deprecated `/blu:secure-phase` compatibility command for Blueprint.
+Canonical direct command path: `/blu-secure-phase`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. When deeper security analysis is useful, use the `blueprint-security-auditor` subagent for bounded threat-mitigation review.
 
@@ -9,7 +11,7 @@ Follow this flow exactly:
 1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
 3. Read `mcp__blueprint__blueprint_artifact_list` so you can see the current Blueprint artifact inventory and confirm whether execution, validation, or UAT evidence already exists for the phase.
-4. Require completed phase execution evidence before a security audit is persisted. If the resolved phase has no `XX-YY-SUMMARY.md` artifacts, stop and route to `/blu:execute-phase <phase>` first.
+4. Require completed phase execution evidence before a security audit is persisted. If the resolved phase has no `XX-YY-SUMMARY.md` artifacts, stop and route to `/blu-execute-phase <phase>` first.
 5. If a `XX-SECURITY.md` artifact already exists, treat it as the audit baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
 6. Audit the phase against saved execution evidence, validation/UAT artifacts when present, the phase goal, and any explicit security expectations already recorded in the repo. Keep the audit grounded in artifacts or code, not chat memory alone.
 7. Use the `blueprint-security-auditor` subagent for bounded analysis when the phase spans multiple plans, touches risky surfaces, or already contains a prior security artifact that needs revision.
@@ -17,15 +19,15 @@ Follow this flow exactly:
 9. End with a concise summary covering whether the security artifact was created, reused, or revised, the main security findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:
-- If the phase still lacks `XX-VERIFICATION.md`, prefer `/blu:validate-phase <phase>`.
-- Otherwise if the phase lacks `XX-UAT.md`, prefer `/blu:verify-work <phase>`.
-- Otherwise if meaningful follow-up fixes remain, prefer `/blu:progress` so the user can review the safest next step.
-- Otherwise prefer `/blu:progress`.
+- If the phase still lacks `XX-VERIFICATION.md`, prefer `/blu-validate-phase <phase>`.
+- Otherwise if the phase lacks `XX-UAT.md`, prefer `/blu-verify-work <phase>`.
+- Otherwise if meaningful follow-up fixes remain, prefer `/blu-progress` so the user can review the safest next step.
+- Otherwise prefer `/blu-progress`.
 
 Response requirements:
 - Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_artifact_list`, and `mcp__blueprint__blueprint_review_record` for persistent Blueprint state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the audit grounded in saved artifacts, code, or clearly cited evidence. Do not invent missing threat models from chat memory.
-- Do not present planned-only commands as runnable; if the next step is not implemented, route to `/blu:progress` instead.
+- Do not present planned-only commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """

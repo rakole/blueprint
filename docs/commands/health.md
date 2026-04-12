@@ -1,4 +1,4 @@
-# `/blu:health`
+# `/blu-health`
 | Field | Value |
 |---|---|
 | Wave | `0` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:health`
+- Gemini command path: `/blu-health`
+- Compatibility during this release: `/blu:health` (deprecated; remove next release)
 - Root router form: `/blu health`
 - Argument hint: `[--repair]`
-- `/blu:health --repair`
+- `/blu-health --repair`
 - `/blu health`
 
 ## Inputs, Project State, And Prerequisite Artifacts

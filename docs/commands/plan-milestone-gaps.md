@@ -1,4 +1,4 @@
-# `/blu:plan-milestone-gaps`
+# `/blu-plan-milestone-gaps`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:plan-milestone-gaps`
+- Gemini command path: `/blu-plan-milestone-gaps`
+- Compatibility during this release: `/blu:plan-milestone-gaps` (deprecated; remove next release)
 - Root router form: `/blu plan-milestone-gaps`
 - Argument hint: `none`
-- `/blu:plan-milestone-gaps`
+- `/blu-plan-milestone-gaps`
 - `/blu plan-milestone-gaps`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -111,8 +112,8 @@
 
 
 - Show roadmap and phase-directory drift before mutation.
-- Stop with concise guidance to run `/blu:audit-milestone` first when no matching audit report exists.
-- If the audit contains no actionable gaps, stop without mutation and route to `/blu:progress`.
+- Stop with concise guidance to run `/blu-audit-milestone` first when no matching audit report exists.
+- If the audit contains no actionable gaps, stop without mutation and route to `/blu-progress`.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
@@ -123,7 +124,7 @@
 - Uses a real milestone audit report as the source of truth for gap planning.
 - Groups related gaps into a few coherent phases instead of blindly creating one phase per gap.
 - Requires one explicit confirmation before appending any gap-closure phases.
-- Updates `.blueprint/STATE.md` so the first new phase becomes current and `/blu:discuss-phase <phase>` is the next safe implemented action.
+- Updates `.blueprint/STATE.md` so the first new phase becomes current and `/blu-discuss-phase <phase>` is the next safe implemented action.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

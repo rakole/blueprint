@@ -5,7 +5,7 @@ This file records the product and architecture decisions that are locked for Blu
 ## Locked Decisions
 
 1. `BP-001` Brand and namespace
-   Blueprint replaces GSD naming. User-facing command names are `/blu` and `/blu:<command>`.
+   Blueprint replaces GSD naming. User-facing command names are `/blu` and `/blu-<command>`, with `/blu:<command>` retained as a one-release compatibility alias during the dash-command migration.
 
 2. `BP-002` Project state directory
    `.planning/` becomes `.blueprint/` in every Blueprint-managed repository.
@@ -17,7 +17,7 @@ This file records the product and architecture decisions that are locked for Blu
    Blueprint started with a docs-first planning pack. Runtime now ships one command at a time on top of those docs, with explicit drift-repair checkpoints when docs and code diverge.
 
 5. `BP-005` Hybrid command surface
-   Every retained command gets a direct `/blu:<name>` entry, and the root `/blu` router can route to all of them.
+   Every retained command gets a direct `/blu-<name>` entry, and the root `/blu` router can route to all of them.
 
 6. `BP-006` Retained command set
    Only the 53 retained commands listed in `README.md` and `docs/MIGRATION-FROM-GSD.md` are in scope for Blueprint v1 planning.
@@ -50,10 +50,10 @@ This file records the product and architecture decisions that are locked for Blu
     Blueprint commands do not rewrite the installed extension from inside Gemini.
 
 16. `BP-016` `update` behavior
-    `/blu:update` is an advisor/checklist command because Gemini extension updates happen outside the active CLI session.
+    `/blu-update` is an advisor/checklist command because Gemini extension updates happen outside the active CLI session.
 
 17. `BP-017` `reapply-patches` behavior
-    `/blu:reapply-patches` uses a global patch registry in `~/.gemini/blueprint/patches/`; it does not patch the installed extension copy directly.
+    `/blu-reapply-patches` uses a global patch registry in `~/.gemini/blueprint/patches/`; it does not patch the installed extension copy directly.
 
 18. `BP-018` Workspace strategy
     `new-workspace` and `remove-workspace` remain supported without `list-workspaces`. The default workspace root is `~/blueprint-workspaces/<name>`, backed by `~/.gemini/blueprint/workspaces.json`.
@@ -83,7 +83,7 @@ This file records the product and architecture decisions that are locked for Blu
     Repo config does not enable or disable Blueprint hooks. Hook configuration lives in `hooks/hooks.json`, while `.blueprint/config.json` carries only project workflow, git, safety, and maintenance settings.
 
 27. `BP-027` Implementation-aware routing
-    `/blu`, `/blu:help`, and `/blu:progress` may inspect the full retained command catalog, but they must only recommend commands whose runtime catalog entry is `implemented`.
+    `/blu`, `/blu-help`, and `/blu-progress` may inspect the full retained command catalog, but they must only recommend commands whose runtime catalog entry is `implemented`.
 
 28. `BP-028` Drift-repair phase gate
     Phase 3 and later command exposure is blocked until the active drift-repair checklist is closed and the relevant runtime substrate exists.

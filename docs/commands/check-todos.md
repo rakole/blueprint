@@ -1,4 +1,4 @@
-# `/blu:check-todos`
+# `/blu-check-todos`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:check-todos`
+- Gemini command path: `/blu-check-todos`
+- Compatibility during this release: `/blu:check-todos` (deprecated; remove next release)
 - Root router form: `/blu check-todos`
 - Argument hint: `[area filter]`
-- `/blu:check-todos auth`
+- `/blu-check-todos auth`
 - `/blu check-todos`
 
 ## Inputs, Project State, And Prerequisite Artifacts

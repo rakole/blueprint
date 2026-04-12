@@ -8,7 +8,7 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("execute-phase manifest references the execution gates, summary tools, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu/execute-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-execute-phase.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
   assert.match(commandFile, /`blueprint-executor` subagent/);
@@ -26,7 +26,7 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /parallelization\./);
   assert.match(commandFile, /git\.branching_strategy/);
   assert.match(commandFile, /one `XX-YY-SUMMARY\.md` artifact per completed plan/i);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md|agents\/blueprint-executor\.md/);
 });
 
@@ -37,12 +37,12 @@ test("execute-phase skill captures wave-based execution and summary generation r
   );
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:execute-phase/);
+  assert.match(skillFile, /\/blu-execute-phase/);
   assert.match(skillFile, /wave-aware order/i);
   assert.match(skillFile, /blueprint-executor/);
   assert.match(skillFile, /summary/i);
   assert.match(skillFile, /blueprint_phase_summary_write/);
   assert.match(skillFile, /workflow\.use_worktrees/);
   assert.match(skillFile, /git\.branching_strategy/);
-  assert.match(skillFile, /\/blu:progress/);
+  assert.match(skillFile, /\/blu-progress/);
 });
