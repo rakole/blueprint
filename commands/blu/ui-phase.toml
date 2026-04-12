@@ -2,26 +2,26 @@ description = "Create a phase-scoped UI spec or explicit skip rationale through 
 prompt = """
 You are the `/blu:ui-phase` command for Blueprint.
 
-Use `skills/blueprint-phase-discovery.md` as the primary orchestration contract. When deeper UI design work is useful, follow `agents/blueprint-ui-designer.md`.
+Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper UI design work is useful, use the `blueprint-ui-designer` subagent for bounded, phase-scoped UI guidance.
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason`.
-3. Read `blueprint_phase_research_status` so you know which discovery artifacts already exist for the phase.
-4. Read `blueprint_config_get` with the `effective` scope so you can honor `workflow.ui_phase` and `workflow.ui_safety_gate`.
-5. Read the existing UI artifact through `blueprint_phase_artifact_read` with `artifact: "ui-spec"` before proposing a replace path.
+1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason`.
+3. Read `mcp__blueprint__blueprint_phase_research_status` so you know which discovery artifacts already exist for the phase.
+4. Read `mcp__blueprint__blueprint_config_get` with the `effective` scope so you can honor `workflow.ui_phase` and `workflow.ui_safety_gate`.
+5. Read the existing UI artifact through `mcp__blueprint__blueprint_phase_artifact_read` with `artifact: "ui-spec"` before proposing a replace path.
 6. If `XX-UI-SPEC.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default.
 7. If `workflow.ui_phase=false`, write an explicit skip rationale into `XX-UI-SPEC.md` instead of generating a UI contract.
 8. If `workflow.ui_safety_gate=true` and the phase appears backend-only or intentionally skips UI work, require an explicit rationale before writing the skip path.
-9. Use `blueprint_artifact_scaffold` only to seed a missing `XX-UI-SPEC.md`. Do not create a second UI-skip artifact.
-10. If deeper UI design work is useful, the output from `agents/blueprint-ui-designer.md` must be concrete enough to write directly into the final artifact.
-11. Persist the actual UI contract or skip rationale through `blueprint_phase_artifact_write` with `artifact: "ui-spec"`.
-12. Call `blueprint_state_update` to record that `/blu:ui-phase` completed and to set the next safe action.
+9. Use `mcp__blueprint__blueprint_artifact_scaffold` only to seed a missing `XX-UI-SPEC.md`. Do not create a second UI-skip artifact.
+10. If deeper UI design work is useful, the output from the `blueprint-ui-designer` subagent must be concrete enough to write directly into the final artifact.
+11. Persist the actual UI contract or skip rationale through `mcp__blueprint__blueprint_phase_artifact_write` with `artifact: "ui-spec"`.
+12. Call `mcp__blueprint__blueprint_state_update` to record that `/blu:ui-phase` completed and to set the next safe action.
 13. Return a concise summary covering the phase, config gates, reused versus replaced artifacts, any warnings, and the next safe action.
 
 Response requirements:
-- Use only `blueprint_phase_locate`, `blueprint_phase_research_status`, `blueprint_config_get`, `blueprint_phase_artifact_read`, `blueprint_phase_artifact_write`, `blueprint_artifact_scaffold`, and `blueprint_state_update` for persistent state work.
+- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_phase_research_status`, `mcp__blueprint__blueprint_config_get`, `mcp__blueprint__blueprint_phase_artifact_read`, `mcp__blueprint__blueprint_phase_artifact_write`, `mcp__blueprint__blueprint_artifact_scaffold`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.

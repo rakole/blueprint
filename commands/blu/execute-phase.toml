@@ -2,31 +2,31 @@ description = "Execute phase plans with wave-aware summary persistence, config-a
 prompt = """
 You are the `/blu:execute-phase` command for Blueprint.
 
-Use `skills/blueprint-phase-execution.md` as the primary orchestration contract. When deeper execution work is useful, follow `agents/blueprint-executor.md`.
+Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. When deeper execution work is useful, use the `blueprint-executor` subagent for bounded per-plan delivery.
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `blueprint_phase_plan_index`, `blueprint_phase_summary_index`, `blueprint_config_get` with `scope: "effective"`, `blueprint_artifact_validate`, and `blueprint_state_load` so you know the phase plan inventory, existing execution coverage, normalized execution config, artifact health, and the current safe follow-up state.
+1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `mcp__blueprint__blueprint_phase_plan_index`, `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_config_get` with `scope: "effective"`, `mcp__blueprint__blueprint_artifact_validate`, and `mcp__blueprint__blueprint_state_load` so you know the phase plan inventory, existing execution coverage, normalized execution config, artifact health, and the current safe follow-up state.
 4. If no plans exist for the phase, stop and route to `/blu:plan-phase` first. If the plan index reports missing plan dependencies, stop and explain which plan prerequisites must be repaired before execution.
-5. Treat `blueprint_phase_summary_index.pendingPlans` as the default execution target set. Existing summaries mean that plan already has durable execution evidence unless the user explicitly asks to replace it.
+5. Treat `mcp__blueprint__blueprint_phase_summary_index.pendingPlans` as the default execution target set. Existing summaries mean that plan already has durable execution evidence unless the user explicitly asks to replace it.
 6. Honor execution filters and safety rules before any writes:
    - `--gaps-only`: keep the target set limited to plans that do not already have summaries.
    - `--wave N`: restrict execution to the selected wave, but do not imply the whole phase is complete when later or earlier pending waves still exist.
    - `--interactive`: summarize the selected plan set, execution mode, and overwrite risk before continuing.
    - If an existing summary would be replaced, require explicit overwrite confirmation instead of silently rewriting it.
-7. Read every selected plan through `blueprint_phase_plan_read`. Read existing summaries for overlapping plan ids through `blueprint_phase_summary_read` before deciding whether to reuse or replace them.
+7. Read every selected plan through `mcp__blueprint__blueprint_phase_plan_read`. Read existing summaries for overlapping plan ids through `mcp__blueprint__blueprint_phase_summary_read` before deciding whether to reuse or replace them.
 8. Honor normalized config when describing or delegating execution behavior:
    - `parallelization.enabled`, `parallelization.plan_level`, `parallelization.max_concurrent_agents`, and `parallelization.min_plans_for_parallel` control whether execution is parallel or sequential.
    - `workflow.use_worktrees` controls whether execution should describe worktree isolation.
    - `git.branching_strategy` controls whether execution stays on the current branch or uses phase/milestone-scoped branch guidance.
-9. Use `blueprint-executor` for bounded per-plan execution work. Keep each selected plan independent, preserve wave ordering, and persist one `XX-YY-SUMMARY.md` artifact per completed plan through `blueprint_phase_summary_write`. Do not write summary files directly.
-10. After summary writes finish, call `blueprint_artifact_validate` and then `blueprint_state_update` so `STATE.md` reflects the active phase, the execute-phase command, and the next safe implemented action. Partial-wave or filtered runs must not mark the whole phase complete.
+9. Use the `blueprint-executor` subagent for bounded per-plan execution work. Keep each selected plan independent, preserve wave ordering, and persist one `XX-YY-SUMMARY.md` artifact per completed plan through `mcp__blueprint__blueprint_phase_summary_write`. Do not write summary files directly.
+10. After summary writes finish, call `mcp__blueprint__blueprint_artifact_validate` and then `mcp__blueprint__blueprint_state_update` so `STATE.md` reflects the active phase, the execute-phase command, and the next safe implemented action. Partial-wave or filtered runs must not mark the whole phase complete.
 11. Return a concise summary covering which plans or waves were executed, whether summaries were created, reused, or replaced, which config gates shaped execution, any warnings, and the next safe implemented action.
 
 Response requirements:
-- Use only `blueprint_phase_locate`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_summary_write`, `blueprint_config_get`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` for persistent state work.
+- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_phase_plan_index`, `mcp__blueprint__blueprint_phase_plan_read`, `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_summary_read`, `mcp__blueprint__blueprint_phase_summary_write`, `mcp__blueprint__blueprint_config_get`, `mcp__blueprint__blueprint_artifact_validate`, `mcp__blueprint__blueprint_state_load`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep plan execution plan-aware: respect dependency waves, do not collapse all plans into one monolithic task, and do not pretend filtered runs completed the full phase.

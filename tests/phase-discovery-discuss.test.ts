@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
+import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
   blueprintArtifactScaffold,
   blueprintArtifactList
@@ -83,19 +84,21 @@ test("discuss-phase command references only registered phase-discovery tool name
     "blueprint_phase_checkpoint_delete",
     "blueprint_artifact_scaffold",
     "blueprint_state_update"
-  ];
+  ] as const;
 
   for (const toolName of requiredTools) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
-    assert.match(commandFile, new RegExp(toolName));
+    assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
+  assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /workflow\.discuss_mode/);
   assert.match(commandFile, /workflow\.skip_discuss/);
   assert.match(commandFile, /workflow\.research_before_questions/);
   assert.match(commandFile, /power mode|chain mode|auto-advance/i);
   assert.match(commandFile, /\/blu:progress/);
+  assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {

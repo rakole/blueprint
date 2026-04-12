@@ -2,15 +2,15 @@ description = "Surface the agent's current assumptions about a phase before plan
 prompt = """
 You are the `/blu:list-phase-assumptions` command for Blueprint.
 
-Use `skills/blueprint-phase-discovery.md` as the primary orchestration contract. When a clearer evidence-backed technical read would materially improve the assumptions summary, you may use `agents/blueprint-researcher.md` as a bounded read-only sidecar.
+Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When a clearer evidence-backed technical read would materially improve the assumptions summary, you may use the `blueprint-researcher` subagent as a bounded read-only sidecar.
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. Read `blueprint_project_status` so your response stays grounded in repository readiness and the current safe next action.
-3. Read `blueprint_roadmap_read` so you can summarize the roadmap goal, list valid phases when the requested phase is missing, and avoid guessing a replacement phase.
-4. If `blueprint_phase_locate` reports `found: false`, stop with the precise `reason`, include the roadmap's available phase numbers and names, and offer only implemented recovery guidance.
-5. Read `blueprint_phase_context` for the resolved phase so you understand requirements, existing discovery artifacts, and missing context.
+1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. Read `mcp__blueprint__blueprint_project_status` so your response stays grounded in repository readiness and the current safe next action.
+3. Read `mcp__blueprint__blueprint_roadmap_read` so you can summarize the roadmap goal, list valid phases when the requested phase is missing, and avoid guessing a replacement phase.
+4. If `mcp__blueprint__blueprint_phase_locate` reports `found: false`, stop with the precise `reason`, include the roadmap's available phase numbers and names, and offer only implemented recovery guidance.
+5. Read `mcp__blueprint__blueprint_phase_context` for the resolved phase so you understand requirements, existing discovery artifacts, and missing context.
 6. Base your answer on the saved roadmap and phase context. Surface assumptions across these five areas:
    - technical approach
    - implementation order
@@ -22,7 +22,7 @@ Follow this flow exactly:
 9. End with a concise correction prompt such as `What do you think?` plus the safest implemented next action when useful. Prefer `/blu:discuss-phase <phase>` or `/blu:progress`; do not present planned or blocked commands as runnable.
 
 Response requirements:
-- Use only `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status` for repo state inspection.
+- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_phase_context`, `mcp__blueprint__blueprint_roadmap_read`, and `mcp__blueprint__blueprint_project_status` for repo state inspection.
 - Do not mutate files, config, roadmap entries, or phase artifacts.
 - Do not guess a nearest replacement phase when the requested phase is missing; list valid roadmap phases instead.
 - Do not turn this command into hidden planning, context capture, or execution.

@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
+import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
 import {
   blueprintPhaseArtifactRead,
@@ -130,19 +131,22 @@ test("research-phase command references only registered tool names and safe rout
     "blueprint_artifact_scaffold",
     "blueprint_state_load",
     "blueprint_state_update"
-  ];
+  ] as const;
 
   for (const toolName of requiredTools) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
-    assert.match(commandFile, new RegExp(toolName));
+    assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
+  assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(commandFile, /`blueprint-researcher` subagent/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /view/);
   assert.match(commandFile, /skip/);
   assert.match(commandFile, /update/);
   assert.match(commandFile, /\/blu:progress/);
   assert.doesNotMatch(commandFile, /\/blu:plan-phase/);
+  assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
 });
 
 test("phase artifact write creates, reuses, updates, and validates research content", async (t) => {

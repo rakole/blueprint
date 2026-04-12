@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
+import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
   blueprintPhaseArtifactRead,
   blueprintPhaseArtifactWrite,
@@ -69,17 +70,20 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "blueprint_phase_artifact_write",
     "blueprint_artifact_scaffold",
     "blueprint_state_update"
-  ];
+  ] as const;
 
   for (const toolName of requiredTools) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
-    assert.match(commandFile, new RegExp(toolName));
+    assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
+  assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(commandFile, /`blueprint-ui-designer` subagent/);
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /XX-UI-SPEC\.md/);
   assert.doesNotMatch(commandFile, /UI-SKIP/);
+  assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-ui-designer\.md/);
 });
 
 test("ui-phase keeps UI output in a single reusable file for either contract or skip rationale", async (t) => {
