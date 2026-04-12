@@ -50,10 +50,10 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 - `blueprint_roadmap_read`
 - `blueprint_roadmap_add_phase`
 - `blueprint_artifact_list`
+- `blueprint_roadmap_remove_phase`
 - `blueprint_artifact_scaffold`
 - `blueprint_state_update`
 - `blueprint_phase_summary_index`
-- `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
 
@@ -73,6 +73,17 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 5. Persist the roadmap mutation through `blueprint_roadmap_add_phase`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.
 6. Scaffold the new phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
 7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <phase>`.
+8. Keep follow-up routing inside implemented Blueprint commands only.
+
+### `remove-phase`
+
+1. Require an explicit phase number before any mutation.
+2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
+3. Read the target phase artifacts before mutation so drift or execution evidence is visible in the preview.
+4. Require explicit confirmation before deleting the target phase and renumbering subsequent phases.
+5. Persist the roadmap mutation through `blueprint_roadmap_remove_phase`; do not rewrite `.blueprint/ROADMAP.md` or rename phase directories directly from the command prompt.
+6. Treat the future-phase guard as mandatory and reject targets that already have execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT` artifacts.
+7. Update `STATE.md` through `blueprint_state_update` so `/blu:remove-phase` is the active command and the next safe implemented follow-up is `/blu:progress`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `audit-milestone`
@@ -100,5 +111,7 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 ## Output Style
 
 - For `add-phase`, report the new phase number and description plainly, mention the scaffolded phase path and any reuse warnings, and end with the next safe implemented action.
+- For `plan-milestone-gaps`, show the grouped gap-closure phases compactly, call out any deferred optional gaps, and end with the first safe implemented follow-up.
+- For `remove-phase`, report the removed phase plainly, summarize any renumbered phases or drift warnings, and end with the next safe implemented action.
 - For `plan-milestone-gaps`, show the grouped gap-closure phases compactly, call out any deferred optional gaps, and end with the first safe implemented follow-up.
 - For `audit-milestone`, call out the original milestone intent, the evidence that confirms or weakens it, any gaps, and the next safe implemented action.

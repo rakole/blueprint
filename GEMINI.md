@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the governance handoff/resume pair is now shipped through `/blu:pause-work` and `/blu:resume-work`, `/blu:add-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` are now implemented, and the current repair focus is making the shipped discovery, execution, validation, UAT, milestone-reporting, and assumptions-review commands fully substantive while later commands remain blocked until their substrate exists.
+- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the governance handoff/resume pair is now shipped through `/blu:pause-work` and `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` are now implemented, and the current repair focus is making the shipped discovery, execution, validation, UAT, milestone-reporting, roadmap-mutation, gap-planning, and assumptions-review commands fully substantive while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:plan-milestone-gaps`, and `/blu:audit-milestone`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, and `/blu:audit-milestone`.
 
 ## State Boundaries
 
@@ -43,6 +43,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:plan-milestone-gaps` reads the latest milestone audit, groups actionable gaps into a coherent follow-up slice, appends the approved phases through MCP roadmap tools, and routes to `/blu:discuss-phase` for the first new phase.
 - `/blu:pause-work` and `/blu:resume-work` now persist the canonical handoff/report and state-routing contract across `.blueprint/reports/pause-work-latest.md` and `.blueprint/STATE.md`.
 - `/blu:add-phase` now appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
+- `/blu:remove-phase` now removes a future phase, deletes the matching phase directory, renumbers later roadmap references plus phase-scoped artifact filenames, and updates `.blueprint/STATE.md`.
 - Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
 - Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.
 
@@ -57,6 +58,6 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - Prefer safe inline routing when user intent is clear.
 - Recommend the best direct `/blu:<command>` entrypoint when intent is ambiguous or the next action is risky.
 - Only recommend commands whose `blueprint_command_catalog` entry is `implemented`.
-- For roadmap work, keep `/blu:add-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` available as the implemented Wave 2 commands until the remaining roadmap surfaces ship.
+- For roadmap work, keep `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` available as the implemented Wave 2 commands until the remaining roadmap surfaces ship.
 - When a command is blocked, explain the missing substrate instead of presenting it as runnable.
 - Do not rely on slash-command chaining or undocumented aliases.

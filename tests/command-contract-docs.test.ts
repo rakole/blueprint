@@ -274,3 +274,16 @@ test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure 
   assert.match(planMilestoneGapsDoc, /groups related gaps into a few coherent phases/i);
   assert.match(planMilestoneGapsDoc, /\/blu:discuss-phase <phase>/);
 });
+
+test("remove-phase command docs keep the roadmap removal contract explicit", async () => {
+  const removePhaseDoc = await readRepoFile("docs/commands/remove-phase.md");
+
+  assert.match(removePhaseDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(removePhaseDoc, /blueprint_roadmap_read/);
+  assert.match(removePhaseDoc, /blueprint_roadmap_remove_phase/);
+  assert.match(removePhaseDoc, /blueprint_artifact_list/);
+  assert.match(removePhaseDoc, /blueprint_state_update/);
+  assert.match(removePhaseDoc, /future phase/i);
+  assert.match(removePhaseDoc, /execution evidence/i);
+  assert.match(removePhaseDoc, /\/blu:progress/);
+});
