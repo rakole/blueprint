@@ -17,5 +17,5 @@ Response requirements:
 - Prefer direct `/blu:<command>` guidance over hidden aliases or slash-command chaining.
 - Only recommend commands whose catalog entry is `implemented: true`.
 - Explain blocked commands as blocked; do not present them as runnable.
-- Explain the next safe action from `blueprint_project_status`.
+- Explain the next safe action from `mcp__blueprint__blueprint_project_status`.
 """

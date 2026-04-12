@@ -26,6 +26,6 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Do not persist scaffold-only or validation-failing research content.
-- If UI discovery is clearly the next step and `blueprint_command_catalog` says `/blu:ui-phase` is implemented, mention it. Otherwise prefer `/blu:progress`.
+- If UI discovery is clearly the next step and `mcp__blueprint__blueprint_command_catalog` says `/blu:ui-phase` is implemented, mention it. Otherwise prefer `/blu:progress`.
 - Do not present blocked lifecycle commands as runnable.
 """
