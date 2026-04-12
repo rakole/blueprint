@@ -4,7 +4,7 @@
 
 The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, the read-only `list-phase-assumptions` discovery command, the Phase 4 validation/UAT commands, the governance handoff/resume commands, the current Wave 2 roadmap/milestone commands including the milestone-closeout trio, and the first shipped Wave 4 docs command.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair, the current Wave 2 roadmap-admin slice (`add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, and `list-phase-assumptions`), and the Wave 4 docs command `docs-update` are also shipped. Runtime routing remains limited to `implemented` commands, and `insert-phase` remains blocked in this cycle.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair, the current Wave 2 roadmap-admin slice (`add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, and `list-phase-assumptions`), and the Wave 4 docs command `docs-update` are also shipped. Runtime routing remains limited to `implemented` commands.
 
 The governance handoff/resume pair now ships through `pause-work` and `resume-work`, with `pause-work` owning the durable handoff report and `resume-work` restoring the next safe implemented action from it.
 
@@ -30,17 +30,17 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 
 ## Recommended Next Session
 
-Wave 2 milestone closeout is now shipped, so future sessions should focus on preserving the closeout contracts while keeping blocked surfaces blocked:
+Wave 2 milestone closeout is now shipped, so future sessions should focus on preserving the closeout contracts while keeping later planned or blocked surfaces gated:
 
 1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
 2. Use the shipped validation, UAT, and milestone closeout sequence (`audit-milestone` -> `complete-milestone` -> `milestone-summary` -> `new-milestone`) instead of reintroducing prompt-only verification or ad hoc archival steps
-3. Keep `insert-phase` blocked unless it is separately replanned with matching docs, manifest, skill, MCP substrate, and tests
+3. Keep the shipped `insert-phase` contract aligned across docs, manifest, skill, MCP substrate, and tests
 
 ## First Replanned Slice
 
 The next implementation slice should be freshly planned after Wave 2 closeout:
 
-- `insert-phase` only if its own manifest, primary skill, required MCP substrate, and regression coverage are planned together
+- preserve `insert-phase` as a shipped Wave 2 command instead of letting it drift back into docs-only status
 - otherwise the next post-Wave-2 rollout should start from a newly locked Wave 3 or later slice instead of pretending the closeout trio is still pending
 
 ## Shared Risks To Watch
@@ -69,4 +69,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the shipped lifecycle, governance, and roadmap-admin commands keep their current guarantees intact, the Wave 2 closeout trio stays aligned across docs and runtime, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the shipped lifecycle, governance, and roadmap-admin commands keep their current guarantees intact, the Wave 2 closeout trio plus `insert-phase` stay aligned across docs and runtime, and later commands remain blocked until their substrate exists.

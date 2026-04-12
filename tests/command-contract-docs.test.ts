@@ -278,6 +278,20 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
   assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
 });
 
+test("insert-phase command docs keep the decimal insertion contract explicit", async () => {
+  const insertPhaseDoc = await readRepoFile("docs/commands/insert-phase.md");
+
+  assert.match(insertPhaseDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(insertPhaseDoc, /blueprint_roadmap_read/);
+  assert.match(insertPhaseDoc, /blueprint_roadmap_insert_phase/);
+  assert.match(insertPhaseDoc, /blueprint_artifact_scaffold/);
+  assert.match(insertPhaseDoc, /blueprint_state_update/);
+  assert.match(insertPhaseDoc, /existing integer phase/i);
+  assert.match(insertPhaseDoc, /next decimal/i);
+  assert.match(insertPhaseDoc, /do not renumber later phases/i);
+  assert.match(insertPhaseDoc, /\/blu:discuss-phase <decimal>/);
+});
+
 test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure contract explicit", async () => {
   const planMilestoneGapsDoc = await readRepoFile("docs/commands/plan-milestone-gaps.md");
 

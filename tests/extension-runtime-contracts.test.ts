@@ -33,6 +33,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "validate-phase",
   "verify-work",
   "add-phase",
+  "insert-phase",
   "remove-phase",
   "plan-milestone-gaps",
   "audit-milestone",
