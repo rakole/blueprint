@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- The live runtime now includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, governance, and roadmap-admin contracts aligned while later commands remain blocked until their substrate exists.
+- The live runtime now includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, `/blu:docs-update`, and `/blu:list-phase-assumptions`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, governance, roadmap-admin, and docs contracts aligned while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, and `/blu:audit-milestone`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, and `/blu:docs-update`.
 
 ## State Boundaries
 
@@ -40,6 +40,8 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:validate-phase` now persists `XX-VERIFICATION.md` verification evidence through the validation MCP substrates.
 - `/blu:verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the same validation MCP substrates and keeps follow-up fixes explicit.
 - `/blu:audit-milestone` audits milestone completion against original intent, writes a durable report in `.blueprint/reports/`, and keeps the follow-up inside the implemented Blueprint surface.
+- `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` now ship as the report-driven milestone closeout and carry-forward reset trio on the existing roadmap, artifact, and state substrates.
+- `/blu:docs-update` now verifies or refreshes selected repo docs against repo and Blueprint evidence, keeps the write scope narrow, and persists a durable `.blueprint/reports/docs-update-latest.md` report.
 - `/blu:plan-milestone-gaps` reads the latest milestone audit, groups actionable gaps into a coherent follow-up slice, appends the approved phases through MCP roadmap tools, and routes to `/blu:discuss-phase` for the first new phase.
 - `/blu:pause-work` and `/blu:resume-work` now persist the canonical handoff/report and state-routing contract across `.blueprint/reports/pause-work-latest.md` and `.blueprint/STATE.md`.
 - `/blu:add-phase` now appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.

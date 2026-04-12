@@ -62,3 +62,20 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(uiDesigner, /safety-gate/i);
   assert.match(uiDesigner, /Do not invent a second artifact for skipped UI work/);
 });
+
+test("docs specialist agents encode scoped drafting and evidence-backed verification rules", async () => {
+  const docWriter = await readAgent("blueprint-doc-writer");
+  const docVerifier = await readAgent("blueprint-doc-verifier");
+
+  assert.match(docWriter, /## Required Reads/);
+  assert.match(docWriter, /## Output Contract/);
+  assert.match(docWriter, /Path: <repo path>/);
+  assert.match(docWriter, /Preserve strong existing structure/i);
+  assert.match(docWriter, /Do not widen into `\.blueprint\/`, `\.planning\/`, or hidden `\/gsd:\*` behavior/);
+
+  assert.match(docVerifier, /## Verification Rules/);
+  assert.match(docVerifier, /PASS`, `GAP`, or `BLOCKED`/);
+  assert.match(docVerifier, /## Required Output Contract/);
+  assert.match(docVerifier, /Report Draft/);
+  assert.match(docVerifier, /Do not downgrade unsupported claims/i);
+});
