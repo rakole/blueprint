@@ -5,11 +5,11 @@
 - `W2-01`: repair command-catalog parity for the closeout trio
 - `W2-02`: repair manifest metadata and routing language
 - `W2-03`: repair roadmap-admin skill coverage
-- `W2-04`: repair milestone artifact and report contracts
+- `W2-04`: keep `insert-phase` blocked and non-routable
 - `W2-05`: repair README, GEMINI, HANDOFF, and MEMORY control-plane docs
 - `W2-06`: repair hook and packaging references
 - `W2-07`: repair command metadata regression coverage
-- `W2-08`: run the final verification sweep and close blockers
+- `W2-08`: run the final regression gate
 
 ## Batches
 
@@ -20,7 +20,8 @@
 
 ## Regression Gate
 
-- Re-run `tests/command-catalog.test.ts`
-- Re-run `tests/help-progress-health.test.ts`
-- Re-run `tests/hooks.test.ts`
-- Finish with a full `npm test`
+- Run targeted checks:
+  - `tests/command-catalog.test.ts`
+  - `tests/help-progress-health.test.ts`
+  - `tests/hooks.test.ts`
+- Finish with the full `npm test` suite.

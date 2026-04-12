@@ -7,6 +7,7 @@ import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
+import { reviewToolDefinitions } from "./tools/review.js";
 import { stateToolDefinitions } from "./tools/state.js";
 
 type ToolDefinition = {
@@ -21,6 +22,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...configToolDefinitions,
   ...stateToolDefinitions,
   ...phaseToolDefinitions,
+  ...reviewToolDefinitions,
   ...artifactToolDefinitions
 ];
 

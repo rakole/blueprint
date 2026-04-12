@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- The live runtime now includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, `/blu:docs-update`, and `/blu:list-phase-assumptions`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, governance, roadmap-admin, and docs contracts aligned while later commands remain blocked until their substrate exists.
+- The live runtime now includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, `/blu:docs-update`, `/blu:list-phase-assumptions`, and `/blu:secure-phase`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, governance, roadmap-admin, docs, and review contracts aligned while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, and `/blu:docs-update`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, `/blu:docs-update`, and `/blu:secure-phase`.
 
 ## State Boundaries
 
@@ -44,10 +44,11 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:docs-update` now verifies or refreshes selected repo docs against repo and Blueprint evidence, keeps the write scope narrow, and persists a durable `.blueprint/reports/docs-update-latest.md` report.
 - `/blu:plan-milestone-gaps` reads the latest milestone audit, groups actionable gaps into a coherent follow-up slice, appends the approved phases through MCP roadmap tools, and routes to `/blu:discuss-phase` for the first new phase.
 - `/blu:pause-work` and `/blu:resume-work` now persist the canonical handoff/report and state-routing contract across `.blueprint/reports/pause-work-latest.md` and `.blueprint/STATE.md`.
+- `/blu:secure-phase` now persists `XX-SECURITY.md` through `blueprint_review_record` and keeps the first review-family slice phase-scoped and MCP-owned.
 - `/blu:add-phase` now appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
 - `/blu:remove-phase` now removes a future phase, deletes the matching phase directory, renumbers later roadmap references plus phase-scoped artifact filenames, and updates `.blueprint/STATE.md`.
-- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
-- Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.
+- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`, `blueprint-phase-validation`, `blueprint-docs`, `blueprint-review`, and `blueprint-roadmap-admin`.
+- Shipped agent contracts live in `agents/`, including `blueprint-researcher`, `blueprint-ui-designer`, `blueprint-doc-writer`, `blueprint-doc-verifier`, and `blueprint-security-auditor`.
 
 ## Mutation Rules
 

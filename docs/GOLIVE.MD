@@ -28,6 +28,7 @@ What is already live:
 - all Wave 0 foundation commands
 - all Wave 1 core lifecycle commands
 - the Wave 2 roadmap-admin slice including `complete-milestone`, `milestone-summary`, and `new-milestone`
+- the first Wave 4 quality pass through `secure-phase`
 
 What remains closest on the roadmap:
 
@@ -42,7 +43,7 @@ What remains closest on the roadmap:
 - Freeze the v1 public promise around the real shipped surface instead of the full retained command catalog.
   - Recommended v1 bar: Wave 0 + Wave 1 + Wave 2 milestone closeout.
   - That functional bar is now satisfied on this branch; the remaining go-live work is release hardening and publication discipline.
-  - Wave 3, Wave 4, and Wave 5 commands should stay documented as future work until they are actually implemented.
+  - Wave 3 and Wave 5 commands should stay documented as future work until they are actually implemented, and only the actually shipped Wave 4 commands should be treated as live.
 - Preserve the current implemented-only routing guarantees in `/blu`, `/blu:help`, and `/blu:progress`.
   - This already exists and should remain a release gate.
 
@@ -102,7 +103,6 @@ What remains closest on the roadmap:
   - `code-review`
   - `code-review-fix`
   - `audit-fix`
-  - `secure-phase`
   - `docs-update`
   - `ui-review`
   - `review`

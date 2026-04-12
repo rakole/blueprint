@@ -30,6 +30,7 @@ const IMPLEMENTED_COMMANDS = [
   "verify-work",
   "pause-work",
   "resume-work",
+  "secure-phase",
   "plan-milestone-gaps",
   "audit-milestone",
   "complete-milestone",
@@ -229,6 +230,9 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["verify-work"].availableOptionalAgents, [
     "blueprint-verifier"
   ]);
+  assert.deepEqual(catalog.commands["secure-phase"].availableOptionalAgents, [
+    "blueprint-security-auditor"
+  ]);
   assert.deepEqual(catalog.commands["plan-milestone-gaps"].availableOptionalAgents, [
     "blueprint-roadmapper"
   ]);
@@ -334,6 +338,26 @@ test("resume-work is implemented once the governance manifest and handoff MCP to
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("secure-phase is implemented once manifest, review skill, and review MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["secure-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu/secure-phase.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_phase_locate",
+    "blueprint_review_record"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-security-auditor"]);
   assert.deepEqual(entry.blockedBy, []);
 });
 
