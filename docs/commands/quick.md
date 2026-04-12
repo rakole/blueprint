@@ -10,14 +10,14 @@
 ## Purpose
 
 
-`quick` carries forward the GSD intent to execute a quick task with GSD guarantees (atomic commits, state tracking) but skip optional agents. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`quick` carries forward the GSD intent to execute a quick task with GSD guarantees (atomic commits, state tracking) but skip unnecessary ceremony. In Blueprint it is implemented as a Gemini-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, and records a durable quick-run report plus the next safe implemented action.
 
 
 ## Command Path And Examples
 
 - Gemini command path: `/blu:quick`
 - Root router form: `/blu quick`
-- Argument hint: `[--full] [--validate] [--discuss] [--research]`
+- Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
 - `/blu:quick --full`
 - `/blu quick`
 
@@ -25,13 +25,14 @@
 
 
 - A Blueprint project should already exist.
+- A bounded task description should already exist.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: may mutate repo files for the bounded task and persists a durable quick-run report plus `STATE.md`.
 
 
 ## Blueprint And Global State Reads
@@ -43,7 +44,7 @@
 ## Blueprint And Global State Writes
 
 
-- `quick-run reports in .blueprint/reports/`
+- `quick-run report in .blueprint/reports/`
 - `.blueprint/STATE.md`
 
 
@@ -52,8 +53,8 @@
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
-- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 
 
 ## Skills And Subagents
@@ -104,6 +105,7 @@
 
 
 - Confirm optional discuss, research, or full verification modes before starting.
+- Confirm report replacement before overwriting `.blueprint/reports/quick-run-latest.md` unless `--force` is present.
 
 
 ## Edge Cases
@@ -117,7 +119,7 @@
 
 
 - Repair malformed index files through MCP instead of raw append logic.
-- Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
+- Route oversized execution asks to `plan-phase` or `execute-phase` instead of bluffing.
 
 
 ## Acceptance Criteria
@@ -128,6 +130,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
+- Keeps deeper discuss, research, and validation passes opt-in instead of implicit.
 
 
 ## Test Cases

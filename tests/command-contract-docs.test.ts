@@ -277,12 +277,25 @@ test("phase execution skill and bounded execution agent are marked implemented i
 
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-phase-execution` \| `implemented` \| Plan execution and summary generation \|/
+    /\| `blueprint-phase-execution` \| `implemented` \| Plan execution, bounded quick delivery, and summary or report generation \|/
   );
   assert.match(
     skillsMarkdown,
     /\| `blueprint-executor` \| `implemented` \| Execute plan tasks and produce summaries \|/
   );
+});
+
+test("quick command docs keep the bounded report-backed execution contract explicit", async () => {
+  const quickDoc = await readRepoFile("docs/commands/quick.md");
+
+  assert.match(quickDoc, /Primary skill: `blueprint-phase-execution`/);
+  assert.match(quickDoc, /blueprint_project_status/);
+  assert.match(quickDoc, /blueprint_command_catalog/);
+  assert.match(quickDoc, /blueprint_artifact_report_write/);
+  assert.match(quickDoc, /blueprint_state_update/);
+  assert.match(quickDoc, /quick-run-latest\.md/);
+  assert.match(quickDoc, /Confirm optional discuss, research, or full verification modes before starting\./);
+  assert.match(quickDoc, /Leaves unrelated repo files untouched/i);
 });
 
 test("phase validation skill and bounded verifier agent are marked implemented in docs", async () => {

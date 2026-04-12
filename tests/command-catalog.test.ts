@@ -29,6 +29,7 @@ const IMPLEMENTED_COMMANDS = [
   "remove-phase",
   "plan-phase",
   "execute-phase",
+  "quick",
   "validate-phase",
   "verify-work",
   "pause-work",
@@ -290,6 +291,12 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["verify-work"].availableOptionalAgents, [
     "blueprint-verifier"
   ]);
+  assert.deepEqual(catalog.commands["quick"].availableOptionalAgents.sort(), [
+    "blueprint-executor",
+    "blueprint-planner",
+    "blueprint-researcher",
+    "blueprint-verifier"
+  ]);
   assert.deepEqual(catalog.commands["secure-phase"].availableOptionalAgents, [
     "blueprint-security-auditor"
   ]);
@@ -543,6 +550,32 @@ test("docs-update is implemented once manifest, skill, and docs-report MCP tools
   assert.deepEqual(entry.availableOptionalAgents.sort(), [
     "blueprint-doc-verifier",
     "blueprint-doc-writer"
+  ]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("quick is implemented once manifest, skill, and report-backed quick-run MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["quick"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu/quick.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_report_write",
+    "blueprint_command_catalog",
+    "blueprint_project_status",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents.sort(), [
+    "blueprint-executor",
+    "blueprint-planner",
+    "blueprint-researcher",
+    "blueprint-verifier"
   ]);
   assert.deepEqual(entry.blockedBy, []);
 });

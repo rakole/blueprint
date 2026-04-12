@@ -1,27 +1,31 @@
 ---
 name: blueprint-phase-execution
 description: >
-  Plan execution and summary generation for Blueprint lifecycle work. Use this
-  skill to run saved plans in wave-aware order, delegate bounded implementation
-  work, and persist honest summary artifacts through MCP.
+  Plan execution, bounded quick delivery, and summary or report generation for
+  Blueprint lifecycle work. Use this skill to run saved plans in wave-aware
+  order, execute quick scoped tasks, delegate bounded implementation work, and
+  persist honest execution evidence through MCP.
 status: implemented
 commands:
   - /blu:execute-phase
+  - /blu:quick
+  - /blu:fast
 ---
 
 # Blueprint Phase Execution Skill
 
 ## Purpose
 
-Orchestrate Blueprint's phase-execution flow so existing plans are executed in a wave-aware order, durable `XX-YY-SUMMARY.md` artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
+Orchestrate Blueprint's execution-family flows so saved plans run in a wave-aware order, bounded quick tasks stay intentionally small, durable `XX-YY-SUMMARY.md` or quick-run report artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
 
 ## Parity Goal
 
-Carry forward the useful upstream `execute-phase` intent while preserving Blueprint deltas:
+Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` intent while preserving Blueprint deltas:
 
 - execution stays Gemini-native and MCP-owned instead of script-owned
 - plans remain the source of execution scope and dependency ordering
 - one durable summary artifact is written per executed plan
+- bounded quick work stays report-backed and does not quietly become a phase-planning substitute
 - partial-wave and filtered runs do not falsely complete the whole phase
 - follow-up routing stays inside the implemented Blueprint surface
 
@@ -42,14 +46,20 @@ Carry forward the useful upstream `execute-phase` intent while preserving Bluepr
 - `blueprint_phase_summary_index`
 - `blueprint_phase_summary_read`
 - `blueprint_phase_summary_write`
+- `blueprint_project_status`
+- `blueprint_command_catalog`
 - `blueprint_config_get`
+- `blueprint_artifact_report_write`
 - `blueprint_artifact_validate`
 - `blueprint_state_load`
 - `blueprint_state_update`
 
 ## Optional Agents
 
+- `blueprint-researcher`
+- `blueprint-planner`
 - `blueprint-executor`
+- `blueprint-verifier`
 
 ## Workflow Rules
 
@@ -65,6 +75,10 @@ Carry forward the useful upstream `execute-phase` intent while preserving Bluepr
 10. After summary writes, refresh validation signals and update `STATE.md` so the next safe implemented action stays accurate.
 11. Prefer `/blu:progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
 12. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
+13. For `/blu:quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.
+14. `/blu:quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
+15. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the canonical `quick-run-latest` report instead of inventing ad hoc state files.
+16. `/blu:quick` should prefer `/blu:progress` after completion unless a narrower implemented next step is obvious and safe.
 
 ## Output Style
 
@@ -72,3 +86,4 @@ Carry forward the useful upstream `execute-phase` intent while preserving Bluepr
 - Explain any overwrite or partial-run risk before writes.
 - Call out the effective execution mode, including parallelization, worktree, and branch-strategy decisions.
 - Keep the user anchored on the next safe implemented action after execution.
+- For `/blu:quick`, explain why the task qualified as a bounded quick run, which optional depth gates were used, what the quick-run report captured, and which implemented follow-up remains safest.
