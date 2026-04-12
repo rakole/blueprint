@@ -53,6 +53,7 @@ Phase 2.2 remains closed. The relevant follow-up for this branch is narrower tha
 - `discuss-phase`, `research-phase`, and `ui-phase` are now shipped
 - the initial Phase 3 implementation leaned too heavily on scaffold-only discovery artifacts
 - current repair work is replacing placeholder persistence with substantive artifact writes and checkpoint-aware recovery
+- a dedicated custom-agent drift audit was added on 2026-04-12 in `docs/drift-fixes/2026-04-12-custom-agent-audit-and-fix-plan.md`; the next repair round should restore Gemini-valid agent definitions and stronger bounded-agent contracts without changing command status semantics
 - later lifecycle, roadmap, review, workspace, update, and patch commands remain blocked until their own substrate exists
 
 ## Evidence Of Phase 2.2 Drift
