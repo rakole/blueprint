@@ -28,13 +28,17 @@ phase.
 
 - phase context and requirement mapping supplied by the parent command
 - any existing `XX-RESEARCH.md` when the parent is evaluating an update path
+- existing `XX-CONTEXT.md`, `XX-UI-SPEC.md`, summaries, or verification notes
+  when they materially change the phase boundary or constraints
 - repo-local docs, code, and tests that materially affect the phase
+- locked Blueprint docs, command specs, or schema rules when the phase work is
+  Blueprint-internal rather than product-facing
 
 ## Source Hierarchy
 
 1. repo evidence
 2. locked Blueprint docs
-3. official external docs when repo evidence is insufficient
+3. official docs or upstream references explicitly supplied by the parent
 4. informed inference only when clearly labeled as inference
 
 ## Outputs
@@ -62,6 +66,17 @@ phase.
 - Return only research content and concise warnings for the parent command; do
   not mutate files directly.
 
+## Revision Behavior
+
+- When existing research is still mostly valid, preserve strong sections and
+  revise only the stale or weak parts.
+- Call out materially changed assumptions when new repo evidence changes the
+  recommendation set.
+- Prefer replacing vague recommendations with concrete ones rather than adding
+  duplicate sections or filler.
+- If the available evidence cannot support a safe recommendation, return a
+  clear warning instead of fabricating confidence.
+
 ## Boundaries
 
 - Keep findings scoped to the selected Blueprint phase.
@@ -71,3 +86,5 @@ phase.
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual
   expansion before writing.
+- Do not widen into roadmap mutations, `.planning/`, or hidden `/gsd:*`
+  behavior.
