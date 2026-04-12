@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu:add-backlog`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu:add-backlog`, the first shipped Wave 3 lightweight execution command `/blu:quick`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -28,6 +28,7 @@ This repository still carries the planning pack that locked the product and arch
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
 - The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
 - The capture command `/blu:add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
+- The bounded execution command `/blu:quick` is now shipped; it keeps lightweight repo work inside a reduced-ceremony path, uses optional discuss, research, and validation depth only after explicit confirmation, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`
 - The documentation command `/blu:docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
 - `insert-phase` remains the only blocked Wave 2 command and must stay non-routable until its own manifest, primary skill contract, and required MCP substrate actually ship
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
@@ -170,6 +171,7 @@ These runtime files exist today:
 - `commands/blu/health.toml`
 - `commands/blu/map-codebase.toml`
 - `commands/blu/add-backlog.toml`
+- `commands/blu/quick.toml`
 - `commands/blu/discuss-phase.toml`
 - `commands/blu/list-phase-assumptions.toml`
 - `commands/blu/research-phase.toml`

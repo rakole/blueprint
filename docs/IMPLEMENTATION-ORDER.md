@@ -60,6 +60,8 @@ Still blocked in this wave: `insert-phase`.
 - `explore`
 - `debug`
 
+Shipped in this wave: `add-backlog` and `quick`.
+
 ### Wave 4: Quality and shipping
 
 - `code-review`

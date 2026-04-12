@@ -31,6 +31,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "list-phase-assumptions",
   "plan-phase",
   "execute-phase",
+  "quick",
   "validate-phase",
   "verify-work",
   "add-backlog",
