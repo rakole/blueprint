@@ -185,17 +185,24 @@ test("phase discovery skill and bounded agent contracts are marked implemented i
   );
 });
 
-test("capture skill and add-backlog docs are marked implemented in docs", async () => {
-  const [skillsMarkdown, addBacklogDoc, mcpToolsDoc] = await Promise.all([
+test("capture skill and shipped note plus backlog docs are marked implemented in docs", async () => {
+  const [skillsMarkdown, noteDoc, addBacklogDoc, mcpToolsDoc, catalogMarkdown] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/note.md"),
     readRepoFile("docs/commands/add-backlog.md"),
-    readRepoFile("docs/MCP-TOOLS.md")
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/COMMAND-CATALOG.md")
   ]);
 
   assert.match(
     skillsMarkdown,
     /\| `blueprint-capture` \| `implemented` \| Notes, todos, backlog, ideation routing \| `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` \|/
   );
+  assert.match(catalogMarkdown, /\| `note` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \|/);
+  assert.match(noteDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(noteDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(noteDoc, /## Blueprint And Global State Writes[\s\S]*`\.blueprint\/notes\/NOTES\.md`/);
+  assert.match(noteDoc, /Keeps? notes project-local/i);
   assert.match(addBacklogDoc, /Primary skill: `blueprint-capture`/);
   assert.match(addBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
   assert.match(addBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_scaffold`/);

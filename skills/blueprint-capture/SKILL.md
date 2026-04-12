@@ -58,6 +58,15 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 
 ## Workflow Rules
 
+### `note`
+
+1. Require non-empty note text before any mutation.
+2. Use `blueprint_artifact_mutate_index` with `target: "note"` for durable note writes instead of raw append logic.
+3. Degrade to suggestion mode when the repo is not yet a Blueprint project.
+4. Treat normalized duplicate note descriptions as already captured work and report the existing entry instead of creating a second copy.
+5. Keep notes project-local. Do not reintroduce upstream global-note behavior, and do not bluff listing or promotion support before those contracts ship.
+6. Keep follow-up guidance inside implemented commands only.
+
 ### `add-backlog`
 
 1. Require a non-empty backlog description before any mutation.
@@ -78,7 +87,7 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 
 ## Future Capture Guardrails
 
-- `note`, `check-todos`, `review-backlog`, and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
+- `check-todos`, `review-backlog`, and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
 - Do not quietly promote backlog entries into roadmap phases without the dedicated promotion contract.
 - Do not write capture state outside `.blueprint/notes/`, `.blueprint/todos/`, `.blueprint/backlog/`, or explicitly reserved `.blueprint/phases/999.x-*/` stubs.
 

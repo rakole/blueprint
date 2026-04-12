@@ -58,6 +58,8 @@ Shipped in this wave: `add-phase`, `insert-phase`, `remove-phase`, `list-phase-a
 - `explore`
 - `debug`
 
+Shipped in this wave: `note`, `add-backlog`.
+
 ### Wave 4: Quality and shipping
 
 - `code-review`
