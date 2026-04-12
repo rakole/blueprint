@@ -23,6 +23,7 @@ const IMPLEMENTED_COMMANDS = [
   "verify-work",
   "pause-work",
   "resume-work",
+  "plan-milestone-gaps",
   "audit-milestone"
 ] as const;
 
@@ -150,6 +151,9 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["verify-work"].availableOptionalAgents, [
     "blueprint-verifier"
   ]);
+  assert.deepEqual(catalog.commands["plan-milestone-gaps"].availableOptionalAgents, [
+    "blueprint-roadmapper"
+  ]);
 });
 
 test("blocked lifecycle and roadmap commands stay unroutable until substrate exists", async () => {
@@ -242,5 +246,27 @@ test("audit-milestone is implemented once manifest, skill, and milestone audit M
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-verifier"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("plan-milestone-gaps is implemented once manifest, skill, and gap-planning MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["plan-milestone-gaps"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_artifact_summary_digest",
+    "blueprint_roadmap_add_phase",
+    "blueprint_roadmap_read",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-roadmapper"]);
   assert.deepEqual(entry.blockedBy, []);
 });

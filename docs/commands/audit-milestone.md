@@ -112,7 +112,7 @@
 
 - Show roadmap and phase-directory drift before mutation.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
-- If the audit surfaces gaps, route to `/blu:progress` unless a later milestone command is already implemented.
+- If the audit surfaces actionable gaps, route to `/blu:plan-milestone-gaps`; otherwise route to `/blu:progress`.
 
 
 ## Acceptance Criteria

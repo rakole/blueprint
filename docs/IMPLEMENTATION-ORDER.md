@@ -149,9 +149,8 @@ The validation, UAT, governance handoff/resume, roadmap append, milestone audit,
 
 ## Recommended First Code Slice
 
-1. `plan-milestone-gaps`
-2. `complete-milestone`
-3. `milestone-summary`
-4. `new-milestone`
+1. `complete-milestone`
+2. `milestone-summary`
+3. `new-milestone`
 
 This sequence keeps the next unshipped surface aligned with the current runtime status.

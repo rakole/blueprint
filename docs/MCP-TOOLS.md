@@ -113,6 +113,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - lifecycle commands lean on phase, artifact, and state tools.
 - `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status` to inspect phase intent and present a read-only assumptions review before planning.
 - `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to append the next whole-number phase, scaffold `.blueprint/phases/<phase-slug>/`, and keep `STATE.md` aligned.
+- `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update` to read the latest audit context, group approved gap-closure phases, append them in order, and point `STATE.md` at the first new phase.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.
 - quality commands use review and artifact tools.

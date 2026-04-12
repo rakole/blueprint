@@ -12,9 +12,9 @@ It is not a literal port of GSD internals.
 
 ## Current Phase
 
-- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `pause-work`, and `resume-work`
+- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `pause-work`, `resume-work`, `add-phase`, `plan-milestone-gaps`, and `audit-milestone`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
-- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `verify-work`, `pause-work`, and `resume-work` are also shipped, and the next broader rollout continues with `add-phase`
+- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `verify-work`, `pause-work`, and `resume-work` are also shipped, `plan-milestone-gaps` now ships as the audit-follow-up roadmap slice, and the next broader rollout continues with `complete-milestone`
 - `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
@@ -85,9 +85,9 @@ It is not a literal port of GSD internals.
 
 Continue the next roadmap slice with:
 
-- `add-phase`
+- `complete-milestone`
 - unchanged implemented-only routing guarantees in `src/mcp/tools/project.ts`
-- the closed Phase 2.2 drift guarantees plus shipped Phase 3 and Phase 4 regression coverage preserved while later roadmap commands land
+- the closed Phase 2.2 drift guarantees plus shipped Phase 3, Phase 4, and Wave 2 gap-planning regression coverage preserved while later roadmap commands land
 
 ## Working Norms
 

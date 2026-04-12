@@ -23,10 +23,11 @@ This repository still carries the planning pack that locked the product and arch
 - The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
+- The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
 - Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
 - Phase 4 execution now ships through `/blu:execute-phase`, which uses the plan and summary MCP substrates to produce execution evidence
 - Phase 4 validation now ships through `/blu:validate-phase` and `/blu:verify-work`, which use summary-aware validation MCP tools to persist verification and UAT evidence
-- The rest of Wave 2 roadmap and milestone commands remain unshipped
+- The remaining Wave 2 roadmap and milestone commands remain unshipped
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
@@ -145,6 +146,7 @@ These runtime files exist today:
 - `commands/blu/verify-work.toml`
 - `commands/blu/audit-milestone.toml`
 - `commands/blu/add-phase.toml`
+- `commands/blu/plan-milestone-gaps.toml`
 - `commands/blu/next.toml`
 - `commands/blu/pause-work.toml`
 - `commands/blu/resume-work.toml`
@@ -188,8 +190,8 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 
 The next broad rollout starts with the remaining roadmap slice while the shipped Phase 3, Phase 4, governance handoff/resume, roadmap-append, and milestone-audit guarantees stay green:
 
-1. Continue the next unshipped command slice beginning with `plan-milestone-gaps`
+1. Continue the next unshipped command slice beginning with `complete-milestone`
 2. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
-3. Preserve the shipped pause/resume routing, validation parity, `add-phase` append guarantees, and milestone-audit report contract while the rest of Wave 2 lands
+3. Preserve the shipped pause/resume routing, validation parity, `add-phase` append guarantees, `plan-milestone-gaps` grouped audit-follow-up contract, and milestone-audit report contract while the rest of Wave 2 lands
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

@@ -260,3 +260,17 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
   assert.match(addPhaseDoc, /next integer after the highest base phase number/i);
   assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
 });
+
+test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure contract explicit", async () => {
+  const planMilestoneGapsDoc = await readRepoFile("docs/commands/plan-milestone-gaps.md");
+
+  assert.match(planMilestoneGapsDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(planMilestoneGapsDoc, /blueprint_roadmap_read/);
+  assert.match(planMilestoneGapsDoc, /blueprint_artifact_list/);
+  assert.match(planMilestoneGapsDoc, /blueprint_artifact_summary_digest/);
+  assert.match(planMilestoneGapsDoc, /blueprint_roadmap_add_phase/);
+  assert.match(planMilestoneGapsDoc, /blueprint_state_update/);
+  assert.match(planMilestoneGapsDoc, /milestone audit report should already exist/i);
+  assert.match(planMilestoneGapsDoc, /groups related gaps into a few coherent phases/i);
+  assert.match(planMilestoneGapsDoc, /\/blu:discuss-phase <phase>/);
+});
