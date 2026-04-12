@@ -11,13 +11,16 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
     "utf8"
   );
 
-  assert.match(commandFile, /skills\/blueprint-roadmap-admin\.md/);
-  assert.match(commandFile, /blueprint_roadmap_read/);
-  assert.match(commandFile, /blueprint_phase_summary_index/);
-  assert.match(commandFile, /blueprint_artifact_list/);
-  assert.match(commandFile, /blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
+  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
+  assert.doesNotMatch(commandFile, /agents\/blueprint-verifier\.md/);
+  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp__blueprint__blueprint_phase_summary_index/);
+  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_list/);
+  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
-  assert.match(commandFile, /blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /\.blueprint\/reports\//);
   assert.match(commandFile, /\/blu:plan-milestone-gaps/);
