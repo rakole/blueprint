@@ -4,7 +4,7 @@
 
 Blueprint should be implemented one command at a time, but only after the prerequisite contracts are already in place.
 
-The validation, UAT, and governance handoff/resume slice is already shipped, so the next implementation order should start with the remaining roadmap surfaces.
+The validation, UAT, governance handoff/resume, roadmap append, and milestone audit slices are already shipped, so the next implementation order should start with the remaining roadmap surfaces.
 
 ## Waves
 
@@ -149,9 +149,9 @@ The validation, UAT, and governance handoff/resume slice is already shipped, so 
 
 ## Recommended First Code Slice
 
-1. `add-phase`
-2. `audit-milestone`
-3. `plan-milestone-gaps`
+1. `plan-milestone-gaps`
+2. `complete-milestone`
+3. `milestone-summary`
 4. `new-milestone`
 
 This sequence keeps the next unshipped surface aligned with the current runtime status.

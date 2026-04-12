@@ -1,0 +1,23 @@
+description = "Append a new integer phase to the current milestone, scaffold its Blueprint phase directory, and point the repo to the next safe lifecycle step."
+prompt = """
+You are the `/blu:add-phase` command for Blueprint.
+
+Use `skills/blueprint-roadmap-admin.md` as the primary orchestration contract.
+
+Follow this flow exactly:
+
+1. Require an explicit phase description from the user input. If the description is missing or blank, stop with concise usage guidance instead of guessing.
+2. Read `blueprint_roadmap_read` first so you know the active milestone, the current phase inventory, and any roadmap recovery warnings before mutating anything.
+3. Summarize the description and the current milestone, then require explicit confirmation before appending the new phase. Review is the default safe path.
+4. Use `blueprint_roadmap_add_phase` with the confirmed description. It must choose the next integer phase number from the highest base phase number in the roadmap, ignore decimal suffixes when counting, append the roadmap entry, and return the canonical `.blueprint/phases/<NN>-<slug>/` directory path.
+5. Use `blueprint_artifact_scaffold` to create or reuse the new phase directory by seeding the initial `XX-CONTEXT.md` scaffold. Do not treat scaffold text as finished phase context.
+6. Use `blueprint_state_update` to record the active phase, set `/blu:add-phase` as the active command, and point the next safe implemented action at `/blu:discuss-phase <phase>`.
+7. Return a concise summary covering the new phase number, description, scaffold path, any warnings, and the next safe Blueprint action.
+
+Response requirements:
+- Use only `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` for persistent state work.
+- Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
+- Do not infer a description when the user omitted one.
+- Do not advertise unimplemented roadmap commands as follow-up steps.
+- Keep the follow-up inside the shipped lifecycle surface; prefer `/blu:discuss-phase <phase>` over planning or execution shortcuts.
+"""

@@ -19,6 +19,11 @@ type RoadmapReadArgs = {
   cwd?: string;
 };
 
+type RoadmapAddPhaseArgs = {
+  cwd?: string;
+  description: string;
+};
+
 type PhaseLookupArgs = {
   cwd?: string;
   phase?: string;
@@ -90,6 +95,18 @@ type ParsedRoadmapPhase = {
   summary: string | null;
   goal: string | null;
   requirements: string[];
+};
+
+type RoadmapAddPhaseResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  slug: string;
+  phaseDir: string;
+  roadmapPath: string;
+  milestone: string | null;
+  written: boolean;
+  warnings: string[];
 };
 
 type PhaseLocateResult = {
@@ -392,6 +409,11 @@ const roadmapReadInputSchema = {
   cwd: z.string().optional()
 };
 
+const roadmapAddPhaseInputSchema = {
+  cwd: z.string().optional(),
+  description: z.string()
+};
+
 const phaseLookupInputSchema = {
   cwd: z.string().optional(),
   phase: z.string().optional()
@@ -497,7 +519,11 @@ function parseRequirements(value: string | null): string[] {
   return value
     .split(",")
     .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
+    .filter(
+      (entry) =>
+        entry.length > 0 &&
+        !["none", "none yet", "n/a", "not yet mapped"].includes(entry.toLowerCase())
+    );
 }
 
 function parseRoadmapDocument(raw: string): {
@@ -535,7 +561,7 @@ function parseRoadmapDocument(raw: string): {
   const phases: ParsedRoadmapPhase[] = [];
 
   for (const match of raw.matchAll(
-    /^- \[([ xX])\] \*\*Phase (\d+(?:\.\d+)?): ([^*]+?)\*\*(?: - (.+))?$/gm
+    /^- \[([ xX])\] (?:\*\*)?Phase (\d+(?:\.\d+)?): ([^\n*]+?)(?:\*\*)?(?: - (.+))?$/gm
   )) {
     const phaseNumber = normalizePhaseNumber(match[2]);
     const phaseName = match[3].trim();
@@ -553,6 +579,101 @@ function parseRoadmapDocument(raw: string): {
   }
 
   return { milestone, phases };
+}
+
+function normalizePhaseDescription(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function slugifyPhaseName(value: string): string {
+  const slug = value
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug.length > 0 ? slug : "new-phase";
+}
+
+function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
+  const basePhaseNumbers = phases
+    .map((phase) => phase.phaseNumber)
+    .map((phaseNumber) => phaseNumber.split(".")[0] ?? phaseNumber)
+    .map((phaseNumber) => Number.parseInt(phaseNumber, 10))
+    .filter((phaseNumber) => !Number.isNaN(phaseNumber));
+
+  const maxIntegerPhase = basePhaseNumbers.length === 0
+    ? 0
+    : Math.max(...basePhaseNumbers);
+
+  return String(maxIntegerPhase + 1);
+}
+
+function escapeForRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function appendPhaseLineToRoadmap(
+  raw: string,
+  phaseNumber: string,
+  phaseName: string
+): string {
+  const phaseLine = `- [ ] **Phase ${phaseNumber}: ${phaseName}**`;
+  const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!phasesSectionPattern.test(raw)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+    );
+  }
+
+  return raw.replace(phasesSectionPattern, (_full, header: string, body: string) => {
+    const trimmedBody = body.trimEnd();
+    const nextBody = trimmedBody.length === 0 ? phaseLine : `${trimmedBody}\n${phaseLine}`;
+    return `${header}${nextBody}\n`;
+  });
+}
+
+function appendPhaseDetailsToRoadmap(
+  raw: string,
+  phaseNumber: string,
+  phaseName: string
+): string {
+  const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
+
+  if (detailHeadingPattern.test(raw)) {
+    return raw;
+  }
+
+  const detailBlock = `### Phase ${phaseNumber}: ${phaseName}
+**Goal**: Capture the phase boundary and implementation goal during /blu:discuss-phase.
+**Requirements**: none yet
+**Depends on**: none
+**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
+**Status**: planned
+`;
+  const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (phaseDetailsSectionPattern.test(raw)) {
+    return raw.replace(
+      phaseDetailsSectionPattern,
+      (_full, header: string, body: string) => {
+        const trimmedBody = body.trimEnd();
+        const nextBody =
+          trimmedBody.length === 0 ? detailBlock.trimEnd() : `${trimmedBody}\n\n${detailBlock.trimEnd()}`;
+        return `${header}${nextBody}\n`;
+      }
+    );
+  }
+
+  return `${raw.trimEnd()}
+
+## Phase Details
+
+${detailBlock}`;
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -975,6 +1096,55 @@ export async function blueprintRoadmapRead(
     warnings: [],
     recovery: [],
     phases
+  };
+}
+
+export async function blueprintRoadmapAddPhase(
+  args: RoadmapAddPhaseArgs
+): Promise<RoadmapAddPhaseResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const roadmap = await readRoadmap(projectRoot);
+  const normalizedDescription = normalizePhaseDescription(args.description);
+
+  if (normalizedDescription.length === 0) {
+    throw new Error(
+      "Phase description required. Re-run /blu:add-phase with a concise description."
+    );
+  }
+
+  const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
+  const phasePrefix = formatPhasePrefix(phaseNumber);
+  const slug = slugifyPhaseName(normalizedDescription);
+  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
+  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+  const updatedRoadmap = appendPhaseDetailsToRoadmap(
+    appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
+    phaseNumber,
+    normalizedDescription
+  );
+  const warnings: string[] = [];
+  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+
+  await ensureParentDirectory(roadmapPath);
+  await fs.writeFile(roadmapPath, updatedRoadmap, "utf8");
+
+  if (await pathExists(phaseDirPath)) {
+    warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
+  } else {
+    await fs.mkdir(phaseDirPath, { recursive: true });
+  }
+
+  return {
+    phaseNumber,
+    phasePrefix,
+    phaseName: normalizedDescription,
+    slug,
+    phaseDir,
+    roadmapPath: roadmap.path,
+    milestone: roadmap.milestone,
+    written: true,
+    warnings
   };
 }
 
@@ -2180,6 +2350,14 @@ export const phaseToolDefinitions = [
     inputSchema: roadmapReadInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintRoadmapRead(args as RoadmapReadArgs)
+  },
+  {
+    name: "blueprint_roadmap_add_phase",
+    description:
+      "Append a new integer phase to the active Blueprint roadmap, ignoring decimal insertions when choosing the next phase number.",
+    inputSchema: roadmapAddPhaseInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintRoadmapAddPhase(args as RoadmapAddPhaseArgs)
   },
   {
     name: "blueprint_phase_locate",

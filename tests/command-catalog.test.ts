@@ -15,6 +15,7 @@ const IMPLEMENTED_COMMANDS = [
   "research-phase",
   "ui-phase",
   "next",
+  "add-phase",
   "plan-phase",
   "execute-phase",
   "validate-phase",
@@ -46,6 +47,27 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.ok(entry.specPath);
     assert.deepEqual(entry.blockedBy, []);
   }
+});
+
+test("add-phase is implemented once manifest, skill, and roadmap MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["add-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_scaffold",
+    "blueprint_roadmap_add_phase",
+    "blueprint_roadmap_read",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
 });
 
 test("implemented commands expose their declared optional agent contracts when shipped", async () => {

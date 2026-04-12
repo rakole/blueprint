@@ -16,13 +16,14 @@ commands:
 
 ## Purpose
 
-Orchestrate Blueprint's roadmap and milestone management flows so milestone evidence, roadmap intent, and archival decisions stay aligned with durable project state.
+Orchestrate Blueprint roadmap and milestone management flows so phase mutations, milestone evidence, and archival decisions stay aligned with durable project state.
 
 ## Parity Goal
 
-Carry forward the useful upstream milestone-management intent while preserving Blueprint's roadmap and milestone boundaries:
+Carry forward the useful upstream roadmap and milestone intent while preserving Blueprint's Gemini-native boundaries:
 
-- roadmap reads happen before milestone mutations
+- roadmap reads happen before roadmap or milestone mutations
+- new phases require an explicit description and deterministic numbering
 - milestone audits compare original intent against saved phase evidence
 - milestone reports stay durable and project-local in `.blueprint/reports/`
 - follow-up routing stays inside the implemented Blueprint surface
@@ -42,10 +43,14 @@ Carry forward the useful upstream milestone-management intent while preserving B
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
+- `docs/GSD-RUNTIME-MIGRATION.md`
 
 ## Required MCP Tools
 
 - `blueprint_roadmap_read`
+- `blueprint_roadmap_add_phase`
+- `blueprint_artifact_scaffold`
+- `blueprint_state_update`
 - `blueprint_phase_summary_index`
 - `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
@@ -58,6 +63,19 @@ Carry forward the useful upstream milestone-management intent while preserving B
 
 ## Workflow Rules
 
+### `add-phase`
+
+1. Require a non-empty phase description before any mutation.
+2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
+3. Require explicit confirmation before appending the phase.
+4. Choose the next phase number from the highest base phase number already present in the roadmap and ignore decimal suffixes when counting.
+5. Persist the roadmap mutation through `blueprint_roadmap_add_phase`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.
+6. Scaffold the new phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
+7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <phase>`.
+8. Keep follow-up routing inside implemented Blueprint commands only.
+
+### `audit-milestone`
+
 1. Read the roadmap before making milestone claims or writing milestone reports.
 2. Keep milestone audits grounded in saved roadmap and phase evidence instead of chat memory.
 3. Require explicit overwrite confirmation before replacing an existing milestone audit report.
@@ -68,6 +86,5 @@ Carry forward the useful upstream milestone-management intent while preserving B
 
 ## Output Style
 
-- Call out the original milestone intent and the evidence that confirms or weakens it.
-- Explain any gaps before proposing the next safe action.
-- Keep the user anchored on the next implemented Blueprint step when no milestone follow-up is available.
+- For `add-phase`, report the new phase number and description plainly, mention the scaffolded phase path and any reuse warnings, and end with the next safe implemented action.
+- For `audit-milestone`, call out the original milestone intent, the evidence that confirms or weakens it, any gaps, and the next safe implemented action.
