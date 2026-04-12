@@ -20,6 +20,7 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
   assert.match(commandFile, /blueprint_artifact_report_write/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /\.blueprint\/reports\//);
+  assert.match(commandFile, /\/blu:plan-milestone-gaps/);
   assert.match(commandFile, /\/blu:progress/);
 });
 
