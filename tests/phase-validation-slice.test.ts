@@ -203,7 +203,7 @@ test("validate-phase and verify-work manifests reference registered validation t
   const [validateManifest, verifyManifest, skillFile] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu/validate-phase.toml"), "utf8"),
     readFile(path.join(repoRoot, "commands/blu/verify-work.toml"), "utf8"),
-    readFile(path.join(repoRoot, "skills/blueprint-phase-validation.md"), "utf8")
+    readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8")
   ]);
 
   for (const toolName of [

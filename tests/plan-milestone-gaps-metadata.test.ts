@@ -25,7 +25,7 @@ test("plan-milestone-gaps manifest references the audit-first gap-planning tools
 
 test("roadmap-admin skill captures grouped audit-follow-up planning behavior", async () => {
   const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-roadmap-admin.md"),
+    path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"),
     "utf8"
   );
 

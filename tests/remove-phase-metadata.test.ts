@@ -23,7 +23,7 @@ test("remove-phase manifest references roadmap removal tools, confirmation gate,
 
 test("roadmap-admin skill captures remove-phase guards and state follow-up", async () => {
   const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-roadmap-admin.md"),
+    path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"),
     "utf8"
   );
 
