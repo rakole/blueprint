@@ -20,9 +20,11 @@ This repository still carries the planning pack that locked the product and arch
 - Phase 3 discovery commands are also shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
 - The read-only lifecycle router `/blu:next` is now shipped on the existing project-status and state-routing substrate
 - The governance handoff command `/blu:pause-work` is now shipped with a durable MCP-owned pause report in `.blueprint/reports/`
+- The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
 - Phase 4 execution now ships through `/blu:execute-phase`, which uses the plan and summary MCP substrates to produce execution evidence
 - Phase 4 validation now ships through `/blu:validate-phase` and `/blu:verify-work`, which use summary-aware validation MCP tools to persist verification and UAT evidence
+- The rest of Wave 2 roadmap and milestone commands remain unshipped
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 - Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
@@ -140,6 +142,7 @@ These runtime files exist today:
 - `commands/blu/verify-work.toml`
 - `commands/blu/next.toml`
 - `commands/blu/pause-work.toml`
+- `commands/blu/add-phase.toml`
 - `skills/blueprint-router.md`
 - `skills/blueprint-bootstrap.md`
 - `skills/blueprint-governance.md`
@@ -148,6 +151,7 @@ These runtime files exist today:
 - `skills/blueprint-phase-planning.md`
 - `skills/blueprint-phase-execution.md`
 - `skills/blueprint-phase-validation.md`
+- `skills/blueprint-roadmap-admin.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`

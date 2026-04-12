@@ -5,7 +5,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | Command | Wave | Family | Primary Skill | Status | Key Writes | Risk |
 |---|---:|---|---|---|---|---|
 | `add-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `.blueprint/backlog/BACKLOG.md; optional 999.x phase stub in .blueprint/phases/` | `Low: backlog append plus optional stub scaffold.` |
-| `add-phase` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `new phase directory in .blueprint/phases/` | `Medium: mutates roadmap state and scaffolds a new phase.` |
+| `add-phase` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `implemented` | `.blueprint/ROADMAP.md; .blueprint/phases/<phase-slug>/; .blueprint/STATE.md` | `Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.` |
 | `add-tests` | 4 | `Quality And Shipping` | `blueprint-phase-validation` | `planned` | `new or updated test files in the repo; verification notes in XX-VERIFICATION.md` | `High: repo code mutation plus verification updates.` |
 | `add-todo` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `.blueprint/todos/TODO.md; optional .blueprint/notes/NOTES.md updates when converting a note` | `Low: todo index update only.` |
 | `audit-fix` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `audit-fix report in .blueprint/reports/; code changes when not dry-running` | `High: classification plus automated remediation.` |
