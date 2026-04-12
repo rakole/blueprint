@@ -2,11 +2,11 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the Wave 0 runtime now exists. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026, and Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, and the current roadmap-admin slice. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
-- Global install target: `gemini extensions install https://github.com/<our_repo>`
+- Global install target: `gemini extensions install https://github.com/rakole/blueprint`
 - Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu:<command>` commands
 - Project state location: `.blueprint/`
 - Global mutable state location: `~/.gemini/blueprint/`
@@ -17,20 +17,17 @@ This repository still carries the planning pack that locked the product and arch
 ## Current Status
 
 - Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
-- Phase 3 discovery commands are also shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
+- Phase 3 discovery commands are shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
+- The shipped lifecycle slice also includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, and the read-only next-step router `/blu:next`
 - The read-only phase-discovery assumptions command `/blu:list-phase-assumptions` is now shipped on the same discovery substrate
-- The read-only lifecycle router `/blu:next` is now shipped on the existing project-status and state-routing substrate
 - The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap removal command `/blu:remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
-- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; Phase 3 discovery shipped the same day and remains in parity closeout before the broader Phase 4 rollout
-- Phase 4 execution now ships through `/blu:execute-phase`, which uses the plan and summary MCP substrates to produce execution evidence
-- Phase 4 validation now ships through `/blu:validate-phase` and `/blu:verify-work`, which use summary-aware validation MCP tools to persist verification and UAT evidence
+- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; current follow-up work keeps the shipped discovery, planning, execution, validation/UAT, governance, and roadmap-admin contracts aligned while `complete-milestone` is the next unshipped slice
 - The remaining Wave 2 roadmap and milestone commands remain unshipped
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
-- Router rule: `/blu`, `/blu:help`, and `/blu:progress` should only recommend commands whose runtime catalog entry is `implemented`
 
 ## Retained Commands
 
@@ -110,7 +107,7 @@ Wave 5 workspace and maintenance:
 - `docs/DRIFT.MD`: closed ledger for the Phase 2.2 drift-repair checkpoint and the Phase 3 unblock decision
 - `docs/ARCHITECTURE.md`: extension structure and runtime boundaries
 - `docs/ARTIFACT-SCHEMA.md`: `.blueprint/`, normalized config schema, and global-state schema
-- `docs/MCP-TOOLS.md`: proposed MCP tool contracts, including scoped config reads and writes
+- `docs/MCP-TOOLS.md`: current registered MCP tools plus planned future tool families
 - `docs/SKILLS-AND-AGENTS.md`: shipped and planned Gemini skills and subagents
 - `docs/HOOKS-POLICIES.md`: advisory hooks and safety policy
 - `docs/MIGRATION-FROM-GSD.md`: command and behavior mapping from GSD to Blueprint

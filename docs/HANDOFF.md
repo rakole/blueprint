@@ -4,7 +4,7 @@
 
 The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, the read-only `list-phase-assumptions` discovery command, the Phase 4 validation/UAT commands, the governance handoff/resume commands, and the current Wave 2 roadmap/milestone commands.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, including validated `research-phase` writes, catalog-aware next-step recovery, advisory hook coverage, and implemented `plan-phase` and `execute-phase` flows on the plan and summary MCP substrates. Phase 4 validation now ships through `validate-phase` and `verify-work` with summary-aware phase artifact persistence. `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` are now shipped as the implemented Wave 2 roadmap, milestone, and discovery commands, while the remaining roadmap surfaces stay unshipped. Runtime routing remains limited to `implemented` commands.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair and the current Wave 2 roadmap-admin slice (`add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, and `list-phase-assumptions`) are also shipped. Runtime routing remains limited to `implemented` commands.
 
 The governance handoff/resume pair now ships through `pause-work` and `resume-work`, with `pause-work` owning the durable handoff report and `resume-work` restoring the next safe implemented action from it.
 
@@ -19,10 +19,10 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
 - Gemini-specific constraint notes to keep implementation aligned with the host CLI
-- runtime command manifests for the shipped Wave 0, Phase 3 discovery, `list-phase-assumptions`, `next`, `validate-phase`, `verify-work`, `pause-work`, `resume-work`, `add-phase`, `remove-phase`, `plan-milestone-gaps`, and `audit-milestone` surfaces
+- runtime command manifests for the shipped Wave 0, discovery, planning, execution, validation/UAT, governance, and current roadmap-admin surfaces
 - shipped `blueprint-roadmap-admin` skill file for the roadmap append, removal, gap-planning, and milestone audit slice
-- shipped Wave 0, Phase 3 discovery, Phase 4 validation, governance, and roadmap admin skill files in `skills/`
-- shipped Wave 0 and Phase 3 discovery agent contract files in `agents/`
+- shipped Wave 0, discovery, planning, execution, validation, governance, and roadmap-admin skill files in `skills/`
+- shipped mapping, discovery, planning, execution, validation, and roadmap-support agent contract files in `agents/`
 - implementation-aware command catalog metadata in `blueprint_command_catalog`
 - seven-document codebase mapping bundle, including `.blueprint/codebase/STRUCTURE.md`
 - advisory hook entrypoints under `src/hooks/` plus `hooks/hooks.json`
@@ -69,4 +69,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the shipped Phase 4 validation commands keep their summary-aware and resumable guarantees intact, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the shipped lifecycle, governance, and roadmap-admin commands keep their current guarantees intact, and later commands remain blocked until their substrate exists.

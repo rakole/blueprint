@@ -2,11 +2,20 @@
 
 ## Goal
 
-Blueprint is a Gemini-native extension that preserves GSD's command-driven methodology while replacing its runtime-specific installer and compatibility layer with a cleaner extension architecture.
+Blueprint is a Gemini-native extension that keeps GSD's command-driven methodology where it is useful, but re-implements runtime ownership around Gemini commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
 
-## Extension Shape
+The live runtime currently ships:
 
-Current shipped runtime layout, with deferred surfaces called out explicitly:
+- Wave 0 foundation
+- the lifecycle slice from `discuss-phase` through `verify-work`
+- governance handoff/resume
+- the current roadmap-admin slice
+
+Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
+
+## Source Layout
+
+Current source tree:
 
 ```text
 blueprint/
@@ -20,16 +29,26 @@ blueprint/
     *.md
   agents/
     *.md
+  hooks/
+    hooks.json
   src/
+    hooks/
     mcp/
+      server.ts
+      tools/
+  tests/
 ```
 
-Deferred, not yet shipped in the current repair branch:
-- `hooks/`
-- `policies/`
-- `src/hooks/`
-- `src/shared/`
-- `dist/`
+Generated at build and release time:
+
+- `dist/mcp/*.js`
+- `dist/hooks/*.js`
+
+Planned later runtime surfaces, not registered today:
+
+- extra MCP families for capture, review, workspace, update, and patch flows
+- extra skill families for planned-only commands
+- extra agent contracts for review, docs, debugging, UI audit, and security audit
 
 ## Runtime Layers
 
@@ -37,31 +56,33 @@ Deferred, not yet shipped in the current repair branch:
 
 - `/blu` is the root router.
 - `/blu:<command>` is the direct entrypoint for each retained command.
-- Commands own user-facing UX and routing, but not persistent state mutation.
+- Commands own user-facing UX, routing, confirmations, and recovery language.
+- Commands do not own durable state mutation.
 
 ### 2. Skills
 
-- Skills hold the high-level orchestration instructions for command families.
-- Skills replace the "thin markdown command plus deep workflow file" split used by GSD.
-- Shipped skills today are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, and `blueprint-phase-discovery`.
-- Later skill families stay planned until the commands that need them are actually shipped.
+- Skills hold orchestration rules for command families.
+- The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
+- Planned skill families stay documented but non-routable until their commands actually ship.
 
-### 3. Subagents
+### 3. Agents
 
-- Subagents handle bounded deep work: research, planning, execution, verification, code review, fixing, debugging, mapping, docs, UI, and security.
-- Agents are invoked only for bounded sidecar work or where the command contract explicitly requires them.
-- Shipped contract files currently cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, `blueprint-verifier`, `blueprint-researcher`, and `blueprint-ui-designer`.
+- Agents handle bounded deep work: project bootstrap research, codebase mapping, phase research, UI design, planning, execution, and verification.
+- They are optional bounded helpers, not an alternate persistence layer.
+- The currently shipped contract files cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-researcher`, `blueprint-ui-designer`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, and `blueprint-verifier`.
 
 ### 4. MCP Server
 
 - The MCP server is the deterministic state engine.
-- It owns `.blueprint/` file creation, config precedence resolution, config normalization, updates, indexing, validation, workspace registry updates, workstream bookkeeping, review metadata, update planning, and patch registry access.
-- Commands and skills must call MCP tools for stateful operations rather than embedding raw filesystem mutation logic in prompt prose.
+- It currently registers project/catalog, config, state/pause-handoff, phase/roadmap, and artifact tool families.
+- It owns `.blueprint/` reads and writes, config normalization, phase artifact persistence, summary and validation persistence, milestone audit report writes, and state synchronization.
+- Planned tool families for capture, review, workspace, update, and patch behavior remain future contracts until they are registered.
 
 ### 5. Hooks
 
-- Hooks are advisory only in v1, and hook code is still deferred in the current repair branch.
-- Hooks should improve safety and reduce repeated model mistakes, but they should not become a hidden execution engine or a hidden prerequisite for Phase 3 discovery.
+- Blueprint ships three advisory hooks: `read-before-edit`, `.blueprint` write guard, and `workflow advisory`.
+- Hook source lives under `src/hooks/`; Gemini consumes the built commands listed in `hooks/hooks.json`.
+- Hooks are advisory only. They warn, but they do not become a hidden state engine or permission system.
 
 ## Command Dispatch Model
 
@@ -69,18 +90,18 @@ Deferred, not yet shipped in the current repair branch:
 
 - User calls `/blu:plan-phase 3`.
 - Gemini loads the command file.
-- The command loads the right Blueprint skill or inline contract.
-- The skill uses MCP tools and optional subagents to complete the flow.
+- The command invokes the matching Blueprint skill and documented MCP tools.
+- Optional bounded agents are used only where the command contract calls for them.
 
 ### Router command
 
 - User calls `/blu`.
-- Router inspects intent plus project state via `blueprint_command_catalog` and `blueprint_project_status`.
+- Router inspects user intent together with `blueprint_command_catalog`, `blueprint_project_status`, and effective config when needed.
 - Router either:
-  - dispatches inline to an `implemented` command contract, or
-  - offers the best direct command when user intent is ambiguous.
+  - dispatches inline to an implemented command contract, or
+  - recommends the safest direct command when intent is ambiguous or risky.
 
-Blocked commands remain visible as catalog metadata, but they must not be presented as runnable.
+Blocked and planned commands remain visible as metadata, but they must not be presented as runnable.
 
 ## State Boundaries
 
@@ -106,11 +127,18 @@ Lives in `~/.gemini/blueprint/`:
 
 Global state is intentionally narrow. Blueprint should not quietly accumulate project-like data outside the repo, and the only config layer outside the repo is the user-defaults file at `~/.gemini/blueprint/defaults.json`.
 
+## Routing And Exposure Rules
+
+- `blueprint_command_catalog` is the source of routable-command truth.
+- `/blu`, `/blu:help`, and `/blu:progress` may inspect the full retained command catalog, but they must only recommend commands whose entry is `implemented`.
+- Documentation alone does not make a command runnable.
+- A command becomes routable only when its manifest, primary skill, and required MCP tools are all present.
+
 ## Design Constraints
 
 ### 1. Docs-first
 
-The planning pack lands before new command surfaces, and later runtime expansion pauses when drift repair is required.
+The planning pack lands before new command surfaces, and runtime expansion pauses when drift repair is required.
 
 ### 2. Gemini-native, not transliterated
 
@@ -131,7 +159,7 @@ Artifact names and schemas must be stable before command code lands, because mos
 
 ## Omitted Architecture
 
-These surfaces are intentionally not planned for v1:
+These surfaces remain intentionally out of scope for Blueprint v1:
 
 - statusline bridge
 - extension self-mutation

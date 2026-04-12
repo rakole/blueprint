@@ -7,8 +7,8 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Phase 4 validation rollout is underway after the 2026-04-11 runtime shipment; `validate-phase`, `verify-work`, `pause-work`, `resume-work`, `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, and `list-phase-assumptions` are implemented and the next slice is `complete-milestone`
-- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the governance handoff/resume commands `pause-work` and `resume-work`, the read-only router/execution-prep commands `next`, `plan-phase`, and `execute-phase`, the validation/UAT commands `validate-phase` and `verify-work`, and the current Wave 2 roadmap-admin commands `add-phase`, `remove-phase`, `plan-milestone-gaps`, and `audit-milestone` are implemented, and routing still filters to implemented commands only
+- Current milestone: post-shipment lifecycle and roadmap-admin closeout is underway after the 2026-04-11 runtime shipment; `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `pause-work`, `resume-work`, `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, and `list-phase-assumptions` are implemented and the next slice is `complete-milestone`
+- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the lifecycle commands `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, the router command `next`, the governance handoff/resume commands `pause-work` and `resume-work`, and the current Wave 2 roadmap-admin commands `add-phase`, `remove-phase`, `plan-milestone-gaps`, and `audit-milestone` are implemented, and routing still filters to implemented commands only
 - Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, implemented validation artifacts, and Phase 4 execution summaries are present
 - Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, keep later commands blocked until their substrate exists, and move the next slice to `complete-milestone`
 - Roadmap-admin status: `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, and `/blu:audit-milestone` are now shipped as the current roadmap-admin slice, covering whole-number phase append, future-phase removal with renumbering, grouped gap-closure planning, and milestone audit reporting
@@ -112,8 +112,8 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Session Notes
 
-- The repo contains a buildable Gemini extension shell plus the full shipped Wave 0 command set
-- Runtime `skills/` and `agents/` surfaces now exist for the shipped Wave 0 contracts
+- The repo contains a buildable Gemini extension shell plus the shipped Wave 0, lifecycle, governance, and roadmap-admin command sets
+- Runtime `skills/` and `agents/` surfaces now exist for the shipped Wave 0, discovery, planning, execution, validation, and roadmap-admin contracts
 - The router/help/progress path must filter to commands whose catalog entry is `implemented`
 - `map-codebase` now owns a seven-document codebase bundle: `STACK`, `ARCHITECTURE`, `STRUCTURE`, `CONVENTIONS`, `TESTING`, `INTEGRATIONS`, and `CONCERNS`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11
@@ -125,4 +125,4 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `ui-phase` keeps a single declared phase artifact: `XX-UI-SPEC.md`, which may hold either a UI contract or an explicit skip rationale
 - `plan-phase` now uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to persist real `XX-YY-PLAN.md` content
 - `validate-phase` now uses `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, and `blueprint_phase_validation_write` to persist real `XX-VERIFICATION.md` content
-- Future sessions may proceed with Phase 4 verification implementation, but they should not expose later commands until the required manifests, primary skills, and MCP tools exist
+- Future sessions should start the next unshipped roadmap command slice at `complete-milestone`, while later commands remain non-routable until the required manifests, primary skills, and MCP tools exist

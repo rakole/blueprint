@@ -6,7 +6,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the governance handoff/resume pair is now shipped through `/blu:pause-work` and `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` are now implemented, and the current repair focus is making the shipped discovery, execution, validation, UAT, milestone-reporting, roadmap-mutation, gap-planning, and assumptions-review commands fully substantive while later commands remain blocked until their substrate exists.
+- The live runtime now includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, governance, and roadmap-admin contracts aligned while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace

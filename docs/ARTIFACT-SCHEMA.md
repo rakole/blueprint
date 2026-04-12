@@ -90,7 +90,7 @@ Purpose:
 - persisted in normalized full form rather than as sparse overrides
 - merged with optional user defaults from `~/.gemini/blueprint/defaults.json`
 
-Planned schema:
+Current normalized schema:
 
 ```json
 {
@@ -323,7 +323,7 @@ Notes are project-local in Blueprint v1 planning.
 
 ### `codebase/`
 
-Planned contents:
+Current shipped bundle:
 - `STACK.md`
 - `ARCHITECTURE.md`
 - `STRUCTURE.md`

@@ -32,7 +32,7 @@ One fixture suite per retained command:
 
 ### 3. Hook fixture tests
 
-For advisory hooks once hook code exists:
+For the shipped advisory hooks:
 
 - stdin fixture in
 - structured advisory out
@@ -71,7 +71,7 @@ Cover:
 - bundled code is present
 - command files resolve
 - MCP server paths resolve from the installed extension
-- hook paths resolve too once hooks actually ship
+- hook paths resolve from the built `dist/` output for the shipped hooks
 
 ## End-to-End Smoke Flow
 
@@ -83,8 +83,9 @@ The minimum smoke flow is:
 4. `/blu:discuss-phase`
 5. `/blu:plan-phase`
 6. `/blu:execute-phase`
-7. `/blu:verify-work`
-8. assert `.blueprint/` tree and generated artifacts
+7. `/blu:validate-phase`
+8. `/blu:verify-work`
+9. assert `.blueprint/` tree and generated artifacts
 
 ## Command-Spec Test Contract
 

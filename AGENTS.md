@@ -24,7 +24,7 @@ It is not a literal port of GSD internals.
 - Direct commands: `/blu:<command>`
 - Project-local state directory: `.blueprint/`
 - Global non-project state directory: `~/.gemini/blueprint/`
-- Install model: `gemini extensions install https://github.com/<repo>`
+- Install model: `gemini extensions install https://github.com/rakole/blueprint`
 
 ## Architecture Rules
 
