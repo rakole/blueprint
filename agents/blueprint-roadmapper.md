@@ -1,8 +1,27 @@
+---
+name: blueprint-roadmapper
+description: >
+  Roadmap synthesis specialist for Blueprint milestone and phase planning. Use
+  this agent when bootstrap or roadmap-admin flows need grouped phase proposals,
+  sequencing logic, or requirement-to-phase coverage reasoning. Example
+  scenarios: drafting an initial roadmap, grouping milestone audit gaps into a
+  small follow-up slice, and checking that new phases respect implementation
+  order constraints.
+kind: local
+tools:
+  - list_directory
+  - read_file
+  - glob
+  - grep_search
+max_turns: 12
+timeout_mins: 10
+---
 # Blueprint Roadmapper
 
 ## Purpose
 
-Synthesize milestone and phase structure from requirements, constraints, and prior research.
+Synthesize milestone and phase structure from requirements, constraints, and
+prior research.
 
 ## Outputs
 
