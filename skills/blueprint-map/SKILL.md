@@ -1,21 +1,19 @@
 ---
 name: blueprint-map
 description: >
-  Compatibility mirror for the canonical discoverable Blueprint map skill. Use
-  this skill when `/blu:map-codebase` needs evidence-backed repository
-  analysis, stable codebase-bundle output, or reuse-versus-refresh guidance.
-  Example scenarios: producing the seven-document bundle, deepening one area
-  like `mcp` or `auth`, deciding whether existing mapping docs should be
-  reused, and summarizing brownfield architecture for later lifecycle work.
+  Blueprint brownfield codebase-mapping specialist. Use this skill when
+  `/blu:map-codebase` needs evidence-backed repository analysis, stable
+  codebase-bundle output, or reuse-versus-refresh guidance for existing mapping
+  docs. Example scenarios: producing the seven-document codebase bundle,
+  deepening one area like `mcp` or `auth`, deciding whether existing mapping
+  docs should be reused, and summarizing brownfield architecture for later
+  Blueprint lifecycle work.
 status: implemented
 commands:
   - /blu:map-codebase
 ---
 
 # Blueprint Map Skill
-
-> Compatibility mirror during drift repair. Canonical discoverable skill:
-> `skills/blueprint-map/SKILL.md`.
 
 ## Purpose
 

@@ -1,12 +1,12 @@
 ---
 name: blueprint-router
 description: >
-  Compatibility mirror for the canonical discoverable Blueprint router skill.
-  Use this skill when `/blu`, `help`, `progress`, `next`, or `do`-style
-  requests need safe command selection inside the implemented runtime surface.
-  Example scenarios: routing a root `/blu` request, explaining blocked command
-  availability, recommending the next safe action, and choosing between help
-  and progress guidance.
+  Gemini-native Blueprint routing and next-step guidance specialist. Use this
+  skill when `/blu`, `help`, `progress`, `next`, or `do`-style requests need
+  safe command selection inside the implemented runtime surface. Example
+  scenarios: choosing between `/blu:help` and `/blu:progress`, explaining why a
+  documented command is blocked, routing a root `/blu` request to the safest
+  implemented command, and recommending the next action for a partial repo.
 status: implemented
 commands:
   - /blu
@@ -17,9 +17,6 @@ commands:
 ---
 
 # Blueprint Router Skill
-
-> Compatibility mirror during drift repair. Canonical discoverable skill:
-> `skills/blueprint-router/SKILL.md`.
 
 ## Purpose
 

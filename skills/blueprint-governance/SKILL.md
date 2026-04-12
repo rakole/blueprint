@@ -1,12 +1,12 @@
 ---
 name: blueprint-governance
 description: >
-  Compatibility mirror for the canonical discoverable Blueprint governance
-  skill. Use this skill when settings, profile, health, or pause/resume flows
-  need explicit state inspection, confirmation-gated repair behavior, or
-  durable handoff handling. Example scenarios: updating settings, changing the
-  active model profile, diagnosing config drift, writing a pause handoff, and
-  restoring work from the latest handoff.
+  Blueprint governance, config, and handoff specialist. Use this skill when
+  `settings`, `set-profile`, `health`, `pause-work`, or `resume-work` need
+  explicit state inspection, confirmation-gated repair behavior, or durable
+  handoff handling. Example scenarios: updating normalized repo settings,
+  changing the active model profile, diagnosing config drift, writing a pause
+  handoff, and restoring work from the canonical pause state.
 status: implemented
 commands:
   - /blu:settings
@@ -17,9 +17,6 @@ commands:
 ---
 
 # Blueprint Governance Skill
-
-> Compatibility mirror during drift repair. Canonical discoverable skill:
-> `skills/blueprint-governance/SKILL.md`.
 
 ## Purpose
 

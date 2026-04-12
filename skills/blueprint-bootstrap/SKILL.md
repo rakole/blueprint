@@ -1,21 +1,18 @@
 ---
 name: blueprint-bootstrap
 description: >
-  Compatibility mirror for the canonical discoverable Blueprint bootstrap
-  skill. Use this skill when `/blu:new-project` needs durable project setup,
-  repo-shape classification, or brownfield-aware bootstrap guidance before
-  later lifecycle work. Example scenarios: classifying a repo, applying saved
-  defaults, drafting substantive initial planning artifacts, and routing
-  brownfield repos toward `/blu:map-codebase`.
+  Blueprint bootstrap and repo-initialization specialist. Use this skill when
+  `/blu:new-project` needs durable project setup, repo-shape classification, or
+  brownfield-aware bootstrap guidance before later lifecycle work. Example
+  scenarios: classifying a repo as greenfield or brownfield, applying saved
+  defaults during bootstrap, drafting substantive initial planning artifacts,
+  and deciding whether bootstrap should route to `/blu:map-codebase`.
 status: implemented
 commands:
   - /blu:new-project
 ---
 
 # Blueprint Bootstrap Skill
-
-> Compatibility mirror during drift repair. Canonical discoverable skill:
-> `skills/blueprint-bootstrap/SKILL.md`.
 
 ## Purpose
 
