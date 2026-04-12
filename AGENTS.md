@@ -12,9 +12,9 @@ It is not a literal port of GSD internals.
 
 ## Current Phase
 
-- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `list-phase-assumptions`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `quick`, `pause-work`, `resume-work`, `docs-update`, `secure-phase`, `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`
+- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `list-phase-assumptions`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `quick`, `pause-work`, `resume-work`, `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, `add-backlog`, `docs-update`, and `secure-phase`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
-- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `quick` is also now shipped on the report-backed lightweight execution path, `verify-work`, `pause-work`, `resume-work`, `docs-update`, and `secure-phase` are also shipped, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, and `/blu:list-phase-assumptions` are now implemented as the current Wave 2 roadmap, milestone, and discovery slice, and `insert-phase` remains explicitly blocked in this cycle
+- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `quick` is also now shipped on the report-backed lightweight execution path, `verify-work`, `pause-work`, `resume-work`, `docs-update`, and `secure-phase` are also shipped, `/blu:add-phase`, `/blu:insert-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, `/blu:add-backlog`, and `/blu:list-phase-assumptions` are now implemented as the current Wave 2, Wave 3, and Wave 4 roadmap, capture, lightweight execution, review, and docs slices
 - `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
@@ -84,10 +84,10 @@ It is not a literal port of GSD internals.
 
 ## Immediate Next Slice
 
-Hold the shipped Wave 2 closeout surface stable while the next rollout is replanned:
+Hold the shipped Wave 2 roadmap-admin surface stable while the next rollout is replanned:
 
 - unchanged implemented-only routing guarantees in `src/mcp/tools/project.ts`
-- `insert-phase` stays blocked and non-routable until its manifest, primary skill contract, and required MCP tools actually ship
+- `insert-phase` stays aligned across its manifest, primary skill contract, required MCP tools, and regression coverage
 - the closed Phase 2.2 drift guarantees plus shipped Phase 3, Phase 4, and Wave 2 closeout regression coverage stay preserved while later commands land
 
 ## Working Norms

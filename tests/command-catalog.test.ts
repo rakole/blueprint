@@ -22,6 +22,8 @@ const IMPLEMENTED_COMMANDS = [
   "ui-phase",
   "next",
   "add-phase",
+  "insert-phase",
+  "add-todo",
   "add-backlog",
   "remove-phase",
   "plan-phase",
@@ -40,7 +42,7 @@ const IMPLEMENTED_COMMANDS = [
   "docs-update"
 ] as const;
 
-const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
+const BLOCKED_COMMANDS = ["do"] as const;
 const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu/list-phase-assumptions.toml";
 
 async function pathExists(relativePath: string): Promise<boolean> {
@@ -166,6 +168,27 @@ test("add-phase is implemented once manifest, skill, and roadmap MCP tools exist
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("insert-phase is implemented once manifest, skill, and roadmap insertion MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["insert-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_scaffold",
+    "blueprint_roadmap_insert_phase",
+    "blueprint_roadmap_read",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
 test("add-backlog is implemented once manifest, skill, and capture MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["add-backlog"];
@@ -180,6 +203,24 @@ test("add-backlog is implemented once manifest, skill, and capture MCP tools exi
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_mutate_index",
     "blueprint_artifact_scaffold"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("add-todo is implemented once manifest, skill, and capture MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["add-todo"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_mutate_index"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

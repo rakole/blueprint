@@ -207,6 +207,27 @@ test("capture skill and add-backlog docs are marked implemented in docs", async 
   );
 });
 
+test("add-todo docs and catalog metadata are marked implemented with the shipped capture tool", async () => {
+  const [catalogMarkdown, addTodoDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/add-todo.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `add-todo` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \| `\.blueprint\/todos\/TODO\.md` \| `Low: todo index update only\.` \|/
+  );
+  assert.match(addTodoDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(addTodoDoc, /Argument hint: `<description>`/);
+  assert.match(addTodoDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.doesNotMatch(addTodoDoc, /`blueprint_state_update`/);
+  assert.match(
+    migrationMarkdown,
+    /\| `add-todo` \| `commands\/gsd\/add-todo\.md` \| GSD has an upstream workflow file \| `docs\/commands\/add-todo\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
+  );
+});
+
 test("list-phase-assumptions docs stay read-only and use the discovery MCP tools", async () => {
   const [commandDoc, skillsMarkdown] = await Promise.all([
     readRepoFile("docs/commands/list-phase-assumptions.md"),
@@ -331,6 +352,20 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
   assert.match(addPhaseDoc, /non-empty phase description is required/i);
   assert.match(addPhaseDoc, /next integer after the highest base phase number/i);
   assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
+});
+
+test("insert-phase command docs keep the decimal insertion contract explicit", async () => {
+  const insertPhaseDoc = await readRepoFile("docs/commands/insert-phase.md");
+
+  assert.match(insertPhaseDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(insertPhaseDoc, /blueprint_roadmap_read/);
+  assert.match(insertPhaseDoc, /blueprint_roadmap_insert_phase/);
+  assert.match(insertPhaseDoc, /blueprint_artifact_scaffold/);
+  assert.match(insertPhaseDoc, /blueprint_state_update/);
+  assert.match(insertPhaseDoc, /existing integer phase/i);
+  assert.match(insertPhaseDoc, /next decimal/i);
+  assert.match(insertPhaseDoc, /do not renumber later phases/i);
+  assert.match(insertPhaseDoc, /\/blu:discuss-phase <decimal>/);
 });
 
 test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure contract explicit", async () => {

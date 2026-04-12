@@ -54,6 +54,7 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 
 - `blueprint_roadmap_read`
 - `blueprint_roadmap_add_phase`
+- `blueprint_roadmap_insert_phase`
 - `blueprint_artifact_list`
 - `blueprint_roadmap_remove_phase`
 - `blueprint_artifact_scaffold`
@@ -79,6 +80,18 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 6. Scaffold the new phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
 7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <phase>`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
+
+### `insert-phase`
+
+1. Require an explicit integer phase number and a non-empty phase description before any mutation.
+2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
+3. Require explicit confirmation before inserting the decimal phase, and preview the computed decimal number plus the fact that later phases will not be renumbered automatically.
+4. Persist the roadmap mutation through `blueprint_roadmap_insert_phase`; do not rewrite `.blueprint/ROADMAP.md` or hand-create phase directories directly from the command prompt.
+5. Treat integer-only targets as mandatory and reject decimal targets.
+6. Keep numbering roadmap-driven: derive the next decimal from the existing roadmap entries under that integer base and fail fast when a conflicting decimal directory already exists on disk.
+7. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
+8. Update `STATE.md` through `blueprint_state_update` so the inserted decimal phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <phase>`.
+9. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `remove-phase`
 
@@ -149,12 +162,13 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 
 ## Wave 2 Closeout Guardrail
 
-- `insert-phase` remains documented but blocked in runtime until its dedicated MCP substrate actually ships.
+- `insert-phase` is now shipped through its dedicated roadmap MCP substrate; keep later roadmap and post-Wave-2 surfaces blocked until their own runtime contracts exist.
 - Do not promote `complete-milestone`, `milestone-summary`, or `new-milestone` by docs alone; they become routable only when the manifest, primary skill, and required MCP tools all exist.
 
 ## Output Style
 
 - For `add-phase`, report the new phase number and description plainly, mention the scaffolded phase path and any reuse warnings, and end with the next safe implemented action.
+- For `insert-phase`, report the inserted decimal phase plainly, mention the anchor integer phase, call out any directory reuse or detail-order warnings, and end with the next safe implemented action.
 - For `plan-milestone-gaps`, show the grouped gap-closure phases compactly, call out any deferred optional gaps, and end with the first safe implemented follow-up.
 - For `remove-phase`, report the removed phase plainly, summarize any renumbered phases or drift warnings, and end with the next safe implemented action.
 - For `plan-milestone-gaps`, show the grouped gap-closure phases compactly, call out any deferred optional gaps, and end with the first safe implemented follow-up.
