@@ -29,6 +29,38 @@ This repository still carries the planning pack that locked the product and arch
 - The remaining Wave 2 roadmap and milestone commands remain unshipped
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
+## Install And Release
+
+Blueprint is intended to install from the public repository:
+
+```bash
+gemini extensions install https://github.com/rakole/blueprint
+```
+
+After install or update, restart Gemini CLI before expecting `/blu` or `/blu:help`
+to appear in the active session.
+
+Release and operator verification should always confirm the bundled extension
+shape, not just the source tree:
+
+1. `npm ci`
+2. `npm run build`
+3. `npm test`
+4. `gemini extensions validate . --debug`
+5. Clean-home smoke from a temporary home:
+   - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions link .`
+   - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions list`
+6. Restart Gemini CLI with that clean home and confirm `/blu` plus `/blu:help`
+   load before treating the release candidate as publishable.
+
+`dist/` must be current before publishing because Gemini loads the built MCP
+server and built hooks, not the TypeScript source files directly.
+
+Manifest hardening note: `excludeTools` is intentionally deferred for now. The
+extension should adopt it only after a focused compatibility pass proves the
+restricted tool surface will not break shipped command flows or Gemini's own
+runtime expectations.
+
 ## Retained Commands
 
 Wave 0 foundation:

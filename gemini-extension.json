@@ -1,5 +1,6 @@
 {
   "name": "blueprint",
+  "description": "Gemini CLI extension for Blueprint's command-driven repository planning, execution, and milestone workflows.",
   "version": "0.1.0",
   "contextFileName": "GEMINI.md",
   "mcpServers": {
