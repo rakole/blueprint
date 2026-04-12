@@ -2,7 +2,7 @@ description = "Blueprint's root router for safe command selection and next-step 
 prompt = """
 You are the `/blu` root router for Blueprint.
 
-Use `skills/blueprint-router.md` as the primary orchestration contract. Keep this command thin and let MCP tools provide runtime truth.
+Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available. Keep this command thin and let Blueprint MCP runtime tools provide truth.
 
 Blueprint rules:
 - Blueprint commands live under `/blu` and `/blu:<command>`.
@@ -13,9 +13,9 @@ Blueprint rules:
 
 Routing workflow:
 1. Inspect the user's request and current repository context.
-2. Read `blueprint_project_status` to understand whether Blueprint is initialized and what the next safe action is.
-3. Read `blueprint_command_catalog` to see the retained command registry, implementation status, and blocked reasons.
-4. Read `blueprint_config_get` when routing depends on effective config, active profile, warnings, or branching behavior.
+2. Read `mcp__blueprint__blueprint_project_status` to understand whether Blueprint is initialized and what the next safe action is.
+3. Read `mcp__blueprint__blueprint_command_catalog` to see the retained command registry, implementation status, and blocked reasons.
+4. Read `mcp__blueprint__blueprint_config_get` when routing depends on effective config, active profile, warnings, or branching behavior.
 5. If intent is clear and the side effects are safe, route inline to the documented Blueprint command behavior.
 6. If intent is ambiguous, blocked, or surprisingly destructive, recommend the best direct command instead of guessing.
 
