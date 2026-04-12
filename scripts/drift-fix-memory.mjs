@@ -6,9 +6,9 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
-const DEFAULT_NAMESPACE = "2026-04-12-extension-and-agent-repair";
+const DEFAULT_NAMESPACE = "wave-2-closeout";
 const DEFAULT_PLAN_DOC =
-  "docs/drift-fixes/2026-04-12-parallel-extension-repair-plan.md";
+  "docs/build/WAVE-2-PARALLEL-CLOSEOUT-PLAN.md";
 const DEFAULT_ROOT =
   process.env.BLUEPRINT_DRIFT_MEMORY_ROOT ??
   path.join(
