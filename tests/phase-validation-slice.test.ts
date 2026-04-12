@@ -15,6 +15,7 @@ import {
   blueprintPhaseValidationRead,
   blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
+import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
@@ -216,16 +217,22 @@ test("validate-phase and verify-work manifests reference registered validation t
     "blueprint_artifact_validate",
     "blueprint_state_load",
     "blueprint_state_update"
-  ]) {
+  ] as const) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
-    assert.match(validateManifest, new RegExp(toolName));
-    assert.match(verifyManifest, new RegExp(toolName));
+    assert.match(validateManifest, new RegExp(blueprintRuntimeToolFqn(toolName)));
+    assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
+  assert.match(validateManifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(verifyManifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(validateManifest, /`blueprint-verifier` subagent/);
+  assert.match(verifyManifest, /`blueprint-verifier` subagent/);
   assert.match(validateManifest, /artifact: "verification"/);
   assert.match(verifyManifest, /artifact: "uat"/);
   assert.match(validateManifest, /\/blu:progress/);
   assert.match(verifyManifest, /\/blu:progress/);
+  assert.doesNotMatch(validateManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
+  assert.doesNotMatch(verifyManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /resumable through `XX-UAT\.md`/);
   assert.match(skillFile, /blueprint-verifier/);

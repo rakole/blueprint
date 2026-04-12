@@ -5,7 +5,10 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
-import { resolveBlueprintSkillPath } from "../src/mcp/runtime-vocabulary.js";
+import {
+  blueprintRuntimeToolFqn,
+  resolveBlueprintSkillPath
+} from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
 
@@ -28,11 +31,11 @@ test("list-phase-assumptions manifest references only registered read-oriented d
     "blueprint_phase_context",
     "blueprint_roadmap_read",
     "blueprint_project_status"
-  ];
+  ] as const;
 
   for (const toolName of expectedTools) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
-    assert.match(raw, new RegExp(toolName));
+    assert.match(raw, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
   assert.doesNotMatch(
@@ -47,12 +50,14 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
     "utf8"
   );
 
-  assert.match(raw, /skills\/blueprint-phase-discovery\.md/);
+  assert.match(raw, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(raw, /`blueprint-researcher` subagent/);
   assert.match(raw, /five areas/);
   assert.match(raw, /What do you think\?/);
   assert.match(raw, /Do not mutate files, config, roadmap entries, or phase artifacts/);
   assert.match(raw, /Do not guess a nearest replacement phase/);
   assert.match(raw, /do not present planned or blocked commands as runnable/i);
+  assert.doesNotMatch(raw, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
 });
 
 test("list-phase-assumptions is exposed as an implemented read-only discovery command", async () => {

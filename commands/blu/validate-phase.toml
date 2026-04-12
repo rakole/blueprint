@@ -2,28 +2,28 @@ description = "Audit completed phase execution, persist durable verification evi
 prompt = """
 You are the `/blu:validate-phase` command for Blueprint.
 
-Use `skills/blueprint-phase-validation.md` as the primary orchestration contract. When deeper validation analysis is useful, follow `agents/blueprint-verifier.md`.
+Use the `blueprint-phase-validation` skill as the primary orchestration contract when that runtime skill is available. When deeper validation analysis is useful, use the `blueprint-verifier` subagent for bounded summary-first review.
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. If the phase cannot be resolved, stop with the precise `blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `blueprint_phase_summary_index`, `blueprint_phase_validation_read` with `artifact: "verification"`, `blueprint_config_get` with `scope: "effective"`, `blueprint_artifact_validate`, and `blueprint_state_load` so you know the execution-evidence coverage, any existing verification artifact, normalized validation gates, repo artifact health, and the current safe follow-up state.
+1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_validation_read` with `artifact: "verification"`, `mcp__blueprint__blueprint_config_get` with `scope: "effective"`, `mcp__blueprint__blueprint_artifact_validate`, and `mcp__blueprint__blueprint_state_load` so you know the execution-evidence coverage, any existing verification artifact, normalized validation gates, repo artifact health, and the current safe follow-up state.
 4. If no execution summaries exist for the phase, stop and route to `/blu:execute-phase` first. If plan artifacts are missing entirely, explain that the phase has not reached executable validation state yet.
-5. Read every available execution summary through `blueprint_phase_summary_read` so the validation audit stays grounded in the saved execution evidence instead of chat history.
+5. Read every available execution summary through `mcp__blueprint__blueprint_phase_summary_read` so the validation audit stays grounded in the saved execution evidence instead of chat history.
 6. If a `XX-VERIFICATION.md` artifact already exists, treat it as the audit baseline. Review it before replacement, and require explicit overwrite confirmation before changing it. Reuse is the default.
 7. Honor normalized config when describing the validation pass:
-   - `workflow.verifier=true`: use `blueprint-verifier` for bounded validation analysis.
+   - `workflow.verifier=true`: use the `blueprint-verifier` subagent for bounded validation analysis.
    - `workflow.verifier=false`: explicitly report that the dedicated verifier pass was skipped because normalized config disabled it.
    - `workflow.nyquist_validation=true`: call out Nyquist-style coverage expectations and remaining gap classes explicitly.
    - `workflow.nyquist_validation=false`: explicitly report that Nyquist-style coverage was informational only because normalized config disabled it.
-8. Use `blueprint-verifier` to audit the completed summaries, identify validation coverage gaps, and draft durable verification conclusions plus any follow-up recommendations. Keep the output phase-scoped and grounded in the existing summaries.
-9. Persist the actual verification content through `blueprint_phase_validation_write` with `artifact: "verification"`. Do not write `XX-VERIFICATION.md` directly.
-10. Call `blueprint_artifact_validate` after the write path and then `blueprint_state_update` so `STATE.md` reflects the active phase, the validation command, and the next safe implemented action. Successful validation should normally route to `/blu:verify-work`; if runtime availability changes, fall back to `/blu:progress` instead of suggesting a blocked command.
+8. Use the `blueprint-verifier` subagent to audit the completed summaries, identify validation coverage gaps, and draft durable verification conclusions plus any follow-up recommendations. Keep the output phase-scoped and grounded in the existing summaries.
+9. Persist the actual verification content through `mcp__blueprint__blueprint_phase_validation_write` with `artifact: "verification"`. Do not write `XX-VERIFICATION.md` directly.
+10. Call `mcp__blueprint__blueprint_artifact_validate` after the write path and then `mcp__blueprint__blueprint_state_update` so `STATE.md` reflects the active phase, the validation command, and the next safe implemented action. Successful validation should normally route to `/blu:verify-work`; if runtime availability changes, fall back to `/blu:progress` instead of suggesting a blocked command.
 11. Return a concise summary covering whether validation was reconstructed or revised, how many summaries were audited, which config gates shaped the audit, any remaining coverage gaps, and the next safe implemented action.
 
 Response requirements:
-- Use only `blueprint_phase_locate`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, `blueprint_phase_validation_write`, `blueprint_config_get`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` for persistent state work.
+- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_summary_read`, `mcp__blueprint__blueprint_phase_validation_read`, `mcp__blueprint__blueprint_phase_validation_write`, `mcp__blueprint__blueprint_config_get`, `mcp__blueprint__blueprint_artifact_validate`, `mcp__blueprint__blueprint_state_load`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the audit grounded in saved execution evidence. Do not invent missing implementation details from chat memory.

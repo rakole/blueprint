@@ -3,22 +3,25 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+
 const repoRoot = process.cwd();
 
 test("plan-phase manifest references the config gates, planner/checker loop, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu/plan-phase.toml"), "utf8");
 
-  assert.match(commandFile, /skills\/blueprint-phase-planning\.md/);
-  assert.match(commandFile, /blueprint_phase_locate/);
-  assert.match(commandFile, /blueprint_phase_context/);
-  assert.match(commandFile, /blueprint_phase_research_status/);
-  assert.match(commandFile, /blueprint_phase_plan_index/);
-  assert.match(commandFile, /blueprint_phase_plan_read/);
-  assert.match(commandFile, /blueprint_phase_plan_write/);
-  assert.match(commandFile, /blueprint_config_get/);
-  assert.match(commandFile, /blueprint_artifact_validate/);
-  assert.match(commandFile, /blueprint_state_load/);
-  assert.match(commandFile, /blueprint_state_update/);
+  assert.match(commandFile, /Use the `blueprint-phase-planning` skill/);
+  assert.match(commandFile, /`blueprint-planner` and `blueprint-checker` subagents/);
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_research_status")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_write")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_validate")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_load")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
   assert.match(commandFile, /workflow\.research/);
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
@@ -26,6 +29,10 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /explicit confirmation path/i);
   assert.match(commandFile, /planner\/checker revision loop|re-run the checker/i);
   assert.match(commandFile, /\/blu:progress/);
+  assert.doesNotMatch(
+    commandFile,
+    /skills\/blueprint-phase-planning\.md|agents\/blueprint-(planner|checker)\.md/
+  );
 });
 
 test("plan-phase skill captures the revision loop and safe follow-up rules", async () => {

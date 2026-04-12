@@ -3,25 +3,29 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+
 const repoRoot = process.cwd();
 
 test("validate-phase manifest references the validation tools, config gates, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu/validate-phase.toml"), "utf8");
 
-  assert.match(commandFile, /skills\/blueprint-phase-validation\.md/);
-  assert.match(commandFile, /blueprint_phase_locate/);
-  assert.match(commandFile, /blueprint_phase_summary_index/);
-  assert.match(commandFile, /blueprint_phase_summary_read/);
-  assert.match(commandFile, /blueprint_phase_validation_read/);
-  assert.match(commandFile, /blueprint_phase_validation_write/);
-  assert.match(commandFile, /blueprint_config_get/);
-  assert.match(commandFile, /blueprint_artifact_validate/);
-  assert.match(commandFile, /blueprint_state_load/);
-  assert.match(commandFile, /blueprint_state_update/);
+  assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
+  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_write")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_validate")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_load")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
   assert.match(commandFile, /workflow\.verifier/);
   assert.match(commandFile, /workflow\.nyquist_validation/);
   assert.match(commandFile, /XX-VERIFICATION\.md/);
   assert.match(commandFile, /\/blu:progress/);
+  assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
 });
 
 test("validate-phase skill captures summary-backed validation and verifier usage rules", async () => {
