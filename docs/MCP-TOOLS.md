@@ -72,9 +72,16 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding, not as the final persistence layer for filled-in artifacts | `{createdFiles, reusedFiles, warnings}` |
 | `blueprint_artifact_list` | Enumerate known core, phase, codebase, and report artifacts | `{artifacts, reports, missing, warnings}` |
+| `blueprint_artifact_mutate_index` | Append canonical capture entries to Blueprint indexes such as backlog, notes, and todos, with duplicate detection and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, updatedCounts, duplicateEntryIds, reservedPhase, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
 | `blueprint_artifact_summary_digest` | Build digests from artifacts, code, tests, and reports | `{digest, inputsUsed}` |
 | `blueprint_artifact_report_write` | Persist durable report artifacts such as milestone audits with overwrite protection | `{path, written, created, overwritten, status, warnings}` |
+
+### Review
+
+| Tool | Purpose | Returns |
+|---|---|---|
+| `blueprint_review_record` | Persist a phase-scoped review artifact such as `XX-SECURITY.md` with overwrite protection | `{reportPath, counts, followUps, status, warnings}` |
 
 ## Planned Later Tool Families
 
@@ -83,10 +90,6 @@ These tool names are part of the documented future contract, but they are not re
 ### Future Roadmap and Milestone Tools
 
 - `blueprint_roadmap_promote_backlog`
-
-### Future Capture Tools
-
-- `blueprint_artifact_mutate_index`
 
 ### Future Workspace and Workstream Tools
 
@@ -99,7 +102,6 @@ These tool names are part of the documented future contract, but they are not re
 ### Future Review and Maintenance Tools
 
 - `blueprint_review_scope`
-- `blueprint_review_record`
 - `blueprint_review_load_findings`
 - `blueprint_update_check`
 - `blueprint_update_plan`
@@ -112,6 +114,7 @@ These tool names are part of the documented future contract, but they are not re
 - `/blu`, `help`, `progress`, and `next` rely on `blueprint_command_catalog`, project status, and other read-oriented tools. They must only surface commands whose catalog entry is `implemented`.
 - `new-project`, `settings`, and `set-profile` lean on project, config, and state tools.
 - `map-codebase` uses `blueprint_project_status`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, and `blueprint_artifact_summary_digest`.
+- `add-backlog` uses `blueprint_artifact_mutate_index` and, when the user explicitly reserves a parking-lot phase, `blueprint_artifact_scaffold`.
 - `discuss-phase` uses phase location/context, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update`.
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, discovery artifact read and write tools, scaffolding, config, and state update tools.
@@ -128,6 +131,7 @@ These tool names are part of the documented future contract, but they are not re
 - `complete-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit into `milestone-complete-<version>.md` and route to `/blu:milestone-summary <milestone>`.
 - `milestone-summary` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit plus completion evidence into `milestone-summary-<version>.md` and route to `/blu:new-milestone`.
 - `new-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to carry forward from the saved milestone summary, preserve historical phase artifacts, and scaffold the next whole-number phase context.
+- `secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped security evidence as `XX-SECURITY.md`.
 
 ## Planned Command Notes
 

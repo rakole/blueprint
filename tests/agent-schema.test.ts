@@ -62,6 +62,11 @@ const EXPECTED_AGENTS = {
     maxTurns: 12,
     timeoutMins: 10
   },
+  "blueprint-security-auditor": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 16,
+    timeoutMins: 15
+  },
   "blueprint-ui-designer": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
     maxTurns: 14,

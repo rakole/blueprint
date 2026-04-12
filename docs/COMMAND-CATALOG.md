@@ -4,7 +4,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 
 | Command | Wave | Family | Primary Skill | Status | Key Writes | Risk |
 |---|---:|---|---|---|---|---|
-| `add-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `.blueprint/backlog/BACKLOG.md; optional 999.x phase stub in .blueprint/phases/` | `Low: backlog append plus optional stub scaffold.` |
+| `add-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `implemented` | `.blueprint/backlog/BACKLOG.md; optional 999.x phase stub in .blueprint/phases/` | `Low: backlog append plus optional stub scaffold.` |
 | `add-phase` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `implemented` | `.blueprint/ROADMAP.md; .blueprint/phases/<phase-slug>/; .blueprint/STATE.md` | `Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.` |
 | `add-tests` | 4 | `Quality And Shipping` | `blueprint-phase-validation` | `planned` | `new or updated test files in the repo; verification notes in XX-VERIFICATION.md` | `High: repo code mutation plus verification updates.` |
 | `add-todo` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `.blueprint/todos/TODO.md; optional .blueprint/notes/NOTES.md updates when converting a note` | `Low: todo index update only.` |
@@ -46,7 +46,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `resume-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `implemented` | `.blueprint/STATE.md` | `Low: restores state from the canonical pause handoff and updates the next safe action.` |
 | `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `updated backlog index; updated roadmap and any promoted phase stubs` | `Medium: can promote backlog items into active roadmap scope.` |
 | `review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEWS.md or equivalent peer-review artifact` | `Medium: external tool orchestration without default repo mutation.` |
-| `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
+| `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `implemented` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |
 | `settings` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json; optional ~/.gemini/blueprint/defaults.json` | `Low: config-only mutation inside repo config plus optional user defaults.` |
 | `ship` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `ship report in .blueprint/reports/; optional PR body file or state note` | `High: remote and git mutation path.` |

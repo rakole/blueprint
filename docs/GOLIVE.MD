@@ -28,6 +28,8 @@ What is already live:
 - all Wave 0 foundation commands
 - all Wave 1 core lifecycle commands
 - the Wave 2 roadmap-admin slice including `insert-phase`, `complete-milestone`, `milestone-summary`, and `new-milestone`
+- the first Wave 3 capture pass through `add-backlog`
+- the first Wave 4 review/docs passes through `secure-phase` and `docs-update`
 
 What remains closest on the roadmap:
 
@@ -38,7 +40,7 @@ What remains closest on the roadmap:
 - Freeze the v1 public promise around the real shipped surface instead of the full retained command catalog.
   - Recommended v1 bar: Wave 0 + Wave 1 + the shipped Wave 2 roadmap-admin slice.
   - That functional bar is now satisfied on this branch; the remaining go-live work is release hardening and publication discipline.
-  - Wave 3, Wave 4, and Wave 5 commands should stay documented as future work until they are actually implemented.
+  - Wave 3 and Wave 5 commands should stay documented as future work until they are actually implemented, and only the actually shipped Wave 4 commands should be treated as live.
 - Preserve the current implemented-only routing guarantees in `/blu`, `/blu:help`, and `/blu:progress`.
   - This already exists and should remain a release gate.
 
@@ -64,11 +66,10 @@ What remains closest on the roadmap:
   - `quick`
   - `do`
   - `add-tests`
-- Start the capture layer once Wave 2 closes:
+- Continue the capture layer beyond the shipped `add-backlog` slice:
   - `note`
   - `add-todo`
   - `check-todos`
-  - `add-backlog`
   - `review-backlog`
   - `explore`
   - `debug`
@@ -91,12 +92,10 @@ What remains closest on the roadmap:
 
 ### Functional
 
-- Ship the rest of Wave 4 quality and shipping:
+- Ship the rest of Wave 4 quality and shipping beyond the already shipped `secure-phase` and `docs-update` commands:
   - `code-review`
   - `code-review-fix`
   - `audit-fix`
-  - `secure-phase`
-  - `docs-update`
   - `ui-review`
   - `review`
   - `pr-branch`

@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, and the first shipped Wave 4 docs command. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the first Wave 3 capture command `/blu:add-backlog`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -21,12 +21,14 @@ This repository still carries the planning pack that locked the product and arch
 - The shipped lifecycle slice also includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, and the read-only next-step router `/blu:next`
 - The read-only phase-discovery assumptions command `/blu:list-phase-assumptions` is now shipped on the same discovery substrate
 - The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
+- The security audit command `/blu:secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
 - The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap insertion command `/blu:insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu:discuss-phase`
 - The roadmap removal command `/blu:remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
 - The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
+- The capture command `/blu:add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
 - The documentation command `/blu:docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
@@ -167,6 +169,7 @@ These runtime files exist today:
 - `commands/blu/progress.toml`
 - `commands/blu/health.toml`
 - `commands/blu/map-codebase.toml`
+- `commands/blu/add-backlog.toml`
 - `commands/blu/discuss-phase.toml`
 - `commands/blu/list-phase-assumptions.toml`
 - `commands/blu/research-phase.toml`
@@ -175,6 +178,7 @@ These runtime files exist today:
 - `commands/blu/execute-phase.toml`
 - `commands/blu/validate-phase.toml`
 - `commands/blu/verify-work.toml`
+- `commands/blu/secure-phase.toml`
 - `commands/blu/audit-milestone.toml`
 - `commands/blu/add-phase.toml`
 - `commands/blu/complete-milestone.toml`
@@ -186,16 +190,19 @@ These runtime files exist today:
 - `commands/blu/next.toml`
 - `commands/blu/pause-work.toml`
 - `commands/blu/resume-work.toml`
-- `skills/blueprint-router.md`
-- `skills/blueprint-bootstrap.md`
-- `skills/blueprint-governance.md`
-- `skills/blueprint-map.md`
-- `skills/blueprint-phase-discovery.md`
-- `skills/blueprint-phase-planning.md`
-- `skills/blueprint-phase-execution.md`
-- `skills/blueprint-phase-validation.md`
+- `skills/blueprint-router/SKILL.md`
+- `skills/blueprint-router.md` (legacy mirror retained for compatibility docs during migration)
+- `skills/blueprint-bootstrap/SKILL.md`
+- `skills/blueprint-governance/SKILL.md`
+- `skills/blueprint-map/SKILL.md`
+- `skills/blueprint-capture/SKILL.md`
+- `skills/blueprint-phase-discovery/SKILL.md`
+- `skills/blueprint-phase-planning/SKILL.md`
+- `skills/blueprint-phase-execution/SKILL.md`
+- `skills/blueprint-phase-validation/SKILL.md`
 - `skills/blueprint-docs/SKILL.md`
-- `skills/blueprint-roadmap-admin.md`
+- `skills/blueprint-review/SKILL.md`
+- `skills/blueprint-roadmap-admin/SKILL.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`
@@ -207,6 +214,7 @@ These runtime files exist today:
 - `agents/blueprint-verifier.md`
 - `agents/blueprint-doc-writer.md`
 - `agents/blueprint-doc-verifier.md`
+- `agents/blueprint-security-auditor.md`
 - `hooks/hooks.json`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`
@@ -214,6 +222,7 @@ These runtime files exist today:
 - `src/mcp/tools/state.ts`
 - `src/mcp/tools/artifacts.ts`
 - `src/mcp/tools/phase.ts`
+- `src/mcp/tools/review.ts`
 - `src/hooks/`
 
 ## Command Status

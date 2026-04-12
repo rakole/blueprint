@@ -18,11 +18,16 @@ This workflow exists to close Wave 2 without drifting the shipped runtime while
   - https://geminicli.com/docs/extensions/best-practices/
   - https://geminicli.com/docs/core/subagents/
 - Keep bundled paths extension-safe and rooted at `${extensionPath}`.
+- Validate that runtime manifests still point at `${extensionPath}` in
+  `gemini-extension.json`.
 - Re-check command manifests against `commands/**/*.toml`.
 
 ## Shared Memory Protocol
 
 - Initialize and coordinate shared closeout work through
   `scripts/drift-fix-memory.mjs`.
+- Update `MEMORY.md` through the shared workflow before handing off.
+- Record major drift checkpoints through `scripts/drift-fix-memory.mjs`.
+- Record major drift checkpoints through `scripts/drift-fix-memory.mjs`.
 - Record task claims, blockers, notes, files changed, and tests run in the
   shared memory flow before marking work complete.

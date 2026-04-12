@@ -10,6 +10,7 @@ The live runtime currently ships:
 - the lifecycle slice from `discuss-phase` through `verify-work`
 - governance handoff/resume
 - the current roadmap-admin slice
+- the first capture command, `add-backlog`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 
@@ -48,7 +49,7 @@ Generated at build and release time:
 
 Planned later runtime surfaces, not registered today:
 
-- extra MCP families for capture, review, workspace, update, and patch flows
+- extra MCP families for review, workspace, update, and patch flows
 - extra skill families for planned-only commands
 - extra agent contracts for review, docs, debugging, UI audit, and security audit
 
@@ -66,7 +67,7 @@ Planned later runtime surfaces, not registered today:
 - Skills hold orchestration rules for command families.
 - Gemini discovers shipped skills from `skills/<name>/SKILL.md`.
 - Legacy flat `skills/*.md` mirrors may remain in the repo during repair, but they are not runtime handles and must not be referenced as activation paths.
-- The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
+- The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-capture`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
 - Planned skill families stay documented but non-routable until their commands actually ship.
 
 ### 3. Agents
@@ -79,9 +80,9 @@ Planned later runtime surfaces, not registered today:
 ### 4. MCP Server
 
 - The MCP server is the deterministic state engine.
-- It currently registers project/catalog, config, state/pause-handoff, phase/roadmap, and artifact tool families.
-- It owns `.blueprint/` reads and writes, config normalization, phase artifact persistence, summary and validation persistence, milestone audit report writes, and state synchronization.
-- Planned tool families for capture, review, workspace, update, and patch behavior remain future contracts until they are registered.
+- It currently registers project/catalog, config, state/pause-handoff, phase/roadmap, capture-index, and artifact tool families.
+- It owns `.blueprint/` reads and writes, config normalization, capture index persistence, phase artifact persistence, summary and validation persistence, milestone audit report writes, and state synchronization.
+- Planned tool families for review, workspace, update, and patch behavior remain future contracts until they are registered.
 
 ### 5. Hooks
 

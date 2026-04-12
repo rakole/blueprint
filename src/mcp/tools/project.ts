@@ -27,6 +27,7 @@ import {
   blueprintStateLoad,
   blueprintStateUpdate
 } from "./state.js";
+import { reviewToolDefinitions } from "./review.js";
 import {
   blueprintDiscoverableSkillPath,
   resolveBlueprintSkillPath,
@@ -176,6 +177,7 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...configToolDefinitions.map((definition) => definition.name),
   ...stateToolDefinitions.map((definition) => definition.name),
   ...phaseToolDefinitions.map((definition) => definition.name),
+  ...reviewToolDefinitions.map((definition) => definition.name),
   ...artifactToolDefinitions.map((definition) => definition.name)
 ]);
 

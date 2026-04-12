@@ -185,6 +185,28 @@ test("phase discovery skill and bounded agent contracts are marked implemented i
   );
 });
 
+test("capture skill and add-backlog docs are marked implemented in docs", async () => {
+  const [skillsMarkdown, addBacklogDoc, mcpToolsDoc] = await Promise.all([
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/add-backlog.md"),
+    readRepoFile("docs/MCP-TOOLS.md")
+  ]);
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-capture` \| `implemented` \| Notes, todos, backlog, ideation routing \| `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` \|/
+  );
+  assert.match(addBacklogDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(addBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(addBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_scaffold`/);
+  assert.match(addBacklogDoc, /999\.x numbering/);
+  assert.match(addBacklogDoc, /Confirm immediate phase-stub reservation when used\./);
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint_artifact_mutate_index` \| Append canonical capture entries to Blueprint indexes such as backlog, notes, and todos/
+  );
+});
+
 test("list-phase-assumptions docs stay read-only and use the discovery MCP tools", async () => {
   const [commandDoc, skillsMarkdown] = await Promise.all([
     readRepoFile("docs/commands/list-phase-assumptions.md"),
@@ -263,6 +285,26 @@ test("docs skill and bounded docs agents are marked implemented in docs", async 
     skillsMarkdown,
     /\| `blueprint-doc-verifier` \| `implemented` \| Fact-check repo docs against saved evidence \|/
   );
+});
+
+test("review skill and security auditor are marked implemented in docs for secure-phase", async () => {
+  const [skillsMarkdown, securePhaseDoc] = await Promise.all([
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/secure-phase.md")
+  ]);
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-review` \| `implemented` \| Reviews, review-fix loops, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-security-auditor` \| `implemented` \| Verify threat mitigations and security coverage \|/
+  );
+  assert.match(securePhaseDoc, /Primary skill: `blueprint-review`/);
+  assert.match(securePhaseDoc, /`blueprint_review_record`/);
+  assert.match(securePhaseDoc, /`blueprint-security-auditor`/);
+  assert.match(securePhaseDoc, /phase XX-SECURITY\.md/);
 });
 
 test("add-phase command docs keep the roadmap append contract explicit", async () => {
