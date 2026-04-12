@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`list-phase-assumptions` carries forward the GSD intent to surface Claude's assumptions about a phase approach before planning. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`list-phase-assumptions` carries forward the GSD intent to surface the agent's assumptions about a phase approach before planning. In Blueprint it stays Gemini-native, uses only read-oriented MCP tools, and remains purely conversational so users can correct misunderstandings before `discuss-phase` or `plan-phase`.
 
 
 ## Command Path And Examples
@@ -24,13 +24,13 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A target phase must exist.
+- A target phase must exist or be inferrable from Blueprint state or the roadmap.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
+- User-facing result: a concise assumptions review that explicitly covers technical approach, implementation order, scope boundaries, risk areas, and dependencies, plus a correction prompt and the next logical implemented action when applicable.
 - Repo side effects: No durable artifact writes are planned.
 
 
@@ -51,6 +51,7 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
+- `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
 
@@ -102,8 +103,8 @@
 ## Failure Modes And Recovery
 
 
-- Show roadmap and phase-directory drift before mutation.
-- Return the nearest valid phase or milestone candidates when the target does not exist.
+- Show roadmap and phase-directory drift without mutating anything.
+- When the target phase does not exist, return the precise lookup failure plus the valid roadmap phases instead of guessing a replacement.
 
 
 ## Acceptance Criteria
@@ -111,6 +112,8 @@
 
 - Returns guidance, assumptions, or routing output without mutating project artifacts by default.
 - Uses only documented read-oriented MCP queries for inspection and routing.
+- Preserves the five assumption areas from the upstream GSD workflow: technical approach, implementation order, scope boundaries, risk areas, and dependencies.
+- Makes uncertainty explicit instead of overstating confidence.
 - Never routes to omitted commands or hides destructive behavior behind an implicit step.
 
 

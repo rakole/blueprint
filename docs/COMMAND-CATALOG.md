@@ -25,7 +25,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `health` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json and .blueprint/STATE.md in repair mode` | `Medium: repair mode can normalize config and rewrite malformed planning artifacts.` |
 | `help` | 0 | `Foundation` | `blueprint-router` | `implemented` | `none` | `Low: read-only help and routing guidance.` |
 | `insert-phase` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `blocked` | `new decimal phase directory; .blueprint/STATE.md` | `Medium: introduces decimal numbering and can shift later assumptions.` |
-| `list-phase-assumptions` | 2 | `Roadmap And Milestone` | `blueprint-phase-discovery` | `planned` | `none` | `Low: read-only analysis.` |
+| `list-phase-assumptions` | 2 | `Roadmap And Milestone` | `blueprint-phase-discovery` | `implemented` | `none` | `Low: read-only analysis.` |
 | `map-codebase` | 0 | `Foundation` | `blueprint-map` | `implemented` | .blueprint/codebase/STACK.md; .blueprint/codebase/ARCHITECTURE.md; .blueprint/codebase/STRUCTURE.md; .blueprint/codebase/CONVENTIONS.md; .blueprint/codebase/TESTING.md; .blueprint/codebase/INTEGRATIONS.md; .blueprint/codebase/CONCERNS.md | `Medium: refresh mode can replace existing codebase-mapping artifacts.` |
 | `milestone-summary` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `summary report in .blueprint/reports/` | `Low: report generation only.` |
 | `new-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `planned` | `PROJECT.md; REQUIREMENTS.md` | `Medium: rotates milestone-scope planning docs.` |

@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the governance handoff/resume pair is now shipped through `/blu:pause-work` and `/blu:resume-work`, `/blu:add-phase` and `/blu:audit-milestone` are now implemented, and the current repair focus is making the shipped discovery, execution, validation, UAT, and milestone-reporting commands fully substantive while later commands remain blocked until their substrate exists.
+- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the governance handoff/resume pair is now shipped through `/blu:pause-work` and `/blu:resume-work`, `/blu:add-phase`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` are now implemented, and the current repair focus is making the shipped discovery, execution, validation, UAT, milestone-reporting, and assumptions-review commands fully substantive while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, and `/blu:audit-milestone`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:list-phase-assumptions`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, `/blu:add-phase`, and `/blu:audit-milestone`.
 
 ## State Boundaries
 
@@ -32,6 +32,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:health` diagnoses Blueprint artifacts and enters repair flows only after explicit confirmation.
 - `/blu:map-codebase` creates or reuses the seven-document `.blueprint/codebase/` bundle, including `STRUCTURE.md`.
 - `/blu:discuss-phase` now captures substantive `XX-CONTEXT.md` content and can persist resumable discussion checkpoints.
+- `/blu:list-phase-assumptions` now runs as a read-only discovery command that surfaces roadmap- and context-backed phase assumptions before planning.
 - `/blu:research-phase` now persists substantive `XX-RESEARCH.md` content instead of relying on scaffold placeholders.
 - `/blu:ui-phase` now persists substantive `XX-UI-SPEC.md` content or an explicit skip rationale in that same file.
 - `/blu:plan-phase` now persists substantive `XX-YY-PLAN.md` content through the plan MCP substrate.
@@ -55,6 +56,6 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - Prefer safe inline routing when user intent is clear.
 - Recommend the best direct `/blu:<command>` entrypoint when intent is ambiguous or the next action is risky.
 - Only recommend commands whose `blueprint_command_catalog` entry is `implemented`.
-- For roadmap work, keep `/blu:add-phase` and `/blu:audit-milestone` available as the only implemented Wave 2 commands until the remaining roadmap surfaces ship.
+- For roadmap work, keep `/blu:add-phase`, `/blu:audit-milestone`, and `/blu:list-phase-assumptions` available as the only implemented Wave 2 commands until the remaining roadmap surfaces ship.
 - When a command is blocked, explain the missing substrate instead of presenting it as runnable.
 - Do not rely on slash-command chaining or undocumented aliases.

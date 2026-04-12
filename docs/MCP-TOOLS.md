@@ -111,6 +111,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
 - `validate-phase` and `verify-work` use `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, `blueprint_phase_validation_write`, `blueprint_config_get`, `blueprint_artifact_validate`, `blueprint_state_load`, and `blueprint_state_update` to persist summary-aware verification and UAT evidence.
 - lifecycle commands lean on phase, artifact, and state tools.
+- `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status` to inspect phase intent and present a read-only assumptions review before planning.
 - `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to append the next whole-number phase, scaffold `.blueprint/phases/<phase-slug>/`, and keep `STATE.md` aligned.
 - roadmap and milestone commands lean on roadmap plus phase tools.
 - capture commands use `blueprint_artifact_mutate_index`.
