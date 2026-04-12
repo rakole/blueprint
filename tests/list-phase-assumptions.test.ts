@@ -1,12 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import { resolveBlueprintSkillPath } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
+
+async function pathExists(relativePath: string): Promise<boolean> {
+  try {
+    await access(relativePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 test("list-phase-assumptions manifest references only registered read-oriented discovery tools", async () => {
   const raw = await readFile(
@@ -48,12 +58,16 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
 test("list-phase-assumptions is exposed as an implemented read-only discovery command", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["list-phase-assumptions"];
+  const skillResolution = await resolveBlueprintSkillPath(
+    "blueprint-phase-discovery",
+    pathExists
+  );
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.manifestPath, "commands/blu/list-phase-assumptions.toml");
-  assert.equal(entry.skillPath, "skills/blueprint-phase-discovery.md");
+  assert.equal(entry.skillPath, skillResolution.resolvedPath);
   assert.equal(entry.specPath, "docs/commands/list-phase-assumptions.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",

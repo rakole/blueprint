@@ -26,7 +26,7 @@ test("validate-phase manifest references the validation tools, config gates, and
 
 test("validate-phase skill captures summary-backed validation and verifier usage rules", async () => {
   const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-validation.md"),
+    path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"),
     "utf8"
   );
 

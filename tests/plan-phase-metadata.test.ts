@@ -30,7 +30,7 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
 
 test("plan-phase skill captures the revision loop and safe follow-up rules", async () => {
   const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-planning.md"),
+    path.join(repoRoot, "skills/blueprint-phase-planning/SKILL.md"),
     "utf8"
   );
 

@@ -28,7 +28,7 @@ test("execute-phase manifest references the execution gates, summary tools, and 
 
 test("execute-phase skill captures wave-based execution and summary generation rules", async () => {
   const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-execution.md"),
+    path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"),
     "utf8"
   );
 

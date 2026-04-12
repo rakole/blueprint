@@ -26,7 +26,7 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
 
 test("audit-milestone skill captures milestone-evidence digest rules and report persistence", async () => {
   const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-roadmap-admin.md"),
+    path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"),
     "utf8"
   );
 
