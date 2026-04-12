@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`new-milestone` carries forward the GSD intent to start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`new-milestone` carries forward the GSD intent to start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it stays Gemini-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, and starts the new milestone at the next whole-number phase instead of renumbering prior work.
 
 
 ## Command Path And Examples
@@ -25,34 +25,40 @@
 
 
 - A Blueprint project must already exist.
+- A matching `milestone-summary-<version>.md` report should already exist in `.blueprint/reports/`.
+- Carry-forward is the default. A fresh reset is allowed only after explicit confirmation.
+- Replacing the existing top-level milestone starter docs requires explicit overwrite confirmation.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise completion summary plus the next safe implemented action when applicable.
+- Repo side effects: Rewrites the starter milestone docs in `.blueprint/`, scaffolds the first carried-forward phase context artifact, and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
 ## Blueprint And Global State Writes
 
 
-- `PROJECT.md`
-- `REQUIREMENTS.md`
-- `ROADMAP.md`
-- `STATE.md`
+- `.blueprint/PROJECT.md`
+- `.blueprint/REQUIREMENTS.md`
+- `.blueprint/ROADMAP.md`
+- `.blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>`
+- `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -87,32 +93,41 @@
 
 ## Shell Risk Profile
 
-- Medium: rotates milestone-scope planning docs.
+- Medium: rewrites carried-forward milestone starter docs and advances the active milestone.
 
 ## User Prompts And Confirmation Gates
 
 
-- Confirm carry-forward and reset decisions before rewriting milestone docs.
+- Carry-forward is the default path. Require explicit confirmation only when the user wants a fresh reset instead.
+- Require explicit overwrite confirmation before replacing the existing milestone starter docs.
 
 
 ## Edge Cases
 
 
-- none
+- Missing milestone summary report for the resolved milestone.
+- Fresh reset instead of the default carry-forward path.
+- Continuing phase numbering without deleting historical phase directories.
 
 
 ## Failure Modes And Recovery
 
 
-- Show roadmap and phase-directory drift before mutation.
+- Show roadmap and report drift before mutation.
+- If the milestone summary report is missing, stop with concise guidance to run `/blu:milestone-summary` first.
+- Preserve historical phase directories; do not delete or renumber prior milestones as part of this command.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
 ## Acceptance Criteria
 
 
-- Keeps roadmap, phase directories, and state synchronized.
+- Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
 - Produces a durable report for milestone-level operations.
+- Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
+- Preserves historical phase directories and starts the new milestone at the next whole-number phase.
+- Scaffolds the first new phase context artifact so `/blu:discuss-phase <first phase>` has a valid phase directory to target.
+- Returns `/blu:discuss-phase <first phase>` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -121,8 +136,9 @@
 ## Test Cases
 
 
-- Roadmap mutation fixture.
-- Renumbering or archival regression fixture.
+- Missing-summary rejection fixture.
+- Carry-forward default fixture.
+- Phase-number continuity fixture.
 - Direct `new-milestone` happy-path fixture.
 
 

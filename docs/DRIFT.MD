@@ -100,7 +100,7 @@ The following families remain intentionally blocked until substrate exists:
 - update MCP tools
 - patch MCP tools
 
-The roadmap-admin family is only partially shipped. Later commands such as `insert-phase`, `complete-milestone`, `new-milestone`, `milestone-summary`, `do`, `quick`, and `ship` must remain non-routable in the runtime catalog until their own runtime substrate exists.
+The roadmap-admin family now ships the milestone-closeout trio on the existing roadmap, artifact, and state MCP surface. `insert-phase` is still intentionally blocked in that family, and later commands such as `do`, `quick`, and `ship` must remain non-routable in the runtime catalog until their own runtime substrate exists.
 
 ## Phase 2.2 Exit Criteria
 

@@ -2,9 +2,9 @@
 
 ## Current State
 
-The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, the read-only `list-phase-assumptions` discovery command, the Phase 4 validation/UAT commands, the governance handoff/resume commands, and the current Wave 2 roadmap/milestone commands.
+The repository contains both the original planning pack and a shipped runtime for Wave 0, the Phase 3 discovery commands, the read-only `list-phase-assumptions` discovery command, the Phase 4 validation/UAT commands, the governance handoff/resume commands, and the current Wave 2 roadmap/milestone commands including the milestone-closeout trio.
 
-Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair and the current Wave 2 roadmap-admin slice (`add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, and `list-phase-assumptions`) are also shipped. Runtime routing remains limited to `implemented` commands.
+Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11. Phase 3 discovery shipped the same day and remains in parity closeout, while the live lifecycle slice now also includes `plan-phase`, `execute-phase`, `validate-phase`, and `verify-work` on the plan, summary, and validation MCP substrates. The governance handoff/resume pair and the current Wave 2 roadmap-admin slice (`add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, and `list-phase-assumptions`) are also shipped. Runtime routing remains limited to `implemented` commands, and `insert-phase` remains blocked in this cycle.
 
 The governance handoff/resume pair now ships through `pause-work` and `resume-work`, with `pause-work` owning the durable handoff report and `resume-work` restoring the next safe implemented action from it.
 
@@ -26,22 +26,22 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 - implementation-aware command catalog metadata in `blueprint_command_catalog`
 - seven-document codebase mapping bundle, including `.blueprint/codebase/STRUCTURE.md`
 - advisory hook entrypoints under `src/hooks/` plus `hooks/hooks.json`
+- the Wave 2 anti-drift build pack in `docs/build/` for parallel 1-to-3-agent closeout loops
 
 ## Recommended Next Session
 
-Phase 4 validation and UAT are now shipped, so future sessions should focus on the next unshipped command slice while keeping blocked surfaces blocked:
+Wave 2 milestone closeout is now shipped, so future sessions should focus on preserving the closeout contracts while keeping blocked surfaces blocked:
 
 1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to commands whose catalog entry is `implemented`
-2. Use the shipped validation, UAT, and milestone-audit commands when closing out phase and milestone evidence instead of reintroducing prompt-only verification
-3. Start the next roadmap slice with `complete-milestone`
+2. Use the shipped validation, UAT, and milestone closeout sequence (`audit-milestone` -> `complete-milestone` -> `milestone-summary` -> `new-milestone`) instead of reintroducing prompt-only verification or ad hoc archival steps
+3. Keep `insert-phase` blocked unless it is separately replanned with matching docs, manifest, skill, MCP substrate, and tests
 
-## First Implementation Slice
+## First Replanned Slice
 
-The next unshipped slice should land in dependency order after validation/UAT closeout:
+The next implementation slice should be freshly planned after Wave 2 closeout:
 
-- `complete-milestone`
-- `milestone-summary`
-- `new-milestone`
+- `insert-phase` only if its own manifest, primary skill, required MCP substrate, and regression coverage are planned together
+- otherwise the next post-Wave-2 rollout should start from a newly locked Wave 3 or later slice instead of pretending the closeout trio is still pending
 
 ## Shared Risks To Watch
 
@@ -69,4 +69,4 @@ When implementing a command, consult in this order:
 
 ## Success Marker For The Next Milestone
 
-The next milestone is successful when the shipped lifecycle, governance, and roadmap-admin commands keep their current guarantees intact, and later commands remain blocked until their substrate exists.
+The next milestone is successful when the shipped lifecycle, governance, and roadmap-admin commands keep their current guarantees intact, the Wave 2 closeout trio stays aligned across docs and runtime, and later commands remain blocked until their substrate exists.

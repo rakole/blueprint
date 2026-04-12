@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`complete-milestone` carries forward the GSD intent to archive completed milestone and prepare for next version. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`complete-milestone` carries forward the GSD intent to archive completed milestone and prepare for next version. In Blueprint it stays Gemini-native, uses a report-driven closeout flow gated by the saved milestone audit, writes a durable completion report, and re-anchors state on the next safe implemented archival follow-up instead of introducing a new milestone-state engine.
 
 
 ## Command Path And Examples
@@ -24,37 +24,41 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A milestone audit should already exist.
+- A matching `milestone-audit-<version>.md` report should already exist in `.blueprint/reports/`.
+- All roadmap phases for the milestone should already be complete, with saved verification and UAT evidence.
+- Replacing an existing milestone completion report requires explicit overwrite confirmation.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise completion summary plus the next safe implemented action when applicable.
+- Repo side effects: Writes a durable milestone completion report in `.blueprint/reports/` and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
 ## Blueprint And Global State Writes
 
 
-- `milestone completion report`
+- `.blueprint/reports/milestone-complete-<version>.md`
 - `.blueprint/STATE.md`
-- `optional roadmap archive notes`
 
 
 ## Required MCP Tools
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
-- `blueprint_phase_mark_complete` -> `{updatedPaths, status}`
-- `blueprint_state_update` -> `{updatedFields, statePath}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
+- `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
 ## Skills And Subagents
@@ -86,32 +90,38 @@
 
 ## Shell Risk Profile
 
-- Medium: advances milestone status and archival expectations.
+- Medium: writes milestone closeout evidence and advances the milestone archival flow.
 
 ## User Prompts And Confirmation Gates
 
 
-- Require explicit confirmation before closing a milestone.
+- Require explicit confirmation before replacing an existing milestone completion report.
+- Confirm the resolved milestone before writing the completion report when the user passed an ambiguous version or name.
 
 
 ## Edge Cases
 
 
-- none
+- Existing milestone completion report replacement.
+- Missing milestone audit report for the resolved milestone.
 
 
 ## Failure Modes And Recovery
 
 
-- Show roadmap and phase-directory drift before mutation.
+- Show roadmap and report drift before mutation.
+- If the milestone audit report is missing, stop with concise guidance to run `/blu:audit-milestone` first.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
 ## Acceptance Criteria
 
 
-- Keeps roadmap, phase directories, and state synchronized.
+- Keeps milestone closeout grounded in the saved roadmap and audit report rather than chat memory.
 - Produces a durable report for milestone-level operations.
+- Requires explicit confirmation before overwriting an existing completion report.
+- Does not rewrite `.blueprint/ROADMAP.md` or phase directories directly.
+- Returns `/blu:milestone-summary <milestone>` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -120,8 +130,8 @@
 ## Test Cases
 
 
-- Roadmap mutation fixture.
-- Renumbering or archival regression fixture.
+- Missing-audit rejection fixture.
+- Existing completion report overwrite fixture.
 - Direct `complete-milestone` happy-path fixture.
 
 

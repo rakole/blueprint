@@ -66,6 +66,9 @@ Minimum locked fields per phase:
 - success criteria
 - status
 
+Contract notes:
+- `new-milestone` may rewrite `ROADMAP.md` for the next milestone, but it should preserve historical phase artifacts and continue numbering at the next whole-number phase instead of renumbering prior milestones.
+
 ### `STATE.md`
 
 Purpose:
@@ -252,6 +255,7 @@ UAT expectations:
 Used for non-phase-specific outputs and command logs:
 
 - milestone audit reports
+- milestone completion reports
 - milestone summaries
 - pause / resume handoffs
 - debug logs
@@ -275,6 +279,40 @@ Contract notes:
 - `audit-milestone` owns this report and writes it through the documented Blueprint persistence flow, including `blueprint_artifact_report_write`.
 - Replacing an existing audit report requires explicit confirmation.
 - The report should stay project-local in `.blueprint/reports/` and not spill into unrelated repo files.
+
+### `reports/milestone-complete-<version>.md`
+
+Purpose:
+- durable closeout report for `/blu:complete-milestone`
+- evidence bridge between the milestone audit and the final archival summary
+
+Minimum locked sections:
+- milestone identifier and closeout decision
+- audit report used
+- completion rationale and residual watch items
+- next safe action
+
+Contract notes:
+- `complete-milestone` owns this report and writes it through `blueprint_artifact_report_write`.
+- Replacing an existing completion report requires explicit confirmation.
+- The report should stay project-local in `.blueprint/reports/`.
+
+### `reports/milestone-summary-<version>.md`
+
+Purpose:
+- durable summary report for `/blu:milestone-summary`
+- carry-forward input for `/blu:new-milestone`
+
+Minimum locked sections:
+- milestone identifier and scope summary
+- source reports used
+- shipped outcomes and deferred follow-ups
+- recommended carry-forward context
+
+Contract notes:
+- `milestone-summary` owns this report and writes it through `blueprint_artifact_report_write`.
+- Replacing an existing milestone summary requires explicit confirmation.
+- The report should stay project-local in `.blueprint/reports/`.
 
 ### `reports/pause-work-latest.md`
 

@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, and the current roadmap-admin slice. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, and the current roadmap-admin slice including the Wave 2 milestone-closeout trio. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -25,8 +25,8 @@ This repository still carries the planning pack that locked the product and arch
 - The roadmap removal command `/blu:remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
-- Phase 2.1 and Phase 2.2 both closed on 2026-04-11; current follow-up work keeps the shipped discovery, planning, execution, validation/UAT, governance, and roadmap-admin contracts aligned while `complete-milestone` is the next unshipped slice
-- The remaining Wave 2 roadmap and milestone commands remain unshipped
+- The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
+- `insert-phase` remains the only blocked Wave 2 command and must stay non-routable until its own manifest, primary skill contract, and required MCP substrate actually ship
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
 ## Install And Release
@@ -176,6 +176,9 @@ These runtime files exist today:
 - `commands/blu/verify-work.toml`
 - `commands/blu/audit-milestone.toml`
 - `commands/blu/add-phase.toml`
+- `commands/blu/complete-milestone.toml`
+- `commands/blu/milestone-summary.toml`
+- `commands/blu/new-milestone.toml`
 - `commands/blu/plan-milestone-gaps.toml`
 - `commands/blu/remove-phase.toml`
 - `commands/blu/next.toml`
@@ -219,10 +222,10 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 
 ## Next Implementation Slice
 
-The next broad rollout starts with the remaining roadmap slice while the shipped Phase 3, Phase 4, governance handoff/resume, roadmap-append, and milestone-audit guarantees stay green:
+Wave 2 milestone closeout is now part of the shipped runtime. The next broad rollout should start from a fresh plan while the shipped Phase 3, Phase 4, governance handoff/resume, and roadmap-admin guarantees stay green:
 
-1. Continue the next unshipped command slice beginning with `complete-milestone`
-2. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until new manifests, skills, and required MCP tools actually ship
-3. Preserve the shipped pause/resume routing, validation parity, `add-phase` append guarantees, `remove-phase` renumbering guarantees, `plan-milestone-gaps` grouped audit-follow-up contract, and milestone-audit report contract while the rest of Wave 2 lands
+1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until any new manifest, primary skill, and required MCP tools actually ship
+2. Keep `insert-phase` blocked and non-routable unless it is separately replanned and implemented end to end
+3. Preserve the shipped pause/resume routing, validation parity, roadmap append/removal guarantees, milestone audit and closeout report contracts, and carry-forward `new-milestone` behavior while the next post-Wave-2 slice lands
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

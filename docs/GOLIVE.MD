@@ -21,35 +21,27 @@ As of 2026-04-12, the repo has a real extension runtime, not just planning docs:
 
 - `gemini-extension.json`, `GEMINI.md`, `commands/`, `skills/`, `agents/`, and `hooks/hooks.json` all exist
 - the MCP server and hooks build into `dist/`
-- `npm test` passes with 125 passing tests
-- the runtime command catalog currently reports 53 retained commands:
-  - 22 `implemented`
-  - 8 `repairing`
-  - 23 `blocked`
+- the runtime command catalog tracks the retained commands across `implemented`, `repairing`, `planned`, and `blocked` states; see `docs/COMMAND-CATALOG.md` for the exact current mix
 
 What is already live:
 
 - all Wave 0 foundation commands
 - all Wave 1 core lifecycle commands
-- most of Wave 2 roadmap-admin commands
+- the Wave 2 roadmap-admin slice including `complete-milestone`, `milestone-summary`, and `new-milestone`
 
 What remains closest on the roadmap:
 
-- `complete-milestone`
-- `milestone-summary`
-- `new-milestone`
+- `insert-phase`
+- the next post-Wave-2 rollout after a fresh plan is locked
 
 ## Must Have
 
 ### Functional
 
-- Finish the remaining Wave 2 milestone closeout flow:
-  - `complete-milestone`
-  - `milestone-summary`
-  - `new-milestone`
 - Keep `insert-phase` explicitly non-routable unless its manifest and MCP substrate actually ship.
 - Freeze the v1 public promise around the real shipped surface instead of the full retained command catalog.
   - Recommended v1 bar: Wave 0 + Wave 1 + Wave 2 milestone closeout.
+  - That functional bar is now satisfied on this branch; the remaining go-live work is release hardening and publication discipline.
   - Wave 3, Wave 4, and Wave 5 commands should stay documented as future work until they are actually implemented.
 - Preserve the current implemented-only routing guarantees in `/blu`, `/blu:help`, and `/blu:progress`.
   - This already exists and should remain a release gate.
@@ -143,10 +135,10 @@ Blueprint should not wait for all 53 retained commands before going public.
 
 A practical v1 go-live bar is:
 
-1. Ship the Wave 2 milestone closeout trio.
-2. Keep the current implemented-only routing guarantees intact.
+1. Keep the shipped Wave 2 milestone closeout trio and implemented-only routing guarantees intact.
+2. Keep `insert-phase` blocked until it is fully implemented end to end.
 3. Add an explicit release process for build, install smoke, and tagged publication.
-4. Publish only the commands that are actually implemented, while keeping later commands clearly marked as planned.
+4. Publish only the commands that are actually implemented, while keeping later commands clearly marked as planned or blocked.
 
 That yields a public extension with a complete end-to-end project lifecycle:
 

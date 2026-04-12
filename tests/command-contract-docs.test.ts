@@ -287,3 +287,46 @@ test("remove-phase command docs keep the roadmap removal contract explicit", asy
   assert.match(removePhaseDoc, /execution evidence/i);
   assert.match(removePhaseDoc, /\/blu:progress/);
 });
+
+test("complete-milestone command docs keep the report-driven closeout contract explicit", async () => {
+  const completeMilestoneDoc = await readRepoFile("docs/commands/complete-milestone.md");
+
+  assert.match(completeMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(completeMilestoneDoc, /blueprint_roadmap_read/);
+  assert.match(completeMilestoneDoc, /blueprint_artifact_list/);
+  assert.match(completeMilestoneDoc, /blueprint_artifact_summary_digest/);
+  assert.match(completeMilestoneDoc, /blueprint_artifact_report_write/);
+  assert.match(completeMilestoneDoc, /blueprint_state_update/);
+  assert.match(completeMilestoneDoc, /milestone-audit-<version>\.md/);
+  assert.match(completeMilestoneDoc, /report-driven/i);
+  assert.match(completeMilestoneDoc, /\/blu:milestone-summary <milestone>/);
+  assert.doesNotMatch(completeMilestoneDoc, /blueprint_phase_mark_complete/);
+});
+
+test("milestone-summary command docs keep the Wave 2 local summary contract explicit", async () => {
+  const milestoneSummaryDoc = await readRepoFile("docs/commands/milestone-summary.md");
+
+  assert.match(milestoneSummaryDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(milestoneSummaryDoc, /blueprint_roadmap_read/);
+  assert.match(milestoneSummaryDoc, /blueprint_artifact_list/);
+  assert.match(milestoneSummaryDoc, /blueprint_artifact_summary_digest/);
+  assert.match(milestoneSummaryDoc, /blueprint_artifact_report_write/);
+  assert.match(milestoneSummaryDoc, /blueprint_state_update/);
+  assert.match(milestoneSummaryDoc, /milestone-complete-<version>\.md/);
+  assert.match(milestoneSummaryDoc, /\/blu:new-milestone/);
+  assert.doesNotMatch(milestoneSummaryDoc, /blueprint-doc-writer/);
+});
+
+test("new-milestone command docs keep the carry-forward default and phase continuity explicit", async () => {
+  const newMilestoneDoc = await readRepoFile("docs/commands/new-milestone.md");
+
+  assert.match(newMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(newMilestoneDoc, /blueprint_roadmap_read/);
+  assert.match(newMilestoneDoc, /blueprint_artifact_summary_digest/);
+  assert.match(newMilestoneDoc, /blueprint_artifact_scaffold/);
+  assert.match(newMilestoneDoc, /blueprint_state_update/);
+  assert.match(newMilestoneDoc, /carry-forward from the saved milestone summary/i);
+  assert.match(newMilestoneDoc, /next whole-number phase/i);
+  assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
+  assert.match(newMilestoneDoc, /\/blu:discuss-phase <first phase>/);
+});

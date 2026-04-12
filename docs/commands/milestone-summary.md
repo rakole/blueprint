@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`milestone-summary` carries forward the GSD intent to generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`milestone-summary` carries forward the GSD intent to generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it stays Gemini-native, builds the final summary from saved roadmap and closeout evidence, writes a durable summary report for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
 
 
 ## Command Path And Examples
@@ -24,41 +24,47 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- Milestone artifacts must already exist.
+- Matching `milestone-audit-<version>.md` and `milestone-complete-<version>.md` reports should already exist in `.blueprint/reports/`.
+- Replacing an existing milestone summary report requires explicit overwrite confirmation.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise completion summary plus the next safe implemented action when applicable.
+- Repo side effects: Writes a durable summary report in `.blueprint/reports/` and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
 ## Blueprint And Global State Writes
 
 
-- `summary report in .blueprint/reports/`
+- `.blueprint/reports/milestone-summary-<version>.md`
+- `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
+- `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
 ## Skills And Subagents
 
 
 - Primary skill: `blueprint-roadmap-admin`
-- Optional subagents:
-- `blueprint-doc-writer`
+- Optional subagents: none
 
 
 ## Dependencies
@@ -88,27 +94,33 @@
 ## User Prompts And Confirmation Gates
 
 
-- None.
+- Require explicit confirmation before replacing an existing milestone summary report.
 
 
 ## Edge Cases
 
 
-- none
+- Missing milestone completion report for the resolved milestone.
+- Existing milestone summary report replacement.
 
 
 ## Failure Modes And Recovery
 
 
-- Show roadmap and phase-directory drift before mutation.
+- Show roadmap and report drift before mutation.
+- If the completion report is missing, stop with concise guidance to run `/blu:complete-milestone` first.
+- If the audit report is missing, stop with concise guidance to run `/blu:audit-milestone` first.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
 ## Acceptance Criteria
 
 
-- Keeps roadmap, phase directories, and state synchronized.
+- Keeps milestone summarization grounded in saved roadmap, audit, and completion evidence.
 - Produces a durable report for milestone-level operations.
+- Requires explicit confirmation before overwriting an existing milestone summary report.
+- Does not depend on any later-wave docs agent.
+- Returns `/blu:new-milestone` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -117,8 +129,8 @@
 ## Test Cases
 
 
-- Roadmap mutation fixture.
-- Renumbering or archival regression fixture.
+- Missing-completion rejection fixture.
+- Existing summary report overwrite fixture.
 - Direct `milestone-summary` happy-path fixture.
 
 

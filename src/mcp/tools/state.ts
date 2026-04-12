@@ -844,6 +844,8 @@ async function deriveNextAction(args: {
   currentMilestone: string | null;
   allPhasesComplete: boolean;
   hasMilestoneAudit: boolean;
+  hasMilestoneCompletion: boolean;
+  hasMilestoneSummary: boolean;
   phaseArtifacts: CurrentPhaseArtifactStatus;
   bootstrapRouting: BootstrapRoutingSignals;
   workflow: WorkflowRoutingSignals;
@@ -873,6 +875,9 @@ async function deriveNextAction(args: {
   const validatePhaseCommand = "/blu:validate-phase";
   const verifyWorkCommand = "/blu:verify-work";
   const auditMilestoneCommand = "/blu:audit-milestone";
+  const completeMilestoneCommand = "/blu:complete-milestone";
+  const milestoneSummaryCommand = "/blu:milestone-summary";
+  const newMilestoneCommand = "/blu:new-milestone";
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return "Run /blu:progress to review the next safe Blueprint action";
@@ -961,6 +966,45 @@ async function deriveNextAction(args: {
     return `Run ${auditMilestoneCommand}${milestoneSuffix} to audit milestone completion before archiving`;
   }
 
+  if (
+    args.allPhasesComplete &&
+    args.phaseArtifacts.hasVerification &&
+    args.phaseArtifacts.hasUat &&
+    args.hasMilestoneAudit &&
+    !args.hasMilestoneCompletion &&
+    implementedCommands.has(completeMilestoneCommand)
+  ) {
+    const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
+
+    return `Run ${completeMilestoneCommand}${milestoneSuffix} to record milestone closeout after the audit`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.phaseArtifacts.hasVerification &&
+    args.phaseArtifacts.hasUat &&
+    args.hasMilestoneAudit &&
+    args.hasMilestoneCompletion &&
+    !args.hasMilestoneSummary &&
+    implementedCommands.has(milestoneSummaryCommand)
+  ) {
+    const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
+
+    return `Run ${milestoneSummaryCommand}${milestoneSuffix} to generate the final milestone summary`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.phaseArtifacts.hasVerification &&
+    args.phaseArtifacts.hasUat &&
+    args.hasMilestoneAudit &&
+    args.hasMilestoneCompletion &&
+    args.hasMilestoneSummary &&
+    implementedCommands.has(newMilestoneCommand)
+  ) {
+    return `Run ${newMilestoneCommand} to start the next milestone from the saved carry-forward summary`;
+  }
+
   return args.currentPhase
     ? `Run /blu:progress to review Phase ${args.currentPhase} and the next safe action`
     : "Run /blu:progress to review the next safe Blueprint action";
@@ -998,6 +1042,14 @@ async function buildSyncedState(projectRoot: string): Promise<{
     currentMilestone === null
       ? null
       : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
+  const milestoneCompletionReportPath =
+    currentMilestone === null
+      ? null
+      : buildBlueprintReportPath(`milestone-complete-${currentMilestone}`);
+  const milestoneSummaryReportPath =
+    currentMilestone === null
+      ? null
+      : buildBlueprintReportPath(`milestone-summary-${currentMilestone}`);
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
@@ -1076,6 +1128,12 @@ async function buildSyncedState(projectRoot: string): Promise<{
               hasMilestoneAudit:
                 milestoneAuditReportPath !== null &&
                 inspection.reports.includes(milestoneAuditReportPath),
+              hasMilestoneCompletion:
+                milestoneCompletionReportPath !== null &&
+                inspection.reports.includes(milestoneCompletionReportPath),
+              hasMilestoneSummary:
+                milestoneSummaryReportPath !== null &&
+                inspection.reports.includes(milestoneSummaryReportPath),
               phaseArtifacts: currentPhaseArtifacts,
               bootstrapRouting,
               workflow: workflowRouting

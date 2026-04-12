@@ -4,7 +4,7 @@
 
 Blueprint should be implemented one command at a time, but only after the prerequisite contracts are already in place.
 
-The validation, UAT, governance handoff/resume, roadmap append, milestone audit, and `list-phase-assumptions` slices are already shipped, so the next implementation order should start with the remaining roadmap surfaces.
+The validation, UAT, governance handoff/resume, roadmap append/removal, milestone audit, milestone closeout, and `list-phase-assumptions` slices are already shipped. `insert-phase` remains blocked in Wave 2, so any post-Wave-2 implementation should start from a fresh plan instead of treating the closeout trio as still pending.
 
 ## Waves
 
@@ -42,6 +42,10 @@ The validation, UAT, governance handoff/resume, roadmap append, milestone audit,
 - `complete-milestone`
 - `milestone-summary`
 - `new-milestone`
+
+Shipped in this wave: `add-phase`, `remove-phase`, `list-phase-assumptions`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`.
+
+Still blocked in this wave: `insert-phase`.
 
 ### Wave 3: Capture and lightweight execution
 
@@ -149,8 +153,8 @@ The validation, UAT, governance handoff/resume, roadmap append, milestone audit,
 
 ## Recommended First Code Slice
 
-1. `complete-milestone`
-2. `milestone-summary`
-3. `new-milestone`
+1. Keep `insert-phase` blocked unless it is separately replanned with matching docs, manifest, primary skill, required MCP substrate, and tests.
+2. If `insert-phase` is intentionally unblocked, land it as its own isolated slice.
+3. Otherwise start the next rollout from a newly locked Wave 3 or later slice.
 
-This sequence keeps the next unshipped surface aligned with the current runtime status.
+This sequence keeps the next implementation work aligned with the current runtime status instead of reopening already shipped Wave 2 closeout work.
