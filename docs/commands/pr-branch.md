@@ -4,13 +4,13 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create a clean PR branch by filtering out .planning/ commits — ready for code review |
+| Upstream GSD intent | Create a clean PR branch by filtering out implementation-bookkeeping commits — ready for code review |
 
 
 ## Purpose
 
 
-`pr-branch` carries forward the GSD intent to create a clean PR branch by filtering out .planning/ commits — ready for code review. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`pr-branch` carries forward the GSD intent to create a clean PR branch by filtering out implementation-bookkeeping commits before code review. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples

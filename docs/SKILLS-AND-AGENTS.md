@@ -1,5 +1,7 @@
 # Blueprint Skills And Agents
 
+Implemented Blueprint skills are Gemini-discoverable bundles at `skills/<name>/SKILL.md`. Legacy flat `skills/*.md` mirrors may remain as repo-local compatibility docs during repair, but they are not runtime activation handles. Implemented Blueprint agents are Gemini subagent definition files under `agents/*.md`.
+
 ## Shipped Skills
 
 Primary command lists are canonical ownership metadata and must stay consistent with `docs/COMMAND-CATALOG.md` and `docs/commands/*.md`. The `Status` column here is skill-family/file rollout metadata; command-level availability remains canonical in `docs/COMMAND-CATALOG.md` and the live `blueprint_command_catalog`.
@@ -66,7 +68,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `execute-phase` uses `blueprint-executor`.
 - `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
 - `validate-phase` and `verify-work` use `blueprint-verifier`.
-- `add-phase` uses `blueprint-roadmap-admin`.
+- `add-phase`, `remove-phase`, and `complete-milestone` remain skill-led roadmap-admin flows and do not require dedicated subagents.
 - `plan-milestone-gaps` and `new-milestone` use `blueprint-roadmapper`.
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.

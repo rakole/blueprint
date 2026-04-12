@@ -26,7 +26,9 @@ blueprint/
     blu/
       *.toml
   skills/
-    *.md
+    <skill>.md
+    <skill>/
+      SKILL.md
   agents/
     *.md
   hooks/
@@ -62,6 +64,8 @@ Planned later runtime surfaces, not registered today:
 ### 2. Skills
 
 - Skills hold orchestration rules for command families.
+- Gemini discovers shipped skills from `skills/<name>/SKILL.md`.
+- Legacy flat `skills/*.md` mirrors may remain in the repo during repair, but they are not runtime handles and must not be referenced as activation paths.
 - The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
 - Planned skill families stay documented but non-routable until their commands actually ship.
 
@@ -69,6 +73,7 @@ Planned later runtime surfaces, not registered today:
 
 - Agents handle bounded deep work: project bootstrap research, codebase mapping, phase research, UI design, planning, execution, and verification.
 - They are optional bounded helpers, not an alternate persistence layer.
+- Gemini loads shipped agent contracts from `agents/*.md`, keyed by agent frontmatter metadata rather than repo file paths mentioned in prompts.
 - The currently shipped contract files cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-researcher`, `blueprint-ui-designer`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, and `blueprint-verifier`.
 
 ### 4. MCP Server
@@ -90,7 +95,7 @@ Planned later runtime surfaces, not registered today:
 
 - User calls `/blu:plan-phase 3`.
 - Gemini loads the command file.
-- The command invokes the matching Blueprint skill and documented MCP tools.
+- The command invokes the matching Blueprint skill by canonical skill name and documented MCP tools.
 - Optional bounded agents are used only where the command contract calls for them.
 
 ### Router command
