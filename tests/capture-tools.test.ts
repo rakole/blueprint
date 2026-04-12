@@ -185,6 +185,39 @@ test("blueprint_artifact_mutate_index appends a backlog entry and reserves an op
   );
 });
 
+test("blueprint_artifact_mutate_index appends todo entries with open status", async (t) => {
+  const repoPath = await createCaptureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: {
+      text: "Add retry telemetry",
+      addedAt: "2026-04-12"
+    }
+  });
+  const todoBody = await readFile(
+    path.join(repoPath, ".blueprint/todos/TODO.md"),
+    "utf8"
+  );
+
+  assert.equal(result.status, "created");
+  assert.equal(result.targetPath, ".blueprint/todos/TODO.md");
+  assert.deepEqual(result.createdEntryIds, ["TODO-001"]);
+  assert.deepEqual(result.duplicateEntryIds, []);
+  assert.equal(result.updatedCounts.added, 1);
+  assert.equal(result.updatedCounts.preserved, 0);
+  assert.equal(result.reservedPhase, null);
+  assert.match(todoBody, /^# Todos/m);
+  assert.match(todoBody, /### TODO-001/);
+  assert.match(todoBody, /- Added: 2026-04-12/);
+  assert.match(todoBody, /- Status: open/);
+  assert.match(todoBody, /- Description: Add retry telemetry/);
+});
+
 test("blueprint_artifact_mutate_index rejects duplicate backlog ideas after normalization", async (t) => {
   const repoPath = await createCaptureRepo();
   t.after(async () => {

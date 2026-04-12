@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the shipped Wave 3 capture commands `/blu:note` and `/blu:add-backlog`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu:note`, `/blu:add-todo`, and `/blu:add-backlog`, and the shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -23,14 +23,15 @@ This repository still carries the planning pack that locked the product and arch
 - The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The security audit command `/blu:secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
 - The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
+- The roadmap insertion command `/blu:insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu:discuss-phase`
 - The roadmap removal command `/blu:remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
 - The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
 - The capture command `/blu:note` is now shipped; it appends deterministic project-local notes to `.blueprint/notes/NOTES.md`, detects duplicates, and keeps note persistence inside Blueprint MCP
+- The capture command `/blu:add-todo` is now shipped; it appends deterministic project-local todos to `.blueprint/todos/TODO.md`, detects duplicates, and keeps todo persistence inside Blueprint MCP
 - The capture command `/blu:add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
 - The documentation command `/blu:docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
-- `insert-phase` remains the only blocked Wave 2 command and must stay non-routable until its own manifest, primary skill contract, and required MCP substrate actually ship
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
 ## Install And Release
@@ -241,7 +242,7 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 Wave 2 milestone closeout is now part of the shipped runtime. The next broad rollout should start from a fresh plan while the shipped Phase 3, Phase 4, governance handoff/resume, and roadmap-admin guarantees stay green:
 
 1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until any new manifest, primary skill, and required MCP tools actually ship
-2. Keep `insert-phase` blocked and non-routable unless it is separately replanned and implemented end to end
+2. Keep the shipped `insert-phase` contract aligned across docs, manifest, primary skill, required MCP substrate, and regression coverage
 3. Preserve the shipped pause/resume routing, validation parity, roadmap append/removal guarantees, milestone audit and closeout report contracts, and carry-forward `new-milestone` behavior while the next post-Wave-2 slice lands
 
 The Phase 2.2 closure record lives in `docs/DRIFT.MD`, and the next-session pickup guide lives in `docs/HANDOFF.md`.

@@ -73,6 +73,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(catalog, /`map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented`/);
   assert.match(catalog, /`next` \| 1 \| `Core Lifecycle` \| `blueprint-router` \| `implemented`/);
   assert.match(catalog, /`execute-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-execution` \| `implemented`/);
+  assert.match(catalog, /`insert-phase` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(catalog, /`remove-phase` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(catalog, /`audit-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(catalog, /`complete-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
@@ -89,6 +90,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(artifactSchema, /`reports\/pause-work-latest\.md`/);
   assert.match(skills, /`blueprint-router` .* `next`, `do`/);
   assert.match(skills, /`blueprint-governance` .* `pause-work`, `resume-work`/);
+  assert.match(skills, /`blueprint-roadmap-admin` .* `insert-phase`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `plan-milestone-gaps`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `audit-milestone`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `complete-milestone`/);
