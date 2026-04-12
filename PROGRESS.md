@@ -2,39 +2,35 @@
 
 Last updated: 2026-04-12
 
-Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by the remaining Wave 2 blocker (`insert-phase`), then by Wave 3 execution-path risk, then by later-wave git and workspace risk.
+Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
 
 ## Incomplete Commands (Priority Up)
 
-Total: 25
+Total: 21
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
-| 1 | `insert-phase` | ❌ | `blocked` | 2 | `Roadmap And Milestone` | Medium |
-| 2 | `quick` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | High |
-| 3 | `debug` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Medium |
-| 4 | `fast` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Medium |
-| 5 | `review-backlog` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Medium |
-| 6 | `add-todo` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
-| 7 | `check-todos` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
-| 8 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
-| 9 | `explore` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
-| 10 | `note` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
-| 11 | `add-tests` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 12 | `audit-fix` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 13 | `code-review-fix` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 14 | `pr-branch` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 15 | `ship` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 16 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 17 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
-| 18 | `code-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 19 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 20 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 21 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 22 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 23 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 24 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 25 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 1 | `fast` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Medium |
+| 2 | `debug` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Medium |
+| 3 | `review-backlog` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Medium |
+| 4 | `check-todos` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
+| 5 | `explore` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
+| 6 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
+| 7 | `add-tests` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 8 | `audit-fix` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 9 | `code-review-fix` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 10 | `pr-branch` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 11 | `ship` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 12 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 13 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
+| 14 | `code-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
+| 15 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
+| 16 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 17 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 18 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 19 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 20 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
+| 21 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -42,25 +38,23 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `add-todo` | `note` | `quick` | Safe parallel set. |
-| 2 | `fast` | `debug` | `review-backlog` | Safe parallel set. |
-| 3 | `check-todos` | `explore` | `add-tests` | Safe parallel set. |
-| 4 | `pr-branch` | `undo` | `review` | Safe parallel set. |
-| 5 | `code-review` | `ui-review` | — | Safe parallel set. |
-| 6 | `audit-fix` | `code-review-fix` | `ship` | Safe parallel set. |
-| 7 | `cleanup` | `new-workspace` | `workstreams` | Safe parallel set. |
-| 8 | `update` | `reapply-patches` | `remove-workspace` | Safe parallel set. |
+| 1 | `fast` | `debug` | `review-backlog` | Safe parallel set. |
+| 2 | `check-todos` | `explore` | `add-tests` | Safe parallel set. |
+| 3 | `pr-branch` | `undo` | `review` | Safe parallel set. |
+| 4 | `code-review` | `ui-review` | — | Safe parallel set. |
+| 5 | `audit-fix` | `code-review-fix` | `ship` | Safe parallel set. |
+| 6 | `cleanup` | `new-workspace` | `workstreams` | Safe parallel set. |
+| 7 | `update` | `reapply-patches` | `remove-workspace` | Safe parallel set. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
 | Command | Status | Depends On |
 |---|---|---|
-| `insert-phase` | `blocked` | `decimal-phase runtime substrate` |
 | `do` | `blocked` | `freeform routing runtime substrate` |
 
 ## Completed Commands (Bubbled Down)
 
-Total: 28
+Total: 32
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -82,13 +76,17 @@ Total: 28
 | 16 | `validate-phase` | ✅ | `implemented` | 1 | `Core Lifecycle` | Low |
 | 17 | `verify-work` | ✅ | `implemented` | 1 | `Core Lifecycle` | Low |
 | 18 | `add-phase` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
-| 19 | `remove-phase` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | High |
-| 20 | `plan-milestone-gaps` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
-| 21 | `audit-milestone` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
-| 22 | `complete-milestone` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
-| 23 | `milestone-summary` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
-| 24 | `new-milestone` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
-| 25 | `list-phase-assumptions` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
-| 26 | `add-backlog` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
-| 27 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
-| 28 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 19 | `insert-phase` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
+| 20 | `remove-phase` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | High |
+| 21 | `plan-milestone-gaps` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
+| 22 | `audit-milestone` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
+| 23 | `complete-milestone` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
+| 24 | `milestone-summary` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
+| 25 | `new-milestone` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Medium |
+| 26 | `list-phase-assumptions` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
+| 27 | `add-backlog` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
+| 28 | `add-todo` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
+| 29 | `note` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
+| 30 | `quick` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | High |
+| 31 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
+| 32 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
