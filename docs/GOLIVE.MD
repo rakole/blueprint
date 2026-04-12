@@ -27,21 +27,18 @@ What is already live:
 
 - all Wave 0 foundation commands
 - all Wave 1 core lifecycle commands
-- the Wave 2 roadmap-admin slice including `complete-milestone`, `milestone-summary`, and `new-milestone`
-- the first Wave 4 quality pass through `secure-phase`
+- the Wave 2 roadmap-admin slice including `insert-phase`, `complete-milestone`, `milestone-summary`, and `new-milestone`
+- the shipped Wave 3 capture commands `note`, `add-todo`, and `add-backlog`
+- the shipped Wave 4 review/docs passes through `secure-phase` and `docs-update`
 
 What remains closest on the roadmap:
 
-- `insert-phase`
 - the next post-Wave-2 rollout after a fresh plan is locked
 
 ## Must Have
 
-### Functional
-
-- Keep `insert-phase` explicitly non-routable unless its manifest and MCP substrate actually ship.
 - Freeze the v1 public promise around the real shipped surface instead of the full retained command catalog.
-  - Recommended v1 bar: Wave 0 + Wave 1 + Wave 2 milestone closeout.
+  - Recommended v1 bar: Wave 0 + Wave 1 + the shipped Wave 2 roadmap-admin slice.
   - That functional bar is now satisfied on this branch; the remaining go-live work is release hardening and publication discipline.
   - Wave 3 and Wave 5 commands should stay documented as future work until they are actually implemented, and only the actually shipped Wave 4 commands should be treated as live.
 - Preserve the current implemented-only routing guarantees in `/blu`, `/blu-help`, and `/blu-progress`.
@@ -64,19 +61,13 @@ What remains closest on the roadmap:
 
 ## Good To Have
 
-### Functional
-
-- Finish the remaining Wave 2 ergonomic gap: `insert-phase`.
 - Ship the near-adjacent lightweight execution surfaces that are useful without requiring the full later platform:
   - `fast`
   - `quick`
   - `do`
   - `add-tests`
-- Start the capture layer once Wave 2 closes:
-  - `note`
-  - `add-todo`
+- Continue the remaining capture layer after the shipped `note`, `add-todo`, and `add-backlog` slice:
   - `check-todos`
-  - `add-backlog`
   - `review-backlog`
   - `explore`
   - `debug`
@@ -99,11 +90,10 @@ What remains closest on the roadmap:
 
 ### Functional
 
-- Ship the rest of Wave 4 quality and shipping:
+- Ship the rest of Wave 4 quality and shipping beyond the already shipped `secure-phase` and `docs-update` commands:
   - `code-review`
   - `code-review-fix`
   - `audit-fix`
-  - `docs-update`
   - `ui-review`
   - `review`
   - `pr-branch`
@@ -135,10 +125,9 @@ Blueprint should not wait for all 53 retained commands before going public.
 
 A practical v1 go-live bar is:
 
-1. Keep the shipped Wave 2 milestone closeout trio and implemented-only routing guarantees intact.
-2. Keep `insert-phase` blocked until it is fully implemented end to end.
-3. Add an explicit release process for build, install smoke, and tagged publication.
-4. Publish only the commands that are actually implemented, while keeping later commands clearly marked as planned or blocked.
+1. Keep the shipped Wave 2 roadmap-admin slice, including `insert-phase`, and the implemented-only routing guarantees intact.
+2. Add an explicit release process for build, install smoke, and tagged publication.
+3. Publish only the commands that are actually implemented, while keeping later commands clearly marked as planned or blocked.
 
 That yields a public extension with a complete end-to-end project lifecycle:
 

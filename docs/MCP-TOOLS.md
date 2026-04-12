@@ -47,6 +47,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_roadmap_read` | Load roadmap, milestone, and phase list | `{roadmap, milestone, phases}` |
 | `blueprint_roadmap_add_phase` | Append the next whole-number phase and derive the matching `.blueprint/phases/<phase-slug>/` directory | `{phaseNumber, phaseDir, roadmapPath}` |
+| `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phaseDir, roadmapPath}` |
 | `blueprint_roadmap_remove_phase` | Remove and renumber phase entries | `{removedPhase, renumberedPhases, roadmapPath}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
 | `blueprint_phase_context` | Summarize phase boundary and existing artifacts | `{phase, requirements, missingArtifacts}` |
@@ -88,7 +89,6 @@ These tool names are part of the documented future contract, but they are not re
 
 ### Future Roadmap and Milestone Tools
 
-- `blueprint_roadmap_insert_phase`
 - `blueprint_roadmap_promote_backlog`
 
 ### Future Workspace and Workstream Tools
@@ -124,6 +124,7 @@ These tool names are part of the documented future contract, but they are not re
 - `pause-work` and `resume-work` use state load and update tools together with pause handoff read and write support.
 - `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status`.
 - `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update`.
+- `insert-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_insert_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to insert the next decimal phase after an existing integer anchor and route the repo back into `/blu-discuss-phase`.
 - `remove-phase` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_roadmap_remove_phase`, and `blueprint_state_update`.
 - `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update`.
 - `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write`.

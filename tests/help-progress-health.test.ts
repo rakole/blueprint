@@ -878,6 +878,15 @@ test("help progress and health command files reference registered MCP tool names
       ]
     },
     {
+      file: "commands/blu-insert-phase.toml",
+      tools: [
+        "blueprint_roadmap_read",
+        "blueprint_roadmap_insert_phase",
+        "blueprint_artifact_scaffold",
+        "blueprint_state_update"
+      ]
+    },
+    {
       file: "commands/blu-remove-phase.toml",
       tools: [
         "blueprint_roadmap_read",

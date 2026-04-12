@@ -18,7 +18,7 @@
 - Gemini command path: `/blu-add-todo`
 - Compatibility during this release: `/blu:add-todo` (deprecated; remove next release)
 - Root router form: `/blu add-todo`
-- Argument hint: `[optional description]`
+- Argument hint: `<description>`
 - `/blu-add-todo Add-retry-telemetry`
 - `/blu add-todo`
 
@@ -45,14 +45,12 @@
 
 
 - `.blueprint/todos/TODO.md`
-- `optional .blueprint/notes/NOTES.md updates when converting a note`
 
 
 ## Required MCP Tools
 
 
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
-- `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
 ## Skills And Subagents

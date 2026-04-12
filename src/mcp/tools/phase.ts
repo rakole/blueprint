@@ -24,6 +24,12 @@ type RoadmapAddPhaseArgs = {
   description: string;
 };
 
+type RoadmapInsertPhaseArgs = {
+  cwd?: string;
+  after: string;
+  description: string;
+};
+
 type RoadmapRemovePhaseArgs = {
   cwd?: string;
   phase: string;
@@ -103,6 +109,19 @@ type ParsedRoadmapPhase = {
 };
 
 type RoadmapAddPhaseResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  slug: string;
+  phaseDir: string;
+  roadmapPath: string;
+  milestone: string | null;
+  written: boolean;
+  warnings: string[];
+};
+
+type RoadmapInsertPhaseResult = {
+  afterPhaseNumber: string;
   phaseNumber: string;
   phasePrefix: string;
   phaseName: string;
@@ -445,6 +464,11 @@ const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
   description: z.string()
 };
+const roadmapInsertPhaseInputSchema = {
+  cwd: z.string().optional(),
+  after: z.string(),
+  description: z.string()
+};
 const roadmapRemovePhaseInputSchema = {
   cwd: z.string().optional(),
   phase: z.string()
@@ -527,6 +551,10 @@ function normalizePhaseNumber(value: string): string {
     .join(".");
 }
 
+function basePhaseNumber(value: string): string {
+  return normalizePhaseNumber(value).split(".")[0] ?? normalizePhaseNumber(value);
+}
+
 function comparePhaseNumbers(left: string, right: string): number {
   const leftParts = normalizePhaseNumber(left)
     .split(".")
@@ -558,6 +586,10 @@ function formatPhasePrefix(value: string): string {
 function extractPhaseNumberToken(value: string): string | null {
   const match = value.trim().match(/(\d+(?:\.\d+)?)/);
   return match ? normalizePhaseNumber(match[1]) : null;
+}
+
+function isIntegerPhaseNumber(value: string): boolean {
+  return !normalizePhaseNumber(value).includes(".");
 }
 
 function slugToTitle(value: string): string {
@@ -669,6 +701,23 @@ function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
   return String(maxIntegerPhase + 1);
 }
 
+function nextDecimalPhaseNumber(
+  phases: ParsedRoadmapPhase[],
+  afterPhaseNumber: string
+): string {
+  const normalizedAfterPhase = normalizePhaseNumber(afterPhaseNumber);
+  const decimalMatcher = new RegExp(`^${escapeForRegex(normalizedAfterPhase)}\\.(\\d+)$`);
+  const suffixes = phases
+    .map((phase) => phase.phaseNumber)
+    .map((phaseNumber) => phaseNumber.match(decimalMatcher)?.[1] ?? null)
+    .filter((suffix): suffix is string => suffix !== null)
+    .map((suffix) => Number.parseInt(suffix, 10))
+    .filter((suffix) => !Number.isNaN(suffix));
+  const nextSuffix = suffixes.length === 0 ? 1 : Math.max(...suffixes) + 1;
+
+  return `${normalizedAfterPhase}.${nextSuffix}`;
+}
+
 function escapeForRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -777,6 +826,66 @@ function appendPhaseLineToRoadmap(
   });
 }
 
+function insertPhaseLineToRoadmap(
+  raw: string,
+  insertAfterPhaseNumber: string,
+  phaseNumber: string,
+  phaseName: string
+): string {
+  const normalizedAnchor = normalizePhaseNumber(insertAfterPhaseNumber);
+  const phaseLine = `- [ ] **Phase ${phaseNumber}: ${phaseName}**`;
+  const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!phasesSectionPattern.test(raw)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+    );
+  }
+
+  let inserted = false;
+
+  const content = raw.replace(phasesSectionPattern, (_full, header: string, body: string) => {
+    const lines = body
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
+    const anchorIndex = lines.findIndex((line) => {
+      const match = line.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
+      return match ? normalizePhaseNumber(match[1]) === normalizedAnchor : false;
+    });
+
+    if (anchorIndex === -1) {
+      return `${header}${body}`;
+    }
+
+    lines.splice(anchorIndex + 1, 0, phaseLine);
+    inserted = true;
+
+    return `${header}${lines.join("\n")}\n`;
+  });
+
+  if (!inserted) {
+    throw new Error(
+      `Phase ${insertAfterPhaseNumber} could not be located in the roadmap phases list.`
+    );
+  }
+
+  return content;
+}
+
+function buildPhaseDetailBlock(
+  phaseNumber: string,
+  phaseName: string,
+  dependsOnPhaseNumber: string | null = null
+): string {
+  return `### Phase ${phaseNumber}: ${phaseName}
+**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
+**Requirements**: none yet
+**Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
+**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
+**Status**: planned
+`;
+}
+
 function appendPhaseDetailsToRoadmap(
   raw: string,
   phaseNumber: string,
@@ -788,13 +897,7 @@ function appendPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = `### Phase ${phaseNumber}: ${phaseName}
-**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
-**Requirements**: none yet
-**Depends on**: none
-**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
-**Status**: planned
-`;
+  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName);
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (phaseDetailsSectionPattern.test(raw)) {
@@ -814,6 +917,71 @@ function appendPhaseDetailsToRoadmap(
 ## Phase Details
 
 ${detailBlock}`;
+}
+
+function insertPhaseDetailsToRoadmap(
+  raw: string,
+  phaseGroupNumbers: string[],
+  phaseNumber: string,
+  phaseName: string,
+  dependsOnPhaseNumber: string
+): string {
+  const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
+
+  if (detailHeadingPattern.test(raw)) {
+    return raw;
+  }
+
+  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber).trimEnd();
+  const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!phaseDetailsSectionPattern.test(raw)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phase Details" section.`
+    );
+  }
+
+  const phaseGroupSet = new Set(phaseGroupNumbers.map((value) => normalizePhaseNumber(value)));
+  let inserted = false;
+  const content = raw.replace(
+    phaseDetailsSectionPattern,
+    (_full, header: string, body: string) => {
+      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
+        (match) => match[1].trimEnd()
+      );
+
+      let insertIndex = -1;
+
+      for (let index = blocks.length - 1; index >= 0; index -= 1) {
+        const blockMatch = blocks[index]?.match(/^### Phase (\d+(?:\.\d+)?): /m);
+        const blockPhaseNumber = blockMatch ? normalizePhaseNumber(blockMatch[1]) : null;
+
+        if (blockPhaseNumber && phaseGroupSet.has(blockPhaseNumber)) {
+          insertIndex = index + 1;
+          break;
+        }
+      }
+
+      if (insertIndex === -1) {
+        throw new Error(
+          `Phase ${dependsOnPhaseNumber} is missing a matching entry under the roadmap's "## Phase Details" section. Resolve roadmap drift before inserting a decimal phase.`
+        );
+      }
+
+      blocks.splice(insertIndex, 0, detailBlock);
+      inserted = true;
+
+      return `${header}${blocks.join("\n\n")}\n`;
+    }
+  );
+
+  if (!inserted) {
+    throw new Error(
+      `Phase ${phaseNumber} could not be inserted into the roadmap's "## Phase Details" section.`
+    );
+  }
+
+  return content;
 }
 
 function removePhaseLineFromRoadmap(
@@ -1369,6 +1537,123 @@ export async function blueprintRoadmapAddPhase(
   }
 
   return {
+    phaseNumber,
+    phasePrefix,
+    phaseName: normalizedDescription,
+    slug,
+    phaseDir,
+    roadmapPath: roadmap.path,
+    milestone: roadmap.milestone,
+    written: true,
+    warnings
+  };
+}
+
+export async function blueprintRoadmapInsertPhase(
+  args: RoadmapInsertPhaseArgs
+): Promise<RoadmapInsertPhaseResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const roadmap = await readRoadmap(projectRoot);
+  const normalizedDescription = normalizePhaseDescription(args.description);
+
+  if (normalizedDescription.length === 0) {
+    throw new Error(
+      "Phase description required. Re-run /blu-insert-phase with an integer phase number such as 3 and a concise description."
+    );
+  }
+
+  const afterPhaseNumber = extractPhaseNumberToken(args.after ?? "");
+
+  if (!afterPhaseNumber) {
+    throw new Error(
+      "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+    );
+  }
+
+  if (!isIntegerPhaseNumber(afterPhaseNumber)) {
+    throw new Error(
+      `Phase ${afterPhaseNumber} cannot be used as an insertion target. Re-run /blu-insert-phase with an existing integer phase number such as ${basePhaseNumber(afterPhaseNumber)}.`
+    );
+  }
+
+  const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === afterPhaseNumber);
+
+  if (!targetPhase) {
+    throw new Error(
+      `Phase ${afterPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+
+  const targetPhaseDirectory = await findPhaseDirectory(projectRoot, afterPhaseNumber);
+
+  if (!targetPhaseDirectory.phaseDir) {
+    throw new Error(
+      targetPhaseDirectory.reason === "ambiguous"
+        ? `Phase ${afterPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting a decimal phase after it.`
+        : `Phase ${afterPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting a decimal phase after it.`
+    );
+  }
+
+  const phaseNumber = nextDecimalPhaseNumber(roadmap.phases, afterPhaseNumber);
+  const phasePrefix = formatPhasePrefix(phaseNumber);
+  const slug = slugifyPhaseName(normalizedDescription);
+  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
+  const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
+
+  if (
+    existingDecimalDirectory.reason === "ambiguous" ||
+    (existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir)
+  ) {
+    throw new Error(
+      existingDecimalDirectory.reason === "ambiguous"
+        ? `Phase ${phaseNumber} already has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting it into the roadmap.`
+        : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
+    );
+  }
+
+  const groupPhases = roadmap.phases.filter(
+    (phase) => basePhaseNumber(phase.phaseNumber) === afterPhaseNumber
+  );
+  const insertionAnchor = groupPhases.at(-1)?.phaseNumber ?? afterPhaseNumber;
+  const insertionAnchorIndex = roadmap.phases.findIndex(
+    (phase) => phase.phaseNumber === insertionAnchor
+  );
+
+  if (insertionAnchorIndex === -1) {
+    throw new Error(
+      `Phase ${afterPhaseNumber} could not be located in the roadmap phases list.`
+    );
+  }
+
+  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+  const insertedPhaseLines = insertPhaseLineToRoadmap(
+    rawRoadmap,
+    insertionAnchor,
+    phaseNumber,
+    normalizedDescription
+  );
+  const updatedRoadmap = insertPhaseDetailsToRoadmap(
+    insertedPhaseLines,
+    groupPhases.map((phase) => phase.phaseNumber),
+    phaseNumber,
+    normalizedDescription,
+    afterPhaseNumber
+  );
+  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+  const warnings: string[] = [];
+
+  await ensureParentDirectory(roadmapPath);
+  await fs.writeFile(roadmapPath, updatedRoadmap, "utf8");
+
+  if (existingDecimalDirectory.phaseDir === phaseDir || (await pathExists(phaseDirPath))) {
+    warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
+  } else {
+    await fs.mkdir(phaseDirPath, { recursive: true });
+  }
+
+  return {
+    afterPhaseNumber,
     phaseNumber,
     phasePrefix,
     phaseName: normalizedDescription,
@@ -2851,6 +3136,14 @@ export const phaseToolDefinitions = [
     inputSchema: roadmapAddPhaseInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintRoadmapAddPhase(args as RoadmapAddPhaseArgs)
+  },
+  {
+    name: "blueprint_roadmap_insert_phase",
+    description:
+      "Insert the next decimal Blueprint phase after an existing integer phase and derive the matching phase directory path without renumbering later phases.",
+    inputSchema: roadmapInsertPhaseInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintRoadmapInsertPhase(args as RoadmapInsertPhaseArgs)
   },
   {
     name: "blueprint_roadmap_remove_phase",
