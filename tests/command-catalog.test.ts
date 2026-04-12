@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { access } from "node:fs/promises";
 
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
@@ -26,17 +27,33 @@ const IMPLEMENTED_COMMANDS = [
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
+const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu/list-phase-assumptions.toml";
+
+async function pathExists(relativePath: string): Promise<boolean> {
+  try {
+    await access(relativePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
+  const listPhaseAssumptionsManifestExists = await pathExists(
+    LIST_PHASE_ASSUMPTIONS_MANIFEST
+  );
   const implemented = Object.entries(catalog.commands)
     .filter(([, entry]) => entry.implemented)
     .map(([command]) => command)
     .sort();
+  const expectedImplementedCommands = listPhaseAssumptionsManifestExists
+    ? [...IMPLEMENTED_COMMANDS, "list-phase-assumptions"]
+    : [...IMPLEMENTED_COMMANDS];
 
-  assert.deepEqual(implemented, [...IMPLEMENTED_COMMANDS].sort());
+  assert.deepEqual(implemented, [...expectedImplementedCommands].sort());
 
-  for (const command of IMPLEMENTED_COMMANDS) {
+  for (const command of expectedImplementedCommands) {
     const entry = catalog.commands[command];
 
     assert.equal(entry.status, "implemented");
@@ -46,6 +63,44 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.ok(entry.skillPath);
     assert.ok(entry.specPath);
     assert.deepEqual(entry.blockedBy, []);
+  }
+
+  const listPhaseAssumptions = catalog.commands["list-phase-assumptions"];
+
+  assert.equal(listPhaseAssumptions.primarySkill, "blueprint-phase-discovery");
+  assert.equal(listPhaseAssumptions.requiredToolsSatisfied, true);
+  assert.deepEqual(listPhaseAssumptions.requiredTools, [
+    "blueprint_phase_locate",
+    "blueprint_phase_context",
+    "blueprint_roadmap_read",
+    "blueprint_project_status"
+  ]);
+  assert.deepEqual(listPhaseAssumptions.availableOptionalAgents, [
+    "blueprint-researcher"
+  ]);
+
+  if (listPhaseAssumptionsManifestExists) {
+    assert.equal(listPhaseAssumptions.declaredStatus, "implemented");
+    assert.equal(listPhaseAssumptions.status, "implemented");
+    assert.equal(listPhaseAssumptions.implemented, true);
+    assert.equal(
+      listPhaseAssumptions.manifestPath,
+      LIST_PHASE_ASSUMPTIONS_MANIFEST
+    );
+    assert.equal(listPhaseAssumptions.skillPath, "skills/blueprint-phase-discovery.md");
+    assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
+    assert.deepEqual(listPhaseAssumptions.blockedBy, []);
+  } else {
+    assert.equal(listPhaseAssumptions.declaredStatus, "planned");
+    assert.equal(listPhaseAssumptions.status, "planned");
+    assert.equal(listPhaseAssumptions.implemented, false);
+    assert.equal(listPhaseAssumptions.manifestPath, null);
+    assert.equal(listPhaseAssumptions.skillPath, "skills/blueprint-phase-discovery.md");
+    assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
+    assert.match(
+      listPhaseAssumptions.blockedBy.join("\n"),
+      /Missing command manifest: commands\/blu\/list-phase-assumptions\.toml/
+    );
   }
 });
 

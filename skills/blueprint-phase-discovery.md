@@ -26,6 +26,7 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 ## Required Inputs
 
 - `docs/commands/discuss-phase.md`
+- `docs/commands/list-phase-assumptions.md`
 - `docs/commands/research-phase.md`
 - `docs/commands/ui-phase.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -37,6 +38,7 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 - `blueprint_phase_locate`
 - `blueprint_phase_context`
 - `blueprint_roadmap_read`
+- `blueprint_project_status`
 - `blueprint_phase_research_status`
 - `blueprint_phase_artifact_read`
 - `blueprint_phase_artifact_write`
@@ -75,6 +77,17 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 6. Require explicit overwrite confirmation before replacing existing research.
 7. Use `blueprint_command_catalog` before recommending `/blu:ui-phase`; otherwise route toward `/blu:progress`.
 8. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+
+### `list-phase-assumptions`
+
+1. Resolve the phase through `blueprint_phase_locate`; omitted phase input may be inferred from state or roadmap, but an explicit invalid phase must fail clearly.
+2. Read `blueprint_project_status`, `blueprint_roadmap_read`, and `blueprint_phase_context` before presenting any assumptions so the answer stays grounded in actual repo readiness, roadmap intent, and saved discovery artifacts.
+3. Keep the command read-only. Do not scaffold, write, repair, or update `.blueprint/` artifacts from this flow.
+4. Surface assumptions across the five required areas: technical approach, implementation order, scope boundaries, risk areas, and dependencies.
+5. Mark uncertainty explicitly instead of overstating confidence; use evidence-first language when context is thin or missing.
+6. If the requested phase cannot be resolved, report the exact failure reason and list valid roadmap phases instead of guessing a substitute.
+7. When deeper technical context would materially improve the summary, `blueprint-researcher` may be used as a bounded read-only sidecar, but the command still ends with conversational output only.
+8. End by inviting corrections and keeping any next-step suggestion inside the implemented Blueprint surface.
 
 ### `ui-phase`
 

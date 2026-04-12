@@ -185,6 +185,26 @@ test("phase discovery skill and bounded agent contracts are marked implemented i
   );
 });
 
+test("list-phase-assumptions docs stay read-only and use the discovery MCP tools", async () => {
+  const [commandDoc, skillsMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/list-phase-assumptions.md"),
+    readRepoFile("docs/SKILLS-AND-AGENTS.md")
+  ]);
+
+  assert.match(commandDoc, /Primary skill: `blueprint-phase-discovery`/);
+  assert.match(commandDoc, /Repo side effects: No durable artifact writes are planned\./);
+  assert.match(commandDoc, /## Blueprint And Global State Writes[\s\S]*none/);
+  assert.match(commandDoc, /## Required MCP Tools[\s\S]*`blueprint_phase_locate`/);
+  assert.match(commandDoc, /## Required MCP Tools[\s\S]*`blueprint_phase_context`/);
+  assert.match(commandDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_read`/);
+  assert.match(commandDoc, /## Required MCP Tools[\s\S]*`blueprint_project_status`/);
+  assert.match(commandDoc, /Shell Risk Profile[\s\S]*Low: read-only analysis\./);
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-phase-discovery` \| `implemented` \| Pre-planning discovery and requirements shaping \| `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` \|/
+  );
+});
+
 test("phase planning skill and bounded planning agents are marked implemented in docs", async () => {
   const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
 

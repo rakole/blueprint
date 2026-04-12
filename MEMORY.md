@@ -7,10 +7,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: Phase 4 validation rollout is underway after the 2026-04-11 runtime shipment; `validate-phase`, `verify-work`, `pause-work`, and `resume-work` are implemented and the next slice is `add-phase`
-- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the governance handoff/resume commands `pause-work` and `resume-work`, the read-only router/execution-prep commands `next`, `plan-phase`, and `execute-phase`, and the validation/UAT commands `validate-phase` and `verify-work` are implemented, and routing still filters to implemented commands only
+- Current milestone: Phase 4 validation rollout is underway after the 2026-04-11 runtime shipment; `validate-phase`, `verify-work`, `pause-work`, `resume-work`, and `list-phase-assumptions` are implemented and the next slice is `plan-milestone-gaps`
+- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the governance handoff/resume commands `pause-work` and `resume-work`, the read-only router/execution-prep commands `next`, `plan-phase`, and `execute-phase`, and the validation/UAT commands `validate-phase` and `verify-work` are implemented, and routing still filters to implemented commands only
 - Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, implemented validation artifacts, and Phase 4 execution summaries are present
-- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, keep later commands blocked until their substrate exists, and move the next slice to `add-phase`
+- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, keep later commands blocked until their substrate exists, and move the next slice to `plan-milestone-gaps`
 - Milestone-audit status: `/blu:audit-milestone` is now shipped as the roadmap-admin audit/reporting slice and writes a durable milestone report in `.blueprint/reports/`
 
 ## Stable References
@@ -94,9 +94,9 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Next Implementation Slice
 
-- implement `add-phase`
+- implement `plan-milestone-gaps`
 - preserve the shipped `audit-milestone` report contract and implemented-only routing behavior
-- preserve the shipped Phase 3 discovery artifact contracts and implemented-only routing behavior
+- preserve the shipped Phase 3 discovery artifact contracts, the read-only `list-phase-assumptions` contract, and implemented-only routing behavior
 - keep `plan-phase` routed through the plan index plus dedicated plan read/write MCP tools
 - keep `execute-phase` routed through the plan index plus dedicated summary read/write MCP tools
 - keep command-catalog rollout aligned with each shipped Phase 4 command

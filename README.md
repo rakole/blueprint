@@ -18,6 +18,7 @@ This repository still carries the planning pack that locked the product and arch
 
 - Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
 - Phase 3 discovery commands are also shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
+- The read-only phase-discovery assumptions command `/blu:list-phase-assumptions` is now shipped on the same discovery substrate
 - The read-only lifecycle router `/blu:next` is now shipped on the existing project-status and state-routing substrate
 - The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
@@ -135,6 +136,7 @@ These runtime files exist today:
 - `commands/blu/health.toml`
 - `commands/blu/map-codebase.toml`
 - `commands/blu/discuss-phase.toml`
+- `commands/blu/list-phase-assumptions.toml`
 - `commands/blu/research-phase.toml`
 - `commands/blu/ui-phase.toml`
 - `commands/blu/plan-phase.toml`
