@@ -69,7 +69,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
 - `validate-phase` and `verify-work` use `blueprint-verifier`.
 - `add-phase`, `remove-phase`, `complete-milestone`, and `milestone-summary` remain skill-led roadmap-admin flows and do not require dedicated subagents.
-- `plan-milestone-gaps` and `new-milestone` use `blueprint-roadmapper`.
+- `plan-milestone-gaps` may use `blueprint-roadmapper` for grouped gap-closure proposals, and `new-milestone` may use it for carry-forward synthesis.
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.
 - `code-review-fix` and `audit-fix` use `blueprint-fixer`.

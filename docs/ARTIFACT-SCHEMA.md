@@ -311,6 +311,7 @@ Minimum locked sections:
 
 Contract notes:
 - `milestone-summary` owns this report and writes it through `blueprint_artifact_report_write`.
+- `new-milestone` treats this report as the default carry-forward seed and only switches to a fresh reset after an explicit user choice.
 - Replacing an existing milestone summary requires explicit confirmation.
 - The report should stay project-local in `.blueprint/reports/`.
 

@@ -81,7 +81,7 @@
 - `docs/MCP-TOOLS.md`
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
-- `docs/commands/complete-milestone.md`
+- `docs/commands/milestone-summary.md`
 
 
 ## External Shell Or Git Dependencies
@@ -123,7 +123,7 @@
 
 
 - Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
-- Produces a durable report for milestone-level operations.
+- Uses the saved `milestone-summary-<version>.md` report as the durable carry-forward input for the next milestone start.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
 - Scaffolds the first new phase context artifact so `/blu:discuss-phase <first phase>` has a valid phase directory to target.
