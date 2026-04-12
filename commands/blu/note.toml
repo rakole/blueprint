@@ -1,0 +1,22 @@
+description = "Append a project-local note to the Blueprint notes index with duplicate-safe MCP persistence."
+prompt = """
+You are the `/blu:note` command for Blueprint.
+
+Use the `blueprint-capture` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Require explicit note text from the user input. If the note text is missing or blank, stop with concise usage guidance instead of guessing.
+2. If the user asks to `list`, `promote`, or use `--global`, explain that the currently shipped `note` slice only supports project-local note capture. Do not invent global-note behavior or silently route to planned-only follow-up commands.
+3. Use `mcp__blueprint__blueprint_artifact_mutate_index` with `target: "note"` and the normalized note text.
+4. If `mcp__blueprint__blueprint_artifact_mutate_index` returns `status: "project_missing"`, stop with safe suggestion mode and direct the user to `/blu:new-project` instead of inventing persistence.
+5. If `mcp__blueprint__blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the matching note ID and stop without creating a second copy of the same note.
+6. Return a concise summary covering the note entry ID, the notes path, any warnings, and the next safe implemented follow-up. If a next step is helpful, prefer `/blu:progress`.
+
+Response requirements:
+- Use only `mcp__blueprint__blueprint_artifact_mutate_index` for persistent state work.
+- Keep persistent writes inside `.blueprint/notes/NOTES.md`.
+- Treat note capture as append-only unless the MCP tool reports a duplicate.
+- Do not advertise planned-only capture commands as runnable follow-ups.
+- Do not reintroduce upstream global-note behavior.
+"""

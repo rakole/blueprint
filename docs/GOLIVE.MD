@@ -28,8 +28,8 @@ What is already live:
 - all Wave 0 foundation commands
 - all Wave 1 core lifecycle commands
 - the Wave 2 roadmap-admin slice including `insert-phase`, `complete-milestone`, `milestone-summary`, and `new-milestone`
-- the first Wave 3 capture pass through `add-backlog`
-- the first Wave 4 review/docs passes through `secure-phase` and `docs-update`
+- the shipped Wave 3 capture commands `note`, `add-todo`, and `add-backlog`
+- the shipped Wave 4 review/docs passes through `secure-phase` and `docs-update`
 
 What remains closest on the roadmap:
 
@@ -66,9 +66,7 @@ What remains closest on the roadmap:
   - `quick`
   - `do`
   - `add-tests`
-- Continue the capture layer beyond the shipped `add-backlog` slice:
-  - `note`
-  - `add-todo`
+- Continue the remaining capture layer after the shipped `note`, `add-todo`, and `add-backlog` slice:
   - `check-todos`
   - `review-backlog`
   - `explore`
