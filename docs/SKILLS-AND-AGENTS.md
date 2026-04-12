@@ -12,6 +12,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-bootstrap` | `implemented` | Repo bootstrap and project initialization | `new-project` |
 | `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health`, `pause-work`, `resume-work` |
 | `blueprint-map` | `implemented` | Brownfield codebase mapping | `map-codebase` |
+| `blueprint-capture` | `implemented` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
 | `blueprint-phase-discovery` | `implemented` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
 | `blueprint-phase-execution` | `implemented` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
@@ -22,7 +23,6 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
-| `blueprint-capture` | `planned` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
 | `blueprint-debug` | `planned` | Debug investigations and recovery plans | `debug` |
 | `blueprint-review` | `planned` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
 | `blueprint-docs` | `planned` | Documentation generation and verification | `docs-update` |

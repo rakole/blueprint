@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, and the current roadmap-admin slice including the Wave 2 milestone-closeout trio. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, and the first Wave 3 capture command `/blu:add-backlog`. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -26,6 +26,7 @@ This repository still carries the planning pack that locked the product and arch
 - The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
 - The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
+- The capture command `/blu:add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
 - `insert-phase` remains the only blocked Wave 2 command and must stay non-routable until its own manifest, primary skill contract, and required MCP substrate actually ship
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
@@ -166,6 +167,7 @@ These runtime files exist today:
 - `commands/blu/progress.toml`
 - `commands/blu/health.toml`
 - `commands/blu/map-codebase.toml`
+- `commands/blu/add-backlog.toml`
 - `commands/blu/discuss-phase.toml`
 - `commands/blu/list-phase-assumptions.toml`
 - `commands/blu/research-phase.toml`
@@ -184,15 +186,17 @@ These runtime files exist today:
 - `commands/blu/next.toml`
 - `commands/blu/pause-work.toml`
 - `commands/blu/resume-work.toml`
-- `skills/blueprint-router.md`
-- `skills/blueprint-bootstrap.md`
-- `skills/blueprint-governance.md`
-- `skills/blueprint-map.md`
-- `skills/blueprint-phase-discovery.md`
-- `skills/blueprint-phase-planning.md`
-- `skills/blueprint-phase-execution.md`
-- `skills/blueprint-phase-validation.md`
-- `skills/blueprint-roadmap-admin.md`
+- `skills/blueprint-router/SKILL.md`
+- `skills/blueprint-router.md` (legacy mirror retained for compatibility docs during migration)
+- `skills/blueprint-bootstrap/SKILL.md`
+- `skills/blueprint-governance/SKILL.md`
+- `skills/blueprint-map/SKILL.md`
+- `skills/blueprint-capture/SKILL.md`
+- `skills/blueprint-phase-discovery/SKILL.md`
+- `skills/blueprint-phase-planning/SKILL.md`
+- `skills/blueprint-phase-execution/SKILL.md`
+- `skills/blueprint-phase-validation/SKILL.md`
+- `skills/blueprint-roadmap-admin/SKILL.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`
