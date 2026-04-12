@@ -182,6 +182,7 @@ const DEFAULT_STATE: BlueprintState = {
 
 const PAUSE_HANDOFF_REPORT_PATH = `${BLUEPRINT_REPORTS_PATH}/pause-work-latest.md`;
 const PAUSE_WORK_COMMAND = "/blu:pause-work";
+const RESUME_WORK_COMMAND = "/blu:resume-work";
 const PAUSE_HANDOFF_BLOCKER_PREFIX = "Paused handoff is active at ";
 
 const stateUpdateInputSchema = {
@@ -454,8 +455,8 @@ function buildPauseHandoffNextAction(
   const phaseLabel = currentPhase ?? handoff.currentPhase;
 
   return phaseLabel
-    ? `Run /blu:progress to review the saved pause handoff for Phase ${phaseLabel} and the next safe implemented action`
-    : "Run /blu:progress to review the saved pause handoff and the next safe implemented action";
+    ? `Run ${RESUME_WORK_COMMAND} to restore the saved pause handoff for Phase ${phaseLabel} and recover the next safe implemented action`
+    : `Run ${RESUME_WORK_COMMAND} to restore the saved pause handoff and recover the next safe implemented action`;
 }
 
 function renderStateDocument(state: BlueprintState): string {

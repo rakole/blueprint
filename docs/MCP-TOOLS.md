@@ -105,6 +105,7 @@ Blueprint commands must use MCP tools for deterministic state operations. This k
 - `new-project`, `settings`, `set-profile`, `progress`, `health` lean on project, config, and state tools.
 - `/blu`, `help`, and `progress` must filter to catalog entries where `implemented` is `true`.
 - `pause-work` uses `blueprint_pause_handoff_get` and `blueprint_pause_handoff_write` to keep the latest resumable handoff in `.blueprint/reports/` while `blueprint_state_update` keeps `STATE.md` aligned.
+- `resume-work` uses `blueprint_project_status`, `blueprint_state_load`, `blueprint_artifact_list`, `blueprint_pause_handoff_get`, and `blueprint_state_update` to restore the saved handoff context and re-anchor `STATE.md` on the next safe implemented action.
 - `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to compare milestone intent against completed evidence and build the durable audit report before any archival step.
 - `plan-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to read existing plans, persist updated `XX-YY-PLAN.md` content, and keep readiness aligned.
 - `execute-phase` uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_summary_write` to read plans, persist `XX-YY-SUMMARY.md` execution evidence, and keep completion state aligned.
