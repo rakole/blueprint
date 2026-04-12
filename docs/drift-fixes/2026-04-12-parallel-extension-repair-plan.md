@@ -469,7 +469,7 @@ Coordination rules:
    - node scripts/drift-fix-memory.mjs complete --agent AGENT_ID --task TASK_ID --summary "what changed" --tests "commands run" --files "file1,file2"
 11. If blocked, record the blocker instead of guessing:
    - node scripts/drift-fix-memory.mjs block --agent AGENT_ID --task TASK_ID --reason "exact blocker"
-
+12. Create a new worktree for yourself to work on, once work is completed push the worktree to remote, raise PR to main, merge it. Once merged, cleanup the branches and update local main.
 Execution style:
 - Work from the plan doc, not from memory.
 - Keep outputs concrete and repo-specific.
