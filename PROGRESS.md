@@ -6,7 +6,7 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 26
+Total: 25
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -28,14 +28,13 @@ Total: 26
 | 16 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
 | 17 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
 | 18 | `code-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 19 | `secure-phase` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 20 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 21 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 22 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 23 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 24 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 25 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 26 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 19 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
+| 20 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 21 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 22 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 23 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 24 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
+| 25 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -47,7 +46,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 | 2 | `fast` | `debug` | `review-backlog` | Safe parallel set. |
 | 3 | `check-todos` | `explore` | `add-tests` | Safe parallel set. |
 | 4 | `pr-branch` | `undo` | `review` | Safe parallel set. |
-| 5 | `code-review` | `secure-phase` | `ui-review` | Safe parallel set. |
+| 5 | `code-review` | `ui-review` | — | Safe parallel set. |
 | 6 | `audit-fix` | `code-review-fix` | `ship` | Safe parallel set. |
 | 7 | `cleanup` | `new-workspace` | `workstreams` | Safe parallel set. |
 | 8 | `update` | `reapply-patches` | `remove-workspace` | Safe parallel set. |
@@ -61,7 +60,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 27
+Total: 28
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -92,3 +91,4 @@ Total: 27
 | 25 | `list-phase-assumptions` | ✅ | `implemented` | 2 | `Roadmap And Milestone` | Low |
 | 26 | `add-backlog` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
 | 27 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
+| 28 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
