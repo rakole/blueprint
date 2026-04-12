@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build --silent && tsx --test tests/**/*.test.ts"
+    "test": "npm run build --silent && tsx --test tests/**/*.test.ts",
+    "smoke:gemini-clean-home": "node scripts/gemini-clean-home-smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
