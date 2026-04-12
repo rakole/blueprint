@@ -59,8 +59,9 @@ What remains closest on the roadmap:
 - Make GitHub install repeatable from a clean checkout.
   - Release flow must always run `npm ci`, `npm run build`, and verify that `dist/mcp/*` and `dist/hooks/*` are current.
   - Blueprint's own Gemini constraints already require bundled `dist/` output before release.
-- Add a real install smoke test in addition to the current repo-local tests.
-  - Minimum path: install the extension, restart Gemini CLI, confirm `/blu` and `/blu:help` load, and execute at least one MCP-backed command successfully.
+- Keep the real install smoke test green and extend it toward publish-source coverage.
+  - Current path: `npm run test:integration:extension` validates local-path `link` and local-path `install` inside a Linux container, checks the bundled MCP and hook entrypoints, and runs a gated live `/help` smoke when `GEMINI_API_KEY` is available.
+  - Remaining release-path hardening: add a separate GitHub-source smoke after public publishing or tagged releases exist.
 - Add release automation or a release checklist that enforces build, test, and artifact verification before a tag is published.
   - There is currently no `.github/` release workflow in this repo.
 - Add `description` to `gemini-extension.json`.

@@ -68,10 +68,16 @@ Required for:
 Cover:
 
 - extension installs from a clean checkout
+- local-path `link` and local-path `install` inside a Linux Testcontainers runtime
 - bundled code is present
 - command files resolve
 - MCP server paths resolve from the installed extension
 - hook paths resolve from the built `dist/` output for the shipped hooks
+- live interactive `/help` smoke when `GEMINI_API_KEY` is available
+
+Current entrypoint:
+
+- `npm run test:integration:extension`
 
 ## End-to-End Smoke Flow
 
