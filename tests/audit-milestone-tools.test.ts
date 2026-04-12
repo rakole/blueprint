@@ -307,6 +307,6 @@ test("project status routes fully verified milestones to audit-milestone until t
 
   assert.doesNotMatch(afterStatus.nextAction, /\/blu:audit-milestone/);
   assert.doesNotMatch(afterState.derivedStatus.nextAction, /\/blu:audit-milestone/);
-  assert.match(afterStatus.nextAction, /\/blu:progress/);
-  assert.match(afterState.derivedStatus.nextAction, /\/blu:progress/);
+  assert.match(afterStatus.nextAction, /\/blu:complete-milestone v2/);
+  assert.match(afterState.derivedStatus.nextAction, /\/blu:complete-milestone v2/);
 });

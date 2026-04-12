@@ -7,11 +7,11 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Project Status
 
-- Current milestone: post-shipment lifecycle and roadmap-admin closeout is underway after the 2026-04-11 runtime shipment; `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `pause-work`, `resume-work`, `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, and `list-phase-assumptions` are implemented and the next slice is `complete-milestone`
-- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the lifecycle commands `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, the router command `next`, the governance handoff/resume commands `pause-work` and `resume-work`, and the current Wave 2 roadmap-admin commands `add-phase`, `remove-phase`, `plan-milestone-gaps`, and `audit-milestone` are implemented, and routing still filters to implemented commands only
+- Current milestone: post-shipment lifecycle and roadmap-admin closeout now includes the shipped Wave 2 milestone-closeout trio; `complete-milestone`, `milestone-summary`, and `new-milestone` are implemented alongside the earlier lifecycle, governance, and roadmap-admin surfaces, while `insert-phase` remains blocked
+- Runtime status: Wave 0 plus the Phase 3 discovery commands (`discuss-phase`, `research-phase`, `ui-phase`), the roadmap-discovery command `list-phase-assumptions`, the lifecycle commands `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, the router command `next`, the governance handoff/resume commands `pause-work` and `resume-work`, and the current Wave 2 roadmap-admin commands `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone` are implemented, and routing still filters to implemented commands only
 - Planning status: shared architecture docs, executable Wave 0 plus Phase 3 runtime artifacts, a closed drift ledger, shipped advisory hooks, repaired research-phase parity guarantees, implemented plan-phase artifacts, implemented validation artifacts, and Phase 4 execution summaries are present
-- Implementation strategy: build one command at a time, preserve the closed Phase 2.2 and shipped Phase 3 contract guarantees, keep later commands blocked until their substrate exists, and move the next slice to `complete-milestone`
-- Roadmap-admin status: `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, and `/blu:audit-milestone` are now shipped as the current roadmap-admin slice, covering whole-number phase append, future-phase removal with renumbering, grouped gap-closure planning, and milestone audit reporting
+- Implementation strategy: keep Wave 2 closeout contracts locked, preserve the closed Phase 2.2 and shipped Phase 3 guarantees, keep `insert-phase` and later surfaces blocked until their substrate exists, and only expand routing when manifests, primary skills, and required MCP tools all line up
+- Roadmap-admin status: `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped as the current roadmap-admin slice, covering whole-number phase append, future-phase removal with renumbering, grouped gap-closure planning, milestone audit reporting, report-driven milestone closeout, summary generation, and carry-forward milestone reset
 
 ## Stable References
 
@@ -94,7 +94,9 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Next Implementation Slice
 
-- implement `complete-milestone`
+- keep the shipped `complete-milestone`, `milestone-summary`, and `new-milestone` contracts aligned with their docs, manifests, shared skill, and implemented-only routing behavior
+- keep `insert-phase` blocked until it is separately replanned with a matching manifest, primary skill contract, required MCP substrate, and regression coverage
+- start any post-Wave-2 rollout from a fresh plan instead of treating the closeout trio as still upcoming
 - preserve the shipped `add-phase`, `remove-phase`, `plan-milestone-gaps`, and `audit-milestone` contracts plus implemented-only routing behavior
 - preserve the shipped Phase 3 discovery artifact contracts, the read-only `list-phase-assumptions` contract, and implemented-only routing behavior
 - keep `plan-phase` routed through the plan index plus dedicated plan read/write MCP tools
@@ -125,4 +127,5 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `ui-phase` keeps a single declared phase artifact: `XX-UI-SPEC.md`, which may hold either a UI contract or an explicit skip rationale
 - `plan-phase` now uses `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_phase_plan_write` to persist real `XX-YY-PLAN.md` content
 - `validate-phase` now uses `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_validation_read`, and `blueprint_phase_validation_write` to persist real `XX-VERIFICATION.md` content
-- Future sessions should start the next unshipped roadmap command slice at `complete-milestone`, while later commands remain non-routable until the required manifests, primary skills, and MCP tools exist
+- `docs/build/WAVE-2-AGENT-WORKFLOW.md`, `docs/build/WAVE-2-PARALLEL-CLOSEOUT-PLAN.md`, and `docs/build/WAVE-2-AUTO-AGENT-META-PROMPT.md` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles
+- Future sessions should treat the Wave 2 milestone-closeout trio as shipped, keep `insert-phase` blocked until its own substrate exists, and only start a new slice once its manifest, primary skill, and required MCP tools are planned together

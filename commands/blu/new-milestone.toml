@@ -1,0 +1,27 @@
+description = "Start the next milestone from saved carry-forward context, rewrite the starter docs, and scaffold the next whole-number phase."
+prompt = """
+You are the `/blu:new-milestone` command for Blueprint.
+
+Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. When the carry-forward summary needs a second pass for next-milestone grouping, use the `blueprint-roadmapper` subagent for bounded read-only synthesis.
+
+Follow this flow exactly:
+
+1. Resolve the current milestone and phase inventory with `mcp__blueprint__blueprint_roadmap_read`.
+2. Build carry-forward context through `mcp__blueprint__blueprint_artifact_summary_digest` using explicit `artifactPaths` that include `.blueprint/ROADMAP.md` and the matching milestone summary report.
+3. If the milestone summary report is missing, stop with concise guidance to run `/blu:milestone-summary` first.
+4. Treat carry-forward as the default mode. Only switch to a fresh reset when the user explicitly asks for it.
+5. If the user did not supply a new milestone name, derive a concise proposal from the current milestone plus the carry-forward summary and show it in the confirmation gate before any write.
+6. Derive the first new phase number as the next integer after the highest base phase number already present in the roadmap. Preserve historical phase directories; do not delete or renumber earlier milestone artifacts as part of this command.
+7. When the summary benefits from a second-pass roadmap shape review, use the `blueprint-roadmapper` subagent for ordered phase proposals and carry-forward grouping notes. The command still owns the final phase numbers and write path.
+8. Require explicit overwrite confirmation before replacing `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, or `.blueprint/ROADMAP.md`.
+9. Regenerate the next milestone starter docs through `mcp__blueprint__blueprint_artifact_scaffold` using a carry-forward bootstrap seed. Include `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/phases/`, and a first phase context scaffold at `.blueprint/phases/<NN>-<slug>/<NN-CONTEXT.md>`.
+10. Call `mcp__blueprint__blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu:new-milestone` as the active command, updates `currentMilestone` to the new milestone, updates `currentPhase` to the first new phase number, and points the next safe implemented follow-up to `/blu:discuss-phase <first phase>`.
+11. Return a concise completion summary covering the new milestone name, whether the flow used carry-forward or an explicit reset, the first new phase scaffolded, any warnings, and the next safe Blueprint action.
+
+Response requirements:
+- Use only `mcp__blueprint__blueprint_roadmap_read`, `mcp__blueprint__blueprint_artifact_summary_digest`, `mcp__blueprint__blueprint_artifact_scaffold`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
+- Keep persistent writes inside `.blueprint/`.
+- Carry-forward is the default safe path. Do not silently reset the milestone from scratch.
+- Preserve historical phase directories and numbering history. This command advances to the next whole-number phase; it does not clean up prior milestone artifacts.
+- Route the follow-up to `/blu:discuss-phase <first phase>` instead of later blocked commands.
+"""

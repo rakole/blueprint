@@ -226,6 +226,268 @@ Exercise the execute-phase router.
   return repoPath;
 }
 
+async function createMilestoneCloseoutRepo(reportStage: "none" | "audit" | "complete" | "summary"): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-milestone-closeout-routing-"));
+  const repoPath = path.join(tempRoot, "repo");
+  const reportsDir = path.join(repoPath, ".blueprint/reports");
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-milestone-closeout");
+
+  await mkdir(phaseRoot, { recursive: true });
+  await mkdir(reportsDir, { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Milestone Closeout Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [x] **Phase 2: Validation Hardening**
+- [x] **Phase 3: Milestone Closeout**
+
+## Phase Details
+
+### Phase 2: Validation Hardening
+**Goal**: Finish the earlier validation slice.
+**Requirements**: CLOSE-01
+
+### Phase 3: Milestone Closeout
+**Goal**: Finalize milestone evidence and archival routing.
+**Requirements**: CLOSE-02
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: 3
+- Active command: /blu:progress
+- Next action: Run /blu:progress
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-CONTEXT.md"),
+    `# Phase 03: Milestone Closeout - Context
+
+## Decisions
+- All milestone phases are complete, so routing should move through audit, completion, summary, and new milestone steps in order.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-RESEARCH.md"),
+    `# Phase 03: Milestone Closeout - Research
+
+**Researched:** 2026-04-12
+**Domain:** milestone closeout routing
+**Confidence:** HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| CLOSE-02 | Route completed milestone work through audit, completion, summary, and carry-forward reset. | Use report presence plus all-phases-complete state to derive the next safe closeout action. |
+
+## Summary
+
+- The final completed phase should route to the milestone audit first, then completion, then summary, then the next milestone start.
+
+## User Constraints
+
+- Keep writes inside .blueprint/.
+- Do not expose blocked commands while deriving the next action.
+
+## Standard Stack
+
+- TypeScript
+- node:test via tsx --test
+
+## Architecture Patterns
+
+- Use durable milestone reports as routing checkpoints.
+- Keep routing dependent on implemented commands only.
+
+## Don't Hand-Roll
+
+- Reuse the existing roadmap, artifact, and state MCP substrates.
+
+## Common Pitfalls
+
+- Skipping the audit report gate and jumping straight to archival.
+- Treating invalid research as good enough to continue closeout routing.
+
+## Code Examples
+
+\`\`\`ts
+await blueprintStateLoad({ cwd: repoPath });
+\`\`\`
+
+## Recommendations
+
+- Route to \`/blu:audit-milestone v2\` when all milestone phases are complete and no milestone audit report exists.
+- Advance sequentially through completion, summary, and \`new-milestone\` once each report appears.
+
+## Sources
+
+- src/mcp/tools/state.ts
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-UI-SPEC.md"),
+    `# Phase 03: Milestone Closeout - UI Spec
+
+## Outcome Mode
+
+- Explicit skip rationale
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-01-PLAN.md"),
+    `---
+phase: 3
+plan_id: "01"
+title: "Milestone Closeout"
+wave: 1
+status: done
+objective: "Close the milestone."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 03: Milestone Closeout - Plan 01
+
+## Goal
+
+Close the milestone.
+
+## Scope
+
+- Reports and routing only.
+
+## Tasks
+
+### Task 1
+
+#### Read First
+
+- .blueprint/ROADMAP.md
+
+#### Action
+
+- Generate milestone closeout reports.
+
+#### Acceptance Criteria
+
+- Routing advances to the next closeout step.
+
+## Verification
+
+- Confirm milestone-closeout routing.
+
+## Must Haves
+
+- Keep writes inside .blueprint/.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Milestone Closeout - Summary
+
+## Result
+
+- Execution completed and the milestone is ready for closeout routing.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-VERIFICATION.md"),
+    `# Phase 03: Milestone Closeout - Verification
+
+## Result
+
+- Validation evidence is complete.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-UAT.md"),
+    `# Phase 03: Milestone Closeout - UAT
+
+## Result
+
+- UAT evidence is complete.
+`,
+    "utf8"
+  );
+
+  if (reportStage === "audit" || reportStage === "complete" || reportStage === "summary") {
+    await writeFile(
+      path.join(reportsDir, "milestone-audit-v2.md"),
+      `# Milestone Audit: v2
+
+## Result
+
+- Audit complete.
+`,
+      "utf8"
+    );
+  }
+
+  if (reportStage === "complete" || reportStage === "summary") {
+    await writeFile(
+      path.join(reportsDir, "milestone-complete-v2.md"),
+      `# Milestone Complete: v2
+
+## Result
+
+- Completion recorded.
+`,
+      "utf8"
+    );
+  }
+
+  if (reportStage === "summary") {
+    await writeFile(
+      path.join(reportsDir, "milestone-summary-v2.md"),
+      `# Milestone Summary: v2
+
+## Result
+
+- Carry-forward summary recorded.
+`,
+      "utf8"
+    );
+  }
+
+  return repoPath;
+}
+
 test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
   const repoPath = await createRepoFromFixture("uninitialized-repo");
   t.after(async () => {
@@ -384,6 +646,37 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu:validate-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu:validate-phase 3/);
+});
+
+test("project status routes milestone closeout through audit, completion, summary, and next milestone in order", async (t) => {
+  const noReportsRepo = await createMilestoneCloseoutRepo("none");
+  const auditRepo = await createMilestoneCloseoutRepo("audit");
+  const completeRepo = await createMilestoneCloseoutRepo("complete");
+  const summaryRepo = await createMilestoneCloseoutRepo("summary");
+  t.after(async () => {
+    await rm(path.dirname(noReportsRepo), { recursive: true, force: true });
+    await rm(path.dirname(auditRepo), { recursive: true, force: true });
+    await rm(path.dirname(completeRepo), { recursive: true, force: true });
+    await rm(path.dirname(summaryRepo), { recursive: true, force: true });
+  });
+
+  const noReportsStatus = await blueprintProjectStatus({ cwd: noReportsRepo });
+  const noReportsState = await blueprintStateLoad({ cwd: noReportsRepo });
+  const auditStatus = await blueprintProjectStatus({ cwd: auditRepo });
+  const auditState = await blueprintStateLoad({ cwd: auditRepo });
+  const completeStatus = await blueprintProjectStatus({ cwd: completeRepo });
+  const completeState = await blueprintStateLoad({ cwd: completeRepo });
+  const summaryStatus = await blueprintProjectStatus({ cwd: summaryRepo });
+  const summaryState = await blueprintStateLoad({ cwd: summaryRepo });
+
+  assert.match(noReportsStatus.nextAction, /\/blu:audit-milestone v2/);
+  assert.match(noReportsState.derivedStatus.nextAction, /\/blu:audit-milestone v2/);
+  assert.match(auditStatus.nextAction, /\/blu:complete-milestone v2/);
+  assert.match(auditState.derivedStatus.nextAction, /\/blu:complete-milestone v2/);
+  assert.match(completeStatus.nextAction, /\/blu:milestone-summary v2/);
+  assert.match(completeState.derivedStatus.nextAction, /\/blu:milestone-summary v2/);
+  assert.match(summaryStatus.nextAction, /\/blu:new-milestone/);
+  assert.match(summaryState.derivedStatus.nextAction, /\/blu:new-milestone/);
 });
 
 test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {
