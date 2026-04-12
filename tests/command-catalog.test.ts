@@ -17,6 +17,7 @@ const IMPLEMENTED_COMMANDS = [
   "ui-phase",
   "next",
   "add-phase",
+  "remove-phase",
   "plan-phase",
   "execute-phase",
   "validate-phase",
@@ -120,6 +121,27 @@ test("add-phase is implemented once manifest, skill, and roadmap MCP tools exist
     "blueprint_artifact_scaffold",
     "blueprint_roadmap_add_phase",
     "blueprint_roadmap_read",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("remove-phase is implemented once manifest, skill, and roadmap removal MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["remove-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_roadmap_read",
+    "blueprint_roadmap_remove_phase",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);

@@ -24,6 +24,11 @@ type RoadmapAddPhaseArgs = {
   description: string;
 };
 
+type RoadmapRemovePhaseArgs = {
+  cwd?: string;
+  phase: string;
+};
+
 type PhaseLookupArgs = {
   cwd?: string;
   phase?: string;
@@ -103,6 +108,33 @@ type RoadmapAddPhaseResult = {
   phaseName: string;
   slug: string;
   phaseDir: string;
+  roadmapPath: string;
+  milestone: string | null;
+  written: boolean;
+  warnings: string[];
+};
+
+type RoadmapRemovePhaseResult = {
+  removedPhase: {
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
+    removedArtifacts: string[];
+  };
+  renumberedPhases: Array<{
+    previousPhaseNumber: string;
+    newPhaseNumber: string;
+    previousPhasePrefix: string;
+    newPhasePrefix: string;
+    phaseName: string;
+    previousPhaseDir: string;
+    newPhaseDir: string;
+    renamedArtifacts: Array<{
+      from: string;
+      to: string;
+    }>;
+  }>;
   roadmapPath: string;
   milestone: string | null;
   written: boolean;
@@ -413,6 +445,10 @@ const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
   description: z.string()
 };
+const roadmapRemovePhaseInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string()
+};
 
 const phaseLookupInputSchema = {
   cwd: z.string().optional(),
@@ -489,6 +525,27 @@ function normalizePhaseNumber(value: string): string {
       return trimmed.length > 0 ? trimmed : "0";
     })
     .join(".");
+}
+
+function comparePhaseNumbers(left: string, right: string): number {
+  const leftParts = normalizePhaseNumber(left)
+    .split(".")
+    .map((segment) => Number.parseInt(segment, 10));
+  const rightParts = normalizePhaseNumber(right)
+    .split(".")
+    .map((segment) => Number.parseInt(segment, 10));
+  const length = Math.max(leftParts.length, rightParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = leftParts[index] ?? 0;
+    const rightValue = rightParts[index] ?? 0;
+
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+
+  return 0;
 }
 
 function formatPhasePrefix(value: string): string {
@@ -616,6 +673,89 @@ function escapeForRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function replaceWithPlaceholders(
+  value: string,
+  replacements: Array<{
+    pattern: RegExp;
+    replacement: string;
+  }>
+): string {
+  const placeholders = replacements.map((_, index) => `__BLUEPRINT_PHASE_${index}__`);
+  let updated = value;
+
+  replacements.forEach((replacement, index) => {
+    updated = updated.replace(replacement.pattern, placeholders[index]);
+  });
+
+  placeholders.forEach((placeholder, index) => {
+    updated = updated.replaceAll(placeholder, replacements[index]?.replacement ?? placeholder);
+  });
+
+  return updated;
+}
+
+function rewriteDependencyLines(
+  value: string,
+  renumberMap: ReadonlyMap<string, string>
+): string {
+  return value.replace(/^(\*\*Depends on\*\*:\s*)(.+)$/gm, (_full, prefix: string, body: string) => {
+    const trimmedBody = body.trim();
+
+    if (trimmedBody.length === 0 || ["none", "n/a"].includes(trimmedBody.toLowerCase())) {
+      return `${prefix}${body}`;
+    }
+
+    const rewritten = body
+      .split(",")
+      .map((rawEntry) => {
+        const entry = rawEntry.trim();
+        const phaseNumber = extractPhaseNumberToken(entry);
+
+        if (!phaseNumber) {
+          return rawEntry;
+        }
+
+        const replacement = renumberMap.get(phaseNumber);
+
+        if (!replacement) {
+          return rawEntry;
+        }
+
+        const phasePrefix = entry.startsWith("Phase ")
+          ? "Phase "
+          : entry.startsWith("phase ")
+            ? "phase "
+            : "";
+
+        return rawEntry.replace(
+          new RegExp(`${escapeForRegex(phasePrefix)}${escapeForRegex(phaseNumber)}\\b`),
+          `${phasePrefix}${replacement}`
+        );
+      })
+      .join(",");
+
+    return `${prefix}${rewritten}`;
+  });
+}
+
+function rewriteRoadmapPhaseReferences(
+  value: string,
+  renumberMap: ReadonlyMap<string, string>
+): string {
+  const replacements = [...renumberMap.entries()].flatMap(([from, to]) => [
+    {
+      pattern: new RegExp(`\\bPhase ${escapeForRegex(from)}\\b`, "g"),
+      replacement: `Phase ${to}`
+    },
+    {
+      pattern: new RegExp(`\\bphase ${escapeForRegex(from)}\\b`, "g"),
+      replacement: `phase ${to}`
+    }
+  ]);
+
+  return rewriteDependencyLines(replaceWithPlaceholders(value, replacements), renumberMap);
+}
+
 function appendPhaseLineToRoadmap(
   raw: string,
   phaseNumber: string,
@@ -674,6 +814,99 @@ function appendPhaseDetailsToRoadmap(
 ## Phase Details
 
 ${detailBlock}`;
+}
+
+function removePhaseLineFromRoadmap(
+  raw: string,
+  phaseNumber: string
+): {
+  content: string;
+  removed: boolean;
+} {
+  const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!phasesSectionPattern.test(raw)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+    );
+  }
+
+  let removed = false;
+  const content = raw.replace(phasesSectionPattern, (_full, header: string, body: string) => {
+    const nextLines = body
+      .split("\n")
+      .filter((line) => {
+        const match = line.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
+
+        if (!match) {
+          return line.trim().length > 0;
+        }
+
+        if (normalizePhaseNumber(match[1]) === phaseNumber) {
+          removed = true;
+          return false;
+        }
+
+        return true;
+      })
+      .join("\n");
+
+    return `${header}${nextLines.trimEnd()}\n`;
+  });
+
+  return {
+    content,
+    removed
+  };
+}
+
+function removePhaseDetailsFromRoadmap(
+  raw: string,
+  phaseNumber: string
+): {
+  content: string;
+  removed: boolean;
+} {
+  const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!phaseDetailsSectionPattern.test(raw)) {
+    return {
+      content: raw,
+      removed: false
+    };
+  }
+
+  let removed = false;
+  const content = raw.replace(
+    phaseDetailsSectionPattern,
+    (_full, header: string, body: string) => {
+      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
+        (match) => match[1].trimEnd()
+      );
+      const nextBlocks = blocks.filter((block) => {
+        const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
+
+        if (!match) {
+          return true;
+        }
+
+        if (normalizePhaseNumber(match[1]) === phaseNumber) {
+          removed = true;
+          return false;
+        }
+
+        return true;
+      });
+      const nextBody = nextBlocks.join("\n\n");
+
+      return nextBody.length > 0 ? `${header}${nextBody}\n` : `${header}`;
+    }
+  );
+
+  return {
+    content,
+    removed
+  };
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -1141,6 +1374,266 @@ export async function blueprintRoadmapAddPhase(
     phaseName: normalizedDescription,
     slug,
     phaseDir,
+    roadmapPath: roadmap.path,
+    milestone: roadmap.milestone,
+    written: true,
+    warnings
+  };
+}
+
+function renameLeadingPhaseToken(
+  entryName: string,
+  phaseNumber: string,
+  replacementPrefix: string
+): string | null {
+  const match = entryName.match(/^(\d+(?:\.\d+)?)(.*)$/);
+
+  if (!match || normalizePhaseNumber(match[1]) !== phaseNumber) {
+    return null;
+  }
+
+  return `${replacementPrefix}${match[2]}`;
+}
+
+async function renamePhaseArtifactsInPlace(
+  projectRoot: string,
+  rootDirectoryPath: string,
+  oldPhaseNumber: string,
+  newPhasePrefix: string
+): Promise<Array<{ from: string; to: string }>> {
+  const renamedArtifacts: Array<{ from: string; to: string }> = [];
+  const entries = await fs.readdir(rootDirectoryPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const currentPath = path.join(rootDirectoryPath, entry.name);
+    const renamedEntry = renameLeadingPhaseToken(entry.name, oldPhaseNumber, newPhasePrefix);
+    const nextPath = renamedEntry ? path.join(rootDirectoryPath, renamedEntry) : currentPath;
+
+    if (renamedEntry) {
+      await fs.rename(currentPath, nextPath);
+      renamedArtifacts.push({
+        from: toRepoRelativePath(projectRoot, currentPath),
+        to: toRepoRelativePath(projectRoot, nextPath)
+      });
+    }
+
+    const stats = await fs.stat(nextPath);
+
+    if (stats.isDirectory()) {
+      renamedArtifacts.push(
+        ...(await renamePhaseArtifactsInPlace(
+          projectRoot,
+          nextPath,
+          oldPhaseNumber,
+          newPhasePrefix
+        ))
+      );
+    }
+  }
+
+  return renamedArtifacts;
+}
+
+function findPhaseRenumberTargets(
+  phases: ParsedRoadmapPhase[],
+  targetPhaseNumber: string
+): Array<{
+  previousPhase: ParsedRoadmapPhase;
+  newPhaseNumber: string;
+}> {
+  const targetIndex = phases.findIndex((phase) => phase.phaseNumber === targetPhaseNumber);
+
+  if (targetIndex === -1) {
+    throw new Error(
+      `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+
+  const renumberTargets: Array<{
+    previousPhase: ParsedRoadmapPhase;
+    newPhaseNumber: string;
+  }> = [];
+
+  for (let index = targetIndex + 1; index < phases.length; index += 1) {
+    renumberTargets.push({
+      previousPhase: phases[index],
+      newPhaseNumber:
+        index === targetIndex + 1
+          ? targetPhaseNumber
+          : phases[index - 1]?.phaseNumber ?? targetPhaseNumber
+    });
+  }
+
+  return renumberTargets;
+}
+
+export async function blueprintRoadmapRemovePhase(
+  args: RoadmapRemovePhaseArgs
+): Promise<RoadmapRemovePhaseResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const roadmap = await readRoadmap(projectRoot);
+  const targetPhaseNumber = extractPhaseNumberToken(args.phase ?? "");
+
+  if (!targetPhaseNumber) {
+    throw new Error(
+      "Phase number required. Re-run /blu:remove-phase with a phase number such as 7."
+    );
+  }
+
+  const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
+
+  if (!targetPhase) {
+    throw new Error(
+      `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+
+  const currentState = await loadBlueprintState(projectRoot);
+  const currentPhaseNumber = extractPhaseNumberToken(currentState.currentPhase);
+
+  if (!currentPhaseNumber) {
+    throw new Error(
+      `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
+    );
+  }
+
+  if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
+    throw new Error(
+      `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
+    );
+  }
+
+  const targetPhaseDirectory = await findPhaseDirectory(projectRoot, targetPhaseNumber);
+
+  if (!targetPhaseDirectory.phaseDir) {
+    throw new Error(
+      targetPhaseDirectory.reason === "ambiguous"
+        ? `Phase ${targetPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
+        : `Phase ${targetPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing it.`
+    );
+  }
+
+  const targetPhaseDirPath = resolveBlueprintPath(projectRoot, targetPhaseDirectory.phaseDir);
+  const removedArtifacts = await listPhaseArtifacts(targetPhaseDirPath, projectRoot);
+  const executionArtifacts = removedArtifacts.filter(
+    (artifactPath) =>
+      /-SUMMARY\.md$/i.test(artifactPath) ||
+      /-VERIFICATION\.md$/i.test(artifactPath) ||
+      /-UAT\.md$/i.test(artifactPath)
+  );
+
+  if (executionArtifacts.length > 0) {
+    throw new Error(
+      `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Remove those artifacts explicitly before removing the phase.`
+    );
+  }
+
+  const renumberTargets = findPhaseRenumberTargets(roadmap.phases, targetPhaseNumber);
+  const renumberMap = new Map(
+    renumberTargets.map(({ previousPhase, newPhaseNumber }) => [
+      previousPhase.phaseNumber,
+      newPhaseNumber
+    ])
+  );
+  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+  const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
+
+  if (!removedPhaseLine.removed) {
+    throw new Error(
+      `Phase ${targetPhaseNumber} could not be removed from the roadmap phases list.`
+    );
+  }
+
+  const removedPhaseDetails = removePhaseDetailsFromRoadmap(
+    removedPhaseLine.content,
+    targetPhaseNumber
+  );
+  const warnings: string[] = [];
+
+  if (!removedPhaseDetails.removed) {
+    warnings.push(
+      `Phase ${targetPhaseNumber} did not have a matching entry under the roadmap's "## Phase Details" section.`
+    );
+  }
+
+  const updatedRoadmap = rewriteRoadmapPhaseReferences(
+    removedPhaseDetails.content,
+    renumberMap
+  );
+  const renumberedPhases: RoadmapRemovePhaseResult["renumberedPhases"] = [];
+  const preparedRenumberTargets = [];
+
+  for (const { previousPhase, newPhaseNumber } of renumberTargets) {
+    const locatedPhaseDirectory = await findPhaseDirectory(projectRoot, previousPhase.phaseNumber);
+
+    if (!locatedPhaseDirectory.phaseDir) {
+      throw new Error(
+        locatedPhaseDirectory.reason === "ambiguous"
+          ? `Phase ${previousPhase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+          : `Phase ${previousPhase.phaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before removing ${targetPhaseNumber}.`
+      );
+    }
+
+    preparedRenumberTargets.push({
+      previousPhase,
+      newPhaseNumber,
+      previousPhaseDir: locatedPhaseDirectory.phaseDir
+    });
+  }
+
+  await fs.rm(targetPhaseDirPath, { recursive: true, force: true });
+
+  for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
+    const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
+    const previousDirectoryName = path.basename(previousPhaseDirPath);
+    const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
+    const renamedDirectoryName = renameLeadingPhaseToken(
+      previousDirectoryName,
+      previousPhase.phaseNumber,
+      newPhasePrefix
+    );
+
+    if (!renamedDirectoryName) {
+      throw new Error(
+        `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
+      );
+    }
+
+    const newPhaseDirPath = path.join(path.dirname(previousPhaseDirPath), renamedDirectoryName);
+
+    await fs.rename(previousPhaseDirPath, newPhaseDirPath);
+
+    const renamedArtifacts = await renamePhaseArtifactsInPlace(
+      projectRoot,
+      newPhaseDirPath,
+      previousPhase.phaseNumber,
+      newPhasePrefix
+    );
+
+    renumberedPhases.push({
+      previousPhaseNumber: previousPhase.phaseNumber,
+      newPhaseNumber,
+      previousPhasePrefix: previousPhase.phasePrefix,
+      newPhasePrefix,
+      phaseName: previousPhase.phaseName,
+      previousPhaseDir,
+      newPhaseDir: toRepoRelativePath(projectRoot, newPhaseDirPath),
+      renamedArtifacts
+    });
+  }
+
+  await fs.writeFile(roadmapPath, updatedRoadmap, "utf8");
+
+  return {
+    removedPhase: {
+      phaseNumber: targetPhase.phaseNumber,
+      phasePrefix: targetPhase.phasePrefix,
+      phaseName: targetPhase.phaseName,
+      phaseDir: targetPhaseDirectory.phaseDir,
+      removedArtifacts
+    },
+    renumberedPhases,
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
     written: true,
@@ -2358,6 +2851,14 @@ export const phaseToolDefinitions = [
     inputSchema: roadmapAddPhaseInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintRoadmapAddPhase(args as RoadmapAddPhaseArgs)
+  },
+  {
+    name: "blueprint_roadmap_remove_phase",
+    description:
+      "Remove a future Blueprint phase, delete its phase directory, and renumber subsequent phase directories plus roadmap references.",
+    inputSchema: roadmapRemovePhaseInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintRoadmapRemovePhase(args as RoadmapRemovePhaseArgs)
   },
   {
     name: "blueprint_phase_locate",

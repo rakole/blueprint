@@ -6,7 +6,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintRoadmapAddPhase, blueprintRoadmapRead } from "../src/mcp/tools/phase.js";
+import {
+  blueprintRoadmapAddPhase,
+  blueprintRoadmapRead,
+  blueprintRoadmapRemovePhase
+} from "../src/mcp/tools/phase.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -17,7 +21,7 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function createRoadmapRepo(): Promise<string> {
+async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-roadmap-tools-"));
   const repoPath = path.join(tempRoot, "repo");
 
@@ -69,7 +73,7 @@ async function createRoadmapRepo(): Promise<string> {
 
 - Project status: initialized
 - Current milestone: v1
-- Current phase: 2.2
+- Current phase: ${currentPhase}
 - Active command: /blu:progress
 - Next action: Run /blu:progress
 - Last updated: 2026-04-11T00:00:00.000Z
@@ -93,6 +97,13 @@ test("roadmap tools register blueprint_roadmap_add_phase", () => {
   assert.ok(
     blueprintToolNames.includes("blueprint_roadmap_add_phase"),
     "blueprint_roadmap_add_phase should be registered"
+  );
+});
+
+test("roadmap tools register blueprint_roadmap_remove_phase", () => {
+  assert.ok(
+    blueprintToolNames.includes("blueprint_roadmap_remove_phase"),
+    "blueprint_roadmap_remove_phase should be registered"
   );
 });
 
@@ -128,4 +139,109 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   assert.equal(after.phases.at(-1)?.phaseDir, ".blueprint/phases/03-notifications-flow");
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Notifications Flow\*\*/);
   assert.match(roadmapBody, /### Phase 3: Notifications Flow/);
+});
+
+test("blueprint_roadmap_remove_phase removes a future phase and renumbers later directories plus artifacts", async (t) => {
+  const repoPath = await createRoadmapRepo("1");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(
+      repoPath,
+      ".blueprint/phases/02.2-validation-parity/02.2-CONTEXT.md"
+    ),
+    "# Context\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(
+      repoPath,
+      ".blueprint/phases/02.2-validation-parity/02.2-01-PLAN.md"
+    ),
+    "# Plan\n",
+    "utf8"
+  );
+  const result = await blueprintRoadmapRemovePhase({
+    cwd: repoPath,
+    phase: "2.1"
+  });
+  const after = await blueprintRoadmapRead({ cwd: repoPath });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(result.removedPhase.phaseNumber, "2.1");
+  assert.equal(result.removedPhase.phaseDir, ".blueprint/phases/02.1-planning-drift-recovery");
+  assert.deepEqual(
+    result.renumberedPhases.map((phase) => [
+      phase.previousPhaseNumber,
+      phase.newPhaseNumber,
+      phase.newPhaseDir
+    ]),
+    [["2.2", "2.1", ".blueprint/phases/02.1-validation-parity"]]
+  );
+  assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1"]);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-planning-drift-recovery")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-validation-parity")),
+    true
+  );
+  assert.equal(
+    await pathExists(
+      path.join(repoPath, ".blueprint/phases/02.1-validation-parity/02.1-CONTEXT.md")
+    ),
+    true
+  );
+  assert.equal(
+    await pathExists(
+      path.join(repoPath, ".blueprint/phases/02.1-validation-parity/02.1-01-PLAN.md")
+    ),
+    true
+  );
+  assert.match(roadmapBody, /- \[ \] \*\*Phase 2\.1: Validation Parity\*\*/);
+  assert.doesNotMatch(roadmapBody, /Planning Drift Recovery/);
+});
+
+test("blueprint_roadmap_remove_phase rejects current or past phases", async (t) => {
+  const repoPath = await createRoadmapRepo("2.2");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapRemovePhase({
+        cwd: repoPath,
+        phase: "2.1"
+      }),
+    /Only future phases can be removed/
+  );
+});
+
+test("blueprint_roadmap_remove_phase rejects phases with execution evidence", async (t) => {
+  const repoPath = await createRoadmapRepo("1");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(
+      repoPath,
+      ".blueprint/phases/02.1-planning-drift-recovery/02.1-01-SUMMARY.md"
+    ),
+    "# Summary\n",
+    "utf8"
+  );
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapRemovePhase({
+        cwd: repoPath,
+        phase: "2.1"
+      }),
+    /already has execution evidence/
+  );
 });
