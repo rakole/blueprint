@@ -8,7 +8,7 @@
 
 ## Purpose
 
-`/blu` is the front door to Blueprint. It inspects user intent together with project state, then either routes directly into an implemented Blueprint command flow or recommends the safest direct `/blu:<command>` entrypoint.
+`/blu` is the front door to Blueprint. It inspects user intent together with project state, then either routes directly into an implemented Blueprint command flow or recommends the safest direct `/blu-<command>` entrypoint.
 
 ## Command Path And Examples
 

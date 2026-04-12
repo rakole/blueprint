@@ -18,6 +18,10 @@ import {
   validateResearchArtifactContent
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
+import {
+  blueprintDirectCommand,
+  blueprintRunDirectCommand
+} from "../command-paths.js";
 
 export type BlueprintState = {
   projectStatus: string;
@@ -174,15 +178,15 @@ const DEFAULT_STATE: BlueprintState = {
   projectStatus: "uninitialized",
   currentMilestone: "v1",
   currentPhase: "1",
-  activeCommand: "/blu:new-project",
-  nextAction: "Run /blu:new-project",
+  activeCommand: blueprintDirectCommand("new-project"),
+  nextAction: blueprintRunDirectCommand("new-project"),
   blockers: [],
   lastUpdated: new Date(0).toISOString()
 };
 
 const PAUSE_HANDOFF_REPORT_PATH = `${BLUEPRINT_REPORTS_PATH}/pause-work-latest.md`;
-const PAUSE_WORK_COMMAND = "/blu:pause-work";
-const RESUME_WORK_COMMAND = "/blu:resume-work";
+const PAUSE_WORK_COMMAND = blueprintDirectCommand("pause-work");
+const RESUME_WORK_COMMAND = blueprintDirectCommand("resume-work");
 const PAUSE_HANDOFF_BLOCKER_PREFIX = "Paused handoff is active at ";
 
 const stateUpdateInputSchema = {
@@ -561,7 +565,7 @@ async function getImplementedCommandNames(): Promise<Set<string>> {
         return new Set(
           Object.entries(catalog.commands)
             .filter(([, entry]) => entry.implemented)
-            .map(([commandName]) => `/blu:${commandName}`)
+            .map(([commandName]) => blueprintDirectCommand(commandName))
         );
       } catch {
         return new Set();
@@ -748,7 +752,7 @@ async function inspectCurrentPhaseArtifacts(
 
   if (!hasContext && hasLaterArtifacts) {
     warnings.push(
-      `Current phase ${currentPhase} has later discovery artifacts without a CONTEXT artifact; run /blu:discuss-phase ${currentPhase} to repair the phase scaffold.`
+      `Current phase ${currentPhase} has later discovery artifacts without a CONTEXT artifact; ${blueprintRunDirectCommand("discuss-phase", currentPhase)} to repair the phase scaffold.`
     );
   }
 
@@ -851,36 +855,36 @@ async function deriveNextAction(args: {
   workflow: WorkflowRoutingSignals;
 }): Promise<string> {
   if (args.projectStatus === "uninitialized") {
-    return "Run /blu:new-project";
+    return blueprintRunDirectCommand("new-project");
   }
 
   if (args.projectStatus === "partial") {
-    return "Run /blu:health to inspect the partial .blueprint state";
+    return `${blueprintRunDirectCommand("health")} to inspect the partial .blueprint state`;
   }
 
   if (args.blockers.length > 0) {
-    return "Run /blu:health to inspect blockers and repair options";
+    return `${blueprintRunDirectCommand("health")} to inspect blockers and repair options`;
   }
 
   if (args.bootstrapRouting.brownfieldDetected && !args.bootstrapRouting.codebaseMapped) {
-    return "Run /blu:map-codebase before treating the roadmap as durable";
+    return `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable`;
   }
 
   const implementedCommands = await getImplementedCommandNames();
-  const discussPhaseCommand = "/blu:discuss-phase";
-  const researchPhaseCommand = "/blu:research-phase";
-  const uiPhaseCommand = "/blu:ui-phase";
-  const planPhaseCommand = "/blu:plan-phase";
-  const executePhaseCommand = "/blu:execute-phase";
-  const validatePhaseCommand = "/blu:validate-phase";
-  const verifyWorkCommand = "/blu:verify-work";
-  const auditMilestoneCommand = "/blu:audit-milestone";
-  const completeMilestoneCommand = "/blu:complete-milestone";
-  const milestoneSummaryCommand = "/blu:milestone-summary";
-  const newMilestoneCommand = "/blu:new-milestone";
+  const discussPhaseCommand = blueprintDirectCommand("discuss-phase");
+  const researchPhaseCommand = blueprintDirectCommand("research-phase");
+  const uiPhaseCommand = blueprintDirectCommand("ui-phase");
+  const planPhaseCommand = blueprintDirectCommand("plan-phase");
+  const executePhaseCommand = blueprintDirectCommand("execute-phase");
+  const validatePhaseCommand = blueprintDirectCommand("validate-phase");
+  const verifyWorkCommand = blueprintDirectCommand("verify-work");
+  const auditMilestoneCommand = blueprintDirectCommand("audit-milestone");
+  const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
+  const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
+  const newMilestoneCommand = blueprintDirectCommand("new-milestone");
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
-    return "Run /blu:progress to review the next safe Blueprint action";
+    return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
 
   if (!args.phaseArtifacts.hasContext && implementedCommands.has(discussPhaseCommand)) {
@@ -1006,8 +1010,8 @@ async function deriveNextAction(args: {
   }
 
   return args.currentPhase
-    ? `Run /blu:progress to review Phase ${args.currentPhase} and the next safe action`
-    : "Run /blu:progress to review the next safe Blueprint action";
+    ? `${blueprintRunDirectCommand("progress")} to review Phase ${args.currentPhase} and the next safe action`
+    : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
 }
 
 async function buildSyncedState(projectRoot: string): Promise<{
@@ -1023,7 +1027,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
 
   if (!inspection.blueprintRootExists) {
     throw new Error(
-      "Cannot sync Blueprint state before .blueprint/ exists. Run /blu:new-project instead."
+      `Cannot sync Blueprint state before .blueprint/ exists. ${blueprintRunDirectCommand("new-project")} instead.`
     );
   }
 
@@ -1112,7 +1116,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
       currentPhase,
       activeCommand:
         projectStatus === "partial"
-          ? "/blu:health"
+          ? blueprintDirectCommand("health")
           : activePauseHandoff
             ? PAUSE_WORK_COMMAND
             : existingState.activeCommand,

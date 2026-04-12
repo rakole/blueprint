@@ -5,6 +5,11 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
+  blueprintCompatibilityDirectCommand,
+  blueprintCompatibilityManifestPath,
+  blueprintDirectCommand
+} from "../src/mcp/command-paths.js";
+import {
   blueprintDiscoverableSkillPath,
   blueprintRuntimeToolFqn,
   resolveBlueprintSkillPath
@@ -211,6 +216,30 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
       stripRuntimeToolFqns(raw),
       /`blueprint_[a-z0-9_]+`/,
       `${contract.commandName} should not fall back to raw internal tool names`
+    );
+  }
+});
+
+test("deprecated compatibility manifests redirect to the canonical dash-form direct commands", async () => {
+  for (const commandName of REPAIRED_DIRECT_COMMANDS) {
+    const manifestPath = blueprintCompatibilityManifestPath(commandName);
+    const raw = await readRelativePath(manifestPath);
+
+    assert.match(
+      raw,
+      new RegExp(
+        escapeRegExp(
+          `You are the deprecated \`${blueprintCompatibilityDirectCommand(commandName)}\` compatibility command`
+        )
+      )
+    );
+    assert.match(
+      raw,
+      new RegExp(
+        escapeRegExp(
+          `Canonical direct command path: \`${blueprintDirectCommand(commandName)}\``
+        )
+      )
     );
   }
 });

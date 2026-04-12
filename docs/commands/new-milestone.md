@@ -1,4 +1,4 @@
-# `/blu:new-milestone`
+# `/blu-new-milestone`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:new-milestone`
+- Gemini command path: `/blu-new-milestone`
+- Compatibility during this release: `/blu:new-milestone` (deprecated; remove next release)
 - Root router form: `/blu new-milestone`
 - Argument hint: `[milestone name, e.g., 'v1.1 Notifications']`
-- `/blu:new-milestone v1.1-Platform`
+- `/blu-new-milestone v1.1-Platform`
 - `/blu new-milestone`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -114,7 +115,7 @@
 
 
 - Show roadmap and report drift before mutation.
-- If the milestone summary report is missing, stop with concise guidance to run `/blu:milestone-summary` first.
+- If the milestone summary report is missing, stop with concise guidance to run `/blu-milestone-summary` first.
 - Preserve historical phase directories; do not delete or renumber prior milestones as part of this command.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
@@ -126,8 +127,8 @@
 - Uses the saved `milestone-summary-<version>.md` report as the durable carry-forward input for the next milestone start.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
-- Scaffolds the first new phase context artifact so `/blu:discuss-phase <first phase>` has a valid phase directory to target.
-- Returns `/blu:discuss-phase <first phase>` as the next safe implemented follow-up.
+- Scaffolds the first new phase context artifact so `/blu-discuss-phase <first phase>` has a valid phase directory to target.
+- Returns `/blu-discuss-phase <first phase>` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

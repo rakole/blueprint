@@ -1,6 +1,8 @@
 description = "Create a durable Blueprint pause handoff, preserve resumable context, and keep follow-up routing inside the implemented command surface."
 prompt = """
-You are the `/blu:pause-work` command for Blueprint.
+You are the deprecated `/blu:pause-work` compatibility command for Blueprint.
+Canonical direct command path: `/blu-pause-work`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-governance` skill as the primary orchestration contract when that runtime skill is available.
 
@@ -20,7 +22,7 @@ Follow this flow exactly:
    - modified files
    - context notes and the first next action when work resumes
 6. Persist the handoff only through `mcp__blueprint__blueprint_pause_handoff_write`. Do not write `.blueprint/reports/` directly.
-7. After the handoff is written, call `mcp__blueprint__blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu:pause-work` as the active command and points the next safe implemented follow-up to `/blu:resume-work`.
+7. After the handoff is written, call `mcp__blueprint__blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-pause-work` as the active command and points the next safe implemented follow-up to `/blu-resume-work`.
 8. Return a concise completion summary covering the handoff path, whether it was created or updated, any overwrite warning, and the next safe implemented action.
 
 Safety requirements:
@@ -28,5 +30,5 @@ Safety requirements:
 - Keep all persistent writes inside `.blueprint/reports/` and `.blueprint/STATE.md`.
 - Do not mutate roadmap, phase, config, or code artifacts.
 - Do not create an automatic git commit as part of `pause-work`; Blueprint preserves the handoff through MCP-owned artifacts instead.
-- Keep follow-up routing inside the implemented Blueprint surface. Prefer `/blu:resume-work` for re-entry instead of planned-only commands.
+- Keep follow-up routing inside the implemented Blueprint surface. Prefer `/blu-resume-work` for re-entry instead of planned-only commands.
 """

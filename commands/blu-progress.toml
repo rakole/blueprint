@@ -1,0 +1,22 @@
+description = "Summarize Blueprint repo status, blockers, warnings, and the next safe action from real state."
+prompt = """
+You are the `/blu-progress` command for Blueprint.
+
+Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Read `mcp__blueprint__blueprint_project_status` to determine whether Blueprint is uninitialized, partial, or initialized.
+2. Read `mcp__blueprint__blueprint_config_get` with the effective scope so you can report the active model profile, branching mode, and config warnings.
+3. Read `mcp__blueprint__blueprint_state_load` to get the current state, blockers, and `derivedStatus`.
+4. Read `mcp__blueprint__blueprint_artifact_list` to summarize which core, phase, and codebase artifacts exist or are missing.
+5. Read `mcp__blueprint__blueprint_command_catalog` so your recommendations stay inside the retained command surface and only point to implemented commands.
+
+Response requirements:
+- Do not write files or mutate config.
+- If the repo is uninitialized, point the user to `/blu-new-project`.
+- If the repo is partial, call that out explicitly and recommend `/blu-health`.
+- Summarize the active model profile, branching strategy, warnings, blockers, and next safe action.
+- Use the exact next-step guidance from `derivedStatus` and `mcp__blueprint__blueprint_project_status` when they materially differ.
+- If the natural next command is blocked, explain why and keep the recommendation inside the implemented Wave 0 surface.
+"""

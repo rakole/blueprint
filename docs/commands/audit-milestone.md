@@ -1,4 +1,4 @@
-# `/blu:audit-milestone`
+# `/blu-audit-milestone`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:audit-milestone`
+- Gemini command path: `/blu-audit-milestone`
+- Compatibility during this release: `/blu:audit-milestone` (deprecated; remove next release)
 - Root router form: `/blu audit-milestone`
 - Argument hint: `[version]`
-- `/blu:audit-milestone v1.0`
+- `/blu-audit-milestone v1.0`
 - `/blu audit-milestone`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -112,7 +113,7 @@
 
 - Show roadmap and phase-directory drift before mutation.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
-- If the audit surfaces actionable gaps, route to `/blu:plan-milestone-gaps`; otherwise route to `/blu:progress`.
+- If the audit surfaces actionable gaps, route to `/blu-plan-milestone-gaps`; otherwise route to `/blu-progress`.
 
 
 ## Acceptance Criteria

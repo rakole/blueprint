@@ -44,7 +44,7 @@ What remains closest on the roadmap:
   - Recommended v1 bar: Wave 0 + Wave 1 + Wave 2 milestone closeout.
   - That functional bar is now satisfied on this branch; the remaining go-live work is release hardening and publication discipline.
   - Wave 3 and Wave 5 commands should stay documented as future work until they are actually implemented, and only the actually shipped Wave 4 commands should be treated as live.
-- Preserve the current implemented-only routing guarantees in `/blu`, `/blu:help`, and `/blu:progress`.
+- Preserve the current implemented-only routing guarantees in `/blu`, `/blu-help`, and `/blu-progress`.
   - This already exists and should remain a release gate.
 
 ### Installability

@@ -2,7 +2,7 @@
 name: blueprint-security-auditor
 description: >
   Security review specialist for Blueprint phase audits. Use this agent when
-  `/blu:secure-phase` needs a bounded review of threat mitigations, risky
+  `/blu-secure-phase` needs a bounded review of threat mitigations, risky
   surfaces, trust boundaries, or follow-up security gaps before a durable
   `XX-SECURITY.md` artifact is persisted. Example scenarios: reviewing auth or
   secret-handling changes, checking shell and filesystem boundaries, and

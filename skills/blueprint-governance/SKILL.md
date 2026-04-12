@@ -9,11 +9,11 @@ description: >
   handoff, and restoring work from the canonical pause state.
 status: implemented
 commands:
-  - /blu:settings
-  - /blu:set-profile
-  - /blu:health
-  - /blu:pause-work
-  - /blu:resume-work
+  - /blu-settings
+  - /blu-set-profile
+  - /blu-health
+  - /blu-pause-work
+  - /blu-resume-work
 ---
 
 # Blueprint Governance Skill
@@ -56,8 +56,8 @@ Stay close to upstream GSD governance flows for settings, profile selection, and
 2. Never reintroduce repo-level `hooks.*`, `workflow.use_workspaces`, or `workflow.use_workstreams`.
 3. `set-profile` changes only project-local `model_profile`.
 4. `health --repair` must explain exact writes before it performs them.
-5. If Blueprint is uninitialized, route to `/blu:new-project` instead of pretending repair equals bootstrap.
+5. If Blueprint is uninitialized, route to `/blu-new-project` instead of pretending repair equals bootstrap.
 6. Keep all config persistence in MCP.
 7. `pause-work` must persist a single durable handoff in `.blueprint/reports/` through MCP and require explicit confirmation before replacing it.
-8. `pause-work` should preserve resumable context without silently creating a git commit; keep the next implemented follow-up on `/blu:resume-work`.
+8. `pause-work` should preserve resumable context without silently creating a git commit; keep the next implemented follow-up on `/blu-resume-work`.
 9. `resume-work` must restore the canonical pause handoff context, clear an active pause condition through `blueprint_state_update`, and then re-anchor `STATE.md` on the live next safe implemented action.

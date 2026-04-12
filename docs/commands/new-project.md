@@ -1,4 +1,4 @@
-# `/blu:new-project`
+# `/blu-new-project`
 | Field | Value |
 |---|---|
 | Wave | `0` |
@@ -12,10 +12,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:new-project`
+- Gemini command path: `/blu-new-project`
+- Compatibility during this release: `/blu:new-project` (deprecated; remove next release)
 - Root router form: `/blu new-project`
 - Argument hint: `[--auto]`
-- `/blu:new-project --auto`
+- `/blu-new-project --auto`
 - `/blu new-project`
 
 ## Inputs, Project State, And Prerequisite Artifacts

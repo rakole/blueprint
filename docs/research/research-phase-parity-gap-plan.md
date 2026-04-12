@@ -4,7 +4,7 @@
 
 - Original audit date: 2026-04-11
 - Last status update: 2026-04-12
-- Target command: `/blu:research-phase`
+- Target command: `/blu-research-phase`
 - Purpose: record the original parity concerns, note what has since shipped, and clarify the remaining gaps that still matter
 
 ## Historical Baseline
@@ -26,7 +26,7 @@ The largest substrate and contract gaps are now closed:
 
 ## Current Assessment
 
-`/blu:research-phase` is now a real MCP-backed research artifact command.
+`/blu-research-phase` is now a real MCP-backed research artifact command.
 
 Current strengths:
 
@@ -71,4 +71,4 @@ If `research-phase` is revisited, the next work should improve workflow depth ra
 
 The original parity-gap plan is now mostly historical.
 
-`/blu:research-phase` is no longer a scaffold-only placeholder path. It now ships substantive research persistence, schema validation, hook coverage, and behavior tests. The remaining distance to upstream GSD is mostly about orchestration depth and further parity verification, not about missing core runtime pieces.
+`/blu-research-phase` is no longer a scaffold-only placeholder path. It now ships substantive research persistence, schema validation, hook coverage, and behavior tests. The remaining distance to upstream GSD is mostly about orchestration depth and further parity verification, not about missing core runtime pieces.

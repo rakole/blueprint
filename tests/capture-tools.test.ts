@@ -42,8 +42,8 @@ async function createCaptureRepo(initialized = true): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 1
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-12T00:00:00.000Z
 
 ## Blockers
@@ -167,7 +167,7 @@ test("blueprint_artifact_mutate_index degrades safely when no Blueprint project 
 
   assert.equal(result.status, "project_missing");
   assert.deepEqual(result.createdEntryIds, []);
-  assert.match(result.warnings.join("\n"), /\/blu:new-project/);
+  assert.match(result.warnings.join("\n"), /\/blu-new-project/);
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/backlog/BACKLOG.md")),
     false

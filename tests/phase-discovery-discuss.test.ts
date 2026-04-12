@@ -51,8 +51,8 @@ async function createPhaseRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:progress
-- Next action: Run /blu:progress
+- Active command: /blu-progress
+- Next action: Run /blu-progress
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -68,7 +68,7 @@ async function createPhaseRepo(): Promise<string> {
 
 test("discuss-phase command references only registered phase-discovery tool names", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/discuss-phase.toml"),
+    path.join(repoRoot, "commands/blu-discuss-phase.toml"),
     "utf8"
   );
   const requiredTools = [
@@ -97,7 +97,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /workflow\.skip_discuss/);
   assert.match(commandFile, /workflow\.research_before_questions/);
   assert.match(commandFile, /power mode|chain mode|auto-advance/i);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
 });
 

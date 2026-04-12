@@ -1,4 +1,4 @@
-# `/blu:add-phase`
+# `/blu-add-phase`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:add-phase`
+- Gemini command path: `/blu-add-phase`
+- Compatibility during this release: `/blu:add-phase` (deprecated; remove next release)
 - Root router form: `/blu add-phase`
 - Argument hint: `<description>`
-- `/blu:add-phase Notifications`
+- `/blu-add-phase Notifications`
 - `/blu add-phase Notifications`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -118,7 +119,7 @@
 - Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
 - Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
 - Updates `.blueprint/STATE.md` with the new next action.
-- Returns `/blu:discuss-phase <new phase number>` as the next safe Blueprint follow-up.
+- Returns `/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

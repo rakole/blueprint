@@ -1,4 +1,4 @@
-# `/blu:code-review-fix`
+# `/blu-code-review-fix`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:code-review-fix`
+- Gemini command path: `/blu-code-review-fix`
+- Compatibility during this release: `/blu:code-review-fix` (deprecated; remove next release)
 - Root router form: `/blu code-review-fix`
 - Argument hint: `<phase-number> [--all] [--auto]`
-- `/blu:code-review-fix 3 --auto`
+- `/blu-code-review-fix 3 --auto`
 - `/blu code-review-fix`
 
 ## Inputs, Project State, And Prerequisite Artifacts

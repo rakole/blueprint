@@ -6,8 +6,8 @@ description: >
   and keep follow-up fixes explicit and MCP-owned.
 status: implemented
 commands:
-  - /blu:validate-phase
-  - /blu:verify-work
+  - /blu-validate-phase
+  - /blu-verify-work
 ---
 
 # Blueprint Phase Validation Skill
@@ -65,7 +65,7 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
 5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
 6. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact.
-7. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu:verify-work`, and fall back to `/blu:progress` only if runtime availability changes.
+7. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu-verify-work`, and fall back to `/blu-progress` only if runtime availability changes.
 
 ### `verify-work`
 

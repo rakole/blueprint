@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("add-backlog manifest uses runtime skill and capture MCP identities", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/add-backlog.toml"),
+    path.join(repoRoot, "commands/blu-add-backlog.toml"),
     "utf8"
   );
 
@@ -15,10 +15,10 @@ test("add-backlog manifest uses runtime skill and capture MCP identities", async
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
   assert.match(commandFile, /mcp__blueprint__blueprint_artifact_mutate_index/);
   assert.match(commandFile, /mcp__blueprint__blueprint_artifact_scaffold/);
-  assert.match(commandFile, /\/blu:new-project/);
+  assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /999\.x/);
-  assert.match(commandFile, /\/blu:add-phase/);
+  assert.match(commandFile, /\/blu-add-phase/);
 });
 
 test("blueprint-capture skill captures backlog parking-lot behavior", async () => {
@@ -29,7 +29,7 @@ test("blueprint-capture skill captures backlog parking-lot behavior", async () =
 
   assert.match(skillFile, /name: blueprint-capture/);
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:add-backlog/);
+  assert.match(skillFile, /\/blu-add-backlog/);
   assert.match(skillFile, /blueprint_artifact_mutate_index/);
   assert.match(skillFile, /blueprint_artifact_scaffold/);
   assert.match(skillFile, /reserve a `999\.x` phase stub/i);

@@ -6,14 +6,14 @@ description: >
   deterministic, evidence-backed, and MCP-owned.
 status: implemented
 commands:
-  - /blu:add-phase
-  - /blu:insert-phase
-  - /blu:remove-phase
-  - /blu:plan-milestone-gaps
-  - /blu:audit-milestone
-  - /blu:complete-milestone
-  - /blu:milestone-summary
-  - /blu:new-milestone
+  - /blu-add-phase
+  - /blu-insert-phase
+  - /blu-remove-phase
+  - /blu-plan-milestone-gaps
+  - /blu-audit-milestone
+  - /blu-complete-milestone
+  - /blu-milestone-summary
+  - /blu-new-milestone
 ---
 
 # Blueprint Roadmap Admin Skill
@@ -77,7 +77,7 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 4. Choose the next phase number from the highest base phase number already present in the roadmap and ignore decimal suffixes when counting.
 5. Persist the roadmap mutation through `blueprint_roadmap_add_phase`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.
 6. Scaffold the new phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
-7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <phase>`.
+7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `remove-phase`
@@ -88,7 +88,7 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 4. Require explicit confirmation before deleting the target phase and renumbering subsequent phases.
 5. Persist the roadmap mutation through `blueprint_roadmap_remove_phase`; do not rewrite `.blueprint/ROADMAP.md` or rename phase directories directly from the command prompt.
 6. Treat the future-phase guard as mandatory and reject targets that already have execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT` artifacts.
-7. Update `STATE.md` through `blueprint_state_update` so `/blu:remove-phase` is the active command and the next safe implemented follow-up is `/blu:progress`.
+7. Update `STATE.md` through `blueprint_state_update` so `/blu-remove-phase` is the active command and the next safe implemented follow-up is `/blu-progress`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `audit-milestone`
@@ -110,29 +110,29 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 5. Keep the grouping reviewable: show which gaps each proposed phase closes and separate optional nice-to-have gaps from must-close work.
 6. Require one explicit confirmation before any roadmap mutation.
 7. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.
-8. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <phase>`.
+8. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
 9. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `complete-milestone`
 
 1. Read the roadmap first and then inspect `.blueprint/reports/` through `blueprint_artifact_list` so the closeout step stays grounded in the saved audit report instead of chat memory.
-2. Fail fast when the matching milestone audit report is missing. Route the user to `/blu:audit-milestone` instead of inventing closeout evidence.
+2. Fail fast when the matching milestone audit report is missing. Route the user to `/blu-audit-milestone` instead of inventing closeout evidence.
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before writing the completion report.
 4. Keep `complete-milestone` report-driven and state-driven. Do not rewrite `.blueprint/ROADMAP.md`, renumber phases, or invent a new `phase_mark_complete` substrate from the command prompt.
 5. Persist the completion report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`.
 6. Require explicit overwrite confirmation before replacing an existing milestone completion report.
-7. Update `STATE.md` through `blueprint_state_update` so `/blu:complete-milestone` is the active command and the next safe implemented follow-up is `/blu:milestone-summary <milestone>`.
+7. Update `STATE.md` through `blueprint_state_update` so `/blu-complete-milestone` is the active command and the next safe implemented follow-up is `/blu-milestone-summary <milestone>`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `milestone-summary`
 
 1. Read the roadmap first and inspect `.blueprint/reports/` through `blueprint_artifact_list` so the summary stays grounded in the matching milestone audit and completion reports.
-2. Fail fast when either the audit report or completion report is missing. Route the user to `/blu:audit-milestone` or `/blu:complete-milestone` instead of fabricating missing inputs.
+2. Fail fast when either the audit report or completion report is missing. Route the user to `/blu-audit-milestone` or `/blu-complete-milestone` instead of fabricating missing inputs.
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-report inputs to build the milestone summary from durable evidence.
 4. Persist the summary report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`.
 5. Require explicit overwrite confirmation before replacing an existing milestone summary report.
 6. Keep the flow skill-led. Do not pull in `blueprint-doc-writer` or any later-wave docs agent for this Wave 2 summary step.
-7. Update `STATE.md` through `blueprint_state_update` so `/blu:milestone-summary` is the active command and the next safe implemented follow-up is `/blu:new-milestone`.
+7. Update `STATE.md` through `blueprint_state_update` so `/blu-milestone-summary` is the active command and the next safe implemented follow-up is `/blu-new-milestone`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `new-milestone`
@@ -142,9 +142,9 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 3. Use `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope; the command still owns the final write path.
 4. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
 5. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
-6. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu:discuss-phase <first phase>` has a valid target directory.
+6. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
 7. Require explicit overwrite confirmation before replacing the existing starter docs.
-8. Update `STATE.md` through `blueprint_state_update` so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu:discuss-phase <first phase>`.
+8. Update `STATE.md` through `blueprint_state_update` so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
 9. Keep follow-up routing inside implemented Blueprint commands only.
 
 ## Wave 2 Closeout Guardrail

@@ -1,4 +1,4 @@
-# `/blu:update`
+# `/blu-update`
 | Field | Value |
 |---|---|
 | Wave | `5` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:update`
+- Gemini command path: `/blu-update`
+- Compatibility during this release: `/blu:update` (deprecated; remove next release)
 - Root router form: `/blu update`
 - Argument hint: `none`
-- `/blu:update`
+- `/blu-update`
 - `/blu update`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -88,7 +89,7 @@
 ## Risk Notes
 
 
-- Gemini extension updates happen outside the running interactive session, so `/blu:update` must remain advisory rather than self-mutating.
+- Gemini extension updates happen outside the running interactive session, so `/blu-update` must remain advisory rather than self-mutating.
 - The command should never write into the installed extension directory or assume a writable installation target.
 - Any update checklist should end with a restart expectation because extension changes load on the next session start.
 

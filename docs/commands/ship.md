@@ -1,4 +1,4 @@
-# `/blu:ship`
+# `/blu-ship`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:ship`
+- Gemini command path: `/blu-ship`
+- Compatibility during this release: `/blu:ship` (deprecated; remove next release)
 - Root router form: `/blu ship`
 - Argument hint: `[phase number or milestone, e.g., '4' or 'v1.0']`
-- `/blu:ship 3 --draft`
+- `/blu-ship 3 --draft`
 - `/blu ship`
 
 ## Inputs, Project State, And Prerequisite Artifacts

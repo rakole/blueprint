@@ -1,4 +1,4 @@
-# `/blu:reapply-patches`
+# `/blu-reapply-patches`
 | Field | Value |
 |---|---|
 | Wave | `5` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:reapply-patches`
+- Gemini command path: `/blu-reapply-patches`
+- Compatibility during this release: `/blu:reapply-patches` (deprecated; remove next release)
 - Root router form: `/blu reapply-patches`
 - Argument hint: `none`
-- `/blu:reapply-patches`
+- `/blu-reapply-patches`
 - `/blu reapply-patches`
 
 ## Inputs, Project State, And Prerequisite Artifacts

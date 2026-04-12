@@ -111,7 +111,7 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   assert.ok("maintenance" in config);
   assert.equal("hooks" in config, false);
   assert.equal(result.brownfield.repoShape, "greenfield");
-  assert.match(result.nextAction, /\/blu:progress/);
+  assert.match(result.nextAction, /\/blu-progress/);
   assert.deepEqual(result.bootstrapDiagnostics.placeholderArtifacts, []);
   assert.equal(result.bootstrapDiagnostics.traceabilityWarnings.length, 0);
   assert.doesNotMatch(
@@ -219,7 +219,7 @@ test("project status reports initialization and a clear next action after bootst
 
   assert.equal(status.initialized, true);
   assert.equal(status.currentPhase, "1");
-  assert.match(status.nextAction, /\/blu:progress/);
+  assert.match(status.nextAction, /\/blu-progress/);
   assert.equal(status.bootstrap.brownfieldDetected, false);
   assert.deepEqual(status.bootstrap.placeholderArtifacts, []);
 });
@@ -285,16 +285,16 @@ test("brownfield repos route to map-codebase after bootstrap until the repo is m
   const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
 
   assert.equal(result.brownfield.repoShape, "brownfield");
-  assert.match(result.nextAction, /\/blu:map-codebase/);
-  assert.match(status.nextAction, /\/blu:map-codebase/);
+  assert.match(result.nextAction, /\/blu-map-codebase/);
+  assert.match(status.nextAction, /\/blu-map-codebase/);
   assert.equal(status.bootstrap.brownfieldDetected, true);
   assert.equal(status.bootstrap.codebaseMapped, false);
-  assert.match(roadmapDoc, /Roadmap confidence: provisional until \/blu:map-codebase/);
+  assert.match(roadmapDoc, /Roadmap confidence: provisional until \/blu-map-codebase/);
 });
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/new-project.toml"),
+    path.join(repoRoot, "commands/blu-new-project.toml"),
     "utf8"
   );
   const requiredTools = [
@@ -329,7 +329,7 @@ test("manifest, command files, and build output line up for installation", async
   assert.equal(manifest.contextFileName, "GEMINI.md");
   assert.equal(await pathExists(path.join(repoRoot, "commands/blu.toml")), true);
   assert.equal(
-    await pathExists(path.join(repoRoot, "commands/blu/new-project.toml")),
+    await pathExists(path.join(repoRoot, "commands/blu-new-project.toml")),
     true
   );
   assert.match(mcpEntrypoint, /dist\/mcp\/server\.js$/);

@@ -1,6 +1,8 @@
 description = "Switch the active Blueprint project model profile without touching saved defaults."
 prompt = """
-You are the `/blu:set-profile` command for Blueprint.
+You are the deprecated `/blu:set-profile` compatibility command for Blueprint.
+Canonical direct command path: `/blu-set-profile`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-governance` skill as the primary orchestration contract when that runtime skill is available.
 

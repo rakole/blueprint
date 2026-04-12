@@ -1,6 +1,8 @@
 description = "Create a phase plan with config-gated discovery checks, explicit overwrite confirmation, and planner/checker revision loops."
 prompt = """
-You are the `/blu:plan-phase` command for Blueprint.
+You are the deprecated `/blu:plan-phase` compatibility command for Blueprint.
+Canonical direct command path: `/blu-plan-phase`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-phase-planning` skill as the primary orchestration contract when that runtime skill is available. When deeper planning analysis is useful, use the `blueprint-planner` and `blueprint-checker` subagents for bounded drafting and review.
 
@@ -10,7 +12,7 @@ Follow this flow exactly:
 2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
 3. Read `mcp__blueprint__blueprint_phase_context`, `mcp__blueprint__blueprint_phase_research_status`, `mcp__blueprint__blueprint_phase_plan_index`, `mcp__blueprint__blueprint_config_get` with `scope: "effective"`, `mcp__blueprint__blueprint_artifact_validate`, and `mcp__blueprint__blueprint_state_load` so you know the phase boundary, discovery status, current plan inventory, active workflow gates, and the next safe implemented command.
 4. Honor normalized config gates before planning:
-   - `workflow.research=true`: require usable context and research before drafting the final plan; if research is missing or invalid, route to `/blu:research-phase` first.
+   - `workflow.research=true`: require usable context and research before drafting the final plan; if research is missing or invalid, route to `/blu-research-phase` first.
    - `workflow.research=false`: explicitly report that research was skipped because normalized config disabled it.
    - `workflow.ui_phase=true`: require a usable UI contract or documented skip rationale before finalizing plan content.
    - `workflow.ui_phase=false`: explicitly report that UI planning was skipped because normalized config disabled it.
@@ -31,6 +33,6 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the planner/checker revision loop targeted; do not replan unrelated files when only a subset of plans needs revision.
-- Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu:progress` instead.
+- Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 - Do not pretend research, UI, or plan-check steps were required if the normalized config disabled them.
 """

@@ -57,8 +57,8 @@ async function createValidationRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v2
 - Current phase: 4
-- Active command: /blu:execute-phase
-- Next action: Run /blu:execute-phase 4
+- Active command: /blu-execute-phase
+- Next action: Run /blu-execute-phase 4
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -154,7 +154,7 @@ await blueprintPhaseValidationWrite({ cwd: repoPath, phase: "4", artifact: "veri
 
 ## Recommendations
 
-- Route to /blu:validate-phase after execution summaries are present.
+- Route to /blu-validate-phase after execution summaries are present.
 
 ## Sources
 
@@ -202,8 +202,8 @@ test("phase validation docs and catalog metadata promote validate-phase and veri
 
 test("validate-phase and verify-work manifests reference registered validation tools and safe routing text", async () => {
   const [validateManifest, verifyManifest, skillFile] = await Promise.all([
-    readFile(path.join(repoRoot, "commands/blu/validate-phase.toml"), "utf8"),
-    readFile(path.join(repoRoot, "commands/blu/verify-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8")
   ]);
 
@@ -229,8 +229,8 @@ test("validate-phase and verify-work manifests reference registered validation t
   assert.match(verifyManifest, /`blueprint-verifier` subagent/);
   assert.match(validateManifest, /artifact: "verification"/);
   assert.match(verifyManifest, /artifact: "uat"/);
-  assert.match(validateManifest, /\/blu:progress/);
-  assert.match(verifyManifest, /\/blu:progress/);
+  assert.match(validateManifest, /\/blu-progress/);
+  assert.match(verifyManifest, /\/blu-progress/);
   assert.doesNotMatch(validateManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
   assert.doesNotMatch(verifyManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
   assert.match(skillFile, /status: implemented/);
@@ -310,15 +310,15 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   const afterUatStatus = await blueprintProjectStatus({ cwd: repoPath });
   const afterUatState = await blueprintStateLoad({ cwd: repoPath });
 
-  assert.match(beforeValidationStatus.nextAction, /\/blu:validate-phase 4/);
-  assert.match(beforeValidationState.derivedStatus.nextAction, /\/blu:validate-phase 4/);
+  assert.match(beforeValidationStatus.nextAction, /\/blu-validate-phase 4/);
+  assert.match(beforeValidationState.derivedStatus.nextAction, /\/blu-validate-phase 4/);
   assert.equal(verificationCreated.status, "created");
   assert.equal(verificationRead.found, true);
   assert.match(verificationRead.content ?? "", /ready for UAT/);
   assert.equal(verificationReused.status, "reused");
   assert.equal(verificationUpdated.status, "updated");
-  assert.match(beforeUatStatus.nextAction, /\/blu:verify-work 4/);
-  assert.match(beforeUatState.derivedStatus.nextAction, /\/blu:verify-work 4/);
+  assert.match(beforeUatStatus.nextAction, /\/blu-verify-work 4/);
+  assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-verify-work 4/);
   assert.equal(uatCreated.status, "created");
   assert.equal(uatRead.found, true);
   assert.match(uatRead.content ?? "", /user acceptance run passed/i);
@@ -333,8 +333,8 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.ok(
     artifactList.artifacts.phases.includes(".blueprint/phases/04-phase-validation/04-UAT.md")
   );
-  assert.match(afterUatStatus.nextAction, /\/blu:progress/);
-  assert.match(afterUatState.derivedStatus.nextAction, /\/blu:progress/);
+  assert.match(afterUatStatus.nextAction, /\/blu-progress/);
+  assert.match(afterUatState.derivedStatus.nextAction, /\/blu-progress/);
 });
 
 test("validate-phase and verify-work command docs keep the validation skill and MCP contracts explicit", async () => {

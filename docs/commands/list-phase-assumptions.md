@@ -1,4 +1,4 @@
-# `/blu:list-phase-assumptions`
+# `/blu-list-phase-assumptions`
 | Field | Value |
 |---|---|
 | Wave | `2` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:list-phase-assumptions`
+- Gemini command path: `/blu-list-phase-assumptions`
+- Compatibility during this release: `/blu:list-phase-assumptions` (deprecated; remove next release)
 - Root router form: `/blu list-phase-assumptions`
 - Argument hint: `[phase]`
-- `/blu:list-phase-assumptions 4`
+- `/blu-list-phase-assumptions 4`
 - `/blu list-phase-assumptions`
 
 ## Inputs, Project State, And Prerequisite Artifacts

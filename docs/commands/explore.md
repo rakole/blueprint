@@ -1,4 +1,4 @@
-# `/blu:explore`
+# `/blu-explore`
 | Field | Value |
 |---|---|
 | Wave | `3` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:explore`
+- Gemini command path: `/blu-explore`
+- Compatibility during this release: `/blu:explore` (deprecated; remove next release)
 - Root router form: `/blu explore`
 - Argument hint: `none`
-- `/blu:explore authentication-strategy`
+- `/blu-explore authentication-strategy`
 - `/blu explore`
 
 ## Inputs, Project State, And Prerequisite Artifacts

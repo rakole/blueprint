@@ -1,4 +1,4 @@
-# `/blu:remove-workspace`
+# `/blu-remove-workspace`
 | Field | Value |
 |---|---|
 | Wave | `5` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:remove-workspace`
+- Gemini command path: `/blu-remove-workspace`
+- Compatibility during this release: `/blu:remove-workspace` (deprecated; remove next release)
 - Root router form: `/blu remove-workspace`
 - Argument hint: `<workspace-name>`
-- `/blu:remove-workspace feature-a`
+- `/blu-remove-workspace feature-a`
 - `/blu remove-workspace`
 
 ## Inputs, Project State, And Prerequisite Artifacts

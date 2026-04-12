@@ -45,8 +45,8 @@ async function createExecutionRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu:execute-phase
-- Next action: Run /blu:execute-phase 3
+- Active command: /blu-execute-phase
+- Next action: Run /blu-execute-phase 3
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -116,7 +116,7 @@ await blueprintPhaseSummaryWrite({ cwd: repoPath, phase: "3", planId: "01", cont
 
 ## Recommendations
 
-- Route to /blu:execute-phase only after discovery and planning artifacts are already in place.
+- Route to /blu-execute-phase only after discovery and planning artifacts are already in place.
 
 ## Sources
 
@@ -226,7 +226,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
     "utf8"
   );
 
-  assert.match(beforeStatus.nextAction, /\/blu:execute-phase 3/);
+  assert.match(beforeStatus.nextAction, /\/blu-execute-phase 3/);
   assert.equal(created.status, "created");
   assert.deepEqual(index.completedPlans, ["01"]);
   assert.deepEqual(index.pendingPlans, []);
@@ -240,6 +240,6 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.ok(context.phase?.artifacts.all.includes(summaryPath));
   assert.ok(listed.artifacts.phases.includes(planPath));
   assert.ok(listed.artifacts.phases.includes(summaryPath));
-  assert.match(afterStatus.nextAction, /\/blu:validate-phase 3/);
+  assert.match(afterStatus.nextAction, /\/blu-validate-phase 3/);
   assert.match(summaryBody, /summary artifact/i);
 });

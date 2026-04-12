@@ -23,7 +23,7 @@ async function pathExists(relativePath: string): Promise<boolean> {
 
 test("list-phase-assumptions manifest references only registered read-oriented discovery tools", async () => {
   const raw = await readFile(
-    path.join(repoRoot, "commands/blu/list-phase-assumptions.toml"),
+    path.join(repoRoot, "commands/blu-list-phase-assumptions.toml"),
     "utf8"
   );
   const expectedTools = [
@@ -46,7 +46,7 @@ test("list-phase-assumptions manifest references only registered read-oriented d
 
 test("list-phase-assumptions manifest preserves the read-only assumptions review contract", async () => {
   const raw = await readFile(
-    path.join(repoRoot, "commands/blu/list-phase-assumptions.toml"),
+    path.join(repoRoot, "commands/blu-list-phase-assumptions.toml"),
     "utf8"
   );
 
@@ -71,7 +71,7 @@ test("list-phase-assumptions is exposed as an implemented read-only discovery co
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
-  assert.equal(entry.manifestPath, "commands/blu/list-phase-assumptions.toml");
+  assert.equal(entry.manifestPath, "commands/blu-list-phase-assumptions.toml");
   assert.equal(skillResolution.resolution, "discoverable");
   assert.equal(entry.skillPath, skillResolution.canonicalPath);
   assert.equal(entry.specPath, "docs/commands/list-phase-assumptions.md");

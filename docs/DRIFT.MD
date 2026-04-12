@@ -22,8 +22,8 @@ ship together.
 
 This ledger tracks `DRIFT-01` through `DRIFT-07`.
 
-- `DRIFT-01`: restore implementation-aware routing so `/blu`, `/blu:help`, and
-  `/blu:progress` surface only implemented commands
+- `DRIFT-01`: restore implementation-aware routing so `/blu`, `/blu-help`, and
+  `/blu-progress` surface only implemented commands
 - `DRIFT-02`: repair bootstrap and mapping docs so Wave 0 matches the live
   Gemini extension runtime
 - `DRIFT-03`: repair discovery parity gaps and lock the current Phase 3 command

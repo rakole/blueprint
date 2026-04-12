@@ -85,12 +85,12 @@ The minimum smoke flow is:
 
 1. install Blueprint
 2. restart Gemini CLI
-3. `/blu:new-project`
-4. `/blu:discuss-phase`
-5. `/blu:plan-phase`
-6. `/blu:execute-phase`
-7. `/blu:validate-phase`
-8. `/blu:verify-work`
+3. `/blu-new-project`
+4. `/blu-discuss-phase`
+5. `/blu-plan-phase`
+6. `/blu-execute-phase`
+7. `/blu-validate-phase`
+8. `/blu-verify-work`
 9. assert `.blueprint/` tree and generated artifacts
 
 ## Command-Spec Test Contract

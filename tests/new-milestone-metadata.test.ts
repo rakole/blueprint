@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("new-milestone manifest references carry-forward seed generation and discuss-phase routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/new-milestone.toml"),
+    path.join(repoRoot, "commands/blu-new-milestone.toml"),
     "utf8"
   );
 
@@ -24,7 +24,7 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /next integer after the highest base phase number/i);
   assert.match(commandFile, /Preserve historical phase directories/i);
   assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN-CONTEXT\.md>/);
-  assert.match(commandFile, /\/blu:discuss-phase <first phase>/);
+  assert.match(commandFile, /\/blu-discuss-phase <first phase>/);
 });
 
 test("roadmap-admin skill captures carry-forward new-milestone behavior", async () => {
@@ -33,9 +33,9 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "utf8"
   );
 
-  assert.match(skillFile, /\/blu:new-milestone/);
+  assert.match(skillFile, /\/blu-new-milestone/);
   assert.match(skillFile, /carry-forward as the default/i);
   assert.match(skillFile, /Preserve historical phase directories/i);
   assert.match(skillFile, /next whole-number phase/i);
-  assert.match(skillFile, /\/blu:discuss-phase <first phase>/);
+  assert.match(skillFile, /\/blu-discuss-phase <first phase>/);
 });

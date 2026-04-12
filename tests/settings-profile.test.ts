@@ -264,11 +264,11 @@ test("config_set reports only keys that actually changed", async (t) => {
 
 test("settings and set-profile command contracts reference the registered MCP tools", async () => {
   const settingsCommand = await readFile(
-    path.join(repoRoot, "commands/blu/settings.toml"),
+    path.join(repoRoot, "commands/blu-settings.toml"),
     "utf8"
   );
   const setProfileCommand = await readFile(
-    path.join(repoRoot, "commands/blu/set-profile.toml"),
+    path.join(repoRoot, "commands/blu-set-profile.toml"),
     "utf8"
   );
   const settingsTools = [

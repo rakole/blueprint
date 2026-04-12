@@ -7,7 +7,7 @@ description: >
   mutation.
 status: implemented
 commands:
-  - /blu:docs-update
+  - /blu-docs-update
 ---
 
 # Blueprint Docs Skill
@@ -58,13 +58,13 @@ Blueprint's Gemini-native boundaries:
 ### `docs-update`
 
 1. Require initialized Blueprint state before relying on project or codebase
-   artifacts. Route to `/blu:new-project` or `/blu:health` when the state is
+   artifacts. Route to `/blu-new-project` or `/blu-health` when the state is
    missing or unhealthy.
 2. Resolve the doc scope before drafting anything. Default to the user-named
    files, or a narrow `README.md`-first pass when scope is otherwise omitted.
 3. Keep broad repo-doc refreshes blocked until the repo has enough saved
    evidence, especially the `.blueprint/codebase/` bundle from
-   `/blu:map-codebase`.
+   `/blu-map-codebase`.
 4. Build the evidence base through `blueprint_artifact_summary_digest` with
    explicit artifact and repo file inputs instead of relying on chat memory.
 5. Treat `--verify-only` as read-only for repo docs. The command may still

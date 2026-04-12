@@ -331,7 +331,7 @@ test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure 
   assert.match(planMilestoneGapsDoc, /blueprint_state_update/);
   assert.match(planMilestoneGapsDoc, /milestone audit report should already exist/i);
   assert.match(planMilestoneGapsDoc, /groups related gaps into a few coherent phases/i);
-  assert.match(planMilestoneGapsDoc, /\/blu:discuss-phase <phase>/);
+  assert.match(planMilestoneGapsDoc, /\/blu-discuss-phase <phase>/);
 });
 
 test("remove-phase command docs keep the roadmap removal contract explicit", async () => {
@@ -344,7 +344,7 @@ test("remove-phase command docs keep the roadmap removal contract explicit", asy
   assert.match(removePhaseDoc, /blueprint_state_update/);
   assert.match(removePhaseDoc, /future phase/i);
   assert.match(removePhaseDoc, /execution evidence/i);
-  assert.match(removePhaseDoc, /\/blu:progress/);
+  assert.match(removePhaseDoc, /\/blu-progress/);
 });
 
 test("complete-milestone command docs keep the report-driven closeout contract explicit", async () => {
@@ -358,7 +358,7 @@ test("complete-milestone command docs keep the report-driven closeout contract e
   assert.match(completeMilestoneDoc, /blueprint_state_update/);
   assert.match(completeMilestoneDoc, /milestone-audit-<version>\.md/);
   assert.match(completeMilestoneDoc, /report-driven/i);
-  assert.match(completeMilestoneDoc, /\/blu:milestone-summary <milestone>/);
+  assert.match(completeMilestoneDoc, /\/blu-milestone-summary <milestone>/);
   assert.doesNotMatch(completeMilestoneDoc, /blueprint_phase_mark_complete/);
 });
 
@@ -372,7 +372,7 @@ test("milestone-summary command docs keep the Wave 2 local summary contract expl
   assert.match(milestoneSummaryDoc, /blueprint_artifact_report_write/);
   assert.match(milestoneSummaryDoc, /blueprint_state_update/);
   assert.match(milestoneSummaryDoc, /milestone-complete-<version>\.md/);
-  assert.match(milestoneSummaryDoc, /\/blu:new-milestone/);
+  assert.match(milestoneSummaryDoc, /\/blu-new-milestone/);
   assert.doesNotMatch(milestoneSummaryDoc, /blueprint-doc-writer/);
 });
 
@@ -387,7 +387,7 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /carry-forward from the saved milestone summary/i);
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
-  assert.match(newMilestoneDoc, /\/blu:discuss-phase <first phase>/);
+  assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);
 });
 
 test("docs-update command docs keep the scoped report-backed docs contract explicit", async () => {

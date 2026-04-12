@@ -6,7 +6,7 @@ import path from "node:path";
 const repoRoot = process.cwd();
 
 test("add-phase manifest uses runtime skill and MCP identities for roadmap append flow", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu/add-phase.toml"), "utf8");
+  const commandFile = await readFile(path.join(repoRoot, "commands/blu-add-phase.toml"), "utf8");
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
@@ -14,5 +14,5 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_add_phase/);
   assert.match(commandFile, /mcp__blueprint__blueprint_artifact_scaffold/);
   assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
-  assert.match(commandFile, /\/blu:discuss-phase <phase>/);
+  assert.match(commandFile, /\/blu-discuss-phase <phase>/);
 });

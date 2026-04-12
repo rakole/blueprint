@@ -3,6 +3,14 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 
 import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
+import {
+  blueprintCompatibilityDirectCommand,
+  blueprintCompatibilityManifestPath,
+  blueprintDirectCommand,
+  blueprintDirectCommandAliases,
+  blueprintPrimaryManifestPath,
+  blueprintRouterCommand
+} from "../src/mcp/command-paths.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintDiscoverableSkillPath,
@@ -40,7 +48,7 @@ const IMPLEMENTED_COMMANDS = [
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
-const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu/list-phase-assumptions.toml";
+const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.toml";
 
 async function pathExists(relativePath: string): Promise<boolean> {
   try {
@@ -90,13 +98,17 @@ test("runtime command catalog marks shipped commands as implemented once manifes
   for (const command of expectedImplementedCommands) {
     const entry = catalog.commands[command];
 
+    assert.equal(entry.command, blueprintDirectCommand(command));
+    assert.equal(entry.route, blueprintRouterCommand(command));
     assert.equal(entry.status, "implemented");
     assert.equal(entry.declaredStatus, "implemented");
     assert.equal(entry.requiredToolsSatisfied, true);
     assert.ok(entry.manifestPath);
+    assert.equal(entry.manifestPath, blueprintPrimaryManifestPath(command));
     assert.equal(entry.skillPath, await expectedDiscoverableSkillPath(entry.primarySkill));
     assert.ok(entry.specPath);
     assert.deepEqual(entry.blockedBy, []);
+    assert.deepEqual(catalog.aliases[command], blueprintDirectCommandAliases(command));
   }
 
   const listPhaseAssumptions = catalog.commands["list-phase-assumptions"];
@@ -141,6 +153,30 @@ test("runtime command catalog marks shipped commands as implemented once manifes
       listPhaseAssumptions.blockedBy.join("\n"),
       /Missing command manifest: commands\/blu\/list-phase-assumptions\.toml/
     );
+  }
+});
+
+test("command path helpers centralize canonical, compatibility, alias, and manifest forms", () => {
+  assert.equal(blueprintDirectCommand("help"), "/blu-help");
+  assert.equal(blueprintCompatibilityDirectCommand("help"), "/blu:help");
+  assert.equal(blueprintRouterCommand("help"), "/blu help");
+  assert.deepEqual(blueprintDirectCommandAliases("help"), ["/blu:help", "/blu help"]);
+  assert.equal(blueprintPrimaryManifestPath("help"), "commands/blu-help.toml");
+  assert.equal(blueprintCompatibilityManifestPath("help"), "commands/blu/help.toml");
+});
+
+test("implemented direct commands keep deprecated compatibility manifests during the transition release", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const command of IMPLEMENTED_COMMANDS) {
+    const manifestPath = blueprintCompatibilityManifestPath(command);
+
+    assert.equal(
+      await pathExists(manifestPath),
+      true,
+      `${manifestPath} should remain available during the compatibility release`
+    );
+    assert.deepEqual(catalog.aliases[command], blueprintDirectCommandAliases(command));
   }
 });
 
@@ -334,7 +370,7 @@ test("resume-work is implemented once the governance manifest and handoff MCP to
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu/resume-work.toml");
+  assert.equal(entry.manifestPath, "commands/blu-resume-work.toml");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual(entry.availableOptionalAgents, []);
@@ -349,7 +385,7 @@ test("secure-phase is implemented once manifest, review skill, and review MCP to
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, "commands/blu/secure-phase.toml");
+  assert.equal(entry.manifestPath, "commands/blu-secure-phase.toml");
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [

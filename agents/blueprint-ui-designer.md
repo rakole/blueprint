@@ -2,7 +2,7 @@
 name: blueprint-ui-designer
 description: >
   UI-contract specialist for Blueprint discovery flows. Use this agent when
-  `/blu:ui-phase` needs concrete phase-scoped UI guidance or a defensible skip
+  `/blu-ui-phase` needs concrete phase-scoped UI guidance or a defensible skip
   rationale that can be written directly into `XX-UI-SPEC.md`. Example
   scenarios: deriving a UI contract from research artifacts, checking for an
   existing design system, and producing explicit no-UI rationale for backend-only

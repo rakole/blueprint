@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("complete-milestone manifest references report-driven closeout tools and summary routing", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/complete-milestone.toml"),
+    path.join(repoRoot, "commands/blu-complete-milestone.toml"),
     "utf8"
   );
 
@@ -21,7 +21,7 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /milestone-complete-<milestone>/);
-  assert.match(commandFile, /\/blu:milestone-summary <milestone>/);
+  assert.match(commandFile, /\/blu-milestone-summary <milestone>/);
   assert.doesNotMatch(commandFile, /blueprint_phase_mark_complete/);
 });
 
@@ -31,9 +31,9 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
     "utf8"
   );
 
-  assert.match(skillFile, /\/blu:complete-milestone/);
+  assert.match(skillFile, /\/blu-complete-milestone/);
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /report-driven and state-driven/i);
-  assert.match(skillFile, /\/blu:milestone-summary <milestone>/);
+  assert.match(skillFile, /\/blu-milestone-summary <milestone>/);
 });

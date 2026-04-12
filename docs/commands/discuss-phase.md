@@ -1,4 +1,4 @@
-# `/blu:discuss-phase`
+# `/blu-discuss-phase`
 | Field | Value |
 |---|---|
 | Wave | `1` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:discuss-phase`
+- Gemini command path: `/blu-discuss-phase`
+- Compatibility during this release: `/blu:discuss-phase` (deprecated; remove next release)
 - Root router form: `/blu discuss-phase`
 - Argument hint: `<phase>`
-- `/blu:discuss-phase 3`
+- `/blu-discuss-phase 3`
 - `/blu discuss-phase`
 
 ## Inputs, Project State, And Prerequisite Artifacts

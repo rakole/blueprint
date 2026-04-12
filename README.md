@@ -2,12 +2,12 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu:add-backlog`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu-add-backlog`, and the first shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
 - Global install target: `gemini extensions install https://github.com/rakole/blueprint`
-- Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu:<command>` commands
+- Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu-<command>` commands; deprecated `/blu:<command>` aliases remain for one release
 - Project state location: `.blueprint/`
 - Global mutable state location: `~/.gemini/blueprint/`
 - Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in `~/.gemini/blueprint/defaults.json`
@@ -16,21 +16,21 @@ This repository still carries the planning pack that locked the product and arch
 
 ## Current Status
 
-- Wave 0 shipped commands: `/blu`, `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`
-- Phase 3 discovery commands are shipped: `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`
-- The shipped lifecycle slice also includes `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, and the read-only next-step router `/blu:next`
-- The read-only phase-discovery assumptions command `/blu:list-phase-assumptions` is now shipped on the same discovery substrate
-- The governance handoff and resume commands `/blu:pause-work` and `/blu:resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
-- The security audit command `/blu:secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
-- The roadmap append command `/blu:add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
-- The roadmap removal command `/blu:remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
-- The milestone audit command `/blu:audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
-- The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
-- The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
-- The capture command `/blu:add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
-- The documentation command `/blu:docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
+- Wave 0 shipped commands: `/blu`, `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-help`, `/blu-progress`, `/blu-health`, `/blu-map-codebase`
+- Phase 3 discovery commands are shipped: `/blu-discuss-phase`, `/blu-research-phase`, `/blu-ui-phase`
+- The shipped lifecycle slice also includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, and the read-only next-step router `/blu-next`
+- The read-only phase-discovery assumptions command `/blu-list-phase-assumptions` is now shipped on the same discovery substrate
+- The governance handoff and resume commands `/blu-pause-work` and `/blu-resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
+- The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
+- The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
+- The roadmap removal command `/blu-remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
+- The milestone audit command `/blu-audit-milestone` is now shipped; it compares original milestone intent against completed phase evidence and writes a durable report in `.blueprint/reports/`
+- The gap-planning command `/blu-plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
+- The milestone closeout trio `/blu-complete-milestone`, `/blu-milestone-summary`, and `/blu-new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
+- The capture command `/blu-add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
+- The documentation command `/blu-docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
 - `insert-phase` remains the only blocked Wave 2 command and must stay non-routable until its own manifest, primary skill contract, and required MCP substrate actually ship
-- Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
+- Runtime gate: `/blu`, `/blu-help`, and `/blu-progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
 ## Install And Release
 
@@ -40,7 +40,7 @@ Blueprint is intended to install from the public repository:
 gemini extensions install https://github.com/rakole/blueprint
 ```
 
-After install or update, restart Gemini CLI before expecting `/blu` or `/blu:help`
+After install or update, restart Gemini CLI before expecting `/blu` or `/blu-help`
 to appear in the active session.
 
 Release and operator verification should always confirm the bundled extension
@@ -53,7 +53,7 @@ shape, not just the source tree:
 5. Clean-home smoke from a temporary home:
    - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions link .`
    - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions list`
-6. Restart Gemini CLI with that clean home and confirm `/blu` plus `/blu:help`
+6. Restart Gemini CLI with that clean home and confirm `/blu` plus `/blu-help`
    load before treating the release candidate as publishable.
 
 `dist/` must be current before publishing because Gemini loads the built MCP
@@ -162,34 +162,34 @@ These runtime files exist today:
 - `gemini-extension.json`
 - `GEMINI.md`
 - `commands/blu.toml`
-- `commands/blu/new-project.toml`
-- `commands/blu/settings.toml`
-- `commands/blu/set-profile.toml`
-- `commands/blu/help.toml`
-- `commands/blu/progress.toml`
-- `commands/blu/health.toml`
-- `commands/blu/map-codebase.toml`
-- `commands/blu/add-backlog.toml`
-- `commands/blu/discuss-phase.toml`
-- `commands/blu/list-phase-assumptions.toml`
-- `commands/blu/research-phase.toml`
-- `commands/blu/ui-phase.toml`
-- `commands/blu/plan-phase.toml`
-- `commands/blu/execute-phase.toml`
-- `commands/blu/validate-phase.toml`
-- `commands/blu/verify-work.toml`
-- `commands/blu/secure-phase.toml`
-- `commands/blu/audit-milestone.toml`
-- `commands/blu/add-phase.toml`
-- `commands/blu/complete-milestone.toml`
-- `commands/blu/docs-update.toml`
-- `commands/blu/milestone-summary.toml`
-- `commands/blu/new-milestone.toml`
-- `commands/blu/plan-milestone-gaps.toml`
-- `commands/blu/remove-phase.toml`
-- `commands/blu/next.toml`
-- `commands/blu/pause-work.toml`
-- `commands/blu/resume-work.toml`
+- `commands/blu-new-project.toml`
+- `commands/blu-settings.toml`
+- `commands/blu-set-profile.toml`
+- `commands/blu-help.toml`
+- `commands/blu-progress.toml`
+- `commands/blu-health.toml`
+- `commands/blu-map-codebase.toml`
+- `commands/blu-add-backlog.toml`
+- `commands/blu-discuss-phase.toml`
+- `commands/blu-list-phase-assumptions.toml`
+- `commands/blu-research-phase.toml`
+- `commands/blu-ui-phase.toml`
+- `commands/blu-plan-phase.toml`
+- `commands/blu-execute-phase.toml`
+- `commands/blu-validate-phase.toml`
+- `commands/blu-verify-work.toml`
+- `commands/blu-secure-phase.toml`
+- `commands/blu-audit-milestone.toml`
+- `commands/blu-add-phase.toml`
+- `commands/blu-complete-milestone.toml`
+- `commands/blu-docs-update.toml`
+- `commands/blu-milestone-summary.toml`
+- `commands/blu-new-milestone.toml`
+- `commands/blu-plan-milestone-gaps.toml`
+- `commands/blu-remove-phase.toml`
+- `commands/blu-next.toml`
+- `commands/blu-pause-work.toml`
+- `commands/blu-resume-work.toml`
 - `skills/blueprint-router/SKILL.md`
 - `skills/blueprint-router.md` (legacy mirror retained for compatibility docs during migration)
 - `skills/blueprint-bootstrap/SKILL.md`
@@ -238,7 +238,7 @@ Blueprint uses one runtime-facing vocabulary across docs and the command catalog
 
 Wave 2 milestone closeout is now part of the shipped runtime. The next broad rollout should start from a fresh plan while the shipped Phase 3, Phase 4, governance handoff/resume, and roadmap-admin guarantees stay green:
 
-1. Keep `/blu`, `/blu:help`, and `/blu:progress` limited to `implemented` commands until any new manifest, primary skill, and required MCP tools actually ship
+1. Keep `/blu`, `/blu-help`, and `/blu-progress` limited to `implemented` commands until any new manifest, primary skill, and required MCP tools actually ship
 2. Keep `insert-phase` blocked and non-routable unless it is separately replanned and implemented end to end
 3. Preserve the shipped pause/resume routing, validation parity, roadmap append/removal guarantees, milestone audit and closeout report contracts, and carry-forward `new-milestone` behavior while the next post-Wave-2 slice lands
 

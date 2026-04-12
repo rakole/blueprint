@@ -1,4 +1,4 @@
-# `/blu:validate-phase`
+# `/blu-validate-phase`
 | Field | Value |
 |---|---|
 | Wave | `1` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:validate-phase`
+- Gemini command path: `/blu-validate-phase`
+- Compatibility during this release: `/blu:validate-phase` (deprecated; remove next release)
 - Root router form: `/blu validate-phase`
 - Argument hint: `[phase number]`
-- `/blu:validate-phase 3`
+- `/blu-validate-phase 3`
 - `/blu validate-phase`
 
 ## Inputs, Project State, And Prerequisite Artifacts

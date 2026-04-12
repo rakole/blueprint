@@ -52,8 +52,8 @@ async function createMilestoneAuditRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v2
 - Current phase: 4
-- Active command: /blu:verify-work
-- Next action: Run /blu:verify-work 4
+- Active command: /blu-verify-work
+- Next action: Run /blu-verify-work 4
 - Last updated: 2026-04-12T00:00:00.000Z
 
 ## Blockers
@@ -158,7 +158,7 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 
 ## Recommendations
 
-- Route to /blu:audit-milestone once every roadmap phase is complete and UAT is present.
+- Route to /blu-audit-milestone once every roadmap phase is complete and UAT is present.
 
 ## Sources
 
@@ -288,8 +288,8 @@ test("project status routes fully verified milestones to audit-milestone until t
   const beforeStatus = await blueprintProjectStatus({ cwd: repoPath });
   const beforeState = await blueprintStateLoad({ cwd: repoPath });
 
-  assert.match(beforeStatus.nextAction, /\/blu:audit-milestone v2/);
-  assert.match(beforeState.derivedStatus.nextAction, /\/blu:audit-milestone v2/);
+  assert.match(beforeStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.match(beforeState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
 
   await blueprintArtifactReportWrite({
     cwd: repoPath,
@@ -305,8 +305,8 @@ test("project status routes fully verified milestones to audit-milestone until t
   const afterStatus = await blueprintProjectStatus({ cwd: repoPath });
   const afterState = await blueprintStateLoad({ cwd: repoPath });
 
-  assert.doesNotMatch(afterStatus.nextAction, /\/blu:audit-milestone/);
-  assert.doesNotMatch(afterState.derivedStatus.nextAction, /\/blu:audit-milestone/);
-  assert.match(afterStatus.nextAction, /\/blu:complete-milestone v2/);
-  assert.match(afterState.derivedStatus.nextAction, /\/blu:complete-milestone v2/);
+  assert.doesNotMatch(afterStatus.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(afterState.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.match(afterStatus.nextAction, /\/blu-complete-milestone v2/);
+  assert.match(afterState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
 });

@@ -1,4 +1,4 @@
-# `/blu:docs-update`
+# `/blu-docs-update`
 | Field | Value |
 |---|---|
 | Wave | `4` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:docs-update`
+- Gemini command path: `/blu-docs-update`
+- Compatibility during this release: `/blu:docs-update` (deprecated; remove next release)
 - Root router form: `/blu docs-update`
 - Argument hint: `[--force] [--verify-only]`
-- `/blu:docs-update --verify-only`
+- `/blu-docs-update --verify-only`
 - `/blu docs-update`
 
 ## Inputs, Project State, And Prerequisite Artifacts

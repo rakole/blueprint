@@ -6,7 +6,7 @@ description: >
   work, and persist honest summary artifacts through MCP.
 status: implemented
 commands:
-  - /blu:execute-phase
+  - /blu-execute-phase
 ---
 
 # Blueprint Phase Execution Skill
@@ -55,7 +55,7 @@ Carry forward the useful upstream `execute-phase` intent while preserving Bluepr
 
 1. Resolve the target phase before executing anything and stop if the phase cannot be inferred safely.
 2. Treat the plan index plus summary index as the execution source of truth; plans without summaries are pending work, and summaries without plans are a repair warning.
-3. If no plans exist yet, route to `/blu:plan-phase` before attempting execution.
+3. If no plans exist yet, route to `/blu-plan-phase` before attempting execution.
 4. Read the selected plan artifacts before delegating execution so wave ordering, dependencies, and acceptance criteria stay grounded in the saved plan set.
 5. Respect `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from normalized effective config when describing execution mode.
 6. Use `blueprint-executor` for bounded per-plan work instead of collapsing the entire phase into one task.
@@ -63,7 +63,7 @@ Carry forward the useful upstream `execute-phase` intent while preserving Bluepr
 8. Existing summaries require explicit overwrite confirmation before replacement. Reuse is the default.
 9. Keep partial-wave, `--wave`, and `--gaps-only` runs honest: they may advance execution coverage, but they must not claim the whole phase is complete while pending plans remain.
 10. After summary writes, refresh validation signals and update `STATE.md` so the next safe implemented action stays accurate.
-11. Prefer `/blu:progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+11. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
 12. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
 
 ## Output Style

@@ -14,14 +14,14 @@ It is not a literal port of GSD internals.
 
 - Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `list-phase-assumptions`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `pause-work`, `resume-work`, `docs-update`, `secure-phase`, `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
-- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `verify-work`, `pause-work`, `resume-work`, `docs-update`, and `secure-phase` are also shipped, `/blu:add-phase`, `/blu:remove-phase`, `/blu:plan-milestone-gaps`, `/blu:audit-milestone`, `/blu:complete-milestone`, `/blu:milestone-summary`, `/blu:new-milestone`, and `/blu:list-phase-assumptions` are now implemented as the current Wave 2 roadmap, milestone, and discovery slice, and `insert-phase` remains explicitly blocked in this cycle
-- `/blu`, `/blu:help`, and `/blu:progress` must still surface only commands whose catalog entry is `implemented`
+- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `verify-work`, `pause-work`, `resume-work`, `docs-update`, and `secure-phase` are also shipped, `/blu-add-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, and `/blu-list-phase-assumptions` are now implemented as the current Wave 2 roadmap, milestone, and discovery slice, and `insert-phase` remains explicitly blocked in this cycle
+- `/blu`, `/blu-help`, and `/blu-progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
 
 - Product name: `blueprint`
 - Root router: `/blu`
-- Direct commands: `/blu:<command>`
+- Direct commands: `/blu-<command>`; deprecated `/blu:<command>` aliases remain supported for one release
 - Project-local state directory: `.blueprint/`
 - Global non-project state directory: `~/.gemini/blueprint/`
 - Install model: `gemini extensions install https://github.com/rakole/blueprint`
@@ -64,7 +64,7 @@ It is not a literal port of GSD internals.
 - Keep `.blueprint/` schema stable while implementing Wave 0 and Wave 1
 - Do not change `blueprint_command_catalog` status semantics while Phase 3 is being implemented; later commands become routable only when manifests, primary skills, and required MCP tools exist
 - Require explicit confirmation for high-risk commands such as `undo`, `ship`, `new-workspace`, `remove-workspace`, `cleanup`, and `reapply-patches`
-- Do not recommend planned-only commands from `/blu`, `/blu:help`, or `/blu:progress`
+- Do not recommend planned-only commands from `/blu`, `/blu-help`, or `/blu-progress`
 - Do not treat documented Phase 3+ commands as runnable until their runtime catalog entry is `implemented`
 - When starting any new code change(fresh context) create a new worktree, post work completion, push to origin, PR to main, merge, pull into main local
 

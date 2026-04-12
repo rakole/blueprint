@@ -6,12 +6,12 @@ description: >
   persistence or advertising unimplemented capture commands as runnable.
 status: implemented
 commands:
-  - /blu:note
-  - /blu:add-todo
-  - /blu:check-todos
-  - /blu:add-backlog
-  - /blu:review-backlog
-  - /blu:explore
+  - /blu-note
+  - /blu-add-todo
+  - /blu-check-todos
+  - /blu-add-backlog
+  - /blu-review-backlog
+  - /blu-explore
 ---
 
 # Blueprint Capture Skill

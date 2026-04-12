@@ -1,4 +1,4 @@
-# `/blu:help`
+# `/blu-help`
 | Field | Value |
 |---|---|
 | Wave | `0` |
@@ -12,10 +12,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:help`
+- Gemini command path: `/blu-help`
+- Compatibility during this release: `/blu:help` (deprecated; remove next release)
 - Root router form: `/blu help`
 - Argument hint: `none`
-- `/blu:help`
+- `/blu-help`
 - `/blu help`
 
 ## Inputs, Project State, And Prerequisite Artifacts
@@ -80,8 +81,8 @@
 
 ## Failure Modes And Recovery
 
-- If Blueprint is not initialized, prefer `/blu:new-project`.
-- If Blueprint is partial, prefer `/blu:health`.
+- If Blueprint is not initialized, prefer `/blu-new-project`.
+- If Blueprint is partial, prefer `/blu-health`.
 - If a requested command is blocked, explain the missing substrate instead of presenting it as runnable.
 
 ## Acceptance Criteria

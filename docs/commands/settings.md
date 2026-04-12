@@ -1,4 +1,4 @@
-# `/blu:settings`
+# `/blu-settings`
 | Field | Value |
 |---|---|
 | Wave | `0` |
@@ -15,10 +15,11 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:settings`
+- Gemini command path: `/blu-settings`
+- Compatibility during this release: `/blu:settings` (deprecated; remove next release)
 - Root router form: `/blu settings`
 - Argument hint: `none`
-- `/blu:settings`
+- `/blu-settings`
 - `/blu settings`
 
 ## Inputs, Project State, And Prerequisite Artifacts

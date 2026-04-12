@@ -2,7 +2,7 @@
 name: blueprint-researcher
 description: >
   Phase-scoped technical research specialist for Blueprint discovery work. Use
-  this agent when `/blu:research-phase` or related discovery commands need
+  this agent when `/blu-research-phase` or related discovery commands need
   source-backed analysis that can be turned into a durable `XX-RESEARCH.md`
   artifact. Example scenarios: gathering implementation patterns for a phase,
   comparing repo evidence against official docs, and producing planner-friendly

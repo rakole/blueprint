@@ -6,7 +6,7 @@ description: >
   with planner/checker revision loops and MCP-owned plan writes.
 status: implemented
 commands:
-  - /blu:plan-phase
+  - /blu-plan-phase
 ---
 
 # Blueprint Phase Planning Skill
@@ -57,14 +57,14 @@ Carry forward the useful upstream `plan-phase` intent while preserving Blueprint
 
 1. Resolve the target phase before drafting anything and stop if it cannot be inferred safely.
 2. Treat `workflow.research`, `workflow.ui_phase`, `workflow.ui_safety_gate`, and `workflow.plan_check` from normalized effective config as the source of truth for planning gates.
-3. If research is enabled and missing or invalid, route to `/blu:research-phase` before finalizing the plan.
+3. If research is enabled and missing or invalid, route to `/blu-research-phase` before finalizing the plan.
 4. If UI planning is enabled, require a usable UI contract or explicit skip rationale before the plan is finalized.
 5. If a phase already has one or more `-PLAN.md` files, inspect them through `blueprint_phase_plan_index` and `blueprint_phase_plan_read`, then require explicit overwrite confirmation before replacement or targeted revision.
 6. Use `blueprint-planner` to draft one or more execution-ready plans with concrete frontmatter, dependency waves, repo paths, task-level `Read First`, task-level `Action`, and grep/test-verifiable `Acceptance Criteria`.
 7. Persist finalized plan content through `blueprint_phase_plan_write`; do not rely on scaffold text as the finished plan.
 8. Use `blueprint-checker` to review the saved plan set against phase evidence and locked Blueprint decisions.
 9. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
-10. Prefer `/blu:progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+10. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
 11. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
 
 ## Output Style

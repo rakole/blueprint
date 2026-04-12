@@ -7,10 +7,10 @@ description: >
   phase-scoped.
 status: implemented
 commands:
-  - /blu:discuss-phase
-  - /blu:research-phase
-  - /blu:ui-phase
-  - /blu:list-phase-assumptions
+  - /blu-discuss-phase
+  - /blu-research-phase
+  - /blu-ui-phase
+  - /blu-list-phase-assumptions
 ---
 
 # Blueprint Phase Discovery Skill
@@ -80,7 +80,7 @@ Carry forward the useful discovery intent from upstream GSD while preserving Blu
 4. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
 5. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
 6. Require explicit overwrite confirmation before replacing existing research.
-7. Use `blueprint_command_catalog` before recommending `/blu:ui-phase`; otherwise route toward `/blu:progress`.
+7. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
 8. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
 
 ### `list-phase-assumptions`

@@ -1,4 +1,4 @@
-# `/blu:research-phase`
+# `/blu-research-phase`
 | Field | Value |
 |---|---|
 | Wave | `1` |
@@ -10,15 +10,16 @@
 ## Purpose
 
 
-`research-phase` carries forward the GSD intent to research how to implement a phase as a standalone discovery flow that usually feeds `/blu:plan-phase`. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
+`research-phase` carries forward the GSD intent to research how to implement a phase as a standalone discovery flow that usually feeds `/blu-plan-phase`. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu:research-phase`
+- Gemini command path: `/blu-research-phase`
+- Compatibility during this release: `/blu:research-phase` (deprecated; remove next release)
 - Root router form: `/blu research-phase`
 - Argument hint: `[phase]`
-- `/blu:research-phase 3`
+- `/blu-research-phase 3`
 - `/blu research-phase`
 
 ## Inputs, Project State, And Prerequisite Artifacts

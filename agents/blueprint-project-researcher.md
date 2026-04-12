@@ -2,7 +2,7 @@
 name: blueprint-project-researcher
 description: >
   Bootstrap-context specialist for Blueprint project initialization. Use this
-  agent when `/blu:new-project` needs grounded repo classification, product
+  agent when `/blu-new-project` needs grounded repo classification, product
   context recovery, or brownfield signals before the first persistent write.
   Example scenarios: classifying a repository as greenfield or brownfield,
   summarizing existing product intent, and surfacing missing inputs before
@@ -41,7 +41,7 @@ Gather repo and product context during bootstrap or milestone-definition work.
 4. Treat existing `.blueprint/` files or partial bootstrap artifacts as a
    signal to surface overwrite or repair risk before recommending new writes.
 5. If the repo is brownfield and mapping has not happened yet, call out that
-   roadmap confidence stays provisional until `/blu:map-codebase`.
+   roadmap confidence stays provisional until `/blu-map-codebase`.
 6. Stop with a blocker when the parent has not supplied enough context to make
    a safe bootstrap recommendation.
 
@@ -59,7 +59,7 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - Cite the evidence that drove the repo classification and any bootstrap risk.
 - Separate confirmed product signals from assumptions or missing inputs.
 - Call out whether the next safe step is normal bootstrap follow-through or a
-  provisional brownfield route to `/blu:map-codebase`.
+  provisional brownfield route to `/blu-map-codebase`.
 - Keep the output concise enough that the parent can turn it into a bootstrap
   summary without rewriting the substance.
 

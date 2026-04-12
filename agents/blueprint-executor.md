@@ -2,7 +2,7 @@
 name: blueprint-executor
 description: >
   Bounded implementation specialist for Blueprint plan execution. Use this
-  agent when `/blu:execute-phase` needs targeted per-plan code changes, repo
+  agent when `/blu-execute-phase` needs targeted per-plan code changes, repo
   verification, and summary-ready execution notes without widening scope across
   the whole phase. Example scenarios: implementing one selected plan, updating
   files within the assigned write boundary, and reporting deviations or partial
@@ -24,7 +24,7 @@ timeout_mins: 20
 ## Purpose
 
 Execute one assigned Blueprint plan or tightly related plan slice with bounded
-write ownership so `/blu:execute-phase` can turn real repo work into one honest,
+write ownership so `/blu-execute-phase` can turn real repo work into one honest,
 summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 
 ## Required Reads

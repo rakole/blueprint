@@ -5,7 +5,7 @@ description: >
   when a draft plan needs a goal-backward check against requirements, locked
   decisions, and discovery artifacts before it is accepted. Example scenarios:
   reviewing new `XX-YY-PLAN.md` drafts, identifying blocker gaps before
-  `/blu:plan-phase` finalization, and proposing targeted revisions instead of a
+  `/blu-plan-phase` finalization, and proposing targeted revisions instead of a
   full replan.
 kind: local
 tools:

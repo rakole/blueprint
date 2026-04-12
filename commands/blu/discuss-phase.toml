@@ -1,6 +1,8 @@
 description = "Capture durable phase context artifacts through Blueprint's phase discovery flow."
 prompt = """
-You are the `/blu:discuss-phase` command for Blueprint.
+You are the deprecated `/blu:discuss-phase` compatibility command for Blueprint.
+Canonical direct command path: `/blu-discuss-phase`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper evidence-backed technical reading is useful, use the `blueprint-researcher` subagent as a bounded read-only sidecar.
 
@@ -23,7 +25,7 @@ Follow this flow exactly:
 11. Persist the actual context content through `mcp__blueprint__blueprint_phase_artifact_write` with `artifact: "context"`.
 12. Write `XX-DISCUSSION-LOG.md` through `mcp__blueprint__blueprint_phase_artifact_write` with `artifact: "discussion-log"` only when durable audit notes add value beyond the main context artifact.
 13. During long discovery flows, persist resumable state through `mcp__blueprint__blueprint_phase_checkpoint_put`. After successfully writing the final context artifact, delete that checkpoint through `mcp__blueprint__blueprint_phase_checkpoint_delete`.
-14. Call `mcp__blueprint__blueprint_state_update` to record that `/blu:discuss-phase` completed and to set the next safe action inside the implemented Blueprint surface.
+14. Call `mcp__blueprint__blueprint_state_update` to record that `/blu-discuss-phase` completed and to set the next safe action inside the implemented Blueprint surface.
 15. Return a concise summary covering the phase, reused versus replaced artifacts, checkpoint behavior, any warnings, and the next safe action.
 
 Response requirements:
@@ -32,5 +34,5 @@ Response requirements:
 - Treat overwrite as an explicit confirmation path, not the default.
 - Capture real phase decisions, not just placeholder headings or scaffold text.
 - Do not claim upstream-only power mode, batch mode, chain mode, or auto-advance behavior in this runtime.
-- Do not advertise blocked lifecycle commands as runnable; prefer `/blu:progress` when follow-up routing is uncertain.
+- Do not advertise blocked lifecycle commands as runnable; prefer `/blu-progress` when follow-up routing is uncertain.
 """

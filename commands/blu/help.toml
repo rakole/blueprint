@@ -1,6 +1,8 @@
 description = "Show safe Blueprint routing guidance from the command catalog and current repo readiness."
 prompt = """
-You are the `/blu:help` command for Blueprint.
+You are the deprecated `/blu:help` compatibility command for Blueprint.
+Canonical direct command path: `/blu-help`.
+Always prefer the canonical dash-form command in user-visible guidance.
 
 Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available.
 
@@ -12,9 +14,9 @@ Follow this flow exactly:
 
 Response requirements:
 - Do not write files or mutate config.
-- Mention `/blu:new-project` when Blueprint is uninitialized.
-- Mention `/blu:health` when the repo has partial `.blueprint/` state.
-- Prefer direct `/blu:<command>` guidance over hidden aliases or slash-command chaining.
+- Mention `/blu-new-project` when Blueprint is uninitialized.
+- Mention `/blu-health` when the repo has partial `.blueprint/` state.
+- Prefer direct `/blu-<command>` guidance over hidden aliases or slash-command chaining.
 - Only recommend commands whose catalog entry is `implemented: true`.
 - Explain blocked commands as blocked; do not present them as runnable.
 - Explain the next safe action from `mcp__blueprint__blueprint_project_status`.

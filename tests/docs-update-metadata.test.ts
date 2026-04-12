@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 
 test("docs-update manifest references the docs skill, doc agents, report tool, and scope guards", async () => {
   const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu/docs-update.toml"),
+    path.join(repoRoot, "commands/blu-docs-update.toml"),
     "utf8"
   );
 
@@ -25,8 +25,8 @@ test("docs-update manifest references the docs skill, doc agents, report tool, a
   assert.match(commandFile, /docs-update-latest/);
   assert.match(commandFile, /`--verify-only`/);
   assert.match(commandFile, /`--force`/);
-  assert.match(commandFile, /\/blu:map-codebase/);
-  assert.match(commandFile, /\/blu:progress/);
+  assert.match(commandFile, /\/blu-map-codebase/);
+  assert.match(commandFile, /\/blu-progress/);
 });
 
 test("docs skill captures narrow-scope updates, verify-only mode, and report persistence", async () => {
@@ -36,7 +36,7 @@ test("docs skill captures narrow-scope updates, verify-only mode, and report per
   );
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu:docs-update/);
+  assert.match(skillFile, /\/blu-docs-update/);
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /`--verify-only` as read-only/i);
