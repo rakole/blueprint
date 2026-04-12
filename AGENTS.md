@@ -66,6 +66,7 @@ It is not a literal port of GSD internals.
 - Require explicit confirmation for high-risk commands such as `undo`, `ship`, `new-workspace`, `remove-workspace`, `cleanup`, and `reapply-patches`
 - Do not recommend planned-only commands from `/blu`, `/blu:help`, or `/blu:progress`
 - Do not treat documented Phase 3+ commands as runnable until their runtime catalog entry is `implemented`
+- When starting any new code change(fresh context) create a new worktree, post work completion, push to origin, PR to main, merge, pull into main local
 
 ## Preferred Read Order
 
