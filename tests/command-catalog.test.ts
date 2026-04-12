@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
+import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import { resolveBlueprintSkillPath } from "../src/mcp/runtime-vocabulary.js";
 
@@ -44,6 +45,14 @@ async function pathExists(relativePath: string): Promise<boolean> {
 async function expectedSkillPath(skillName: string): Promise<string | null> {
   const resolution = await resolveBlueprintSkillPath(skillName, pathExists);
   return resolution.resolvedPath;
+}
+
+async function readRelativePath(relativePath: string): Promise<string | null> {
+  try {
+    return await readFile(relativePath, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
@@ -188,6 +197,22 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["plan-milestone-gaps"].availableOptionalAgents, [
     "blueprint-roadmapper"
   ]);
+});
+
+test("runtime command catalog only advertises metadata-valid optional agents", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const availableAgents = new Set(
+    Object.values(catalog.commands).flatMap((entry) => entry.availableOptionalAgents)
+  );
+
+  for (const agentName of availableAgents) {
+    const validation = await validateBundledBlueprintAgentDefinition(
+      agentName,
+      readRelativePath
+    );
+
+    assert.equal(validation.valid, true, validation.issues.join("\n"));
+  }
 });
 
 test("blocked lifecycle and roadmap commands stay unroutable until substrate exists", async () => {
