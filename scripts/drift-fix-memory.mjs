@@ -2,6 +2,7 @@
 
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -28,7 +29,7 @@ Usage:
   node scripts/drift-fix-memory.mjs register-agent --agent ID [--worktree PATH] [--branch NAME] [--note TEXT] [--root PATH]
   node scripts/drift-fix-memory.mjs claim --agent ID --task ID [--summary TEXT] [--worktree PATH] [--branch NAME] [--root PATH]
   node scripts/drift-fix-memory.mjs release --agent ID --task ID [--reason TEXT] [--root PATH]
-  node scripts/drift-fix-memory.mjs complete --agent ID --task ID [--summary TEXT] [--tests TEXT] [--files CSV] [--root PATH]
+  node scripts/drift-fix-memory.mjs complete --agent ID --task ID [--summary TEXT] [--tests TEXT] [--files CSV] [--no-files-reason TEXT] [--root PATH]
   node scripts/drift-fix-memory.mjs block --agent ID --task ID --reason TEXT [--root PATH]
   node scripts/drift-fix-memory.mjs note --agent ID [--task ID] --title TEXT (--body TEXT | --body-file PATH) [--kind KIND] [--root PATH]
   node scripts/drift-fix-memory.mjs cleanup [--root PATH]
@@ -108,6 +109,175 @@ function csvToList(raw) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+}
+
+function normalizeRepoFile(filePath, worktree) {
+  const trimmed = filePath.trim();
+
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const relative = path.isAbsolute(trimmed)
+    ? path.relative(worktree, trimmed)
+    : trimmed.replace(/^[.][/\\]/, "");
+
+  if (
+    relative.length === 0 ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative)
+  ) {
+    throw new Error(
+      `File ${trimmed} must stay inside the claimed worktree ${worktree}.`
+    );
+  }
+
+  return relative.split(path.sep).join("/");
+}
+
+function runGit(worktree, args) {
+  return spawnSync("git", args, {
+    cwd: worktree,
+    encoding: "utf8"
+  });
+}
+
+function readGitFileList(worktree, args) {
+  const result = runGit(worktree, args);
+
+  if (result.status !== 0) {
+    return [];
+  }
+
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(path.sep).join("/"));
+}
+
+function resolveGitBaseRef(worktree) {
+  const upstream = runGit(worktree, [
+    "rev-parse",
+    "--abbrev-ref",
+    "--symbolic-full-name",
+    "@{upstream}"
+  ]);
+
+  if (upstream.status === 0) {
+    return upstream.stdout.trim();
+  }
+
+  for (const candidate of ["origin/main", "main"]) {
+    const probe = runGit(worktree, ["rev-parse", "--verify", candidate]);
+
+    if (probe.status === 0) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function collectCompletionEvidence(worktree, files) {
+  const insideGit = runGit(worktree, ["rev-parse", "--show-toplevel"]);
+
+  if (insideGit.status !== 0) {
+    throw new Error(`Claimed worktree is not a git repository: ${worktree}`);
+  }
+
+  const changedFiles = new Set();
+  const fileArgs = ["--", ...files];
+
+  for (const line of readGitFileList(worktree, [
+    "diff",
+    "--name-only",
+    "--relative",
+    ...fileArgs
+  ])) {
+    changedFiles.add(line);
+  }
+
+  for (const line of readGitFileList(worktree, [
+    "diff",
+    "--cached",
+    "--name-only",
+    "--relative",
+    ...fileArgs
+  ])) {
+    changedFiles.add(line);
+  }
+
+  for (const line of readGitFileList(worktree, [
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+    ...fileArgs
+  ])) {
+    changedFiles.add(line);
+  }
+
+  const baseRef = resolveGitBaseRef(worktree);
+
+  if (baseRef) {
+    for (const line of readGitFileList(worktree, [
+      "diff",
+      "--name-only",
+      `${baseRef}...HEAD`,
+      "--",
+      ...files
+    ])) {
+      changedFiles.add(line);
+    }
+  }
+
+  return Array.from(changedFiles).sort();
+}
+
+function validateCompletionFiles(claim, rawFiles, noFilesReason) {
+  if (typeof noFilesReason === "string" && noFilesReason.trim().length > 0) {
+    return {
+      files: [],
+      noFilesReason: noFilesReason.trim(),
+      verifiedFiles: []
+    };
+  }
+
+  if (rawFiles.length === 0) {
+    throw new Error(
+      "Completion requires --files with changed repo paths or --no-files-reason for an explicit no-op closeout."
+    );
+  }
+
+  const worktree =
+    typeof claim.worktree === "string" && claim.worktree.trim().length > 0
+      ? path.resolve(claim.worktree)
+      : process.cwd();
+  const files = rawFiles
+    .map((file) => normalizeRepoFile(file, worktree))
+    .filter(Boolean);
+
+  if (files.length === 0) {
+    throw new Error(
+      "Completion requires at least one repo-relative file path in --files."
+    );
+  }
+
+  const changedFiles = collectCompletionEvidence(worktree, files);
+  const changedSet = new Set(changedFiles);
+  const missingEvidence = files.filter((file) => !changedSet.has(file));
+
+  if (missingEvidence.length > 0) {
+    throw new Error(
+      `Completion for ${claim.taskId} requires verifiable file changes. No change evidence found for: ${missingEvidence.join(", ")}`
+    );
+  }
+
+  return {
+    files,
+    noFilesReason: null,
+    verifiedFiles: changedFiles
+  };
 }
 
 function resolveRoot(args) {
@@ -210,7 +380,7 @@ node scripts/drift-fix-memory.mjs status
 node scripts/drift-fix-memory.mjs register-agent --agent AGENT_ID --worktree "$PWD" --branch "$(git branch --show-current)"
 node scripts/drift-fix-memory.mjs claim --agent AGENT_ID --task DF-001
 node scripts/drift-fix-memory.mjs note --agent AGENT_ID --task DF-001 --title "Finding" --body "Short note"
-node scripts/drift-fix-memory.mjs complete --agent AGENT_ID --task DF-001 --summary "Done" --tests "npm test -- --test-name-pattern=..."
+node scripts/drift-fix-memory.mjs complete --agent AGENT_ID --task DF-001 --summary "Done" --tests "npm test -- --test-name-pattern=..." --files "path/to/file.ts"
 \`\`\`
 
 ## Directory Layout
@@ -397,6 +567,12 @@ async function completeCommand(args) {
     throw new Error(`Task ${taskId} is claimed by ${claim.agentId}, not ${agentId}.`);
   }
 
+  const fileValidation = validateCompletionFiles(
+    claim,
+    csvToList(args.files),
+    typeof args["no-files-reason"] === "string" ? args["no-files-reason"] : null
+  );
+
   const completion = {
     ...claim,
     completedAt: nowIso(),
@@ -408,7 +584,9 @@ async function completeCommand(args) {
       typeof args.tests === "string" && args.tests.trim().length > 0
         ? args.tests.trim()
         : null,
-    files: csvToList(args.files)
+    files: fileValidation.files,
+    noFilesReason: fileValidation.noFilesReason,
+    verifiedFiles: fileValidation.verifiedFiles
   };
 
   await writeJson(completedPath, completion);

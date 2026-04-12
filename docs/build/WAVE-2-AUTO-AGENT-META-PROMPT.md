@@ -44,6 +44,10 @@ node scripts/drift-fix-memory.mjs note --agent AGENT_ID --task TASK_ID --title "
 node scripts/drift-fix-memory.mjs complete --agent AGENT_ID --task TASK_ID --summary "done" --tests "..." --files "a,b,c"
 ```
 
+Only use `complete` with `--files` when those repo paths were actually changed.
+If a task is verification-only and no repo edits were needed, use
+`--no-files-reason "..."` instead of inventing touched files.
+
 If you discover that the claimed task requires a new agent, new hook, new MCP tool, or any cross-scope mutation not already planned:
 
 1. Stop immediately.
