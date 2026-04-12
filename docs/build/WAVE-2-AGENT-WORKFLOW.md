@@ -99,6 +99,13 @@ node scripts/drift-fix-memory.mjs note --agent AGENT_ID --task W2-01 --title "Fi
 node scripts/drift-fix-memory.mjs complete --agent AGENT_ID --task W2-01 --summary "done" --tests "npm test -- --test-name-pattern=..." --files "a,b,c"
 ```
 
+If a task truly finishes without repo file edits, do not invent touched files.
+Record that explicitly with:
+
+```bash
+node scripts/drift-fix-memory.mjs complete --agent AGENT_ID --task W2-08 --summary "regression-only closeout" --tests "npm test" --no-files-reason "Regression-only pass; no repo edits were needed."
+```
+
 If blocked:
 
 ```bash
