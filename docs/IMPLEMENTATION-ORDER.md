@@ -74,6 +74,8 @@ Still blocked in this wave: `insert-phase`.
 - `ship`
 - `undo`
 
+Shipped in this wave: `docs-update`.
+
 ### Wave 5: Workspace and maintenance
 
 - `new-workspace`

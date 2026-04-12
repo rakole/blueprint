@@ -27,6 +27,11 @@ const SKILL_BUNDLES = [
     commands: ["/blu:validate-phase", "/blu:verify-work"]
   },
   {
+    name: "blueprint-docs",
+    description: "Documentation generation and verification",
+    commands: ["/blu:docs-update"]
+  },
+  {
     name: "blueprint-roadmap-admin",
     description: "Roadmap append, milestone audits, and future roadmap or milestone mutations",
     commands: [

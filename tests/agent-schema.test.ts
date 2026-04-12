@@ -14,6 +14,16 @@ const EXPECTED_AGENTS = {
     maxTurns: 10,
     timeoutMins: 10
   },
+  "blueprint-doc-verifier": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 16,
+    timeoutMins: 15
+  },
+  "blueprint-doc-writer": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 16,
+    timeoutMins: 15
+  },
   "blueprint-executor": {
     tools: [
       "list_directory",

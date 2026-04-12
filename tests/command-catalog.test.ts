@@ -33,7 +33,8 @@ const IMPLEMENTED_COMMANDS = [
   "audit-milestone",
   "complete-milestone",
   "milestone-summary",
-  "new-milestone"
+  "new-milestone",
+  "docs-update"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
@@ -215,6 +216,10 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["milestone-summary"].availableOptionalAgents, []);
   assert.deepEqual(catalog.commands["new-milestone"].availableOptionalAgents, [
     "blueprint-roadmapper"
+  ]);
+  assert.deepEqual(catalog.commands["docs-update"].availableOptionalAgents.sort(), [
+    "blueprint-doc-verifier",
+    "blueprint-doc-writer"
   ]);
 });
 
@@ -411,5 +416,29 @@ test("new-milestone is implemented once manifest, skill, and carry-forward scaff
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-roadmapper"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("docs-update is implemented once manifest, skill, and docs-report MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["docs-update"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_artifact_report_write",
+    "blueprint_artifact_summary_digest",
+    "blueprint_project_status"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents.sort(), [
+    "blueprint-doc-verifier",
+    "blueprint-doc-writer"
+  ]);
   assert.deepEqual(entry.blockedBy, []);
 });
