@@ -28,11 +28,11 @@ import {
   blueprintStateUpdate
 } from "./state.js";
 import {
-  blueprintAgentDefinitionPath,
   blueprintDiscoverableSkillPath,
   resolveBlueprintSkillPath,
   type BlueprintInternalToolName
 } from "../runtime-vocabulary.js";
+import { resolveAvailableOptionalAgents } from "../agent-definition.js";
 
 type CommandStatus = "planned" | "implemented" | "blocked" | "repairing";
 
@@ -558,11 +558,15 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     blockedBy.push(`Missing required MCP tool: ${toolName}`);
   }
 
-  for (const agentName of optionalAgents) {
-    if (await pathExists(bundledUrl(blueprintAgentDefinitionPath(agentName)))) {
-      availableOptionalAgents.push(agentName);
-    }
-  }
+  availableOptionalAgents.push(
+    ...(await resolveAvailableOptionalAgents(optionalAgents, async (relativePath) => {
+      try {
+        return await fs.readFile(bundledUrl(relativePath), "utf8");
+      } catch {
+        return null;
+      }
+    }))
+  );
 
   let status = parsedRow.declaredStatus;
 
