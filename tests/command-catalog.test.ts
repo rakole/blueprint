@@ -4,7 +4,10 @@ import { access, readFile } from "node:fs/promises";
 
 import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
-import { resolveBlueprintSkillPath } from "../src/mcp/runtime-vocabulary.js";
+import {
+  blueprintDiscoverableSkillPath,
+  resolveBlueprintSkillPath
+} from "../src/mcp/runtime-vocabulary.js";
 
 const IMPLEMENTED_COMMANDS = [
   "new-project",
@@ -42,9 +45,17 @@ async function pathExists(relativePath: string): Promise<boolean> {
   }
 }
 
-async function expectedSkillPath(skillName: string): Promise<string | null> {
+async function expectedDiscoverableSkillPath(skillName: string): Promise<string> {
   const resolution = await resolveBlueprintSkillPath(skillName, pathExists);
-  return resolution.resolvedPath;
+
+  assert.equal(
+    resolution.resolution,
+    "discoverable",
+    `${skillName} should resolve through skills/${skillName}/SKILL.md`
+  );
+  assert.equal(resolution.resolvedPath, resolution.canonicalPath);
+
+  return blueprintDiscoverableSkillPath(skillName);
 }
 
 async function readRelativePath(relativePath: string): Promise<string | null> {
@@ -77,7 +88,7 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.equal(entry.declaredStatus, "implemented");
     assert.equal(entry.requiredToolsSatisfied, true);
     assert.ok(entry.manifestPath);
-    assert.ok(entry.skillPath);
+    assert.equal(entry.skillPath, await expectedDiscoverableSkillPath(entry.primarySkill));
     assert.ok(entry.specPath);
     assert.deepEqual(entry.blockedBy, []);
   }
@@ -106,7 +117,7 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     );
     assert.equal(
       listPhaseAssumptions.skillPath,
-      await expectedSkillPath("blueprint-phase-discovery")
+      await expectedDiscoverableSkillPath("blueprint-phase-discovery")
     );
     assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
     assert.deepEqual(listPhaseAssumptions.blockedBy, []);
@@ -117,7 +128,7 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.equal(listPhaseAssumptions.manifestPath, null);
     assert.equal(
       listPhaseAssumptions.skillPath,
-      await expectedSkillPath("blueprint-phase-discovery")
+      await expectedDiscoverableSkillPath("blueprint-phase-discovery")
     );
     assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
     assert.match(

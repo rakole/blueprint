@@ -67,7 +67,8 @@ test("list-phase-assumptions is exposed as an implemented read-only discovery co
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.manifestPath, "commands/blu/list-phase-assumptions.toml");
-  assert.equal(entry.skillPath, skillResolution.resolvedPath);
+  assert.equal(skillResolution.resolution, "discoverable");
+  assert.equal(entry.skillPath, skillResolution.canonicalPath);
   assert.equal(entry.specPath, "docs/commands/list-phase-assumptions.md");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
