@@ -10,7 +10,7 @@ The live runtime currently ships:
 - the lifecycle slice from `discuss-phase` through `verify-work`
 - governance handoff/resume
 - the current roadmap-admin slice
-- the first capture command, `add-backlog`
+- the shipped Wave 3 capture commands, `note` and `add-backlog`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 

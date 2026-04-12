@@ -68,6 +68,72 @@ test("capture tools register blueprint_artifact_mutate_index", () => {
   );
 });
 
+test("blueprint_artifact_mutate_index appends a note entry without status or reserved phase metadata", async (t) => {
+  const repoPath = await createCaptureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "note",
+    entry: {
+      text: "Investigate sync edge cases",
+      addedAt: "2026-04-12"
+    }
+  });
+  const noteBody = await readFile(
+    path.join(repoPath, ".blueprint/notes/NOTES.md"),
+    "utf8"
+  );
+
+  assert.equal(result.status, "created");
+  assert.equal(result.targetPath, ".blueprint/notes/NOTES.md");
+  assert.deepEqual(result.createdEntryIds, ["NOTE-001"]);
+  assert.deepEqual(result.duplicateEntryIds, []);
+  assert.equal(result.updatedCounts.added, 1);
+  assert.equal(result.updatedCounts.preserved, 0);
+  assert.equal(result.reservedPhase, null);
+  assert.match(noteBody, /^# Notes/m);
+  assert.match(noteBody, /### NOTE-001/);
+  assert.match(noteBody, /- Added: 2026-04-12/);
+  assert.match(noteBody, /- Description: Investigate sync edge cases/);
+  assert.doesNotMatch(noteBody, /- Status:/);
+  assert.doesNotMatch(noteBody, /- Reserved Phase:/);
+});
+
+test("blueprint_artifact_mutate_index rejects duplicate notes after normalization", async (t) => {
+  const repoPath = await createCaptureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "note",
+    entry: {
+      text: "Investigate sync edge cases"
+    }
+  });
+  const duplicate = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "note",
+    entry: {
+      text: "  investigate   sync edge cases  "
+    }
+  });
+  const noteBody = await readFile(
+    path.join(repoPath, ".blueprint/notes/NOTES.md"),
+    "utf8"
+  );
+
+  assert.equal(duplicate.status, "duplicate");
+  assert.deepEqual(duplicate.createdEntryIds, []);
+  assert.deepEqual(duplicate.duplicateEntryIds, ["NOTE-001"]);
+  assert.equal(duplicate.updatedCounts.duplicates, 1);
+  assert.doesNotMatch(noteBody, /NOTE-002/);
+});
+
 test("blueprint_artifact_mutate_index appends a backlog entry and reserves an optional 999.x stub", async (t) => {
   const repoPath = await createCaptureRepo();
   t.after(async () => {

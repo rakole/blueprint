@@ -10,14 +10,14 @@
 ## Purpose
 
 
-`note` carries forward the GSD intent to zero-friction idea capture. Append, list, or promote notes to todos.. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`note` carries forward the GSD intent to zero-friction idea capture. In Blueprint, the currently shipped slice supports project-local append-only note capture through MCP-backed persistence. It keeps notes inside `.blueprint/notes/`, does not reintroduce upstream global-note behavior, and leaves listing or promotion behavior for later dedicated capture contracts.
 
 
 ## Command Path And Examples
 
 - Gemini command path: `/blu:note`
 - Root router form: `/blu note`
-- Argument hint: `<text> | list | promote <N> [--global]`
+- Argument hint: `<text>`
 - `/blu:note Investigate-sync-edge-cases`
 - `/blu note`
 
@@ -94,12 +94,14 @@
 
 - The input is too vague to classify cleanly into note, todo, backlog, or execution work.
 - The target item already exists or has already been promoted, completed, or archived.
+- The user asks for `list`, `promote`, or `--global` behavior that is not part of the currently shipped note slice.
 
 
 ## Failure Modes And Recovery
 
 
 - Repair malformed index files through MCP instead of raw append logic.
+- Explain that the shipped note contract supports project-local capture only when the user asks for global notes, listing, or promotion behavior.
 - Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
 
 
@@ -110,6 +112,7 @@
 - If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Keeps notes project-local instead of reintroducing global-note behavior.
 - Leaves unrelated repo files untouched.
 
 
