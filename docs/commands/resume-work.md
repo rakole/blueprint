@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`resume-work` carries forward the GSD intent to resume work from previous session with full context restoration. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`resume-work` restores a paused Blueprint session from the canonical handoff and state artifacts, then surfaces the next safe implemented action. In Blueprint it stays Gemini-native and uses documented MCP tools for deterministic re-entry.
 
 
 ## Command Path And Examples
@@ -24,26 +24,28 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A prior `pause-work` handoff or populated state file should exist.
+- A prior `pause-work` handoff or populated `STATE.md` should exist.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise resume summary plus the next safe implemented action when applicable.
+- Repo side effects: Updates the current Blueprint state to reflect the resumed session.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `.blueprint/STATE.md`
+- `.blueprint/reports/pause-work-latest.md`
+- relevant phase artifacts when present
 
 
 ## Blueprint And Global State Writes
 
 
-- none
+- `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
@@ -94,7 +96,7 @@
 
 ## Shell Risk Profile
 
-- Low: restores state without planned repo mutation.
+- Low: restores state and updates `STATE.md` only.
 
 ## User Prompts And Confirmation Gates
 
@@ -119,10 +121,8 @@
 ## Acceptance Criteria
 
 
-- Reads and writes only the selected phase scope.
+- Reconstructs context from `STATE.md`, phase artifacts, and the canonical `pause-work` handoff schema in `.blueprint/reports/pause-work-latest.md`.
 - Updates `STATE.md` whenever the next-step signal changes.
-- Creates or updates only the declared artifacts for this command.
-- Reconstructs context from `STATE.md` plus the canonical `pause-work` handoff schema in `.blueprint/reports/pause-work-latest.md`.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 
@@ -139,4 +139,5 @@
 
 
 - Upstream command file: `commands/gsd/resume-work.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract
+- Upstream workflow status: GSD does not have a dedicated upstream workflow file
+- Blueprint delta: shipped MCP-backed resume routing that restores context from the canonical pause handoff and `STATE.md`

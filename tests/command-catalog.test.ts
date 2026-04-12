@@ -20,7 +20,8 @@ const IMPLEMENTED_COMMANDS = [
   "execute-phase",
   "validate-phase",
   "verify-work",
-  "pause-work"
+  "pause-work",
+  "resume-work"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do", "insert-phase"] as const;
@@ -156,4 +157,19 @@ test("validation slice commands are implemented once manifests, shared skill, an
     assert.deepEqual(entry.availableOptionalAgents, ["blueprint-verifier"]);
     assert.deepEqual(entry.blockedBy, []);
   }
+});
+
+test("resume-work is implemented once the governance manifest and handoff MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["resume-work"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu/resume-work.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
 });

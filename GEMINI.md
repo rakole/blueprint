@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the roadmap append command `/blu:add-phase` is now implemented, and the current repair focus is making the shipped discovery, execution, validation, and UAT commands fully substantive while later commands remain blocked until their substrate exists.
+- Phase 4 validation is now live through `/blu:validate-phase` and `/blu:verify-work`, the governance handoff/resume pair is now shipped through `/blu:pause-work` and `/blu:resume-work`, `/blu:add-phase` is now implemented, and the current repair focus is making the shipped discovery, execution, validation, and UAT commands fully substantive while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu:<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, and `/blu:add-phase`.
+- Current shipped direct commands: `/blu:new-project`, `/blu:settings`, `/blu:set-profile`, `/blu:help`, `/blu:progress`, `/blu:health`, `/blu:map-codebase`, `/blu:discuss-phase`, `/blu:research-phase`, `/blu:ui-phase`, `/blu:plan-phase`, `/blu:execute-phase`, `/blu:validate-phase`, `/blu:verify-work`, `/blu:next`, `/blu:pause-work`, `/blu:resume-work`, and `/blu:add-phase`.
 
 ## State Boundaries
 
@@ -38,7 +38,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu:execute-phase` now persists `XX-YY-SUMMARY.md` execution evidence through the summary MCP substrates and keeps the next action explicit.
 - `/blu:validate-phase` now persists `XX-VERIFICATION.md` verification evidence through the validation MCP substrates.
 - `/blu:verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the same validation MCP substrates and keeps follow-up fixes explicit.
-- `/blu:pause-work` now persists a canonical handoff report in `.blueprint/reports/pause-work-latest.md` and keeps the next implemented follow-up on `/blu:progress`.
+- `/blu:pause-work` and `/blu:resume-work` now persist the canonical handoff/report and state-routing contract across `.blueprint/reports/pause-work-latest.md` and `.blueprint/STATE.md`.
 - `/blu:add-phase` now appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
 - Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
 - Shipped agent contracts live in `agents/`, including `blueprint-researcher` and `blueprint-ui-designer`.

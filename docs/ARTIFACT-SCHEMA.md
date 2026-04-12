@@ -263,7 +263,7 @@ Used for non-phase-specific outputs and command logs:
 
 Purpose:
 - durable human-readable and machine-parseable pause handoff for the current Blueprint work context
-- canonical resumability input for future `resume-work`
+- canonical resumability input for `resume-work`
 
 Locked fields and sections:
 - frontmatter keys:
