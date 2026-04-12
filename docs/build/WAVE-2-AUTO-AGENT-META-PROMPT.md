@@ -9,8 +9,7 @@ change.
 - Register, claim, note, and complete work through `scripts/drift-fix-memory.mjs`.
 - Refresh shared drift memory with `scripts/drift-fix-memory.mjs` when the
   checkpoint state changes.
-- Escalate whenever the task appears to require a new MCP tool, a new hook or
-  policy file, or a later-wave agent that is not part of the scoped closeout.
+- Escalate whenever the task appears to require a new MCP tool, a new hook or policy file, or a later-wave agent that is not part of the scoped closeout.
 
 ## Required Final Report
 
