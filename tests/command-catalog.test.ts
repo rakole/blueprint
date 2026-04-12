@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
 
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import { resolveBlueprintSkillPath } from "../src/mcp/runtime-vocabulary.js";
 
 const IMPLEMENTED_COMMANDS = [
   "new-project",
@@ -38,6 +39,11 @@ async function pathExists(relativePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function expectedSkillPath(skillName: string): Promise<string | null> {
+  const resolution = await resolveBlueprintSkillPath(skillName, pathExists);
+  return resolution.resolvedPath;
 }
 
 test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
@@ -89,7 +95,10 @@ test("runtime command catalog marks shipped commands as implemented once manifes
       listPhaseAssumptions.manifestPath,
       LIST_PHASE_ASSUMPTIONS_MANIFEST
     );
-    assert.equal(listPhaseAssumptions.skillPath, "skills/blueprint-phase-discovery.md");
+    assert.equal(
+      listPhaseAssumptions.skillPath,
+      await expectedSkillPath("blueprint-phase-discovery")
+    );
     assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
     assert.deepEqual(listPhaseAssumptions.blockedBy, []);
   } else {
@@ -97,7 +106,10 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.equal(listPhaseAssumptions.status, "planned");
     assert.equal(listPhaseAssumptions.implemented, false);
     assert.equal(listPhaseAssumptions.manifestPath, null);
-    assert.equal(listPhaseAssumptions.skillPath, "skills/blueprint-phase-discovery.md");
+    assert.equal(
+      listPhaseAssumptions.skillPath,
+      await expectedSkillPath("blueprint-phase-discovery")
+    );
     assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
     assert.match(
       listPhaseAssumptions.blockedBy.join("\n"),

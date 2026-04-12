@@ -27,6 +27,12 @@ import {
   blueprintStateLoad,
   blueprintStateUpdate
 } from "./state.js";
+import {
+  blueprintAgentDefinitionPath,
+  blueprintDiscoverableSkillPath,
+  resolveBlueprintSkillPath,
+  type BlueprintInternalToolName
+} from "../runtime-vocabulary.js";
 
 type CommandStatus = "planned" | "implemented" | "blocked" | "repairing";
 
@@ -164,7 +170,7 @@ const PROJECT_TOOL_NAMES = [
   "blueprint_command_catalog",
   "blueprint_project_init",
   "blueprint_project_status"
-] as const;
+ ] as const satisfies readonly BlueprintInternalToolName[];
 const AVAILABLE_TOOL_NAMES = new Set([
   ...PROJECT_TOOL_NAMES,
   ...configToolDefinitions.map((definition) => definition.name),
@@ -187,7 +193,7 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
       implemented: true,
       blockedBy: [],
       manifestPath: "commands/blu/new-project.toml",
-      skillPath: "skills/blueprint-bootstrap.md",
+      skillPath: blueprintDiscoverableSkillPath("blueprint-bootstrap"),
       specPath: "docs/commands/new-project.md",
       requiredTools: [
         "blueprint_project_init",
@@ -477,14 +483,6 @@ function commandManifestPath(commandName: string): string {
   return `commands/blu/${commandName}.toml`;
 }
 
-function commandSkillPath(primarySkill: string): string {
-  return `skills/${primarySkill}.md`;
-}
-
-function commandAgentPath(agentName: string): string {
-  return `agents/${agentName}.md`;
-}
-
 type ParsedCatalogRow = {
   commandName: string;
   wave: number;
@@ -527,18 +525,19 @@ function parseCatalogRow(cells: string[]): ParsedCatalogRow | null {
 async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<CommandCatalogEntry> {
   const specPath = `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
   const manifestPath = commandManifestPath(parsedRow.commandName);
-  const skillPath = commandSkillPath(parsedRow.primarySkill);
   const specUrl = bundledUrl(specPath);
   const manifestUrl = bundledUrl(manifestPath);
-  const skillUrl = bundledUrl(skillPath);
   const manifestExists = await pathExists(manifestUrl);
-  const skillExists = await pathExists(skillUrl);
   const specExists = await pathExists(specUrl);
   const specMarkdown = specExists ? await fs.readFile(specUrl, "utf8") : "";
   const requiredTools = parseRequiredTools(specMarkdown);
   const optionalAgents = parseOptionalAgents(specMarkdown, parsedRow.primarySkill);
   const availableOptionalAgents: string[] = [];
   const blockedBy: string[] = [];
+  const skillResolution = await resolveBlueprintSkillPath(parsedRow.primarySkill, async (skillPath) =>
+    pathExists(bundledUrl(skillPath))
+  );
+  const skillExists = skillResolution.resolvedPath !== null;
 
   if (!specExists) {
     blockedBy.push(`Missing command spec: ${specPath}`);
@@ -549,7 +548,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   }
 
   if (!skillExists) {
-    blockedBy.push(`Missing primary skill: ${skillPath}`);
+    blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
   }
 
   const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
@@ -560,7 +559,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   }
 
   for (const agentName of optionalAgents) {
-    if (await pathExists(bundledUrl(commandAgentPath(agentName)))) {
+    if (await pathExists(bundledUrl(blueprintAgentDefinitionPath(agentName)))) {
       availableOptionalAgents.push(agentName);
     }
   }
@@ -593,7 +592,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     implemented: status === "implemented",
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
-    skillPath: skillExists ? skillPath : null,
+    skillPath: skillResolution.resolvedPath,
     specPath: specExists ? specPath : null,
     requiredTools,
     requiredToolsSatisfied,
