@@ -5,6 +5,7 @@ import * as z from "zod/v4";
 import {
   BLUEPRINT_DIR,
   BLUEPRINT_REPORTS_PATH,
+  buildBlueprintReportPath,
   blueprintPathExists,
   BLUEPRINT_STATE_PATH,
   ensureParentDirectory,
@@ -805,6 +806,7 @@ async function inspectCurrentPhaseArtifacts(
 async function readRoadmapSignals(projectRoot: string): Promise<{
   currentMilestone: string | null;
   currentPhase: string | null;
+  allPhasesComplete: boolean;
 }> {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
 
@@ -812,7 +814,7 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
     const raw = await fs.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
     const phaseMatches = [
-      ...raw.matchAll(/- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/g)
+      ...raw.matchAll(/^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm)
     ];
     const currentPhase =
       phaseMatches.find((match) => match[1] === " ")?.[2] ??
@@ -821,12 +823,16 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
 
     return {
       currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
-      currentPhase
+      currentPhase,
+      allPhasesComplete:
+        phaseMatches.length > 0 &&
+        phaseMatches.every((match) => match[1].toLowerCase() === "x")
     };
   } catch {
     return {
       currentMilestone: null,
-      currentPhase: null
+      currentPhase: null,
+      allPhasesComplete: false
     };
   }
 }
@@ -835,6 +841,9 @@ async function deriveNextAction(args: {
   projectStatus: string;
   blockers: string[];
   currentPhase: string | null;
+  currentMilestone: string | null;
+  allPhasesComplete: boolean;
+  hasMilestoneAudit: boolean;
   phaseArtifacts: CurrentPhaseArtifactStatus;
   bootstrapRouting: BootstrapRoutingSignals;
   workflow: WorkflowRoutingSignals;
@@ -863,6 +872,7 @@ async function deriveNextAction(args: {
   const executePhaseCommand = "/blu:execute-phase";
   const validatePhaseCommand = "/blu:validate-phase";
   const verifyWorkCommand = "/blu:verify-work";
+  const auditMilestoneCommand = "/blu:audit-milestone";
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return "Run /blu:progress to review the next safe Blueprint action";
@@ -939,6 +949,18 @@ async function deriveNextAction(args: {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
 
+  if (
+    args.allPhasesComplete &&
+    args.phaseArtifacts.hasVerification &&
+    args.phaseArtifacts.hasUat &&
+    !args.hasMilestoneAudit &&
+    implementedCommands.has(auditMilestoneCommand)
+  ) {
+    const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
+
+    return `Run ${auditMilestoneCommand}${milestoneSuffix} to audit milestone completion before archiving`;
+  }
+
   return args.currentPhase
     ? `Run /blu:progress to review Phase ${args.currentPhase} and the next safe action`
     : "Run /blu:progress to review the next safe Blueprint action";
@@ -972,6 +994,10 @@ async function buildSyncedState(projectRoot: string): Promise<{
   const projectStatus = inspection.readiness;
   const currentPhase = roadmapSignals.currentPhase ?? existingState.currentPhase;
   const currentMilestone = roadmapSignals.currentMilestone ?? existingState.currentMilestone;
+  const milestoneAuditReportPath =
+    currentMilestone === null
+      ? null
+      : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
@@ -1045,6 +1071,11 @@ async function buildSyncedState(projectRoot: string): Promise<{
               projectStatus,
               blockers,
               currentPhase,
+              currentMilestone,
+              allPhasesComplete: roadmapSignals.allPhasesComplete,
+              hasMilestoneAudit:
+                milestoneAuditReportPath !== null &&
+                inspection.reports.includes(milestoneAuditReportPath),
               phaseArtifacts: currentPhaseArtifacts,
               bootstrapRouting,
               workflow: workflowRouting

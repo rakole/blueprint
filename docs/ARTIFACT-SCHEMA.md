@@ -259,6 +259,23 @@ Used for non-phase-specific outputs and command logs:
 - update and patch reports
 - quick-task reports
 
+### `reports/milestone-audit-<version>.md`
+
+Purpose:
+- durable audit report for `/blu:audit-milestone` before milestone archival
+- evidence bridge between the original milestone intent and the completed phase set
+
+Minimum locked sections:
+- milestone identifier and original intent snapshot
+- roadmap and phase evidence digest
+- gaps found and archival blockers
+- next safe action
+
+Contract notes:
+- `audit-milestone` owns this report and writes it through the documented Blueprint persistence flow, including `blueprint_artifact_report_write`.
+- Replacing an existing audit report requires explicit confirmation.
+- The report should stay project-local in `.blueprint/reports/` and not spill into unrelated repo files.
+
 ### `reports/pause-work-latest.md`
 
 Purpose:

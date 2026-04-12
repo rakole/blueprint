@@ -14,7 +14,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
 | `blueprint-phase-execution` | `implemented` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
-| `blueprint-roadmap-admin` | `implemented` | Roadmap append plus future roadmap and milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
+| `blueprint-roadmap-admin` | `implemented` | Roadmap append, milestone audits, and future roadmap/milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 
 ## Planned Later Skills
 
@@ -68,6 +68,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `validate-phase` and `verify-work` use `blueprint-verifier`.
 - `add-phase` uses `blueprint-roadmap-admin`.
 - `plan-milestone-gaps` and `new-milestone` use `blueprint-roadmapper`.
+- `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.
 - `code-review-fix` and `audit-fix` use `blueprint-fixer`.
 - `audit-fix` may also use `blueprint-reviewer` and `blueprint-verifier`.

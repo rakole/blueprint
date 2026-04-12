@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`audit-milestone` carries forward the GSD intent to audit milestone completion against original intent before archiving. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`audit-milestone` carries forward the GSD intent to audit milestone completion against original intent before archiving. In Blueprint it stays Gemini-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report before any archival step is attempted.
 
 
 ## Command Path And Examples
@@ -24,20 +24,24 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A roadmap and at least one phase artifact set should exist.
+- A roadmap and at least one completed phase evidence set should exist.
+- An existing audit report should only be replaced with explicit confirmation.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- User-facing result: a concise completion summary plus the next safe implemented action when applicable.
+- Repo side effects: Writes a durable milestone audit report in `.blueprint/reports/`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
 ## Blueprint And Global State Writes
@@ -50,8 +54,10 @@
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
 
 ## Skills And Subagents
@@ -74,6 +80,8 @@
 - Related command docs:
 - `docs/commands/execute-phase.md`
 - `docs/commands/verify-work.md`
+- `docs/commands/plan-milestone-gaps.md`
+- `docs/commands/complete-milestone.md`
 
 
 ## External Shell Or Git Dependencies
@@ -90,13 +98,13 @@
 ## User Prompts And Confirmation Gates
 
 
-- None.
+- Require explicit confirmation before replacing an existing milestone audit report.
 
 
 ## Edge Cases
 
 
-- none
+- Existing audit report replacement.
 
 
 ## Failure Modes And Recovery
@@ -104,6 +112,7 @@
 
 - Show roadmap and phase-directory drift before mutation.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
+- If the audit surfaces gaps, route to `/blu:progress` unless a later milestone command is already implemented.
 
 
 ## Acceptance Criteria
@@ -111,6 +120,7 @@
 
 - Keeps roadmap, phase directories, and state synchronized.
 - Produces a durable report for milestone-level operations.
+- Requires explicit confirmation before overwriting an existing audit report.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
