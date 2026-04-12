@@ -1,23 +1,29 @@
 # Wave 2 Agent Workflow
 
-Use this workflow when closing the Wave 2 roadmap-admin surface and its regression obligations.
+## Scope
 
-## Locked Scope
+This workflow exists to close Wave 2 without drifting the shipped runtime while
+`insert-phase` remains blocked.
 
-- Keep `complete-milestone`, `milestone-summary`, and `new-milestone` aligned with their shipped contracts.
-- Keep `insert-phase` blocked until its dedicated runtime substrate exists.
+- Keep `complete-milestone`, `milestone-summary`, and `new-milestone` aligned
+  across docs, manifests, skills, MCP tools, and tests.
+- Treat `insert-phase` as blocked until its dedicated runtime substrate ships.
 - Do not reintroduce `.planning/` as Blueprint runtime state.
-- Do not reintroduce `/gsd:*`.
+- Do not reintroduce `/gsd:*` as a user-visible runtime escape hatch.
 
-## Packaging And Runtime Checks
+## Packaging And Gemini Checks
 
-- Re-read the Gemini extension reference: https://geminicli.com/docs/extensions/reference/
-- Re-read extension best practices: https://geminicli.com/docs/extensions/best-practices/
-- Re-read Gemini subagents guidance: https://geminicli.com/docs/core/subagents/
-- Keep runtime references aligned with `${extensionPath}` and the bundled command manifests under `commands/**/*.toml`.
+- Review the Gemini extension packaging references before claiming parity:
+  - https://geminicli.com/docs/extensions/reference/
+  - https://geminicli.com/docs/extensions/best-practices/
+  - https://geminicli.com/docs/core/subagents/
+- Keep bundled paths extension-safe and rooted at `${extensionPath}`.
+- Re-check command manifests against `commands/**/*.toml`.
 
 ## Shared Memory Protocol
 
+- Initialize and coordinate shared closeout work through
+  `scripts/drift-fix-memory.mjs`.
 - Update `MEMORY.md` through the shared workflow before handing off.
-- Refresh drift notes with `scripts/drift-fix-memory.mjs` when the state snapshot changes materially.
-- Record blockers, tests, and the next safe action in the closeout handoff.
+- Record task claims, blockers, notes, files changed, and tests run in the
+  shared memory flow before marking work complete.

@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, and the first Wave 3 capture command `/blu:add-backlog`. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio, the first Wave 3 capture command `/blu:add-backlog`, and the first shipped Wave 4 docs command `/blu:docs-update`. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -27,6 +27,7 @@ This repository still carries the planning pack that locked the product and arch
 - The gap-planning command `/blu:plan-milestone-gaps` is now shipped; it reads the latest milestone audit, groups actionable gaps into a small set of follow-up phases, appends them to `.blueprint/ROADMAP.md`, and updates `.blueprint/STATE.md`
 - The milestone closeout trio `/blu:complete-milestone`, `/blu:milestone-summary`, and `/blu:new-milestone` are now shipped on the existing roadmap, artifact, and state MCP substrates; `new-milestone` defaults to carry-forward and may optionally reuse `blueprint-roadmapper`
 - The capture command `/blu:add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
+- The documentation command `/blu:docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
 - `insert-phase` remains the only blocked Wave 2 command and must stay non-routable until its own manifest, primary skill contract, and required MCP substrate actually ship
 - Runtime gate: `/blu`, `/blu:help`, and `/blu:progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
@@ -179,6 +180,7 @@ These runtime files exist today:
 - `commands/blu/audit-milestone.toml`
 - `commands/blu/add-phase.toml`
 - `commands/blu/complete-milestone.toml`
+- `commands/blu/docs-update.toml`
 - `commands/blu/milestone-summary.toml`
 - `commands/blu/new-milestone.toml`
 - `commands/blu/plan-milestone-gaps.toml`
@@ -196,6 +198,7 @@ These runtime files exist today:
 - `skills/blueprint-phase-planning/SKILL.md`
 - `skills/blueprint-phase-execution/SKILL.md`
 - `skills/blueprint-phase-validation/SKILL.md`
+- `skills/blueprint-docs/SKILL.md`
 - `skills/blueprint-roadmap-admin/SKILL.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
@@ -206,6 +209,8 @@ These runtime files exist today:
 - `agents/blueprint-checker.md`
 - `agents/blueprint-executor.md`
 - `agents/blueprint-verifier.md`
+- `agents/blueprint-doc-writer.md`
+- `agents/blueprint-doc-verifier.md`
 - `hooks/hooks.json`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`

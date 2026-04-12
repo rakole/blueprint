@@ -270,6 +270,23 @@ test("phase validation skill and bounded verifier agent are marked implemented i
   );
 });
 
+test("docs skill and bounded docs agents are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-docs` \| `implemented` \| Documentation generation and verification \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-doc-writer` \| `implemented` \| Draft scoped repo documentation updates \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-doc-verifier` \| `implemented` \| Fact-check repo docs against saved evidence \|/
+  );
+});
+
 test("add-phase command docs keep the roadmap append contract explicit", async () => {
   const addPhaseDoc = await readRepoFile("docs/commands/add-phase.md");
 
@@ -351,4 +368,17 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu:discuss-phase <first phase>/);
+});
+
+test("docs-update command docs keep the scoped report-backed docs contract explicit", async () => {
+  const docsUpdateDoc = await readRepoFile("docs/commands/docs-update.md");
+
+  assert.match(docsUpdateDoc, /Primary skill: `blueprint-docs`/);
+  assert.match(docsUpdateDoc, /blueprint_project_status/);
+  assert.match(docsUpdateDoc, /blueprint_artifact_list/);
+  assert.match(docsUpdateDoc, /blueprint_artifact_summary_digest/);
+  assert.match(docsUpdateDoc, /blueprint_artifact_report_write/);
+  assert.match(docsUpdateDoc, /`--verify-only` must never mutate repo documentation files/i);
+  assert.match(docsUpdateDoc, /docs-update-latest\.md/);
+  assert.match(docsUpdateDoc, /Leaves unrelated repo files untouched/i);
 });

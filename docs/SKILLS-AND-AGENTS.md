@@ -17,6 +17,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
 | `blueprint-phase-execution` | `implemented` | Plan execution and summary generation | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
+| `blueprint-docs` | `implemented` | Documentation generation and verification | `docs-update` |
 | `blueprint-roadmap-admin` | `implemented` | Roadmap append, milestone audits, and future roadmap/milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 
 ## Planned Later Skills
@@ -25,7 +26,6 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 |---|---|---|---|
 | `blueprint-debug` | `planned` | Debug investigations and recovery plans | `debug` |
 | `blueprint-review` | `planned` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
-| `blueprint-docs` | `planned` | Documentation generation and verification | `docs-update` |
 | `blueprint-maintenance` | `planned` | Git, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
 
 ## Shipped Agent Contracts
@@ -41,6 +41,8 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-verifier` | `implemented` | Verify execution results and UAT evidence |
 | `blueprint-researcher` | `implemented` | Phase-specific technical research |
 | `blueprint-ui-designer` | `implemented` | Produce `UI-SPEC` contracts |
+| `blueprint-doc-writer` | `implemented` | Draft scoped repo documentation updates |
+| `blueprint-doc-verifier` | `implemented` | Fact-check repo docs against saved evidence |
 
 ## Planned Later Agents
 
@@ -49,8 +51,6 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-reviewer` | `planned` | Produce code review findings |
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
 | `blueprint-debugger` | `planned` | Run structured debugging investigations |
-| `blueprint-doc-writer` | `planned` | Draft repo documentation |
-| `blueprint-doc-verifier` | `planned` | Fact-check generated docs against the repo |
 | `blueprint-ui-auditor` | `planned` | Perform retroactive UI audits |
 | `blueprint-security-auditor` | `planned` | Verify threat mitigations and security coverage |
 

@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`docs-update` carries forward the GSD intent to generate or update project documentation verified against the codebase. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`docs-update` carries forward the GSD intent to generate or update project documentation verified against the codebase. In Blueprint it stays Gemini-native, keeps Blueprint-owned persistence on MCP rails, and treats repo documentation edits as explicit, reviewable mutations instead of hidden side effects.
 
 
 ## Command Path And Examples
@@ -31,7 +31,7 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: may update the selected repo documentation files and persists a durable `docs-update` report in `.blueprint/reports/`.
 
 
 ## Blueprint And Global State Reads
@@ -53,6 +53,7 @@
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
 
 ## Skills And Subagents
@@ -93,6 +94,7 @@
 
 
 - Confirm forced regeneration before replacing heavily edited docs.
+- `--verify-only` must never mutate repo documentation files.
 
 
 ## Edge Cases
@@ -105,17 +107,17 @@
 ## Failure Modes And Recovery
 
 
-- Preserve generated reports when git or external CLI steps fail.
-- Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- Preserve the durable report when doc mutation is skipped, blocked, or partially applied.
+- Fall back to explicit file selection or manual guidance instead of guessing a broad docs scope.
 
 
 ## Acceptance Criteria
 
 
-- Produces a durable artifact for review, security, UI, or shipping work.
+- Produces or updates selected repo documentation files and a durable `.blueprint/reports/docs-update-latest.md` report.
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
-- Uses only documented MCP tools for persistent state changes.
+- Uses only documented MCP tools for Blueprint-owned persistent state changes.
 - Leaves unrelated repo files untouched.
 
 
