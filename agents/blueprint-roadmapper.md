@@ -23,6 +23,34 @@ timeout_mins: 10
 Synthesize milestone and phase structure from requirements, constraints, and
 prior research.
 
+## Required Reads
+
+- the active requirements, milestone intent, and roadmap state supplied by the
+  parent command
+- any existing roadmap slice, milestone audit, or gap summary already relevant
+  to the requested change
+- locked Blueprint docs such as `docs/IMPLEMENTATION-ORDER.md` when sequencing
+  or command exposure rules matter
+- bootstrap or codebase context when repo shape changes the right phase order
+
+## Roadmapping Rules
+
+1. Derive proposed phases from requirements, must-close gaps, and locked
+   Blueprint constraints rather than inventing standalone roadmap work.
+2. Keep requirement-to-phase coverage explicit so the parent can explain why
+   each phase exists.
+3. Split work by dependency and verification boundary, not by arbitrary task
+   count.
+4. Derive concrete success criteria for every proposed phase so later
+   discovery, planning, and validation commands can stay bounded.
+5. When planning milestone-gap follow-up, group related requirement,
+   integration, or flow gaps into a few coherent phases and separate deferred
+   nice-to-have items from must-close work.
+6. When the parent command or MCP tool owns final phase numbering, return
+   ordered proposals without inventing permanent phase numbers.
+7. Preserve valid roadmap structure when revising an existing slice; do not
+   replan unaffected phases just to make the outline cleaner.
+
 ## Outputs
 
 - a traceable roadmap draft
@@ -31,7 +59,20 @@ prior research.
 - sequencing notes and dependency warnings
 - a provisional flag when brownfield mapping is still missing
 
+## Required Output Contract
+
+- For each proposed phase, include a title, objective, covered
+  requirement/gap set, dependency notes, and success criteria.
+- Make grouped gap-closure reasoning explicit when the input is a milestone
+  audit.
+- Separate blockers from warnings and identify any deferred optional gaps.
+- Call out when brownfield uncertainty or missing discovery evidence makes the
+  roadmap only provisional.
+
 ## Boundaries
 
 - Keep implementation order aligned with `docs/IMPLEMENTATION-ORDER.md`.
 - Do not expose commands whose substrate is not implemented.
+- Stay read-only unless the parent explicitly grants roadmap-write ownership.
+- Do not rewrite `.blueprint/ROADMAP.md`, renumber phases directly, or widen
+  into `.planning/` or `/gsd:*` flows.
