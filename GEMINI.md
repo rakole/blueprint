@@ -6,14 +6,14 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
 - Phase 3 discovery shipped on 2026-04-11.
-- The live runtime now includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-add-backlog`, `/blu-docs-update`, `/blu-list-phase-assumptions`, and `/blu-secure-phase`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, governance, roadmap-admin, capture, docs, and review contracts aligned while later commands remain blocked until their substrate exists.
+- The live runtime now includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-quick`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-add-backlog`, `/blu-docs-update`, `/blu-list-phase-assumptions`, and `/blu-secure-phase`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, lightweight execution, governance, roadmap-admin, capture, docs, and review contracts aligned while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
 
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
 - Use direct commands in the `/blu-<command>` namespace when the user already knows the action they want. Deprecated `/blu:<command>` aliases remain available for this release only.
-- Current shipped direct commands: `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-help`, `/blu-progress`, `/blu-health`, `/blu-map-codebase`, `/blu-discuss-phase`, `/blu-list-phase-assumptions`, `/blu-research-phase`, `/blu-ui-phase`, `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-next`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-add-backlog`, `/blu-docs-update`, and `/blu-secure-phase`.
+- Current shipped direct commands: `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-help`, `/blu-progress`, `/blu-health`, `/blu-map-codebase`, `/blu-discuss-phase`, `/blu-list-phase-assumptions`, `/blu-research-phase`, `/blu-ui-phase`, `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-quick`, `/blu-next`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-add-backlog`, `/blu-docs-update`, and `/blu-secure-phase`.
 
 ## State Boundaries
 
@@ -39,6 +39,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - `/blu-execute-phase` now persists `XX-YY-SUMMARY.md` execution evidence through the summary MCP substrates and keeps the next action explicit.
 - `/blu-validate-phase` now persists `XX-VERIFICATION.md` verification evidence through the validation MCP substrates.
 - `/blu-verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the same validation MCP substrates and keeps follow-up fixes explicit.
+- `/blu-quick` now ships as the bounded lightweight execution path; it starts from project status and the runtime command catalog, keeps deeper discuss, research, and validation work opt-in, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`.
 - `/blu-audit-milestone` audits milestone completion against original intent, writes a durable report in `.blueprint/reports/`, and keeps the follow-up inside the implemented Blueprint surface.
 - `/blu-complete-milestone`, `/blu-milestone-summary`, and `/blu-new-milestone` now ship as the report-driven milestone closeout and carry-forward reset trio on the existing roadmap, artifact, and state substrates.
 - `/blu-note` now ships as the project-local note capture slice; it appends duplicate-safe notes to `.blueprint/notes/NOTES.md` through Blueprint MCP and leaves list or promote behavior for later capture contracts.

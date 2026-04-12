@@ -1,0 +1,34 @@
+description = "Execute a bounded repo task with reduced ceremony, optional depth gates, and a durable quick-run report."
+prompt = """
+You are the deprecated `/blu:quick` compatibility command for Blueprint.
+Canonical direct command path: `/blu-quick`.
+Always prefer the canonical dash-form command in user-visible guidance.
+
+Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. When the user explicitly asks for more depth, use the `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents only for bounded work that fits the quick-run scope.
+
+Follow this flow exactly:
+
+1. Read `mcp__blueprint__blueprint_project_status` and `mcp__blueprint__blueprint_command_catalog` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
+2. Require an explicit task description from the user input. If the request is blank or too vague to execute safely, stop with concise usage guidance instead of inventing scope.
+3. Resolve optional depth flags before editing anything:
+   - `--discuss`: ask for explicit confirmation before doing a quick clarification or discovery pass.
+   - `--research`: ask for explicit confirmation before doing repo or domain research beyond the minimum needed to execute.
+   - `--validate`: ask for explicit confirmation before running a bounded verification pass after implementation.
+   - `--full`: treat it as `--discuss`, `--research`, and `--validate` together, and require explicit confirmation before continuing.
+4. Keep `quick` bounded. If the request clearly needs a saved phase plan, multi-wave execution, or a larger cross-cutting rollout, stop and route to `/blu-plan-phase` or `/blu-execute-phase` instead of bluffing. Do not recommend `/blu-fast` unless `mcp__blueprint__blueprint_command_catalog` says it is implemented.
+5. When the scope is still a good quick-run fit:
+   - use `blueprint-researcher` only for a compact repo-context pass when `--research` or `--full` was confirmed
+   - use `blueprint-planner` only for a compact bounded checklist when the task needs brief structure but not a durable phase plan
+   - use `blueprint-executor` only for bounded implementation work that stays inside the agreed quick-run scope
+   - use `blueprint-verifier` only when `--validate` or `--full` was confirmed
+6. Persist the durable Blueprint report through `mcp__blueprint__blueprint_artifact_report_write` with the canonical report name `quick-run-latest`. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it.
+7. After the quick run completes, call `mcp__blueprint__blueprint_state_update` so `STATE.md` records `/blu-quick` as the active command and points to the next safe implemented action. Prefer `/blu-progress` as the follow-up unless the quick run clearly leaves a narrower implemented next step.
+8. Return a concise completion summary covering the bounded task, whether optional discuss, research, or validation depth was used, the report status, any warnings or deferred follow-up work, and the next safe implemented action.
+
+Response requirements:
+- Use only `mcp__blueprint__blueprint_project_status`, `mcp__blueprint__blueprint_command_catalog`, `mcp__blueprint__blueprint_artifact_report_write`, and `mcp__blueprint__blueprint_state_update` for Blueprint-owned persistent state work.
+- Keep Blueprint-owned writes inside `.blueprint/reports/quick-run-latest.md` plus `.blueprint/STATE.md`.
+- Treat `--force` as the only way to bypass confirmation for replacing the canonical quick-run report.
+- Do not invent phase plans, research artifacts, or validation artifacts as hidden side effects of `quick`.
+- Do not present planned-only commands as runnable follow-ups; use the command catalog to keep recommendations inside the implemented surface.
+"""
