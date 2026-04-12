@@ -4,13 +4,13 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Research how to implement a phase (standalone - usually use /gsd-plan-phase instead) |
+| Upstream GSD intent | Research how to implement a phase (standalone research flow that usually feeds planning) |
 
 
 ## Purpose
 
 
-`research-phase` carries forward the GSD intent to research how to implement a phase (standalone - usually use /gsd-plan-phase instead). In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
+`research-phase` carries forward the GSD intent to research how to implement a phase as a standalone discovery flow that usually feeds `/blu:plan-phase`. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
 
 
 ## Command Path And Examples

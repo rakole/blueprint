@@ -4,7 +4,7 @@
 
 - Checkpoint: Phase 2.2 future-contract drift repair
 - State: closed on 2026-04-11 after Phase 2.1 completed earlier that day
-- Result: all Phase 2.2 exit criteria validated; Phase 3 discovery was later shipped on 2026-04-11, and the current follow-up work is repairing discovery parity gaps without widening runtime exposure
+- Result: all Phase 2.2 exit criteria validated; the later discovery, lifecycle, governance, and roadmap-admin follow-up slices are now shipped, and the current repair round is closing extension-surface drift without widening runtime exposure
 - Scope: repair control-plane and future-command contract drift before any broader post-Phase-3 expansion
 - Runtime posture: salvage the working Wave 0 runtime, keep blocked command exposure unchanged, and do not invent new runtime substrate in this checkpoint
 
@@ -50,11 +50,12 @@ Phase 2.2 reopens this ledger for follow-up repair work without undoing those re
 
 Phase 2.2 remains closed. The relevant follow-up for this branch is narrower than a new drift checkpoint:
 
-- `discuss-phase`, `research-phase`, and `ui-phase` are now shipped
-- the initial Phase 3 implementation leaned too heavily on scaffold-only discovery artifacts
-- current repair work is replacing placeholder persistence with substantive artifact writes and checkpoint-aware recovery
+- `discuss-phase`, `research-phase`, `ui-phase`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `next`, `pause-work`, and `resume-work` are now shipped
+- `add-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, and `list-phase-assumptions` are now shipped
+- the initial discovery and lifecycle rollout needed follow-up work on artifact depth, command vocabulary, discoverability, and bounded-agent contracts
+- current repair work is replacing placeholder persistence, stale runtime wording, and packaging drift without widening command exposure
 - a dedicated custom-agent drift audit was added on 2026-04-12 in `docs/drift-fixes/2026-04-12-custom-agent-audit-and-fix-plan.md`; the next repair round should restore Gemini-valid agent definitions and stronger bounded-agent contracts without changing command status semantics
-- later lifecycle, roadmap, review, workspace, update, and patch commands remain blocked until their own substrate exists
+- later review, workspace, workstream, update, patch, and still-unimplemented roadmap/maintenance commands remain non-routable until their own substrate exists
 
 ## Evidence Of Phase 2.2 Drift
 
@@ -64,7 +65,7 @@ Phase 2.2 remains closed. The relevant follow-up for this branch is narrower tha
 | Drift-repair requirement traceability was incomplete | `.planning/REQUIREMENTS.md` omitted `DRIFT-01` through `DRIFT-07`, and Foundation completion markers lagged the verified Phase 2 runtime | Backfill drift requirements and phase mapping in the requirements ledger |
 | Future command ownership drifted across docs | `docs/SKILLS-AND-AGENTS.md` did not match the canonical ownership in `docs/COMMAND-CATALOG.md` and the per-command specs for `next`, `do`, `pause-work`, `resume-work`, and `plan-milestone-gaps` | Treat the catalog plus command specs as canonical and repair conflicting docs |
 | Future parity docs could flatten orchestration | Planned high-risk command docs need an explicit guard against collapsing skill-led or agent-assisted flows into command-only prose | Refresh migration and parity notes so later slices preserve Blueprint's thin-command, skill-led architecture |
-| Later commands remain intentionally blocked | Roadmap, phase, review, workspace, workstream, update, and patch MCP families are still missing | Keep blocked commands unroutable and do not change runtime status semantics in this checkpoint |
+| Later commands remain intentionally blocked | Review, workspace, workstream, update, and patch MCP families are still missing, and some later roadmap or maintenance flows are still spec-only | Keep blocked or planned commands unroutable and do not change runtime status semantics in this checkpoint |
 
 ## Allowed Blueprint Divergences
 
@@ -93,14 +94,13 @@ These are intentional and should not be “fixed away”:
 
 The following families remain intentionally blocked until substrate exists:
 
-- roadmap MCP tools
 - review MCP tools
 - workspace MCP tools
 - workstream MCP tools
 - update MCP tools
 - patch MCP tools
 
-Because of that, later commands such as `plan-phase`, `insert-phase`, and `do` must remain blocked in the runtime catalog even though they are documented.
+The roadmap-admin family is only partially shipped. Later commands such as `insert-phase`, `complete-milestone`, `new-milestone`, `milestone-summary`, `do`, `quick`, and `ship` must remain non-routable in the runtime catalog until their own runtime substrate exists.
 
 ## Phase 2.2 Exit Criteria
 
@@ -124,5 +124,5 @@ Because of that, later commands such as `plan-phase`, `insert-phase`, and `do` m
 Phase 2.2 closure does not relax these runtime protections:
 
 1. routing still surfaces only `implemented` commands
-2. blocked command families remain blocked until substrate exists
+2. still-unimplemented command families remain blocked until substrate exists
 3. Phase 3 implementation may proceed, but Phase 3+ commands do not become runnable through docs alone

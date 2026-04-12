@@ -14,9 +14,9 @@ It does not reopen locked Blueprint architecture decisions. Omitted commands rem
 
 Allowed Blueprint destinations in this document:
 - command spec owner in `docs/commands/`
-- exact primary skill from `docs/SKILLS-AND-AGENTS.md`
-- optional agent names already declared in the command specs
-- exact MCP tools named in the command spec, or an existing MCP tool family when a spec does not name individual tools
+- exact primary skill from `docs/SKILLS-AND-AGENTS.md`, resolved through `skills/<name>/SKILL.md`
+- optional agent names already declared in the command specs and implemented as Gemini subagent files in `agents/*.md`
+- exact MCP tool ids named in the command spec, or an existing MCP tool family when a spec does not name individual tools; command manifests may surface those tools through runtime FQNs such as `mcp__blueprint__...`
 - advisory hooks already defined in `docs/HOOKS-POLICIES.md`
 - explicit omission when Blueprint intentionally does not port a surface
 
@@ -29,6 +29,7 @@ Rules for using these tags here:
 - Rows may carry more than one tag. A Blueprint destination can be `locked` while hook coverage remains `spec-derived` and upstream parity still `needs-upstream-audit`.
 - The seven commands whose specs explicitly say GSD has no dedicated upstream workflow file are treated as Blueprint-native flow contracts and are not marked `needs-upstream-audit` for a missing workflow file.
 - This document must not invent new Blueprint skills, MCP tools, agents, or hook surfaces.
+- This matrix names canonical skill ids, agent ids, and tool ids; it does not use repo file paths as runtime handles.
 
 ## Phase 2.1 Closure Snapshot
 
