@@ -250,6 +250,44 @@ test("blueprint_artifact_mutate_index rejects duplicate backlog ideas after norm
   assert.doesNotMatch(backlogBody, /BACKLOG-002/);
 });
 
+test("blueprint_artifact_mutate_index updates backlog status and clears consumed reserved phases", async (t) => {
+  const repoPath = await createCaptureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "backlog",
+    entry: {
+      text: "Offline mode",
+      reservePhaseStub: true
+    }
+  });
+  const result = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "backlog",
+    action: "update",
+    updates: [
+      {
+        id: "BACKLOG-001",
+        status: "promoted",
+        reservedPhase: null
+      }
+    ]
+  });
+  const backlogBody = await readFile(
+    path.join(repoPath, ".blueprint/backlog/BACKLOG.md"),
+    "utf8"
+  );
+
+  assert.equal(result.status, "updated");
+  assert.equal(result.updatedCounts.updated, 1);
+  assert.match(backlogBody, /### BACKLOG-001/);
+  assert.match(backlogBody, /- Status: promoted/);
+  assert.doesNotMatch(backlogBody, /- Reserved Phase:/);
+});
+
 test("blueprint_artifact_mutate_index degrades safely when no Blueprint project exists", async (t) => {
   const repoPath = await createCaptureRepo(false);
   t.after(async () => {

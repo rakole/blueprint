@@ -210,7 +210,7 @@ test("capture skill and shipped note plus backlog docs are marked implemented in
   assert.match(addBacklogDoc, /Confirm immediate phase-stub reservation when used\./);
   assert.match(
     mcpToolsDoc,
-    /\| `blueprint_artifact_mutate_index` \| Append canonical capture entries to Blueprint indexes such as backlog, notes, and todos/
+    /\| `blueprint_artifact_mutate_index` \| Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos/
   );
 });
 
@@ -232,6 +232,34 @@ test("add-todo docs and catalog metadata are marked implemented with the shipped
   assert.match(
     migrationMarkdown,
     /\| `add-todo` \| `commands\/gsd\/add-todo\.md` \| GSD has an upstream workflow file \| `docs\/commands\/add-todo\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
+  );
+});
+
+test("review-backlog docs and catalog metadata are marked implemented with the backlog-promotion tool", async () => {
+  const [catalogMarkdown, reviewBacklogDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/review-backlog.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `review-backlog` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \|/
+  );
+  assert.match(reviewBacklogDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(reviewBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(reviewBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_promote_backlog`/);
+  assert.match(reviewBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_state_update`/);
+  assert.match(reviewBacklogDoc, /reserved `999\.x` stubs/i);
+  assert.match(reviewBacklogDoc, /Promoted backlog items become active roadmap phases without deleting backlog history\./);
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint_roadmap_promote_backlog` \| Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999\.x` phase stubs when present/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `review-backlog` \| `commands\/gsd\/review-backlog\.md` \| GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract \| `docs\/commands\/review-backlog\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
   );
 });
 

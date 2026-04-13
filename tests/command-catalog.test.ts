@@ -34,6 +34,7 @@ const IMPLEMENTED_COMMANDS = [
   "insert-phase",
   "add-todo",
   "add-backlog",
+  "review-backlog",
   "remove-phase",
   "plan-phase",
   "execute-phase",
@@ -240,6 +241,26 @@ test("add-backlog is implemented once manifest, skill, and capture MCP tools exi
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_mutate_index",
     "blueprint_artifact_scaffold"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("review-backlog is implemented once manifest, skill, and backlog-promotion MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["review-backlog"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_mutate_index",
+    "blueprint_roadmap_promote_backlog",
+    "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

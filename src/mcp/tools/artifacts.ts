@@ -103,17 +103,25 @@ type ArtifactListArgs = {
 };
 
 type ArtifactMutateIndexTarget = "backlog" | "todo" | "note";
+type ArtifactMutateIndexAction = "append" | "update";
+type ArtifactMutateIndexUpdate = {
+  id: string;
+  status?: string;
+  description?: string;
+  reservedPhase?: string | null;
+};
 
 type ArtifactMutateIndexArgs = {
   cwd?: string;
   target: ArtifactMutateIndexTarget;
-  action?: "append";
+  action?: ArtifactMutateIndexAction;
   entry?: {
     text: string;
     status?: string;
     addedAt?: string;
     reservePhaseStub?: boolean;
   };
+  updates?: ArtifactMutateIndexUpdate[];
 };
 
 type ArtifactScaffoldResult = {
@@ -206,7 +214,7 @@ type ArtifactReportWriteResult = {
   warnings: string[];
 };
 
-type CaptureIndexRow = {
+export type CaptureIndexRow = {
   id: string;
   added: string;
   status: string | null;
@@ -511,7 +519,7 @@ function parseCaptureRowBlock(
   };
 }
 
-function parseCaptureIndexDocument(
+export function parseCaptureIndexDocument(
   content: string,
   target: ArtifactMutateIndexTarget
 ): {
@@ -969,7 +977,7 @@ const artifactListInputSchema = {
 const artifactMutateIndexInputSchema = {
   cwd: z.string().optional(),
   target: z.enum(CAPTURE_INDEX_TARGETS),
-  action: z.enum(["append"]).optional(),
+  action: z.enum(["append", "update"]).optional(),
   entry: z
     .object({
       text: z.string(),
@@ -977,6 +985,16 @@ const artifactMutateIndexInputSchema = {
       addedAt: z.string().optional(),
       reservePhaseStub: z.boolean().optional()
     })
+    .optional(),
+  updates: z
+    .array(
+      z.object({
+        id: z.string(),
+        status: z.string().optional(),
+        description: z.string().optional(),
+        reservedPhase: z.string().nullable().optional()
+      })
+    )
     .optional()
 };
 const artifactValidateInputSchema = {
@@ -2166,20 +2184,161 @@ export async function blueprintArtifactMutateIndex(
     );
   }
 
-  if ((args.action ?? "append") !== "append") {
+  const absolutePath = resolveBlueprintPath(projectRoot, targetPath);
+  const exists = await pathExists(absolutePath);
+  const raw = exists ? await fs.readFile(absolutePath, "utf8") : "";
+  const parsed = parseCaptureIndexDocument(raw, args.target);
+
+  if (parsed.malformed) {
+    warnings.push(
+      `Recovered non-canonical capture index content while repairing ${targetPath}.`
+    );
+  }
+
+  if ((args.action ?? "append") === "update") {
+    const updates = args.updates ?? [];
+
+    if (updates.length === 0) {
+      return {
+        status: "invalid",
+        targetPath,
+        createdEntryIds: [],
+        duplicateEntryIds: [],
+        updatedCounts: {
+          added: 0,
+          updated: 0,
+          duplicates: 0,
+          preserved: parsed.rows.length
+        },
+        reservedPhase: null,
+        warnings: ["Capture index updates require at least one entry id."]
+      };
+    }
+
+    const rows = [...parsed.rows];
+    const seenUpdateIds = new Set<string>();
+    let updated = 0;
+
+    for (const update of updates) {
+      const normalizedId = update.id.trim().toUpperCase();
+
+      if (normalizedId.length === 0) {
+        warnings.push("Skipped a capture index update because the entry id was blank.");
+        continue;
+      }
+
+      if (seenUpdateIds.has(normalizedId)) {
+        warnings.push(`Skipped duplicate update request for ${normalizedId}.`);
+        continue;
+      }
+
+      seenUpdateIds.add(normalizedId);
+
+      const rowIndex = rows.findIndex((row) => row.id === normalizedId);
+
+      if (rowIndex === -1) {
+        warnings.push(`No ${args.target} entry matched ${normalizedId}.`);
+        continue;
+      }
+
+      const currentRow = rows[rowIndex];
+      let nextRow = currentRow;
+      let rowChanged = false;
+
+      if (typeof update.status === "string") {
+        const normalizedStatus = normalizeCaptureText(update.status);
+
+        if (normalizedStatus.length === 0) {
+          warnings.push(`Skipped blank status update for ${normalizedId}.`);
+        } else if (config.defaultStatus !== null && normalizedStatus !== currentRow.status) {
+          nextRow = {
+            ...nextRow,
+            status: normalizedStatus
+          };
+          rowChanged = true;
+        }
+      }
+
+      if (typeof update.description === "string") {
+        const normalizedDescription = normalizeCaptureText(update.description);
+
+        if (normalizedDescription.length === 0) {
+          warnings.push(`Skipped blank description update for ${normalizedId}.`);
+        } else if (normalizedDescription !== currentRow.description) {
+          nextRow = {
+            ...nextRow,
+            description: normalizedDescription
+          };
+          rowChanged = true;
+        }
+      }
+
+      if (
+        config.supportsReservedPhase &&
+        Object.prototype.hasOwnProperty.call(update, "reservedPhase")
+      ) {
+        const normalizedReservedPhase =
+          typeof update.reservedPhase === "string"
+            ? normalizeCaptureText(update.reservedPhase)
+            : null;
+        const nextReservedPhase =
+          normalizedReservedPhase && normalizedReservedPhase.length > 0
+            ? normalizedReservedPhase
+            : null;
+
+        if (nextReservedPhase !== currentRow.reservedPhase) {
+          nextRow = {
+            ...nextRow,
+            reservedPhase: nextReservedPhase
+          };
+          rowChanged = true;
+        }
+      }
+
+      if (!rowChanged) {
+        continue;
+      }
+
+      rows[rowIndex] = nextRow;
+      updated += 1;
+    }
+
+    if (updated === 0 && !parsed.malformed) {
+      return {
+        status: "invalid",
+        targetPath,
+        createdEntryIds: [],
+        duplicateEntryIds: [],
+        updatedCounts: {
+          added: 0,
+          updated: 0,
+          duplicates: 0,
+          preserved: parsed.rows.length
+        },
+        reservedPhase: null,
+        warnings
+      };
+    }
+
+    const recoveryContent =
+      parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
+    const rendered = renderCaptureIndexDocument(args.target, rows, recoveryContent);
+
+    await writeTextFile(absolutePath, rendered);
+
     return {
-      status: "invalid",
+      status: "updated",
       targetPath,
       createdEntryIds: [],
       duplicateEntryIds: [],
       updatedCounts: {
         added: 0,
-        updated: 0,
+        updated,
         duplicates: 0,
-        preserved: 0
+        preserved: Math.max(rows.length - updated, 0)
       },
       reservedPhase: null,
-      warnings: ["Only the append capture mutation is implemented today."]
+      warnings
     };
   }
 
@@ -2200,17 +2359,6 @@ export async function blueprintArtifactMutateIndex(
       reservedPhase: null,
       warnings: ["Capture entry text must not be blank."]
     };
-  }
-
-  const absolutePath = resolveBlueprintPath(projectRoot, targetPath);
-  const exists = await pathExists(absolutePath);
-  const raw = exists ? await fs.readFile(absolutePath, "utf8") : "";
-  const parsed = parseCaptureIndexDocument(raw, args.target);
-
-  if (parsed.malformed) {
-    warnings.push(
-      `Recovered non-canonical capture index content while repairing ${targetPath}.`
-    );
   }
 
   const duplicateRows = parsed.rows.filter(

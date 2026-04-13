@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`review-backlog` carries forward the GSD intent to review and promote backlog items to active milestone. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`review-backlog` carries forward the GSD intent to review and promote backlog items to active milestone. In Blueprint it now ships as the deterministic backlog-promotion flow: preview canonical backlog entries first, require explicit promotion decisions, reuse reserved `999.x` stubs when present, and keep backlog plus roadmap mutations inside documented MCP tools.
 
 
 ## Command Path And Examples
@@ -26,6 +26,7 @@
 
 
 - A backlog index should already exist.
+- A Blueprint roadmap should already exist.
 
 
 ## Outputs
@@ -38,7 +39,8 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- `backlog index`
+- `roadmap and phase inventory`
 
 
 ## Blueprint And Global State Writes
@@ -46,13 +48,14 @@
 
 - `updated backlog index`
 - `updated roadmap and any promoted phase stubs`
+- `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
 
 
-- `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
-- `blueprint_roadmap_promote_backlog` -> `{promotedItems, createdPhaseDirs}`
+- `blueprint_artifact_mutate_index` -> `{targetPath, updatedCounts, warnings}`
+- `blueprint_roadmap_promote_backlog` -> `{status, backlogItems, promotedItems, createdPhaseDirs, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -75,6 +78,7 @@
 - Related command docs:
 - `docs/commands/add-backlog.md`
 - `docs/commands/add-phase.md`
+- `docs/commands/discuss-phase.md`
 
 
 ## External Shell Or Git Dependencies
@@ -105,6 +109,7 @@
 
 
 - Repair malformed index files through MCP instead of raw append logic.
+- Preview backlog candidates through MCP before asking for promote/remove decisions.
 - Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
 
 
@@ -115,13 +120,14 @@
 - If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Promoted backlog items become active roadmap phases without deleting backlog history.
 - Leaves unrelated repo files untouched.
 
 
 ## Test Cases
 
 
-- Capture append fixture.
+- Backlog preview fixture.
 - No-project graceful degradation fixture.
 - Direct `review-backlog` happy-path fixture.
 

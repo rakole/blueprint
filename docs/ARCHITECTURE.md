@@ -10,7 +10,7 @@ The live runtime currently ships:
 - the lifecycle slice from `discuss-phase` through `verify-work`
 - governance handoff/resume
 - the current roadmap-admin slice
-- the shipped Wave 3 capture commands, `note` and `add-backlog`
+- the shipped Wave 3 capture commands, `note`, `add-todo`, `add-backlog`, and `review-backlog`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 
@@ -80,7 +80,7 @@ Planned later runtime surfaces, not registered today:
 ### 4. MCP Server
 
 - The MCP server is the deterministic state engine.
-- It currently registers project/catalog, config, state/pause-handoff, phase/roadmap, capture-index, and artifact tool families.
+- It currently registers project/catalog, config, state/pause-handoff, phase/roadmap including backlog promotion, capture-index, and artifact tool families.
 - It owns `.blueprint/` reads and writes, config normalization, capture index persistence, phase artifact persistence, summary and validation persistence, milestone audit report writes, and state synchronization.
 - Planned tool families for review, workspace, update, and patch behavior remain future contracts until they are registered.
 

@@ -4,10 +4,12 @@ import path from "node:path";
 import * as z from "zod/v4";
 
 import {
+  BLUEPRINT_BACKLOG_INDEX_PATH,
   BLUEPRINT_DIR,
   BLUEPRINT_PHASES_PATH,
   ensureParentDirectory,
   ensureRepoRoot,
+  parseCaptureIndexDocument,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
   resolveBlueprintPath,
@@ -33,6 +35,12 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
   cwd?: string;
   phase: string;
+};
+
+type RoadmapPromoteBacklogArgs = {
+  cwd?: string;
+  backlogIds?: string[];
+  previewOnly?: boolean;
 };
 
 type PhaseLookupArgs = {
@@ -157,6 +165,33 @@ type RoadmapRemovePhaseResult = {
   roadmapPath: string;
   milestone: string | null;
   written: boolean;
+  warnings: string[];
+};
+
+type RoadmapPromotionPreviewItem = {
+  backlogId: string;
+  description: string;
+  status: string | null;
+  reservedPhase: string | null;
+};
+
+type RoadmapPromoteBacklogResult = {
+  status: "preview" | "updated" | "project_missing" | "invalid";
+  backlogPath: string;
+  roadmapPath: string;
+  backlogItems: RoadmapPromotionPreviewItem[];
+  selectedBacklogIds: string[];
+  promotedItems: Array<{
+    backlogId: string;
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    reservedPhase: string | null;
+    phaseDir: string;
+    createdPhaseDir: boolean;
+    reusedReservedPhaseDir: boolean;
+  }>;
+  createdPhaseDirs: string[];
   warnings: string[];
 };
 
@@ -472,6 +507,11 @@ const roadmapInsertPhaseInputSchema = {
 const roadmapRemovePhaseInputSchema = {
   cwd: z.string().optional(),
   phase: z.string()
+};
+const roadmapPromoteBacklogInputSchema = {
+  cwd: z.string().optional(),
+  backlogIds: z.array(z.string()).optional(),
+  previewOnly: z.boolean().optional()
 };
 
 const phaseLookupInputSchema = {
@@ -1179,6 +1219,63 @@ async function readRoadmap(
     path: `${BLUEPRINT_DIR}/ROADMAP.md`,
     milestone: parsed.milestone,
     phases: parsed.phases
+  };
+}
+
+function normalizeBacklogReviewStatus(value: string | null): string {
+  return value?.trim().toLowerCase() ?? "backlog";
+}
+
+function backlogStatusBlocksPromotion(value: string | null): boolean {
+  return ["promoted", "done", "completed", "archived", "removed", "discarded"].includes(
+    normalizeBacklogReviewStatus(value)
+  );
+}
+
+async function readBacklogPromotionCandidates(projectRoot: string): Promise<{
+  status: "ready" | "project_missing" | "missing";
+  backlogItems: RoadmapPromotionPreviewItem[];
+  warnings: string[];
+}> {
+  const projectPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/PROJECT.md`);
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  const backlogPath = resolveBlueprintPath(projectRoot, BLUEPRINT_BACKLOG_INDEX_PATH);
+
+  if (!(await pathExists(projectPath)) || !(await pathExists(roadmapPath))) {
+    return {
+      status: "project_missing",
+      backlogItems: [],
+      warnings: [
+        "Blueprint review-backlog requires an initialized project. Run /blu-new-project before promoting backlog items."
+      ]
+    };
+  }
+
+  if (!(await pathExists(backlogPath))) {
+    return {
+      status: "missing",
+      backlogItems: [],
+      warnings: ["No backlog index exists yet. Run /blu-add-backlog before reviewing backlog items."]
+    };
+  }
+
+  const rawBacklog = await fs.readFile(backlogPath, "utf8");
+  const parsedBacklog = parseCaptureIndexDocument(rawBacklog, "backlog");
+  const warnings = parsedBacklog.malformed
+    ? [
+        `Recovered non-canonical backlog index content while reading ${BLUEPRINT_BACKLOG_INDEX_PATH}.`
+      ]
+    : [];
+
+  return {
+    status: "ready",
+    backlogItems: parsedBacklog.rows.map((row) => ({
+      backlogId: row.id,
+      description: row.description,
+      status: row.status,
+      reservedPhase: row.reservedPhase
+    })),
+    warnings
   };
 }
 
@@ -1922,6 +2019,249 @@ export async function blueprintRoadmapRemovePhase(
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
     written: true,
+    warnings
+  };
+}
+
+async function materializePromotedBacklogPhaseDirectory(
+  projectRoot: string,
+  item: RoadmapPromotionPreviewItem,
+  phasePrefix: string,
+  phaseName: string
+): Promise<{
+  phaseDir: string;
+  createdPhaseDir: boolean;
+  reusedReservedPhaseDir: boolean;
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
+  const desiredPhaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slugifyPhaseName(phaseName)}`;
+  const desiredPhaseDirPath = resolveBlueprintPath(projectRoot, desiredPhaseDir);
+
+  if (item.reservedPhase) {
+    const reservedDirectory = await findPhaseDirectory(projectRoot, item.reservedPhase);
+
+    if (reservedDirectory.reason === "ambiguous") {
+      throw new Error(
+        `Backlog item ${item.backlogId} maps to reserved phase ${item.reservedPhase}, but multiple matching directories exist under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before promoting it.`
+      );
+    }
+
+    if (reservedDirectory.phaseDir) {
+      const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
+      const renamedDirectoryName = renameLeadingPhaseToken(
+        path.basename(reservedPhaseDirPath),
+        item.reservedPhase,
+        phasePrefix
+      );
+
+      if (!renamedDirectoryName) {
+        throw new Error(
+          `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
+        );
+      }
+
+      const promotedPhaseDirPath = path.join(
+        path.dirname(reservedPhaseDirPath),
+        renamedDirectoryName
+      );
+
+      if (
+        promotedPhaseDirPath !== reservedPhaseDirPath &&
+        (await pathExists(promotedPhaseDirPath))
+      ) {
+        throw new Error(
+          `Promoted phase directory already exists for backlog item ${item.backlogId}: ${toRepoRelativePath(projectRoot, promotedPhaseDirPath)}.`
+        );
+      }
+
+      if (promotedPhaseDirPath !== reservedPhaseDirPath) {
+        await fs.rename(reservedPhaseDirPath, promotedPhaseDirPath);
+      }
+
+      await renamePhaseArtifactsInPlace(
+        projectRoot,
+        promotedPhaseDirPath,
+        item.reservedPhase,
+        phasePrefix
+      );
+
+      return {
+        phaseDir: toRepoRelativePath(projectRoot, promotedPhaseDirPath),
+        createdPhaseDir: true,
+        reusedReservedPhaseDir: true,
+        warnings
+      };
+    }
+
+    warnings.push(
+      `Reserved phase ${item.reservedPhase} did not have a matching directory; created a new active phase directory instead.`
+    );
+  }
+
+  if (await pathExists(desiredPhaseDirPath)) {
+    warnings.push(`Phase directory already exists and was reused: ${desiredPhaseDir}`);
+
+    return {
+      phaseDir: desiredPhaseDir,
+      createdPhaseDir: false,
+      reusedReservedPhaseDir: false,
+      warnings
+    };
+  }
+
+  await fs.mkdir(desiredPhaseDirPath, { recursive: true });
+
+  return {
+    phaseDir: desiredPhaseDir,
+    createdPhaseDir: true,
+    reusedReservedPhaseDir: false,
+    warnings
+  };
+}
+
+export async function blueprintRoadmapPromoteBacklog(
+  args: RoadmapPromoteBacklogArgs = {}
+): Promise<RoadmapPromoteBacklogResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const backlogPath = BLUEPRINT_BACKLOG_INDEX_PATH;
+  const roadmapPath = `${BLUEPRINT_DIR}/ROADMAP.md`;
+  const backlog = await readBacklogPromotionCandidates(projectRoot);
+
+  if (backlog.status === "project_missing") {
+    return {
+      status: "project_missing",
+      backlogPath,
+      roadmapPath,
+      backlogItems: [],
+      selectedBacklogIds: [],
+      promotedItems: [],
+      createdPhaseDirs: [],
+      warnings: backlog.warnings
+    };
+  }
+
+  if (backlog.status === "missing") {
+    return {
+      status: "invalid",
+      backlogPath,
+      roadmapPath,
+      backlogItems: [],
+      selectedBacklogIds: [],
+      promotedItems: [],
+      createdPhaseDirs: [],
+      warnings: backlog.warnings
+    };
+  }
+
+  const requestedBacklogIds = [...new Set((args.backlogIds ?? []).map((value) => value.trim().toUpperCase()).filter((value) => value.length > 0))];
+
+  if ((args.previewOnly ?? false) || requestedBacklogIds.length === 0) {
+    return {
+      status: "preview",
+      backlogPath,
+      roadmapPath,
+      backlogItems: backlog.backlogItems,
+      selectedBacklogIds: [],
+      promotedItems: [],
+      createdPhaseDirs: [],
+      warnings: backlog.warnings
+    };
+  }
+
+  const warnings = [...backlog.warnings];
+  const selectedItems: RoadmapPromotionPreviewItem[] = [];
+
+  for (const backlogId of requestedBacklogIds) {
+    const matched = backlog.backlogItems.find((item) => item.backlogId === backlogId);
+
+    if (!matched) {
+      warnings.push(`Backlog item ${backlogId} was not found in ${backlogPath}.`);
+      continue;
+    }
+
+    if (backlogStatusBlocksPromotion(matched.status)) {
+      warnings.push(
+        `Backlog item ${backlogId} is already ${normalizeBacklogReviewStatus(matched.status)} and was skipped.`
+      );
+      continue;
+    }
+
+    selectedItems.push(matched);
+  }
+
+  if (selectedItems.length === 0) {
+    return {
+      status: "invalid",
+      backlogPath,
+      roadmapPath,
+      backlogItems: backlog.backlogItems,
+      selectedBacklogIds: requestedBacklogIds,
+      promotedItems: [],
+      createdPhaseDirs: [],
+      warnings
+    };
+  }
+
+  const roadmap = await readRoadmap(projectRoot);
+  const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
+  let roadmapBody = await fs.readFile(roadmapAbsolutePath, "utf8");
+  const roadmapPhases = [...roadmap.phases];
+  const promotedItems: RoadmapPromoteBacklogResult["promotedItems"] = [];
+  const createdPhaseDirs: string[] = [];
+
+  for (const item of selectedItems) {
+    const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
+    const phasePrefix = formatPhasePrefix(phaseNumber);
+    const phaseName = normalizePhaseDescription(item.description);
+    const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
+      projectRoot,
+      item,
+      phasePrefix,
+      phaseName
+    );
+
+    roadmapBody = appendPhaseDetailsToRoadmap(
+      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
+      phaseNumber,
+      phaseName
+    );
+    roadmapPhases.push({
+      phaseNumber,
+      phasePrefix,
+      phaseName,
+      completed: false,
+      summary: null,
+      goal: null,
+      requirements: []
+    });
+    promotedItems.push({
+      backlogId: item.backlogId,
+      phaseNumber,
+      phasePrefix,
+      phaseName,
+      reservedPhase: item.reservedPhase,
+      phaseDir: phaseDirectory.phaseDir,
+      createdPhaseDir: phaseDirectory.createdPhaseDir,
+      reusedReservedPhaseDir: phaseDirectory.reusedReservedPhaseDir
+    });
+    if (phaseDirectory.createdPhaseDir) {
+      createdPhaseDirs.push(phaseDirectory.phaseDir);
+    }
+    warnings.push(...phaseDirectory.warnings);
+  }
+
+  await ensureParentDirectory(roadmapAbsolutePath);
+  await fs.writeFile(roadmapAbsolutePath, roadmapBody, "utf8");
+
+  return {
+    status: "updated",
+    backlogPath,
+    roadmapPath,
+    backlogItems: backlog.backlogItems,
+    selectedBacklogIds: selectedItems.map((item) => item.backlogId),
+    promotedItems,
+    createdPhaseDirs,
     warnings
   };
 }
@@ -3152,6 +3492,14 @@ export const phaseToolDefinitions = [
     inputSchema: roadmapRemovePhaseInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintRoadmapRemovePhase(args as RoadmapRemovePhaseArgs)
+  },
+  {
+    name: "blueprint_roadmap_promote_backlog",
+    description:
+      "Preview or promote selected backlog items into appended roadmap phases while reusing reserved 999.x phase stubs when available.",
+    inputSchema: roadmapPromoteBacklogInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintRoadmapPromoteBacklog(args as RoadmapPromoteBacklogArgs)
   },
   {
     name: "blueprint_phase_locate",
