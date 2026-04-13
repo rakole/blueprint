@@ -22,6 +22,13 @@ commands:
 
 Provide implementation-aware routing and next-step guidance without advertising spec-only commands as runnable.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp__blueprint__blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `do` flows while preserving Blueprint deltas:
@@ -43,15 +50,15 @@ Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `
 
 ## Required MCP Tools
 
-- `blueprint_command_catalog`
-- `blueprint_project_status`
-- `blueprint_config_get`
-- `blueprint_state_load`
-- `blueprint_artifact_list`
+- `mcp__blueprint__blueprint_command_catalog`
+- `mcp__blueprint__blueprint_project_status`
+- `mcp__blueprint__blueprint_config_get`
+- `mcp__blueprint__blueprint_state_load`
+- `mcp__blueprint__blueprint_artifact_list`
 
 ## Routing Rules
 
-1. Read `blueprint_command_catalog` first.
+1. Read `mcp__blueprint__blueprint_command_catalog` first.
 2. Treat `implemented: true` as the only routable command state.
 3. Never route to commands whose status is `planned`, `blocked`, or `repairing`.
 4. If the user asks for a blocked or planned command, explain the `blockedBy` reasons and recommend the nearest implemented prerequisite.

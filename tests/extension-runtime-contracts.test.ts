@@ -99,6 +99,19 @@ async function activeCommandDocs(): Promise<string[]> {
     .sort();
 }
 
+async function implementedSkillNames(): Promise<string[]> {
+  const catalog = await blueprintCommandCatalog();
+  const skillNames = new Set<string>(["blueprint-router"]);
+
+  for (const entry of Object.values(catalog.commands)) {
+    if (entry.implemented) {
+      skillNames.add(entry.primarySkill);
+    }
+  }
+
+  return [...skillNames].sort();
+}
+
 async function repairedPromptContracts(): Promise<RuntimePromptContract[]> {
   const catalog = await blueprintCommandCatalog();
 
@@ -165,16 +178,7 @@ test("gemini extension discovery points at the built Blueprint MCP server", asyn
 });
 
 test("implemented Blueprint skills resolve to discoverable Gemini bundles with metadata", async () => {
-  const catalog = await blueprintCommandCatalog();
-  const skillNames = new Set<string>(["blueprint-router"]);
-
-  for (const entry of Object.values(catalog.commands)) {
-    if (entry.implemented) {
-      skillNames.add(entry.primarySkill);
-    }
-  }
-
-  for (const skillName of [...skillNames].sort()) {
+  for (const skillName of await implementedSkillNames()) {
     const resolution = await resolveBlueprintSkillPath(skillName, pathExists);
 
     assert.equal(
@@ -190,6 +194,38 @@ test("implemented Blueprint skills resolve to discoverable Gemini bundles with m
     assert.match(raw, new RegExp(`name: ${escapeRegExp(skillName)}`));
     assert.match(raw, /\ndescription:\s*(>|)?/);
     assert.match(raw, /\nstatus: implemented\b/);
+  }
+});
+
+test("implemented Blueprint skills include runtime tool and slash-command guardrails", async () => {
+  for (const skillName of await implementedSkillNames()) {
+    const raw = await readRelativePath(blueprintDiscoverableSkillPath(skillName));
+
+    assert.match(
+      raw,
+      /## Runtime Call Rules/,
+      `${skillName} should document runtime call guardrails`
+    );
+    assert.match(
+      raw,
+      /`mcp__blueprint__blueprint_project_status`/,
+      `${skillName} should include a runtime FQN example`
+    );
+    assert.match(
+      raw,
+      /Translate any shorthand tool ids like `blueprint_project_status`/,
+      `${skillName} should explain shorthand-to-FQN translation`
+    );
+    assert.match(
+      raw,
+      /Treat Blueprint skills as loaded guidance, not callable tools\./,
+      `${skillName} should block skill-as-tool confusion`
+    );
+    assert.match(
+      raw,
+      /Never run `\/blu-\*` in the shell\./,
+      `${skillName} should forbid shelling slash commands`
+    );
   }
 });
 
@@ -243,6 +279,27 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
       `${contract.commandName} should not fall back to raw internal tool names`
     );
   }
+});
+
+test("new-project manifest forbids shell execution and tool-name drift", async () => {
+  const raw = await readRelativePath("commands/blu-new-project.toml");
+
+  assert.match(
+    raw,
+    /Only call Blueprint MCP tools through their runtime FQNs such as `mcp__blueprint__blueprint_project_init`\./
+  );
+  assert.match(
+    raw,
+    /Translate any shorthand `blueprint_\*` ids from older docs into their runtime FQNs before calling them\./
+  );
+  assert.match(
+    raw,
+    /Do not try to re-activate Blueprint skills as tools inside this command/
+  );
+  assert.match(
+    raw,
+    /do not run `\/blu-new-project` in the shell; it is a Gemini slash command, not a shell executable\./i
+  );
 });
 
 test("shipped direct commands no longer include deprecated compatibility manifests", async () => {

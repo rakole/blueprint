@@ -22,6 +22,13 @@ commands:
 
 Handle config, profile, and health flows with explicit state inspection and confirmation-gated repair behavior.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp__blueprint__blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Stay close to upstream GSD governance flows for settings, profile selection, and health validation while preserving Blueprint config and hook boundaries.

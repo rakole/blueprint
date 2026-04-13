@@ -20,6 +20,13 @@ commands:
 
 Keep notes, todos, backlog entries, and ideation handoffs project-local, deterministic, and easy to promote later without turning chat history into the source of truth.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp__blueprint__blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Carry forward the useful capture behavior from GSD while preserving Blueprint's Gemini-native boundaries:

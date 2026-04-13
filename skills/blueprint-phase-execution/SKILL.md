@@ -18,6 +18,13 @@ commands:
 
 Orchestrate Blueprint's execution-family flows so saved plans run in a wave-aware order, bounded quick tasks stay intentionally small, durable `XX-YY-SUMMARY.md` or quick-run report artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp__blueprint__blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` intent while preserving Blueprint deltas:
