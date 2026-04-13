@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Retroactive 6-pillar visual audit of implemented frontend code |
 
 
 ## Purpose
 
 
-`ui-review` carries forward the GSD intent to retroactive 6-pillar visual audit of implemented frontend code. Blueprint ships it as a phase-scoped UI audit command: it grounds the review in saved execution evidence plus the saved `XX-UI-SPEC.md` contract when present, can delegate bounded visual analysis to a dedicated UI auditor, and persists the finished result through the shared review MCP tool instead of prompt-only file writes.
+`ui-review` is Blueprint's command for retroactive 6-pillar visual audit of implemented frontend code. Blueprint ships it as a phase-scoped UI audit command: it grounds the review in saved execution evidence plus the saved `XX-UI-SPEC.md` contract when present, can delegate bounded visual analysis to a dedicated UI auditor, and persists the finished result through the shared review MCP tool instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -127,8 +126,3 @@
 - Direct `ui-review` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/ui-review.md`
-- Upstream workflow status: GSD has an upstream workflow file

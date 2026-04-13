@@ -114,4 +114,4 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - Do not mutate `.blueprint` planning/control artifacts, command docs, or agent
   definitions unless the assigned plan explicitly owns them.
 - Do not invent MCP results, hidden approvals, or completed acceptance criteria.
-- Do not reintroduce `.planning`, `/gsd:*`, or script-owned persistence.
+- Do not reintroduce `.planning`, legacy slash-command surfaces, or script-owned persistence.

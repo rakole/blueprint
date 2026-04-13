@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks. |
 
 
 ## Purpose
 
 
-`undo` carries forward the GSD intent to safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks.. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`undo` is Blueprint's command for safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks.. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -136,8 +135,3 @@
 - Direct `undo` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/undo.md`
-- Upstream workflow status: GSD has an upstream workflow file

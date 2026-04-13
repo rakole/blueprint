@@ -4,11 +4,10 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Show available GSD commands and usage guide |
 
 ## Purpose
 
-`help` carries forward the GSD intent to show available GSD commands and usage guide. In Blueprint it stays Gemini-native and state-aware, but safe command recommendations must be limited to the shipped runtime surface.
+`help` is Blueprint's command for showing available Blueprint commands and usage guidance. In Blueprint it stays Gemini-native and state-aware, but safe command recommendations must be limited to the shipped runtime surface.
 
 ## Command Path And Examples
 
@@ -55,7 +54,7 @@
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
 - `docs/IMPLEMENTATION-ORDER.md`
-- Upstream dependency docs:
+- Related command docs:
 - `docs/commands/root-router.md`
 - `docs/commands/new-project.md`
 - `docs/commands/progress.md`
@@ -97,7 +96,3 @@
 - Partially initialized Blueprint repo fixture.
 - Direct `help` happy-path fixture.
 
-## Upstream Reference
-
-- Upstream command file: `commands/gsd/help.md`
-- Upstream workflow status: GSD has an upstream workflow file

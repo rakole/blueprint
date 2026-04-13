@@ -26,7 +26,7 @@ Orchestrate Blueprint's post-execution validation, conversational UAT, and evide
 
 ## Parity Goal
 
-Carry forward the useful upstream validation intent while preserving Blueprint deltas:
+Carry forward the useful validation intent while preserving Blueprint deltas:
 
 - execution summaries remain the source of truth for what was actually delivered
 - validation and UAT stay Gemini-native and MCP-owned instead of script-owned
@@ -45,7 +45,7 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/PHASE-LIFECYCLE.md`
 - saved `XX-YY-SUMMARY.md` artifacts for the target phase
 

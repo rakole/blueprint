@@ -76,4 +76,4 @@ artifact without guessing scope, risks, or follow-up fixes.
 - Remain read-only; the parent command owns MCP persistence and any repo
   mutation.
 - Do not widen the scope beyond the resolved phase and selected repo files.
-- Do not reintroduce `.planning` or `/gsd:*` flows.
+- Do not reintroduce `.planning` or legacy slash-command flows.

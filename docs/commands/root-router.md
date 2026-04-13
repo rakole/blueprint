@@ -82,7 +82,7 @@
 
 ## Edge Cases
 
-- The user asks for an omitted command name that existed upstream in GSD.
+- The user asks for an omitted command name that existed in earlier planning.
 - The project is partially initialized, so routing needs to prefer `health` or `new-project` instead of pretending everything is ready.
 - The next action is blocked by missing artifacts and the router needs to explain the correct prerequisite command.
 

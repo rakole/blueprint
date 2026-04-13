@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Audit milestone completion against original intent before archiving |
 
 
 ## Purpose
 
 
-`audit-milestone` carries forward the GSD intent to audit milestone completion against original intent before archiving. In Blueprint it stays Gemini-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report before any archival step is attempted.
+`audit-milestone` is Blueprint's command for audit milestone completion against original intent before archiving. In Blueprint it stays Gemini-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report before any archival step is attempted.
 
 
 ## Command Path And Examples
@@ -134,8 +133,3 @@
 - Direct `audit-milestone` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/audit-milestone.md`
-- Upstream workflow status: GSD has an upstream workflow file

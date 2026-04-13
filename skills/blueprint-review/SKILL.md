@@ -30,7 +30,7 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
 
 ## Parity Goal
 
-Carry forward the useful upstream review intent while preserving Blueprint
+Carry forward the useful review intent while preserving Blueprint
 deltas:
 
 - review outputs are durable artifacts, not prompt-only summaries
@@ -57,7 +57,7 @@ non-routable until their extra MCP substrate lands.
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/PHASE-LIFECYCLE.md`
 - saved phase artifacts for the target phase, especially execution summaries
 

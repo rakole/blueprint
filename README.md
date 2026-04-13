@@ -159,8 +159,8 @@ Wave 5 workspace and maintenance:
 - `docs/MCP-TOOLS.md`: current registered MCP tools plus planned future tool families
 - `docs/SKILLS-AND-AGENTS.md`: shipped and planned Gemini skills and subagents
 - `docs/HOOKS-POLICIES.md`: advisory hooks and safety policy
-- `docs/MIGRATION-FROM-GSD.md`: command and behavior mapping from GSD to Blueprint
-- `docs/GSD-RUNTIME-MIGRATION.md`: runtime-porting matrix for retained workflows and explicit Blueprint deltas
+- `docs/COMMAND-BASELINE.md`: command scope and behavior baseline for Blueprint
+- `docs/RUNTIME-REFERENCE.md`: runtime-porting matrix for retained workflows and explicit Blueprint deltas
 - `docs/COMMAND-CATALOG.md`: retained-command index with wave, skill, status, write surface, and risk
 - `docs/GEMINI-CONSTRAINTS.md`: Gemini CLI restrictions that shaped the Blueprint design
 - `docs/IMPLEMENTATION-ORDER.md`: dependency-ordered command queue

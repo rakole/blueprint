@@ -24,7 +24,7 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_review_load_findings`, `mcp_blueprint_blueprint_review_record`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `XX-REVIEW-FIX.md` and `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
-- Do not create git commits or branches automatically just because upstream GSD did; if the user wants git mutation beyond the bounded repo fix itself, ask explicitly.
+- Do not create git commits or branches automatically just because earlier tooling did; if the user wants git mutation beyond the bounded repo fix itself, ask explicitly.
 - Do not guess missing findings from unstaged repo drift or chat memory when the saved review artifact is absent or too weak.
 - Keep next-step guidance inside implemented Blueprint commands only.
 """

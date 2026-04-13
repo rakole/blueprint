@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Systematic debugging with persistent state across context resets |
 
 
 ## Purpose
 
 
-`debug` carries forward the GSD intent to systematic debugging with persistent state across context resets. In Blueprint it is implemented as a Gemini-native investigation flow that keeps debugging evidence explicit, persists a durable `debug-latest` report through MCP, and routes broader fix work into the existing implemented execution commands instead of inventing hidden runtime state.
+`debug` is Blueprint's command for systematic debugging with persistent state across context resets. In Blueprint it is implemented as a Gemini-native investigation flow that keeps debugging evidence explicit, persists a durable `debug-latest` report through MCP, and routes broader fix work into the existing implemented execution commands instead of inventing hidden runtime state.
 
 
 ## Command Path And Examples
@@ -130,8 +129,3 @@
 - Direct `debug` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/debug.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract

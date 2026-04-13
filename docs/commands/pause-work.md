@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create context handoff when pausing work mid-phase |
 
 
 ## Purpose
 
 
-`pause-work` carries forward the GSD intent to create context handoff when pausing work mid-phase. In Blueprint it stays Gemini-native, persists the handoff through dedicated MCP tools, and keeps follow-up routing inside the implemented Blueprint surface.
+`pause-work` is Blueprint's command for create context handoff when pausing work mid-phase. In Blueprint it stays Gemini-native, persists the handoff through dedicated MCP tools, and keeps follow-up routing inside the implemented Blueprint surface.
 
 
 ## Command Path And Examples
@@ -77,7 +76,7 @@
 - `docs/commands/progress.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/progress.md`
@@ -135,9 +134,3 @@
 - Direct `pause-work` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/pause-work.md`
-- Upstream workflow status: GSD has an upstream workflow file and Blueprint audited it before shipping this contract.
-- Blueprint delta: preserve the upstream resumability intent, but keep persistence in `.blueprint/` and do not perform an automatic WIP git commit.

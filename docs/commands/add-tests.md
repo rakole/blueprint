@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Generate tests for a completed phase based on UAT criteria and implementation |
 
 
 ## Purpose
 
 
-`add-tests` carries forward the GSD intent to generate tests for a completed phase based on UAT criteria and implementation. Blueprint ships it as an evidence-backed test-generation command: it reads saved execution summaries plus existing verification or UAT evidence first, keeps repo mutation scoped to the selected tests, persists updated verification notes through the validation MCP substrate, and writes a durable phase report under `.blueprint/reports/`.
+`add-tests` is Blueprint's command for generate tests for a completed phase based on UAT criteria and implementation. Blueprint ships it as an evidence-backed test-generation command: it reads saved execution summaries plus existing verification or UAT evidence first, keeps repo mutation scoped to the selected tests, persists updated verification notes through the validation MCP substrate, and writes a durable phase report under `.blueprint/reports/`.
 
 
 ## Command Path And Examples
@@ -145,8 +144,3 @@
 - Direct `add-tests` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/add-tests.md`
-- Upstream workflow status: GSD has an upstream workflow file

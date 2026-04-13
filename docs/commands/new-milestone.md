@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Start a new milestone cycle — update PROJECT.md and route to requirements |
 
 
 ## Purpose
 
 
-`new-milestone` carries forward the GSD intent to start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it stays Gemini-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, and starts the new milestone at the next whole-number phase instead of renumbering prior work.
+`new-milestone` is Blueprint's command for start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it stays Gemini-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, and starts the new milestone at the next whole-number phase instead of renumbering prior work.
 
 
 ## Command Path And Examples
@@ -142,8 +141,3 @@
 - Direct `new-milestone` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/new-milestone.md`
-- Upstream workflow status: GSD has an upstream workflow file

@@ -108,6 +108,6 @@ guessing plan structure or dependency order.
   not prompt-only mutation or hidden state.
 - Do not mutate files directly; this agent is planning-only and read-only.
 - Do not widen into unrelated phases, roadmap edits, `.planning/`, or
-  `/gsd:*` behavior.
+  legacy slash-command surfaces behavior.
 - Do not recommend planned-only commands as the next step when the parent can
   route to an implemented Blueprint command instead.

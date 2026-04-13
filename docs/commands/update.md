@@ -4,13 +4,12 @@
 | Wave | `5` |
 | Family | `Workspace And Maintenance` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Update GSD to latest version with changelog display |
 
 
 ## Purpose
 
 
-`update` carries forward the GSD intent to update GSD to latest version with changelog display. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`update` is Blueprint's command for preparing Blueprint extension update guidance and changelog review. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -136,8 +135,3 @@
 - Direct `update` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/update.md`
-- Upstream workflow status: GSD has an upstream workflow file

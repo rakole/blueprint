@@ -33,7 +33,7 @@ Orchestrate Blueprint maintenance flows so git, workspace, cleanup, and patch op
 
 ## Parity Goal
 
-Carry forward the useful upstream maintenance intent while preserving Blueprint's Gemini-native boundaries:
+Carry forward the useful maintenance intent while preserving Blueprint's Gemini-native boundaries:
 
 - confirmation comes before any destructive or git-mutating step
 - Blueprint-owned persistence stays inside documented MCP tools
@@ -57,7 +57,7 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 
 ## Required MCP Tools
 

@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Generate a comprehensive project summary from milestone artifacts for team onboarding and review |
 
 
 ## Purpose
 
 
-`milestone-summary` carries forward the GSD intent to generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it stays Gemini-native, builds the final summary from saved roadmap and closeout evidence, writes a durable summary report for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
+`milestone-summary` is Blueprint's command for generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it stays Gemini-native, builds the final summary from saved roadmap and closeout evidence, writes a durable summary report for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
 
 
 ## Command Path And Examples
@@ -134,8 +133,3 @@
 - Direct `milestone-summary` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/milestone-summary.md`
-- Upstream workflow status: GSD has an upstream workflow file

@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create PR, run review, and prepare for merge after verification passes |
 
 
 ## Purpose
 
 
-`ship` carries forward the GSD intent to create PR, run review, and prepare for merge after verification passes. In Blueprint it now ships as a confirmation-gated, report-backed maintenance flow that reuses saved verification and review evidence, keeps push and PR creation explicit, and leaves a durable manual fallback when GitHub automation is unavailable.
+`ship` is Blueprint's command for create PR, run review, and prepare for merge after verification passes. In Blueprint it now ships as a confirmation-gated, report-backed maintenance flow that reuses saved verification and review evidence, keeps push and PR creation explicit, and leaves a durable manual fallback when GitHub automation is unavailable.
 
 
 ## Command Path And Examples
@@ -154,8 +153,3 @@
 - Direct `ship` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/ship.md`
-- Upstream workflow status: GSD has an upstream workflow file

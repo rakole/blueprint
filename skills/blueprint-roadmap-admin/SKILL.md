@@ -31,7 +31,7 @@ Orchestrate Blueprint roadmap and milestone management flows so phase mutations,
 
 ## Parity Goal
 
-Carry forward the useful upstream roadmap and milestone intent while preserving Blueprint's Gemini-native boundaries:
+Carry forward the useful roadmap and milestone intent while preserving Blueprint's Gemini-native boundaries:
 
 - roadmap reads happen before roadmap or milestone mutations
 - new phases require an explicit description and deterministic numbering
@@ -55,7 +55,7 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 
 ## Required MCP Tools
 
@@ -126,7 +126,7 @@ Carry forward the useful upstream roadmap and milestone intent while preserving 
 1. Read the roadmap first and then inspect `.blueprint/reports/` through `blueprint_artifact_list` so the command stays grounded in the latest milestone audit instead of chat memory.
 2. Fail fast when the matching milestone audit report is missing or when the audit contains no actionable gaps.
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before proposing any new phases.
-4. Preserve the upstream gap-closure intent by grouping related requirement, integration, and flow gaps into a few coherent roadmap phases rather than adding one phase per gap.
+4. Preserve the locked gap-closure intent by grouping related requirement, integration, and flow gaps into a few coherent roadmap phases rather than adding one phase per gap.
 5. Keep the grouping reviewable: show which gaps each proposed phase closes and separate optional nice-to-have gaps from must-close work.
 6. Require one explicit confirmation before any roadmap mutation.
 7. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.

@@ -78,6 +78,6 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 
 ## Non-Goals
 
-- No attempt to mirror every upstream GSD agent one-to-one.
+- No attempt to mirror every legacy agent one-to-one.
 - No runtime-generated skills or agents in v1 planning.
 - No hidden support commands for omitted features.

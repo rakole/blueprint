@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Automatically advance to the next logical step in the GSD workflow |
 
 
 ## Purpose
 
 
-`next` carries forward the GSD intent to automatically advance to the next logical step in the GSD workflow. In Blueprint it stays Gemini-native, relies on documented read-only MCP tools, and keeps the repo-side contract explicit enough that routing remains implementation-aware instead of prompt-only guesswork.
+`next` is Blueprint's command for advancing to the next logical step in the Blueprint workflow. In Blueprint it stays Gemini-native, relies on documented read-only MCP tools, and keeps the repo-side contract explicit enough that routing remains implementation-aware instead of prompt-only guesswork.
 
 
 ## Command Path And Examples
@@ -79,7 +78,7 @@
 - `docs/commands/progress.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/progress.md`
@@ -137,8 +136,3 @@
 - Direct `next` command contract uses only registered read-oriented MCP tools.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/next.md`
-- Upstream workflow status: GSD has an upstream workflow file

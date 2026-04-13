@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Execute all plans in a phase with wave-based parallelization |
 
 
 ## Purpose
 
 
-`execute-phase` carries forward the GSD intent to execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a Gemini-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and hands off to the shipped `validate-phase` flow before `verify-work` continues the lifecycle.
+`execute-phase` is Blueprint's command for execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a Gemini-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and hands off to the shipped `validate-phase` flow before `verify-work` continues the lifecycle.
 
 
 ## Command Path And Examples
@@ -85,7 +84,7 @@
 - `docs/MCP-TOOLS.md`
 - `docs/PHASE-LIFECYCLE.md`
 - `docs/SKILLS-AND-AGENTS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/plan-phase.md`
@@ -146,8 +145,3 @@
 - Wave-filtered direct `execute-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/execute-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

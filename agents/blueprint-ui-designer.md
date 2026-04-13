@@ -79,4 +79,4 @@ discovery flows.
 - Stay read-only unless the parent explicitly delegates the final artifact
   write.
 - Do not widen into implementation execution, `.planning/`, or hidden
-  `/gsd:*` workflows.
+  legacy slash-command surfaces workflows.

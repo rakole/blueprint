@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Execute a quick task with GSD guarantees (atomic commits, state tracking) but skip optional agents |
 
 
 ## Purpose
 
 
-`quick` carries forward the GSD intent to execute a quick task with GSD guarantees (atomic commits, state tracking) but skip unnecessary ceremony. In Blueprint it is implemented as a Gemini-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, and records a durable quick-run report plus the next safe implemented action.
+`quick` is Blueprint's command for executing a quick task with Blueprint guarantees (atomic commits, state tracking) while skipping unnecessary ceremony. In Blueprint it is implemented as a Gemini-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, and records a durable quick-run report plus the next safe implemented action.
 
 
 ## Command Path And Examples
@@ -82,7 +81,7 @@
 - `docs/commands/progress.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/fast.md`
@@ -141,8 +140,3 @@
 - Direct `quick` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/quick.md`
-- Upstream workflow status: GSD has an upstream workflow file

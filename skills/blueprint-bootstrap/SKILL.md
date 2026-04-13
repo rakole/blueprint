@@ -27,7 +27,7 @@ Orchestrate Blueprint project initialization around the current MCP bootstrap pr
 
 ## Parity Goal
 
-Preserve the useful structure of upstream GSD `new-project`:
+Preserve the useful structure of the locked `new-project` contract:
 
 - detect brownfield context early
 - honor saved defaults
@@ -44,7 +44,7 @@ Current Blueprint delta:
 ## Required Inputs
 
 - `docs/commands/new-project.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/DRIFT.MD`
 
 ## Required MCP Tools

@@ -56,7 +56,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - workspace registry
 - update metadata
 - patch registry
-- `.planning/` in this repo is implementation bookkeeping for the GSD build-out and must not be surfaced as Blueprint runtime state
+- `.planning/` in this repo is implementation bookkeeping for the Blueprint build-out and must not be surfaced as Blueprint runtime state
 
 ## Retained Commands
 
@@ -120,7 +120,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 ## Guardrail Snapshot
 
-- Do not start by porting all GSD scripts directly
+- Do not start by porting all legacy scripts directly
 - Do not make hooks foundational to state transitions
 - Do not mutate the installed extension directory from Blueprint commands
 - Treat `update` as advisory only

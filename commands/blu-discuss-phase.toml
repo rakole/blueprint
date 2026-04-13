@@ -31,6 +31,6 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Capture real phase decisions, not just placeholder headings or scaffold text.
-- Do not claim upstream-only power mode, batch mode, chain mode, or auto-advance behavior in this runtime.
+- Do not claim legacy power mode, batch mode, chain mode, or auto-advance behavior in this runtime.
 - Do not advertise blocked lifecycle commands as runnable; prefer `/blu-progress` when follow-up routing is uncertain.
 """

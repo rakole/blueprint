@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Retroactively verify threat mitigations for a completed phase |
 
 
 ## Purpose
 
 
-`secure-phase` carries forward the GSD intent to retroactively verify threat mitigations for a completed phase. Blueprint ships it as a Gemini-native security audit command: it reads saved phase evidence, drafts a phase-scoped security review, and persists the result through the dedicated review MCP tool instead of prompt-only file writes.
+`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a Gemini-native security audit command: it reads saved phase evidence, drafts a phase-scoped security review, and persists the result through the dedicated review MCP tool instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -126,8 +125,3 @@
 - Direct `secure-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/secure-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

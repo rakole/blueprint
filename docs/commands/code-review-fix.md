@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Auto-fix issues found by code review in REVIEW.md. Spawns fixer agent, commits each fix atomically, produces REVIEW-FIX.md summary. |
 
 
 ## Purpose
 
 
-`code-review-fix` carries forward the GSD intent to auto-fix issues found by code review in REVIEW.md. Spawns fixer agent, commits each fix atomically, produces REVIEW-FIX.md summary. Blueprint ships it as a bounded, evidence-backed remediation step: it starts from the saved `XX-REVIEW.md` artifact, fixes only the explicitly selected findings, persists a durable `XX-REVIEW-FIX.md` summary through the shared review MCP tool, and updates `STATE.md` so follow-up routing stays inside implemented commands.
+`code-review-fix` is Blueprint's command for auto-fix issues found by code review in REVIEW.md. Spawns fixer agent, commits each fix atomically, produces REVIEW-FIX.md summary. Blueprint ships it as a bounded, evidence-backed remediation step: it starts from the saved `XX-REVIEW.md` artifact, fixes only the explicitly selected findings, persists a durable `XX-REVIEW-FIX.md` summary through the shared review MCP tool, and updates `STATE.md` so follow-up routing stays inside implemented commands.
 
 
 ## Command Path And Examples
@@ -131,8 +130,3 @@
 - Direct `code-review-fix` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/code-review-fix.md`
-- Upstream workflow status: GSD has an upstream workflow file

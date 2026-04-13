@@ -61,5 +61,5 @@ invented claims.
 
 - Stay read-only; the parent command owns repo edits and MCP persistence.
 - Do not widen into code changes, roadmap mutations, `.planning/`, or hidden
-  `/gsd:*` flows.
+  legacy slash-command surfaces flows.
 - Do not downgrade unsupported claims into acceptable approximations.

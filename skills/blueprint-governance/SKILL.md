@@ -31,7 +31,7 @@ Handle config, profile, and health flows with explicit state inspection and conf
 
 ## Parity Goal
 
-Stay close to upstream GSD governance flows for settings, profile selection, and health validation while preserving Blueprint config and hook boundaries.
+Stay close to the locked governance contracts for settings, profile selection, and health validation while preserving Blueprint config and hook boundaries.
 
 ## Required Inputs
 

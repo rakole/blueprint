@@ -2,7 +2,7 @@
 
 ## Goal
 
-Blueprint is a Gemini-native extension that keeps GSD's command-driven methodology where it is useful, but re-implements runtime ownership around Gemini commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
+Blueprint is a Gemini-native extension that keeps the command-driven methodology where it is useful, but re-implements runtime ownership around Gemini commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
 
 The live runtime currently ships:
 
@@ -156,7 +156,7 @@ The planning pack lands before new command surfaces, and runtime expansion pause
 
 ### 2. Gemini-native, not transliterated
 
-Blueprint is allowed to diverge from GSD where Gemini CLI or extension constraints differ:
+Blueprint is allowed to diverge from earlier planning assumptions where Gemini CLI or extension constraints differ:
 
 - no installer-managed runtime conversion
 - no slash-command chaining assumption

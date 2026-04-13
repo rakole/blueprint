@@ -24,7 +24,7 @@ Orchestrate Blueprint's phase-planning flow so the final plan is grounded in cur
 
 ## Parity Goal
 
-Carry forward the useful upstream `plan-phase` intent while preserving Blueprint deltas:
+Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 
 - config-driven research and UI gates stay authoritative
 - existing plans require explicit overwrite confirmation

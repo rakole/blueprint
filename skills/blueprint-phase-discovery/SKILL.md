@@ -28,7 +28,7 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 
 ## Parity Goal
 
-Carry forward the useful discovery intent from upstream GSD while preserving Blueprint deltas:
+Keep the useful discovery intent while preserving Blueprint deltas:
 
 - persistent writes stay inside `.blueprint/`
 - commands stay thin and user-facing

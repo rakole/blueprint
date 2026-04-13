@@ -38,7 +38,7 @@ phase.
 
 1. repo evidence
 2. locked Blueprint docs
-3. official docs or upstream references explicitly supplied by the parent
+3. official docs or explicitly supplied external references
 4. informed inference only when clearly labeled as inference
 
 ## Outputs
@@ -86,5 +86,5 @@ phase.
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual
   expansion before writing.
-- Do not widen into roadmap mutations, `.planning/`, or hidden `/gsd:*`
+- Do not widen into roadmap mutations, `.planning/`, or hidden legacy slash-command behavior
   behavior.

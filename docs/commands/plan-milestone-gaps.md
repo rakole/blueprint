@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create phases to close all gaps identified by milestone audit |
 
 
 ## Purpose
 
 
-`plan-milestone-gaps` carries forward the GSD intent to create phases to close all gaps identified by milestone audit. In Blueprint it stays Gemini-native, keeps the flow audit-first, groups related gaps into a few coherent follow-up phases, and delegates roadmap/state persistence to documented MCP tools instead of direct file rewrites.
+`plan-milestone-gaps` is Blueprint's command for create phases to close all gaps identified by milestone audit. In Blueprint it stays Gemini-native, keeps the flow audit-first, groups related gaps into a few coherent follow-up phases, and delegates roadmap/state persistence to documented MCP tools instead of direct file rewrites.
 
 
 ## Command Path And Examples
@@ -138,8 +137,3 @@
 - Direct `plan-milestone-gaps` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/plan-milestone-gaps.md`
-- Upstream workflow status: GSD has an upstream workflow file

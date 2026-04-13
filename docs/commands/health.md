@@ -4,13 +4,12 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Diagnose planning directory health and optionally repair issues |
 
 
 ## Purpose
 
 
-`health` carries forward the GSD intent to diagnose planning directory health and optionally repair issues. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`health` is Blueprint's command for diagnose planning directory health and optionally repair issues. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -133,8 +132,3 @@
 - Direct `health` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/health.md`
-- Upstream workflow status: GSD has an upstream workflow file

@@ -47,4 +47,4 @@ This ledger tracks `DRIFT-01` through `DRIFT-07`.
   substrate ships
 - future-command ownership must stay aligned across
   `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`,
-  `docs/GSD-RUNTIME-MIGRATION.md`, and `docs/commands/*.md`
+  `docs/RUNTIME-REFERENCE.md`, and `docs/commands/*.md`

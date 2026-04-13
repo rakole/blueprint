@@ -75,4 +75,4 @@ prior research.
 - Do not expose commands whose substrate is not implemented.
 - Stay read-only unless the parent explicitly grants roadmap-write ownership.
 - Do not rewrite `.blueprint/ROADMAP.md`, renumber phases directly, or widen
-  into `.planning/` or `/gsd:*` flows.
+  into `.planning/` or legacy slash-command surfaces flows.

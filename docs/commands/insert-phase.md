@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Insert urgent work as decimal phase (e.g., 72.1) between existing phases |
 
 
 ## Purpose
 
 
-`insert-phase` carries forward the GSD intent to insert urgent work as decimal phase (e.g., 72.1) between existing phases. In Blueprint it is implemented as a Gemini-native roadmap insertion flow that reads the current roadmap first, derives the next decimal from the requested integer phase group, inserts the new roadmap line and Phase Details block without renumbering later phases, scaffolds the matching `.blueprint/phases/<phase-slug>/` directory, and then routes the repo back into discovery.
+`insert-phase` is Blueprint's command for insert urgent work as decimal phase (e.g., 72.1) between existing phases. In Blueprint it is implemented as a Gemini-native roadmap insertion flow that reads the current roadmap first, derives the next decimal from the requested integer phase group, inserts the new roadmap line and Phase Details block without renumbering later phases, scaffolds the matching `.blueprint/phases/<phase-slug>/` directory, and then routes the repo back into discovery.
 
 
 ## Command Path And Examples
@@ -141,8 +140,3 @@
 - Direct `insert-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/insert-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

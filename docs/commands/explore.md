@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Socratic ideation and idea routing — think through ideas before committing to plans |
 
 
 ## Purpose
 
 
-`explore` carries forward the GSD intent to socratic ideation and idea routing — think through ideas before committing to plans. In Blueprint the shipped slice stays Gemini-native, classifies an idea into the right capture target, requires an explicit confirmation before writing, and uses documented MCP tools to persist only the chosen note, todo, backlog, or roadmap proposal.
+`explore` is Blueprint's command for socratic ideation and idea routing — think through ideas before committing to plans. In Blueprint the shipped slice stays Gemini-native, classifies an idea into the right capture target, requires an explicit confirmation before writing, and uses documented MCP tools to persist only the chosen note, todo, backlog, or roadmap proposal.
 
 
 ## Command Path And Examples
@@ -126,8 +125,3 @@
 - Direct `explore` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/explore.md`
-- Upstream workflow status: GSD has an upstream workflow file

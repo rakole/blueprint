@@ -81,4 +81,4 @@ by missing prerequisites.
 - Stay read-only and scoped to review; do not rewrite plan files directly.
 - Do not request unrelated replanning when a targeted fix would close the gap.
 - Do not approve plans that depend on undocumented state ownership, `.planning`,
-  or hidden `/gsd:*` commands.
+  or hidden legacy slash-command commands.

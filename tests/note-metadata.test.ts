@@ -17,7 +17,7 @@ test("note manifest uses runtime skill and capture MCP identities", async () => 
   assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /project-local note capture/i);
-  assert.match(commandFile, /Do not reintroduce upstream global-note behavior/);
+  assert.match(commandFile, /Do not reintroduce global-note behavior/);
 });
 
 test("blueprint-capture skill captures shipped note behavior", async () => {
@@ -28,7 +28,7 @@ test("blueprint-capture skill captures shipped note behavior", async () => {
 
   assert.match(skillFile, /### `note`/);
   assert.match(skillFile, /target: "note"/);
-  assert.match(skillFile, /Do not reintroduce upstream global-note behavior/i);
+  assert.match(skillFile, /Do not reintroduce global-note behavior/i);
   assert.match(skillFile, /implemented commands only/i);
   assert.doesNotMatch(
     skillFile,

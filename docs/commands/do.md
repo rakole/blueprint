@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Route freeform text to the right GSD command automatically |
 
 
 ## Purpose
 
 
-`do` carries forward the GSD intent to route freeform text to the right GSD command automatically. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`do` is Blueprint's command for routing freeform text to the right Blueprint command. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -74,7 +73,7 @@
 - `docs/commands/progress.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/help.md`
@@ -131,8 +130,3 @@
 - Direct `do` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/do.md`
-- Upstream workflow status: GSD has an upstream workflow file

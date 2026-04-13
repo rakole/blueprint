@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Remove a future phase from roadmap and renumber subsequent phases |
 
 
 ## Purpose
 
 
-`remove-phase` carries forward the GSD intent to remove a future phase from roadmap and renumber subsequent phases. In Blueprint it is implemented as a Gemini-native roadmap surgery flow that previews the impact, removes the requested future phase, deletes the matching phase directory, renumbers subsequent roadmap entries and phase directories, and then re-anchors `.blueprint/STATE.md` on the safest implemented follow-up.
+`remove-phase` is Blueprint's command for remove a future phase from roadmap and renumber subsequent phases. In Blueprint it is implemented as a Gemini-native roadmap surgery flow that previews the impact, removes the requested future phase, deletes the matching phase directory, renumbers subsequent roadmap entries and phase directories, and then re-anchors `.blueprint/STATE.md` on the safest implemented follow-up.
 
 
 ## Command Path And Examples
@@ -137,8 +136,3 @@
 - Direct `remove-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/remove-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

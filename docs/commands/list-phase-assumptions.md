@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Surface Claude's assumptions about a phase approach before planning |
 
 
 ## Purpose
 
 
-`list-phase-assumptions` carries forward the GSD intent to surface the agent's assumptions about a phase approach before planning. In Blueprint it stays Gemini-native, uses only read-oriented MCP tools, and remains purely conversational so users can correct misunderstandings before `discuss-phase` or `plan-phase`.
+`list-phase-assumptions` is Blueprint's command for surface the agent's assumptions about a phase approach before planning. In Blueprint it stays Gemini-native, uses only read-oriented MCP tools, and remains purely conversational so users can correct misunderstandings before `discuss-phase` or `plan-phase`.
 
 
 ## Command Path And Examples
@@ -112,7 +111,7 @@
 
 - Returns guidance, assumptions, or routing output without mutating project artifacts by default.
 - Uses only documented read-oriented MCP queries for inspection and routing.
-- Preserves the five assumption areas from the upstream GSD workflow: technical approach, implementation order, scope boundaries, risk areas, and dependencies.
+- Preserves the five assumption areas from the locked discovery workflow: technical approach, implementation order, scope boundaries, risk areas, and dependencies.
 - Makes uncertainty explicit instead of overstating confidence.
 - Never routes to omitted commands or hides destructive behavior behind an implicit step.
 
@@ -125,8 +124,3 @@
 - Direct `list-phase-assumptions` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/list-phase-assumptions.md`
-- Upstream workflow status: GSD has an upstream workflow file

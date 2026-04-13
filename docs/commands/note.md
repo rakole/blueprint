@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Zero-friction idea capture. Append, list, or promote notes to todos. |
 
 
 ## Purpose
 
 
-`note` carries forward the GSD intent to zero-friction idea capture. In Blueprint, the currently shipped slice supports project-local append-only note capture through MCP-backed persistence. It keeps notes inside `.blueprint/notes/`, does not reintroduce upstream global-note behavior, and leaves listing or promotion behavior for later dedicated capture contracts.
+`note` is Blueprint's command for zero-friction idea capture. In Blueprint, the currently shipped slice supports project-local append-only note capture through MCP-backed persistence. It keeps notes inside `.blueprint/notes/`, does not reintroduce global-note behavior, and leaves listing or promotion behavior for later dedicated capture contracts.
 
 
 ## Command Path And Examples
@@ -124,8 +123,3 @@
 - Direct `note` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/note.md`
-- Upstream workflow status: GSD has an upstream workflow file

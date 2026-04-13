@@ -4,13 +4,12 @@
 | Wave | `5` |
 | Family | `Workspace And Maintenance` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Manage parallel workstreams — list, create, switch, status, progress, complete, and resume |
 
 
 ## Purpose
 
 
-`workstreams` carries forward the GSD intent to manage parallel workstreams — list, create, switch, status, progress, complete, and resume. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`workstreams` is Blueprint's command for manage parallel workstreams — list, create, switch, status, progress, complete, and resume. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -134,8 +133,3 @@
 - Direct `workstreams` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/workstreams.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract

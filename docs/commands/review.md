@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Request cross-AI peer review of phase plans from external AI CLIs |
 
 
 ## Purpose
 
 
-`review` carries forward the GSD intent to request cross-AI peer review of phase plans from external AI CLIs. Blueprint now ships it as a Gemini-native peer-review command: it reads the saved phase plan set through dedicated phase-plan MCP tools, keeps reviewer availability explicit instead of assumed, preserves reviewer disagreement honestly, and persists the final result through the shared review MCP tools instead of prompt-only file writes.
+`review` is Blueprint's command for request cross-AI peer review of phase plans from external AI CLIs. Blueprint now ships it as a Gemini-native peer-review command: it reads the saved phase plan set through dedicated phase-plan MCP tools, keeps reviewer availability explicit instead of assumed, preserves reviewer disagreement honestly, and persists the final result through the shared review MCP tools instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -130,8 +129,3 @@
 - Direct `review` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/review.md`
-- Upstream workflow status: GSD has an upstream workflow file

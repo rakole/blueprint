@@ -4,13 +4,12 @@
 | Wave | `5` |
 | Family | `Workspace And Maintenance` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Reapply local modifications after a GSD update |
 
 
 ## Purpose
 
 
-`reapply-patches` carries forward the GSD intent to reapply local modifications after a GSD update. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`reapply-patches` is Blueprint's command for reapplying local modifications after a Blueprint update. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -104,7 +103,7 @@
 ## Edge Cases
 
 
-- A saved patch may no longer apply cleanly after an upstream update because the destination files have drifted.
+- A saved patch may no longer apply cleanly after a later update because the destination files have drifted.
 - The patch registry may contain entries from multiple repos or versions, so selection must be explicit and auditable.
 - The requested target does not exist in the registry, or the registry is stale relative to disk state.
 - A dirty tree, patch conflict, or active work in another location would make mutation unsafe.
@@ -137,8 +136,3 @@
 - Direct `reapply-patches` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/reapply-patches.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract

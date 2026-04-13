@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | List pending todos and select one to work on |
 
 
 ## Purpose
 
 
-`check-todos` carries forward the GSD intent to list pending todos and select one to work on. In Blueprint it stays Gemini-native, reads repo readiness through `blueprint_project_status`, and uses the shared capture index MCP tool to inspect pending todos plus mark a single todo active or completed when the user confirms that change.
+`check-todos` is Blueprint's command for list pending todos and select one to work on. In Blueprint it stays Gemini-native, reads repo readiness through `blueprint_project_status`, and uses the shared capture index MCP tool to inspect pending todos plus mark a single todo active or completed when the user confirms that change.
 
 
 ## Command Path And Examples
@@ -122,8 +121,3 @@
 - Direct `check-todos` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/check-todos.md`
-- Upstream workflow status: GSD has an upstream workflow file
