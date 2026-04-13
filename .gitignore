@@ -1,5 +1,6 @@
 node_modules/
-dist/
+# Blueprint is installed from Git without a build step, so the bundled runtime
+# under dist/ must be committed as part of the shipped extension.
 .DS_Store
 .idea/
 /docs/build/TEMP.md
