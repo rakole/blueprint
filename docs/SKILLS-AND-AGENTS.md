@@ -63,7 +63,8 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `execute-phase` uses `blueprint-executor`.
 - `fast` remains a no-subagent trivial-task path and does not require dedicated bounded helpers.
 - `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
-- `validate-phase` and `verify-work` use `blueprint-verifier`.
+- `validate-phase`, `verify-work`, and `add-tests` use `blueprint-verifier`.
+- `add-tests` may also use `blueprint-executor` for bounded multi-file test implementation.
 - `add-phase`, `remove-phase`, `complete-milestone`, and `milestone-summary` remain skill-led roadmap-admin flows and do not require dedicated subagents.
 - `plan-milestone-gaps` may use `blueprint-roadmapper` for grouped gap-closure proposals, and `new-milestone` may use it for carry-forward synthesis.
 - `audit-milestone` uses `blueprint-verifier`.

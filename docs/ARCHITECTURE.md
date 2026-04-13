@@ -8,6 +8,7 @@ The live runtime currently ships:
 
 - Wave 0 foundation
 - the lifecycle slice from `discuss-phase` through `verify-work`
+- the validation follow-up command `add-tests`
 - governance handoff/resume
 - the current roadmap-admin slice
 - the shipped Wave 3 capture commands, `note`, `add-todo`, `add-backlog`, and `review-backlog`
