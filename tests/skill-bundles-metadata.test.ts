@@ -49,6 +49,11 @@ const SKILL_BUNDLES = [
     commands: ["/blu-docs-update"]
   },
   {
+    name: "blueprint-review",
+    description: "Review, security, UI-audit, and peer-review orchestration for Blueprint",
+    commands: ["/blu-code-review", "/blu-secure-phase"]
+  },
+  {
     name: "blueprint-roadmap-admin",
     description: "Roadmap append, milestone audits, and future roadmap or milestone mutations",
     commands: [

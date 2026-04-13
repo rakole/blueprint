@@ -82,6 +82,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 | Tool | Purpose | Returns |
 |---|---|---|
+| `blueprint_review_scope` | Resolve a deterministic review scope for a phase from executed plan metadata or explicit repo file paths | `{status, phase, files, reviewMode, artifacts, reason, warnings}` |
 | `blueprint_review_record` | Persist a phase-scoped review artifact such as `XX-SECURITY.md` with overwrite protection | `{reportPath, counts, followUps, status, warnings}` |
 
 ## Planned Later Tool Families
@@ -98,7 +99,6 @@ These tool names are part of the documented future contract, but they are not re
 
 ### Future Review and Maintenance Tools
 
-- `blueprint_review_scope`
 - `blueprint_review_load_findings`
 - `blueprint_update_check`
 - `blueprint_update_plan`
@@ -131,6 +131,7 @@ These tool names are part of the documented future contract, but they are not re
 - `complete-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit into `milestone-complete-<version>.md` and route to `/blu-milestone-summary <milestone>`.
 - `milestone-summary` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit plus completion evidence into `milestone-summary-<version>.md` and route to `/blu-new-milestone`.
 - `new-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to carry forward from the saved milestone summary, preserve historical phase artifacts, and scaffold the next whole-number phase context.
+- `code-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, and `blueprint_review_record` to derive a deterministic repo-file scope from executed plans or explicit file paths and persist `XX-REVIEW.md`.
 - `secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped security evidence as `XX-SECURITY.md`.
 
 ## Planned Command Notes

@@ -34,12 +34,13 @@ deltas:
 - follow-up risks stay explicit in artifacts instead of disappearing into chat
 - implemented-only routing remains the source of truth for next-step guidance
 
-Today, `secure-phase` is the shipped review-family command. Other review-family
-commands remain documented but non-routable until their extra MCP substrate
-lands.
+Today, `code-review` and `secure-phase` are the shipped review-family commands.
+Other review-family commands remain documented but non-routable until their
+extra MCP substrate lands.
 
 ## Required Inputs
 
+- `docs/commands/code-review.md`
 - `docs/commands/secure-phase.md`
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
@@ -53,13 +54,36 @@ lands.
 
 - `blueprint_phase_locate`
 - `blueprint_artifact_list`
+- `blueprint_review_scope`
 - `blueprint_review_record`
 
 ## Optional Agents
 
+- `blueprint-reviewer`
 - `blueprint-security-auditor`
 
 ## Workflow Rules
+
+### `code-review`
+
+1. Resolve the target phase first and read the current Blueprint artifact
+   inventory before reviewing code.
+2. Use `blueprint_review_scope` to derive the deterministic repo file list from
+   executed plan metadata or explicit file arguments; do not guess from git
+   diff alone.
+3. Require executed phase evidence unless the user supplied an explicit file
+   scope.
+4. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
+   to reuse unless the user explicitly asks for an update.
+5. Keep findings grounded in the selected repo files plus saved execution,
+   validation, or UAT artifacts.
+6. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
+   or a deep pass that benefits from a bounded second look.
+7. Persist the finished review through `blueprint_review_record` with the
+   `code-review` artifact.
+8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+   `/blu-secure-phase <phase>` when the phase still lacks a security artifact;
+   otherwise prefer `/blu-progress`.
 
 ### `secure-phase`
 
@@ -85,4 +109,6 @@ lands.
 - Do not mutate arbitrary repo files from review commands.
 - Do not present planned-only review commands as runnable just because they are
   documented.
+- Do not guess review scope from unstaged repo drift when saved phase evidence
+  is missing.
 - Keep the artifact explicit about pass signals, findings, and follow-up risk.

@@ -29,7 +29,7 @@ What is already live:
 - all Wave 1 core lifecycle commands
 - the Wave 2 roadmap-admin slice including `insert-phase`, `complete-milestone`, `milestone-summary`, and `new-milestone`
 - the shipped Wave 3 capture commands `note`, `add-todo`, `add-backlog`, and `review-backlog`
-- the shipped Wave 4 review/docs passes through `secure-phase` and `docs-update`
+- the shipped Wave 4 review/docs passes through `code-review`, `secure-phase`, and `docs-update`
 
 What remains closest on the roadmap:
 
@@ -88,8 +88,7 @@ What remains closest on the roadmap:
 
 ### Functional
 
-- Ship the rest of Wave 4 quality and shipping beyond the already shipped `secure-phase` and `docs-update` commands:
-  - `code-review`
+- Ship the rest of Wave 4 quality and shipping beyond the already shipped `code-review`, `secure-phase`, and `docs-update` commands:
   - `code-review-fix`
   - `audit-fix`
   - `ui-review`
