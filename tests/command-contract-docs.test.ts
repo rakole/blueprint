@@ -507,6 +507,31 @@ test("code-review docs and reviewer agent are marked implemented in docs", async
   assert.match(codeReviewDoc, /phase XX-REVIEW\.md/);
 });
 
+test("audit-fix docs and migration notes keep the remediation contract explicit", async () => {
+  const [auditFixDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/audit-fix.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(auditFixDoc, /Primary skill: `blueprint-review`/);
+  assert.match(auditFixDoc, /`blueprint_phase_locate`/);
+  assert.match(auditFixDoc, /`blueprint_artifact_list`/);
+  assert.match(auditFixDoc, /`blueprint_review_scope`/);
+  assert.match(auditFixDoc, /`blueprint_artifact_report_write`/);
+  assert.match(auditFixDoc, /`blueprint_artifact_mutate_index`/);
+  assert.match(auditFixDoc, /`blueprint_state_update`/);
+  assert.match(auditFixDoc, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
+  assert.match(
+    mcpToolsDoc,
+    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
+  );
+});
+
 test("add-phase command docs keep the roadmap append contract explicit", async () => {
   const addPhaseDoc = await readRepoFile("docs/commands/add-phase.md");
 

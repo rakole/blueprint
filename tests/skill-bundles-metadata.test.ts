@@ -51,7 +51,7 @@ const SKILL_BUNDLES = [
   {
     name: "blueprint-review",
     description: "Review, security, UI-audit, and peer-review orchestration for Blueprint",
-    commands: ["/blu-code-review", "/blu-secure-phase"]
+    commands: ["/blu-code-review", "/blu-audit-fix", "/blu-secure-phase"]
   },
   {
     name: "blueprint-roadmap-admin",

@@ -34,14 +34,15 @@ deltas:
 - follow-up risks stay explicit in artifacts instead of disappearing into chat
 - implemented-only routing remains the source of truth for next-step guidance
 
-Today, `code-review` and `secure-phase` are the shipped review-family commands.
-Other review-family commands remain documented but non-routable until their
-extra MCP substrate lands.
+Today, `code-review`, `secure-phase`, and `audit-fix` are the shipped
+review-family commands. Other review-family commands remain documented but
+non-routable until their extra MCP substrate lands.
 
 ## Required Inputs
 
 - `docs/commands/code-review.md`
 - `docs/commands/secure-phase.md`
+- `docs/commands/audit-fix.md`
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -56,11 +57,16 @@ extra MCP substrate lands.
 - `blueprint_artifact_list`
 - `blueprint_review_scope`
 - `blueprint_review_record`
+- `blueprint_artifact_report_write`
+- `blueprint_artifact_mutate_index`
+- `blueprint_state_update`
 
 ## Optional Agents
 
 - `blueprint-reviewer`
 - `blueprint-security-auditor`
+- `blueprint-verifier`
+- `blueprint-fixer`
 
 ## Workflow Rules
 
@@ -102,6 +108,35 @@ extra MCP substrate lands.
 7. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
    depending on which lifecycle artifacts already exist.
+
+### `audit-fix`
+
+1. Resolve the target phase and read the current Blueprint artifact inventory
+   before proposing changes.
+2. Use `blueprint_review_scope` to derive the deterministic remediation scope
+   from executed plan metadata or explicit repo files; do not guess from git
+   diff alone.
+3. Read the most relevant saved evidence first. Prefer an existing
+   `XX-REVIEW.md`, and also inspect `XX-SECURITY.md`, `XX-VERIFICATION.md`, and
+   `XX-UAT.md` when they exist.
+4. Treat `--dry-run` as analysis-only mode. Dry runs may still write the
+   durable `audit-fix-<phase>` report, but they must not apply repo mutations.
+5. Keep repo mutation tightly bounded to the resolved review scope and to
+   high-confidence issues supported by saved evidence or direct code
+   inspection.
+6. Use `blueprint-reviewer` for bounded classification when saved review
+   evidence is broad, `blueprint-verifier` for bounded post-fix verification
+   when targeted checks need a second pass, and `blueprint-fixer` only when
+   that agent is available and the fix scope stays narrow.
+7. Persist the durable remediation report through
+   `blueprint_artifact_report_write` using the canonical report name
+   `audit-fix-<phase>`.
+8. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
+   the user explicitly asks to persist the follow-up or confirms that it should
+   become a todo.
+9. Update `STATE.md` through `blueprint_state_update` so the next safe action
+   points at `/blu-validate-phase <phase>`, `/blu-add-tests <phase>`, or
+   `/blu-progress` based on the remaining evidence gap.
 
 ## Non-Negotiables
 
