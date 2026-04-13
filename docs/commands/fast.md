@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`fast` carries forward the GSD intent to execute a trivial task inline — no subagents, no planning overhead. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`fast` carries forward the GSD intent to execute a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a Gemini-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, and updates state only when the repo is already initialized.
 
 
 ## Command Path And Examples
@@ -32,7 +32,7 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized Blueprint project.
 
 
 ## Blueprint And Global State Reads
@@ -44,7 +44,7 @@
 ## Blueprint And Global State Writes
 
 
-- `code changes and optional STATE.md last-action updates`
+- optional `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
@@ -89,6 +89,7 @@
 
 
 - Refuse or reroute if the requested task is not truly trivial.
+- Route partial or unhealthy Blueprint repos to `/blu-health` before any Blueprint-owned persistence.
 
 
 ## Edge Cases
@@ -113,6 +114,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
+- Does not create quick-run reports, phase artifacts, or subagent side effects.
 
 
 ## Test Cases

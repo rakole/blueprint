@@ -66,6 +66,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `list-phase-assumptions` may use `blueprint-researcher`.
 - `plan-phase` uses `blueprint-planner` and `blueprint-checker`.
 - `execute-phase` uses `blueprint-executor`.
+- `fast` remains a no-subagent trivial-task path and does not require dedicated bounded helpers.
 - `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
 - `validate-phase` and `verify-work` use `blueprint-verifier`.
 - `add-phase`, `remove-phase`, `complete-milestone`, and `milestone-summary` remain skill-led roadmap-admin flows and do not require dedicated subagents.
