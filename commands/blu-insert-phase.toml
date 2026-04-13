@@ -7,15 +7,15 @@ Use the `blueprint-roadmap-admin` skill as the primary orchestration contract wh
 Follow this flow exactly:
 
 1. Require an explicit integer phase number and a non-empty phase description from the user input. If either value is missing or blank, stop with concise usage guidance instead of guessing.
-2. Read `mcp__blueprint__blueprint_roadmap_read` first so you know the active milestone, the current phase inventory, and any roadmap recovery warnings before mutating anything.
+2. Read `mcp_blueprint_blueprint_roadmap_read` first so you know the active milestone, the current phase inventory, and any roadmap recovery warnings before mutating anything.
 3. Summarize the target phase, the current milestone, the computed decimal insertion number, and the fact that later phases will not be renumbered automatically. Require explicit confirmation before mutation. Review is the default safe path.
-4. Use `mcp__blueprint__blueprint_roadmap_insert_phase` with the confirmed integer phase number and description. It must reject decimal targets, derive the next decimal phase number from the roadmap, insert the new roadmap entry immediately after the target phase group, insert the matching Phase Details block, and return the canonical `.blueprint/phases/<NN.N>-<slug>/` directory path.
-5. Use `mcp__blueprint__blueprint_artifact_scaffold` to create or reuse the new phase directory by seeding the initial `XX-CONTEXT.md` scaffold. Do not treat scaffold text as finished phase context.
-6. Use `mcp__blueprint__blueprint_state_update` to record the inserted decimal phase as current, set `/blu-insert-phase` as the active command, and point the next safe implemented action at `/blu-discuss-phase <phase>`.
+4. Use `mcp_blueprint_blueprint_roadmap_insert_phase` with the confirmed integer phase number and description. It must reject decimal targets, derive the next decimal phase number from the roadmap, insert the new roadmap entry immediately after the target phase group, insert the matching Phase Details block, and return the canonical `.blueprint/phases/<NN.N>-<slug>/` directory path.
+5. Use `mcp_blueprint_blueprint_artifact_scaffold` to create or reuse the new phase directory by seeding the initial `XX-CONTEXT.md` scaffold. Do not treat scaffold text as finished phase context.
+6. Use `mcp_blueprint_blueprint_state_update` to record the inserted decimal phase as current, set `/blu-insert-phase` as the active command, and point the next safe implemented action at `/blu-discuss-phase <phase>`.
 7. Return a concise summary covering the inserted phase number, the anchor phase, the description, the scaffold path, any warnings or dependency-review notes, and the next safe Blueprint action.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_roadmap_read`, `mcp__blueprint__blueprint_roadmap_insert_phase`, `mcp__blueprint__blueprint_artifact_scaffold`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_roadmap_insert_phase`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
 - Do not accept decimal insertion targets.
 - Do not renumber later phases or claim that downstream dependency references were rewritten automatically.

@@ -10,9 +10,9 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_add_phase/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_scaffold/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
 });

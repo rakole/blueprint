@@ -10,7 +10,7 @@ This file captures the Gemini CLI and extension constraints that materially shap
 - Project-specific state belongs in `.blueprint/`; mutable global state belongs only in `~/.gemini/blueprint/`.
 - User-level Blueprint defaults, when supported, live only in `~/.gemini/blueprint/defaults.json`.
 - Stateful mutations should happen through an extension-bundled MCP server rather than prompt-only logic.
-- Blueprint slash commands are Gemini entrypoints, not shell executables, and callable Blueprint MCP instructions should use runtime FQNs such as `mcp__blueprint__...` instead of bare internal tool ids.
+- Blueprint slash commands are Gemini entrypoints, not shell executables, and callable Blueprint MCP instructions should use runtime FQNs such as `mcp_blueprint_...` instead of bare internal tool ids.
 - Hooks are advisory in v1. Blueprint should not depend on statusline injection, hidden settings mutation, or extension self-modification.
 - Repo config should not control hook activation; hook configuration belongs to extension-owned `hooks/hooks.json`.
 - `/blu-update` is advisory because Gemini extension installation and update flows happen outside the current interactive session.

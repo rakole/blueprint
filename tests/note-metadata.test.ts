@@ -13,7 +13,7 @@ test("note manifest uses runtime skill and capture MCP identities", async () => 
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /project-local note capture/i);

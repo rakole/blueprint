@@ -6,20 +6,20 @@ Use the `blueprint-roadmap-admin` skill as the primary orchestration contract wh
 
 Follow this flow exactly:
 
-1. Read `mcp__blueprint__blueprint_roadmap_read` first so you know the active milestone, current phase inventory, and any roadmap recovery warnings before proposing new work.
-2. Read `mcp__blueprint__blueprint_artifact_list` and locate the latest milestone audit report in `.blueprint/reports/`. Prefer a report whose name matches the active milestone, and fall back to the newest milestone-audit report only when the milestone still matches the roadmap context.
+1. Read `mcp_blueprint_blueprint_roadmap_read` first so you know the active milestone, current phase inventory, and any roadmap recovery warnings before proposing new work.
+2. Read `mcp_blueprint_blueprint_artifact_list` and locate the latest milestone audit report in `.blueprint/reports/`. Prefer a report whose name matches the active milestone, and fall back to the newest milestone-audit report only when the milestone still matches the roadmap context.
 3. If no matching audit report exists, stop with concise guidance to run `/blu-audit-milestone` first.
-4. Build an audit-plus-roadmap digest through `mcp__blueprint__blueprint_artifact_summary_digest` using explicit `artifactPaths` that include `.blueprint/ROADMAP.md` and the chosen milestone audit report.
+4. Build an audit-plus-roadmap digest through `mcp_blueprint_blueprint_artifact_summary_digest` using explicit `artifactPaths` that include `.blueprint/ROADMAP.md` and the chosen milestone audit report.
 5. Read the audit report content and group only actionable gaps into a small set of coherent follow-up phases. Preserve the upstream intent: combine related requirement, integration, or flow gaps when they affect the same subsystem or dependency chain, and keep each proposed phase focused rather than creating one phase per gap.
 6. If the audit shows no actionable gaps, stop without writing and explain that the milestone does not need additional gap-closure phases right now. Route the user to `/blu-progress`.
 7. Present a concise “Gap Closure Plan” summary with the milestone, the audit report used, the grouped proposed phases, which gaps each phase closes, and any nice-to-have gaps that could be deferred.
 8. Require one explicit confirmation gate before any write. The safe default is review first; do not append phases until the user clearly approves the grouped plan.
-9. After confirmation, call `mcp__blueprint__blueprint_roadmap_add_phase` once per approved gap-closure phase in the confirmed order. Let the tool assign the next integer phase number each time and create the matching `.blueprint/phases/<NN>-<slug>/` directory.
-10. Use `mcp__blueprint__blueprint_state_update` to set `/blu-plan-milestone-gaps` as the active command, point `currentPhase` at the first newly added gap-closure phase, and set the next safe implemented action to `/blu-discuss-phase <first new phase number>`.
+9. After confirmation, call `mcp_blueprint_blueprint_roadmap_add_phase` once per approved gap-closure phase in the confirmed order. Let the tool assign the next integer phase number each time and create the matching `.blueprint/phases/<NN>-<slug>/` directory.
+10. Use `mcp_blueprint_blueprint_state_update` to set `/blu-plan-milestone-gaps` as the active command, point `currentPhase` at the first newly added gap-closure phase, and set the next safe implemented action to `/blu-discuss-phase <first new phase number>`.
 11. Return a concise completion summary covering the milestone audited, the report used, phases added, any deferred gaps, and the next safe Blueprint action.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_roadmap_read`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_summary_digest`, `mcp__blueprint__blueprint_roadmap_add_phase`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_roadmap_add_phase`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
 - Keep the flow audit-first. Do not invent gap-closure phases from chat memory when the audit report is missing or empty.
 - Preserve the grouped-gap behavior from upstream GSD, but keep Blueprint Gemini-native and MCP-owned rather than rewriting files directly.

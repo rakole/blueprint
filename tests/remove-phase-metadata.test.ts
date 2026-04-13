@@ -13,10 +13,10 @@ test("remove-phase manifest references roadmap removal tools, confirmation gate,
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_list/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_remove_phase/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_remove_phase/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /future-phase guard|current or past phases/i);
   assert.match(commandFile, /\/blu-progress/);

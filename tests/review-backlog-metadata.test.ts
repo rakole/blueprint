@@ -13,13 +13,13 @@ test("review-backlog manifest references preview, promotion, backlog updates, an
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_promote_backlog/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_promote_backlog/);
   assert.match(commandFile, /previewOnly: true/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /action: "update"/);
   assert.match(commandFile, /status: "promoted"/);
   assert.match(commandFile, /status: "archived"/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /\/blu-discuss-phase <first promoted phase>/);
 });
 

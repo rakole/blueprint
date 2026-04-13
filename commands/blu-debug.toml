@@ -6,7 +6,7 @@ Use the `blueprint-debug` skill as the primary orchestration contract when that 
 
 Follow this flow exactly:
 
-1. Read `mcp__blueprint__blueprint_project_status` first. If Blueprint is uninitialized, stop in safe suggestion mode: explain that persistent debugging needs a Blueprint project and route to `/blu-new-project` instead of inventing `.blueprint/` state.
+1. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized, stop in safe suggestion mode: explain that persistent debugging needs a Blueprint project and route to `/blu-new-project` instead of inventing `.blueprint/` state.
 2. Require a concrete issue statement before doing deeper work. If the request is blank or too vague, ask for the failing behavior, expected behavior, and any repro hint instead of guessing.
 3. Treat `--diagnose` as diagnose-only mode. In that mode, do not attempt repo fixes unless the user explicitly confirms a fix attempt after seeing the diagnosis.
 4. Inspect the most relevant repo evidence before proposing conclusions. Read the directly implicated files, tests, logs, or the current `.blueprint/reports/debug-latest.md` report when it exists and helps continue an earlier investigation.
@@ -16,13 +16,13 @@ Follow this flow exactly:
    - gathering log, stack trace, or config evidence
    - returning a compact diagnosis, confidence level, and next-step options
 6. Keep the scope investigative. If the issue reveals a broad implementation ask, stop and route to `/blu-quick` for a bounded fix or `/blu-plan-phase` for a larger saved-plan rollout instead of improvising a wide refactor inside `debug`.
-7. Persist the durable investigation report through `mcp__blueprint__blueprint_artifact_report_write` with the canonical report name `debug-latest`. If that report already exists and the user did not explicitly approve replacement, require explicit overwrite confirmation before replacing it.
-8. If the investigation surfaces a concrete follow-up task that should be captured, use `mcp__blueprint__blueprint_artifact_mutate_index` only after the user explicitly asks to capture it or confirms the follow-up should become a todo.
-9. After the report is written, call `mcp__blueprint__blueprint_state_update` so `STATE.md` records `/blu-debug` as the active command and points to the next safe implemented action. Prefer `/blu-progress` when the best follow-up is not narrower.
+7. Persist the durable investigation report through `mcp_blueprint_blueprint_artifact_report_write` with the canonical report name `debug-latest`. If that report already exists and the user did not explicitly approve replacement, require explicit overwrite confirmation before replacing it.
+8. If the investigation surfaces a concrete follow-up task that should be captured, use `mcp_blueprint_blueprint_artifact_mutate_index` only after the user explicitly asks to capture it or confirms the follow-up should become a todo.
+9. After the report is written, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-debug` as the active command and points to the next safe implemented action. Prefer `/blu-progress` when the best follow-up is not narrower.
 10. Return a concise completion summary covering the issue investigated, the evidence used, whether the run stayed diagnose-only, the report status, any captured todo follow-up, and the next safe implemented action.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_project_status`, `mcp__blueprint__blueprint_artifact_report_write`, `mcp__blueprint__blueprint_artifact_mutate_index`, and `mcp__blueprint__blueprint_state_update` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_report_write`, `mcp_blueprint_blueprint_artifact_mutate_index`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/debug-latest.md`, optional `.blueprint/todos/TODO.md`, and `.blueprint/STATE.md`.
 - Do not invent hidden debug state, checkpoint files, or `.planning/` helpers.
 - Treat `--diagnose` as confirmation-gated for any fix attempt.

@@ -13,10 +13,10 @@ test("pr-branch manifest references the maintenance skill, report tool, and git 
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_project_status/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_config_get/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /pr-branch-latest/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /\.blueprint\/\*\*/);

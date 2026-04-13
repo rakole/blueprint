@@ -13,12 +13,12 @@ test("cleanup manifest references the maintenance skill, cleanup report, and exp
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_project_status/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_list/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /cleanup-latest/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /active roadmap/i);

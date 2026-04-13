@@ -8,14 +8,14 @@ Follow this flow exactly:
 
 1. Require an explicit backlog description from the user input. If the description is missing or blank, stop with concise usage guidance instead of guessing.
 2. If the user explicitly asks to reserve a `999.x` phase stub right now, require explicit confirmation before writing anything.
-3. Use `mcp__blueprint__blueprint_artifact_mutate_index` with `target: "backlog"` and the normalized description. Set `reservePhaseStub: true` only after the reservation is explicitly confirmed.
-4. If `mcp__blueprint__blueprint_artifact_mutate_index` returns `status: "project_missing"`, stop with safe suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
-5. If `mcp__blueprint__blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the matching backlog ID and stop without creating a second copy of the same parking-lot idea.
-6. If the mutation result includes a reserved phase stub, use `mcp__blueprint__blueprint_artifact_scaffold` to create the returned phase context artifact path. Do not hand-write the stub file.
+3. Use `mcp_blueprint_blueprint_artifact_mutate_index` with `target: "backlog"` and the normalized description. Set `reservePhaseStub: true` only after the reservation is explicitly confirmed.
+4. If `mcp_blueprint_blueprint_artifact_mutate_index` returns `status: "project_missing"`, stop with safe suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
+5. If `mcp_blueprint_blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the matching backlog ID and stop without creating a second copy of the same parking-lot idea.
+6. If the mutation result includes a reserved phase stub, use `mcp_blueprint_blueprint_artifact_scaffold` to create the returned phase context artifact path. Do not hand-write the stub file.
 7. Return a concise summary covering the backlog entry ID, the backlog path, any reserved `999.x` stub path, any warnings, and the next safe implemented follow-up.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_artifact_mutate_index` and `mcp__blueprint__blueprint_artifact_scaffold` for persistent state work.
+- Use only `mcp_blueprint_blueprint_artifact_mutate_index` and `mcp_blueprint_blueprint_artifact_scaffold` for persistent state work.
 - Keep persistent writes inside `.blueprint/backlog/` and the optional `.blueprint/phases/999.x-*/` stub path.
 - Treat backlog capture as append-only unless the MCP tool reports a duplicate.
 - Do not advertise planned-only capture commands as runnable follow-ups.

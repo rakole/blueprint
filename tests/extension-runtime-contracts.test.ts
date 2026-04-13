@@ -150,7 +150,7 @@ async function repairedPromptContracts(): Promise<RuntimePromptContract[]> {
 }
 
 function stripRuntimeToolFqns(markdown: string): string {
-  return markdown.replace(/`mcp__blueprint__blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
+  return markdown.replace(/`mcp_blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
 test("gemini extension discovery points at the built Blueprint MCP server", async () => {
@@ -208,7 +208,7 @@ test("implemented Blueprint skills include runtime tool and slash-command guardr
     );
     assert.match(
       raw,
-      /`mcp__blueprint__blueprint_project_status`/,
+      /`mcp_blueprint_blueprint_project_status`/,
       `${skillName} should include a runtime FQN example`
     );
     assert.match(
@@ -286,11 +286,15 @@ test("new-project manifest forbids shell execution and tool-name drift", async (
 
   assert.match(
     raw,
-    /Only call Blueprint MCP tools through their runtime FQNs such as `mcp__blueprint__blueprint_project_init`\./
+    /When you name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form `mcp_blueprint_<toolName>`\./
   );
   assert.match(
     raw,
-    /Translate any shorthand `blueprint_\*` ids from older docs into their runtime FQNs before calling them\./
+    /Translate any shorthand `blueprint_\*` ids from older docs into their `mcp_blueprint_\*` runtime FQNs before calling them\./
+  );
+  assert.match(
+    raw,
+    /Never try to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts\./
   );
   assert.match(
     raw,

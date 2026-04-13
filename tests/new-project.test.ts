@@ -316,6 +316,9 @@ test("command contract references the same Phase 1 tool names as the MCP server"
 
   assert.match(commandFile, /--auto/);
   assert.match(commandFile, /\.blueprint\/config\.json/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_init/);
+  assert.match(commandFile, /Blueprint MCP server is disconnected or undiscovered/i);
+  assert.match(commandFile, /Never try to invoke Blueprint MCP tools through shell commands/i);
 });
 
 test("manifest, command files, and build output line up for installation", async () => {

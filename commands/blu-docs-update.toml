@@ -6,13 +6,13 @@ Use the `blueprint-docs` skill as the primary orchestration contract when that r
 
 Follow this flow exactly:
 
-1. Read `mcp__blueprint__blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
-2. Read `mcp__blueprint__blueprint_artifact_list` so you know which project, codebase, phase, and report artifacts already exist.
+1. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
+2. Read `mcp_blueprint_blueprint_artifact_list` so you know which project, codebase, phase, and report artifacts already exist.
 3. Resolve the documentation scope from the user's request before editing anything:
    - If the user named one or more doc files, keep the write scope to those files.
    - If the user passed `--verify-only`, stay read-only for repo docs and prepare only the verification report.
    - If the user did not name a scope, default to a narrow pass on `README.md` plus closely related top-level repo docs. Do not fan out into `.blueprint/`, `docs/commands/`, or large internal doc sweeps unless the user clearly asked for that breadth.
-4. Build a compact evidence digest through `mcp__blueprint__blueprint_artifact_summary_digest`. Use explicit `artifactPaths`, `docFiles`, `sourceFiles`, or `testFiles` so the digest is grounded in the selected documentation scope, the current codebase bundle when it exists, and any relevant Blueprint project artifacts.
+4. Build a compact evidence digest through `mcp_blueprint_blueprint_artifact_summary_digest`. Use explicit `artifactPaths`, `docFiles`, `sourceFiles`, or `testFiles` so the digest is grounded in the selected documentation scope, the current codebase bundle when it exists, and any relevant Blueprint project artifacts.
 5. If the repo lacks the `.blueprint/codebase/` mapping bundle and the user asked for a broad repo-doc refresh instead of a narrow targeted edit, stop and route to `/blu-map-codebase` first so the docs pass stays evidence-backed.
 6. Inspect the targeted documentation files directly before replacing them. If the change would replace heavily edited docs and the user did not clearly ask for replacement or pass `--force`, require explicit overwrite confirmation before mutating those files.
 7. In `--verify-only` mode:
@@ -23,11 +23,11 @@ Follow this flow exactly:
    - use the `blueprint-doc-writer` subagent for bounded drafting when the requested change spans multiple sections or multiple files
    - verify the proposed documentation with the `blueprint-doc-verifier` subagent before finalizing the edits
    - keep repo mutations scoped to the selected documentation files only; do not mutate code, tests, `.blueprint/`, or git state as part of this command
-9. Persist the durable report through `mcp__blueprint__blueprint_artifact_report_write` with the report name `docs-update-latest`. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it.
+9. Persist the durable report through `mcp_blueprint_blueprint_artifact_report_write` with the report name `docs-update-latest`. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it.
 10. Return a concise completion summary covering the selected doc scope, whether the pass verified or updated docs, the evidence inputs used, the report status, any blockers or factual gaps, and the next safe implemented Blueprint action. Prefer `/blu-progress` when a follow-up is needed and no narrower implemented command is clearly better.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_project_status`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_summary_digest`, and `mcp__blueprint__blueprint_artifact_report_write` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, and `mcp_blueprint_blueprint_artifact_report_write` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/`.
 - Treat `--force` as the only path that bypasses confirmation for replacing existing docs or the canonical report.
 - Treat `--verify-only` as strictly read-only for repo documentation files.

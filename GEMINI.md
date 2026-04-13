@@ -72,6 +72,8 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - Commands own UX and routing.
 - MCP tools own persistent reads and writes.
 - Do not create or mutate Blueprint artifacts through prompt-only prose when an MCP tool is responsible for the change.
+- When you need to name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form `mcp_blueprint_<toolName>`.
+- Never try to reach Blueprint MCP tools through shell wrappers such as `mcp use ...`, `blueprint-mcp ...`, or ad-hoc `node -e` SDK scripts. If a Blueprint MCP tool is unavailable, say the Blueprint MCP server is disconnected or undiscovered and ask the user to check `/mcp` or restart Gemini CLI.
 
 ## Router Guidance
 
