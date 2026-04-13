@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-plan-milestone-gaps`
-- Compatibility during this release: `/blu:plan-milestone-gaps` (deprecated; remove next release)
 - Root router form: `/blu plan-milestone-gaps`
 - Argument hint: `none`
 - `/blu-plan-milestone-gaps`

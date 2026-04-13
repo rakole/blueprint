@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-list-phase-assumptions`
-- Compatibility during this release: `/blu:list-phase-assumptions` (deprecated; remove next release)
 - Root router form: `/blu list-phase-assumptions`
 - Argument hint: `[phase]`
 - `/blu-list-phase-assumptions 4`

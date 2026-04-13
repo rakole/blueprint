@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-add-backlog`
-- Compatibility during this release: `/blu:add-backlog` (deprecated; remove next release)
 - Root router form: `/blu add-backlog`
 - Argument hint: `<description>`
 - `/blu-add-backlog Offline-mode`

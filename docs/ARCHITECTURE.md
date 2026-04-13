@@ -60,7 +60,7 @@ Planned later runtime surfaces, not registered today:
 ### 1. Commands
 
 - `/blu` is the root router.
-- `/blu-<command>` is the direct entrypoint for each retained command. Deprecated `/blu:<command>` aliases remain for one release during migration.
+- `/blu-<command>` is the direct entrypoint for each retained command.
 - Commands own user-facing UX, routing, confirmations, and recovery language.
 - Commands do not own durable state mutation.
 

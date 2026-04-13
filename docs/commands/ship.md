@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-ship`
-- Compatibility during this release: `/blu:ship` (deprecated; remove next release)
 - Root router form: `/blu ship`
 - Argument hint: `[phase number or milestone, e.g., '4' or 'v1.0']`
 - `/blu-ship 3 --draft`

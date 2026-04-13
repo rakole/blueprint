@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-add-tests`
-- Compatibility during this release: `/blu:add-tests` (deprecated; remove next release)
 - Root router form: `/blu add-tests`
 - Argument hint: `<phase> [additional instructions]`
 - `/blu-add-tests 3`

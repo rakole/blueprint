@@ -7,7 +7,7 @@ This repository still carries the planning pack that locked the product and arch
 ## What Is Locked
 
 - Global install target: `gemini extensions install https://github.com/rakole/blueprint`
-- Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu-<command>` commands; deprecated `/blu:<command>` aliases remain for one release
+- Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu-<command>` commands
 - Project state location: `.blueprint/`
 - Global mutable state location: `~/.gemini/blueprint/`
 - Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in `~/.gemini/blueprint/defaults.json`
@@ -203,9 +203,8 @@ These runtime files exist today:
 - `commands/blu-next.toml`
 - `commands/blu-pause-work.toml`
 - `commands/blu-resume-work.toml`
-- Deprecated one-release compatibility manifests for shipped direct commands under `commands/blu/*.toml`
 - `skills/blueprint-router/SKILL.md`
-- `skills/blueprint-router.md` (legacy mirror retained for compatibility docs during migration)
+- `skills/blueprint-router.md` (legacy mirror retained during runtime repair)
 - `skills/blueprint-bootstrap/SKILL.md`
 - `skills/blueprint-governance/SKILL.md`
 - `skills/blueprint-map/SKILL.md`

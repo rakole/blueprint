@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-remove-phase`
-- Compatibility during this release: `/blu:remove-phase` (deprecated; remove next release)
 - Root router form: `/blu remove-phase`
 - Argument hint: `<phase-number>`
 - `/blu-remove-phase 7`

@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-add-todo`
-- Compatibility during this release: `/blu:add-todo` (deprecated; remove next release)
 - Root router form: `/blu add-todo`
 - Argument hint: `<description>`
 - `/blu-add-todo Add-retry-telemetry`

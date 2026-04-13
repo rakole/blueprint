@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-review`
-- Compatibility during this release: `/blu:review` (deprecated; remove next release)
 - Root router form: `/blu review`
 - Argument hint: `--phase N [--gemini] [--claude] [--codex] [--opencode] [--all]`
 - `/blu-review --phase 3 --all`

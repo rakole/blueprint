@@ -13,7 +13,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-map-codebase`
-- Compatibility during this release: `/blu:map-codebase` (deprecated; remove next release)
 - Root router form: `/blu map-codebase`
 - Argument hint: `[optional: specific area to map, e.g., 'api' or 'auth']`
 - `/blu-map-codebase auth`

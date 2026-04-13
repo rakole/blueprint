@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-ui-phase`
-- Compatibility during this release: `/blu:ui-phase` (deprecated; remove next release)
 - Root router form: `/blu ui-phase`
 - Argument hint: `[phase]`
 - `/blu-ui-phase 2`

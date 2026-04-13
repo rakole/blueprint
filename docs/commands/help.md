@@ -13,7 +13,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-help`
-- Compatibility during this release: `/blu:help` (deprecated; remove next release)
 - Root router form: `/blu help`
 - Argument hint: `none`
 - `/blu-help`

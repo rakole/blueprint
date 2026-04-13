@@ -26,7 +26,7 @@ Provide implementation-aware routing and next-step guidance without advertising 
 
 Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `do` flows while preserving Blueprint deltas:
 
-- `/blu` and `/blu-<command>` naming, with `/blu:<command>` accepted only as a temporary compatibility alias
+- `/blu` and `/blu-<command>` naming
 - `.blueprint/` instead of `.planning/`
 - Gemini-native inline routing
 - no slash-command chaining

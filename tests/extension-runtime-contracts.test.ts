@@ -1,12 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
-  blueprintCompatibilityDirectCommand,
-  blueprintCompatibilityManifestPath,
   blueprintDirectCommand
 } from "../src/mcp/command-paths.js";
 import {
@@ -83,6 +81,13 @@ async function pathExists(relativePath: string): Promise<boolean> {
 
 async function readRelativePath(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
+}
+
+async function activeCommandDocs(): Promise<string[]> {
+  return (await readdir(path.join(repoRoot, "docs/commands")))
+    .filter((entry) => entry.endsWith(".md"))
+    .map((entry) => `docs/commands/${entry}`)
+    .sort();
 }
 
 async function repairedPromptContracts(): Promise<RuntimePromptContract[]> {
@@ -231,26 +236,37 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
   }
 });
 
-test("deprecated compatibility manifests redirect to the canonical dash-form direct commands", async () => {
+test("shipped direct commands no longer include deprecated compatibility manifests", async () => {
   for (const commandName of REPAIRED_DIRECT_COMMANDS) {
-    const manifestPath = blueprintCompatibilityManifestPath(commandName);
-    const raw = await readRelativePath(manifestPath);
-
-    assert.match(
-      raw,
-      new RegExp(
-        escapeRegExp(
-          `You are the deprecated \`${blueprintCompatibilityDirectCommand(commandName)}\` compatibility command`
-        )
-      )
+    assert.equal(
+      await pathExists(`commands/blu/${commandName}.toml`),
+      false,
+      `${commandName} should not ship a deprecated colon-form compatibility manifest`
     );
-    assert.match(
+    assert.equal(await pathExists(`commands/blu-${commandName}.toml`), true);
+  }
+});
+
+test("active docs and runtime prompts do not mention colon-form direct commands", async () => {
+  const paths = [
+    "README.md",
+    "GEMINI.md",
+    "AGENTS.md",
+    "MEMORY.md",
+    "commands/blu.toml",
+    "docs/ARCHITECTURE.md",
+    "docs/DECISIONS.md",
+    "skills/blueprint-router/SKILL.md",
+    ...(await activeCommandDocs())
+  ];
+
+  for (const relativePath of paths) {
+    const raw = await readRelativePath(relativePath);
+
+    assert.doesNotMatch(
       raw,
-      new RegExp(
-        escapeRegExp(
-          `Canonical direct command path: \`${blueprintDirectCommand(commandName)}\``
-        )
-      )
+      /\/blu:/,
+      `${relativePath} should not mention removed colon-form direct commands`
     );
   }
 });

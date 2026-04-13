@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-validate-phase`
-- Compatibility during this release: `/blu:validate-phase` (deprecated; remove next release)
 - Root router form: `/blu validate-phase`
 - Argument hint: `[phase number]`
 - `/blu-validate-phase 3`

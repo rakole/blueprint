@@ -13,7 +13,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-progress`
-- Compatibility during this release: `/blu:progress` (deprecated; remove next release)
 - Root router form: `/blu progress`
 - Argument hint: `none`
 - `/blu-progress`

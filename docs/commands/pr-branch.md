@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-pr-branch`
-- Compatibility during this release: `/blu:pr-branch` (deprecated; remove next release)
 - Root router form: `/blu pr-branch`
 - Argument hint: `[target branch, default: main]`
 - `/blu-pr-branch develop`
