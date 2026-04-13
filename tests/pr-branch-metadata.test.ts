@@ -42,3 +42,29 @@ test("maintenance skill captures pr-branch filtering, report persistence, and so
   assert.match(skillFile, /without rewriting or deleting the source branch in place/i);
   assert.match(skillFile, /pr-branch-latest/);
 });
+
+test("repo-facing status docs treat pr-branch as a shipped command", async () => {
+  const [agentsFile, handoffFile, architectureFile, readmeFile, geminiFile, progressFile] =
+    await Promise.all([
+      readFile(path.join(repoRoot, "AGENTS.md"), "utf8"),
+      readFile(path.join(repoRoot, "docs/HANDOFF.md"), "utf8"),
+      readFile(path.join(repoRoot, "docs/ARCHITECTURE.md"), "utf8"),
+      readFile(path.join(repoRoot, "README.md"), "utf8"),
+      readFile(path.join(repoRoot, "GEMINI.md"), "utf8"),
+      readFile(path.join(repoRoot, "PROGRESS.md"), "utf8")
+    ]);
+
+  assert.match(agentsFile, /`pr-branch` are also shipped|`pr-branch`/i);
+  assert.match(handoffFile, /shipped Wave 4 review-branch command `pr-branch`/i);
+  assert.match(architectureFile, /shipped Wave 4 review-branch command, `pr-branch`/i);
+  assert.match(readmeFile, /The review-branch command `\/blu-pr-branch` is now shipped/i);
+  assert.match(geminiFile, /`\/blu-pr-branch`/);
+  assert.match(
+    progressFile,
+    /\| [0-9]+ \| `pr-branch` \| ✅ \| `implemented` \| 4 \| `Quality And Shipping` \| High \|/
+  );
+  assert.doesNotMatch(
+    progressFile,
+    /\| [0-9]+ \| `pr-branch` \| ❌ \| `planned` \| 4 \| `Quality And Shipping` \| High \|/
+  );
+});

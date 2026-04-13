@@ -6,27 +6,21 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 17
+Total: 11
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
-| 1 | `explore` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
-| 2 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
-| 3 | `add-tests` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 4 | `audit-fix` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 5 | `code-review-fix` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 6 | `pr-branch` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 7 | `ship` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 8 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 9 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
-| 10 | `code-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 11 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 12 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 13 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 14 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 15 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 16 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 17 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 1 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
+| 2 | `ship` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 3 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
+| 4 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
+| 5 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
+| 6 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 7 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 8 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 9 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 10 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
+| 11 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -34,12 +28,10 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `explore` | `add-tests` | `audit-fix` | Safe parallel set. |
-| 2 | `code-review-fix` | `pr-branch` | `ship` | Safe parallel set. |
-| 3 | `undo` | `review` | `code-review` | Safe parallel set. |
-| 4 | `ui-review` | `cleanup` | `new-workspace` | Safe parallel set. |
-| 5 | `reapply-patches` | `workstreams` | `update` | Safe parallel set. |
-| 6 | `remove-workspace` | — | — | Safe parallel set. |
+| 1 | `ship` | `undo` | `review` | Safe parallel set. |
+| 2 | `ui-review` | `cleanup` | `new-workspace` | Safe parallel set. |
+| 3 | `reapply-patches` | `remove-workspace` | `workstreams` | Safe parallel set. |
+| 4 | `update` | — | — | Safe parallel set. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
@@ -49,7 +41,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 36
+Total: 42
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -87,5 +79,11 @@ Total: 36
 | 32 | `note` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
 | 33 | `quick` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | High |
 | 34 | `debug` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Medium |
-| 35 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
-| 36 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 35 | `explore` | ✅ | `implemented` | 3 | `Capture And Lightweight Execution` | Low |
+| 36 | `add-tests` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 37 | `audit-fix` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 38 | `code-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 39 | `code-review-fix` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 40 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
+| 41 | `pr-branch` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 42 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
