@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, review-branch, and shipping commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, peer-review, review-branch, and shipping commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -26,6 +26,7 @@ This repository still carries the planning pack that locked the product and arch
 - The review-fix command `/blu-code-review-fix` is now shipped on April 13, 2026; it loads saved `XX-REVIEW.md` findings through `blueprint_review_load_findings`, keeps fixes tightly bounded to the selected review issues, persists `XX-REVIEW-FIX.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The remediation command `/blu-audit-fix` is now shipped on April 13, 2026; it reuses the deterministic review scope, reads saved review or validation evidence first, keeps repo mutation bounded, persists `.blueprint/reports/audit-fix-<phase>.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
+- The peer review command `/blu-review` is now shipped on April 13, 2026; it reads saved phase plans through the plan MCP substrate, fans out to whichever reviewer CLIs are actually available, preserves partial reviewer availability honestly, and persists `XX-REVIEWS.md` through `blueprint_review_record`
 - The UI audit command `/blu-ui-review` is now shipped on April 13, 2026; it reads saved execution and UI-spec evidence, uses the `blueprint-review` skill plus the bounded `blueprint-ui-auditor` contract when needed, and persists `XX-UI-REVIEW.md` through `blueprint_review_record`
 - The review-branch command `/blu-pr-branch` is now shipped on April 13, 2026; it reads project and config state first, previews the filtered review scope with explicit `.blueprint/` inclusion or exclusion, persists `.blueprint/reports/pr-branch-latest.md`, and never rewrites the source branch in place
 - The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
@@ -187,6 +188,7 @@ These runtime files exist today:
 - `commands/blu-check-todos.toml`
 - `commands/blu-add-backlog.toml`
 - `commands/blu-review-backlog.toml`
+- `commands/blu-review.toml`
 - `commands/blu-explore.toml`
 - `commands/blu-fast.toml`
 - `commands/blu-quick.toml`

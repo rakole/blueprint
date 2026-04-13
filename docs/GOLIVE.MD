@@ -88,10 +88,8 @@ What remains closest on the roadmap:
 
 ### Functional
 
-- Ship the rest of Wave 4 quality and shipping beyond the already shipped `code-review`, `audit-fix`, `secure-phase`, `docs-update`, `add-tests`, `pr-branch`, and `ship` commands:
-  - `code-review-fix`
+- Ship the rest of Wave 4 quality and shipping beyond the already shipped `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `docs-update`, `add-tests`, `pr-branch`, and `ship` commands:
   - `ui-review`
-  - `review`
   - `undo`
 - Ship the full Wave 5 workspace and maintenance layer:
   - `new-workspace`
