@@ -50,7 +50,7 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 - `blueprint_artifact_scaffold`
 - `blueprint_project_status`
 - `blueprint_state_update`
-- `blueprint_roadmap_add_phase`
+- `blueprint_roadmap_promote_backlog`
 
 ## Optional Agents
 
@@ -85,10 +85,19 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 4. Treat normalized duplicate todo descriptions as already captured work and report the existing entry instead of creating a second copy.
 5. Keep follow-up guidance inside implemented commands only.
 
+### `review-backlog`
+
+1. Start with `blueprint_roadmap_promote_backlog` in preview mode so backlog review decisions come from the canonical backlog index instead of chat memory.
+2. Require explicit confirmation for each promote or remove decision; keep is the default safe path.
+3. Promote confirmed backlog items through `blueprint_roadmap_promote_backlog` so roadmap append logic, next-phase numbering, and reserved `999.x` stub reuse stay deterministic.
+4. After promotion, update the canonical backlog rows through `blueprint_artifact_mutate_index` with `action: "update"` so promoted items become `promoted` and clear any consumed reserved phase metadata.
+5. If the user explicitly removes backlog items from active consideration, mark them `archived` through `blueprint_artifact_mutate_index` instead of deleting history.
+6. Use `blueprint_state_update` so the next safe implemented action routes to `/blu-discuss-phase <first promoted phase>` when promotion happened, or `/blu-progress` when it did not.
+7. Keep follow-up guidance inside implemented commands only.
+
 ## Future Capture Guardrails
 
-- `check-todos`, `review-backlog`, and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
-- Do not quietly promote backlog entries into roadmap phases without the dedicated promotion contract.
+- `check-todos` and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
 - Do not write capture state outside `.blueprint/notes/`, `.blueprint/todos/`, `.blueprint/backlog/`, or explicitly reserved `.blueprint/phases/999.x-*/` stubs.
 
 ## Output Style

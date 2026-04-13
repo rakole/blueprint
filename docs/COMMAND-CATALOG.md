@@ -44,7 +44,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `remove-workspace` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `updated global workspace registry; workspace directory removal` | `High: directory deletion and worktree cleanup.` |
 | `research-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-RESEARCH.md; .blueprint/STATE.md` | `Low: writes research artifacts only.` |
 | `resume-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `implemented` | `.blueprint/STATE.md` | `Low: restores state from the canonical pause handoff and updates the next safe action.` |
-| `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `updated backlog index; updated roadmap and any promoted phase stubs` | `Medium: can promote backlog items into active roadmap scope.` |
+| `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `implemented` | `.blueprint/backlog/BACKLOG.md; .blueprint/ROADMAP.md; promoted phase directories under .blueprint/phases/; .blueprint/STATE.md` | `Medium: can promote backlog items into active roadmap scope.` |
 | `review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEWS.md or equivalent peer-review artifact` | `Medium: external tool orchestration without default repo mutation.` |
 | `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `implemented` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |

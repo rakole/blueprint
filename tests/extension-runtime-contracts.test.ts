@@ -19,8 +19,8 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 const repoRoot = process.cwd();
 
 // Covers the command batches repaired in DF-008, DF-009, and DF-010, plus the
-// shipped note/add-todo/add-backlog capture slice, the debug slice, and the
-// secure-phase review slice.
+// shipped note/add-todo/add-backlog/review-backlog capture slice, the debug
+// slice, and the secure-phase review slice.
 const REPAIRED_DIRECT_COMMANDS = [
   "help",
   "progress",
@@ -45,6 +45,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "note",
   "add-todo",
   "add-backlog",
+  "review-backlog",
   "secure-phase",
   "add-phase",
   "insert-phase",
