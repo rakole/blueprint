@@ -2,148 +2,100 @@
 
 ## Status
 
-- Date: 2026-04-11
-- Type: future-work research note
-- Scope: how Blueprint can adopt the useful security parts of GSD without breaking Blueprint's Gemini-native architecture
+- Date: 2026-04-13
+- Type: active implementation roadmap
+- Scope: runtime hardening, artifact safety, and maintenance integrity for Blueprint's shipped and planned surfaces
 - Reference: [GSD `security.cjs`](https://github.com/gsd-build/get-shit-done/blob/main/get-shit-done/bin/lib/security.cjs)
 
 ## Recommendation In One Paragraph
 
-Blueprint should not copy GSD's security layer file-for-file. It should extract the intent of that module into a small shared Blueprint security library, make MCP tools the primary enforcement point, keep hooks advisory, and only wire higher-level audit behavior into `secure-phase` after the planned review substrate exists. The first goal is a shared guardrail foundation for path safety, prompt-safety scans, safe parsing, and argument validation. The second goal is a later security review flow that produces `XX-SECURITY.md` through `blueprint-review` and `blueprint-security-auditor`.
+Blueprint should still avoid a file-for-file port of GSD's security module, but the useful intent now has a concrete home in the runtime: a shared `src/shared/security.ts` layer, MCP-first enforcement, advisory hooks that reuse the same detectors, and tighter maintenance-flow preflights. The security work is now staged in waves. Wave 1 hardens shared path, parsing, and identifier validation. Wave 2 adds prompt-boundary and artifact-boundary protections. Wave 3 aligns high-risk maintenance flows around shared preflight rules. Wave 4 keeps `secure-phase` as the user-visible security surface, but grounds its evidence model in the earlier hardening taxonomy.
 
-## What GSD's Security Module Actually Gives Us
+## Current Baseline
 
-The upstream module is a defense-in-depth utility layer. It centralizes:
+Blueprint already ships:
 
-- path traversal protection with symlink-aware resolution
-- prompt-injection pattern scanning
-- prompt/display sanitization
-- shell argument validation
-- safe JSON parsing with size limits
-- phase and field-name validation
-- prompt-structure validation for XML-like workflow files
-- entropy-based anomaly detection for suspicious encoded payloads
+- repo-relative and `.blueprint/`-scoped path helpers in MCP tools
+- advisory hooks for read-before-edit, `.blueprint` writes, and workflow drift
+- a phase-scoped `secure-phase` review flow through `blueprint_review_record`
+- report-backed high-risk maintenance contracts for `pr-branch`, `ship`, and `cleanup`
 
-That is useful for Blueprint, but the integration point needs to change. GSD uses this in a CLI runtime that writes markdown prompts and orchestrates shell-heavy workflows. Blueprint's architecture puts deterministic state changes inside MCP tools, keeps commands thin, and treats hooks as advisory only.
+That means the remaining problem is not "add security from scratch." It is "replace narrow local checks with a shared hardening layer and apply it consistently without widening the public command surface."
 
-## Blueprint Constraints That Change The Design
+## Architecture Constraints
 
-- `docs/DECISIONS.md` locks Blueprint into MCP-owned persistence, not script-owned persistence.
-- `docs/DRIFT.MD` freezes Phase 3+ exposure until missing substrate lands, so this work must not accidentally surface blocked commands early.
-- `docs/MCP-TOOLS.md` already requires tools to reject path traversal.
-- `docs/commands/secure-phase.md` already defines the future contract for a security audit command, but that command is still `planned`.
-- `src/mcp/tools/artifacts.ts` already has basic repo-relative and `.blueprint/` path checks through `resolveRepoRelativePath` and `resolveBlueprintPath`.
+- MCP tools remain the hard enforcement boundary for persistence and validation.
+- Hooks remain advisory and must not become a second hidden state engine.
+- The security rollout must not make planned commands routable by implication.
+- Early waves should keep command names, MCP tool names, manifests, and public routing stable.
+- High-risk maintenance flows need the same integrity checks even when some commands are still docs-only.
 
-Because of that, the right move is to strengthen shared validation under the MCP layer first, then attach review and audit behavior later.
+## Implemented Foundation
 
-## Proposed Blueprint Design
+The current runtime now includes a shared `src/shared/security.ts` module that owns:
 
-### 1. Add a shared security module
+- symlink-aware path containment checks
+- null-byte rejection
+- safe JSON parsing with size limits and object-shape enforcement
+- shared phase-ref, numeric artifact id, and field-name validation
+- prompt-boundary analysis for instruction-override text, hidden control characters, role markers, and suspicious encoded payloads
+- persistence-time sanitization of hidden control characters
 
-Create a reusable module under `src/shared/security/` or `src/shared/security.ts` with Blueprint-shaped helpers such as:
+The MCP layer now routes its core path and persistence helpers through that shared module, and the shipped advisory hooks reuse the same prompt-boundary detectors for consistency.
 
-- `validatePathWithinRoot(baseDir, candidatePath, opts)`
-- `scanForPromptInjection(text, opts)`
-- `sanitizeForPromptEmbedding(text)`
-- `sanitizeForUserDisplay(text)`
-- `safeJsonParse(text, opts)`
-- `validateBlueprintPhaseRef(value)`
-- `validateBlueprintFieldName(value)`
-- `scanEntropyAnomalies(text)`
+## Wave Plan
 
-Blueprint should reuse existing repo-relative path helpers where possible, then centralize stricter logic there instead of duplicating checks in each MCP tool.
+### Wave 0: Planning Pack
 
-### 2. Make MCP tools the hard enforcement layer
+- Keep the security roadmap in `docs/` plus `MEMORY.md`; do not create extension-repo `.blueprint/` planning state.
+- Lock the decisions that shared security lives at the MCP boundary, hooks remain advisory, security hardening does not expand routing, and high-risk maintenance flows share preflight integrity checks.
+- Keep `docs/COMMAND-CATALOG.md`, manifests, and command status untouched unless a later wave changes the real runtime contract.
 
-Security checks should run inside MCP tools before filesystem writes or risky parsing. Priority integration points:
+### Wave 1: Shared Runtime Guardrails
 
-1. `src/mcp/tools/artifacts.ts`
-2. `src/mcp/tools/project.ts`
-3. `src/mcp/tools/config.ts`
-4. future review, workspace, patch, and update tool families
+- Centralize repo-root and `.blueprint/` path containment under the shared security layer.
+- Reject path traversal, absolute-path misuse for repo-relative inputs, null bytes, and symlink escapes.
+- Replace raw JSON parsing in config, project bootstrap, and phase checkpoint paths with size-limited safe parsing.
+- Reuse shared phase-ref, artifact-id, and field-name validators instead of duplicate local helpers.
 
-This keeps Blueprint aligned with its core rule: tools own persistence. Commands and skills can warn, but they should not become the only place where security validation happens.
+### Wave 2: Prompt And Artifact Boundary Hardening
 
-### 3. Add prompt-safety specifically where Blueprint writes LLM-facing artifacts
+- Treat reports, review artifacts, security artifacts, pause handoffs, phase artifacts, and capture indexes as prompt-boundary-sensitive persistence points.
+- Sanitize hidden control characters before persistence.
+- Reject instruction-override text and suspicious encoded payloads at MCP write boundaries.
+- Warn on contextual prompt metadata and unsafe display markers through the shared advisory hook detectors.
 
-Blueprint may not generate GSD-style workflow files today, but it does own agent specs, skill docs, command specs, and `.blueprint/` planning artifacts that can later flow back into model context. That means Blueprint still benefits from:
+### Wave 3: High-Risk Maintenance Hardening
 
-- scanning user-supplied long-form text before embedding it into generated artifacts
-- stripping invisible Unicode and obvious role-boundary markers before prompt embedding
-- sanitizing display output to avoid surfacing leaked protocol markers
+- Align `pr-branch`, `ship`, and `cleanup` around shared preflight expectations: dirty-tree checks, resolved-target validation, evidence-backed scope, and report-before-mutate behavior.
+- Push the same preflight model into the documented future contracts for `undo`, `new-workspace`, `remove-workspace`, and `reapply-patches` before those commands ship.
+- Keep global maintenance state transactional and provenance-aware instead of allowing ad hoc registry writes.
 
-This should be applied narrowly to user-controlled text fields, not as a blanket rewrite of every markdown file.
+### Wave 4: Security Evidence And Review Alignment
 
-### 4. Keep hooks advisory
-
-The existing hook policy already points in the right direction. A Blueprint hook can warn on suspicious `.blueprint/` writes or prompt-injection markers, but it should not become the source of truth for state safety. The hook should complement MCP validation, not replace it.
-
-### 5. Treat `secure-phase` as a later review surface, not the foundation
-
-`secure-phase` should stay planned until the review substrate is real. When it is implemented, it should consume the shared security helpers and produce an audit artifact through `blueprint_review_record`. That later flow can cover:
-
-- threat-model verification against completed phase outputs
-- missing mitigation checks
-- suspicious artifact content findings
-- follow-up tasks or fix recommendations
-
-In other words: the shared security library protects the runtime; `secure-phase` reports on project security posture.
-
-## Suggested Delivery Order
-
-### Slice A: shared runtime guardrails
-
-- extract current path-safety logic into a shared module
-- add symlink-aware containment checks similar to GSD's `validatePath`
-- add safe JSON parsing and common identifier validators
-- add unit tests for traversal, null-byte, and malformed-input cases
-
-### Slice B: prompt-safety integration
-
-- add injection scanning and sanitization helpers
-- integrate them into artifact creation and any MCP path that embeds user-controlled text into Blueprint-managed markdown
-- add tests for invisible Unicode, delimiter markers, prompt-stuffing, and encoded payload heuristics
-
-### Slice C: advisory hook alignment
-
-- add warnings in Blueprint hooks for suspicious artifact writes
-- keep hook messages informational and consistent with MCP rejection behavior
-
-### Slice D: future quality/security command work
-
-- implement `blueprint-review` review substrate
-- add `blueprint-security-auditor`
-- implement `/blu-secure-phase` on top of the shared helpers and review recording tools
+- Keep `secure-phase` as the user-visible security surface.
+- Clarify that `XX-SECURITY.md` should distinguish confirmed mitigations, missing or partial controls, suspicious artifact content, and follow-up hardening work.
+- Keep review evidence grounded in saved phase artifacts, direct repo references, and explicit next safe actions.
 
 ## What Not To Port Directly
 
-- do not port shell-specific validation everywhere if Blueprint is not using shell execution at that boundary
-- do not make hooks state-owning
-- do not introduce a second persistence path outside MCP tools
-- do not expose `secure-phase` early just because security helpers exist
-- do not assume GSD's XML-like prompt structure rules map 1:1 to Gemini command or agent files
+- do not port shell-specific validation everywhere if Blueprint is not invoking shell behavior at that boundary
+- do not move state authority from MCP tools into hooks or skills
+- do not invent a second persistence path outside MCP tools
+- do not widen the routable command surface just because shared security helpers exist
+- do not make `secure-phase` the foundation of runtime safety; it is the reporting surface, not the enforcement layer
 
-## Concrete Future Work Backlog
+## Concrete Follow-Through
 
-1. Add `src/shared/security.ts` with shared validators and sanitizers.
-2. Refactor `src/mcp/tools/artifacts.ts` to consume the shared path-safety helper instead of owning all traversal logic locally.
-3. Add shared tests that cover symlinks, null bytes, absolute paths, prompt injection markers, invisible Unicode, oversized JSON, and high-entropy payloads.
-4. Define which Blueprint artifact fields are "prompt-boundary sensitive" and should be scanned or sanitized before persistence.
-5. Add a review-family design note for how `blueprint-security-auditor` will emit findings into `XX-SECURITY.md`.
+1. Keep new MCP write paths on the shared security helpers instead of reintroducing local path or JSON parsing.
+2. Expand tests whenever a new persistence boundary is added: path escape, malformed JSON, prompt-boundary rejection, and advisory-hook alignment.
+3. Keep maintenance command specs and the maintenance skill explicit about shared preflight requirements as those commands evolve.
+4. Tighten `secure-phase` guidance only when the persisted evidence contract really changes.
 
-## Exit Criteria For This Research To Become Implementation
+## Exit Criteria
 
-- a shared security module exists and is used by MCP tools
-- path safety is centralized rather than duplicated
-- prompt-safety checks are applied only at clear user-input boundaries
-- tests prove traversal and prompt-safety regressions fail fast
-- `secure-phase` remains `planned` until the review-family MCP tools and agent contract are actually present
-
-## Bottom Line
-
-Bring the security part into Blueprint in two layers:
-
-- now: shared MCP-first runtime guardrails
-- later: `secure-phase` and security-auditor reporting
-
-That preserves the useful parts of GSD's security posture while staying faithful to Blueprint's own architecture and current Phase 2.2 freeze rules.
+- shared security helpers remain the default path for repo-relative resolution, JSON parsing, and prompt-boundary checks
+- MCP writes reject unsafe prompt-boundary content and symlink escapes consistently
+- hooks stay advisory but use the same detectors as MCP enforcement
+- maintenance docs and skill contracts reflect shared integrity preflights
+- security reporting stays phase-scoped and evidence-backed without changing the command surface

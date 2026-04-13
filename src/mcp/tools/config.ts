@@ -11,6 +11,7 @@ import {
   toRepoRelativePath,
   writeJsonFile
 } from "./artifacts.js";
+import { validateFieldNameSegment } from "../../shared/security.js";
 
 type ConfigScope = "project" | "defaults" | "effective";
 type ModelProfile = "quality" | "balanced" | "budget" | "inherit";
@@ -250,6 +251,7 @@ function setNestedValue(
   let current = target;
 
   for (const segment of pathSegments.slice(0, -1)) {
+    validateFieldNameSegment(segment);
     const next = current[segment];
 
     if (!isPlainObject(next)) {
@@ -259,7 +261,9 @@ function setNestedValue(
     current = current[segment] as Record<string, unknown>;
   }
 
-  current[pathSegments[pathSegments.length - 1]] = value;
+  const finalSegment = pathSegments[pathSegments.length - 1];
+  validateFieldNameSegment(finalSegment);
+  current[finalSegment] = value;
 }
 
 function coerceLegacyConfigCandidate(
@@ -319,6 +323,13 @@ function applyConfigLayer(
   pathPrefix: string[] = []
 ): void {
   for (const [key, value] of Object.entries(source)) {
+    try {
+      validateFieldNameSegment(key, "Config key");
+    } catch (error) {
+      warnings.push(error instanceof Error ? error.message : `Ignored unsafe config key: ${key}`);
+      continue;
+    }
+
     const fullPath = [...pathPrefix, key].join(".");
 
     if (isReservedKey(scope, fullPath)) {

@@ -90,3 +90,15 @@ This file records the product and architecture decisions that are locked for Blu
 
 29. `BP-029` Stable codebase mapping bundle
     `map-codebase` owns a seven-document `.blueprint/codebase/` bundle: `STACK.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `CONVENTIONS.md`, `TESTING.md`, `INTEGRATIONS.md`, and `CONCERNS.md`.
+
+30. `BP-030` Shared security boundary
+    Shared runtime security logic lives in `src/shared/security.ts`, with MCP tools consuming it as the hard enforcement layer for path containment, safe parsing, prompt-boundary checks, and identifier validation.
+
+31. `BP-031` Advisory hook parity
+    Hooks may reuse the shared security detectors for warnings, but they remain advisory and must not replace MCP-owned enforcement.
+
+32. `BP-032` Security hardening does not widen routing
+    Security hardening waves do not make planned commands routable by implication and do not expand the public command surface unless a command's manifest, skill, and required MCP tools are all present.
+
+33. `BP-033` Maintenance integrity preflights
+    High-risk maintenance and workspace flows must share explicit preflight integrity checks for dirty state, resolved targets, provenance, and report-before-mutate behavior.

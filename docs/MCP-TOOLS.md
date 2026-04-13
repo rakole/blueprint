@@ -10,6 +10,7 @@ Blueprint commands use MCP tools for deterministic state operations. This keeps 
 - Commands own UX.
 - Skills own orchestration.
 - Agents own bounded deep work.
+- Shared runtime security lives below the tool surface and is consumed by MCP tools rather than by command-only prompt logic.
 
 ## Current Registered Tool Surface
 
@@ -135,12 +136,12 @@ These tool names are part of the documented future contract, but they are not re
 - `code-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, and `blueprint_review_record` to derive a deterministic repo-file scope from executed plans or explicit file paths and persist `XX-REVIEW.md`.
 - `code-review-fix` uses `blueprint_phase_locate`, `blueprint_review_load_findings`, `blueprint_review_record`, and `blueprint_state_update` to load saved review findings, keep remediation bounded, persist `XX-REVIEW-FIX.md`, and route follow-up through implemented commands only.
 - `audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation bounded, report-backed, and routed inside implemented follow-up commands.
-- `secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped security evidence as `XX-SECURITY.md`.
+- `secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped security evidence as `XX-SECURITY.md`, with the shared security layer enforcing prompt-boundary checks before the artifact is written.
 - `review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_review_record` to read the saved phase plan set, keep reviewer availability explicit, and persist `XX-REVIEWS.md`.
 - `ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped UI audit evidence as `XX-UI-REVIEW.md`.
-- `pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to keep review-branch preparation evidence-backed, report-backed, and explicit about `.blueprint/` filtering before any git mutation.
-- `ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep shipping evidence-backed, report-backed, explicit about push or PR mutation, and honest about the next safe follow-up when `gh` is unavailable.
-- `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection.
+- `pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to keep review-branch preparation evidence-backed, report-backed, and explicit about `.blueprint/` filtering before any git mutation; its maintenance flow should continue to apply the shared dirty-tree and resolved-target preflight checks before branch mutation.
+- `ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep shipping evidence-backed, report-backed, explicit about push or PR mutation, and honest about the next safe follow-up when `gh` is unavailable; its maintenance flow should continue to apply the shared dirty-tree, scope, and report-before-mutate preflight checks.
+- `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection; its maintenance flow should continue to apply the shared dirty-tree, protected-scope, and report-before-mutate preflight checks.
 
 ## Planned Command Notes
 
@@ -151,5 +152,7 @@ These tool names are part of the documented future contract, but they are not re
 
 - All tools operate relative to the repo root or the locked global Blueprint directory.
 - Config tools may read or write only `.blueprint/config.json` and `~/.gemini/blueprint/defaults.json`; they must not create ad hoc config files elsewhere.
-- Tools must reject path traversal.
+- Tools must reject path traversal, absolute-path misuse for repo-relative inputs, null bytes, and symlink escapes.
+- Tools should use shared safe parsing with size limits for config, checkpoint, and registry-style JSON inputs.
+- Prompt-boundary-sensitive writes such as reports, phase artifacts, review artifacts, pause handoffs, and capture indexes should be checked through the shared security layer before persistence.
 - Tools must not write into the installed extension directory as part of normal command execution.

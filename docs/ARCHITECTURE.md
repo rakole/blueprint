@@ -89,13 +89,14 @@ Planned later runtime surfaces, not registered today:
 - The MCP server is the deterministic state engine.
 - It currently registers project/catalog, config, state/pause-handoff, phase/roadmap including backlog promotion, capture-index, and artifact tool families.
 - It owns `.blueprint/` reads and writes, config normalization, capture index persistence, phase artifact persistence, summary and validation persistence, milestone audit report writes, and state synchronization.
+- It also owns the hard security boundary for persistence through the shared security layer in `src/shared/security.ts`, including shared path containment, safe parsing, prompt-boundary checks, and identifier validation.
 - Planned tool families for review, workspace, update, and patch behavior remain future contracts until they are registered.
 
 ### 5. Hooks
 
 - Blueprint ships three advisory hooks: `read-before-edit`, `.blueprint` write guard, and `workflow advisory`.
 - Hook source lives under `src/hooks/`; Gemini consumes the built commands listed in `hooks/hooks.json`.
-- Hooks are advisory only. They warn, but they do not become a hidden state engine or permission system.
+- Hooks are advisory only. They may reuse the shared security detectors for consistency, but they do not become a hidden state engine or permission system.
 
 ## Command Dispatch Model
 
@@ -169,6 +170,10 @@ Implementation order matters more than breadth. Shared primitives are built firs
 ### 4. Stable artifact contracts
 
 Artifact names and schemas must be stable before command code lands, because most commands depend on shared artifact discovery.
+
+### 5. Shared security first
+
+Shared security primitives land below commands and skills. They harden MCP validation, artifact persistence, and high-risk maintenance preflights before they change the public command surface.
 
 ## Omitted Architecture
 

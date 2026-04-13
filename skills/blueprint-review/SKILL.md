@@ -130,11 +130,14 @@ non-routable until their extra MCP substrate lands.
    default to reuse unless the user explicitly asks for an update.
 4. Keep the audit grounded in saved repo evidence, phase goals, and the actual
    implementation surface under review.
-5. Use `blueprint-security-auditor` when the phase spans multiple plans,
+5. Distinguish confirmed mitigations, missing or partial controls, suspicious
+   artifact content, and follow-up hardening work explicitly inside the saved
+   security artifact.
+6. Use `blueprint-security-auditor` when the phase spans multiple plans,
    touches risky surfaces, or needs a higher-confidence mitigation review.
-6. Persist finished security evidence through `blueprint_review_record` with the
+7. Persist finished security evidence through `blueprint_review_record` with the
    `security` artifact.
-7. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
    depending on which lifecycle artifacts already exist.
 

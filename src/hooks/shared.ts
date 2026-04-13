@@ -2,6 +2,14 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  hasSuspiciousPromptBoundarySignals,
+  isPathWithinRootSync,
+  safeJsonParse,
+  safeJsonParseObject,
+  sanitizeForDisplay
+} from "../shared/security.js";
+
 export interface HookInput {
   cwd?: string;
   hook_event_name?: string;
@@ -26,15 +34,6 @@ export interface HookOutput {
 type AnyRecord = Record<string, unknown>;
 
 const WRITE_TOOL_NAMES = new Set(["write_file", "replace"]);
-const PROMPT_INJECTION_PATTERNS = [
-  /ignore (?:all )?previous instructions/i,
-  /forget (?:all )?previous instructions/i,
-  /system prompt/i,
-  /developer message/i,
-  /prompt injection/i,
-  /jailbreak/i,
-  /override the rules/i
-];
 
 export function isWriteTool(toolName: unknown): toolName is string {
   return typeof toolName === "string" && WRITE_TOOL_NAMES.has(toolName);
@@ -54,7 +53,7 @@ export function resolveCandidatePath(cwd: string, candidate: unknown): string | 
 
 export function isBlueprintPath(cwd: string, targetPath: string): boolean {
   const blueprintRoot = path.resolve(cwd, ".blueprint");
-  return targetPath === blueprintRoot || targetPath.startsWith(`${blueprintRoot}${path.sep}`);
+  return isPathWithinRootSync(blueprintRoot, targetPath);
 }
 
 export function isExistingPath(targetPath: string): boolean {
@@ -83,7 +82,10 @@ export async function readHookInput(): Promise<HookInput> {
     return {};
   }
 
-  const parsed = JSON.parse(raw);
+  const parsed = safeJsonParseObject(raw, {
+    label: "hook input",
+    maxBytes: 512 * 1024
+  });
   if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
     return parsed as HookInput;
   }
@@ -101,7 +103,10 @@ export async function readTranscript(transcriptPath: string | undefined): Promis
     return null;
   }
 
-  return JSON.parse(transcript);
+  return safeJsonParse(transcript, {
+    label: "hook transcript",
+    maxBytes: 2 * 1024 * 1024
+  });
 }
 
 export async function readTranscriptForCwd(
@@ -225,7 +230,7 @@ export function contentFromToolInput(input: HookInput): string | null {
 }
 
 export function hasPromptInjectionSignals(content: string): boolean {
-  return PROMPT_INJECTION_PATTERNS.some((pattern) => pattern.test(content));
+  return hasSuspiciousPromptBoundarySignals(content);
 }
 
 export function isResearchArtifactPath(targetPath: string): boolean {
@@ -237,6 +242,6 @@ export function hasResearchArtifactMarkers(content: string): boolean {
 }
 
 export function advisoryReason(targetPath: string, message: string): HookOutput {
-  const displayPath = targetPath.replaceAll(path.sep, "/");
+  const displayPath = sanitizeForDisplay(targetPath.replaceAll(path.sep, "/"));
   return makeAdvisory(`${message} (${displayPath})`);
 }

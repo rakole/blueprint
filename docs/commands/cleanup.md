@@ -103,6 +103,7 @@
 - The command should emit a durable cleanup report before deleting, compacting, or relocating planning artifacts.
 - Milestone-level cleanup must respect later reports that still reference earlier phase files.
 - Cleanup should not invent a new archive destination inside `.blueprint/` without explicit approval when no existing destination already exists.
+- Cleanup should show the resolved phase-directory set, protected exclusions, and final archive destination before any filesystem mutation proceeds.
 
 
 ## User Prompts And Confirmation Gates

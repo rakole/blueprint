@@ -16,6 +16,7 @@ import {
   type BootstrapRoadmapPhase,
   type BootstrapSeed
 } from "./artifacts.js";
+import { safeJsonParseObject } from "../../shared/security.js";
 import {
   configToolDefinitions,
   blueprintConfigGet,
@@ -242,7 +243,10 @@ async function pathExists(targetPath: string | URL): Promise<boolean> {
 async function readPackageProjectName(projectRoot: string): Promise<string | null> {
   try {
     const raw = await fs.readFile(path.join(projectRoot, "package.json"), "utf8");
-    const parsed = JSON.parse(raw) as { name?: unknown };
+    const parsed = safeJsonParseObject<{ name?: unknown }>(raw, {
+      label: "package.json",
+      maxBytes: 1024 * 1024
+    });
     return typeof parsed.name === "string" && parsed.name.trim().length > 0
       ? parsed.name.trim()
       : null;
@@ -254,7 +258,10 @@ async function readPackageProjectName(projectRoot: string): Promise<string | nul
 async function readPackageDescription(projectRoot: string): Promise<string | null> {
   try {
     const raw = await fs.readFile(path.join(projectRoot, "package.json"), "utf8");
-    const parsed = JSON.parse(raw) as { description?: unknown };
+    const parsed = safeJsonParseObject<{ description?: unknown }>(raw, {
+      label: "package.json",
+      maxBytes: 1024 * 1024
+    });
     return typeof parsed.description === "string" && parsed.description.trim().length > 0
       ? parsed.description.trim()
       : null;

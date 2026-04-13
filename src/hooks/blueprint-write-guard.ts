@@ -3,13 +3,13 @@ import {
   advisoryReason,
   contentFromToolInput,
   getTargetPath,
-  hasPromptInjectionSignals,
   hasResearchArtifactMarkers,
   isBlueprintPath,
   isWriteTool,
   noop
 } from "./shared.js";
 import { runHook } from "./run-hook.js";
+import { analyzePromptBoundaryText } from "../shared/security.js";
 
 export async function evaluateBlueprintWriteGuard(input: HookInput): Promise<HookOutput> {
   if (!isWriteTool(input.tool_name)) {
@@ -31,8 +31,9 @@ export async function evaluateBlueprintWriteGuard(input: HookInput): Promise<Hoo
     return noop();
   }
 
-  const suspiciousReason = hasPromptInjectionSignals(content)
-    ? "Blueprint advisory: `.blueprint` content looks like prompt injection or instruction override text"
+  const promptBoundaryAnalysis = analyzePromptBoundaryText(content);
+  const suspiciousReason = promptBoundaryAnalysis.findings.length > 0
+    ? "Blueprint advisory: `.blueprint` content looks like prompt injection, hidden control text, or instruction override text"
     : null;
 
   if (suspiciousReason) {

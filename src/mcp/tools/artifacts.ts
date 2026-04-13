@@ -3,6 +3,15 @@ import path from "node:path";
 
 import * as z from "zod/v4";
 
+import {
+  assertNoNullBytes,
+  ensurePathWithinRootSync,
+  formatBlueprintPhasePrefix,
+  normalizeBlueprintPhaseRef,
+  prepareTextForPersistence,
+  resolveRepoRelativeInputPathSync,
+  safeJsonParseObject
+} from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
 
 export const BLUEPRINT_DIR = ".blueprint";
@@ -242,6 +251,11 @@ type ArtifactReportWriteResult = {
   overwritten: boolean;
   status: "created" | "updated" | "reused" | "invalid";
   warnings: string[];
+};
+
+type TextWriteOptions = {
+  label?: string;
+  enforcePromptBoundary?: boolean;
 };
 
 export type CaptureIndexRow = {
@@ -1296,20 +1310,11 @@ const CODEBASE_SECTION_TITLES: Record<(typeof CODEBASE_ARTIFACTS)[number], strin
 };
 
 function normalizePhaseNumber(value: string): string {
-  return value
-    .split(".")
-    .map((segment) => {
-      const trimmed = segment.trim().replace(/^0+(?=\d)/, "");
-      return trimmed.length > 0 ? trimmed : "0";
-    })
-    .join(".");
+  return normalizeBlueprintPhaseRef(value);
 }
 
 function formatPhasePrefix(value: string): string {
-  const normalized = normalizePhaseNumber(value);
-  const [head, ...rest] = normalized.split(".");
-
-  return [head.padStart(2, "0"), ...rest].join(".");
+  return formatBlueprintPhasePrefix(value);
 }
 
 export function normalizeReportSlug(value: string): string {
@@ -1617,23 +1622,32 @@ export function resolveRepoRelativePath(
   projectRoot: string,
   relativePath: string
 ): string {
-  const absolutePath = path.resolve(projectRoot, relativePath);
-  const relativeToRoot = path.relative(projectRoot, absolutePath);
+  try {
+    return resolveRepoRelativeInputPathSync(projectRoot, relativePath, {
+      label: "Path"
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("must be repo-relative, not absolute")
+    ) {
+      throw error;
+    }
 
-  if (
-    relativeToRoot.startsWith("..") ||
-    path.isAbsolute(relativeToRoot)
-  ) {
     throw new Error(`Path traversal is not allowed: ${relativePath}`);
   }
-
-  return absolutePath;
 }
 
 export function resolveBlueprintPath(
   projectRoot: string,
   relativePath: string
 ): string {
+  assertNoNullBytes(relativePath, "Blueprint path");
+
+  if (path.isAbsolute(relativePath)) {
+    throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
+  }
+
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
     throw new Error(
       `Blueprint artifacts must stay inside ${BLUEPRINT_DIR}/: ${relativePath}`
@@ -1641,12 +1655,12 @@ export function resolveBlueprintPath(
   }
 
   const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
-  const relativeToBlueprintRoot = path.relative(getBlueprintRoot(projectRoot), absolutePath);
 
-  if (
-    relativeToBlueprintRoot.startsWith("..") ||
-    path.isAbsolute(relativeToBlueprintRoot)
-  ) {
+  try {
+    ensurePathWithinRootSync(getBlueprintRoot(projectRoot), absolutePath, {
+      label: "Blueprint path"
+    });
+  } catch {
     throw new Error(`Path traversal is not allowed: ${relativePath}`);
   }
 
@@ -1665,13 +1679,7 @@ export async function readJsonIfPresent(
   }
 
   const raw = await fs.readFile(filePath, "utf8");
-  const parsed = JSON.parse(raw) as unknown;
-
-  if (!isPlainObject(parsed)) {
-    throw new Error(`${filePath} must contain a JSON object.`);
-  }
-
-  return parsed;
+  return safeJsonParseObject(raw, { label: filePath });
 }
 
 export async function writeJsonFile(
@@ -1684,10 +1692,22 @@ export async function writeJsonFile(
 
 export async function writeTextFile(
   filePath: string,
-  value: string
-): Promise<void> {
+  value: string,
+  options: TextWriteOptions = {}
+): Promise<string[]> {
+  const prepared =
+    options.enforcePromptBoundary === false
+      ? {
+          content: value.replace(/\r\n/g, "\n"),
+          warnings: [] as string[]
+        }
+      : prepareTextForPersistence(value, {
+          label: options.label ?? path.basename(filePath)
+        });
+
   await ensureParentDirectory(filePath);
-  await fs.writeFile(filePath, value, "utf8");
+  await fs.writeFile(filePath, prepared.content, "utf8");
+  return prepared.warnings;
 }
 
 function extractMarkdownSection(markdown: string, heading: string): string {
@@ -2366,7 +2386,11 @@ export async function blueprintArtifactScaffold(
       continue;
     }
 
-    await writeTextFile(absolutePath, renderArtifact(renderContext));
+    warnings.push(
+      ...await writeTextFile(absolutePath, renderArtifact(renderContext), {
+        label: artifact
+      })
+    );
 
     if (exists) {
       warnings.push(
@@ -2591,7 +2615,11 @@ export async function blueprintArtifactMutateIndex(
           parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
         const rendered = renderCaptureIndexDocument(args.target, nextRows, recoveryContent);
 
-        await writeTextFile(absolutePath, rendered);
+        warnings.push(
+          ...await writeTextFile(absolutePath, rendered, {
+            label: targetPath
+          })
+        );
       } else {
         warnings.push(
           "Preserved existing todo status because it already matched the requested value."
@@ -2695,10 +2723,24 @@ export async function blueprintArtifactMutateIndex(
         config.supportsReservedPhase &&
         Object.prototype.hasOwnProperty.call(update, "reservedPhase")
       ) {
-        const normalizedReservedPhase =
-          typeof update.reservedPhase === "string"
-            ? normalizeCaptureText(update.reservedPhase)
-            : null;
+        let normalizedReservedPhase: string | null = null;
+
+        if (typeof update.reservedPhase === "string") {
+          try {
+            normalizedReservedPhase = normalizeBlueprintPhaseRef(
+              normalizeCaptureText(update.reservedPhase),
+              "Reserved phase"
+            );
+          } catch (error) {
+            warnings.push(
+              error instanceof Error
+                ? `Skipped invalid reserved phase for ${normalizedId}: ${error.message}`
+                : `Skipped invalid reserved phase for ${normalizedId}.`
+            );
+            normalizedReservedPhase = currentRow.reservedPhase;
+          }
+        }
+
         const nextReservedPhase =
           normalizedReservedPhase && normalizedReservedPhase.length > 0
             ? normalizedReservedPhase
@@ -2738,7 +2780,11 @@ export async function blueprintArtifactMutateIndex(
       parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
     const rendered = renderCaptureIndexDocument(args.target, rows, recoveryContent);
 
-    await writeTextFile(absolutePath, rendered);
+    warnings.push(
+      ...await writeTextFile(absolutePath, rendered, {
+        label: targetPath
+      })
+    );
 
     return {
       ...buildEmptyCaptureMutationResult(targetPath, "updated", warnings),
@@ -2822,7 +2868,11 @@ export async function blueprintArtifactMutateIndex(
     parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
   const rendered = renderCaptureIndexDocument(args.target, rows, recoveryContent);
 
-  await writeTextFile(absolutePath, rendered);
+  warnings.push(
+    ...await writeTextFile(absolutePath, rendered, {
+      label: targetPath
+    })
+  );
 
   return {
     ...buildEmptyCaptureMutationResult(targetPath, exists ? "updated" : "created", warnings),
@@ -3441,8 +3491,11 @@ export async function blueprintArtifactReportWrite(
     }
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: pathValue
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing report: ${pathValue}`);

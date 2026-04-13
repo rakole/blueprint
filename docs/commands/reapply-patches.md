@@ -92,6 +92,7 @@
 - Patch replay must target the global patch registry in `~/.gemini/blueprint/patches/`, not ad hoc files inside the installed extension copy.
 - Conflict reporting is more important than partial success; skipped or failed hunks need to be explicit and durable.
 - Patch selection should be auditable by patch id, source version, and repo compatibility before replay begins.
+- The command should show the resolved patch set, target repo compatibility, and report-before-mutate plan before replay confirmation.
 
 
 ## User Prompts And Confirmation Gates

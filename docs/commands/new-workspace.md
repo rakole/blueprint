@@ -94,6 +94,7 @@
 - Default workspace creation should resolve to `maintenance.workspace_root` from effective config when available, falling back to `~/blueprint-workspaces/<name>` only when no config layer overrides it.
 - Registry writes in `~/.gemini/blueprint/workspaces.json` must be transactional with filesystem creation so partial entries are not left behind.
 - Worktree mode should be preferred when safe, but the command needs a clean fallback to clone mode when the source repo cannot host worktrees.
+- The command should show the resolved workspace path, chosen strategy, and registry mutation plan explicitly before creation.
 
 
 ## User Prompts And Confirmation Gates

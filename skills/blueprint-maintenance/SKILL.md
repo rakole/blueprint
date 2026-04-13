@@ -65,18 +65,23 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 
 ## Workflow Rules
 
+Shared rule for all maintenance flows:
+
+- run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer writing the durable maintenance report before the mutating step when the command owns one
+
 ### `pr-branch`
 
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Read effective config through `blueprint_config_get` before deriving base-branch or commit-docs behavior. Prefer explicit user input, then `git.base_branch`, then safe repo detection.
 3. Inspect git status before mutation. A dirty working tree is a hard stop for the clean review-branch flow.
-4. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
-5. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
-6. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
-7. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, and included versus excluded scope before any git mutation.
-8. Create the review branch without rewriting or deleting the source branch in place.
-9. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/pr-branch-latest.md`.
-10. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
+4. Make the resolved target explicit before mutation: name the source branch, base branch, candidate review branch, and whether `.blueprint/**` is included.
+5. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
+6. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
+7. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
+8. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, and included versus excluded scope before any git mutation.
+9. Create the review branch without rewriting or deleting the source branch in place.
+10. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/pr-branch-latest.md`.
+11. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
 
 ### `ship`
 
@@ -84,25 +89,27 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 2. Resolve the shipping scope explicitly. Prefer the user-named phase, otherwise anchor the flow to the current phase and saved Blueprint evidence instead of guessing across unrelated work.
 3. Read effective config through `blueprint_config_get` before deriving base-branch, branching, or commit-docs behavior. Prefer explicit user input, then `git.base_branch`, then safe repo detection.
 4. Inspect git status before mutation. A dirty working tree or missing base branch is a hard stop for the shipping flow.
-5. Read saved verification, UAT, review, security, and `pr-branch` evidence through `blueprint_artifact_list` before proposing a draft or ready PR path.
-6. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the shipping plan stays grounded in the saved Blueprint evidence and the active diff.
-7. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
-8. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
-9. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/ship-latest.md`, including manual fallback guidance when remote creation does not happen.
-10. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
+5. Make the resolved target explicit before mutation: name the selected phase or milestone, source branch, base branch, and the evidence set that is gating the ship path.
+6. Read saved verification, UAT, review, security, and `pr-branch` evidence through `blueprint_artifact_list` before proposing a draft or ready PR path.
+7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the shipping plan stays grounded in the saved Blueprint evidence and the active diff.
+8. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
+9. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
+10. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/ship-latest.md`, including manual fallback guidance when remote creation does not happen.
+11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
 
 ### `cleanup`
 
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Read `blueprint_roadmap_read` before proposing any archive scope so the current phase and active roadmap references stay visible as protected exclusions.
 3. Inspect git status plus `.blueprint/phases/` before mutation. A dirty working tree, missing phase root, or obviously inconsistent phase layout is a hard stop for cleanup.
-4. Read saved milestone completion, summary, and related evidence through `blueprint_artifact_list` before proposing any archive scope.
-5. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, and stop instead of guessing when saved evidence is incomplete.
-6. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` so the cleanup plan stays grounded in the saved milestone evidence and the selected directories.
-7. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior.
-8. Persist the approved cleanup plan through `blueprint_artifact_report_write` as `.blueprint/reports/cleanup-latest.md` before filesystem mutation begins.
-9. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
-10. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
+4. Make the resolved target explicit before mutation: name the candidate phase directories, protected exclusions, and final archive destination.
+5. Read saved milestone completion, summary, and related evidence through `blueprint_artifact_list` before proposing any archive scope.
+6. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, and stop instead of guessing when saved evidence is incomplete.
+7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` so the cleanup plan stays grounded in the saved milestone evidence and the selected directories.
+8. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior.
+9. Persist the approved cleanup plan through `blueprint_artifact_report_write` as `.blueprint/reports/cleanup-latest.md` before filesystem mutation begins.
+10. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
+11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
 
 ## Planned Later Command Guardrail
 
