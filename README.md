@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, docs, test-generation, and review-branch commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -19,6 +19,7 @@ This repository still carries the planning pack that locked the product and arch
 - Wave 0 shipped commands: `/blu`, `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-help`, `/blu-progress`, `/blu-health`, `/blu-map-codebase`
 - Phase 3 discovery commands are shipped: `/blu-discuss-phase`, `/blu-research-phase`, `/blu-ui-phase`
 - The shipped lifecycle slice also includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, and the read-only next-step router `/blu-next`
+- The test-generation command `/blu-add-tests` is now shipped on April 13, 2026; it derives focused repo test scope from saved summaries plus verification or UAT evidence, updates `XX-VERIFICATION.md` through the validation MCP substrate, and persists `.blueprint/reports/add-tests-<phase>.md`
 - The read-only phase-discovery assumptions command `/blu-list-phase-assumptions` is now shipped on the same discovery substrate
 - The governance handoff and resume commands `/blu-pause-work` and `/blu-resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The code review command `/blu-code-review` is now shipped on April 13, 2026; it resolves a deterministic repo-file scope from executed plans or explicit file paths, uses the `blueprint-review` skill plus the bounded `blueprint-reviewer` contract when needed, and persists `XX-REVIEW.md` through the shared review MCP tools
@@ -191,6 +192,7 @@ These runtime files exist today:
 - `commands/blu-execute-phase.toml`
 - `commands/blu-validate-phase.toml`
 - `commands/blu-verify-work.toml`
+- `commands/blu-add-tests.toml`
 - `commands/blu-code-review.toml`
 - `commands/blu-secure-phase.toml`
 - `commands/blu-audit-milestone.toml`

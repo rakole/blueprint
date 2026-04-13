@@ -44,6 +44,7 @@ const IMPLEMENTED_COMMANDS = [
   "debug",
   "validate-phase",
   "verify-work",
+  "add-tests",
   "pause-work",
   "resume-work",
   "secure-phase",
@@ -546,6 +547,36 @@ test("code-review is implemented once manifest, review skill, and review MCP too
     "blueprint_review_scope"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("add-tests is implemented once manifest, validation skill, and test-generation MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["add-tests"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu-add-tests.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_phase_locate",
+    "blueprint_phase_summary_index",
+    "blueprint_phase_summary_read",
+    "blueprint_phase_validation_read",
+    "blueprint_phase_validation_write",
+    "blueprint_artifact_list",
+    "blueprint_artifact_validate",
+    "blueprint_artifact_report_write",
+    "blueprint_state_load",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents.sort(), [
+    "blueprint-executor",
+    "blueprint-verifier"
+  ]);
   assert.deepEqual(entry.blockedBy, []);
 });
 

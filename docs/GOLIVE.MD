@@ -29,7 +29,7 @@ What is already live:
 - all Wave 1 core lifecycle commands
 - the Wave 2 roadmap-admin slice including `insert-phase`, `complete-milestone`, `milestone-summary`, and `new-milestone`
 - the shipped Wave 3 capture commands `note`, `add-todo`, `add-backlog`, and `review-backlog`
-- the shipped Wave 4 review/docs passes through `code-review`, `secure-phase`, and `docs-update`
+- the shipped Wave 4 review/docs/test-generation passes through `code-review`, `secure-phase`, `docs-update`, and `add-tests`
 
 What remains closest on the roadmap:
 

@@ -8,13 +8,14 @@ status: implemented
 commands:
   - /blu-validate-phase
   - /blu-verify-work
+  - /blu-add-tests
 ---
 
 # Blueprint Phase Validation Skill
 
 ## Purpose
 
-Orchestrate Blueprint's post-execution validation and conversational UAT flow so completed phase summaries are audited, durable validation artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
+Orchestrate Blueprint's post-execution validation, conversational UAT, and evidence-backed test-generation flow so completed phase summaries are audited, durable validation artifacts are persisted through MCP, and follow-up routing stays inside the implemented Blueprint surface.
 
 ## Parity Goal
 
@@ -23,6 +24,7 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 - execution summaries remain the source of truth for what was actually delivered
 - validation and UAT stay Gemini-native and MCP-owned instead of script-owned
 - conversational UAT is resumable through `XX-UAT.md`
+- test generation stays grounded in saved summaries plus validation or UAT evidence
 - follow-up fixes stay explicit instead of hidden in prompt-only prose
 - persistent writes remain phase-scoped inside `.blueprint/`
 - follow-up routing stays inside the implemented Blueprint surface
@@ -31,6 +33,7 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 
 - `docs/commands/validate-phase.md`
 - `docs/commands/verify-work.md`
+- `docs/commands/add-tests.md`
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -46,14 +49,17 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 - `blueprint_phase_summary_read`
 - `blueprint_phase_validation_read`
 - `blueprint_phase_validation_write`
+- `blueprint_artifact_list`
 - `blueprint_config_get`
 - `blueprint_artifact_validate`
+- `blueprint_artifact_report_write`
 - `blueprint_state_load`
 - `blueprint_state_update`
 
 ## Optional Agents
 
 - `blueprint-verifier`
+- `blueprint-executor`
 
 ## Workflow Rules
 
@@ -78,8 +84,22 @@ Carry forward the useful upstream validation intent while preserving Blueprint d
 7. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
 8. Update `STATE.md` with the UAT result and the next safe implemented action.
 
+### `add-tests`
+
+1. Resolve the target phase and require saved execution summaries before generating or updating tests.
+2. Read summary artifacts plus any existing `XX-VERIFICATION.md` or `XX-UAT.md` so test generation is grounded in saved implementation evidence and explicit gaps.
+3. Require at least one validation or UAT artifact before proceeding. Route to `/blu-validate-phase` when both are missing.
+4. Keep repo mutation narrow: honor explicit user scope first, otherwise derive a focused test scope from completed summaries, saved gaps, and existing repo test conventions.
+5. Inspect the relevant repo code, existing tests, and test-runner configuration before writing. Prefer extending nearby tests over duplicating the same coverage in a second suite.
+6. Use `blueprint-executor` for bounded multi-file test implementation when the harness or write scope is non-trivial.
+7. Use `blueprint-verifier` to review whether the proposed tests cover the saved execution behavior and any explicit validation or UAT gaps.
+8. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists.
+9. Persist the durable non-phase report through `blueprint_artifact_report_write` using the canonical `add-tests-<phase>` report naming pattern.
+10. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
+
 ## Non-Negotiables
 
 - All persistent writes must go through MCP tools only.
 - Do not mutate arbitrary repo files from validation commands.
+- Do not invent or switch test frameworks when the repo has no clear test convention.
 - Do not present planned-only lifecycle commands as runnable just because they are documented.
