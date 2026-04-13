@@ -9,7 +9,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | Skill | Status | Purpose | Primary Commands |
 |---|---|---|---|
 | `blueprint-router` | `implemented` | Root routing, command selection, and next-step guidance | `help`, `progress`, `/blu`, `next`, `do` |
-| `blueprint-bootstrap` | `implemented` | Repo bootstrap and project initialization | `new-project` |
+| `blueprint-bootstrap` | `implemented` | Repo bootstrap, deep questioning, and initial roadmap shaping | `new-project` |
 | `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health`, `pause-work`, `resume-work` |
 | `blueprint-map` | `implemented` | Brownfield codebase mapping | `map-codebase` |
 | `blueprint-capture` | `implemented` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
@@ -27,8 +27,8 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 
 | Agent | Status | Purpose |
 |---|---|---|
-| `blueprint-project-researcher` | `implemented` | Gather initial repo and product context during `new-project` |
-| `blueprint-roadmapper` | `implemented` | Build roadmap candidates and milestone structure |
+| `blueprint-project-researcher` | `implemented` | Gather initial repo and product context during `new-project` and sharpen the bootstrap brief |
+| `blueprint-roadmapper` | `implemented` | Build roadmap candidates, coverage notes, and revision-safe milestone structure |
 | `blueprint-mapper` | `implemented` | Create codebase mapping outputs |
 | `blueprint-planner` | `implemented` | Create plan files |
 | `blueprint-checker` | `implemented` | Verify plan quality before execution |
@@ -50,7 +50,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
 ## Command To Agent Expectations
 
-- `new-project` may use `blueprint-project-researcher` and `blueprint-roadmapper`.
+- `new-project` may use `blueprint-project-researcher` for brownfield or fuzzy-context bootstrap discovery and `blueprint-roadmapper` for requirement-to-phase shaping plus roadmap revisions.
 - `map-codebase` uses `blueprint-mapper`.
 - `next` and `do` remain router-owned and do not require dedicated subagents.
 - `pause-work` and `resume-work` remain governance-owned and do not require dedicated subagents.

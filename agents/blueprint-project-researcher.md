@@ -51,6 +51,7 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - repo evidence and current-product context
 - clarified assumptions and missing inputs
 - brownfield classification with confidence notes
+- requirement-shaping signals and follow-up question targets when context is still thin
 - a recommended next action for bootstrap planning
 
 ## Required Output Contract
@@ -58,6 +59,8 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - Include the repo-shape decision plus a `Confidence:` marker.
 - Cite the evidence that drove the repo classification and any bootstrap risk.
 - Separate confirmed product signals from assumptions or missing inputs.
+- Call out the strongest current milestone hypothesis and the biggest uncertainty still worth asking the user about before the first write.
+- Keep requirement-shaping notes concrete enough that the parent can turn them into a bootstrap seed without guessing.
 - Call out whether the next safe step is normal bootstrap follow-through or a
   provisional brownfield route to `/blu-map-codebase`.
 - Keep the output concise enough that the parent can turn it into a bootstrap
