@@ -37,6 +37,7 @@ const IMPLEMENTED_COMMANDS = [
   "remove-phase",
   "plan-phase",
   "execute-phase",
+  "fast",
   "quick",
   "validate-phase",
   "verify-work",
@@ -613,5 +614,24 @@ test("quick is implemented once manifest, skill, and report-backed quick-run MCP
     "blueprint-researcher",
     "blueprint-verifier"
   ]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("fast is implemented once manifest, skill, and trivial inline MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["fast"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("fast"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_project_status",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
 });

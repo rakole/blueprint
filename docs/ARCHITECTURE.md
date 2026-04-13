@@ -11,6 +11,7 @@ The live runtime currently ships:
 - governance handoff/resume
 - the current roadmap-admin slice
 - the shipped Wave 3 capture commands, `note` and `add-backlog`
+- the shipped Wave 3 lightweight execution commands, `fast` and `quick`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 
