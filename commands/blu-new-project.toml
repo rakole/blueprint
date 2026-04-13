@@ -8,6 +8,8 @@ Blueprint MCP access rules:
 - When you name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form `mcp_blueprint_<toolName>`.
 - Never try to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts.
 - If a required Blueprint MCP tool is unavailable, stop and report that the Blueprint MCP server is disconnected or undiscovered instead of improvising a shell fallback.
+- Translate any shorthand `blueprint_*` ids from older docs into their `mcp_blueprint_*` runtime FQNs before calling them.
+- Do not try to re-activate Blueprint skills as tools inside this command, and do not run `/blu-new-project` in the shell; it is a Gemini slash command, not a shell executable.
 
 Follow this flow exactly:
 

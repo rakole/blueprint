@@ -22,6 +22,13 @@ commands:
 
 Orchestrate Blueprint roadmap and milestone management flows so phase mutations, milestone evidence, and archival decisions stay aligned with durable project state.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Carry forward the useful upstream roadmap and milestone intent while preserving Blueprint's Gemini-native boundaries:

@@ -18,6 +18,13 @@ Orchestrate Blueprint's debugging flow so issue diagnosis stays evidence-backed,
 stateful only through explicit MCP-owned artifacts, and honest about whether
 the right next step is a bounded fix, a saved plan, or more validation.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Carry forward the useful upstream debug intent while preserving Blueprint's

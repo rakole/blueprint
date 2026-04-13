@@ -18,6 +18,13 @@ commands:
 
 Orchestrate Blueprint project initialization around the current MCP bootstrap primitives without reducing the flow to raw scaffolding.
 
+## Runtime Call Rules
+
+- Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
+- Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+
 ## Parity Goal
 
 Preserve the useful structure of upstream GSD `new-project`:
@@ -42,12 +49,12 @@ Current Blueprint delta:
 
 ## Required MCP Tools
 
-- `blueprint_project_init`
-- `blueprint_project_status`
-- `blueprint_config_get`
-- `blueprint_config_set`
-- `blueprint_state_update`
-- `blueprint_artifact_scaffold`
+- `mcp_blueprint_blueprint_project_init`
+- `mcp_blueprint_blueprint_project_status`
+- `mcp_blueprint_blueprint_config_get`
+- `mcp_blueprint_blueprint_config_set`
+- `mcp_blueprint_blueprint_state_update`
+- `mcp_blueprint_blueprint_artifact_scaffold`
 
 ## Optional Agents
 
@@ -59,8 +66,8 @@ Current Blueprint delta:
 1. Classify the repo as greenfield, scaffold-only, or brownfield before the first write.
 2. Inspect saved defaults before asking for changes, and treat `--auto` as a non-interactive bootstrap mode rather than a way to skip overwrite safety.
 3. Gather or synthesize enough context that `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` are no longer placeholder-only shells.
-4. Use `blueprint_project_init` for the first persistent bootstrap write.
-5. Keep follow-up config changes inside `blueprint_config_set`.
+4. Use `mcp_blueprint_blueprint_project_init` for the first persistent bootstrap write.
+5. Keep follow-up config changes inside `mcp_blueprint_blueprint_config_set`.
 6. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
 7. Re-read project status after initialization and end with the next safe implemented command.
 8. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
