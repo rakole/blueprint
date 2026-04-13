@@ -1,6 +1,6 @@
 # Blueprint Progress
 
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
 
