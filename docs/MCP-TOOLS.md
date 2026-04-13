@@ -120,6 +120,7 @@ These tool names are part of the documented future contract, but they are not re
 - `ui-phase` uses phase readiness, discovery artifact read and write tools, scaffolding, config, and state update tools.
 - `plan-phase` uses plan index, plan read and write tools, config, artifact validation, and state update tools.
 - `execute-phase` uses plan index/read, summary index/read/write, config, artifact validation, and state update tools.
+- `fast` uses `blueprint_project_status` and `blueprint_state_update` to keep trivial inline execution inside the implemented command surface without inventing extra Blueprint artifacts.
 - `quick` uses `blueprint_project_status`, `blueprint_command_catalog`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep bounded quick runs report-backed and routed inside the implemented command surface.
 - `validate-phase` and `verify-work` use summary index/read, validation read/write, config, artifact validation, and state update tools.
 - `pause-work` and `resume-work` use state load and update tools together with pause handoff read and write support.
