@@ -17,7 +17,7 @@ Priority uses a simple MoSCoW split:
 
 ## Current Snapshot
 
-As of 2026-04-12, the repo has a real extension runtime, not just planning docs:
+As of 2026-04-13, the repo has a real extension runtime, not just planning docs:
 
 - `gemini-extension.json`, `GEMINI.md`, `commands/`, `skills/`, `agents/`, and `hooks/hooks.json` all exist
 - the MCP server and hooks build into `dist/`
@@ -29,7 +29,7 @@ What is already live:
 - all Wave 1 core lifecycle commands
 - the Wave 2 roadmap-admin slice including `insert-phase`, `complete-milestone`, `milestone-summary`, and `new-milestone`
 - the shipped Wave 3 capture commands `note`, `add-todo`, `add-backlog`, and `review-backlog`
-- the shipped Wave 4 review/docs/test-generation passes through `code-review`, `secure-phase`, `docs-update`, and `add-tests`
+- the shipped Wave 4 review/docs/test-generation and maintenance passes through `code-review`, `audit-fix`, `secure-phase`, `docs-update`, `add-tests`, `pr-branch`, and `ship`
 
 What remains closest on the roadmap:
 
@@ -88,13 +88,10 @@ What remains closest on the roadmap:
 
 ### Functional
 
-- Ship the rest of Wave 4 quality and shipping beyond the already shipped `code-review`, `secure-phase`, and `docs-update` commands:
+- Ship the rest of Wave 4 quality and shipping beyond the already shipped `code-review`, `audit-fix`, `secure-phase`, `docs-update`, `add-tests`, `pr-branch`, and `ship` commands:
   - `code-review-fix`
-  - `audit-fix`
   - `ui-review`
   - `review`
-  - `pr-branch`
-  - `ship`
   - `undo`
 - Ship the full Wave 5 workspace and maintenance layer:
   - `new-workspace`

@@ -1,0 +1,29 @@
+description = "Prepare a confirmation-gated shipping run from saved Blueprint evidence, then persist a durable ship report with push and PR fallback guidance."
+prompt = """
+You are the `/blu-ship` command for Blueprint.
+
+Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Read `mcp__blueprint__blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
+2. Resolve the shipping scope explicitly. When the user named a phase, read `mcp__blueprint__blueprint_phase_locate` for that phase and stop with a correction request if it does not exist. When the user did not name a phase, use the current Blueprint state plus saved artifacts to anchor the safest scope instead of guessing across unrelated work.
+3. Read `mcp__blueprint__blueprint_config_get` in `effective` scope. Resolve the target base branch from explicit user input first, then `git.base_branch`, then safe repo detection. Keep `git.branching_strategy` and `planning.commit_docs` visible in the preview.
+4. Inspect git status, the current branch, and the target base branch before mutation. A dirty working tree or missing base branch is a hard stop for shipping. If the current branch is not a clean review branch, explain the mismatch and prefer `/blu-pr-branch` or manual cleanup guidance over guessing.
+5. Read `mcp__blueprint__blueprint_artifact_list` and collect the saved evidence relevant to shipping: verification or UAT artifacts, review or security artifacts when present, and the latest `pr-branch` report when it exists. Treat that evidence as a gate, not a best-effort suggestion.
+6. Build a compact evidence digest through `mcp__blueprint__blueprint_artifact_summary_digest`. Use explicit `artifactPaths` and, when useful, tracked-file inputs from the current branch so the shipping preview is grounded in the selected phase, the saved Blueprint evidence, and the actual diff.
+7. Summarize the exact shipping plan before any mutation: selected scope, evidence found or missing, current branch, target base branch, draft versus ready PR mode, whether push and PR creation will be attempted, whether `gh` is available and authenticated, the report name `ship-latest`, and the exact git or `gh` commands you intend to run. Make remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps. Require explicit confirmation before any push or PR creation, and require explicit overwrite confirmation before replacing an existing `ship-latest` report.
+8. After confirmation, run only the approved git or remote steps. Never hide a push behind PR creation, never create a ready-for-review PR when the saved evidence only supports draft shipping, and if `gh` is missing or unauthenticated, skip PR creation and fall back to a durable manual checklist instead of failing the whole command.
+9. Persist the durable report through `mcp__blueprint__blueprint_artifact_report_write` with the report name `ship-latest`. Record the selected scope, saved evidence, source and base branches, requested push and PR actions, actual push or PR outcome, any `gh` fallback notes, and the manual checklist when remote creation did not happen.
+10. If shipping changed the next safe Blueprint action, update it through `mcp__blueprint__blueprint_state_update` only after the report is written. Keep the follow-up inside the implemented surface when possible; prefer `/blu-progress`, `/blu-code-review`, `/blu-secure-phase`, `/blu-verify-work`, or `/blu-pr-branch` when they fit the evidence.
+11. Return a concise completion summary covering the selected scope, branch and PR outcome, report status, any evidence gaps, and the next safe action. Do not present planned-only commands as runnable.
+
+Response requirements:
+- Use only `mcp__blueprint__blueprint_project_status`, `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_config_get`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_summary_digest`, `mcp__blueprint__blueprint_artifact_report_write`, and `mcp__blueprint__blueprint_state_update` for Blueprint-owned persistent state work.
+- Keep Blueprint-owned writes inside `.blueprint/reports/` plus `STATE.md` when state routing actually changes.
+- Never mutate git or remote state without an explicit confirmation gate that names the exact push or PR steps.
+- Keep draft versus ready PR mode honest and grounded in the saved Blueprint evidence.
+- Preserve a durable manual fallback when `gh` is missing, unauthenticated, or explicitly declined.
+- Honor normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` instead of inventing a second branch-policy heuristic.
+- Do not present planned-only commands as runnable follow-ups.
+"""

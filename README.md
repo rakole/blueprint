@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, and review-branch commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, review-branch, and shipping commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -41,6 +41,7 @@ This repository still carries the planning pack that locked the product and arch
 - The bounded execution command `/blu-quick` is now shipped; it keeps lightweight repo work inside a reduced-ceremony path, uses optional discuss, research, and validation depth only after explicit confirmation, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`
 - The debug command `/blu-debug` is now shipped on April 13, 2026; it runs a structured investigation flow, persists `.blueprint/reports/debug-latest.md`, can capture explicit todo follow-ups, and routes broader fix work into existing implemented execution commands
 - The documentation command `/blu-docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
+- The maintenance commands `/blu-pr-branch` and `/blu-ship` are now shipped on April 13, 2026; `pr-branch` keeps `.blueprint/` filtering explicit and persists `.blueprint/reports/pr-branch-latest.md`, while `ship` reuses saved verification and review evidence, keeps push or PR creation confirmation-gated, and persists `.blueprint/reports/ship-latest.md` with manual fallback guidance when `gh` is unavailable
 - Runtime gate: `/blu`, `/blu-help`, and `/blu-progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
 ## Install And Release
@@ -182,7 +183,9 @@ These runtime files exist today:
 - `commands/blu-map-codebase.toml`
 - `commands/blu-note.toml`
 - `commands/blu-add-todo.toml`
+- `commands/blu-check-todos.toml`
 - `commands/blu-add-backlog.toml`
+- `commands/blu-review-backlog.toml`
 - `commands/blu-explore.toml`
 - `commands/blu-fast.toml`
 - `commands/blu-quick.toml`
@@ -205,6 +208,8 @@ These runtime files exist today:
 - `commands/blu-insert-phase.toml`
 - `commands/blu-complete-milestone.toml`
 - `commands/blu-docs-update.toml`
+- `commands/blu-pr-branch.toml`
+- `commands/blu-ship.toml`
 - `commands/blu-milestone-summary.toml`
 - `commands/blu-new-milestone.toml`
 - `commands/blu-plan-milestone-gaps.toml`
@@ -225,6 +230,7 @@ These runtime files exist today:
 - `skills/blueprint-phase-validation/SKILL.md`
 - `skills/blueprint-docs/SKILL.md`
 - `skills/blueprint-review/SKILL.md`
+- `skills/blueprint-maintenance/SKILL.md`
 - `skills/blueprint-roadmap-admin/SKILL.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
