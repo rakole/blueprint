@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`ui-review` carries forward the GSD intent to retroactive 6-pillar visual audit of implemented frontend code. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`ui-review` carries forward the GSD intent to retroactive 6-pillar visual audit of implemented frontend code. Blueprint ships it as a phase-scoped UI audit command: it grounds the review in saved execution evidence plus the saved `XX-UI-SPEC.md` contract when present, can delegate bounded visual analysis to a dedicated UI auditor, and persists the finished result through the shared review MCP tool instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -37,7 +37,7 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- Phase resolution and artifact inventory through the documented phase and artifact MCP tools
 
 
 ## Blueprint And Global State Writes
@@ -51,7 +51,7 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_review_record` -> `{reportPath, counts, followUps}`
+- `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 
 
 ## Skills And Subagents
@@ -80,7 +80,7 @@
 
 
 - External dependencies:
-- optional screenshot tooling later
+- optional screenshot tooling or user-supplied visual evidence later
 
 
 ## Shell Risk Profile
@@ -90,12 +90,13 @@
 ## User Prompts And Confirmation Gates
 
 
-- None.
+- None by default. Overwrite remains explicit confirmation when a prior `XX-UI-REVIEW.md` already exists.
 
 
 ## Edge Cases
 
 
+- The phase contains little or no actual UI work and only a saved skip rationale in `XX-UI-SPEC.md`.
 - The command scope does not match the currently changed files, branch, or phase artifacts.
 - External tooling such as `git`, `gh`, or peer-review CLIs is missing or only partially available.
 
@@ -103,14 +104,15 @@
 ## Failure Modes And Recovery
 
 
-- Preserve generated reports when git or external CLI steps fail.
-- Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- Preserve generated review artifacts when follow-up git or external CLI steps fail.
+- Fall back to explicit UI evidence review or manual next-step guidance instead of guessing.
 
 
 ## Acceptance Criteria
 
 
 - Produces a durable artifact for review, security, UI, or shipping work.
+- Grounds the audit in saved execution evidence and the UI contract when available.
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
@@ -120,7 +122,7 @@
 ## Test Cases
 
 
-- Phase review or shipping fixture.
+- Phase review fixture with saved UI evidence.
 - Git or external CLI availability fixture.
 - Direct `ui-review` happy-path fixture.
 

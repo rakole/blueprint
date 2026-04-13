@@ -461,6 +461,34 @@ test("review skill and security auditor are marked implemented in docs for secur
   assert.match(securePhaseDoc, /phase XX-SECURITY\.md/);
 });
 
+test("ui-review docs and UI auditor are marked implemented in docs", async () => {
+  const [skillsMarkdown, uiReviewDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/ui-review.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-ui-auditor` \| `implemented` \| Perform retroactive six-pillar UI audits \|/
+  );
+  assert.match(uiReviewDoc, /Primary skill: `blueprint-review`/);
+  assert.match(uiReviewDoc, /`blueprint_phase_locate`/);
+  assert.match(uiReviewDoc, /`blueprint_artifact_list`/);
+  assert.match(uiReviewDoc, /`blueprint_review_record`/);
+  assert.match(uiReviewDoc, /`blueprint-ui-auditor`/);
+  assert.match(uiReviewDoc, /phase XX-UI-REVIEW\.md/);
+  assert.match(
+    mcpToolsDoc,
+    /`ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `ui-review` \| `commands\/gsd\/ui-review\.md` \| GSD has an upstream workflow file \| `docs\/commands\/ui-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_record` \|/
+  );
+});
+
 test("maintenance skill and pr-branch docs keep the review-branch contract explicit", async () => {
   const [skillsMarkdown, prBranchDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
