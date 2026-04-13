@@ -20,6 +20,15 @@ type ReviewArtifactKind =
   | "security"
   | "ui-review";
 
+type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
+
+type ReviewFinding = {
+  id: string;
+  severity: ReviewFindingSeverity;
+  summary: string;
+  sourceSection: string | null;
+};
+
 type ReviewRecordArgs = {
   cwd?: string;
   phase?: string;
@@ -83,6 +92,28 @@ type ReviewScopeResult = {
   warnings: string[];
 };
 
+type ReviewLoadFindingsArgs = {
+  cwd?: string;
+  phase?: string;
+  artifact?: ReviewArtifactKind;
+};
+
+type ReviewLoadFindingsResult = {
+  phaseFound: boolean;
+  found: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  artifact: ReviewArtifactKind;
+  path: string | null;
+  findings: ReviewFinding[];
+  severityCounts: Record<ReviewFindingSeverity, number>;
+  followUps: string[];
+  reason: string | null;
+  warnings: string[];
+};
+
 const REVIEW_ARTIFACT_SUFFIXES: Record<ReviewArtifactKind, string> = {
   "code-review": "-REVIEW.md",
   "peer-review": "-REVIEWS.md",
@@ -110,6 +141,14 @@ const reviewScopeInputSchema = {
   phase: z.string().optional(),
   files: z.array(z.string()).optional(),
   depth: z.enum(["quick", "standard", "deep"]).optional()
+};
+
+const reviewLoadFindingsInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  artifact: z
+    .enum(["code-review", "peer-review", "review-fix", "security", "ui-review"])
+    .optional()
 };
 
 function normalizeTextContent(content: string): string {
@@ -184,6 +223,138 @@ function extractMarkdownSectionItems(
   }
 
   return [...new Set(items)];
+}
+
+function extractMarkdownSectionEntries(
+  content: string,
+  headingPattern: RegExp
+): Array<{
+  heading: string;
+  items: string[];
+}> {
+  const lines = content.split("\n");
+  const entries: Array<{
+    heading: string;
+    items: string[];
+  }> = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index].match(/^(##+)\s+(.+)$/);
+
+    if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
+      continue;
+    }
+
+    const sectionLevel = headingMatch[1].length;
+    const sectionLines: string[] = [];
+
+    for (let innerIndex = index + 1; innerIndex < lines.length; innerIndex += 1) {
+      const nextHeadingMatch = lines[innerIndex].match(/^(##+)\s+(.+)$/);
+
+      if (nextHeadingMatch && nextHeadingMatch[1].length <= sectionLevel) {
+        break;
+      }
+
+      sectionLines.push(lines[innerIndex]);
+    }
+
+    const items = [...new Set(collectListItems(sectionLines.join("\n")))];
+
+    if (items.length > 0) {
+      entries.push({
+        heading: headingMatch[2].trim(),
+        items
+      });
+    }
+  }
+
+  return entries;
+}
+
+function emptySeverityCounts(): Record<ReviewFindingSeverity, number> {
+  return {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    unknown: 0
+  };
+}
+
+function inferFindingSeverity(
+  heading: string,
+  item: string
+): ReviewFindingSeverity {
+  const source = `${heading} ${item}`.toLowerCase();
+
+  if (/\b(?:critical|p0)\b/.test(source)) {
+    return "critical";
+  }
+
+  if (/\b(?:high|p1)\b/.test(source)) {
+    return "high";
+  }
+
+  if (/\b(?:medium|p2)\b/.test(source)) {
+    return "medium";
+  }
+
+  if (/\b(?:low|p3)\b/.test(source)) {
+    return "low";
+  }
+
+  return "unknown";
+}
+
+function normalizeFindingSummary(item: string): string {
+  return item
+    .replace(/^\[(?:critical|high|medium|low|p[0-3])\]\s*[:\-]?\s*/i, "")
+    .replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "")
+    .replace(/^severity\s*[:\-]\s*(?:critical|high|medium|low)\s*[:\-]?\s*/i, "")
+    .trim();
+}
+
+function parseFindingsFromArtifact(content: string): {
+  findings: ReviewFinding[];
+  severityCounts: Record<ReviewFindingSeverity, number>;
+  followUps: string[];
+} {
+  const entries = extractMarkdownSectionEntries(
+    content,
+    /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i
+  );
+  const findings: ReviewFinding[] = [];
+  const seenSummaries = new Set<string>();
+  const severityCounts = emptySeverityCounts();
+
+  for (const entry of entries) {
+    for (const item of entry.items) {
+      const summary = normalizeFindingSummary(item);
+
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+
+      const severity = inferFindingSeverity(entry.heading, item);
+      seenSummaries.add(summary);
+      severityCounts[severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity,
+        summary,
+        sourceSection: entry.heading
+      });
+    }
+  }
+
+  return {
+    findings,
+    severityCounts,
+    followUps: extractMarkdownSectionItems(
+      content,
+      /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
+    )
+  };
 }
 
 function collectReviewCounts(content: string): {
@@ -635,6 +806,92 @@ export async function blueprintReviewRecord(
   };
 }
 
+export async function blueprintReviewLoadFindings(
+  args: ReviewLoadFindingsArgs
+): Promise<ReviewLoadFindingsResult> {
+  const artifact = args.artifact ?? "code-review";
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate({
+    cwd: projectRoot,
+    phase: args.phase
+  });
+
+  if (
+    !located.found ||
+    !located.phaseNumber ||
+    !located.phasePrefix ||
+    !located.phaseDir
+  ) {
+    return {
+      phaseFound: false,
+      found: false,
+      phaseNumber: null,
+      phasePrefix: null,
+      phaseName: null,
+      phaseDir: null,
+      artifact,
+      path: null,
+      findings: [],
+      severityCounts: emptySeverityCounts(),
+      followUps: [],
+      reason:
+        located.reason ?? "Phase could not be resolved for review findings loading.",
+      warnings: located.warnings
+    };
+  }
+
+  const artifactPath =
+    located.artifacts.find((candidate) =>
+      candidate.endsWith(REVIEW_ARTIFACT_SUFFIXES[artifact])
+    ) ?? null;
+
+  if (!artifactPath) {
+    return {
+      phaseFound: true,
+      found: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
+      phaseDir: located.phaseDir,
+      artifact,
+      path: null,
+      findings: [],
+      severityCounts: emptySeverityCounts(),
+      followUps: [],
+      reason: `Phase ${located.phaseNumber} does not have a saved ${REVIEW_ARTIFACT_SUFFIXES[artifact]} artifact yet.`,
+      warnings: located.warnings
+    };
+  }
+
+  const content = await fs.readFile(
+    resolveBlueprintPath(projectRoot, artifactPath),
+    "utf8"
+  );
+  const parsed = parseFindingsFromArtifact(content);
+
+  return {
+    phaseFound: true,
+    found: true,
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
+    phaseDir: located.phaseDir,
+    artifact,
+    path: artifactPath,
+    findings: parsed.findings,
+    severityCounts: parsed.severityCounts,
+    followUps: parsed.followUps,
+    reason: null,
+    warnings:
+      parsed.findings.length === 0
+        ? [
+            ...located.warnings,
+            `No structured findings were parsed from ${artifactPath}.`
+          ]
+        : located.warnings
+  };
+}
+
 export const reviewToolDefinitions = [
   {
     name: "blueprint_review_scope",
@@ -643,6 +900,14 @@ export const reviewToolDefinitions = [
     inputSchema: reviewScopeInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintReviewScope(args as ReviewScopeArgs)
+  },
+  {
+    name: "blueprint_review_load_findings",
+    description:
+      "Load structured findings and severity counts from a saved phase-scoped Blueprint review artifact.",
+    inputSchema: reviewLoadFindingsInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintReviewLoadFindings(args as ReviewLoadFindingsArgs)
   },
   {
     name: "blueprint_review_record",

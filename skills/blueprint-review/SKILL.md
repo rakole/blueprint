@@ -34,13 +34,14 @@ deltas:
 - follow-up risks stay explicit in artifacts instead of disappearing into chat
 - implemented-only routing remains the source of truth for next-step guidance
 
-Today, `code-review`, `secure-phase`, and `audit-fix` are the shipped
+Today, `code-review`, `code-review-fix`, `secure-phase`, and `audit-fix` are the shipped
 review-family commands. Other review-family commands remain documented but
 non-routable until their extra MCP substrate lands.
 
 ## Required Inputs
 
 - `docs/commands/code-review.md`
+- `docs/commands/code-review-fix.md`
 - `docs/commands/secure-phase.md`
 - `docs/commands/audit-fix.md`
 - `docs/COMMAND-CATALOG.md`
@@ -56,6 +57,7 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_phase_locate`
 - `blueprint_artifact_list`
 - `blueprint_review_scope`
+- `blueprint_review_load_findings`
 - `blueprint_review_record`
 - `blueprint_artifact_report_write`
 - `blueprint_artifact_mutate_index`
@@ -88,8 +90,32 @@ non-routable until their extra MCP substrate lands.
 7. Persist the finished review through `blueprint_review_record` with the
    `code-review` artifact.
 8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu-secure-phase <phase>` when the phase still lacks a security artifact;
-   otherwise prefer `/blu-progress`.
+   `/blu-secure-phase <phase>` when the phase still lacks a security artifact,
+   `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
+   otherwise `/blu-progress`.
+
+### `code-review-fix`
+
+1. Resolve the target phase and load the saved `XX-REVIEW.md` findings before
+   proposing any repo mutation.
+2. Use `blueprint_review_load_findings` for the findings baseline; do not infer
+   fix scope from chat memory or raw git drift when review evidence is missing.
+3. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
+   route back to `/blu-code-review <phase>` or `/blu-progress` instead of
+   bluffing.
+4. Require explicit confirmation of the selected findings unless the user
+   clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
+5. Keep repo mutation tightly bounded to the selected review findings and the
+   implicated repo files.
+6. Use `blueprint-reviewer` for bounded reclassification when the saved review
+   is broad or ambiguous, and `blueprint-fixer` only when that agent is
+   available and the fix scope stays narrow.
+7. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
+   `blueprint_review_record` with the `review-fix` artifact.
+8. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
+   inside implemented commands. Prefer `/blu-validate-phase <phase>` when
+   behavior changed, `/blu-add-tests <phase>` when missing tests are the main
+   remaining gap, and `/blu-progress` otherwise.
 
 ### `secure-phase`
 

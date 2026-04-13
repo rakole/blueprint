@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`code-review-fix` carries forward the GSD intent to auto-fix issues found by code review in REVIEW.md. Spawns fixer agent, commits each fix atomically, produces REVIEW-FIX.md summary.. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`code-review-fix` carries forward the GSD intent to auto-fix issues found by code review in REVIEW.md. Spawns fixer agent, commits each fix atomically, produces REVIEW-FIX.md summary. Blueprint ships it as a bounded, evidence-backed remediation step: it starts from the saved `XX-REVIEW.md` artifact, fixes only the explicitly selected findings, persists a durable `XX-REVIEW-FIX.md` summary through the shared review MCP tool, and updates `STATE.md` so follow-up routing stays inside implemented commands.
 
 
 ## Command Path And Examples
@@ -31,13 +31,13 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: may apply bounded repo fixes, writes a durable review-fix artifact, and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- Phase resolution plus saved review findings through the documented phase and review MCP tools
 
 
 ## Blueprint And Global State Writes
@@ -52,8 +52,8 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_review_load_findings` -> `{findings, severityCounts}`
-- `blueprint_review_record` -> `{reportPath, counts, followUps}`
+- `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
+- `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -93,7 +93,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the selected findings before applying fixes.
+- Confirm the selected findings before applying fixes unless the user explicitly approved automatic remediation.
 
 
 ## Edge Cases
@@ -106,8 +106,9 @@
 ## Failure Modes And Recovery
 
 
-- Preserve generated reports when git or external CLI steps fail.
-- Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- Preserve generated reports when verification or shell checks fail.
+- Fall back to `/blu-code-review <phase>` when the saved review baseline is missing or too weak.
+- Fall back to `/blu-progress` instead of guessing through an unclear remediation scope.
 
 
 ## Acceptance Criteria
@@ -117,6 +118,8 @@
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Persists the durable remediation artifact through `blueprint_review_record`.
+- Updates `STATE.md` when the next-step signal changes.
 - Leaves unrelated repo files untouched.
 
 
