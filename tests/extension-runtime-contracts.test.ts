@@ -56,7 +56,8 @@ const REPAIRED_DIRECT_COMMANDS = [
   "audit-milestone",
   "complete-milestone",
   "milestone-summary",
-  "new-milestone"
+  "new-milestone",
+  "pr-branch"
 ] as const;
 
 type RuntimePromptContract = {

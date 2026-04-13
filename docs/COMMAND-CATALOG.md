@@ -36,7 +36,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `pause-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `implemented` | `.blueprint/reports/pause-work-latest.md; .blueprint/STATE.md` | `Low: writes handoff and state artifacts only.` |
 | `plan-milestone-gaps` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `implemented` | `.blueprint/ROADMAP.md; new phase directories for approved gaps; .blueprint/STATE.md` | `Medium: can add multiple phases in one pass.` |
 | `plan-phase` | 1 | `Core Lifecycle` | `blueprint-phase-planning` | `implemented` | `one or more XX-YY-PLAN.md files; .blueprint/STATE.md` | `Medium: can replace plans and change downstream execution order.` |
-| `pr-branch` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `git branch state; branch report in .blueprint/reports/` | `High: git branch mutation.` |
+| `pr-branch` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `implemented` | `git branch state; .blueprint/reports/pr-branch-latest.md` | `High: git branch mutation.` |
 | `progress` | 0 | `Foundation` | `blueprint-router` | `implemented` | `none` | `Low: read-only status inspection.` |
 | `quick` | 3 | `Capture And Lightweight Execution` | `blueprint-phase-execution` | `implemented` | `quick-run report in .blueprint/reports/; .blueprint/STATE.md` | `High: can execute repo changes with reduced ceremony.` |
 | `reapply-patches` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `patch replay report in .blueprint/reports/ or global patch logs; repo file changes when replay succeeds` | `High: patch replay may touch many repo files.` |

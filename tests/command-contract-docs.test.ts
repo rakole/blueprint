@@ -438,6 +438,36 @@ test("review skill and security auditor are marked implemented in docs for secur
   assert.match(securePhaseDoc, /phase XX-SECURITY\.md/);
 });
 
+test("maintenance skill and pr-branch docs keep the review-branch contract explicit", async () => {
+  const [skillsMarkdown, prBranchDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/pr-branch.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-maintenance` \| `implemented` \| Git, review-branch prep, workspace, cleanup, update, and patch operations \| `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` \|/
+  );
+  assert.match(prBranchDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(prBranchDoc, /blueprint_project_status/);
+  assert.match(prBranchDoc, /blueprint_config_get/);
+  assert.match(prBranchDoc, /blueprint_artifact_summary_digest/);
+  assert.match(prBranchDoc, /blueprint_artifact_report_write/);
+  assert.match(prBranchDoc, /pr-branch-latest\.md/);
+  assert.match(prBranchDoc, /Preserves the source branch/i);
+  assert.match(prBranchDoc, /planning\.commit_docs/);
+  assert.match(
+    mcpToolsDoc,
+    /`pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `pr-branch` \| `commands\/gsd\/pr-branch\.md` \| GSD has an upstream workflow file \| `docs\/commands\/pr-branch\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write` \|/
+  );
+});
+
 test("code-review docs and reviewer agent are marked implemented in docs", async () => {
   const [skillsMarkdown, codeReviewDoc] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),

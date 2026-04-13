@@ -74,7 +74,7 @@ Shipped in this wave: `note`, `add-todo`, `check-todos`, `add-backlog`, `review-
 - `ship`
 - `undo`
 
-Shipped in this wave: `code-review`, `secure-phase`, and `docs-update`.
+Shipped in this wave: `code-review`, `secure-phase`, `docs-update`, and `pr-branch`.
 
 ### Wave 5: Workspace and maintenance
 

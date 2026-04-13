@@ -133,6 +133,7 @@ These tool names are part of the documented future contract, but they are not re
 - `new-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to carry forward from the saved milestone summary, preserve historical phase artifacts, and scaffold the next whole-number phase context.
 - `code-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, and `blueprint_review_record` to derive a deterministic repo-file scope from executed plans or explicit file paths and persist `XX-REVIEW.md`.
 - `secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped security evidence as `XX-SECURITY.md`.
+- `pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to keep review-branch preparation evidence-backed, report-backed, and explicit about `.blueprint/` filtering before any git mutation.
 
 ## Planned Command Notes
 

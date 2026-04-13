@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`pr-branch` carries forward the GSD intent to create a clean PR branch by filtering out implementation-bookkeeping commits before code review. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`pr-branch` carries forward the GSD intent to create a clean PR branch by filtering out implementation-bookkeeping commits before code review. Blueprint now ships it as a confirmation-gated, report-backed review-branch preparation flow that keeps git mutations explicit, preserves the source branch, and makes `.blueprint/` inclusion or exclusion reviewable before branch creation.
 
 
 ## Command Path And Examples
@@ -46,7 +46,7 @@
 
 
 - `git branch state`
-- `branch report in .blueprint/reports/`
+- `.blueprint/reports/pr-branch-latest.md`
 
 
 ## Required MCP Tools
@@ -55,6 +55,7 @@
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
 
 ## Skills And Subagents
@@ -95,12 +96,14 @@
 - Branch creation must never discard local work that does not match the filtered PR shape.
 - If filtering produces an unexpectedly empty diff, the command should stop and explain why before creating noise branches.
 - Base-branch and commit-docs behavior should come from normalized effective config rather than a second branch-detection path inside the command.
+- The command should stop on a dirty working tree instead of mixing uncommitted changes into the review-branch replay path.
 
 
 ## User Prompts And Confirmation Gates
 
 
 - Always confirm the target base branch and filtered commit scope.
+- Confirm report replacement before overwriting `.blueprint/reports/pr-branch-latest.md`.
 
 
 ## Edge Cases
@@ -127,6 +130,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
+- Preserves the source branch and records the created review branch plus filtered scope in `.blueprint/reports/pr-branch-latest.md`.
 - Honors normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` when preparing a review branch.
 
 

@@ -21,12 +21,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-docs` | `implemented` | Documentation generation and verification | `docs-update` |
 | `blueprint-review` | `implemented` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
 | `blueprint-roadmap-admin` | `implemented` | Roadmap append, milestone audits, and future roadmap/milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
-
-## Planned Later Skills
-
-| Skill | Status | Purpose | Primary Commands |
-|---|---|---|---|
-| `blueprint-maintenance` | `planned` | Git, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
+| `blueprint-maintenance` | `implemented` | Git, review-branch prep, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
 
 ## Shipped Agent Contracts
 
@@ -77,6 +72,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `audit-fix` may also use `blueprint-reviewer` and `blueprint-verifier`.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
+- `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
 - `ui-review` uses `blueprint-ui-auditor`.
 - `secure-phase` uses `blueprint-security-auditor`.
 
