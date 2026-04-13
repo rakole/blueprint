@@ -491,6 +491,34 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
   );
 });
 
+test("maintenance skill and ship docs keep the shipping contract explicit", async () => {
+  const [shipDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/ship.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(shipDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(shipDoc, /`blueprint_project_status`/);
+  assert.match(shipDoc, /`blueprint_phase_locate`/);
+  assert.match(shipDoc, /`blueprint_config_get`/);
+  assert.match(shipDoc, /`blueprint_artifact_list`/);
+  assert.match(shipDoc, /`blueprint_artifact_summary_digest`/);
+  assert.match(shipDoc, /`blueprint_artifact_report_write`/);
+  assert.match(shipDoc, /`blueprint_state_update`/);
+  assert.match(shipDoc, /ship-latest\.md/);
+  assert.match(shipDoc, /Confirm draft versus ready state/i);
+  assert.match(shipDoc, /manual fallback/i);
+  assert.match(
+    mcpToolsDoc,
+    /`ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `ship` \| `commands\/gsd\/ship\.md` \| GSD has an upstream workflow file \| `docs\/commands\/ship\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+  );
+});
+
 test("code-review docs and reviewer agent are marked implemented in docs", async () => {
   const [skillsMarkdown, codeReviewDoc] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),

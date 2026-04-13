@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`ship` carries forward the GSD intent to create PR, run review, and prepare for merge after verification passes. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`ship` carries forward the GSD intent to create PR, run review, and prepare for merge after verification passes. In Blueprint it now ships as a confirmation-gated, report-backed maintenance flow that reuses saved verification and review evidence, keeps push and PR creation explicit, and leaves a durable manual fallback when GitHub automation is unavailable.
 
 
 ## Command Path And Examples
@@ -39,23 +39,26 @@
 
 
 - `.blueprint/config.json`
+- selected phase artifacts and saved reports under `.blueprint/phases/` and `.blueprint/reports/`
 
 
 ## Blueprint And Global State Writes
 
 
-- `ship report in .blueprint/reports/`
-- `optional PR body file or state note`
+- `.blueprint/reports/ship-latest.md`
+- `.blueprint/STATE.md` when the next safe action changes after shipping
 - `git and remote state when shipping proceeds`
 
 
 ## Required MCP Tools
 
 
+- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -77,7 +80,8 @@
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/verify-work.md`
-- `docs/commands/review.md`
+- `docs/commands/code-review.md`
+- `docs/commands/secure-phase.md`
 - `docs/commands/pr-branch.md`
 
 
@@ -100,12 +104,14 @@
 - If `gh` is missing or unauthenticated, the command should still produce a durable manual PR checklist and draft body.
 - Verification and review artifacts should be treated as gating evidence, not best-effort suggestions.
 - Shipping should honor normalized `git.*` and `planning.commit_docs` config rather than re-deriving branch policy from git state alone.
+- Shipping should stop on a dirty working tree or branch mismatch instead of guessing through uncommitted or off-scope repo state.
 
 
 ## User Prompts And Confirmation Gates
 
 
-- Confirm draft versus ready state and fallback behavior when gh is unavailable.
+- Confirm draft versus ready state, the exact push and PR steps to run, and fallback behavior when `gh` is unavailable.
+- Confirm report replacement before overwriting `.blueprint/reports/ship-latest.md`.
 
 
 ## Edge Cases
@@ -134,6 +140,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
+- Records the selected scope, branch plan, push or PR outcome, and manual fallback guidance in `.blueprint/reports/ship-latest.md`.
 - Honors normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` when building the shipping path and fallback guidance.
 
 

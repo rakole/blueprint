@@ -55,9 +55,12 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 ## Required MCP Tools
 
 - `blueprint_project_status`
+- `blueprint_phase_locate`
 - `blueprint_config_get`
+- `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
+- `blueprint_state_update`
 
 ## Workflow Rules
 
@@ -74,11 +77,25 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 9. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/pr-branch-latest.md`.
 10. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
 
+### `ship`
+
+1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
+2. Resolve the shipping scope explicitly. Prefer the user-named phase, otherwise anchor the flow to the current phase and saved Blueprint evidence instead of guessing across unrelated work.
+3. Read effective config through `blueprint_config_get` before deriving base-branch, branching, or commit-docs behavior. Prefer explicit user input, then `git.base_branch`, then safe repo detection.
+4. Inspect git status before mutation. A dirty working tree or missing base branch is a hard stop for the shipping flow.
+5. Read saved verification, UAT, review, security, and `pr-branch` evidence through `blueprint_artifact_list` before proposing a draft or ready PR path.
+6. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the shipping plan stays grounded in the saved Blueprint evidence and the active diff.
+7. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
+8. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
+9. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/ship-latest.md`, including manual fallback guidance when remote creation does not happen.
+10. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
+
 ## Planned Later Command Guardrail
 
-- `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
 
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, and end with the safest implemented follow-up or manual next step.
+- For `ship`, report the selected scope, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, and the safest implemented follow-up or manual next step.

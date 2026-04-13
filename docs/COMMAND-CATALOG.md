@@ -49,7 +49,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `implemented` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |
 | `settings` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json; optional ~/.gemini/blueprint/defaults.json` | `Low: config-only mutation inside repo config plus optional user defaults.` |
-| `ship` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `ship report in .blueprint/reports/; optional PR body file or state note` | `High: remote and git mutation path.` |
+| `ship` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `implemented` | `.blueprint/reports/ship-latest.md; optional git push and PR state; .blueprint/STATE.md` | `High: remote and git mutation path.` |
 | `ui-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-UI-SPEC.md (UI contract or explicit skip rationale); .blueprint/STATE.md` | `Low: writes a UI contract or documented skip rationale only.` |
 | `ui-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-UI-REVIEW.md` | `Low: review artifact only.` |
 | `undo` | 4 | `Quality And Shipping` | `blueprint-maintenance` | `planned` | `git history through revert operations; undo report in .blueprint/reports/` | `High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.` |
