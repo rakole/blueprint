@@ -468,6 +468,22 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
   );
 });
 
+test("code-review docs and reviewer agent are marked implemented in docs", async () => {
+  const [skillsMarkdown, codeReviewDoc] = await Promise.all([
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/code-review.md")
+  ]);
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-reviewer` \| `implemented` \| Produce bounded code review findings from a resolved Blueprint scope \|/
+  );
+  assert.match(codeReviewDoc, /Primary skill: `blueprint-review`/);
+  assert.match(codeReviewDoc, /`blueprint_review_scope`/);
+  assert.match(codeReviewDoc, /`blueprint-reviewer`/);
+  assert.match(codeReviewDoc, /phase XX-REVIEW\.md/);
+});
+
 test("add-phase command docs keep the roadmap append contract explicit", async () => {
   const addPhaseDoc = await readRepoFile("docs/commands/add-phase.md");
 

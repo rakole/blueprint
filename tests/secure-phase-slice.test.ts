@@ -117,7 +117,7 @@ test("blueprint_review_record writes a phase-scoped security artifact with follo
 
 ## Follow-Ups
 
-- Add review-scope and findings-load tools before shipping the rest of the review family.
+- Add findings-load support before shipping the rest of the review family.
 
 ## Next Safe Action
 
@@ -136,7 +136,7 @@ test("blueprint_review_record writes a phase-scoped security artifact with follo
   assert.equal(written.counts.findings, 1);
   assert.equal(written.counts.followUps, 1);
   assert.deepEqual(written.followUps, [
-    "Add review-scope and findings-load tools before shipping the rest of the review family."
+    "Add findings-load support before shipping the rest of the review family."
   ]);
 
   const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");

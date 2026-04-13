@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`code-review` carries forward the GSD intent to review source files changed during a phase for bugs, security issues, and code quality problems. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`code-review` carries forward the GSD intent to review source files changed during a phase for bugs, security issues, and code quality problems. Blueprint ships it as a Gemini-native review command: it resolves a deterministic repo-file scope from executed plan metadata or explicit file paths, audits that scope against saved phase evidence, and persists the result through the shared review MCP tools instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -32,13 +32,13 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Writes only the declared phase-scoped review artifact for this command.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- Phase resolution, artifact inventory, and review scoping through the documented phase, artifact, and review MCP tools
 
 
 ## Blueprint And Global State Writes
@@ -51,7 +51,7 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_review_scope` -> `{phase, files, reviewMode}`
+- `blueprint_review_scope` -> `{status, phase, files, reviewMode, artifacts, reason, warnings}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 

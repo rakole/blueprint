@@ -13,7 +13,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `check-todos` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `implemented` | `todo status fields when selection or completion changes` | `Low: todo selection and status update only.` |
 | `cleanup` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `archived phase directories; cleanup report in .blueprint/reports/` | `High: planning-directory archival and removal behavior.` |
 | `code-review-fix` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW-FIX.md; code changes` | `High: automated fixes plus optional iteration loop.` |
-| `code-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW.md` | `Low: review artifact generation only.` |
+| `code-review` | 4 | `Quality And Shipping` | `blueprint-review` | `implemented` | `phase XX-REVIEW.md` | `Low: review artifact generation only.` |
 | `complete-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `implemented` | `.blueprint/reports/milestone-complete-<version>.md; .blueprint/STATE.md` | `Medium: writes milestone closeout evidence and advances archival routing.` |
 | `debug` | 3 | `Capture And Lightweight Execution` | `blueprint-debug` | `implemented` | `debug report in .blueprint/reports/debug-latest.md; optional todo follow-ups; .blueprint/STATE.md` | `Medium: exploratory shell commands and test runs are likely.` |
 | `discuss-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-CONTEXT.md; optional phase XX-DISCUSSION-LOG.md; optional phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery` | `Medium: can replace or extend phase context artifacts.` |

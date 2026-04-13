@@ -36,6 +36,7 @@ const IMPLEMENTED_COMMANDS = [
   "check-todos",
   "add-backlog",
   "review-backlog",
+  "code-review",
   "remove-phase",
   "plan-phase",
   "execute-phase",
@@ -380,6 +381,9 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["debug"].availableOptionalAgents, [
     "blueprint-debugger"
   ]);
+  assert.deepEqual(catalog.commands["code-review"].availableOptionalAgents, [
+    "blueprint-reviewer"
+  ]);
   assert.deepEqual(catalog.commands["secure-phase"].availableOptionalAgents, [
     "blueprint-security-auditor"
   ]);
@@ -508,6 +512,27 @@ test("secure-phase is implemented once manifest, review skill, and review MCP to
     "blueprint_review_record"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-security-auditor"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("code-review is implemented once manifest, review skill, and review MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["code-review"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu-code-review.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_phase_locate",
+    "blueprint_review_record",
+    "blueprint_review_scope"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
   assert.deepEqual(entry.blockedBy, []);
 });
 

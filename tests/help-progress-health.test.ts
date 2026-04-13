@@ -934,6 +934,15 @@ test("help progress and health command files reference registered MCP tool names
         "blueprint_artifact_summary_digest",
         "blueprint_artifact_report_write"
       ]
+    },
+    {
+      file: "commands/blu-code-review.toml",
+      tools: [
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_review_scope",
+        "blueprint_review_record"
+      ]
     }
   ];
 
@@ -973,8 +982,10 @@ test("runtime-facing docs mention shipped command coverage instead of a docs-onl
   assert.match(readmeFile, /commands\/blu-map-codebase\.toml/);
   assert.match(readmeFile, /commands\/blu-debug\.toml/);
   assert.match(readmeFile, /commands\/blu-docs-update\.toml/);
+  assert.match(readmeFile, /commands\/blu-code-review\.toml/);
   assert.match(geminiFile, /\/blu-debug/);
   assert.match(geminiFile, /\/blu-docs-update/);
+  assert.match(geminiFile, /\/blu-code-review/);
   assert.match(readmeFile, /skills\/blueprint-router\.md/);
   assert.doesNotMatch(readmeFile, /## Planned Runtime Layout/);
 });
