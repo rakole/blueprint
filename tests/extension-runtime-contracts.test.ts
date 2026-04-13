@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
@@ -15,6 +17,7 @@ import {
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+const execFileAsync = promisify(execFile);
 
 // Covers the command batches repaired in DF-008, DF-009, and DF-010, plus the
 // shipped note/add-todo/check-todos/add-backlog/review-backlog/explore capture
@@ -90,6 +93,18 @@ async function pathExists(relativePath: string): Promise<boolean> {
 
 async function readRelativePath(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
+}
+
+async function assertGitTracksPath(relativePath: string): Promise<void> {
+  try {
+    await execFileAsync("git", ["ls-files", "--error-unmatch", relativePath], {
+      cwd: repoRoot
+    });
+  } catch {
+    assert.fail(
+      `${relativePath} must be tracked because Git-installed Gemini extensions do not build Blueprint before launching runtime entrypoints.`
+    );
+  }
 }
 
 async function activeCommandDocs(): Promise<string[]> {
@@ -175,6 +190,17 @@ test("gemini extension discovery points at the built Blueprint MCP server", asyn
   assert.deepEqual(manifest.mcpServers?.blueprint?.args, [
     "${extensionPath}/dist/mcp/server.js"
   ]);
+});
+
+test("git-installed extension bundle includes the built runtime assets", async () => {
+  for (const relativePath of [
+    "dist/mcp/server.js",
+    "dist/hooks/read-before-edit.js",
+    "dist/hooks/blueprint-write-guard.js",
+    "dist/hooks/workflow-advisory.js"
+  ]) {
+    await assertGitTracksPath(relativePath);
+  }
 });
 
 test("implemented Blueprint skills resolve to discoverable Gemini bundles with metadata", async () => {

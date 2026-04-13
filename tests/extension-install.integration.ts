@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import {
   access,
   cp,
@@ -76,20 +77,42 @@ async function stageShippedExtension(): Promise<{
 }> {
   const stageRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-extension-stage-"));
   const extensionDir = path.join(stageRoot, "blueprint");
+  const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  })
+    .split("\0")
+    .filter(Boolean);
 
   await mkdir(extensionDir, { recursive: true });
 
-  for (const relativePath of shippedPaths) {
+  for (const relativePath of trackedFiles) {
+    const isShippedPath = shippedPaths.some((shippedPath) => {
+      return relativePath === shippedPath || relativePath.startsWith(`${shippedPath}/`);
+    });
+    const isExcludedPath = excludedStagePaths.some((excludedPath) => {
+      return relativePath === excludedPath || relativePath.startsWith(`${excludedPath}/`);
+    });
+
+    if (!isShippedPath || isExcludedPath) {
+      continue;
+    }
+
     const sourcePath = path.join(repoRoot, relativePath);
     const targetPath = path.join(extensionDir, relativePath);
 
-    assert.equal(
-      await pathExists(sourcePath),
-      true,
-      `${relativePath} must exist before staging the extension`
-    );
-
+    await mkdir(path.dirname(targetPath), { recursive: true });
     await cp(sourcePath, targetPath, { recursive: true });
+  }
+
+  for (const relativePath of shippedPaths) {
+    assert.equal(
+      trackedFiles.some((trackedPath) => {
+        return trackedPath === relativePath || trackedPath.startsWith(`${relativePath}/`);
+      }),
+      true,
+      `${relativePath} must be tracked before staging the extension`
+    );
   }
 
   for (const relativePath of excludedStagePaths) {
