@@ -23,8 +23,10 @@ This repository still carries the planning pack that locked the product and arch
 - The read-only phase-discovery assumptions command `/blu-list-phase-assumptions` is now shipped on the same discovery substrate
 - The governance handoff and resume commands `/blu-pause-work` and `/blu-resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The code review command `/blu-code-review` is now shipped on April 13, 2026; it resolves a deterministic repo-file scope from executed plans or explicit file paths, uses the `blueprint-review` skill plus the bounded `blueprint-reviewer` contract when needed, and persists `XX-REVIEW.md` through the shared review MCP tools
+- The review-fix command `/blu-code-review-fix` is now shipped on April 13, 2026; it loads saved `XX-REVIEW.md` findings through `blueprint_review_load_findings`, keeps fixes tightly bounded to the selected review issues, persists `XX-REVIEW-FIX.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The remediation command `/blu-audit-fix` is now shipped on April 13, 2026; it reuses the deterministic review scope, reads saved review or validation evidence first, keeps repo mutation bounded, persists `.blueprint/reports/audit-fix-<phase>.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
+- The review-branch command `/blu-pr-branch` is now shipped on April 13, 2026; it reads project and config state first, previews the filtered review scope with explicit `.blueprint/` inclusion or exclusion, persists `.blueprint/reports/pr-branch-latest.md`, and never rewrites the source branch in place
 - The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap insertion command `/blu-insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu-discuss-phase`
 - The roadmap removal command `/blu-remove-phase` is now shipped; it removes a future phase, deletes the matching phase directory, renumbers later roadmap references and phase artifacts, and updates `.blueprint/STATE.md`
@@ -198,6 +200,7 @@ These runtime files exist today:
 - `commands/blu-verify-work.toml`
 - `commands/blu-add-tests.toml`
 - `commands/blu-code-review.toml`
+- `commands/blu-code-review-fix.toml`
 - `commands/blu-audit-fix.toml`
 - `commands/blu-secure-phase.toml`
 - `commands/blu-audit-milestone.toml`

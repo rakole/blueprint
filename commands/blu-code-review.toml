@@ -20,7 +20,7 @@ Follow this flow exactly:
 
 Next-action rules:
 - If the phase does not yet have `XX-SECURITY.md`, prefer `/blu-secure-phase <phase>`.
-- Otherwise if meaningful follow-up fixes remain, prefer `/blu-progress` because `/blu-code-review-fix` is not implemented yet.
+- Otherwise if meaningful follow-up fixes remain, prefer `/blu-code-review-fix <phase>`.
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
@@ -29,5 +29,5 @@ Response requirements:
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the review grounded in saved artifacts and the concrete repo files returned by the review-scope tool.
 - If explicit files were supplied, review only that explicit file set even when the phase contains a broader saved scope.
-- Do not present planned-only review commands such as `/blu-code-review-fix` as runnable; route to `/blu-progress` instead.
+- Recommend `/blu-code-review-fix` only when the review actually leaves concrete follow-up findings to address.
 """

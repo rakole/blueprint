@@ -36,6 +36,7 @@ const IMPLEMENTED_COMMANDS = [
   "review-backlog",
   "explore",
   "code-review",
+  "code-review-fix",
   "audit-fix",
   "remove-phase",
   "plan-phase",
@@ -551,6 +552,27 @@ test("code-review is implemented once manifest, review skill, and review MCP too
     "blueprint_phase_locate",
     "blueprint_review_record",
     "blueprint_review_scope"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("code-review-fix is implemented once manifest, review skill, and findings tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["code-review-fix"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu-code-review-fix.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_phase_locate",
+    "blueprint_review_load_findings",
+    "blueprint_review_record",
+    "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
   assert.deepEqual(entry.blockedBy, []);

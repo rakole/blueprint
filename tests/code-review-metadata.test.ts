@@ -19,6 +19,7 @@ test("code-review manifest references the review tools, reviewer agent, and safe
   assert.match(commandFile, /XX-REVIEW\.md/);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-secure-phase/);
+  assert.match(commandFile, /\/blu-code-review-fix/);
   assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-review\.md|agents\/blueprint-reviewer\.md/);
 });
@@ -36,5 +37,6 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /blueprint-reviewer/);
   assert.match(skillFile, /XX-REVIEW\.md/);
   assert.match(skillFile, /\/blu-secure-phase <phase>/);
+  assert.match(skillFile, /\/blu-code-review-fix <phase>/);
   assert.match(skillFile, /\/blu-progress/);
 });

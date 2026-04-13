@@ -11,9 +11,12 @@ The live runtime currently ships:
 - the validation follow-up command `add-tests`
 - governance handoff/resume
 - the current roadmap-admin slice
-- the shipped Wave 3 capture commands, `note`, `add-todo`, `add-backlog`, and `review-backlog`
+- the shipped Wave 3 capture commands, `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, and `explore`
 - the shipped Wave 3 lightweight execution commands, `fast` and `quick`
-- the shipped Wave 3 lightweight execution commands, `fast` and `quick`
+- the shipped Wave 3 debug command, `debug`
+- the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, and `secure-phase`
+- the shipped Wave 4 docs command, `docs-update`
+- the shipped Wave 4 review-branch command, `pr-branch`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 
@@ -70,7 +73,7 @@ Planned later runtime surfaces, not registered today:
 - Skills hold orchestration rules for command families.
 - Gemini discovers shipped skills from `skills/<name>/SKILL.md`.
 - Legacy flat `skills/*.md` mirrors may remain in the repo during repair, but they are not runtime handles and must not be referenced as activation paths.
-- The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-capture`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, and `blueprint-roadmap-admin`.
+- The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-capture`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, `blueprint-debug`, `blueprint-docs`, `blueprint-review`, `blueprint-roadmap-admin`, and `blueprint-maintenance`.
 - Planned skill families stay documented but non-routable until their commands actually ship.
 
 ### 3. Agents
