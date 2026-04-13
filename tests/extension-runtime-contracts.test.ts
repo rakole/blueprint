@@ -18,8 +18,8 @@ const repoRoot = process.cwd();
 
 // Covers the command batches repaired in DF-008, DF-009, and DF-010, plus the
 // shipped note/add-todo/check-todos/add-backlog/review-backlog/explore capture
-// slice, the debug slice, and the shipped code-review, audit-fix,
-// secure-phase, add-tests, and pr-branch Wave 4 slice.
+// slice, the debug slice, and the shipped code-review, code-review-fix,
+// audit-fix, secure-phase, add-tests, and pr-branch Wave 4 slice.
 const REPAIRED_DIRECT_COMMANDS = [
   "help",
   "progress",
@@ -49,6 +49,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "review-backlog",
   "explore",
   "code-review",
+  "code-review-fix",
   "audit-fix",
   "secure-phase",
   "add-phase",

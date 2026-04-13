@@ -13,7 +13,7 @@ The live runtime currently ships:
 - the current roadmap-admin slice
 - the shipped Wave 3 capture commands, `note`, `add-todo`, `add-backlog`, and `review-backlog`
 - the shipped Wave 3 lightweight execution commands, `fast` and `quick`
-- the shipped Wave 3 lightweight execution commands, `fast` and `quick`
+- the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, and `secure-phase`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 
