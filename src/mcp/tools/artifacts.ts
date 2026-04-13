@@ -103,7 +103,7 @@ type ArtifactListArgs = {
 };
 
 type ArtifactMutateIndexTarget = "backlog" | "todo" | "note";
-type ArtifactMutateIndexAction = "append" | "update";
+type ArtifactMutateIndexAction = "append" | "list" | "update";
 type ArtifactMutateIndexUpdate = {
   id: string;
   status?: string;
@@ -120,6 +120,19 @@ type ArtifactMutateIndexArgs = {
     status?: string;
     addedAt?: string;
     reservePhaseStub?: boolean;
+  };
+  filter?: {
+    query?: string;
+    ids?: string[];
+    statuses?: string[];
+    limit?: number;
+  };
+  match?: {
+    id?: string;
+    text?: string;
+  };
+  update?: {
+    status?: string;
   };
   updates?: ArtifactMutateIndexUpdate[];
 };
@@ -149,10 +162,18 @@ type ArtifactMutateIndexReservedPhase = {
 };
 
 type ArtifactMutateIndexResult = {
-  status: "created" | "updated" | "duplicate" | "project_missing" | "invalid";
+  status:
+    | "created"
+    | "updated"
+    | "duplicate"
+    | "listed"
+    | "not_found"
+    | "project_missing"
+    | "invalid";
   targetPath: string;
   createdEntryIds: string[];
   duplicateEntryIds: string[];
+  matchedEntryIds: string[];
   updatedCounts: {
     added: number;
     updated: number;
@@ -160,6 +181,15 @@ type ArtifactMutateIndexResult = {
     preserved: number;
   };
   reservedPhase: ArtifactMutateIndexReservedPhase | null;
+  entries: CaptureIndexRow[];
+  summary: {
+    total: number;
+    matched: number;
+    open: number;
+    active: number;
+    completed: number;
+    other: number;
+  };
   warnings: string[];
 };
 
@@ -361,6 +391,68 @@ function normalizeCaptureText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function normalizeCaptureStatus(value?: string | null): string {
+  return normalizeCaptureText(value ?? "").toLowerCase();
+}
+
+function canonicalizeTodoStatus(
+  value?: string | null,
+  options: { strict?: boolean } = {}
+): string {
+  const normalized = normalizeCaptureStatus(value);
+
+  if (normalized.length === 0) {
+    return "open";
+  }
+
+  if (["open", "pending", "todo"].includes(normalized)) {
+    return "open";
+  }
+
+  if (
+    [
+      "active",
+      "selected",
+      "current",
+      "working",
+      "in progress",
+      "in-progress",
+      "in_progress"
+    ].includes(normalized)
+  ) {
+    return "active";
+  }
+
+  if (["completed", "complete", "done", "closed", "finished"].includes(normalized)) {
+    return "completed";
+  }
+
+  if (options.strict ?? true) {
+    throw new Error(
+      `Todo status must be one of: open, active, completed. Received: ${value ?? ""}`
+    );
+  }
+
+  return normalized;
+}
+
+function normalizeStoredCaptureStatus(
+  target: ArtifactMutateIndexTarget,
+  value?: string | null
+): string | null {
+  const normalized = normalizeCaptureStatus(value);
+
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  if (target === "todo") {
+    return canonicalizeTodoStatus(normalized, { strict: false });
+  }
+
+  return normalized;
+}
+
 function captureDedupKey(value: string): string {
   return normalizeCaptureText(value)
     .toLowerCase()
@@ -512,10 +604,166 @@ function parseCaptureRowBlock(
   return {
     id: headingMatch[1],
     added,
-    status: config.defaultStatus !== null ? fields.get("status") ?? config.defaultStatus : null,
+    status:
+      config.defaultStatus !== null
+        ? normalizeStoredCaptureStatus(target, fields.get("status")) ?? config.defaultStatus
+        : null,
     description,
     reservedPhase:
       config.supportsReservedPhase ? fields.get("reserved phase") ?? null : null
+  };
+}
+
+function matchesCaptureQuery(row: CaptureIndexRow, query?: string): boolean {
+  const normalizedQuery = normalizeCaptureText(query ?? "").toLowerCase();
+
+  if (normalizedQuery.length === 0) {
+    return true;
+  }
+
+  return (
+    row.id.toLowerCase().includes(normalizedQuery) ||
+    row.description.toLowerCase().includes(normalizedQuery)
+  );
+}
+
+function filterCaptureRows(
+  rows: CaptureIndexRow[],
+  target: ArtifactMutateIndexTarget,
+  filter: ArtifactMutateIndexArgs["filter"],
+  options: { defaultTodoStatuses?: boolean } = {}
+): CaptureIndexRow[] {
+  const requestedIds = new Set(
+    (filter?.ids ?? [])
+      .map((value) => normalizeCaptureText(value))
+      .filter((value) => value.length > 0)
+  );
+  const requestedStatuses = new Set(
+    (filter?.statuses ?? [])
+      .map((value) =>
+        target === "todo"
+          ? canonicalizeTodoStatus(value, { strict: false })
+          : normalizeCaptureStatus(value)
+      )
+      .filter((value) => value.length > 0)
+  );
+  const useDefaultTodoStatuses =
+    target === "todo" && requestedStatuses.size === 0 && (options.defaultTodoStatuses ?? false);
+  const sortedRows =
+    target === "todo"
+      ? [...rows].sort((left, right) => {
+          const rank = (value: string | null): number => {
+            const status = canonicalizeTodoStatus(value, { strict: false });
+
+            if (status === "active") {
+              return 0;
+            }
+
+            if (status === "open") {
+              return 1;
+            }
+
+            if (status === "completed") {
+              return 2;
+            }
+
+            return 3;
+          };
+
+          return rank(left.status) - rank(right.status);
+        })
+      : rows;
+  const filtered = sortedRows.filter((row) => {
+    if (requestedIds.size > 0 && !requestedIds.has(row.id)) {
+      return false;
+    }
+
+    const rowStatus =
+      target === "todo"
+        ? canonicalizeTodoStatus(row.status, { strict: false })
+        : normalizeCaptureStatus(row.status);
+
+    if (requestedStatuses.size > 0 && !requestedStatuses.has(rowStatus)) {
+      return false;
+    }
+
+    if (useDefaultTodoStatuses && !["open", "active"].includes(rowStatus)) {
+      return false;
+    }
+
+    return matchesCaptureQuery(row, filter?.query);
+  });
+  const limit = filter?.limit;
+
+  if (!limit || limit <= 0 || filtered.length <= limit) {
+    return filtered;
+  }
+
+  return filtered.slice(0, limit);
+}
+
+function summarizeCaptureRows(
+  rows: CaptureIndexRow[],
+  matchedRows: CaptureIndexRow[],
+  target: ArtifactMutateIndexTarget
+): ArtifactMutateIndexResult["summary"] {
+  const summary = {
+    total: rows.length,
+    matched: matchedRows.length,
+    open: 0,
+    active: 0,
+    completed: 0,
+    other: 0
+  };
+
+  for (const row of matchedRows) {
+    const normalizedStatus =
+      target === "todo"
+        ? canonicalizeTodoStatus(row.status, { strict: false })
+        : normalizeCaptureStatus(row.status);
+
+    if (normalizedStatus === "open") {
+      summary.open += 1;
+    } else if (normalizedStatus === "active") {
+      summary.active += 1;
+    } else if (normalizedStatus === "completed") {
+      summary.completed += 1;
+    } else if (normalizedStatus.length > 0) {
+      summary.other += 1;
+    }
+  }
+
+  return summary;
+}
+
+function buildEmptyCaptureMutationResult(
+  targetPath: string,
+  status: ArtifactMutateIndexResult["status"],
+  warnings: string[] = []
+): ArtifactMutateIndexResult {
+  return {
+    status,
+    targetPath,
+    createdEntryIds: [],
+    duplicateEntryIds: [],
+    matchedEntryIds: [],
+    updatedCounts: {
+      added: 0,
+      updated: 0,
+      duplicates: 0,
+      preserved: 0
+    },
+    reservedPhase: null,
+    entries: [],
+    summary: {
+      total: 0,
+      matched: 0,
+      open: 0,
+      active: 0,
+      completed: 0,
+      other: 0
+    },
+    warnings
   };
 }
 
@@ -977,13 +1225,32 @@ const artifactListInputSchema = {
 const artifactMutateIndexInputSchema = {
   cwd: z.string().optional(),
   target: z.enum(CAPTURE_INDEX_TARGETS),
-  action: z.enum(["append", "update"]).optional(),
+  action: z.enum(["append", "list", "update"]).optional(),
   entry: z
     .object({
       text: z.string(),
       status: z.string().optional(),
       addedAt: z.string().optional(),
       reservePhaseStub: z.boolean().optional()
+    })
+    .optional(),
+  filter: z
+    .object({
+      query: z.string().optional(),
+      ids: z.array(z.string()).optional(),
+      statuses: z.array(z.string()).optional(),
+      limit: z.number().int().positive().optional()
+    })
+    .optional(),
+  match: z
+    .object({
+      id: z.string().optional(),
+      text: z.string().optional()
+    })
+    .optional(),
+  update: z
+    .object({
+      status: z.string().optional()
     })
     .optional(),
   updates: z
@@ -2156,25 +2423,15 @@ export async function blueprintArtifactMutateIndex(
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const config = CAPTURE_INDEX_CONFIG[args.target];
+  const action = args.action ?? "append";
   const targetPath = config.targetPath;
   const warnings: string[] = [];
 
   if (inspection.readiness === "uninitialized") {
     return {
-      status: "project_missing",
-      targetPath,
-      createdEntryIds: [],
-      duplicateEntryIds: [],
-      updatedCounts: {
-        added: 0,
-        updated: 0,
-        duplicates: 0,
-        preserved: 0
-      },
-      reservedPhase: null,
-      warnings: [
+      ...buildEmptyCaptureMutationResult(targetPath, "project_missing", [
         "Blueprint capture commands require an initialized project. Run /blu-new-project before writing capture artifacts."
-      ]
+      ])
     };
   }
 
@@ -2191,27 +2448,188 @@ export async function blueprintArtifactMutateIndex(
 
   if (parsed.malformed) {
     warnings.push(
-      `Recovered non-canonical capture index content while repairing ${targetPath}.`
+      action === "append" || action === "update"
+        ? `Recovered non-canonical capture index content while repairing ${targetPath}.`
+        : `Detected non-canonical capture index content while reading ${targetPath}.`
     );
   }
 
-  if ((args.action ?? "append") === "update") {
+  if (action === "list") {
+    const matchedRows = filterCaptureRows(parsed.rows, args.target, args.filter, {
+      defaultTodoStatuses: true
+    });
+
+    return {
+      ...buildEmptyCaptureMutationResult(targetPath, "listed", warnings),
+      matchedEntryIds: matchedRows.map((row) => row.id),
+      updatedCounts: {
+        added: 0,
+        updated: 0,
+        duplicates: 0,
+        preserved: parsed.rows.length
+      },
+      entries: matchedRows,
+      summary: summarizeCaptureRows(parsed.rows, matchedRows, args.target)
+    };
+  }
+
+  if (action === "update") {
+    const hasBatchUpdates = (args.updates ?? []).length > 0;
+
+    if (!hasBatchUpdates && args.target === "todo") {
+      const requestedId = normalizeCaptureText(args.match?.id ?? "");
+      const requestedText = normalizeCaptureText(args.match?.text ?? "");
+
+      if (requestedId.length === 0 && requestedText.length === 0) {
+        return {
+          ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+            ...warnings,
+            "Todo updates require a matching entry ID or exact todo text."
+          ]),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          summary: summarizeCaptureRows(parsed.rows, [], args.target)
+        };
+      }
+
+      if (normalizeCaptureText(args.update?.status ?? "").length === 0) {
+        return {
+          ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+            ...warnings,
+            "Todo updates require an explicit status."
+          ]),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          summary: summarizeCaptureRows(parsed.rows, [], args.target)
+        };
+      }
+
+      const desiredStatus = canonicalizeTodoStatus(args.update?.status);
+      const matchedRows = parsed.rows.filter((row) => {
+        if (requestedId.length > 0) {
+          return row.id === requestedId;
+        }
+
+        return captureDedupKey(row.description) === captureDedupKey(requestedText);
+      });
+
+      if (matchedRows.length === 0) {
+        return {
+          ...buildEmptyCaptureMutationResult(targetPath, "not_found", [
+            ...warnings,
+            "No matching todo entry was found."
+          ]),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          summary: summarizeCaptureRows(parsed.rows, [], args.target)
+        };
+      }
+
+      if (matchedRows.length > 1) {
+        return {
+          ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+            ...warnings,
+            `Todo selection is ambiguous. Use an exact ID instead: ${matchedRows.map((row) => row.id).join(", ")}`
+          ]),
+          matchedEntryIds: matchedRows.map((row) => row.id),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          entries: matchedRows,
+          summary: summarizeCaptureRows(parsed.rows, matchedRows, args.target)
+        };
+      }
+
+      const matchedEntry = matchedRows[0];
+      let updatedCount = 0;
+      const nextRows = parsed.rows.map((row) => {
+        const currentStatus = canonicalizeTodoStatus(row.status, { strict: false });
+
+        if (row.id === matchedEntry.id) {
+          if (currentStatus === desiredStatus) {
+            return row;
+          }
+
+          updatedCount += 1;
+
+          return {
+            ...row,
+            status: desiredStatus
+          };
+        }
+
+        if (desiredStatus === "active" && currentStatus === "active") {
+          updatedCount += 1;
+
+          return {
+            ...row,
+            status: "open"
+          };
+        }
+
+        return row;
+      });
+      const didWrite = parsed.malformed || updatedCount > 0;
+
+      if (didWrite) {
+        const recoveryContent =
+          parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
+        const rendered = renderCaptureIndexDocument(args.target, nextRows, recoveryContent);
+
+        await writeTextFile(absolutePath, rendered);
+      } else {
+        warnings.push(
+          "Preserved existing todo status because it already matched the requested value."
+        );
+      }
+
+      const resultingEntry = nextRows.find((row) => row.id === matchedEntry.id);
+      const resultingEntries = resultingEntry ? [resultingEntry] : [];
+
+      return {
+        ...buildEmptyCaptureMutationResult(targetPath, "updated", warnings),
+        matchedEntryIds: [matchedEntry.id],
+        updatedCounts: {
+          added: 0,
+          updated: updatedCount,
+          duplicates: 0,
+          preserved: parsed.rows.length - updatedCount
+        },
+        entries: resultingEntries,
+        summary: summarizeCaptureRows(nextRows, resultingEntries, args.target)
+      };
+    }
+
     const updates = args.updates ?? [];
 
     if (updates.length === 0) {
       return {
-        status: "invalid",
-        targetPath,
-        createdEntryIds: [],
-        duplicateEntryIds: [],
+        ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+          ...warnings,
+          "Capture index updates require at least one entry id."
+        ]),
         updatedCounts: {
           added: 0,
           updated: 0,
           duplicates: 0,
           preserved: parsed.rows.length
         },
-        reservedPhase: null,
-        warnings: ["Capture index updates require at least one entry id."]
+        summary: summarizeCaptureRows(parsed.rows, [], args.target)
       };
     }
 
@@ -2305,18 +2723,14 @@ export async function blueprintArtifactMutateIndex(
 
     if (updated === 0 && !parsed.malformed) {
       return {
-        status: "invalid",
-        targetPath,
-        createdEntryIds: [],
-        duplicateEntryIds: [],
+        ...buildEmptyCaptureMutationResult(targetPath, "invalid", warnings),
         updatedCounts: {
           added: 0,
           updated: 0,
           duplicates: 0,
           preserved: parsed.rows.length
         },
-        reservedPhase: null,
-        warnings
+        summary: summarizeCaptureRows(parsed.rows, [], args.target)
       };
     }
 
@@ -2327,18 +2741,22 @@ export async function blueprintArtifactMutateIndex(
     await writeTextFile(absolutePath, rendered);
 
     return {
-      status: "updated",
-      targetPath,
-      createdEntryIds: [],
-      duplicateEntryIds: [],
+      ...buildEmptyCaptureMutationResult(targetPath, "updated", warnings),
       updatedCounts: {
         added: 0,
         updated,
         duplicates: 0,
         preserved: Math.max(rows.length - updated, 0)
       },
-      reservedPhase: null,
-      warnings
+      matchedEntryIds: updates.map((update) => update.id.trim().toUpperCase()),
+      entries: rows.filter((row) =>
+        updates.some((update) => row.id === update.id.trim().toUpperCase())
+      ),
+      summary: summarizeCaptureRows(
+        rows,
+        rows.filter((row) => updates.some((update) => row.id === update.id.trim().toUpperCase())),
+        args.target
+      )
     };
   }
 
@@ -2346,18 +2764,17 @@ export async function blueprintArtifactMutateIndex(
 
   if (normalizedText.length === 0) {
     return {
-      status: "invalid",
-      targetPath,
-      createdEntryIds: [],
-      duplicateEntryIds: [],
+      ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+        ...warnings,
+        "Capture entry text must not be blank."
+      ]),
       updatedCounts: {
         added: 0,
         updated: 0,
         duplicates: 0,
-        preserved: 0
+        preserved: parsed.rows.length
       },
-      reservedPhase: null,
-      warnings: ["Capture entry text must not be blank."]
+      summary: summarizeCaptureRows(parsed.rows, [], args.target)
     };
   }
 
@@ -2371,9 +2788,7 @@ export async function blueprintArtifactMutateIndex(
     );
 
     return {
-      status: "duplicate",
-      targetPath,
-      createdEntryIds: [],
+      ...buildEmptyCaptureMutationResult(targetPath, "duplicate", warnings),
       duplicateEntryIds: duplicateRows.map((row) => row.id),
       updatedCounts: {
         added: 0,
@@ -2381,8 +2796,9 @@ export async function blueprintArtifactMutateIndex(
         duplicates: duplicateRows.length,
         preserved: parsed.rows.length
       },
-      reservedPhase: null,
-      warnings
+      matchedEntryIds: duplicateRows.map((row) => row.id),
+      entries: duplicateRows,
+      summary: summarizeCaptureRows(parsed.rows, duplicateRows, args.target)
     };
   }
 
@@ -2390,16 +2806,14 @@ export async function blueprintArtifactMutateIndex(
     args.target === "backlog" && (args.entry?.reservePhaseStub ?? false)
       ? buildReservedBacklogPhase(parsed.rows, normalizedText)
       : null;
-  const normalizedStatus = normalizeCaptureText(args.entry?.status ?? "");
+  const normalizedStatus =
+    config.defaultStatus !== null
+      ? normalizeStoredCaptureStatus(args.target, args.entry?.status) ?? config.defaultStatus
+      : null;
   const nextRow: CaptureIndexRow = {
     id: nextCaptureEntryId(parsed.rows, config.idPrefix),
     added: normalizeCaptureDate(args.entry?.addedAt),
-    status:
-      config.defaultStatus !== null
-        ? normalizedStatus.length > 0
-          ? normalizedStatus
-          : config.defaultStatus
-        : null,
+    status: config.defaultStatus !== null ? normalizedStatus : null,
     description: normalizedText,
     reservedPhase: reservedPhase?.phaseNumber ?? null
   };
@@ -2411,10 +2825,8 @@ export async function blueprintArtifactMutateIndex(
   await writeTextFile(absolutePath, rendered);
 
   return {
-    status: exists ? "updated" : "created",
-    targetPath,
+    ...buildEmptyCaptureMutationResult(targetPath, exists ? "updated" : "created", warnings),
     createdEntryIds: [nextRow.id],
-    duplicateEntryIds: [],
     updatedCounts: {
       added: 1,
       updated: 0,
@@ -2422,7 +2834,9 @@ export async function blueprintArtifactMutateIndex(
       preserved: parsed.rows.length
     },
     reservedPhase,
-    warnings
+    matchedEntryIds: [nextRow.id],
+    entries: [nextRow],
+    summary: summarizeCaptureRows(rows, [nextRow], args.target)
   };
 }
 
@@ -3064,7 +3478,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_mutate_index",
     description:
-      "Append canonical capture entries to project-local Blueprint indexes such as backlog, todo, and notes.",
+      "Append or update canonical capture entries in project-local Blueprint indexes such as backlog, todo, and notes, and inspect or update todo status deterministically.",
     inputSchema: artifactMutateIndexInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactMutateIndex(args as ArtifactMutateIndexArgs)
