@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-discuss-phase`
-- Compatibility during this release: `/blu:discuss-phase` (deprecated; remove next release)
 - Root router form: `/blu discuss-phase`
 - Argument hint: `<phase>`
 - `/blu-discuss-phase 3`

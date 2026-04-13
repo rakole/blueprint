@@ -5,7 +5,7 @@ This file records the product and architecture decisions that are locked for Blu
 ## Locked Decisions
 
 1. `BP-001` Brand and namespace
-   Blueprint replaces GSD naming. User-facing command names are `/blu` and `/blu-<command>`, with `/blu:<command>` retained as a one-release compatibility alias during the dash-command migration.
+   Blueprint replaces GSD naming. User-facing command names are `/blu` and `/blu-<command>`.
 
 2. `BP-002` Project state directory
    `.planning/` becomes `.blueprint/` in every Blueprint-managed repository.

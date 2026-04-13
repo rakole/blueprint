@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-next`
-- Compatibility during this release: `/blu:next` (deprecated; remove next release)
 - Root router form: `/blu next`
 - Argument hint: `none`
 - `/blu-next`

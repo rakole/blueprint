@@ -40,7 +40,6 @@ const requiredInstalledPaths = [
   "GEMINI.md",
   "commands/blu.toml",
   "commands/blu-help.toml",
-  "commands/blu/help.toml",
   "skills/blueprint-router/SKILL.md",
   "agents/blueprint-planner.md",
   "hooks/hooks.json",
@@ -419,19 +418,11 @@ match_max 200000
 set saw_prompt 0
 set saw_blu 0
 set saw_blu_help 0
-set sent_compat_help 0
-set saw_compat_help_output 0
 
 spawn env HOME="$env(HOME)" GEMINI_API_KEY="$env(GEMINI_API_KEY)" NO_COLOR=1 TERM=dumb CI=1 gemini --debug
 
 expect {
-  -re {Unknown command|command not found|No such command} {
-    if {$sent_compat_help == 1} {
-      puts stderr "Deprecated /blu:help compatibility entrypoint was not accepted"
-      exit 1
-    }
-    exp_continue
-  }
+  -re {Unknown command|command not found|No such command} { exp_continue }
   -re {How would you like to authenticate} {
     send -- "2\\r"
     exp_continue
@@ -448,20 +439,13 @@ expect {
     if {$saw_prompt == 0} {
       set saw_prompt 1
       send -- "/help\\r"
-    } elseif {$saw_blu == 1 && $saw_blu_help == 1 && $sent_compat_help == 0} {
-      set sent_compat_help 1
-      send -- "/blu:help\\r"
-    } elseif {$sent_compat_help == 1 && $saw_compat_help_output == 1} {
+    } elseif {$saw_blu == 1 && $saw_blu_help == 1} {
       send -- "/quit\\r"
     }
     exp_continue
   }
   -re {/blu-help} {
-    if {$sent_compat_help == 1} {
-      set saw_compat_help_output 1
-    } else {
-      set saw_blu_help 1
-    }
+    set saw_blu_help 1
     exp_continue
   }
   -re {(^|\\s)/blu(\\s|$)} {
@@ -472,8 +456,8 @@ expect {
     exp_continue
   }
   eof {
-    if {$saw_blu != 1 || $saw_blu_help != 1 || $sent_compat_help != 1 || $saw_compat_help_output != 1} {
-      puts stderr "Interactive help did not show /blu and /blu-help or /blu:help did not route successfully"
+    if {$saw_blu != 1 || $saw_blu_help != 1} {
+      puts stderr "Interactive help did not show /blu and /blu-help"
       exit 1
     }
     exit 0

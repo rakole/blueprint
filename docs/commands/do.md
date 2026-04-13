@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-do`
-- Compatibility during this release: `/blu:do` (deprecated; remove next release)
 - Root router form: `/blu do`
 - Argument hint: `<description of what you want to do>`
 - `/blu-do set-up-roadmap-for-notifications`

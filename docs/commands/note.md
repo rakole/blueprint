@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-note`
-- Compatibility during this release: `/blu:note` (deprecated; remove next release)
 - Root router form: `/blu note`
 - Argument hint: `<text>`
 - `/blu-note Investigate-sync-edge-cases`

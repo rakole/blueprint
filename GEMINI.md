@@ -12,7 +12,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 ## Command Namespace
 
 - Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
-- Use direct commands in the `/blu-<command>` namespace when the user already knows the action they want. Deprecated `/blu:<command>` aliases remain available for this release only.
+- Use direct commands in the `/blu-<command>` namespace when the user already knows the action they want.
 - Current shipped direct commands: `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-help`, `/blu-progress`, `/blu-health`, `/blu-map-codebase`, `/blu-discuss-phase`, `/blu-list-phase-assumptions`, `/blu-research-phase`, `/blu-ui-phase`, `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-quick`, `/blu-debug`, `/blu-next`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-add-backlog`, `/blu-docs-update`, `/blu-code-review`, and `/blu-secure-phase`.
 
 ## State Boundaries

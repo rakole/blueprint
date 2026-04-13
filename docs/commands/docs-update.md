@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-docs-update`
-- Compatibility during this release: `/blu:docs-update` (deprecated; remove next release)
 - Root router form: `/blu docs-update`
 - Argument hint: `[--force] [--verify-only]`
 - `/blu-docs-update --verify-only`

@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-add-phase`
-- Compatibility during this release: `/blu:add-phase` (deprecated; remove next release)
 - Root router form: `/blu add-phase`
 - Argument hint: `<description>`
 - `/blu-add-phase Notifications`

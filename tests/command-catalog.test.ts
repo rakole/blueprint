@@ -4,8 +4,6 @@ import { access, readFile } from "node:fs/promises";
 
 import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
 import {
-  blueprintCompatibilityDirectCommand,
-  blueprintCompatibilityManifestPath,
   blueprintDirectCommand,
   blueprintDirectCommandAliases,
   blueprintPrimaryManifestPath,
@@ -166,26 +164,17 @@ test("runtime command catalog marks shipped commands as implemented once manifes
   }
 });
 
-test("command path helpers centralize canonical, compatibility, alias, and manifest forms", () => {
+test("command path helpers centralize canonical, alias, and manifest forms", () => {
   assert.equal(blueprintDirectCommand("help"), "/blu-help");
-  assert.equal(blueprintCompatibilityDirectCommand("help"), "/blu:help");
   assert.equal(blueprintRouterCommand("help"), "/blu help");
-  assert.deepEqual(blueprintDirectCommandAliases("help"), ["/blu:help", "/blu help"]);
+  assert.deepEqual(blueprintDirectCommandAliases("help"), ["/blu help"]);
   assert.equal(blueprintPrimaryManifestPath("help"), "commands/blu-help.toml");
-  assert.equal(blueprintCompatibilityManifestPath("help"), "commands/blu/help.toml");
 });
 
-test("implemented direct commands keep deprecated compatibility manifests during the transition release", async () => {
+test("implemented direct commands expose only router-style aliases", async () => {
   const catalog = await blueprintCommandCatalog();
 
   for (const command of IMPLEMENTED_COMMANDS) {
-    const manifestPath = blueprintCompatibilityManifestPath(command);
-
-    assert.equal(
-      await pathExists(manifestPath),
-      true,
-      `${manifestPath} should remain available during the compatibility release`
-    );
     assert.deepEqual(catalog.aliases[command], blueprintDirectCommandAliases(command));
   }
 });

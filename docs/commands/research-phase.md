@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-research-phase`
-- Compatibility during this release: `/blu:research-phase` (deprecated; remove next release)
 - Root router form: `/blu research-phase`
 - Argument hint: `[phase]`
 - `/blu-research-phase 3`

@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-insert-phase`
-- Compatibility during this release: `/blu:insert-phase` (deprecated; remove next release)
 - Root router form: `/blu insert-phase`
 - Argument hint: `<after> <description>`
 - `/blu-insert-phase 3 Migration-cleanup`

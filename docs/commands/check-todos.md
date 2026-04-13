@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-check-todos`
-- Compatibility during this release: `/blu:check-todos` (deprecated; remove next release)
 - Root router form: `/blu check-todos`
 - Argument hint: `[area filter]`
 - `/blu-check-todos auth`

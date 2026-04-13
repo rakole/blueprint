@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-remove-workspace`
-- Compatibility during this release: `/blu:remove-workspace` (deprecated; remove next release)
 - Root router form: `/blu remove-workspace`
 - Argument hint: `<workspace-name>`
 - `/blu-remove-workspace feature-a`

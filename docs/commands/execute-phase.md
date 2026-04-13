@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-execute-phase`
-- Compatibility during this release: `/blu:execute-phase` (deprecated; remove next release)
 - Root router form: `/blu execute-phase`
 - Argument hint: `<phase-number> [--wave N] [--gaps-only] [--interactive]`
 - `/blu-execute-phase 3 --wave 2`

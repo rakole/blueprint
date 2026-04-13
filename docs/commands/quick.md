@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-quick`
-- Compatibility during this release: `/blu:quick` (deprecated; remove next release)
 - Root router form: `/blu quick`
 - Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
 - `/blu-quick --full`

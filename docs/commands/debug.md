@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-debug`
-- Compatibility during this release: `/blu:debug` (deprecated; remove next release)
 - Root router form: `/blu debug`
 - Argument hint: `[--diagnose] [issue description]`
 - `/blu-debug login-button-hangs-on-safari`

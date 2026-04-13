@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-undo`
-- Compatibility during this release: `/blu:undo` (deprecated; remove next release)
 - Root router form: `/blu undo`
 - Argument hint: `--last N | --phase NN | --plan NN-MM`
 - `/blu-undo --phase 03`

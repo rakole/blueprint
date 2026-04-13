@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-review-backlog`
-- Compatibility during this release: `/blu:review-backlog` (deprecated; remove next release)
 - Root router form: `/blu review-backlog`
 - Argument hint: `none`
 - `/blu-review-backlog`

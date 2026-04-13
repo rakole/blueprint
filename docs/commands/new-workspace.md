@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-new-workspace`
-- Compatibility during this release: `/blu:new-workspace` (deprecated; remove next release)
 - Root router form: `/blu new-workspace`
 - Argument hint: `--name <name> [--repos repo1,repo2] [--path /target] [--strategy worktree|clone] [--branch name] [--auto]`
 - `/blu-new-workspace --name feature-a --repos .`

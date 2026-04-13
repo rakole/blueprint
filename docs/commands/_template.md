@@ -14,7 +14,6 @@ One concise paragraph describing what the command should accomplish in Blueprint
 ## Command Path And Examples
 
 - Gemini command path: `/blu-<command>`
-- Compatibility during this release: `/blu:<command>` (deprecated; remove next release)
 - Root router form: `/blu <command>`
 - Argument hint: `<args and flags>`
 - `<example invocation>`

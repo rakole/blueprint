@@ -6,7 +6,6 @@ Use the `blueprint-router` skill as the primary orchestration contract when that
 
 Blueprint rules:
 - Blueprint commands live under `/blu` and `/blu-<command>`.
-- The deprecated `/blu:<command>` alias remains available for one release during migration.
 - Use MCP tools for project and config reads. Do not invent state.
 - Do not rely on slash-command chaining or undocumented aliases.
 - Only recommend or route commands whose `mcp__blueprint__blueprint_command_catalog` entry is `implemented: true`.

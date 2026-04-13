@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-pause-work`
-- Compatibility during this release: `/blu:pause-work` (deprecated; remove next release)
 - Root router form: `/blu pause-work`
 - Argument hint: `none`
 - `/blu-pause-work`

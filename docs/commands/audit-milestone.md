@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-audit-milestone`
-- Compatibility during this release: `/blu:audit-milestone` (deprecated; remove next release)
 - Root router form: `/blu audit-milestone`
 - Argument hint: `[version]`
 - `/blu-audit-milestone v1.0`

@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-health`
-- Compatibility during this release: `/blu:health` (deprecated; remove next release)
 - Root router form: `/blu health`
 - Argument hint: `[--repair]`
 - `/blu-health --repair`

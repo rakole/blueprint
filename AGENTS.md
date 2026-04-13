@@ -21,7 +21,7 @@ It is not a literal port of GSD internals.
 
 - Product name: `blueprint`
 - Root router: `/blu`
-- Direct commands: `/blu-<command>`; deprecated `/blu:<command>` aliases remain supported for one release
+- Direct commands: `/blu-<command>`
 - Project-local state directory: `.blueprint/`
 - Global non-project state directory: `~/.gemini/blueprint/`
 - Install model: `gemini extensions install https://github.com/rakole/blueprint`

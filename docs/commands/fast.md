@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-fast`
-- Compatibility during this release: `/blu:fast` (deprecated; remove next release)
 - Root router form: `/blu fast`
 - Argument hint: `[task description]`
 - `/blu-fast fix-readme-typo`

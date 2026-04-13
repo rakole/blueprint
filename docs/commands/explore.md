@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-explore`
-- Compatibility during this release: `/blu:explore` (deprecated; remove next release)
 - Root router form: `/blu explore`
 - Argument hint: `none`
 - `/blu-explore authentication-strategy`

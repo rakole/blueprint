@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-cleanup`
-- Compatibility during this release: `/blu:cleanup` (deprecated; remove next release)
 - Root router form: `/blu cleanup`
 - Argument hint: `none`
 - `/blu-cleanup`

@@ -13,7 +13,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-new-project`
-- Compatibility during this release: `/blu:new-project` (deprecated; remove next release)
 - Root router form: `/blu new-project`
 - Argument hint: `[--auto]`
 - `/blu-new-project --auto`

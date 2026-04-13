@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-secure-phase`
-- Compatibility during this release: `/blu:secure-phase` (deprecated; remove next release)
 - Root router form: `/blu secure-phase`
 - Argument hint: `[phase number]`
 - `/blu-secure-phase 3`

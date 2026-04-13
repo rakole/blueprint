@@ -16,7 +16,6 @@
 ## Command Path And Examples
 
 - Gemini command path: `/blu-settings`
-- Compatibility during this release: `/blu:settings` (deprecated; remove next release)
 - Root router form: `/blu settings`
 - Argument hint: `none`
 - `/blu-settings`
