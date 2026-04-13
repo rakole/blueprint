@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, and `/blu-add-backlog`, the shipped Wave 3 lightweight execution command `/blu-quick`, and the shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, and `/blu-add-backlog`, the shipped Wave 3 lightweight execution command `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -32,6 +32,7 @@ This repository still carries the planning pack that locked the product and arch
 - The capture command `/blu-add-todo` is now shipped; it appends deterministic project-local todos to `.blueprint/todos/TODO.md`, detects duplicates, and keeps todo persistence inside Blueprint MCP
 - The capture command `/blu-add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
 - The bounded execution command `/blu-quick` is now shipped; it keeps lightweight repo work inside a reduced-ceremony path, uses optional discuss, research, and validation depth only after explicit confirmation, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`
+- The debug command `/blu-debug` is now shipped on April 13, 2026; it runs a structured investigation flow, persists `.blueprint/reports/debug-latest.md`, can capture explicit todo follow-ups, and routes broader fix work into existing implemented execution commands
 - The documentation command `/blu-docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
 - Runtime gate: `/blu`, `/blu-help`, and `/blu-progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
@@ -176,6 +177,7 @@ These runtime files exist today:
 - `commands/blu-add-todo.toml`
 - `commands/blu-add-backlog.toml`
 - `commands/blu-quick.toml`
+- `commands/blu-debug.toml`
 - `commands/blu-discuss-phase.toml`
 - `commands/blu-list-phase-assumptions.toml`
 - `commands/blu-research-phase.toml`
@@ -207,6 +209,7 @@ These runtime files exist today:
 - `skills/blueprint-phase-discovery/SKILL.md`
 - `skills/blueprint-phase-planning/SKILL.md`
 - `skills/blueprint-phase-execution/SKILL.md`
+- `skills/blueprint-debug/SKILL.md`
 - `skills/blueprint-phase-validation/SKILL.md`
 - `skills/blueprint-docs/SKILL.md`
 - `skills/blueprint-review/SKILL.md`
@@ -215,6 +218,7 @@ These runtime files exist today:
 - `agents/blueprint-roadmapper.md`
 - `agents/blueprint-mapper.md`
 - `agents/blueprint-researcher.md`
+- `agents/blueprint-debugger.md`
 - `agents/blueprint-ui-designer.md`
 - `agents/blueprint-planner.md`
 - `agents/blueprint-checker.md`

@@ -39,6 +39,11 @@ const SKILL_BUNDLES = [
     commands: ["/blu-validate-phase", "/blu-verify-work"]
   },
   {
+    name: "blueprint-debug",
+    description: "Debug investigations and recovery plans",
+    commands: ["/blu-debug"]
+  },
+  {
     name: "blueprint-docs",
     description: "Documentation generation and verification",
     commands: ["/blu-docs-update"]

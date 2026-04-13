@@ -58,7 +58,7 @@ Shipped in this wave: `add-phase`, `insert-phase`, `remove-phase`, `list-phase-a
 - `explore`
 - `debug`
 
-Shipped in this wave: `note`, `add-todo`, `add-backlog`, and `quick`.
+Shipped in this wave: `note`, `add-todo`, `add-backlog`, `quick`, and `debug`.
 
 ### Wave 4: Quality and shipping
 

@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`debug` carries forward the GSD intent to systematic debugging with persistent state across context resets. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`debug` carries forward the GSD intent to systematic debugging with persistent state across context resets. In Blueprint it is implemented as a Gemini-native investigation flow that keeps debugging evidence explicit, persists a durable `debug-latest` report through MCP, and routes broader fix work into the existing implemented execution commands instead of inventing hidden runtime state.
 
 
 ## Command Path And Examples
@@ -44,7 +44,7 @@
 ## Blueprint And Global State Writes
 
 
-- `debug report in .blueprint/reports/`
+- `debug report in .blueprint/reports/debug-latest.md`
 - `optional todo follow-ups`
 - `.blueprint/STATE.md`
 
@@ -53,6 +53,7 @@
 
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -93,6 +94,7 @@
 
 
 - Confirm fix attempts when the command was invoked in diagnose-only mode.
+- Confirm report replacement before overwriting `.blueprint/reports/debug-latest.md`.
 
 
 ## Edge Cases
@@ -105,8 +107,8 @@
 ## Failure Modes And Recovery
 
 
-- Repair malformed index files through MCP instead of raw append logic.
-- Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
+- Repair malformed todo index files through MCP instead of raw append logic.
+- Route oversized implementation asks to `quick` or `plan-phase` instead of bluffing.
 
 
 ## Acceptance Criteria
@@ -117,6 +119,8 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
+- Persists the durable investigation report through `.blueprint/reports/debug-latest.md`.
+- Treats `--diagnose` as a confirmation gate for any fix attempt.
 
 
 ## Test Cases
