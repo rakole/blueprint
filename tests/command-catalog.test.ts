@@ -52,7 +52,8 @@ const IMPLEMENTED_COMMANDS = [
   "complete-milestone",
   "milestone-summary",
   "new-milestone",
-  "docs-update"
+  "docs-update",
+  "pr-branch"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do"] as const;
@@ -633,6 +634,27 @@ test("docs-update is implemented once manifest, skill, and docs-report MCP tools
     "blueprint-doc-verifier",
     "blueprint-doc-writer"
   ]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("pr-branch is implemented once manifest, skill, and review-branch report MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["pr-branch"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("pr-branch"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_report_write",
+    "blueprint_artifact_summary_digest",
+    "blueprint_config_get",
+    "blueprint_project_status"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
 });
 
