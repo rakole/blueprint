@@ -7,8 +7,8 @@ Read this before making planning or implementation changes.
 
 ## Project Mission
 
-Blueprint is a Gemini CLI extension that rethinks the useful parts of GSD as a Gemini-native system.
-It is not a literal port of GSD internals.
+Blueprint is a Gemini CLI extension that packages the retained Blueprint workflow as a Gemini-native system.
+It is not a literal port of earlier tooling internals.
 
 ## Current Phase
 
@@ -28,7 +28,7 @@ It is not a literal port of GSD internals.
 
 ## Architecture Rules
 
-- Treat Blueprint as a Gemini-native redesign, not a file-for-file GSD port
+- Treat Blueprint as a Gemini-native redesign, not a file-for-file legacy port
 - Use MCP as the deterministic state engine for structured reads and writes
 - Keep commands thin and user-facing
 - Use skills for orchestration
@@ -45,7 +45,7 @@ It is not a literal port of GSD internals.
 - workspace registry
 - update metadata
 - patch registry
-- `.planning/` may exist in this repository for local GSD implementation bookkeeping only; it is not Blueprint runtime state
+- `.planning/` may exist in this repository for local implementation bookkeeping only; it is not Blueprint runtime state
 
 ## Command Status Vocabulary
 
@@ -56,8 +56,8 @@ It is not a literal port of GSD internals.
 
 ## Guardrails
 
-- Do not reintroduce `.planning/` or `/gsd:*`
-- Do not silently add omitted GSD commands without re-planning
+- Do not reintroduce `.planning/` or legacy slash-command surfaces
+- Do not silently add omitted legacy commands without re-planning
 - Do not mutate the installed extension directory from Blueprint commands
 - Do not make `update` self-mutating; it must remain advisory
 - Do not rely on hooks for core state transitions
@@ -96,4 +96,4 @@ Hold the shipped Wave 2 roadmap-admin surface stable while the next rollout is r
 - Keep command behavior aligned with the command spec docs
 - Update `MEMORY.md` when major decisions change or implementation moves to a new wave
 - If a new architectural decision is made, update the relevant doc in `docs/` rather than only mentioning it in chat
-- When a shipped command intentionally differs from upstream GSD behavior, document that delta in `docs/GSD-RUNTIME-MIGRATION.md`
+- When a shipped command intentionally differs from the locked Blueprint baseline, document that delta in `docs/RUNTIME-REFERENCE.md`

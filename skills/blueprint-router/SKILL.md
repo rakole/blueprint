@@ -31,7 +31,7 @@ Provide implementation-aware routing and next-step guidance without advertising 
 
 ## Parity Goal
 
-Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `do` flows while preserving Blueprint deltas:
+Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts while preserving Blueprint deltas:
 
 - `/blu` and `/blu-<command>` naming
 - `.blueprint/` instead of `.planning/`
@@ -45,7 +45,7 @@ Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `
 - `docs/commands/help.md`
 - `docs/commands/progress.md`
 - `docs/commands/next.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/DRIFT.MD`
 
 ## Required MCP Tools
@@ -71,4 +71,4 @@ Stay as close as practical to the upstream GSD `help`, `progress`, `next`, and `
 
 - Explain why a command is or is not currently available.
 - Keep recommendations inside the implemented Blueprint surface.
-- Never hallucinate omitted GSD commands or future Blueprint commands.
+- Never hallucinate omitted legacy commands or future Blueprint commands.

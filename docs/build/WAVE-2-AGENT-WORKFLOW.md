@@ -9,7 +9,7 @@ This workflow exists to close Wave 2 without drifting the shipped runtime while
   across docs, manifests, skills, MCP tools, and tests.
 - Treat `insert-phase` as blocked until its dedicated runtime substrate ships.
 - Do not reintroduce `.planning/` as Blueprint runtime state.
-- Do not reintroduce `/gsd:*` as a user-visible runtime escape hatch.
+- Do not reintroduce legacy slash-command surfaces as a user-visible runtime escape hatch.
 
 ## Packaging And Gemini Checks
 

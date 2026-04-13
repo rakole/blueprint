@@ -27,7 +27,7 @@ the right next step is a bounded fix, a saved plan, or more validation.
 
 ## Parity Goal
 
-Carry forward the useful upstream debug intent while preserving Blueprint's
+Carry forward the useful debug intent while preserving Blueprint's
 Gemini-native boundaries:
 
 - investigations stay grounded in repo evidence rather than chat memory
@@ -43,7 +43,7 @@ Gemini-native boundaries:
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - the issue statement, repro notes, failing command, or other evidence the user supplied
 
 ## Required MCP Tools

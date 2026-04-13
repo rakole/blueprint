@@ -27,7 +27,7 @@ Orchestrate Blueprint's execution-family flows so saved plans run in a wave-awar
 
 ## Parity Goal
 
-Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` intent while preserving Blueprint deltas:
+Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while preserving Blueprint deltas:
 
 - execution stays Gemini-native and MCP-owned instead of script-owned
 - plans remain the source of execution scope and dependency ordering

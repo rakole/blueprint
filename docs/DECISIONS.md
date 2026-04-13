@@ -5,7 +5,7 @@ This file records the product and architecture decisions that are locked for Blu
 ## Locked Decisions
 
 1. `BP-001` Brand and namespace
-   Blueprint replaces GSD naming. User-facing command names are `/blu` and `/blu-<command>`.
+   Blueprint uses `/blu` and `/blu-<command>` as the only user-facing command names.
 
 2. `BP-002` Project state directory
    `.planning/` becomes `.blueprint/` in every Blueprint-managed repository.
@@ -20,10 +20,10 @@ This file records the product and architecture decisions that are locked for Blu
    Every retained command gets a direct `/blu-<name>` entry, and the root `/blu` router can route to all of them.
 
 6. `BP-006` Retained command set
-   Only the 53 retained commands listed in `README.md` and `docs/MIGRATION-FROM-GSD.md` are in scope for Blueprint v1 planning.
+   Only the 53 retained commands listed in `README.md` and `docs/COMMAND-BASELINE.md` are in scope for Blueprint v1 planning.
 
 7. `BP-007` Strict omit policy
-   Omitted upstream commands are not exposed as first-class Blueprint commands in v1 planning.
+   Omitted legacy commands are not exposed as first-class Blueprint commands in v1 planning.
 
 8. `BP-008` `eval-review` removal
    `eval-review` is explicitly removed from the retained-command plan.

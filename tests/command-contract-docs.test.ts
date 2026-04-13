@@ -61,7 +61,7 @@ function parseMigrationSkills(markdown: string): Map<string, string> {
   const skills = new Map<string, string>();
 
   for (const match of markdown.matchAll(
-    /^\| `([^`]+)` \| `commands\/gsd\/[^`]+\.md` \| .* \| `docs\/commands\/[^`]+\.md` \| `([^`]+)` \|/gm
+    /^\| `([^`]+)` \| `docs\/commands\/[^`]+\.md` \| `([^`]+)` \|/gm
   )) {
     const [, command, skill] = match;
     skills.set(command, skill);
@@ -126,7 +126,7 @@ test("skill inventory and migration matrix agree with canonical primary skill ow
   const [catalogMarkdown, skillsMarkdown, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
   const catalog = parseCatalog(catalogMarkdown);
   const skillOwnership = parseSkillOwnership(skillsMarkdown);
@@ -149,7 +149,7 @@ test("skill inventory and migration matrix agree with canonical primary skill ow
 test("phase 2.2 drift fixes stay locked for the known ownership mismatches", async () => {
   const [skillsMarkdown, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
   const skillOwnership = parseSkillOwnership(skillsMarkdown);
   const migrationSkills = parseMigrationSkills(migrationMarkdown);
@@ -218,7 +218,7 @@ test("add-todo docs and catalog metadata are marked implemented with the shipped
   const [catalogMarkdown, addTodoDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/commands/add-todo.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -231,7 +231,7 @@ test("add-todo docs and catalog metadata are marked implemented with the shipped
   assert.doesNotMatch(addTodoDoc, /`blueprint_state_update`/);
   assert.match(
     migrationMarkdown,
-    /\| `add-todo` \| `commands\/gsd\/add-todo\.md` \| GSD has an upstream workflow file \| `docs\/commands\/add-todo\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
+    /\| `add-todo` \| `docs\/commands\/add-todo\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
   );
 });
 
@@ -239,7 +239,7 @@ test("check-todos docs and catalog metadata are marked implemented with the ship
   const [catalogMarkdown, checkTodosDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/commands/check-todos.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -254,7 +254,7 @@ test("check-todos docs and catalog metadata are marked implemented with the ship
   assert.doesNotMatch(checkTodosDoc, /`blueprint_state_update`/);
   assert.match(
     migrationMarkdown,
-    /\| `check-todos` \| `commands\/gsd\/check-todos\.md` \| GSD has an upstream workflow file \| `docs\/commands\/check-todos\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_project_status` \|/
+    /\| `check-todos` \| `docs\/commands\/check-todos\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_project_status` \|/
   );
 });
 
@@ -263,7 +263,7 @@ test("review-backlog docs and catalog metadata are marked implemented with the b
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/commands/review-backlog.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -282,7 +282,7 @@ test("review-backlog docs and catalog metadata are marked implemented with the b
   );
   assert.match(
     migrationMarkdown,
-    /\| `review-backlog` \| `commands\/gsd\/review-backlog\.md` \| GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract \| `docs\/commands\/review-backlog\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
+    /\| `review-backlog` \| `docs\/commands\/review-backlog\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -290,7 +290,7 @@ test("explore docs and catalog metadata are marked implemented with the ideation
   const [catalogMarkdown, exploreDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/commands/explore.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -305,7 +305,7 @@ test("explore docs and catalog metadata are marked implemented with the ideation
   assert.match(exploreDoc, /Requires explicit confirmation of the final routing target before any write\./);
   assert.match(
     migrationMarkdown,
-    /\| `explore` \| `commands\/gsd\/explore\.md` \| GSD has an upstream workflow file \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_project_status` \|/
+    /\| `explore` \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_project_status` \|/
   );
 });
 
@@ -466,7 +466,7 @@ test("ui-review docs and UI auditor are marked implemented in docs", async () =>
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
     readRepoFile("docs/commands/ui-review.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -485,7 +485,7 @@ test("ui-review docs and UI auditor are marked implemented in docs", async () =>
   );
   assert.match(
     migrationMarkdown,
-    /\| `ui-review` \| `commands\/gsd\/ui-review\.md` \| GSD has an upstream workflow file \| `docs\/commands\/ui-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_record` \|/
+    /\| `ui-review` \| `docs\/commands\/ui-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_record` \|/
   );
 });
 
@@ -494,7 +494,7 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
     readRepoFile("docs/commands/pr-branch.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -515,7 +515,7 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
   );
   assert.match(
     migrationMarkdown,
-    /\| `pr-branch` \| `commands\/gsd\/pr-branch\.md` \| GSD has an upstream workflow file \| `docs\/commands\/pr-branch\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write` \|/
+    /\| `pr-branch` \| `docs\/commands\/pr-branch\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write` \|/
   );
 });
 
@@ -523,7 +523,7 @@ test("maintenance skill and ship docs keep the shipping contract explicit", asyn
   const [shipDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/ship.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(shipDoc, /Primary skill: `blueprint-maintenance`/);
@@ -543,7 +543,7 @@ test("maintenance skill and ship docs keep the shipping contract explicit", asyn
   );
   assert.match(
     migrationMarkdown,
-    /\| `ship` \| `commands\/gsd\/ship\.md` \| GSD has an upstream workflow file \| `docs\/commands\/ship\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+    /\| `ship` \| `docs\/commands\/ship\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -551,7 +551,7 @@ test("maintenance skill and cleanup docs keep the archival contract explicit", a
   const [cleanupDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/cleanup.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(cleanupDoc, /Primary skill: `blueprint-maintenance`/);
@@ -570,7 +570,7 @@ test("maintenance skill and cleanup docs keep the archival contract explicit", a
   );
   assert.match(
     migrationMarkdown,
-    /\| `cleanup` \| `commands\/gsd\/cleanup\.md` \| GSD has an upstream workflow file \| `docs\/commands\/cleanup\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_roadmap_read`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+    /\| `cleanup` \| `docs\/commands\/cleanup\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_roadmap_read`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -594,7 +594,7 @@ test("review docs and migration notes keep the peer-review contract explicit", a
   const [reviewDoc, mcpToolsDoc, migrationMarkdown, catalogMarkdown] = await Promise.all([
     readRepoFile("docs/commands/review.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
     readRepoFile("docs/COMMAND-CATALOG.md")
   ]);
 
@@ -616,7 +616,7 @@ test("review docs and migration notes keep the peer-review contract explicit", a
   );
   assert.match(
     migrationMarkdown,
-    /\| `review` \| `commands\/gsd\/review\.md` \| GSD has an upstream workflow file \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_review_record` \|/
+    /\| `review` \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_review_record` \|/
   );
 });
 
@@ -624,7 +624,7 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   const [auditFixDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/audit-fix.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(auditFixDoc, /Primary skill: `blueprint-review`/);
@@ -641,7 +641,7 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   );
   assert.match(
     migrationMarkdown,
-    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
+    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -649,7 +649,7 @@ test("code-review-fix docs and migration notes keep the review-remediation contr
   const [codeReviewFixDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/code-review-fix.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(codeReviewFixDoc, /Primary skill: `blueprint-review`/);
@@ -664,7 +664,7 @@ test("code-review-fix docs and migration notes keep the review-remediation contr
   );
   assert.match(
     migrationMarkdown,
-    /\| `code-review-fix` \| `commands\/gsd\/code-review-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \|/
+    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \|/
   );
 });
 

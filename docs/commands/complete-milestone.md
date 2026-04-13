@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Archive completed milestone and prepare for next version |
 
 
 ## Purpose
 
 
-`complete-milestone` carries forward the GSD intent to archive completed milestone and prepare for next version. In Blueprint it stays Gemini-native, uses a report-driven closeout flow gated by the saved milestone audit, writes a durable completion report, and re-anchors state on the next safe implemented archival follow-up instead of introducing a new milestone-state engine.
+`complete-milestone` is Blueprint's command for archive completed milestone and prepare for next version. In Blueprint it stays Gemini-native, uses a report-driven closeout flow gated by the saved milestone audit, writes a durable completion report, and re-anchors state on the next safe implemented archival follow-up instead of introducing a new milestone-state engine.
 
 
 ## Command Path And Examples
@@ -135,8 +134,3 @@
 - Direct `complete-milestone` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/complete-milestone.md`
-- Upstream workflow status: GSD has an upstream workflow file

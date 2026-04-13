@@ -4,13 +4,12 @@
 | Wave | `5` |
 | Family | `Workspace And Maintenance` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create an isolated workspace with repo copies and independent project state |
 
 
 ## Purpose
 
 
-`new-workspace` carries forward the GSD intent to create an isolated workspace with repo copies and independent project state. In Blueprint that means per-workspace `.blueprint/` state plus a global workspace registry under `~/.gemini/blueprint/`; the command should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that it can be implemented in isolation later.
+`new-workspace` is Blueprint's command for create an isolated workspace with repo copies and independent project state. In Blueprint that means per-workspace `.blueprint/` state plus a global workspace registry under `~/.gemini/blueprint/`; the command should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that it can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -139,8 +138,3 @@
 - Direct `new-workspace` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/new-workspace.md`
-- Upstream workflow status: GSD has an upstream workflow file

@@ -107,4 +107,4 @@ gaps.
   mutation.
 - Surface unmet requirements explicitly and do not downgrade blockers into soft
   suggestions.
-- Do not widen into new feature work, `.planning`, or `/gsd:*` flows.
+- Do not widen into new feature work, `.planning`, or legacy slash-command flows.

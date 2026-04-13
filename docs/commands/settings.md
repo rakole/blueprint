@@ -4,13 +4,12 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Configure GSD workflow toggles and model profile |
 
 
 ## Purpose
 
 
-`settings` carries forward the GSD intent to configure GSD workflow toggles and model profile. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -76,7 +75,7 @@
 - `docs/commands/new-project.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/new-project.md`
@@ -140,8 +139,3 @@
 - Direct `settings` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/settings.md`
-- Upstream workflow status: GSD has an upstream workflow file

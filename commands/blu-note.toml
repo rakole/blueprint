@@ -18,5 +18,5 @@ Response requirements:
 - Keep persistent writes inside `.blueprint/notes/NOTES.md`.
 - Treat note capture as append-only unless the MCP tool reports a duplicate.
 - Do not advertise planned-only capture commands as runnable follow-ups.
-- Do not reintroduce upstream global-note behavior.
+- Do not reintroduce global-note behavior.
 """

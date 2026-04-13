@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Gather phase context through adaptive questioning before planning. Use --auto to skip interactive questions (Claude picks recommended defaults). Use --chain for interactive discuss followed by automatic plan+execute. Use --power for bulk question generation into a file-based UI (answer at your own pace). |
 
 
 ## Purpose
 
 
-`discuss-phase` carries forward the GSD intent to gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now persists substantive context content and resumable checkpoint state through dedicated MCP tools, while still deferring upstream-style power-mode, chain-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now persists substantive context content and resumable checkpoint state through dedicated MCP tools, while still deferring legacy power-mode, chain-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
@@ -140,8 +139,3 @@
 - Direct `discuss-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/discuss-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

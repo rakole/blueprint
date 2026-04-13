@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Validate built features through conversational UAT |
 
 
 ## Purpose
 
 
-`verify-work` carries forward the GSD intent to validate built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads saved execution and validation evidence first, persists resumable phase-scoped `XX-UAT.md` content through dedicated validation MCP tools, and keeps optional follow-up fixes explicit instead of hiding them in chat.
+`verify-work` is Blueprint's command for validate built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads saved execution and validation evidence first, persists resumable phase-scoped `XX-UAT.md` content through dedicated validation MCP tools, and keeps optional follow-up fixes explicit instead of hiding them in chat.
 
 
 ## Command Path And Examples
@@ -76,7 +75,7 @@
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
 - `docs/PHASE-LIFECYCLE.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/execute-phase.md`
@@ -134,7 +133,3 @@
 - Direct `verify-work` happy-path fixture.
 
 
-## Upstream Reference
-
-- Upstream command file: `commands/gsd/verify-work.md`
-- Upstream workflow status: GSD has an upstream workflow file

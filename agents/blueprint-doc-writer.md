@@ -64,4 +64,4 @@ claims.
 - Stay read-only; the parent command owns file mutation and report persistence.
 - Do not invent features, shipped commands, or guarantees that are not supported
   by the supplied repo evidence.
-- Do not widen into `.blueprint/`, `.planning/`, or hidden `/gsd:*` behavior.
+- Do not widen into `.blueprint/`, `.planning/`, or hidden legacy slash-command behavior.

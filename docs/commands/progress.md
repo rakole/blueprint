@@ -4,11 +4,10 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Check project progress, show context, and route to next action (execute or plan) |
 
 ## Purpose
 
-`progress` carries forward the GSD intent to check project progress, show context, and route to next action. In Blueprint it stays read-oriented and Gemini-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
+`progress` is Blueprint's command for check project progress, show context, and route to next action. In Blueprint it stays read-oriented and Gemini-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
 
 ## Command Path And Examples
 
@@ -104,7 +103,3 @@
 - Config-warning fixture.
 - Direct `progress` happy-path fixture.
 
-## Upstream Reference
-
-- Upstream command file: `commands/gsd/progress.md`
-- Upstream workflow status: GSD has an upstream workflow file

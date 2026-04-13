@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Retroactively audit and fill Nyquist validation gaps for a completed phase |
 
 
 ## Purpose
 
 
-`validate-phase` carries forward the GSD intent to retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a Gemini-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next safe implemented step when validation succeeds.
+`validate-phase` is Blueprint's command for retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a Gemini-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next safe implemented step when validation succeeds.
 
 
 ## Command Path And Examples
@@ -79,7 +78,7 @@
 - `docs/ARCHITECTURE.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/PHASE-LIFECYCLE.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/IMPLEMENTATION-ORDER.md`
@@ -139,8 +138,3 @@
 - Direct `validate-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/validate-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

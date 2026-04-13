@@ -4,13 +4,12 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Switch model profile for GSD agents (quality/balanced/budget/inherit) |
 
 
 ## Purpose
 
 
-`set-profile` carries forward the GSD intent to switch model profile for GSD agents (quality/balanced/budget/inherit). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`set-profile` is Blueprint's command for switching the model profile for Blueprint agents (quality/balanced/budget/inherit). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -74,7 +73,7 @@
 - `docs/commands/settings.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/settings.md`
@@ -131,8 +130,3 @@
 - Direct `set-profile` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/set-profile.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract

@@ -18,7 +18,7 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
       readRepoFile("docs/HANDOFF.md"),
       readRepoFile("MEMORY.md"),
       readRepoFile("docs/DRIFT.MD"),
-      readRepoFile("docs/GSD-RUNTIME-MIGRATION.md"),
+      readRepoFile("docs/RUNTIME-REFERENCE.md"),
       readRepoFile("docs/HOOKS-POLICIES.md")
     ]);
 
@@ -51,11 +51,15 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
   assert.match(drift, /repairs discovery parity gaps/i);
   assert.match(
     migration,
-    /Phase 3 discovery shipped on 2026-04-11 and remains in parity closeout while the later shipped lifecycle, governance, and roadmap-admin slices keep their current contracts/i
+    /Wave 2 roadmap administration, Wave 3 capture and lightweight execution, and the shipped Wave 4 review surfaces all remain locked to their documented command contracts/i
   );
   assert.match(
     migration,
-    /`plan-phase` and `execute-phase` are now implemented in Blueprint on top of the plan and summary MCP substrates/i
+    /The implemented Blueprint runtime now uses dedicated plan index\/read\/write MCP tools/i
+  );
+  assert.match(
+    migration,
+    /Execution now honors normalized parallelization, worktree, and branching config through dedicated plan read and summary persistence tools/i
   );
   assert.doesNotMatch(hooks, /No hook code ships/);
   assert.match(hooks, /Blueprint now ships three advisory hooks/);
@@ -111,7 +115,7 @@ test("runtime docs keep .planning and hook control out of Blueprint runtime owne
   ]);
 
   assert.match(agents, /it is not Blueprint runtime state/);
-  assert.match(memory, /implementation bookkeeping for the GSD build-out/);
+  assert.match(memory, /implementation bookkeeping for the Blueprint build-out/);
   assert.match(artifactSchema, /repo-level `hooks\.\*` keys/);
   assert.match(hooks, /Repo config must not enable or disable hooks/);
   assert.match(mcpTools, /Tools must not write into the installed extension directory/);

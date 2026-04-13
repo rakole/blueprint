@@ -54,7 +54,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
     researcher,
     /preserve strong sections and\s+revise only the stale or weak parts/i
   );
-  assert.match(researcher, /official docs or upstream references explicitly supplied by the parent/);
+  assert.match(researcher, /official docs or explicitly supplied external references/);
 
   assert.match(uiDesigner, /## Required Reads/);
   assert.match(uiDesigner, /## UI Decision Rules/);
@@ -71,7 +71,7 @@ test("docs specialist agents encode scoped drafting and evidence-backed verifica
   assert.match(docWriter, /## Output Contract/);
   assert.match(docWriter, /Path: <repo path>/);
   assert.match(docWriter, /Preserve strong existing structure/i);
-  assert.match(docWriter, /Do not widen into `\.blueprint\/`, `\.planning\/`, or hidden `\/gsd:\*` behavior/);
+  assert.match(docWriter, /Do not widen into `\.blueprint\/`, `\.planning\/`, or hidden legacy slash-command behavior/);
 
   assert.match(docVerifier, /## Verification Rules/);
   assert.match(docVerifier, /PASS`, `GAP`, or `BLOCKED`/);

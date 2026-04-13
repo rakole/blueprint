@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Review and promote backlog items to active milestone |
 
 
 ## Purpose
 
 
-`review-backlog` carries forward the GSD intent to review and promote backlog items to active milestone. In Blueprint it now ships as the deterministic backlog-promotion flow: preview canonical backlog entries first, require explicit promotion decisions, reuse reserved `999.x` stubs when present, and keep backlog plus roadmap mutations inside documented MCP tools.
+`review-backlog` is Blueprint's command for review and promote backlog items to active milestone. In Blueprint it now ships as the deterministic backlog-promotion flow: preview canonical backlog entries first, require explicit promotion decisions, reuse reserved `999.x` stubs when present, and keep backlog plus roadmap mutations inside documented MCP tools.
 
 
 ## Command Path And Examples
@@ -131,8 +130,3 @@
 - Direct `review-backlog` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/review-backlog.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract

@@ -19,7 +19,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 
 - Project-local Blueprint state lives in `.blueprint/`.
 - Global operational Blueprint state lives in `~/.gemini/blueprint/`.
-- `.planning/` is not Blueprint runtime state and must not be used for shipped command persistence. It may still exist in this repo as implementation bookkeeping for the GSD build-out.
+- `.planning/` is not Blueprint runtime state and must not be used for shipped command persistence. It may still exist in this repo as implementation bookkeeping for the Blueprint build-out.
 
 ## Current Runtime Surface
 

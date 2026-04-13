@@ -17,7 +17,7 @@ commands:
 
 ## Purpose
 
-Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-default behavior and clear parity with upstream GSD mapping.
+Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-default behavior and clear alignment with the locked Blueprint mapping contract.
 
 ## Runtime Call Rules
 
@@ -28,7 +28,7 @@ Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-de
 
 ## Parity Goal
 
-Carry forward the upstream mapper-oriented flow:
+Carry forward the mapper-oriented flow:
 
 - prefer dedicated mapper agents when available
 - otherwise perform deterministic sequential mapping
@@ -44,7 +44,7 @@ Blueprint deltas:
 
 - `docs/commands/map-codebase.md`
 - `docs/ARTIFACT-SCHEMA.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - `docs/DRIFT.MD`
 
 ## Required MCP Tools

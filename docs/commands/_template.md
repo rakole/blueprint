@@ -5,11 +5,10 @@
 | Wave | `<0-5>` |
 | Family | `<family>` |
 | Root-routable | `Yes` or `No` |
-| Upstream GSD intent | `<one-line intent>` |
 
 ## Purpose
 
-One concise paragraph describing what the command should accomplish in Blueprint and how it differs from a literal GSD port.
+One concise paragraph describing what the command should accomplish in Blueprint and the Blueprint-native constraints it must preserve.
 
 ## Command Path And Examples
 
@@ -62,7 +61,7 @@ One concise paragraph describing what the command should accomplish in Blueprint
 - Related command docs:
 - `docs/commands/<dependency>.md`
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 - Add this section for router or orchestration commands that depend on earlier command contracts.
 
@@ -107,7 +106,3 @@ One concise paragraph describing what the command should accomplish in Blueprint
 - happy-path fixture
 - missing prerequisite fixture
 - regression fixture
-
-## Upstream Reference
-
-- `commands/gsd/<command>.md`

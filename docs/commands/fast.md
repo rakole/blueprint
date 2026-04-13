@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Execute a trivial task inline — no subagents, no planning overhead |
 
 
 ## Purpose
 
 
-`fast` carries forward the GSD intent to execute a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a Gemini-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, and updates state only when the repo is already initialized.
+`fast` is Blueprint's command for execute a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a Gemini-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, and updates state only when the repo is already initialized.
 
 
 ## Command Path And Examples
@@ -124,8 +123,3 @@
 - Direct `fast` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/fast.md`
-- Upstream workflow status: GSD has an upstream workflow file

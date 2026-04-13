@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Review source files changed during a phase for bugs, security issues, and code quality problems |
 
 
 ## Purpose
 
 
-`code-review` carries forward the GSD intent to review source files changed during a phase for bugs, security issues, and code quality problems. Blueprint ships it as a Gemini-native review command: it resolves a deterministic repo-file scope from executed plan metadata or explicit file paths, audits that scope against saved phase evidence, and persists the result through the shared review MCP tools instead of prompt-only file writes.
+`code-review` is Blueprint's command for review source files changed during a phase for bugs, security issues, and code quality problems. Blueprint ships it as a Gemini-native review command: it resolves a deterministic repo-file scope from executed plan metadata or explicit file paths, audits that scope against saved phase evidence, and persists the result through the shared review MCP tools instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -125,8 +124,3 @@
 - Direct `code-review` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/code-review.md`
-- Upstream workflow status: GSD has an upstream workflow file

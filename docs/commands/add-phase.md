@@ -4,13 +4,12 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Add phase to end of current milestone in roadmap |
 
 
 ## Purpose
 
 
-`add-phase` carries forward the GSD intent to add phase to end of current milestone in roadmap. In Blueprint it stays Gemini-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state.
+`add-phase` is Blueprint's command for add phase to end of current milestone in roadmap. In Blueprint it stays Gemini-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state.
 
 
 ## Command Path And Examples
@@ -134,8 +133,3 @@
 - Direct `add-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/add-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

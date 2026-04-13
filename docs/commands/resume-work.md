@@ -4,7 +4,6 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Resume work from previous session with full context restoration |
 
 
 ## Purpose
@@ -79,7 +78,7 @@
 - `docs/commands/pause-work.md`
 
 
-## Upstream Dependency Docs
+## Related Command Docs
 
 
 - `docs/commands/progress.md`
@@ -135,9 +134,3 @@
 - Direct `resume-work` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/resume-work.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file
-- Blueprint delta: shipped MCP-backed resume routing that restores context from the canonical pause handoff and `STATE.md`

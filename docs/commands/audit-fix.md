@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Autonomous audit-to-fix pipeline — find issues, classify, fix, test, commit |
 
 
 ## Purpose
 
 
-`audit-fix` carries forward the GSD intent to autonomous audit-to-fix pipeline — find issues, classify, fix, test, commit. Blueprint ships it as a bounded, evidence-backed remediation loop: it resolves a deterministic repo-file scope from saved phase execution metadata, reads the most relevant review and verification artifacts first, keeps repo mutation tightly scoped, persists a durable `.blueprint/reports/audit-fix-<phase>.md` report, and updates `STATE.md` so follow-up routing stays inside implemented commands.
+`audit-fix` is Blueprint's command for autonomous audit-to-fix pipeline — find issues, classify, fix, test, commit. Blueprint ships it as a bounded, evidence-backed remediation loop: it resolves a deterministic repo-file scope from saved phase execution metadata, reads the most relevant review and verification artifacts first, keeps repo mutation tightly scoped, persists a durable `.blueprint/reports/audit-fix-<phase>.md` report, and updates `STATE.md` so follow-up routing stays inside implemented commands.
 
 
 ## Command Path And Examples
@@ -139,8 +138,3 @@
 - Direct `audit-fix` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/audit-fix.md`
-- Upstream workflow status: GSD has an upstream workflow file

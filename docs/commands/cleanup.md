@@ -4,13 +4,12 @@
 | Wave | `5` |
 | Family | `Workspace And Maintenance` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Archive accumulated phase directories from completed milestones |
 
 
 ## Purpose
 
 
-`cleanup` carries forward the GSD intent to archive accumulated phase directories from completed milestones. In Blueprint it now ships as a confirmation-gated, evidence-backed archival flow: it reads saved roadmap and milestone closeout evidence first, persists a durable cleanup report before filesystem mutation, and keeps active phase protection explicit instead of hiding directory moves behind shell glue.
+`cleanup` is Blueprint's command for archive accumulated phase directories from completed milestones. In Blueprint it now ships as a confirmation-gated, evidence-backed archival flow: it reads saved roadmap and milestone closeout evidence first, persists a durable cleanup report before filesystem mutation, and keeps active phase protection explicit instead of hiding directory moves behind shell glue.
 
 
 ## Command Path And Examples
@@ -153,8 +152,3 @@
 - Direct `cleanup` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/cleanup.md`
-- Upstream workflow status: GSD has an upstream workflow file

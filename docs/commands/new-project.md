@@ -4,11 +4,10 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Initialize a new project with deep context gathering and PROJECT.md |
 
 ## Purpose
 
-`new-project` carries forward the GSD intent to initialize a new project with deep context gathering and `PROJECT.md`. In Blueprint it stays Gemini-native and delegates persistence to documented MCP tools, but the orchestration depth must remain closer to upstream than a simple scaffold-only bootstrap.
+`new-project` is Blueprint's command for initialize a new project with deep context gathering and `PROJECT.md`. In Blueprint it stays Gemini-native and delegates persistence to documented MCP tools, but the orchestration depth must remain richer than a simple scaffold-only bootstrap.
 
 ## Command Path And Examples
 
@@ -119,7 +118,3 @@
 - Brownfield fixture that routes to `map-codebase`.
 - Bootstrap seed fixture that verifies authored requirements and roadmap traceability.
 
-## Upstream Reference
-
-- Upstream command file: `commands/gsd/new-project.md`
-- Upstream workflow status: GSD has an upstream workflow file

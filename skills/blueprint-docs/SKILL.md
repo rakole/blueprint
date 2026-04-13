@@ -27,7 +27,7 @@ and doc mutation remains reviewable and tightly scoped.
 
 ## Parity Goal
 
-Carry forward the useful upstream docs-update intent while preserving
+Carry forward the useful docs-update intent while preserving
 Blueprint's Gemini-native boundaries:
 
 - documentation updates stay grounded in repo and Blueprint evidence
@@ -43,7 +43,7 @@ Blueprint's Gemini-native boundaries:
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 - the targeted repo docs selected for the current pass
 - relevant code, tests, and any existing `.blueprint/codebase/` artifacts that
   verify the documentation claims

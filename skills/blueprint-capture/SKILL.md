@@ -29,7 +29,7 @@ Keep notes, todos, backlog entries, and ideation handoffs project-local, determi
 
 ## Parity Goal
 
-Carry forward the useful capture behavior from GSD while preserving Blueprint's Gemini-native boundaries:
+Keep the useful capture behavior while preserving Blueprint's Gemini-native boundaries:
 
 - capture state stays inside `.blueprint/`
 - MCP tools own durable writes and index repair
@@ -49,7 +49,7 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/GSD-RUNTIME-MIGRATION.md`
+- `docs/RUNTIME-REFERENCE.md`
 
 ## Required MCP Tools
 
@@ -71,7 +71,7 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 2. Use `blueprint_artifact_mutate_index` with `target: "note"` for durable note writes instead of raw append logic.
 3. Degrade to suggestion mode when the repo is not yet a Blueprint project.
 4. Treat normalized duplicate note descriptions as already captured work and report the existing entry instead of creating a second copy.
-5. Keep notes project-local. Do not reintroduce upstream global-note behavior, and do not bluff listing or promotion support before those contracts ship.
+5. Keep notes project-local. Do not reintroduce global-note behavior, and do not bluff listing or promotion support before those contracts ship.
 6. Keep follow-up guidance inside implemented commands only.
 
 ### `add-backlog`

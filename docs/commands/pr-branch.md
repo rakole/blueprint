@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create a clean PR branch by filtering out implementation-bookkeeping commits — ready for code review |
 
 
 ## Purpose
 
 
-`pr-branch` carries forward the GSD intent to create a clean PR branch by filtering out implementation-bookkeeping commits before code review. Blueprint now ships it as a confirmation-gated, report-backed review-branch preparation flow that keeps git mutations explicit, preserves the source branch, and makes `.blueprint/` inclusion or exclusion reviewable before branch creation.
+`pr-branch` is Blueprint's command for create a clean PR branch by filtering out implementation-bookkeeping commits before code review. Blueprint now ships it as a confirmation-gated, report-backed review-branch preparation flow that keeps git mutations explicit, preserves the source branch, and makes `.blueprint/` inclusion or exclusion reviewable before branch creation.
 
 
 ## Command Path And Examples
@@ -143,8 +142,3 @@
 - Direct `pr-branch` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/pr-branch.md`
-- Upstream workflow status: GSD has an upstream workflow file

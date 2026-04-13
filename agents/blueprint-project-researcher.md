@@ -71,4 +71,4 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - Do not draft or rewrite roadmap, requirements, or `.blueprint/` artifacts
   directly from this agent.
 - Do not widen into implementation planning, execution, `.planning/`, or
-  `/gsd:*` behavior.
+  legacy slash-command surfaces behavior.

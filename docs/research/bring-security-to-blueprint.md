@@ -5,11 +5,11 @@
 - Date: 2026-04-13
 - Type: active implementation roadmap
 - Scope: runtime hardening, artifact safety, and maintenance integrity for Blueprint's shipped and planned surfaces
-- Reference: [GSD `security.cjs`](https://github.com/gsd-build/get-shit-done/blob/main/get-shit-done/bin/lib/security.cjs)
+- Reference: earlier security-module audit notes
 
 ## Recommendation In One Paragraph
 
-Blueprint should still avoid a file-for-file port of GSD's security module, but the useful intent now has a concrete home in the runtime: a shared `src/shared/security.ts` layer, MCP-first enforcement, advisory hooks that reuse the same detectors, and tighter maintenance-flow preflights. The security work is now staged in waves. Wave 1 hardens shared path, parsing, and identifier validation. Wave 2 adds prompt-boundary and artifact-boundary protections. Wave 3 aligns high-risk maintenance flows around shared preflight rules. Wave 4 keeps `secure-phase` as the user-visible security surface, but grounds its evidence model in the earlier hardening taxonomy.
+Blueprint should still avoid a file-for-file port of the earlier security module, but the useful intent now has a concrete home in the runtime: a shared `src/shared/security.ts` layer, MCP-first enforcement, advisory hooks that reuse the same detectors, and tighter maintenance-flow preflights. The security work is now staged in waves. Wave 1 hardens shared path, parsing, and identifier validation. Wave 2 adds prompt-boundary and artifact-boundary protections. Wave 3 aligns high-risk maintenance flows around shared preflight rules. Wave 4 keeps `secure-phase` as the user-visible security surface, but grounds its evidence model in the earlier hardening taxonomy.
 
 ## Current Baseline
 

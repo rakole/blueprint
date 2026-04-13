@@ -37,17 +37,17 @@ Current strengths:
 - shipped advisory hook coverage
 - behavior-oriented tests for real research content
 
-Current limitations versus upstream GSD:
+Current limitations versus the richer earlier workflow:
 
 - less emphasis on multi-stage research orchestration
-- lighter bounded-agent workflow than the upstream dedicated researcher path
+- lighter bounded-agent workflow than the fully staged researcher path
 - less explicit continuation and revision UX around existing research
 - parity is stronger at the artifact-contract level than at the deeper conversational-workflow level
 
-## Remaining Gaps Versus GSD
+## Remaining Gaps
 
 1. Richer bounded research orchestration
-   Blueprint has the right artifact contract now, but the workflow is still lighter than the upstream staged researcher experience.
+   Blueprint has the right artifact contract now, but the workflow is still lighter than the fully staged researcher experience.
 
 2. Existing-research UX depth
    Reuse and overwrite paths exist, but the surrounding interaction model is still thinner than a fully conversational view/update/skip workflow with more revision context.
@@ -55,8 +55,8 @@ Current limitations versus upstream GSD:
 3. Broader failure-mode coverage
    The current suite validates substantive content well, but there is still room to deepen coverage for ambiguous phase selection, more varied recovery paths, and longer continuation flows.
 
-4. Upstream parity verification
-   The current Blueprint behavior is internally coherent and materially better than the original audit described, but deeper one-to-one parity against upstream GSD runtime behavior is still not fully audited.
+4. Behavior parity verification
+   The current Blueprint behavior is internally coherent and materially better than the original audit described, but deeper one-to-one behavior auditing is still not fully complete.
 
 ## Recommended Follow-Up
 
@@ -71,4 +71,4 @@ If `research-phase` is revisited, the next work should improve workflow depth ra
 
 The original parity-gap plan is now mostly historical.
 
-`/blu-research-phase` is no longer a scaffold-only placeholder path. It now ships substantive research persistence, schema validation, hook coverage, and behavior tests. The remaining distance to upstream GSD is mostly about orchestration depth and further parity verification, not about missing core runtime pieces.
+`/blu-research-phase` is no longer a scaffold-only placeholder path. It now ships substantive research persistence, schema validation, hook coverage, and behavior tests. The remaining distance is mostly about orchestration depth and further behavior verification, not about missing core runtime pieces.

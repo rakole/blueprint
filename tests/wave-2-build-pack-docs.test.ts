@@ -23,7 +23,7 @@ test("wave 2 workflow doc locks scope, packaging checks, and shared-memory proto
   assert.match(workflow, /commands\/\*\*\/\.?toml|commands\/\*\*\/\.toml|commands\/\*\*\/toml|commands\/\*\*\/\*\.toml/);
   assert.match(workflow, /scripts\/drift-fix-memory\.mjs/);
   assert.match(workflow, /Do not reintroduce `?\.planning\/`?/);
-  assert.match(workflow, /Do not reintroduce `?\/gsd:\*`?/);
+  assert.match(workflow, /Do not reintroduce legacy slash-command surfaces/);
 });
 
 test("wave 2 parallel closeout plan enumerates tasks, batches, and final regression gate", async () => {

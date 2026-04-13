@@ -5,11 +5,11 @@
 - Original audit date: 2026-04-11
 - Last status update: 2026-04-12
 - Target command: `/blu-new-project`
-- Purpose: preserve the original parity findings while recording which gaps are now closed and which still separate Blueprint from the richer upstream GSD bootstrap flow
+- Purpose: preserve the original parity findings while recording which gaps are now closed and which still separate Blueprint from the richer bootstrap flow
 
 ## Historical Baseline
 
-The original 2026-04-11 audit was correct about the main risk at that time: Blueprint had a solid deterministic bootstrap substrate, but it still lagged upstream GSD in questioning depth, project-level research, approval loops, and authored bootstrap quality.
+The original 2026-04-11 audit was correct about the main risk at that time: Blueprint had a solid deterministic bootstrap substrate, but it still lagged the richer bootstrap flow in questioning depth, project-level research, approval loops, and authored bootstrap quality.
 
 That baseline is still useful as historical context, but it is no longer an accurate description of the current runtime without the updates below.
 
@@ -35,31 +35,31 @@ Current strengths:
 - explicit brownfield routing and provisional-roadmap signaling
 - test coverage for the current bootstrap contract
 
-Current limitations versus upstream GSD:
+Current limitations versus the richer earlier workflow:
 
 - less interactive questioning depth
 - no shipped project-level research fan-out or synthesis stage
 - no approval-loop-heavy roadmap authoring flow
-- bounded bootstrap agents are still lighter contracts than the upstream researcher and roadmapper workflow stack
+- bounded bootstrap agents are still lighter contracts than the fully staged researcher and roadmapper workflow stack
 
-## Remaining Gaps Versus GSD
+## Remaining Gaps
 
 The main parity gaps that still matter are now narrower and more behavioral:
 
 1. Deep bootstrap questioning
-   Blueprint still relies more on deterministic drafting and less on the richer interview-style discovery flow that upstream GSD can run during project initialization.
+   Blueprint still relies more on deterministic drafting and less on the richer interview-style discovery flow available in earlier planning.
 
 2. Project-level research orchestration
    Optional bootstrap agents exist, but the runtime does not yet require a dedicated multi-agent research and synthesis pass before roadmap authoring.
 
 3. Approval and revision loops
-   Upstream GSD spends more interaction budget on revising requirements and roadmap structure before treating bootstrap output as settled.
+   The earlier workflow spends more interaction budget on revising requirements and roadmap structure before treating bootstrap output as settled.
 
 4. Stronger bounded agent contracts
-   `blueprint-project-researcher` and `blueprint-roadmapper` are useful, but they are still lighter-weight than the fully staged upstream roles they replace.
+   `blueprint-project-researcher` and `blueprint-roadmapper` are useful, but they are still lighter-weight than the fully staged earlier roles they replace.
 
 5. Broader parity-oriented tests
-   The current suite proves the deterministic runtime contract well. It does not yet prove GSD-level conversational depth or approval-loop fidelity.
+   The current suite proves the deterministic runtime contract well. It does not yet prove the same conversational depth or approval-loop fidelity.
 
 ## Recommended Follow-Up
 
@@ -74,4 +74,4 @@ If `new-project` is revisited, the next repair slice should focus on behavior, n
 
 The original audit's core conclusion has changed.
 
-`/blu-new-project` is no longer just a safe bootstrap substrate. It is now a substantive deterministic bootstrap command. The remaining distance to upstream GSD is primarily in conversational depth and orchestration richness, not in artifact quality, brownfield routing, or missing runtime substrate.
+`/blu-new-project` is no longer just a safe bootstrap substrate. It is now a substantive deterministic bootstrap command. The remaining distance is primarily in conversational depth and orchestration richness, not in artifact quality, brownfield routing, or missing runtime substrate.

@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Capture idea or task as todo from current conversation context |
 
 
 ## Purpose
 
 
-`add-todo` carries forward the GSD intent to capture idea or task as todo from current conversation context. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`add-todo` is Blueprint's command for capture idea or task as todo from current conversation context. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -121,8 +120,3 @@
 - Direct `add-todo` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/add-todo.md`
-- Upstream workflow status: GSD has an upstream workflow file

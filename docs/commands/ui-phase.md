@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Generate UI design contract (UI-SPEC.md) for frontend phases |
 
 
 ## Purpose
 
 
-`ui-phase` carries forward the GSD intent to generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and now writes substantive UI-spec or skip-rationale content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
+`ui-phase` is Blueprint's command for generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and now writes substantive UI-spec or skip-rationale content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
 
 
 ## Command Path And Examples
@@ -141,8 +140,3 @@
 - Direct `ui-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/ui-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file

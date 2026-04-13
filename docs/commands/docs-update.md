@@ -4,13 +4,12 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Generate or update project documentation verified against the codebase |
 
 
 ## Purpose
 
 
-`docs-update` carries forward the GSD intent to generate or update project documentation verified against the codebase. In Blueprint it stays Gemini-native, keeps Blueprint-owned persistence on MCP rails, and treats repo documentation edits as explicit, reviewable mutations instead of hidden side effects.
+`docs-update` is Blueprint's command for generate or update project documentation verified against the codebase. In Blueprint it stays Gemini-native, keeps Blueprint-owned persistence on MCP rails, and treats repo documentation edits as explicit, reviewable mutations instead of hidden side effects.
 
 
 ## Command Path And Examples
@@ -129,8 +128,3 @@
 - Direct `docs-update` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/docs-update.md`
-- Upstream workflow status: GSD has an upstream workflow file

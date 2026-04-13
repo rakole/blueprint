@@ -4,11 +4,10 @@
 | Wave | `0` |
 | Family | `Foundation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Analyze codebase with parallel mapper agents to produce codebase documents |
 
 ## Purpose
 
-`map-codebase` carries forward the GSD intent to analyze a brownfield codebase with mapper-style passes and produce durable codebase documents. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the brownfield contract explicit without reviving omitted commands such as `scan` or `intel`.
+`map-codebase` is Blueprint's command for analyze a brownfield codebase with mapper-style passes and produce durable codebase documents. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the brownfield contract explicit without reviving omitted commands such as `scan` or `intel`.
 
 ## Command Path And Examples
 
@@ -104,7 +103,3 @@
 - Partially initialized Blueprint repo fixture.
 - Direct `map-codebase` happy-path fixture.
 
-## Upstream Reference
-
-- Upstream command file: `commands/gsd/map-codebase.md`
-- Upstream workflow status: GSD has an upstream workflow file

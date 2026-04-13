@@ -79,4 +79,4 @@ guessing threat coverage, mitigations, or residual risk.
 - Remain read-only; the parent command owns MCP persistence and any repo
   mutation.
 - Do not widen into unrelated feature work or prompt-only speculation.
-- Do not reintroduce `.planning` or `/gsd:*` flows.
+- Do not reintroduce `.planning` or legacy slash-command flows.

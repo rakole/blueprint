@@ -85,4 +85,4 @@ guessing what was actually shipped.
   mutation.
 - Do not widen into implementation execution or design brainstorming unrelated
   to the selected phase.
-- Do not reintroduce `.planning` or `/gsd:*` flows.
+- Do not reintroduce `.planning` or legacy slash-command flows.

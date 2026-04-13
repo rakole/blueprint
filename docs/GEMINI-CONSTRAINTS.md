@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file captures the Gemini CLI and extension constraints that materially shaped the Blueprint architecture. It exists so future implementation sessions do not accidentally drift back toward upstream GSD assumptions that only made sense in a different host environment.
+This file captures the Gemini CLI and extension constraints that materially shaped the Blueprint architecture. It exists so future implementation sessions do not accidentally drift back toward legacy assumptions that only made sense in a different host environment.
 
 ## Locked Runtime Constraints
 
@@ -28,7 +28,7 @@ This file captures the Gemini CLI and extension constraints that materially shap
 
 ## What Future Sessions Should Avoid
 
-- Reintroducing `.planning/`, `/gsd:*`, or installer-managed runtime state.
-- Adding omitted upstream commands as hidden aliases without revisiting the retained-command contract.
+- Reintroducing `.planning/`, legacy slash-command surfaces, or installer-managed runtime state.
+- Adding omitted legacy commands as hidden aliases without revisiting the retained-command contract.
 - Letting high-risk commands skip confirmation gates because another command already checked something earlier.
 - Writing extension-owned runtime state into the installed extension directory.

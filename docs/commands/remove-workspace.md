@@ -4,13 +4,12 @@
 | Wave | `5` |
 | Family | `Workspace And Maintenance` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Remove a GSD workspace and clean up worktrees |
 
 
 ## Purpose
 
 
-`remove-workspace` carries forward the GSD intent to remove a GSD workspace and clean up worktrees. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`remove-workspace` is Blueprint's command for removing a workspace and cleaning up worktrees. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -134,8 +133,3 @@
 - Direct `remove-workspace` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/remove-workspace.md`
-- Upstream workflow status: GSD has an upstream workflow file

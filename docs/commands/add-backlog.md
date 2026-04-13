@@ -4,13 +4,12 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Add an idea to the backlog parking lot (999.x numbering) |
 
 
 ## Purpose
 
 
-`add-backlog` carries forward the GSD intent to add an idea to the backlog parking lot (999.x numbering). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`add-backlog` is Blueprint's command for add an idea to the backlog parking lot (999.x numbering). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
@@ -123,8 +122,3 @@
 - Direct `add-backlog` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/add-backlog.md`
-- Upstream workflow status: GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract

@@ -4,13 +4,12 @@
 | Wave | `1` |
 | Family | `Core Lifecycle` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
-| Upstream GSD intent | Create detailed phase plan (PLAN.md) with verification loop |
 
 
 ## Purpose
 
 
-`plan-phase` carries forward the GSD intent to create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying Gemini-native.
+`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying Gemini-native.
 
 
 ## Command Path And Examples
@@ -145,8 +144,3 @@
 - Direct `plan-phase` happy-path fixture.
 
 
-## Upstream Reference
-
-
-- Upstream command file: `commands/gsd/plan-phase.md`
-- Upstream workflow status: GSD has an upstream workflow file
