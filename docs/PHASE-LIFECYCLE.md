@@ -29,7 +29,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 - `secure-phase` writes `XX-SECURITY.md`.
 - `ui-review` writes `XX-UI-REVIEW.md`.
 - `add-tests` may add code-level tests, update `XX-VERIFICATION.md`, and write a supporting `.blueprint/reports/add-tests-<phase>.md` report.
-- `review` writes peer-review artifacts under `.blueprint/reports/` when cross-CLI review is requested.
+- `review` writes `XX-REVIEWS.md`.
 
 ## Phase Completion Signals
 

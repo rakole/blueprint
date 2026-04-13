@@ -535,6 +535,36 @@ test("code-review docs and reviewer agent are marked implemented in docs", async
   assert.match(codeReviewDoc, /phase XX-REVIEW\.md/);
 });
 
+test("review docs and migration notes keep the peer-review contract explicit", async () => {
+  const [reviewDoc, mcpToolsDoc, migrationMarkdown, catalogMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/review.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md"),
+    readRepoFile("docs/COMMAND-CATALOG.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `review` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEWS\.md` \| `Medium: external reviewer orchestration without default repo mutation\.` \|/
+  );
+  assert.match(reviewDoc, /Primary skill: `blueprint-review`/);
+  assert.match(reviewDoc, /`blueprint_phase_locate`/);
+  assert.match(reviewDoc, /`blueprint_artifact_list`/);
+  assert.match(reviewDoc, /`blueprint_phase_plan_index`/);
+  assert.match(reviewDoc, /`blueprint_phase_plan_read`/);
+  assert.match(reviewDoc, /`blueprint_review_record`/);
+  assert.match(reviewDoc, /phase XX-REVIEWS\.md/);
+  assert.match(reviewDoc, /preserve disagreement/i);
+  assert.match(
+    mcpToolsDoc,
+    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_review_record`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `review` \| `commands\/gsd\/review\.md` \| GSD has an upstream workflow file \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_review_record` \|/
+  );
+});
+
 test("audit-fix docs and migration notes keep the remediation contract explicit", async () => {
   const [auditFixDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/audit-fix.md"),

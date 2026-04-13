@@ -34,7 +34,7 @@ deltas:
 - follow-up risks stay explicit in artifacts instead of disappearing into chat
 - implemented-only routing remains the source of truth for next-step guidance
 
-Today, `code-review`, `code-review-fix`, `secure-phase`, and `audit-fix` are the shipped
+Today, `code-review`, `code-review-fix`, `secure-phase`, `audit-fix`, and `review` are the shipped
 review-family commands. Other review-family commands remain documented but
 non-routable until their extra MCP substrate lands.
 
@@ -44,6 +44,7 @@ non-routable until their extra MCP substrate lands.
 - `docs/commands/code-review-fix.md`
 - `docs/commands/secure-phase.md`
 - `docs/commands/audit-fix.md`
+- `docs/commands/review.md`
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -163,6 +164,32 @@ non-routable until their extra MCP substrate lands.
 9. Update `STATE.md` through `blueprint_state_update` so the next safe action
    points at `/blu-validate-phase <phase>`, `/blu-add-tests <phase>`, or
    `/blu-progress` based on the remaining evidence gap.
+
+### `review`
+
+1. Resolve the target phase and read the current Blueprint artifact inventory
+   before launching peer review so plan, execution, or prior review evidence is
+   visible.
+2. Read the saved plan set through `blueprint_phase_plan_index` and
+   `blueprint_phase_plan_read`; do not guess the review scope from unstaged repo
+   drift, chat memory, or unrelated files.
+3. If there are no saved `XX-YY-PLAN.md` artifacts for the phase, route to
+   `/blu-plan-phase <phase>` instead of bluffing through a planless peer review.
+4. Inspect any existing `XX-REVIEWS.md` before proposing replacement and
+   default to reuse unless the user explicitly asks for an update.
+5. Confirm which reviewer CLIs are actually available and authenticated before
+   launch. Honor explicit reviewer flags, but never claim an unavailable
+   reviewer ran successfully.
+6. Preserve disagreement between reviewers instead of flattening it into a fake
+   consensus, and record partial reviewer availability honestly when only some
+   requested reviewers ran.
+7. Persist the finished peer-review artifact through `blueprint_review_record`
+   with the `peer-review` artifact.
+8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+   `/blu-plan-phase <phase>` when meaningful plan revisions remain,
+   `/blu-execute-phase <phase>` when the review passes and execution has not
+   started, `/blu-code-review <phase>` when execution exists but code review is
+   still missing, and otherwise `/blu-progress`.
 
 ## Non-Negotiables
 
