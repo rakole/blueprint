@@ -1099,6 +1099,7 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
   );
   const phases = seed.roadmapPhases
     .map((phase) => {
+      const normalizedPhaseNumber = normalizePhaseNumber(phase.phase);
       const marker = phase.status === "done" ? "x" : " ";
       const requirementClause =
         phase.requirementIds && phase.requirementIds.length > 0
@@ -1106,7 +1107,7 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
           : "";
       const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
 
-      return `- [${marker}] Phase ${phase.phase}: ${phase.title}${requirementClause}
+      return `- [${marker}] Phase ${normalizedPhaseNumber}: ${phase.title}${requirementClause}
   - Objective: ${phase.objective}${notes ? `\n${notes}` : ""}`;
     })
     .join("\n");

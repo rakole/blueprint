@@ -14409,10 +14409,14 @@ function normalizeBlueprintPhaseRef(value, label = "Phase reference") {
   if (!PHASE_REFERENCE_PATTERN.test(trimmed)) {
     throw new Error(`${label} must be a numeric Blueprint phase reference: ${value}`);
   }
-  return trimmed.split(".").map((segment) => {
-    const normalized = segment.replace(/^0+(?=\d)/, "");
-    return normalized.length > 0 ? normalized : "0";
-  }).join(".");
+  const normalized = trimmed.split(".").map((segment) => {
+    const normalized2 = segment.replace(/^0+(?=\d)/, "");
+    return normalized2.length > 0 ? normalized2 : "0";
+  });
+  while (normalized.length > 1 && normalized.at(-1) === "0") {
+    normalized.pop();
+  }
+  return normalized.join(".");
 }
 function formatBlueprintPhasePrefix(value) {
   const normalized = normalizeBlueprintPhaseRef(value);
@@ -15555,10 +15559,11 @@ function renderRoadmapArtifact(context) {
     context.bootstrapSeed
   );
   const phases = seed.roadmapPhases.map((phase) => {
+    const normalizedPhaseNumber = normalizePhaseNumber(phase.phase);
     const marker = phase.status === "done" ? "x" : " ";
     const requirementClause = phase.requirementIds && phase.requirementIds.length > 0 ? ` (Requirements: ${phase.requirementIds.join(", ")})` : "";
     const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
-    return `- [${marker}] Phase ${phase.phase}: ${phase.title}${requirementClause}
+    return `- [${marker}] Phase ${normalizedPhaseNumber}: ${phase.title}${requirementClause}
   - Objective: ${phase.objective}${notes ? `
 ${notes}` : ""}`;
   }).join("\n");

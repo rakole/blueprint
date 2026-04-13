@@ -133,6 +133,62 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
+async function createLegacyDecimalPhaseRepo(): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-phase-tools-legacy-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/01-legacy-bootstrap"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Legacy Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 1.0: Legacy Bootstrap** - Old whole-number decimal format
+
+## Phase Details
+
+### Phase 1.0: Legacy Bootstrap
+**Goal**: Preserve compatibility for older roadmaps.
+**Requirements**: LEG-01
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 1.0
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-13T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 test("phase discovery MCP tools are registered in the Blueprint server", () => {
   for (const toolName of [
     "blueprint_roadmap_read",
@@ -190,6 +246,23 @@ test("phase locate reports missing roadmap phases without escaping the Blueprint
   assert.match(missing.reason ?? "", /not found/i);
   assert.ok(missing.recovery.length > 0);
   assert.equal(missing.phaseDir, null);
+});
+
+test("phase locate resolves integer requests against legacy whole-number decimal roadmap entries", async (t) => {
+  const repoPath = await createLegacyDecimalPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const roadmap = await blueprintRoadmapRead({ cwd: repoPath });
+  const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "1" });
+
+  assert.equal(roadmap.phases[0]?.phaseNumber, "1");
+  assert.equal(roadmap.phases[0]?.phasePrefix, "01");
+  assert.equal(located.found, true);
+  assert.equal(located.phaseNumber, "1");
+  assert.equal(located.phasePrefix, "01");
+  assert.equal(located.phaseDir, ".blueprint/phases/01-legacy-bootstrap");
 });
 
 test("phase research status reflects context, research, and UI-spec presence", async (t) => {
