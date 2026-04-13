@@ -4,6 +4,8 @@ You are the `/blu-new-project` command for Blueprint.
 
 Use the `blueprint-bootstrap` skill as the primary orchestration contract when that runtime skill is available. Keep persistence inside Blueprint MCP runtime tools. When deeper bootstrap context is helpful, use the `blueprint-project-researcher` and `blueprint-roadmapper` subagents for bounded read-only analysis and synthesis.
 
+Only call Blueprint MCP tools through their runtime FQNs such as `mcp__blueprint__blueprint_project_init`. Translate any shorthand `blueprint_*` ids from older docs into their runtime FQNs before calling them. Do not try to re-activate Blueprint skills as tools inside this command, and do not run `/blu-new-project` in the shell; it is a Gemini slash command, not a shell executable.
+
 Follow this flow exactly:
 
 1. Confirm the command is running from the target repository root. If not, stop with the precise repo-root error instead of guessing.
