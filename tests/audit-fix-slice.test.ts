@@ -20,7 +20,7 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   );
   assert.match(
     implementationOrder,
-    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `docs-update`, `add-tests`, `pr-branch`, and `ship`\./
+    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, and `ship`\./
   );
 });
 

@@ -973,6 +973,14 @@ test("help progress and health command files reference registered MCP tool names
         "blueprint_artifact_mutate_index",
         "blueprint_state_update"
       ]
+    },
+    {
+      file: "commands/blu-ui-review.toml",
+      tools: [
+        "blueprint_phase_locate",
+        "blueprint_artifact_list",
+        "blueprint_review_record"
+      ]
     }
   ];
 
@@ -1016,6 +1024,7 @@ test("runtime-facing docs mention shipped command coverage instead of a docs-onl
   assert.match(readmeFile, /commands\/blu-code-review\.toml/);
   assert.match(readmeFile, /commands\/blu-code-review-fix\.toml/);
   assert.match(readmeFile, /commands\/blu-audit-fix\.toml/);
+  assert.match(readmeFile, /commands\/blu-ui-review\.toml/);
   assert.match(readmeFile, /commands\/blu-ship\.toml/);
   assert.match(geminiFile, /\/blu-debug/);
   assert.match(geminiFile, /\/blu-docs-update/);
@@ -1023,6 +1032,7 @@ test("runtime-facing docs mention shipped command coverage instead of a docs-onl
   assert.match(geminiFile, /\/blu-code-review/);
   assert.match(geminiFile, /\/blu-code-review-fix/);
   assert.match(geminiFile, /\/blu-audit-fix/);
+  assert.match(geminiFile, /\/blu-ui-review/);
   assert.match(geminiFile, /\/blu-ship/);
   assert.match(readmeFile, /skills\/blueprint-router\.md/);
   assert.match(readmeFile, /skills\/blueprint-maintenance\/SKILL\.md/);

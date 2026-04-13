@@ -1,0 +1,29 @@
+description = "Archive completed Blueprint phase directories through a confirmation-gated cleanup plan, then persist a durable cleanup report and next-step routing."
+prompt = """
+You are the `/blu-cleanup` command for Blueprint.
+
+Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+
+Follow this flow exactly:
+
+1. Read `mcp__blueprint__blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
+2. Read `mcp__blueprint__blueprint_roadmap_read` so the active milestone and the currently referenced phases stay visible. Treat the current phase and every phase still referenced by the active roadmap as protected cleanup exclusions.
+3. Inspect git status plus the `.blueprint/phases/` directory before mutation. A dirty working tree, missing phase directory root, or obviously inconsistent phase layout is a hard stop for cleanup.
+4. Read `mcp__blueprint__blueprint_artifact_list` and collect the closeout evidence relevant to cleanup: saved milestone completion or summary reports, the latest milestone audit when useful, and the phase artifacts for every candidate phase directory. Never rely on chat memory alone to prove a phase is safe to archive.
+5. Derive the cleanup scope explicitly. Only propose phase directories that belong to completed milestones, are no longer referenced by the active roadmap, and are not the current phase directory. If saved reports and repo state do not prove that scope safely, stop and explain the missing evidence instead of guessing.
+6. Build a compact evidence digest through `mcp__blueprint__blueprint_artifact_summary_digest`. Use explicit `artifactPaths` so the cleanup preview is grounded in the saved milestone evidence, the selected phase directories, and the protected directories that will be kept in place.
+7. Summarize the exact cleanup plan before any mutation: selected phase directories, protected directories that will not move, the candidate archive destination inside `.blueprint/`, whether that destination already exists, whether the operation will move directories directly or copy then delete originals, the report name `cleanup-latest`, and the exact filesystem commands you intend to run. Require explicit confirmation before any filesystem mutation, and require explicit overwrite confirmation before replacing an existing `cleanup-latest` report.
+8. Before relocating or deleting phase directories, persist the approved cleanup plan through `mcp__blueprint__blueprint_artifact_report_write` with the report name `cleanup-latest`. Record the selected scope, evidence found, protected directories, chosen archive destination, and the pending mutation plan. If overwrite was not explicitly approved, stop instead of replacing the report.
+9. After confirmation and report persistence, run only the approved filesystem operations. Never archive the current phase, the active milestone, or any phase without saved closeout evidence. If you use a copy path, delete the original directories only after the archive copy succeeds cleanly.
+10. If cleanup changes the next safe Blueprint action, update it through `mcp__blueprint__blueprint_state_update` only after the report is written and filesystem work succeeds. Keep the follow-up inside the implemented surface when possible; prefer `/blu-progress`, `/blu-new-milestone`, `/blu-plan-phase`, or `/blu-discuss-phase` when they fit the remaining repo state.
+11. Return a concise completion summary covering the archived phase directories, kept directories, report status, any safety blockers or skipped directories, and the next safe action. Do not present planned-only commands as runnable.
+
+Response requirements:
+- Use only `mcp__blueprint__blueprint_project_status`, `mcp__blueprint__blueprint_roadmap_read`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_summary_digest`, `mcp__blueprint__blueprint_artifact_report_write`, and `mcp__blueprint__blueprint_state_update` for Blueprint-owned persistent state work.
+- Keep Blueprint-owned writes inside `.blueprint/reports/cleanup-latest.md` plus `STATE.md` when state routing actually changes.
+- Never move or delete phase directories without an explicit confirmation gate.
+- Never archive the current phase, any phase still referenced by the active roadmap, or any phase lacking saved milestone closeout evidence.
+- Do not invent a new persistent archive schema inside `.blueprint/` unless the destination already exists or the user explicitly approves creating it.
+- Preserve a durable report of the approved cleanup scope before filesystem mutation begins.
+- Do not present planned-only commands as runnable follow-ups.
+"""

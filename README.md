@@ -27,6 +27,7 @@ This repository still carries the planning pack that locked the product and arch
 - The remediation command `/blu-audit-fix` is now shipped on April 13, 2026; it reuses the deterministic review scope, reads saved review or validation evidence first, keeps repo mutation bounded, persists `.blueprint/reports/audit-fix-<phase>.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
 - The peer review command `/blu-review` is now shipped on April 13, 2026; it reads saved phase plans through the plan MCP substrate, fans out to whichever reviewer CLIs are actually available, preserves partial reviewer availability honestly, and persists `XX-REVIEWS.md` through `blueprint_review_record`
+- The UI audit command `/blu-ui-review` is now shipped on April 13, 2026; it reads saved execution and UI-spec evidence, uses the `blueprint-review` skill plus the bounded `blueprint-ui-auditor` contract when needed, and persists `XX-UI-REVIEW.md` through `blueprint_review_record`
 - The review-branch command `/blu-pr-branch` is now shipped on April 13, 2026; it reads project and config state first, previews the filtered review scope with explicit `.blueprint/` inclusion or exclusion, persists `.blueprint/reports/pr-branch-latest.md`, and never rewrites the source branch in place
 - The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap insertion command `/blu-insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu-discuss-phase`
@@ -42,7 +43,7 @@ This repository still carries the planning pack that locked the product and arch
 - The bounded execution command `/blu-quick` is now shipped; it keeps lightweight repo work inside a reduced-ceremony path, uses optional discuss, research, and validation depth only after explicit confirmation, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`
 - The debug command `/blu-debug` is now shipped on April 13, 2026; it runs a structured investigation flow, persists `.blueprint/reports/debug-latest.md`, can capture explicit todo follow-ups, and routes broader fix work into existing implemented execution commands
 - The documentation command `/blu-docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
-- The maintenance commands `/blu-pr-branch` and `/blu-ship` are now shipped on April 13, 2026; `pr-branch` keeps `.blueprint/` filtering explicit and persists `.blueprint/reports/pr-branch-latest.md`, while `ship` reuses saved verification and review evidence, keeps push or PR creation confirmation-gated, and persists `.blueprint/reports/ship-latest.md` with manual fallback guidance when `gh` is unavailable
+- The maintenance commands `/blu-pr-branch`, `/blu-ship`, and `/blu-cleanup` are now shipped on April 13, 2026; `pr-branch` keeps `.blueprint/` filtering explicit and persists `.blueprint/reports/pr-branch-latest.md`, `ship` reuses saved verification and review evidence and persists `.blueprint/reports/ship-latest.md` with manual fallback guidance when `gh` is unavailable, and `cleanup` archives only completed-milestone phase directories after explicit confirmation and a durable `.blueprint/reports/cleanup-latest.md` plan
 - Runtime gate: `/blu`, `/blu-help`, and `/blu-progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
 ## Install And Release
@@ -205,6 +206,7 @@ These runtime files exist today:
 - `commands/blu-code-review-fix.toml`
 - `commands/blu-audit-fix.toml`
 - `commands/blu-secure-phase.toml`
+- `commands/blu-ui-review.toml`
 - `commands/blu-audit-milestone.toml`
 - `commands/blu-add-phase.toml`
 - `commands/blu-insert-phase.toml`
@@ -212,6 +214,7 @@ These runtime files exist today:
 - `commands/blu-docs-update.toml`
 - `commands/blu-pr-branch.toml`
 - `commands/blu-ship.toml`
+- `commands/blu-cleanup.toml`
 - `commands/blu-milestone-summary.toml`
 - `commands/blu-new-milestone.toml`
 - `commands/blu-plan-milestone-gaps.toml`
@@ -248,6 +251,7 @@ These runtime files exist today:
 - `agents/blueprint-doc-writer.md`
 - `agents/blueprint-doc-verifier.md`
 - `agents/blueprint-security-auditor.md`
+- `agents/blueprint-ui-auditor.md`
 - `hooks/hooks.json`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`
