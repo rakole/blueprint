@@ -57,6 +57,7 @@ prior research.
 - milestone structure and phase ordering
 - requirement-to-phase coverage notes
 - sequencing notes and dependency warnings
+- revision guidance that preserves valid existing phases when only part of the roadmap changes
 - a provisional flag when brownfield mapping is still missing
 
 ## Required Output Contract
@@ -66,6 +67,8 @@ prior research.
 - Make grouped gap-closure reasoning explicit when the input is a milestone
   audit.
 - Separate blockers from warnings and identify any deferred optional gaps.
+- When revising an existing roadmap, preserve unaffected phases and call out
+  exactly what changed instead of silently replanning everything.
 - Call out when brownfield uncertainty or missing discovery evidence makes the
   roadmap only provisional.
 

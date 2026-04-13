@@ -17,6 +17,8 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   assert.match(projectResearcher, /greenfield`, `scaffold-only`, or `brownfield`/);
   assert.match(projectResearcher, /Confidence:/);
   assert.match(projectResearcher, /\/blu-map-codebase/);
+  assert.match(projectResearcher, /requirement-shaping signals/i);
+  assert.match(projectResearcher, /biggest uncertainty still worth asking the user/i);
   assert.match(
     projectResearcher,
     /Do not draft or rewrite roadmap, requirements, or `\.blueprint\/` artifacts\s+directly/
@@ -26,6 +28,8 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   assert.match(roadmapper, /requirement-to-phase coverage explicit/i);
   assert.match(roadmapper, /success criteria/i);
   assert.match(roadmapper, /group related requirement,\s+integration, or flow gaps/i);
+  assert.match(roadmapper, /preserve unaffected phases/i);
+  assert.match(roadmapper, /exactly what changed/i);
   assert.match(
     roadmapper,
     /return\s+ordered proposals without inventing permanent phase numbers/i
