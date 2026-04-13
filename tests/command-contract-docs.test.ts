@@ -286,6 +286,29 @@ test("review-backlog docs and catalog metadata are marked implemented with the b
   );
 });
 
+test("explore docs and catalog metadata are marked implemented with the ideation-routing tools", async () => {
+  const [catalogMarkdown, exploreDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/explore.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `explore` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \| `the chosen target only: note, todo, backlog entry, or roadmap proposal` \| `Low: ideation-first, persistence second\.` \|/
+  );
+  assert.match(exploreDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(exploreDoc, /Argument hint: `<idea>`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_add_phase`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_project_status`/);
+  assert.match(exploreDoc, /Requires explicit confirmation of the final routing target before any write\./);
+  assert.match(
+    migrationMarkdown,
+    /\| `explore` \| `commands\/gsd\/explore\.md` \| GSD has an upstream workflow file \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_project_status` \|/
+  );
+});
+
 test("list-phase-assumptions docs stay read-only and use the discovery MCP tools", async () => {
   const [commandDoc, skillsMarkdown] = await Promise.all([
     readRepoFile("docs/commands/list-phase-assumptions.md"),

@@ -37,6 +37,6 @@ test("blueprint-capture skill captures shipped check-todos behavior", async () =
   assert.match(skillFile, /active` or `completed/);
   assert.doesNotMatch(
     skillFile,
-    /`check-todos`, `review-backlog`, and `explore` stay documented contracts/
+    /`check-todos` and `review-backlog` stay documented contracts/
   );
 });
