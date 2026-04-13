@@ -58,7 +58,8 @@ const IMPLEMENTED_COMMANDS = [
   "new-milestone",
   "docs-update",
   "pr-branch",
-  "ship"
+  "ship",
+  "cleanup"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do"] as const;
@@ -823,6 +824,29 @@ test("ship is implemented once manifest, skill, and report-backed shipping MCP t
     "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_project_status",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("cleanup is implemented once manifest, skill, and archival report MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["cleanup"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("cleanup"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_artifact_report_write",
+    "blueprint_artifact_summary_digest",
+    "blueprint_project_status",
+    "blueprint_roadmap_read",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);

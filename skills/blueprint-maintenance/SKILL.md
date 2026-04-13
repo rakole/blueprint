@@ -57,6 +57,7 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 - `blueprint_project_status`
 - `blueprint_phase_locate`
 - `blueprint_config_get`
+- `blueprint_roadmap_read`
 - `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
@@ -90,12 +91,26 @@ Carry forward the useful upstream maintenance intent while preserving Blueprint'
 9. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/ship-latest.md`, including manual fallback guidance when remote creation does not happen.
 10. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
 
+### `cleanup`
+
+1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
+2. Read `blueprint_roadmap_read` before proposing any archive scope so the current phase and active roadmap references stay visible as protected exclusions.
+3. Inspect git status plus `.blueprint/phases/` before mutation. A dirty working tree, missing phase root, or obviously inconsistent phase layout is a hard stop for cleanup.
+4. Read saved milestone completion, summary, and related evidence through `blueprint_artifact_list` before proposing any archive scope.
+5. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, and stop instead of guessing when saved evidence is incomplete.
+6. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` so the cleanup plan stays grounded in the saved milestone evidence and the selected directories.
+7. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior.
+8. Persist the approved cleanup plan through `blueprint_artifact_report_write` as `.blueprint/reports/cleanup-latest.md` before filesystem mutation begins.
+9. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
+10. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
+
 ## Planned Later Command Guardrail
 
-- `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
 
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, and end with the safest implemented follow-up or manual next step.
 - For `ship`, report the selected scope, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, and the safest implemented follow-up or manual next step.
+- For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
