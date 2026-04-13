@@ -1,11 +1,15 @@
 import { promises as fs } from "node:fs";
+import path from "node:path";
 
 import * as z from "zod/v4";
 
 import {
   ensureParentDirectory,
   ensureRepoRoot,
-  resolveBlueprintPath
+  resolveBlueprintPath,
+  resolveRepoRelativePath,
+  toRepoRelativePath,
+  validatePlanArtifactContent
 } from "./artifacts.js";
 import { blueprintPhaseLocate } from "./phase.js";
 
@@ -44,6 +48,41 @@ type ReviewRecordResult = {
   warnings: string[];
 };
 
+type ReviewDepth = "quick" | "standard" | "deep";
+
+type ReviewScopeArgs = {
+  cwd?: string;
+  phase?: string;
+  files?: string[];
+  depth?: ReviewDepth;
+};
+
+type ReviewScopeResult = {
+  status: "ready" | "invalid";
+  phase: {
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
+    resolvedFrom: "explicit" | "state" | "roadmap";
+  } | null;
+  files: string[];
+  reviewMode: {
+    depth: ReviewDepth;
+    source: "phase-plans" | "explicit-files" | "mixed";
+  };
+  artifacts: {
+    plans: string[];
+    summaries: string[];
+    verification: string | null;
+    uat: string | null;
+    existingReview: string | null;
+    security: string | null;
+  };
+  reason: string | null;
+  warnings: string[];
+};
+
 const REVIEW_ARTIFACT_SUFFIXES: Record<ReviewArtifactKind, string> = {
   "code-review": "-REVIEW.md",
   "peer-review": "-REVIEWS.md",
@@ -64,6 +103,13 @@ const reviewRecordInputSchema = {
   ]),
   content: z.string(),
   overwrite: z.boolean().optional()
+};
+
+const reviewScopeInputSchema = {
+  cwd: z.string().optional(),
+  phase: z.string().optional(),
+  files: z.array(z.string()).optional(),
+  depth: z.enum(["quick", "standard", "deep"]).optional()
 };
 
 function normalizeTextContent(content: string): string {
@@ -160,6 +206,333 @@ function collectReviewCounts(content: string): {
       followUps: followUps.length
     },
     followUps
+  };
+}
+
+function parsePlanIdForSuffix(
+  pathValue: string,
+  phasePrefix: string,
+  suffix: "PLAN" | "SUMMARY"
+): string | null {
+  const match = pathValue.match(
+    new RegExp(`${phasePrefix.replace(".", "\\.")}-(\\d+)-${suffix}\\.md$`)
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  return match[1].padStart(2, "0");
+}
+
+function findPhaseArtifact(artifacts: string[], suffix: string): string | null {
+  return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
+}
+
+async function readRepoFileIfPresent(
+  projectRoot: string,
+  relativePath: string
+): Promise<string | null> {
+  try {
+    const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
+    return await fs.readFile(absolutePath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+async function normalizeExplicitReviewFiles(
+  projectRoot: string,
+  files: string[],
+  warnings: string[]
+): Promise<string[]> {
+  const resolvedFiles = new Set<string>();
+
+  for (const rawFile of files) {
+    const requestedPath = rawFile.trim();
+
+    if (requestedPath.length === 0) {
+      continue;
+    }
+
+    let absolutePath: string;
+
+    try {
+      absolutePath = resolveRepoRelativePath(projectRoot, requestedPath);
+    } catch (error) {
+      warnings.push(
+        error instanceof Error
+          ? error.message
+          : `Could not resolve explicit review path: ${requestedPath}`
+      );
+      continue;
+    }
+
+    const relativePath = toRepoRelativePath(projectRoot, absolutePath);
+
+    if (relativePath.startsWith(".blueprint/")) {
+      warnings.push(
+        `Skipped Blueprint artifact path from explicit review scope: ${relativePath}`
+      );
+      continue;
+    }
+
+    let stats;
+
+    try {
+      stats = await fs.stat(absolutePath);
+    } catch {
+      warnings.push(`Skipped missing explicit review path: ${relativePath}`);
+      continue;
+    }
+
+    if (!stats.isFile()) {
+      warnings.push(`Skipped non-file explicit review path: ${relativePath}`);
+      continue;
+    }
+
+    resolvedFiles.add(relativePath);
+  }
+
+  return [...resolvedFiles];
+}
+
+async function deriveReviewFilesFromPlans(
+  projectRoot: string,
+  located: {
+    phaseNumber: string;
+    phasePrefix: string;
+    artifacts: string[];
+  },
+  warnings: string[]
+): Promise<string[]> {
+  const summaryPlanIds = new Set(
+    located.artifacts
+      .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
+      .map((artifact) => parsePlanIdForSuffix(artifact, located.phasePrefix, "SUMMARY"))
+      .filter((planId): planId is string => planId !== null)
+  );
+
+  if (summaryPlanIds.size === 0) {
+    warnings.push(
+      "No execution summaries were found for the selected phase, so Blueprint could not derive a review scope from executed plans."
+    );
+
+    return [];
+  }
+
+  const planPaths = located.artifacts.filter((artifact) => {
+    if (!artifact.endsWith("-PLAN.md")) {
+      return false;
+    }
+
+    const planId = parsePlanIdForSuffix(artifact, located.phasePrefix, "PLAN");
+    return planId !== null && summaryPlanIds.has(planId);
+  });
+
+  if (planPaths.length === 0) {
+    warnings.push(
+      "Execution summaries exist, but the matching plan artifacts were missing, so Blueprint could not derive changed repo files for review."
+    );
+
+    return [];
+  }
+
+  const resolvedFiles = new Set<string>();
+
+  for (const planPath of planPaths) {
+    const content = await readRepoFileIfPresent(projectRoot, planPath);
+
+    if (content === null) {
+      warnings.push(`Skipped unreadable plan artifact while deriving review scope: ${planPath}`);
+      continue;
+    }
+
+    const validation = validatePlanArtifactContent(content, located.phaseNumber);
+
+    if (!validation.valid) {
+      warnings.push(
+        `Plan metadata issues in ${planPath}: ${validation.issues.join(" ")}`
+      );
+    }
+
+    for (const plannedPath of validation.metadata.filesModified) {
+      const requestedPath = plannedPath.trim();
+
+      if (requestedPath.length === 0) {
+        continue;
+      }
+
+      if (requestedPath.includes("*")) {
+        warnings.push(
+          `Skipped wildcard review scope entry from ${planPath}: ${requestedPath}`
+        );
+        continue;
+      }
+
+      let absolutePath: string;
+
+      try {
+        absolutePath = resolveRepoRelativePath(projectRoot, requestedPath);
+      } catch (error) {
+        warnings.push(
+          error instanceof Error
+            ? error.message
+            : `Could not resolve planned review path from ${planPath}: ${requestedPath}`
+        );
+        continue;
+      }
+
+      const relativePath = toRepoRelativePath(projectRoot, absolutePath);
+
+      if (relativePath.startsWith(".blueprint/")) {
+        warnings.push(
+          `Skipped Blueprint artifact path from ${planPath} review scope: ${relativePath}`
+        );
+        continue;
+      }
+
+      let stats;
+
+      try {
+        stats = await fs.stat(absolutePath);
+      } catch {
+        warnings.push(
+          `Skipped missing repo path from ${planPath} review scope: ${relativePath}`
+        );
+        continue;
+      }
+
+      if (!stats.isFile()) {
+        warnings.push(
+          `Skipped non-file repo path from ${planPath} review scope: ${relativePath}`
+        );
+        continue;
+      }
+
+      resolvedFiles.add(relativePath);
+    }
+  }
+
+  return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
+}
+
+export async function blueprintReviewScope(
+  args: ReviewScopeArgs
+): Promise<ReviewScopeResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate({
+    cwd: projectRoot,
+    phase: args.phase
+  });
+
+  if (
+    !located.found ||
+    !located.phaseNumber ||
+    !located.phasePrefix ||
+    !located.phaseDir
+  ) {
+    return {
+      status: "invalid",
+      phase: null,
+      files: [],
+      reviewMode: {
+        depth: args.depth ?? "standard",
+        source: (args.files?.length ?? 0) > 0 ? "explicit-files" : "phase-plans"
+      },
+      artifacts: {
+        plans: [],
+        summaries: [],
+        verification: null,
+        uat: null,
+        existingReview: null,
+        security: null
+      },
+      reason: located.reason ?? "Phase could not be resolved for review scoping.",
+      warnings: located.warnings
+    };
+  }
+
+  const warnings = [...located.warnings];
+  const explicitFiles = await normalizeExplicitReviewFiles(
+    projectRoot,
+    args.files ?? [],
+    warnings
+  );
+  const derivedFiles = await deriveReviewFilesFromPlans(
+    projectRoot,
+    {
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      artifacts: located.artifacts
+    },
+    warnings
+  );
+  const files = [...new Set([...explicitFiles, ...derivedFiles])];
+  const source =
+    explicitFiles.length > 0 && derivedFiles.length > 0
+      ? "mixed"
+      : explicitFiles.length > 0
+        ? "explicit-files"
+        : "phase-plans";
+  const artifacts = {
+    plans: located.artifacts
+      .filter((artifact) => artifact.endsWith("-PLAN.md"))
+      .sort((left, right) => left.localeCompare(right)),
+    summaries: located.artifacts
+      .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
+      .sort((left, right) => left.localeCompare(right)),
+    verification: findPhaseArtifact(located.artifacts, "-VERIFICATION.md"),
+    uat: findPhaseArtifact(located.artifacts, "-UAT.md"),
+    existingReview: findPhaseArtifact(located.artifacts, "-REVIEW.md"),
+    security: findPhaseArtifact(located.artifacts, "-SECURITY.md")
+  };
+
+  if (files.length === 0) {
+    return {
+      status: "invalid",
+      phase: {
+        phaseNumber: located.phaseNumber,
+        phasePrefix: located.phasePrefix,
+        phaseName:
+          located.phaseName ??
+          `Phase ${located.phasePrefix} ${path.basename(located.phaseDir)}`,
+        phaseDir: located.phaseDir,
+        resolvedFrom: located.resolvedFrom
+      },
+      files,
+      reviewMode: {
+        depth: args.depth ?? "standard",
+        source
+      },
+      artifacts,
+      reason:
+        explicitFiles.length > 0
+          ? "No valid repo files remained in the explicit review scope."
+          : "Blueprint could not derive any reviewable repo files from the executed phase plans. Re-run with explicit --files paths or restore the saved plan metadata.",
+      warnings
+    };
+  }
+
+  return {
+    status: "ready",
+    phase: {
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName:
+        located.phaseName ??
+        `Phase ${located.phasePrefix} ${path.basename(located.phaseDir)}`,
+      phaseDir: located.phaseDir,
+      resolvedFrom: located.resolvedFrom
+    },
+    files,
+    reviewMode: {
+      depth: args.depth ?? "standard",
+      source
+    },
+    artifacts,
+    reason: null,
+    warnings
   };
 }
 
@@ -263,6 +636,14 @@ export async function blueprintReviewRecord(
 }
 
 export const reviewToolDefinitions = [
+  {
+    name: "blueprint_review_scope",
+    description:
+      "Resolve a phase-backed Blueprint code-review scope from executed plan metadata or explicit repo file paths.",
+    inputSchema: reviewScopeInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintReviewScope(args as ReviewScopeArgs)
+  },
   {
     name: "blueprint_review_record",
     description:

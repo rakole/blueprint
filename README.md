@@ -21,6 +21,7 @@ This repository still carries the planning pack that locked the product and arch
 - The shipped lifecycle slice also includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, and the read-only next-step router `/blu-next`
 - The read-only phase-discovery assumptions command `/blu-list-phase-assumptions` is now shipped on the same discovery substrate
 - The governance handoff and resume commands `/blu-pause-work` and `/blu-resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
+- The code review command `/blu-code-review` is now shipped on April 13, 2026; it resolves a deterministic repo-file scope from executed plans or explicit file paths, uses the `blueprint-review` skill plus the bounded `blueprint-reviewer` contract when needed, and persists `XX-REVIEW.md` through the shared review MCP tools
 - The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
 - The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap insertion command `/blu-insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu-discuss-phase`
@@ -188,6 +189,7 @@ These runtime files exist today:
 - `commands/blu-execute-phase.toml`
 - `commands/blu-validate-phase.toml`
 - `commands/blu-verify-work.toml`
+- `commands/blu-code-review.toml`
 - `commands/blu-secure-phase.toml`
 - `commands/blu-audit-milestone.toml`
 - `commands/blu-add-phase.toml`
@@ -218,6 +220,7 @@ These runtime files exist today:
 - `skills/blueprint-roadmap-admin/SKILL.md`
 - `agents/blueprint-project-researcher.md`
 - `agents/blueprint-roadmapper.md`
+- `agents/blueprint-reviewer.md`
 - `agents/blueprint-mapper.md`
 - `agents/blueprint-researcher.md`
 - `agents/blueprint-debugger.md`

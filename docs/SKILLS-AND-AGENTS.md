@@ -41,6 +41,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-verifier` | `implemented` | Verify execution results and UAT evidence |
 | `blueprint-researcher` | `implemented` | Phase-specific technical research |
 | `blueprint-debugger` | `implemented` | Run structured debugging investigations |
+| `blueprint-reviewer` | `implemented` | Produce bounded code review findings from a resolved Blueprint scope |
 | `blueprint-security-auditor` | `implemented` | Verify threat mitigations and security coverage |
 | `blueprint-ui-designer` | `implemented` | Produce `UI-SPEC` contracts |
 | `blueprint-doc-writer` | `implemented` | Draft scoped repo documentation updates |
@@ -50,7 +51,6 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 
 | Agent | Status | Purpose |
 |---|---|---|
-| `blueprint-reviewer` | `planned` | Produce code review findings |
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
 | `blueprint-ui-auditor` | `planned` | Perform retroactive UI audits |
 
