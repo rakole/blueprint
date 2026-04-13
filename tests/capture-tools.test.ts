@@ -218,6 +218,125 @@ test("blueprint_artifact_mutate_index appends todo entries with open status", as
   assert.match(todoBody, /- Description: Add retry telemetry/);
 });
 
+test("blueprint_artifact_mutate_index lists pending todos with active items first", async (t) => {
+  const repoPath = await createCaptureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: {
+      text: "Add retry telemetry",
+      status: "open"
+    }
+  });
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: {
+      text: "Harden auth handoff",
+      status: "active"
+    }
+  });
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: {
+      text: "Delete legacy flags",
+      status: "completed"
+    }
+  });
+
+  const result = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    action: "list"
+  });
+
+  assert.equal(result.status, "listed");
+  assert.deepEqual(result.matchedEntryIds, ["TODO-002", "TODO-001"]);
+  assert.deepEqual(
+    result.entries.map((entry) => `${entry.id}:${entry.status}`),
+    ["TODO-002:active", "TODO-001:open"]
+  );
+  assert.equal(result.summary.total, 3);
+  assert.equal(result.summary.matched, 2);
+  assert.equal(result.summary.active, 1);
+  assert.equal(result.summary.open, 1);
+  assert.equal(result.summary.completed, 0);
+});
+
+test("blueprint_artifact_mutate_index updates todo status and keeps a single active item", async (t) => {
+  const repoPath = await createCaptureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: {
+      text: "Add retry telemetry",
+      status: "open"
+    }
+  });
+  await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    entry: {
+      text: "Harden auth handoff",
+      status: "active"
+    }
+  });
+
+  const activated = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    action: "update",
+    match: {
+      id: "TODO-001"
+    },
+    update: {
+      status: "active"
+    }
+  });
+  const completed = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    action: "update",
+    match: {
+      id: "TODO-001"
+    },
+    update: {
+      status: "completed"
+    }
+  });
+  const todoBody = await readFile(
+    path.join(repoPath, ".blueprint/todos/TODO.md"),
+    "utf8"
+  );
+
+  assert.equal(activated.status, "updated");
+  assert.deepEqual(activated.matchedEntryIds, ["TODO-001"]);
+  assert.equal(activated.updatedCounts.updated, 2);
+  assert.deepEqual(
+    activated.entries.map((entry) => `${entry.id}:${entry.status}`),
+    ["TODO-001:active"]
+  );
+
+  assert.equal(completed.status, "updated");
+  assert.deepEqual(completed.matchedEntryIds, ["TODO-001"]);
+  assert.equal(completed.updatedCounts.updated, 1);
+  assert.deepEqual(
+    completed.entries.map((entry) => `${entry.id}:${entry.status}`),
+    ["TODO-001:completed"]
+  );
+  assert.match(todoBody, /### TODO-001[\s\S]*- Status: completed/);
+  assert.match(todoBody, /### TODO-002[\s\S]*- Status: open/);
+});
+
 test("blueprint_artifact_mutate_index rejects duplicate backlog ideas after normalization", async (t) => {
   const repoPath = await createCaptureRepo();
   t.after(async () => {

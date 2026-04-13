@@ -66,8 +66,7 @@ What remains closest on the roadmap:
   - `quick`
   - `do`
   - `add-tests`
-- Continue the remaining capture layer after the shipped `note`, `add-todo`, and `add-backlog` slice:
-  - `check-todos`
+- Continue the remaining capture layer after the shipped `note`, `add-todo`, `check-todos`, and `add-backlog` slice:
   - `review-backlog`
   - `explore`
   - `debug`

@@ -235,6 +235,29 @@ test("add-todo docs and catalog metadata are marked implemented with the shipped
   );
 });
 
+test("check-todos docs and catalog metadata are marked implemented with the shipped todo-review tools", async () => {
+  const [catalogMarkdown, checkTodosDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/check-todos.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `check-todos` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \| `todo status fields when selection or completion changes` \| `Low: todo selection and status update only\.` \|/
+  );
+  assert.match(checkTodosDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(checkTodosDoc, /Argument hint: `\[area filter\]`/);
+  assert.match(checkTodosDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(checkTodosDoc, /## Required MCP Tools[\s\S]*`blueprint_project_status`/);
+  assert.match(checkTodosDoc, /Confirm active or completed status changes before writing them\./);
+  assert.doesNotMatch(checkTodosDoc, /`blueprint_state_update`/);
+  assert.match(
+    migrationMarkdown,
+    /\| `check-todos` \| `commands\/gsd\/check-todos\.md` \| GSD has an upstream workflow file \| `docs\/commands\/check-todos\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_project_status` \|/
+  );
+});
+
 test("list-phase-assumptions docs stay read-only and use the discovery MCP tools", async () => {
   const [commandDoc, skillsMarkdown] = await Promise.all([
     readRepoFile("docs/commands/list-phase-assumptions.md"),

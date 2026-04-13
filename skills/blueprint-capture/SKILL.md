@@ -85,9 +85,18 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 4. Treat normalized duplicate todo descriptions as already captured work and report the existing entry instead of creating a second copy.
 5. Keep follow-up guidance inside implemented commands only.
 
+### `check-todos`
+
+1. Read `blueprint_project_status` before listing or mutating todos so missing or partial Blueprint state routes safely.
+2. Use `blueprint_artifact_mutate_index` with `target: "todo"` and `action: "list"` to inspect pending todos. Apply a query filter when the user supplies an area, ID, or keyword.
+3. When the user only wants the queue, keep the response read-oriented and show pending todos with any active item first.
+4. Require explicit confirmation before marking a todo `active` or `completed` unless the user request is already unmistakably explicit.
+5. Use `blueprint_artifact_mutate_index` with `target: "todo"` and `action: "update"` for status changes, and prefer exact todo IDs when mutating.
+6. Keep follow-up guidance inside implemented commands only.
+
 ## Future Capture Guardrails
 
-- `check-todos`, `review-backlog`, and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
+- `review-backlog` and `explore` stay documented contracts until their own manifests and any extra MCP substrate ship.
 - Do not quietly promote backlog entries into roadmap phases without the dedicated promotion contract.
 - Do not write capture state outside `.blueprint/notes/`, `.blueprint/todos/`, `.blueprint/backlog/`, or explicitly reserved `.blueprint/phases/999.x-*/` stubs.
 

@@ -42,6 +42,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "verify-work",
   "note",
   "add-todo",
+  "check-todos",
   "add-backlog",
   "secure-phase",
   "add-phase",
