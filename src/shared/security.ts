@@ -245,13 +245,18 @@ export function normalizeBlueprintPhaseRef(value: string, label = "Phase referen
     throw new Error(`${label} must be a numeric Blueprint phase reference: ${value}`);
   }
 
-  return trimmed
+  const normalized = trimmed
     .split(".")
     .map((segment) => {
       const normalized = segment.replace(/^0+(?=\d)/, "");
       return normalized.length > 0 ? normalized : "0";
-    })
-    .join(".");
+    });
+
+  while (normalized.length > 1 && normalized.at(-1) === "0") {
+    normalized.pop();
+  }
+
+  return normalized.join(".");
 }
 
 export function formatBlueprintPhasePrefix(value: string): string {

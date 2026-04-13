@@ -130,6 +130,9 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   assert.match(requirementsDoc, /## Traceability Notes/);
   assert.match(roadmapDoc, /Requirements: RQ-01, RQ-02/);
   assert.match(roadmapDoc, /Roadmap confidence: ready for progress review/);
+  assert.match(roadmapDoc, /Phase 1: Discovery And Definition/);
+  assert.match(roadmapDoc, /Phase 2: Foundation Bootstrap/);
+  assert.doesNotMatch(roadmapDoc, /Phase 1\.0:|Phase 2\.0:/);
 });
 
 test("new-project fails from a nested directory with a precise repo-root error", async (t) => {
@@ -272,6 +275,43 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
   assert.match(roadmapDoc, /Phase 1: Define Workflow \(Requirements: BP-01, BP-02\)/);
   assert.equal(status.currentMilestone, "v2");
   assert.equal(status.currentPhase, "1");
+});
+
+test("new-project normalizes whole-number decimal roadmap phases from bootstrap seeds", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      roadmapPhases: [
+        {
+          phase: "1.0",
+          title: "Discovery And Definition",
+          objective: "Confirm milestone intent."
+        },
+        {
+          phase: "2.0",
+          title: "Foundation Bootstrap",
+          objective: "Prepare planning inputs."
+        },
+        {
+          phase: "2.1",
+          title: "Urgent Insert",
+          objective: "Handle inserted work."
+        }
+      ]
+    }
+  });
+
+  const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.match(roadmapDoc, /Phase 1: Discovery And Definition/);
+  assert.match(roadmapDoc, /Phase 2: Foundation Bootstrap/);
+  assert.match(roadmapDoc, /Phase 2\.1: Urgent Insert/);
+  assert.doesNotMatch(roadmapDoc, /Phase 1\.0:|Phase 2\.0:/);
 });
 
 test("brownfield repos route to map-codebase after bootstrap until the repo is mapped", async (t) => {
