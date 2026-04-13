@@ -19,6 +19,11 @@ const EXPECTED_AGENTS = {
     maxTurns: 16,
     timeoutMins: 15
   },
+  "blueprint-debugger": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 18,
+    timeoutMins: 20
+  },
   "blueprint-doc-writer": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
     maxTurns: 16,

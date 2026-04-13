@@ -79,3 +79,17 @@ test("docs specialist agents encode scoped drafting and evidence-backed verifica
   assert.match(docVerifier, /Report Draft/);
   assert.match(docVerifier, /Do not downgrade unsupported claims/i);
 });
+
+test("debug specialist agent encodes bounded investigation and report-ready diagnosis", async () => {
+  const debuggerAgent = await readAgent("blueprint-debugger");
+
+  assert.match(debuggerAgent, /## Required Reads/);
+  assert.match(debuggerAgent, /debug-latest\.md/);
+  assert.match(debuggerAgent, /## Investigation Protocol/);
+  assert.match(debuggerAgent, /narrowest plausible repro path/i);
+  assert.match(debuggerAgent, /confirmed`, `likely`, and `unproven`/);
+  assert.match(debuggerAgent, /## Required Output Contract/);
+  assert.match(debuggerAgent, /## Recovery Options/);
+  assert.match(debuggerAgent, /\.blueprint\/reports\/debug-latest\.md/);
+  assert.match(debuggerAgent, /Do not present planned-only commands as runnable/i);
+});

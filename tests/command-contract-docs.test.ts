@@ -298,6 +298,32 @@ test("quick command docs keep the bounded report-backed execution contract expli
   assert.match(quickDoc, /Leaves unrelated repo files untouched/i);
 });
 
+test("debug skill and bounded debugger agent are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-debug` \| `implemented` \| Debug investigations and recovery plans \| `debug` \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-debugger` \| `implemented` \| Run structured debugging investigations \|/
+  );
+});
+
+test("debug command docs keep the report-backed investigation contract explicit", async () => {
+  const debugDoc = await readRepoFile("docs/commands/debug.md");
+
+  assert.match(debugDoc, /Primary skill: `blueprint-debug`/);
+  assert.match(debugDoc, /blueprint_project_status/);
+  assert.match(debugDoc, /blueprint_artifact_report_write/);
+  assert.match(debugDoc, /blueprint_artifact_mutate_index/);
+  assert.match(debugDoc, /blueprint_state_update/);
+  assert.match(debugDoc, /debug-latest\.md/);
+  assert.match(debugDoc, /diagnose-only mode/i);
+  assert.match(debugDoc, /Leaves unrelated repo files untouched/i);
+});
+
 test("fast command docs keep the trivial inline execution contract explicit", async () => {
   const fastDoc = await readRepoFile("docs/commands/fast.md");
 
