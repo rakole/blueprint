@@ -104,9 +104,20 @@ Carry forward the useful capture behavior from GSD while preserving Blueprint's 
 6. Use `blueprint_state_update` so the next safe implemented action routes to `/blu-discuss-phase <first promoted phase>` when promotion happened, or `/blu-progress` when it did not.
 7. Keep follow-up guidance inside implemented commands only.
 
+### `explore`
+
+1. Require a non-empty idea or topic before doing any classification work.
+2. Read `blueprint_project_status` first so missing or partial Blueprint state routes safely.
+3. Classify the idea into exactly one of `note`, `todo`, `backlog`, `roadmap`, or `no-write`.
+4. If the request is clearly execution-sized or phase-sized beyond a capture handoff, do not persist it through capture tools; route to `quick` or `plan-phase` instead.
+5. If the repo is not yet a Blueprint project, stop in suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
+6. Confirm the final routing target and normalized text before any write. Review is the default safe path.
+7. Use `blueprint_artifact_mutate_index` for confirmed `note`, `todo`, or `backlog` writes, and treat duplicate descriptions as already captured work instead of creating a second copy.
+8. Use `blueprint_roadmap_add_phase` only when the confirmed target is roadmap-ready active work; if project health is partial, route to `/blu-health` before roadmap mutation.
+9. Keep follow-up guidance inside implemented commands only. Prefer `/blu-check-todos` after todo capture, `/blu-review-backlog` after backlog capture, `/blu-discuss-phase <phase>` after roadmap capture, and `/blu-progress` otherwise.
+
 ## Future Capture Guardrails
 
-- `explore` stays documented until its own manifest and any extra MCP substrate ship.
 - Do not write capture state outside `.blueprint/notes/`, `.blueprint/todos/`, `.blueprint/backlog/`, or explicitly reserved `.blueprint/phases/999.x-*/` stubs.
 
 ## Output Style

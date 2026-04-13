@@ -35,6 +35,6 @@ test("blueprint-capture skill captures todo append behavior", async () => {
   assert.match(skillFile, /implemented commands only/i);
   assert.doesNotMatch(
     skillFile,
-    /`note`, `add-todo`, `check-todos`, `review-backlog`, and `explore` stay documented contracts/
+    /`note`, `add-todo`, `check-todos`, and `review-backlog` stay documented contracts/
   );
 });

@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, and `/blu-add-backlog`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`), governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review and docs commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -32,6 +32,7 @@ This repository still carries the planning pack that locked the product and arch
 - The capture command `/blu-note` is now shipped; it appends deterministic project-local notes to `.blueprint/notes/NOTES.md`, detects duplicates, and keeps note persistence inside Blueprint MCP
 - The capture command `/blu-add-todo` is now shipped; it appends deterministic project-local todos to `.blueprint/todos/TODO.md`, detects duplicates, and keeps todo persistence inside Blueprint MCP
 - The capture command `/blu-add-backlog` is now shipped; it appends deterministic parking-lot entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` stub through Blueprint MCP plus scaffolding
+- The ideation command `/blu-explore` is now shipped on April 13, 2026; it classifies ideas into note, todo, backlog, or roadmap-ready work, requires explicit routing confirmation before any write, and persists only the confirmed target through Blueprint MCP
 - The trivial execution command `/blu-fast` is now shipped; it handles truly small inline repo work without subagents or report artifacts, updates `.blueprint/STATE.md` only when Blueprint is already initialized, and reroutes larger asks to `/blu-quick` or planning flows
 - The bounded execution command `/blu-quick` is now shipped; it keeps lightweight repo work inside a reduced-ceremony path, uses optional discuss, research, and validation depth only after explicit confirmation, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`
 - The debug command `/blu-debug` is now shipped on April 13, 2026; it runs a structured investigation flow, persists `.blueprint/reports/debug-latest.md`, can capture explicit todo follow-ups, and routes broader fix work into existing implemented execution commands
@@ -178,6 +179,7 @@ These runtime files exist today:
 - `commands/blu-note.toml`
 - `commands/blu-add-todo.toml`
 - `commands/blu-add-backlog.toml`
+- `commands/blu-explore.toml`
 - `commands/blu-fast.toml`
 - `commands/blu-quick.toml`
 - `commands/blu-debug.toml`

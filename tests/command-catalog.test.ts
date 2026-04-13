@@ -34,6 +34,7 @@ const IMPLEMENTED_COMMANDS = [
   "check-todos",
   "add-backlog",
   "review-backlog",
+  "explore",
   "code-review",
   "remove-phase",
   "plan-phase",
@@ -315,6 +316,26 @@ test("check-todos is implemented once manifest, skill, and capture MCP tools exi
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("explore is implemented once manifest, skill, and ideation-routing MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["explore"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_mutate_index",
+    "blueprint_project_status",
+    "blueprint_roadmap_add_phase"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-researcher"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
 test("remove-phase is implemented once manifest, skill, and roadmap removal MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["remove-phase"];
@@ -350,6 +371,9 @@ test("implemented commands expose their declared optional agent contracts when s
     "blueprint-researcher"
   ]);
   assert.deepEqual(catalog.commands["research-phase"].availableOptionalAgents, [
+    "blueprint-researcher"
+  ]);
+  assert.deepEqual(catalog.commands["explore"].availableOptionalAgents, [
     "blueprint-researcher"
   ]);
   assert.deepEqual(catalog.commands["ui-phase"].availableOptionalAgents, [

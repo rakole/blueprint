@@ -10,14 +10,14 @@
 ## Purpose
 
 
-`explore` carries forward the GSD intent to socratic ideation and idea routing — think through ideas before committing to plans. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`explore` carries forward the GSD intent to socratic ideation and idea routing — think through ideas before committing to plans. In Blueprint the shipped slice stays Gemini-native, classifies an idea into the right capture target, requires an explicit confirmation before writing, and uses documented MCP tools to persist only the chosen note, todo, backlog, or roadmap proposal.
 
 
 ## Command Path And Examples
 
 - Gemini command path: `/blu-explore`
 - Root router form: `/blu explore`
-- Argument hint: `none`
+- Argument hint: `<idea>`
 - `/blu-explore authentication-strategy`
 - `/blu explore`
 
@@ -31,7 +31,7 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Writes only the confirmed Blueprint capture or roadmap artifact for the chosen target.
 
 
 ## Blueprint And Global State Reads
@@ -112,6 +112,7 @@
 
 - Capture outputs stay deterministic and append-only where expected.
 - If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
+- Requires explicit confirmation of the final routing target before any write.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
