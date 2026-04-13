@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`check-todos` carries forward the GSD intent to list pending todos and select one to work on. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`check-todos` carries forward the GSD intent to list pending todos and select one to work on. In Blueprint it stays Gemini-native, reads repo readiness through `blueprint_project_status`, and uses the shared capture index MCP tool to inspect pending todos plus mark a single todo active or completed when the user confirms that change.
 
 
 ## Command Path And Examples
@@ -50,7 +50,7 @@
 ## Required MCP Tools
 
 
-- `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
+- `blueprint_artifact_mutate_index` -> `{targetPath, matchedEntryIds, entries, updatedCounts, summary}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
 
@@ -108,7 +108,7 @@
 ## Acceptance Criteria
 
 
-- Capture outputs stay deterministic and append-only where expected.
+- Capture outputs stay deterministic, and todo status updates remain MCP-owned.
 - If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
