@@ -6,12 +6,12 @@ Use the `blueprint-phase-validation` skill as the primary orchestration contract
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_validation_read` with `artifact: "verification"`, `mcp__blueprint__blueprint_phase_validation_read` with `artifact: "uat"`, `mcp__blueprint__blueprint_config_get` with `scope: "effective"`, `mcp__blueprint__blueprint_artifact_validate`, and `mcp__blueprint__blueprint_state_load` so you know the execution evidence, existing validation and UAT state, normalized validation gates, repo artifact health, and the current safe follow-up state.
+1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "verification"`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "uat"`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the execution evidence, existing validation and UAT state, normalized validation gates, repo artifact health, and the current safe follow-up state.
 4. Treat execution summaries as the prerequisite evidence for conversational UAT. If the target phase has no execution summaries yet, stop and route to `/blu-execute-phase` first.
 5. If the phase does not have a `XX-VERIFICATION.md` artifact yet, stop and route to `/blu-validate-phase` first.
-6. Read every available execution summary through `mcp__blueprint__blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
+6. Read every available execution summary through `mcp_blueprint_blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
 7. If `XX-UAT.md` already exists, inspect it and take an explicit path:
    - `view`: summarize the existing UAT state and stop without mutating files
    - `resume`: continue the conversational UAT from the saved artifact without replacing it
@@ -23,13 +23,13 @@ Follow this flow exactly:
    - `workflow.nyquist_validation=true`: call out any remaining acceptance gaps explicitly.
    - `workflow.nyquist_validation=false`: explicitly report that gap classification was informational only because normalized config disabled it.
 9. Use the `blueprint-verifier` subagent for bounded sidecar UAT work when the artifact needs to be created or updated. Require the result to include the observed user-facing behavior, pass/fail notes, unresolved gaps, and optional follow-up fix capture.
-10. Persist the actual UAT content through `mcp__blueprint__blueprint_phase_validation_write` with `artifact: "uat"`. Do not write `XX-UAT.md` directly.
+10. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with `artifact: "uat"`. Do not write `XX-UAT.md` directly.
 11. If verification reveals follow-up fixes, capture them in the same UAT artifact or in the next explicit follow-up note/state update; do not silently mutate unrelated code.
-12. Call `mcp__blueprint__blueprint_artifact_validate` after the write path and then `mcp__blueprint__blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
+12. Call `mcp_blueprint_blueprint_artifact_validate` after the write path and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
 13. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, which config gates shaped the pass, any gaps or follow-up captures, and the next safe implemented action.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_summary_read`, `mcp__blueprint__blueprint_phase_validation_read`, `mcp__blueprint__blueprint_phase_validation_write`, `mcp__blueprint__blueprint_config_get`, `mcp__blueprint__blueprint_artifact_validate`, `mcp__blueprint__blueprint_state_load`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep conversational UAT phase-scoped and summary-aware; do not validate unrelated repo files.

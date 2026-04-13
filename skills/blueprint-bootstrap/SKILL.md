@@ -32,6 +32,7 @@ Current Blueprint delta:
 - persistent writes go through MCP tools into `.blueprint/`
 - no `.planning/` runtime state
 - no installer-managed runtime mutation
+- Gemini runtime FQNs for Blueprint MCP tools use the form `mcp_blueprint_<toolName>` when a prompt needs to name them explicitly
 
 ## Required Inputs
 
@@ -63,6 +64,7 @@ Current Blueprint delta:
 6. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
 7. Re-read project status after initialization and end with the next safe implemented command.
 8. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
+9. If Blueprint MCP tools are unavailable, stop and report the disconnected runtime instead of trying shell wrappers such as `mcp use`, `blueprint-mcp`, or ad-hoc SDK scripts.
 
 ## Output Style
 

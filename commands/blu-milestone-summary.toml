@@ -6,18 +6,18 @@ Use the `blueprint-roadmap-admin` skill as the primary orchestration contract wh
 
 Follow this flow exactly:
 
-1. Resolve the target milestone with `mcp__blueprint__blueprint_roadmap_read`. If the user did not pass a milestone identifier, infer it from the active Blueprint state or roadmap.
-2. Read `mcp__blueprint__blueprint_roadmap_read` and `mcp__blueprint__blueprint_artifact_list` so you know the active milestone, the current phase inventory, and whether the matching audit, completion, or summary reports already exist.
+1. Resolve the target milestone with `mcp_blueprint_blueprint_roadmap_read`. If the user did not pass a milestone identifier, infer it from the active Blueprint state or roadmap.
+2. Read `mcp_blueprint_blueprint_roadmap_read` and `mcp_blueprint_blueprint_artifact_list` so you know the active milestone, the current phase inventory, and whether the matching audit, completion, or summary reports already exist.
 3. If the matching milestone audit report is missing, stop with concise guidance to run `/blu-audit-milestone` first.
 4. If the matching milestone completion report is missing, stop with concise guidance to run `/blu-complete-milestone` first.
-5. Build the summary digest through `mcp__blueprint__blueprint_artifact_summary_digest` using explicit `artifactPaths` that include `.blueprint/ROADMAP.md`, the milestone audit report, and the milestone completion report.
+5. Build the summary digest through `mcp_blueprint_blueprint_artifact_summary_digest` using explicit `artifactPaths` that include `.blueprint/ROADMAP.md`, the milestone audit report, and the milestone completion report.
 6. If a milestone summary report already exists and the user has not clearly asked to replace it, require explicit overwrite confirmation before any write.
-7. Persist the summary report through `mcp__blueprint__blueprint_artifact_report_write` with a report name of `milestone-summary-<milestone>`.
-8. Call `mcp__blueprint__blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-milestone-summary` as the active command, keeps the resolved milestone and current phase synchronized, and points the next safe implemented follow-up to `/blu-new-milestone`.
+7. Persist the summary report through `mcp_blueprint_blueprint_artifact_report_write` with a report name of `milestone-summary-<milestone>`.
+8. Call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-milestone-summary` as the active command, keeps the resolved milestone and current phase synchronized, and points the next safe implemented follow-up to `/blu-new-milestone`.
 9. Return a concise completion summary covering the milestone resolved, the source reports used, whether the summary report was created or replaced, any warnings, and the next safe Blueprint action.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_roadmap_read`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_summary_digest`, `mcp__blueprint__blueprint_artifact_report_write`, and `mcp__blueprint__blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep persistent writes inside `.blueprint/reports/` and `.blueprint/STATE.md`.
 - Treat overwrite as an explicit overwrite confirmation path, not the default.
 - Keep this Wave 2 summary step skill-led; do not pull in any later-wave docs agent.

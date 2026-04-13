@@ -6,9 +6,9 @@ Use the `blueprint-governance` skill as the primary orchestration contract when 
 
 Follow this flow exactly:
 
-1. Call `mcp__blueprint__blueprint_state_load` first so you know the current Blueprint state, blockers, and derived next action.
-2. Call `mcp__blueprint__blueprint_artifact_list` to inspect the existing Blueprint artifact and report inventory.
-3. Call `mcp__blueprint__blueprint_pause_handoff_get` to determine whether an active pause handoff already exists.
+1. Call `mcp_blueprint_blueprint_state_load` first so you know the current Blueprint state, blockers, and derived next action.
+2. Call `mcp_blueprint_blueprint_artifact_list` to inspect the existing Blueprint artifact and report inventory.
+3. Call `mcp_blueprint_blueprint_pause_handoff_get` to determine whether an active pause handoff already exists.
 4. If an existing handoff is present and the user has not clearly asked to replace it, stop and require explicit overwrite confirmation before any write.
 5. Build a resumable handoff that captures:
    - current state and exact stopping point
@@ -19,8 +19,8 @@ Follow this flow exactly:
    - human actions pending
    - modified files
    - context notes and the first next action when work resumes
-6. Persist the handoff only through `mcp__blueprint__blueprint_pause_handoff_write`. Do not write `.blueprint/reports/` directly.
-7. After the handoff is written, call `mcp__blueprint__blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-pause-work` as the active command and points the next safe implemented follow-up to `/blu-resume-work`.
+6. Persist the handoff only through `mcp_blueprint_blueprint_pause_handoff_write`. Do not write `.blueprint/reports/` directly.
+7. After the handoff is written, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-pause-work` as the active command and points the next safe implemented follow-up to `/blu-resume-work`.
 8. Return a concise completion summary covering the handoff path, whether it was created or updated, any overwrite warning, and the next safe implemented action.
 
 Safety requirements:

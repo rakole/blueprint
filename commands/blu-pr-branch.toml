@@ -6,10 +6,10 @@ Use the `blueprint-maintenance` skill as the primary orchestration contract when
 
 Follow this flow exactly:
 
-1. Read `mcp__blueprint__blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
-2. Read `mcp__blueprint__blueprint_config_get` in `effective` scope. Resolve the target base branch from explicit user input first, then `git.base_branch`, then safe repo detection. Keep `git.branching_strategy` and `planning.commit_docs` visible in the preview.
+1. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
+2. Read `mcp_blueprint_blueprint_config_get` in `effective` scope. Resolve the target base branch from explicit user input first, then `git.base_branch`, then safe repo detection. Keep `git.branching_strategy` and `planning.commit_docs` visible in the preview.
 3. Inspect the current git branch, the target base branch, and the working tree before mutation. If the repo has uncommitted changes, stop and ask the user to commit, stash, or intentionally rerun after cleaning the tree. Do not guess through a dirty diff.
-4. Build a compact evidence digest through `mcp__blueprint__blueprint_artifact_summary_digest`. Use explicit `artifactPaths` and, when useful, `trackedFiles` from the current branch diff so the review-branch preview is grounded in the active phase, current state, and files that actually changed.
+4. Build a compact evidence digest through `mcp_blueprint_blueprint_artifact_summary_digest`. Use explicit `artifactPaths` and, when useful, `trackedFiles` from the current branch diff so the review-branch preview is grounded in the active phase, current state, and files that actually changed.
 5. Derive the filtered PR scope explicitly:
    - default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user explicitly asked to keep them
    - if `planning.commit_docs` is false, do not invent Blueprint-artifact commits that are not already in scope
@@ -17,11 +17,11 @@ Follow this flow exactly:
    - if filtering would produce an empty diff, stop and explain why instead of creating a noise branch
 6. Summarize the target base branch, current source branch, candidate review branch name, included paths, excluded paths, and the exact git mutations you intend to run. Require explicit confirmation before any branch creation or replay step. Review is the default safe path.
 7. After confirmation, create the clean review branch through git commands only. Prefer a file- or commit-replay path that preserves the filtered diff without rewriting the source branch in place, and never discard the user's existing branch or local commits.
-8. Persist the durable report through `mcp__blueprint__blueprint_artifact_report_write` with the report name `pr-branch-latest`. The report should record the base branch, source branch, created review branch, included and excluded scope, digest inputs, and any manual follow-up such as push or PR creation. If that report already exists and the user did not explicitly approve replacement, require explicit overwrite confirmation before replacing it.
+8. Persist the durable report through `mcp_blueprint_blueprint_artifact_report_write` with the report name `pr-branch-latest`. The report should record the base branch, source branch, created review branch, included and excluded scope, digest inputs, and any manual follow-up such as push or PR creation. If that report already exists and the user did not explicitly approve replacement, require explicit overwrite confirmation before replacing it.
 9. Return a concise completion summary covering the created review branch, the filtered scope, the report status, any warnings about omitted Blueprint artifacts, and the next safe action. Prefer manual push guidance or `/blu-progress`; do not present planned-only follow-up commands as runnable.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_project_status`, `mcp__blueprint__blueprint_config_get`, `mcp__blueprint__blueprint_artifact_summary_digest`, and `mcp__blueprint__blueprint_artifact_report_write` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_summary_digest`, and `mcp_blueprint_blueprint_artifact_report_write` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/`.
 - Never mutate git state without an explicit confirmation gate.
 - Never rewrite or delete the source branch in place.

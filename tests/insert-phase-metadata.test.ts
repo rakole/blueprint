@@ -13,10 +13,10 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_insert_phase/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_scaffold/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_insert_phase/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /Do not accept decimal insertion targets/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);

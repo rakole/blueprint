@@ -26,8 +26,8 @@ export function blueprintAgentDefinitionPath(agentName: string): string {
 
 export function blueprintRuntimeToolFqn(
   toolName: BlueprintInternalToolName
-): `mcp__${typeof BLUEPRINT_MCP_SERVER_NAME}__${BlueprintInternalToolName}` {
-  return `mcp__${BLUEPRINT_MCP_SERVER_NAME}__${toolName}`;
+): `mcp_${typeof BLUEPRINT_MCP_SERVER_NAME}_${BlueprintInternalToolName}` {
+  return `mcp_${BLUEPRINT_MCP_SERVER_NAME}_${toolName}`;
 }
 
 export async function resolveBlueprintSkillPath(

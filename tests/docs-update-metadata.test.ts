@@ -16,12 +16,12 @@ test("docs-update manifest references the docs skill, doc agents, report tool, a
   assert.doesNotMatch(commandFile, /skills\/blueprint-docs\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-doc-writer\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-doc-verifier\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_project_status/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_list/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
   assert.match(commandFile, /docFiles/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /docs-update-latest/);
   assert.match(commandFile, /`--verify-only`/);
   assert.match(commandFile, /`--force`/);

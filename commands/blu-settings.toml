@@ -6,9 +6,9 @@ Use the `blueprint-governance` skill as the primary orchestration contract when 
 
 Follow this flow exactly:
 
-1. Call `mcp__blueprint__blueprint_project_status` first and stop unless the current repository is already initialized for Blueprint.
-2. Call `mcp__blueprint__blueprint_config_get` with `scope: "project"` to load the current repo config and surface any normalization or migration warnings before asking for changes.
-3. Call `mcp__blueprint__blueprint_config_get` with `scope: "defaults"` only when you need to show or compare saved defaults from `~/.gemini/blueprint/defaults.json`.
+1. Call `mcp_blueprint_blueprint_project_status` first and stop unless the current repository is already initialized for Blueprint.
+2. Call `mcp_blueprint_blueprint_config_get` with `scope: "project"` to load the current repo config and surface any normalization or migration warnings before asking for changes.
+3. Call `mcp_blueprint_blueprint_config_get` with `scope: "defaults"` only when you need to show or compare saved defaults from `~/.gemini/blueprint/defaults.json`.
 4. Run a common settings pass first. Cover:
    - `model_profile`
    - `workflow.research`
@@ -34,13 +34,13 @@ Follow this flow exactly:
    - `git.milestone_branch_template`
    - `git.quick_branch_template`
    - `agent_skills`
-6. Apply project-local changes only through `mcp__blueprint__blueprint_config_set` with `scope: "project"`.
-7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to `~/.gemini/blueprint/defaults.json`. Use `mcp__blueprint__blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write.
+6. Apply project-local changes only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`.
+7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to `~/.gemini/blueprint/defaults.json`. Use `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write.
 8. Never write or reintroduce removed repo keys such as `workflow.use_workspaces`, `workflow.use_workstreams`, or `hooks.*`.
-9. If the user asks for a broad reset, confirm it before calling `mcp__blueprint__blueprint_config_set`.
+9. If the user asks for a broad reset, confirm it before calling `mcp_blueprint_blueprint_config_set`.
 
 Response requirements:
 - Summarize which project settings changed and whether saved defaults were also updated.
-- Mention any migration or normalization warnings returned by `mcp__blueprint__blueprint_config_get` or `mcp__blueprint__blueprint_config_set`.
+- Mention any migration or normalization warnings returned by `mcp_blueprint_blueprint_config_get` or `mcp_blueprint_blueprint_config_set`.
 - End with the next logical action when the repo status suggests one.
 """

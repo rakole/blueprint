@@ -13,13 +13,13 @@ test("ship manifest references the maintenance skill, report tool, and explicit 
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_project_status/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_phase_locate/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_config_get/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_list/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_summary_digest/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_phase_locate/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /ship-latest/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /draft versus ready PR mode/i);

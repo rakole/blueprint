@@ -137,7 +137,7 @@ async function repairedPromptContracts(): Promise<RuntimePromptContract[]> {
 }
 
 function stripRuntimeToolFqns(markdown: string): string {
-  return markdown.replace(/`mcp__blueprint__blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
+  return markdown.replace(/`mcp_blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
 test("gemini extension discovery points at the built Blueprint MCP server", async () => {

@@ -13,9 +13,9 @@ test("explore manifest references capture skill, ideation-routing tools, and con
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_project_status/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_mutate_index/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_add_phase/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
   assert.match(commandFile, /route to `\/blu-quick` or `\/blu-plan-phase`/);
   assert.match(commandFile, /require explicit confirmation before writing anything/i);
   assert.match(commandFile, /\/blu-new-project/);

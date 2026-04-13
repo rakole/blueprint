@@ -6,11 +6,11 @@ Use the `blueprint-phase-validation` skill as the primary orchestration contract
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_validation_read` with `artifact: "verification"`, `mcp__blueprint__blueprint_phase_validation_read` with `artifact: "uat"`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_validate`, and `mcp__blueprint__blueprint_state_load` so you know the saved execution evidence, current validation or UAT context, existing Blueprint artifacts, repo artifact health, and the current safe follow-up state.
+1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "verification"`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "uat"`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the saved execution evidence, current validation or UAT context, existing Blueprint artifacts, repo artifact health, and the current safe follow-up state.
 4. If the target phase has no execution summaries, stop and route to `/blu-execute-phase <phase>` first. If the phase lacks both `XX-VERIFICATION.md` and `XX-UAT.md`, stop and route to `/blu-validate-phase <phase>` instead of generating tests from chat memory alone.
-5. Read every available execution summary through `mcp__blueprint__blueprint_phase_summary_read` so test generation stays grounded in the saved implementation evidence instead of unstaged repo drift or prompt memory.
+5. Read every available execution summary through `mcp_blueprint_blueprint_phase_summary_read` so test generation stays grounded in the saved implementation evidence instead of unstaged repo drift or prompt memory.
 6. Resolve the repo test scope explicitly before editing:
    - if the user named files, directories, or a specific test runner, honor that scope first
    - otherwise derive a narrow default scope from the completed summaries, the existing verification or UAT gaps, and the current repo test conventions
@@ -19,9 +19,9 @@ Follow this flow exactly:
 8. Keep repo mutation limited to the selected test files plus any minimal helper code that the new tests require. Do not widen into feature rewrites, unrelated refactors, or non-test documentation updates from this command.
 9. Use the `blueprint-executor` subagent for bounded implementation when the requested test pass spans multiple files, multiple suites, or the relevant test harness needs careful adaptation. Use the `blueprint-verifier` subagent to review whether the proposed tests actually cover the saved execution behavior and any explicit verification or UAT gaps.
 10. After editing, run the narrowest relevant test command you can infer safely from the repo. Prefer the targeted test files or package script over a broad full-suite run unless the user explicitly asked for that breadth.
-11. Persist the updated verification notes through `mcp__blueprint__blueprint_phase_validation_write` with `artifact: "verification"`. Reuse any existing `XX-VERIFICATION.md` as the baseline and extend it with explicit test-coverage notes instead of replacing it casually.
-12. Persist the durable outcome report through `mcp__blueprint__blueprint_artifact_report_write` with the report name `add-tests-<phase>`. The report should capture the selected scope, tests added or updated, test commands run, pass or fail status, remaining gaps, and any follow-up guidance.
-13. Call `mcp__blueprint__blueprint_artifact_validate` after the write path and then `mcp__blueprint__blueprint_state_update` so `STATE.md` reflects the active phase, the add-tests command, and the next safe implemented action.
+11. Persist the updated verification notes through `mcp_blueprint_blueprint_phase_validation_write` with `artifact: "verification"`. Reuse any existing `XX-VERIFICATION.md` as the baseline and extend it with explicit test-coverage notes instead of replacing it casually.
+12. Persist the durable outcome report through `mcp_blueprint_blueprint_artifact_report_write` with the report name `add-tests-<phase>`. The report should capture the selected scope, tests added or updated, test commands run, pass or fail status, remaining gaps, and any follow-up guidance.
+13. Call `mcp_blueprint_blueprint_artifact_validate` after the write path and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the add-tests command, and the next safe implemented action.
 14. Return a concise completion summary covering the target phase, the test scope, which summaries and validation artifacts informed the pass, whether tests were added or updated, the executed test command and result, the verification and report status, any remaining gaps, and the next safe implemented action.
 
 Next-action rules:
@@ -30,7 +30,7 @@ Next-action rules:
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_phase_summary_index`, `mcp__blueprint__blueprint_phase_summary_read`, `mcp__blueprint__blueprint_phase_validation_read`, `mcp__blueprint__blueprint_phase_validation_write`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_artifact_validate`, `mcp__blueprint__blueprint_artifact_report_write`, `mcp__blueprint__blueprint_state_load`, and `mcp__blueprint__blueprint_state_update` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_artifact_report_write`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside the selected `.blueprint/phases/<phase>/` directory, `.blueprint/reports/`, and `.blueprint/STATE.md`.
 - Keep repo code mutation limited to the selected test scope and any minimal supporting test helpers.
 - Do not invent missing implementation details, missing acceptance criteria, or missing test frameworks from chat memory alone.

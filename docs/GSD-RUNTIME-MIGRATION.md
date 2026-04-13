@@ -16,7 +16,7 @@ Allowed Blueprint destinations in this document:
 - command spec owner in `docs/commands/`
 - exact primary skill from `docs/SKILLS-AND-AGENTS.md`, resolved through `skills/<name>/SKILL.md`
 - optional agent names already declared in the command specs and implemented as Gemini subagent files in `agents/*.md`
-- exact MCP tool ids named in the command spec, or an existing MCP tool family when a spec does not name individual tools; command manifests may surface those tools through runtime FQNs such as `mcp__blueprint__...`
+- exact MCP tool ids named in the command spec, or an existing MCP tool family when a spec does not name individual tools; command manifests may surface those tools through runtime FQNs such as `mcp_blueprint_...`
 - advisory hooks already defined in `docs/HOOKS-POLICIES.md`
 - explicit omission when Blueprint intentionally does not port a surface
 

@@ -6,16 +6,16 @@ Use the `blueprint-review` skill as the primary orchestration contract when that
 
 Follow this flow exactly:
 
-1. Resolve the target phase with `mcp__blueprint__blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
-2. If the phase cannot be resolved, stop with the precise `mcp__blueprint__blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp__blueprint__blueprint_artifact_list` so you can confirm whether the phase already has plans, execution evidence, prior peer review, code review, security review, verification, or UAT artifacts.
-4. Read `mcp__blueprint__blueprint_phase_plan_index` for the resolved phase. If there are no `-PLAN.md` artifacts, stop and route to `/blu-plan-phase <phase>` instead of improvising from chat memory.
-5. Read the saved plan set through `mcp__blueprint__blueprint_phase_plan_read`. Review only the selected phase plans plus directly related saved evidence; do not infer scope from unstaged repo drift or unrelated files.
+1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
+2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
+3. Read `mcp_blueprint_blueprint_artifact_list` so you can confirm whether the phase already has plans, execution evidence, prior peer review, code review, security review, verification, or UAT artifacts.
+4. Read `mcp_blueprint_blueprint_phase_plan_index` for the resolved phase. If there are no `-PLAN.md` artifacts, stop and route to `/blu-plan-phase <phase>` instead of improvising from chat memory.
+5. Read the saved plan set through `mcp_blueprint_blueprint_phase_plan_read`. Review only the selected phase plans plus directly related saved evidence; do not infer scope from unstaged repo drift or unrelated files.
 6. If a `XX-REVIEWS.md` artifact already exists, treat it as the baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
 7. Confirm which reviewer CLIs are actually available before launch. Honor explicit flags such as `--gemini`, `--claude`, `--codex`, `--opencode`, or `--all`, but do not pretend an unavailable or unauthenticated reviewer ran successfully.
 8. When a requested reviewer is unavailable, record that honestly in the artifact instead of failing silently. Preserve partial fan-out results when at least one requested reviewer completed.
 9. Keep disagreement visible. If reviewers materially disagree, preserve the disagreement in the saved artifact instead of flattening it into a fake consensus.
-10. Persist the final peer-review artifact through `mcp__blueprint__blueprint_review_record` with `artifact: "peer-review"`. Do not write `XX-REVIEWS.md` directly.
+10. Persist the final peer-review artifact through `mcp_blueprint_blueprint_review_record` with `artifact: "peer-review"`. Do not write `XX-REVIEWS.md` directly.
 11. End with a concise summary covering which reviewers ran, which were unavailable, whether the artifact was created, reused, or revised, the main peer-review feedback, and the next logical implemented Blueprint action.
 
 Next-action rules:
@@ -25,7 +25,7 @@ Next-action rules:
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
-- Use only `mcp__blueprint__blueprint_phase_locate`, `mcp__blueprint__blueprint_artifact_list`, `mcp__blueprint__blueprint_phase_plan_index`, `mcp__blueprint__blueprint_phase_plan_read`, and `mcp__blueprint__blueprint_review_record` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_phase_plan_read`, and `mcp_blueprint_blueprint_review_record` for Blueprint-owned persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the artifact grounded in the saved phase plan set and the actual reviewer outputs. Do not fabricate reviewer coverage when tools are missing or unauthenticated.

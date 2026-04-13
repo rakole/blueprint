@@ -13,12 +13,12 @@ test("milestone-summary manifest references saved report evidence and new-milest
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_roadmap_read/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_list/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_summary_digest/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_report_write/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_state_update/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /milestone-summary-<milestone>/);
   assert.match(commandFile, /\/blu-new-milestone/);

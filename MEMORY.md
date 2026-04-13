@@ -32,6 +32,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Hooks remain advisory rather than state-owning
 - Scripts are not the primary persistence layer
 - `blueprint_command_catalog` is runtime-aware and should be treated as the source of routable-command truth
+- Gemini CLI runtime FQNs for Blueprint MCP tools use `mcp_blueprint_<toolName>`; do not reintroduce Codex-style `mcp__blueprint__...` names or shell fallbacks such as `mcp use` or `blueprint-mcp`
 
 ## Planned MCP Responsibilities
 

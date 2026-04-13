@@ -24,11 +24,11 @@ test("runtime vocabulary exposes canonical discoverable skill and agent paths", 
 test("runtime vocabulary maps internal Blueprint tools to MCP runtime FQNs", () => {
   assert.equal(
     blueprintRuntimeToolFqn("blueprint_command_catalog"),
-    "mcp__blueprint__blueprint_command_catalog"
+    "mcp_blueprint_blueprint_command_catalog"
   );
   assert.equal(
     blueprintRuntimeToolFqn("blueprint_phase_plan_write"),
-    "mcp__blueprint__blueprint_phase_plan_write"
+    "mcp_blueprint_blueprint_phase_plan_write"
   );
 });
 

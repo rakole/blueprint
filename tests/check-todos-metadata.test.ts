@@ -13,8 +13,8 @@ test("check-todos manifest uses runtime skill and todo-status MCP identities", a
 
   assert.match(commandFile, /`blueprint-capture` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-capture\.md/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_project_status/);
-  assert.match(commandFile, /mcp__blueprint__blueprint_artifact_mutate_index/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /action: "list"/);
   assert.match(commandFile, /action: "update"/);
   assert.match(commandFile, /\/blu-new-project/);
