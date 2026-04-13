@@ -6,18 +6,17 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 8
+Total: 7
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
 | 1 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
 | 2 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 3 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
-| 4 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 5 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 6 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 7 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 8 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 3 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 4 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 5 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 6 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
+| 7 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -25,7 +24,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `undo` | `review` | `none` | `ui-review` is now shipped; only two unscheduled Wave 4 commands remain. |
+| 1 | `undo` | `none` | `none` | `ui-review` is now shipped; only one unscheduled Wave 4 command remains. |
 | 2 | `new-workspace` | `reapply-patches` | `update` | Safe parallel set. |
 | 3 | `remove-workspace` | `workstreams` | `none` | Cleanup is now shipped; the remaining workspace set is no longer a full three-command batch. |
 
@@ -37,7 +36,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 45
+Total: 46
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -80,9 +79,10 @@ Total: 45
 | 37 | `audit-fix` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 38 | `code-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
 | 39 | `code-review-fix` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 40 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
-| 41 | `pr-branch` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 42 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
-| 43 | `ui-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
-| 44 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 45 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 40 | `review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
+| 41 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
+| 42 | `pr-branch` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 43 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 44 | `ui-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 45 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 46 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
