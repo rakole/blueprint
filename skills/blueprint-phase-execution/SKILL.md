@@ -8,6 +8,7 @@ description: >
 status: implemented
 commands:
   - /blu-execute-phase
+  - /blu-fast
   - /blu-quick
 ---
 
@@ -78,7 +79,10 @@ Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` int
 14. `/blu-quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
 15. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the canonical `quick-run-latest` report instead of inventing ad hoc state files.
 16. `/blu-quick` should prefer `/blu-progress` after completion unless a narrower implemented next step is obvious and safe.
-17. Do not recommend `/blu-fast` unless `blueprint_command_catalog` says it is implemented.
+17. `/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, and do not create durable reports or phase artifacts.
+18. `/blu-fast` may update `STATE.md` only when Blueprint is initialized and healthy; partial repos should reroute to `/blu-health`, and uninitialized repos should stay in safe suggestion mode for Blueprint persistence.
+19. Route any non-trivial or evidence-heavy ask from `/blu-fast` to `/blu-quick` or `/blu-plan-phase` instead of stretching the command past its contract.
+20. Do not recommend `/blu-fast` unless `blueprint_command_catalog` says it is implemented.
 
 ## Output Style
 
@@ -86,4 +90,5 @@ Carry forward the useful upstream `execute-phase`, `quick`, and later `fast` int
 - Explain any overwrite or partial-run risk before writes.
 - Call out the effective execution mode, including parallelization, worktree, and branch-strategy decisions.
 - Keep the user anchored on the next safe implemented action after execution.
+- For `/blu-fast`, explain why the task qualified as a trivial inline run, whether Blueprint state was updated, and which implemented follow-up remains safest.
 - For `/blu-quick`, explain why the task qualified as a bounded quick run, which optional depth gates were used, what the quick-run report captured, and which implemented follow-up remains safest.

@@ -326,6 +326,19 @@ test("quick command docs keep the bounded report-backed execution contract expli
   assert.match(quickDoc, /Leaves unrelated repo files untouched/i);
 });
 
+test("fast command docs keep the trivial inline execution contract explicit", async () => {
+  const fastDoc = await readRepoFile("docs/commands/fast.md");
+
+  assert.match(fastDoc, /Primary skill: `blueprint-phase-execution`/);
+  assert.match(fastDoc, /blueprint_project_status/);
+  assert.match(fastDoc, /blueprint_state_update/);
+  assert.match(fastDoc, /optional `?\.blueprint\/STATE\.md`?/);
+  assert.match(fastDoc, /May run inside or outside a Blueprint project/);
+  assert.match(fastDoc, /no subagents, no planning overhead/i);
+  assert.match(fastDoc, /Does not create quick-run reports, phase artifacts, or subagent side effects\./);
+  assert.match(fastDoc, /Leaves unrelated repo files untouched/i);
+});
+
 test("phase validation skill and bounded verifier agent are marked implemented in docs", async () => {
   const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
 
