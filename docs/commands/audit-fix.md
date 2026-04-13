@@ -10,7 +10,7 @@
 ## Purpose
 
 
-`audit-fix` carries forward the GSD intent to autonomous audit-to-fix pipeline — find issues, classify, fix, test, commit. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`audit-fix` carries forward the GSD intent to autonomous audit-to-fix pipeline — find issues, classify, fix, test, commit. Blueprint ships it as a bounded, evidence-backed remediation loop: it resolves a deterministic repo-file scope from saved phase execution metadata, reads the most relevant review and verification artifacts first, keeps repo mutation tightly scoped, persists a durable `.blueprint/reports/audit-fix-<phase>.md` report, and updates `STATE.md` so follow-up routing stays inside implemented commands.
 
 
 ## Command Path And Examples
@@ -24,35 +24,39 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A suitable audit source must exist or be computable.
+- The target phase must already have execution summaries or an explicit repo-file scope.
+- At least one of `XX-REVIEW.md`, `XX-SECURITY.md`, `XX-VERIFICATION.md`, or `XX-UAT.md` should already exist so the remediation pass starts from saved evidence instead of chat memory.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: may apply bounded repo fixes when not dry-running, writes a durable remediation report under `.blueprint/reports/`, may capture an explicit todo follow-up, and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- Phase resolution and saved artifact inventory through the documented phase, artifact, and review MCP tools
 
 
 ## Blueprint And Global State Writes
 
 
-- `audit-fix report in .blueprint/reports/`
+- `.blueprint/reports/audit-fix-<phase>.md`
 - `code changes when not dry-running`
 - `optional todo follow-ups`
+- `.blueprint/STATE.md`
 
 
 ## Required MCP Tools
 
 
-- `blueprint_review_scope` -> `{phase, files, reviewMode}`
-- `blueprint_review_record` -> `{reportPath, counts, followUps}`
+- `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
+- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_review_scope` -> `{status, phase, files, reviewMode, artifacts, reason, warnings}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -96,7 +100,8 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm severity threshold and max fix count before mutation.
+- Confirm before applying non-trivial fixes unless the user explicitly requested automatic remediation.
+- Confirm before capturing a follow-up todo.
 
 
 ## Edge Cases
@@ -109,8 +114,9 @@
 ## Failure Modes And Recovery
 
 
-- Preserve generated reports when git or external CLI steps fail.
-- Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- Preserve the durable audit-fix report even when verification or shell checks fail.
+- Route to `/blu-code-review <phase>` or `/blu-verify-work <phase>` when the remediation baseline is too weak instead of guessing through missing evidence.
+- Fall back to explicit file selection or `/blu-progress` instead of guessing through an unclear fix scope.
 
 
 ## Acceptance Criteria
@@ -120,6 +126,8 @@
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Persists the durable remediation report through `blueprint_artifact_report_write`.
+- Updates `STATE.md` when the next-step signal changes.
 - Leaves unrelated repo files untouched.
 
 

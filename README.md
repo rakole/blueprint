@@ -2,7 +2,7 @@
 
 Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
 
-This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, docs, test-generation, and review-branch commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
+This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, and review-branch commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
@@ -23,6 +23,7 @@ This repository still carries the planning pack that locked the product and arch
 - The read-only phase-discovery assumptions command `/blu-list-phase-assumptions` is now shipped on the same discovery substrate
 - The governance handoff and resume commands `/blu-pause-work` and `/blu-resume-work` are now shipped with durable MCP-owned handoff/state routing in `.blueprint/reports/` and `.blueprint/STATE.md`
 - The code review command `/blu-code-review` is now shipped on April 13, 2026; it resolves a deterministic repo-file scope from executed plans or explicit file paths, uses the `blueprint-review` skill plus the bounded `blueprint-reviewer` contract when needed, and persists `XX-REVIEW.md` through the shared review MCP tools
+- The remediation command `/blu-audit-fix` is now shipped on April 13, 2026; it reuses the deterministic review scope, reads saved review or validation evidence first, keeps repo mutation bounded, persists `.blueprint/reports/audit-fix-<phase>.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
 - The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap insertion command `/blu-insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu-discuss-phase`
@@ -194,6 +195,7 @@ These runtime files exist today:
 - `commands/blu-verify-work.toml`
 - `commands/blu-add-tests.toml`
 - `commands/blu-code-review.toml`
+- `commands/blu-audit-fix.toml`
 - `commands/blu-secure-phase.toml`
 - `commands/blu-audit-milestone.toml`
 - `commands/blu-add-phase.toml`

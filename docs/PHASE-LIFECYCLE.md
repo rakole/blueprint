@@ -25,6 +25,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 
 - `code-review` writes `XX-REVIEW.md`.
 - `code-review-fix` writes a review-fix artifact or summary when issues are addressed.
+- `audit-fix` writes `.blueprint/reports/audit-fix-<phase>.md` and may update repo files plus `STATE.md`.
 - `secure-phase` writes `XX-SECURITY.md`.
 - `ui-review` writes `XX-UI-REVIEW.md`.
 - `add-tests` may add code-level tests, update `XX-VERIFICATION.md`, and write a supporting `.blueprint/reports/add-tests-<phase>.md` report.
