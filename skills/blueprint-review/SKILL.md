@@ -34,7 +34,7 @@ deltas:
 - follow-up risks stay explicit in artifacts instead of disappearing into chat
 - implemented-only routing remains the source of truth for next-step guidance
 
-Today, `code-review`, `code-review-fix`, `secure-phase`, and `audit-fix` are the shipped
+Today, `code-review`, `code-review-fix`, `secure-phase`, `ui-review`, and `audit-fix` are the shipped
 review-family commands. Other review-family commands remain documented but
 non-routable until their extra MCP substrate lands.
 
@@ -44,6 +44,7 @@ non-routable until their extra MCP substrate lands.
 - `docs/commands/code-review-fix.md`
 - `docs/commands/secure-phase.md`
 - `docs/commands/audit-fix.md`
+- `docs/commands/ui-review.md`
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -67,6 +68,7 @@ non-routable until their extra MCP substrate lands.
 
 - `blueprint-reviewer`
 - `blueprint-security-auditor`
+- `blueprint-ui-auditor`
 - `blueprint-verifier`
 - `blueprint-fixer`
 
@@ -134,6 +136,26 @@ non-routable until their extra MCP substrate lands.
 7. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
    depending on which lifecycle artifacts already exist.
+
+### `ui-review`
+
+1. Resolve the target phase and require saved execution evidence before the
+   audit begins.
+2. Read the existing Blueprint artifact inventory first so the audit can cite
+   summaries, `XX-UI-SPEC.md`, validation, and UAT artifacts when they exist.
+3. Inspect any existing `XX-UI-REVIEW.md` before proposing replacement and
+   default to reuse unless the user explicitly asks for an update.
+4. Keep the audit grounded in saved repo evidence, the phase goal, and the
+   actual frontend or UX surface under review.
+5. Use `blueprint-ui-auditor` when the phase spans multiple screens, includes
+   richer interaction work, or benefits from a higher-confidence six-pillar UI
+   audit.
+6. Persist finished UI audit evidence through `blueprint_review_record` with
+   the `ui-review` artifact.
+7. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+   `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
+   depending on which lifecycle artifacts already exist and whether follow-up UI
+   work remains.
 
 ### `audit-fix`
 

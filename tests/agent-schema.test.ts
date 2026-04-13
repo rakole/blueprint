@@ -82,6 +82,11 @@ const EXPECTED_AGENTS = {
     maxTurns: 14,
     timeoutMins: 12
   },
+  "blueprint-ui-auditor": {
+    tools: ["list_directory", "read_file", "glob", "grep_search"],
+    maxTurns: 16,
+    timeoutMins: 15
+  },
   "blueprint-verifier": {
     tools: ["list_directory", "read_file", "glob", "grep_search"],
     maxTurns: 16,

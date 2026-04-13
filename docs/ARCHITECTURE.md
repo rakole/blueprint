@@ -14,7 +14,7 @@ The live runtime currently ships:
 - the shipped Wave 3 capture commands, `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, and `explore`
 - the shipped Wave 3 lightweight execution commands, `fast` and `quick`
 - the shipped Wave 3 debug command, `debug`
-- the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, and `secure-phase`
+- the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, and `ui-review`
 - the shipped Wave 4 docs command, `docs-update`
 - the shipped Wave 4 review-branch command, `pr-branch`
 

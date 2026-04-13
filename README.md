@@ -26,6 +26,7 @@ This repository still carries the planning pack that locked the product and arch
 - The review-fix command `/blu-code-review-fix` is now shipped on April 13, 2026; it loads saved `XX-REVIEW.md` findings through `blueprint_review_load_findings`, keeps fixes tightly bounded to the selected review issues, persists `XX-REVIEW-FIX.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The remediation command `/blu-audit-fix` is now shipped on April 13, 2026; it reuses the deterministic review scope, reads saved review or validation evidence first, keeps repo mutation bounded, persists `.blueprint/reports/audit-fix-<phase>.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up
 - The security audit command `/blu-secure-phase` is now shipped; it reads saved phase evidence, uses the `blueprint-review` skill plus the bounded `blueprint-security-auditor` contract when needed, and persists `XX-SECURITY.md` through `blueprint_review_record`
+- The UI audit command `/blu-ui-review` is now shipped on April 13, 2026; it reads saved execution and UI-spec evidence, uses the `blueprint-review` skill plus the bounded `blueprint-ui-auditor` contract when needed, and persists `XX-UI-REVIEW.md` through `blueprint_review_record`
 - The review-branch command `/blu-pr-branch` is now shipped on April 13, 2026; it reads project and config state first, previews the filtered review scope with explicit `.blueprint/` inclusion or exclusion, persists `.blueprint/reports/pr-branch-latest.md`, and never rewrites the source branch in place
 - The roadmap append command `/blu-add-phase` is now shipped; it appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`
 - The roadmap insertion command `/blu-insert-phase` is now shipped; it inserts the next decimal phase after an existing integer anchor, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back into `/blu-discuss-phase`
@@ -203,6 +204,7 @@ These runtime files exist today:
 - `commands/blu-code-review-fix.toml`
 - `commands/blu-audit-fix.toml`
 - `commands/blu-secure-phase.toml`
+- `commands/blu-ui-review.toml`
 - `commands/blu-audit-milestone.toml`
 - `commands/blu-add-phase.toml`
 - `commands/blu-insert-phase.toml`
@@ -246,6 +248,7 @@ These runtime files exist today:
 - `agents/blueprint-doc-writer.md`
 - `agents/blueprint-doc-verifier.md`
 - `agents/blueprint-security-auditor.md`
+- `agents/blueprint-ui-auditor.md`
 - `hooks/hooks.json`
 - `src/mcp/server.ts`
 - `src/mcp/tools/project.ts`
