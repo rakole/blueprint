@@ -49,6 +49,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_roadmap_add_phase` | Append the next whole-number phase and derive the matching `.blueprint/phases/<phase-slug>/` directory | `{phaseNumber, phaseDir, roadmapPath}` |
 | `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phaseDir, roadmapPath}` |
 | `blueprint_roadmap_remove_phase` | Remove and renumber phase entries | `{removedPhase, renumberedPhases, roadmapPath}` |
+| `blueprint_roadmap_promote_backlog` | Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999.x` phase stubs when present | `{status, backlogItems, selectedBacklogIds, promotedItems, createdPhaseDirs, warnings}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
 | `blueprint_phase_context` | Summarize phase boundary and existing artifacts | `{phase, requirements, missingArtifacts}` |
 | `blueprint_phase_research_status` | Report discovery readiness for context, research, and UI-spec artifacts | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
@@ -72,7 +73,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding, not as the final persistence layer for filled-in artifacts | `{createdFiles, reusedFiles, warnings}` |
 | `blueprint_artifact_list` | Enumerate known core, phase, codebase, and report artifacts | `{artifacts, reports, missing, warnings}` |
-| `blueprint_artifact_mutate_index` | Append canonical capture entries to Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
+| `blueprint_artifact_mutate_index` | Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
 | `blueprint_artifact_summary_digest` | Build digests from artifacts, code, tests, and reports | `{digest, inputsUsed}` |
 | `blueprint_artifact_report_write` | Persist durable report artifacts such as milestone audits with overwrite protection | `{path, written, created, overwritten, status, warnings}` |
@@ -86,10 +87,6 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 ## Planned Later Tool Families
 
 These tool names are part of the documented future contract, but they are not registered today.
-
-### Future Roadmap and Milestone Tools
-
-- `blueprint_roadmap_promote_backlog`
 
 ### Future Workspace and Workstream Tools
 
@@ -115,6 +112,7 @@ These tool names are part of the documented future contract, but they are not re
 - `new-project`, `settings`, and `set-profile` lean on project, config, and state tools.
 - `map-codebase` uses `blueprint_project_status`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, and `blueprint_artifact_summary_digest`.
 - `add-backlog` uses `blueprint_artifact_mutate_index` and, when the user explicitly reserves a parking-lot phase, `blueprint_artifact_scaffold`.
+- `review-backlog` uses `blueprint_roadmap_promote_backlog`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to preview backlog candidates, append promoted roadmap phases, preserve backlog history through status transitions, and route the repo into `/blu-discuss-phase`.
 - `discuss-phase` uses phase location/context, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update`.
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, discovery artifact read and write tools, scaffolding, config, and state update tools.

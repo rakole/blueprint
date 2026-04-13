@@ -35,11 +35,13 @@ const IMPLEMENTED_COMMANDS = [
   "add-todo",
   "check-todos",
   "add-backlog",
+  "review-backlog",
   "remove-phase",
   "plan-phase",
   "execute-phase",
   "fast",
   "quick",
+  "debug",
   "validate-phase",
   "verify-work",
   "pause-work",
@@ -247,6 +249,26 @@ test("add-backlog is implemented once manifest, skill, and capture MCP tools exi
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("review-backlog is implemented once manifest, skill, and backlog-promotion MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["review-backlog"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_mutate_index",
+    "blueprint_roadmap_promote_backlog",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
 test("note is implemented once manifest, skill, and capture MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["note"];
@@ -353,6 +375,9 @@ test("implemented commands expose their declared optional agent contracts when s
     "blueprint-planner",
     "blueprint-researcher",
     "blueprint-verifier"
+  ]);
+  assert.deepEqual(catalog.commands["debug"].availableOptionalAgents, [
+    "blueprint-debugger"
   ]);
   assert.deepEqual(catalog.commands["secure-phase"].availableOptionalAgents, [
     "blueprint-security-auditor"
@@ -653,5 +678,26 @@ test("fast is implemented once manifest, skill, and trivial inline MCP tools exi
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("debug is implemented once manifest, skill, and report-backed debug MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["debug"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("debug"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_mutate_index",
+    "blueprint_artifact_report_write",
+    "blueprint_project_status",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-debugger"]);
   assert.deepEqual(entry.blockedBy, []);
 });

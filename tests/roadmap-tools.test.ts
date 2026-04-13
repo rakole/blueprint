@@ -9,6 +9,7 @@ import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintRoadmapAddPhase,
   blueprintRoadmapInsertPhase,
+  blueprintRoadmapPromoteBacklog,
   blueprintRoadmapRead,
   blueprintRoadmapRemovePhase
 } from "../src/mcp/tools/phase.js";
@@ -187,6 +188,13 @@ test("roadmap tools register blueprint_roadmap_insert_phase", () => {
   );
 });
 
+test("roadmap tools register blueprint_roadmap_promote_backlog", () => {
+  assert.ok(
+    blueprintToolNames.includes("blueprint_roadmap_promote_backlog"),
+    "blueprint_roadmap_promote_backlog should be registered"
+  );
+});
+
 test("blueprint_roadmap_add_phase appends the next integer phase and slugged directory", async (t) => {
   const repoPath = await createRoadmapRepo();
   t.after(async () => {
@@ -290,6 +298,82 @@ test("blueprint_roadmap_insert_phase increments the decimal suffix from roadmap 
     roadmapBody,
     /Phase 2: Core Runtime[\s\S]*Phase 2\.1: API Stabilization[\s\S]*Phase 2\.2: Validation Sweep[\s\S]*Phase 4: Release Hardening/
   );
+});
+
+test("blueprint_roadmap_promote_backlog previews backlog items and promotes confirmed entries into appended phases", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/backlog"), {
+    recursive: true
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/backlog/BACKLOG.md"),
+    `# Backlog
+
+## Parking Lot
+
+### BACKLOG-001
+- Added: 2026-04-12
+- Status: backlog
+- Reserved Phase: 999.1
+- Description: Offline mode
+
+### BACKLOG-002
+- Added: 2026-04-12
+- Status: backlog
+- Description: Export telemetry report
+`,
+    "utf8"
+  );
+  await mkdir(path.join(repoPath, ".blueprint/phases/999.1-offline-mode"), {
+    recursive: true
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/999.1-offline-mode/999.1-CONTEXT.md"),
+    "# Context\n",
+    "utf8"
+  );
+
+  const preview = await blueprintRoadmapPromoteBacklog({
+    cwd: repoPath,
+    previewOnly: true
+  });
+  const result = await blueprintRoadmapPromoteBacklog({
+    cwd: repoPath,
+    backlogIds: ["BACKLOG-001", "BACKLOG-002"]
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(preview.status, "preview");
+  assert.deepEqual(preview.backlogItems.map((item) => item.backlogId), [
+    "BACKLOG-001",
+    "BACKLOG-002"
+  ]);
+  assert.equal(result.status, "updated");
+  assert.deepEqual(result.selectedBacklogIds, ["BACKLOG-001", "BACKLOG-002"]);
+  assert.deepEqual(result.promotedItems.map((item) => item.phaseNumber), ["3", "4"]);
+  assert.deepEqual(result.createdPhaseDirs, [
+    ".blueprint/phases/03-offline-mode",
+    ".blueprint/phases/04-export-telemetry-report"
+  ]);
+  assert.equal(result.promotedItems[0]?.reusedReservedPhaseDir, true);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-offline-mode/03-CONTEXT.md")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/999.1-offline-mode")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/04-export-telemetry-report")),
+    true
+  );
+  assert.match(roadmapBody, /Phase 3: Offline mode/);
+  assert.match(roadmapBody, /Phase 4: Export telemetry report/);
 });
 
 test("blueprint_roadmap_remove_phase removes a future phase and renumbers later directories plus artifacts", async (t) => {

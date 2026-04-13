@@ -15,7 +15,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `code-review-fix` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW-FIX.md; code changes` | `High: automated fixes plus optional iteration loop.` |
 | `code-review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEW.md` | `Low: review artifact generation only.` |
 | `complete-milestone` | 2 | `Roadmap And Milestone` | `blueprint-roadmap-admin` | `implemented` | `.blueprint/reports/milestone-complete-<version>.md; .blueprint/STATE.md` | `Medium: writes milestone closeout evidence and advances archival routing.` |
-| `debug` | 3 | `Capture And Lightweight Execution` | `blueprint-debug` | `planned` | `debug report in .blueprint/reports/; optional todo follow-ups` | `Medium: exploratory shell commands and test runs are likely.` |
+| `debug` | 3 | `Capture And Lightweight Execution` | `blueprint-debug` | `implemented` | `debug report in .blueprint/reports/debug-latest.md; optional todo follow-ups; .blueprint/STATE.md` | `Medium: exploratory shell commands and test runs are likely.` |
 | `discuss-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-CONTEXT.md; optional phase XX-DISCUSSION-LOG.md; optional phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery` | `Medium: can replace or extend phase context artifacts.` |
 | `do` | 3 | `Capture And Lightweight Execution` | `blueprint-router` | `blocked` | `none` | `Low: routing only.` |
 | `docs-update` | 4 | `Quality And Shipping` | `blueprint-docs` | `implemented` | `repo documentation files; docs-update report in .blueprint/reports/` | `Medium: writes repo docs outside `.blueprint/`.` |
@@ -44,7 +44,7 @@ This file is a one-page index for the retained Blueprint command surface. It com
 | `remove-workspace` | 5 | `Workspace And Maintenance` | `blueprint-maintenance` | `planned` | `updated global workspace registry; workspace directory removal` | `High: directory deletion and worktree cleanup.` |
 | `research-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` | `phase XX-RESEARCH.md; .blueprint/STATE.md` | `Low: writes research artifacts only.` |
 | `resume-work` | 1 | `Core Lifecycle` | `blueprint-governance` | `implemented` | `.blueprint/STATE.md` | `Low: restores state from the canonical pause handoff and updates the next safe action.` |
-| `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `planned` | `updated backlog index; updated roadmap and any promoted phase stubs` | `Medium: can promote backlog items into active roadmap scope.` |
+| `review-backlog` | 3 | `Capture And Lightweight Execution` | `blueprint-capture` | `implemented` | `.blueprint/backlog/BACKLOG.md; .blueprint/ROADMAP.md; promoted phase directories under .blueprint/phases/; .blueprint/STATE.md` | `Medium: can promote backlog items into active roadmap scope.` |
 | `review` | 4 | `Quality And Shipping` | `blueprint-review` | `planned` | `phase XX-REVIEWS.md or equivalent peer-review artifact` | `Medium: external tool orchestration without default repo mutation.` |
 | `secure-phase` | 4 | `Quality And Shipping` | `blueprint-review` | `implemented` | `phase XX-SECURITY.md` | `Low: audit artifact only.` |
 | `set-profile` | 0 | `Foundation` | `blueprint-governance` | `implemented` | `.blueprint/config.json` | `Low: single-setting mutation for project model profile selection.` |

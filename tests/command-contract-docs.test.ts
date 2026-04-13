@@ -210,7 +210,7 @@ test("capture skill and shipped note plus backlog docs are marked implemented in
   assert.match(addBacklogDoc, /Confirm immediate phase-stub reservation when used\./);
   assert.match(
     mcpToolsDoc,
-    /\| `blueprint_artifact_mutate_index` \| Append canonical capture entries to Blueprint indexes such as backlog, notes, and todos/
+    /\| `blueprint_artifact_mutate_index` \| Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos/
   );
 });
 
@@ -255,6 +255,34 @@ test("check-todos docs and catalog metadata are marked implemented with the ship
   assert.match(
     migrationMarkdown,
     /\| `check-todos` \| `commands\/gsd\/check-todos\.md` \| GSD has an upstream workflow file \| `docs\/commands\/check-todos\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_project_status` \|/
+  );
+});
+
+test("review-backlog docs and catalog metadata are marked implemented with the backlog-promotion tool", async () => {
+  const [catalogMarkdown, reviewBacklogDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/review-backlog.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `review-backlog` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \|/
+  );
+  assert.match(reviewBacklogDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(reviewBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(reviewBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_promote_backlog`/);
+  assert.match(reviewBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_state_update`/);
+  assert.match(reviewBacklogDoc, /reserved `999\.x` stubs/i);
+  assert.match(reviewBacklogDoc, /Promoted backlog items become active roadmap phases without deleting backlog history\./);
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint_roadmap_promote_backlog` \| Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999\.x` phase stubs when present/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `review-backlog` \| `commands\/gsd\/review-backlog\.md` \| GSD does not have a dedicated upstream workflow file and will need a Blueprint-native flow contract \| `docs\/commands\/review-backlog\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -319,6 +347,32 @@ test("quick command docs keep the bounded report-backed execution contract expli
   assert.match(quickDoc, /quick-run-latest\.md/);
   assert.match(quickDoc, /Confirm optional discuss, research, or full verification modes before starting\./);
   assert.match(quickDoc, /Leaves unrelated repo files untouched/i);
+});
+
+test("debug skill and bounded debugger agent are marked implemented in docs", async () => {
+  const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
+
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-debug` \| `implemented` \| Debug investigations and recovery plans \| `debug` \|/
+  );
+  assert.match(
+    skillsMarkdown,
+    /\| `blueprint-debugger` \| `implemented` \| Run structured debugging investigations \|/
+  );
+});
+
+test("debug command docs keep the report-backed investigation contract explicit", async () => {
+  const debugDoc = await readRepoFile("docs/commands/debug.md");
+
+  assert.match(debugDoc, /Primary skill: `blueprint-debug`/);
+  assert.match(debugDoc, /blueprint_project_status/);
+  assert.match(debugDoc, /blueprint_artifact_report_write/);
+  assert.match(debugDoc, /blueprint_artifact_mutate_index/);
+  assert.match(debugDoc, /blueprint_state_update/);
+  assert.match(debugDoc, /debug-latest\.md/);
+  assert.match(debugDoc, /diagnose-only mode/i);
+  assert.match(debugDoc, /Leaves unrelated repo files untouched/i);
 });
 
 test("fast command docs keep the trivial inline execution contract explicit", async () => {

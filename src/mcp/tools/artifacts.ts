@@ -104,6 +104,12 @@ type ArtifactListArgs = {
 
 type ArtifactMutateIndexTarget = "backlog" | "todo" | "note";
 type ArtifactMutateIndexAction = "append" | "list" | "update";
+type ArtifactMutateIndexUpdate = {
+  id: string;
+  status?: string;
+  description?: string;
+  reservedPhase?: string | null;
+};
 
 type ArtifactMutateIndexArgs = {
   cwd?: string;
@@ -128,6 +134,7 @@ type ArtifactMutateIndexArgs = {
   update?: {
     status?: string;
   };
+  updates?: ArtifactMutateIndexUpdate[];
 };
 
 type ArtifactScaffoldResult = {
@@ -237,7 +244,7 @@ type ArtifactReportWriteResult = {
   warnings: string[];
 };
 
-type CaptureIndexRow = {
+export type CaptureIndexRow = {
   id: string;
   added: string;
   status: string | null;
@@ -760,7 +767,7 @@ function buildEmptyCaptureMutationResult(
   };
 }
 
-function parseCaptureIndexDocument(
+export function parseCaptureIndexDocument(
   content: string,
   target: ArtifactMutateIndexTarget
 ): {
@@ -1245,6 +1252,16 @@ const artifactMutateIndexInputSchema = {
     .object({
       status: z.string().optional()
     })
+    .optional(),
+  updates: z
+    .array(
+      z.object({
+        id: z.string(),
+        status: z.string().optional(),
+        description: z.string().optional(),
+        reservedPhase: z.string().nullable().optional()
+      })
+    )
     .optional()
 };
 const artifactValidateInputSchema = {
@@ -2457,171 +2474,289 @@ export async function blueprintArtifactMutateIndex(
   }
 
   if (action === "update") {
-    if (args.target !== "todo") {
-      return {
-        ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
-          ...warnings,
-          "Only todo status updates are implemented today."
-        ]),
-        updatedCounts: {
-          added: 0,
-          updated: 0,
-          duplicates: 0,
-          preserved: parsed.rows.length
-        },
-        summary: summarizeCaptureRows(parsed.rows, [], args.target)
-      };
-    }
+    const hasBatchUpdates = (args.updates ?? []).length > 0;
 
-    const requestedId = normalizeCaptureText(args.match?.id ?? "");
-    const requestedText = normalizeCaptureText(args.match?.text ?? "");
+    if (!hasBatchUpdates && args.target === "todo") {
+      const requestedId = normalizeCaptureText(args.match?.id ?? "");
+      const requestedText = normalizeCaptureText(args.match?.text ?? "");
 
-    if (requestedId.length === 0 && requestedText.length === 0) {
-      return {
-        ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
-          ...warnings,
-          "Todo updates require a matching entry ID or exact todo text."
-        ]),
-        updatedCounts: {
-          added: 0,
-          updated: 0,
-          duplicates: 0,
-          preserved: parsed.rows.length
-        },
-        summary: summarizeCaptureRows(parsed.rows, [], args.target)
-      };
-    }
-
-    if (normalizeCaptureText(args.update?.status ?? "").length === 0) {
-      return {
-        ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
-          ...warnings,
-          "Todo updates require an explicit status."
-        ]),
-        updatedCounts: {
-          added: 0,
-          updated: 0,
-          duplicates: 0,
-          preserved: parsed.rows.length
-        },
-        summary: summarizeCaptureRows(parsed.rows, [], args.target)
-      };
-    }
-
-    const desiredStatus = canonicalizeTodoStatus(args.update?.status);
-    const matchedRows = parsed.rows.filter((row) => {
-      if (requestedId.length > 0) {
-        return row.id === requestedId;
+      if (requestedId.length === 0 && requestedText.length === 0) {
+        return {
+          ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+            ...warnings,
+            "Todo updates require a matching entry ID or exact todo text."
+          ]),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          summary: summarizeCaptureRows(parsed.rows, [], args.target)
+        };
       }
 
-      return captureDedupKey(row.description) === captureDedupKey(requestedText);
-    });
+      if (normalizeCaptureText(args.update?.status ?? "").length === 0) {
+        return {
+          ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+            ...warnings,
+            "Todo updates require an explicit status."
+          ]),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          summary: summarizeCaptureRows(parsed.rows, [], args.target)
+        };
+      }
 
-    if (matchedRows.length === 0) {
-      return {
-        ...buildEmptyCaptureMutationResult(targetPath, "not_found", [
-          ...warnings,
-          "No matching todo entry was found."
-        ]),
-        updatedCounts: {
-          added: 0,
-          updated: 0,
-          duplicates: 0,
-          preserved: parsed.rows.length
-        },
-        summary: summarizeCaptureRows(parsed.rows, [], args.target)
-      };
-    }
-
-    if (matchedRows.length > 1) {
-      return {
-        ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
-          ...warnings,
-          `Todo selection is ambiguous. Use an exact ID instead: ${matchedRows.map((row) => row.id).join(", ")}`
-        ]),
-        matchedEntryIds: matchedRows.map((row) => row.id),
-        updatedCounts: {
-          added: 0,
-          updated: 0,
-          duplicates: 0,
-          preserved: parsed.rows.length
-        },
-        entries: matchedRows,
-        summary: summarizeCaptureRows(parsed.rows, matchedRows, args.target)
-      };
-    }
-
-    const matchedEntry = matchedRows[0];
-    let updatedCount = 0;
-    const nextRows = parsed.rows.map((row) => {
-      const currentStatus = canonicalizeTodoStatus(row.status, { strict: false });
-
-      if (row.id === matchedEntry.id) {
-        if (currentStatus === desiredStatus) {
-          return row;
+      const desiredStatus = canonicalizeTodoStatus(args.update?.status);
+      const matchedRows = parsed.rows.filter((row) => {
+        if (requestedId.length > 0) {
+          return row.id === requestedId;
         }
 
-        updatedCount += 1;
+        return captureDedupKey(row.description) === captureDedupKey(requestedText);
+      });
 
+      if (matchedRows.length === 0) {
         return {
-          ...row,
-          status: desiredStatus
+          ...buildEmptyCaptureMutationResult(targetPath, "not_found", [
+            ...warnings,
+            "No matching todo entry was found."
+          ]),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          summary: summarizeCaptureRows(parsed.rows, [], args.target)
         };
       }
 
-      if (desiredStatus === "active" && currentStatus === "active") {
-        updatedCount += 1;
-
+      if (matchedRows.length > 1) {
         return {
-          ...row,
-          status: "open"
+          ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+            ...warnings,
+            `Todo selection is ambiguous. Use an exact ID instead: ${matchedRows.map((row) => row.id).join(", ")}`
+          ]),
+          matchedEntryIds: matchedRows.map((row) => row.id),
+          updatedCounts: {
+            added: 0,
+            updated: 0,
+            duplicates: 0,
+            preserved: parsed.rows.length
+          },
+          entries: matchedRows,
+          summary: summarizeCaptureRows(parsed.rows, matchedRows, args.target)
         };
       }
 
-      return row;
-    });
-    const didWrite = parsed.malformed || updatedCount > 0;
+      const matchedEntry = matchedRows[0];
+      let updatedCount = 0;
+      const nextRows = parsed.rows.map((row) => {
+        const currentStatus = canonicalizeTodoStatus(row.status, { strict: false });
 
-    if (didWrite) {
-      const recoveryContent =
-        parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
-      const rendered = renderCaptureIndexDocument(args.target, nextRows, recoveryContent);
+        if (row.id === matchedEntry.id) {
+          if (currentStatus === desiredStatus) {
+            return row;
+          }
 
-      await writeTextFile(absolutePath, rendered);
-    } else {
-      warnings.push("Preserved existing todo status because it already matched the requested value.");
+          updatedCount += 1;
+
+          return {
+            ...row,
+            status: desiredStatus
+          };
+        }
+
+        if (desiredStatus === "active" && currentStatus === "active") {
+          updatedCount += 1;
+
+          return {
+            ...row,
+            status: "open"
+          };
+        }
+
+        return row;
+      });
+      const didWrite = parsed.malformed || updatedCount > 0;
+
+      if (didWrite) {
+        const recoveryContent =
+          parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
+        const rendered = renderCaptureIndexDocument(args.target, nextRows, recoveryContent);
+
+        await writeTextFile(absolutePath, rendered);
+      } else {
+        warnings.push(
+          "Preserved existing todo status because it already matched the requested value."
+        );
+      }
+
+      const resultingEntry = nextRows.find((row) => row.id === matchedEntry.id);
+      const resultingEntries = resultingEntry ? [resultingEntry] : [];
+
+      return {
+        ...buildEmptyCaptureMutationResult(targetPath, "updated", warnings),
+        matchedEntryIds: [matchedEntry.id],
+        updatedCounts: {
+          added: 0,
+          updated: updatedCount,
+          duplicates: 0,
+          preserved: parsed.rows.length - updatedCount
+        },
+        entries: resultingEntries,
+        summary: summarizeCaptureRows(nextRows, resultingEntries, args.target)
+      };
     }
 
-    const resultingEntry = nextRows.find((row) => row.id === matchedEntry.id);
-    const resultingEntries = resultingEntry ? [resultingEntry] : [];
+    const updates = args.updates ?? [];
+
+    if (updates.length === 0) {
+      return {
+        ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
+          ...warnings,
+          "Capture index updates require at least one entry id."
+        ]),
+        updatedCounts: {
+          added: 0,
+          updated: 0,
+          duplicates: 0,
+          preserved: parsed.rows.length
+        },
+        summary: summarizeCaptureRows(parsed.rows, [], args.target)
+      };
+    }
+
+    const rows = [...parsed.rows];
+    const seenUpdateIds = new Set<string>();
+    let updated = 0;
+
+    for (const update of updates) {
+      const normalizedId = update.id.trim().toUpperCase();
+
+      if (normalizedId.length === 0) {
+        warnings.push("Skipped a capture index update because the entry id was blank.");
+        continue;
+      }
+
+      if (seenUpdateIds.has(normalizedId)) {
+        warnings.push(`Skipped duplicate update request for ${normalizedId}.`);
+        continue;
+      }
+
+      seenUpdateIds.add(normalizedId);
+
+      const rowIndex = rows.findIndex((row) => row.id === normalizedId);
+
+      if (rowIndex === -1) {
+        warnings.push(`No ${args.target} entry matched ${normalizedId}.`);
+        continue;
+      }
+
+      const currentRow = rows[rowIndex];
+      let nextRow = currentRow;
+      let rowChanged = false;
+
+      if (typeof update.status === "string") {
+        const normalizedStatus = normalizeCaptureText(update.status);
+
+        if (normalizedStatus.length === 0) {
+          warnings.push(`Skipped blank status update for ${normalizedId}.`);
+        } else if (config.defaultStatus !== null && normalizedStatus !== currentRow.status) {
+          nextRow = {
+            ...nextRow,
+            status: normalizedStatus
+          };
+          rowChanged = true;
+        }
+      }
+
+      if (typeof update.description === "string") {
+        const normalizedDescription = normalizeCaptureText(update.description);
+
+        if (normalizedDescription.length === 0) {
+          warnings.push(`Skipped blank description update for ${normalizedId}.`);
+        } else if (normalizedDescription !== currentRow.description) {
+          nextRow = {
+            ...nextRow,
+            description: normalizedDescription
+          };
+          rowChanged = true;
+        }
+      }
+
+      if (
+        config.supportsReservedPhase &&
+        Object.prototype.hasOwnProperty.call(update, "reservedPhase")
+      ) {
+        const normalizedReservedPhase =
+          typeof update.reservedPhase === "string"
+            ? normalizeCaptureText(update.reservedPhase)
+            : null;
+        const nextReservedPhase =
+          normalizedReservedPhase && normalizedReservedPhase.length > 0
+            ? normalizedReservedPhase
+            : null;
+
+        if (nextReservedPhase !== currentRow.reservedPhase) {
+          nextRow = {
+            ...nextRow,
+            reservedPhase: nextReservedPhase
+          };
+          rowChanged = true;
+        }
+      }
+
+      if (!rowChanged) {
+        continue;
+      }
+
+      rows[rowIndex] = nextRow;
+      updated += 1;
+    }
+
+    if (updated === 0 && !parsed.malformed) {
+      return {
+        ...buildEmptyCaptureMutationResult(targetPath, "invalid", warnings),
+        updatedCounts: {
+          added: 0,
+          updated: 0,
+          duplicates: 0,
+          preserved: parsed.rows.length
+        },
+        summary: summarizeCaptureRows(parsed.rows, [], args.target)
+      };
+    }
+
+    const recoveryContent =
+      parsed.malformed && parsed.recoveryContent ? parsed.recoveryContent : null;
+    const rendered = renderCaptureIndexDocument(args.target, rows, recoveryContent);
+
+    await writeTextFile(absolutePath, rendered);
 
     return {
       ...buildEmptyCaptureMutationResult(targetPath, "updated", warnings),
-      matchedEntryIds: [matchedEntry.id],
       updatedCounts: {
         added: 0,
-        updated: updatedCount,
+        updated,
         duplicates: 0,
-        preserved: parsed.rows.length - updatedCount
+        preserved: Math.max(rows.length - updated, 0)
       },
-      entries: resultingEntries,
-      summary: summarizeCaptureRows(nextRows, resultingEntries, args.target)
-    };
-  }
-
-  if (action !== "append") {
-    return {
-      ...buildEmptyCaptureMutationResult(targetPath, "invalid", [
-        ...warnings,
-        `Unsupported capture mutation action: ${action}`
-      ]),
-      updatedCounts: {
-        added: 0,
-        updated: 0,
-        duplicates: 0,
-        preserved: parsed.rows.length
-      },
-      summary: summarizeCaptureRows(parsed.rows, [], args.target)
+      matchedEntryIds: updates.map((update) => update.id.trim().toUpperCase()),
+      entries: rows.filter((row) =>
+        updates.some((update) => row.id === update.id.trim().toUpperCase())
+      ),
+      summary: summarizeCaptureRows(
+        rows,
+        rows.filter((row) => updates.some((update) => row.id === update.id.trim().toUpperCase())),
+        args.target
+      )
     };
   }
 
@@ -3343,7 +3478,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_mutate_index",
     description:
-      "Append canonical capture entries to project-local Blueprint indexes such as backlog, todo, and notes, and inspect or update todo status deterministically.",
+      "Append or update canonical capture entries in project-local Blueprint indexes such as backlog, todo, and notes, and inspect or update todo status deterministically.",
     inputSchema: artifactMutateIndexInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactMutateIndex(args as ArtifactMutateIndexArgs)
