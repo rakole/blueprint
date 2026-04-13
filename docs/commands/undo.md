@@ -93,6 +93,7 @@
 - Blueprint should plan around safe revert-style operations and explicitly avoid destructive git shortcuts such as hard reset.
 - Undo targets need dependency awareness so reverting a phase does not silently invalidate later validated work.
 - A dry-run summary should exist before any commit-level mutation is attempted.
+- The command should show the resolved revert target set, dependency impact, and report-before-mutate path before confirmation.
 
 
 ## User Prompts And Confirmation Gates

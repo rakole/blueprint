@@ -31,6 +31,7 @@ Scope:
 Behavior:
 - advisory only
 - paired with MCP validation rather than raw shell writes
+- reuses the shared prompt-boundary detectors for instruction overrides, unsafe role markers, suspicious encoded payloads, and hidden control text
 
 ### 3. Workflow advisory
 
@@ -74,6 +75,7 @@ These actions should happen only through bounded MCP-backed flows where required
 
 - `.blueprint/` mutations should prefer MCP tools over raw shell writes.
 - commands that scaffold or rewrite artifacts must validate required fields before returning success.
+- prompt-boundary-sensitive writes should be checked by MCP first and only mirrored as hook advisories second.
 
 ## Current Hook Implementation Notes
 
@@ -81,3 +83,4 @@ These actions should happen only through bounded MCP-backed flows where required
 - Hook configuration should be centralized in `hooks/hooks.json`.
 - Repo config must not enable or disable hooks; `.blueprint/config.json` is not a second hook-control surface.
 - Hook behavior should remain testable through stdin/stdout fixtures as runtime contracts evolve.
+- Hook warnings should stay consistent with the shared security detector set, but hooks must never become the authoritative enforcement path.

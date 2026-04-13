@@ -13,9 +13,17 @@ import {
   validatePlanArtifactContent,
   validateResearchArtifactContent,
   resolveBlueprintPath,
-  toRepoRelativePath
+  toRepoRelativePath,
+  writeJsonFile,
+  writeTextFile
 } from "./artifacts.js";
 import { loadBlueprintState } from "./state.js";
+import {
+  formatBlueprintPhasePrefix,
+  normalizeBlueprintPhaseRef,
+  normalizeNumericArtifactId,
+  safeJsonParseObject
+} from "../../shared/security.js";
 
 type RoadmapReadArgs = {
   cwd?: string;
@@ -582,13 +590,7 @@ const phaseCheckpointPutInputSchema = {
 };
 
 function normalizePhaseNumber(value: string): string {
-  return value
-    .split(".")
-    .map((segment) => {
-      const trimmed = segment.trim().replace(/^0+(?=\d)/, "");
-      return trimmed.length > 0 ? trimmed : "0";
-    })
-    .join(".");
+  return normalizeBlueprintPhaseRef(value);
 }
 
 function basePhaseNumber(value: string): string {
@@ -617,10 +619,7 @@ function comparePhaseNumbers(left: string, right: string): number {
 }
 
 function formatPhasePrefix(value: string): string {
-  const normalized = normalizePhaseNumber(value);
-  const [head, ...rest] = normalized.split(".");
-
-  return [head.padStart(2, "0"), ...rest].join(".");
+  return formatBlueprintPhasePrefix(value);
 }
 
 function extractPhaseNumberToken(value: string): string | null {
@@ -1401,13 +1400,7 @@ function checkpointPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "ph
 }
 
 function normalizePlanId(value: string): string {
-  const trimmed = value.trim();
-
-  if (!/^\d+$/.test(trimmed)) {
-    throw new Error(`Plan id must be numeric: ${value}`);
-  }
-
-  return trimmed.padStart(2, "0");
+  return normalizeNumericArtifactId(value, "Plan id");
 }
 
 function parsePlanArtifactPath(
@@ -1624,8 +1617,11 @@ export async function blueprintRoadmapAddPhase(
   const warnings: string[] = [];
   const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
 
-  await ensureParentDirectory(roadmapPath);
-  await fs.writeFile(roadmapPath, updatedRoadmap, "utf8");
+  warnings.push(
+    ...await writeTextFile(roadmapPath, updatedRoadmap, {
+      label: roadmap.path
+    })
+  );
 
   if (await pathExists(phaseDirPath)) {
     warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
@@ -1740,8 +1736,11 @@ export async function blueprintRoadmapInsertPhase(
   const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
   const warnings: string[] = [];
 
-  await ensureParentDirectory(roadmapPath);
-  await fs.writeFile(roadmapPath, updatedRoadmap, "utf8");
+  warnings.push(
+    ...await writeTextFile(roadmapPath, updatedRoadmap, {
+      label: roadmap.path
+    })
+  );
 
   if (existingDecimalDirectory.phaseDir === phaseDir || (await pathExists(phaseDirPath))) {
     warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
@@ -2005,7 +2004,11 @@ export async function blueprintRoadmapRemovePhase(
     });
   }
 
-  await fs.writeFile(roadmapPath, updatedRoadmap, "utf8");
+  warnings.push(
+    ...await writeTextFile(roadmapPath, updatedRoadmap, {
+      label: roadmap.path
+    })
+  );
 
   return {
     removedPhase: {
@@ -2251,8 +2254,11 @@ export async function blueprintRoadmapPromoteBacklog(
     warnings.push(...phaseDirectory.warnings);
   }
 
-  await ensureParentDirectory(roadmapAbsolutePath);
-  await fs.writeFile(roadmapAbsolutePath, roadmapBody, "utf8");
+  warnings.push(
+    ...await writeTextFile(roadmapAbsolutePath, roadmapBody, {
+      label: roadmapPath
+    })
+  );
 
   return {
     status: "updated",
@@ -2605,8 +2611,11 @@ export async function blueprintPhaseArtifactWrite(
     };
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: artifactPath
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
@@ -2785,8 +2794,11 @@ export async function blueprintPhaseValidationWrite(
     };
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: artifactPath
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
@@ -3051,8 +3063,11 @@ export async function blueprintPhasePlanWrite(
     };
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: pathValue
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing plan artifact: ${pathValue}`);
@@ -3288,8 +3303,11 @@ export async function blueprintPhaseSummaryWrite(
     };
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: pathValue
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing summary artifact: ${pathValue}`);
@@ -3351,7 +3369,10 @@ export async function blueprintPhaseCheckpointGet(
   }
 
   const parsed = ensureCheckpointObject(
-    JSON.parse(await fs.readFile(absolutePath, "utf8")) as unknown,
+    safeJsonParseObject(await fs.readFile(absolutePath, "utf8"), {
+      label: checkpointPath,
+      maxBytes: 256 * 1024
+    }),
     checkpointPath
   );
 
@@ -3396,8 +3417,7 @@ export async function blueprintPhaseCheckpointPut(
     }
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, nextRaw, "utf8");
+  await writeJsonFile(absolutePath, nextCheckpoint);
 
   return {
     phaseNumber: resolved.phaseNumber,

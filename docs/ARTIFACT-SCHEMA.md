@@ -262,7 +262,8 @@ Minimum expected structure:
 
 Security audit expectations:
 - must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
-- should distinguish confirmed mitigations from missing or partial controls
+- should distinguish confirmed mitigations from missing or partial controls, even when those distinctions stay inside the existing `Findings` and `Follow-Ups` sections
+- should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
 
 ## Supporting Trees

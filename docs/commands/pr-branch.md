@@ -96,6 +96,7 @@
 - If filtering produces an unexpectedly empty diff, the command should stop and explain why before creating noise branches.
 - Base-branch and commit-docs behavior should come from normalized effective config rather than a second branch-detection path inside the command.
 - The command should stop on a dirty working tree instead of mixing uncommitted changes into the review-branch replay path.
+- The command should also name the resolved source branch, base branch, and filtered target explicitly before mutation so preflight validation is reviewable.
 
 
 ## User Prompts And Confirmation Gates

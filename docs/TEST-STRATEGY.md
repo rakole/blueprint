@@ -18,6 +18,9 @@ Cover:
 - core markdown artifact required fields
 - phase artifact naming rules
 - path safety
+- symlink escape, absolute-path misuse, and null-byte rejection
+- safe JSON parsing size limits and object-shape enforcement
+- prompt-boundary sanitization and rejection rules for persistence helpers
 - MCP tool input validation
 - MCP tool return shapes
 
@@ -38,6 +41,7 @@ For the shipped advisory hooks:
 - structured advisory out
 - silent no-op cases
 - no false positives for normal `.blueprint/` writes
+- shared-detector parity with MCP prompt-boundary warnings
 
 ### 4. Integration tests
 
@@ -62,6 +66,12 @@ Required for:
 - `new-workspace`
 - `remove-workspace`
 - `reapply-patches`
+
+These flows should also cover:
+
+- dirty-tree preflight aborts
+- resolved-target and provenance checks
+- report-before-mutate behavior when the command writes durable maintenance evidence
 
 ### 6. Install and packaging tests
 
@@ -100,6 +110,8 @@ Every command spec in `docs/commands/` should yield:
 - one fixture test for the happy path
 - one fixture test for the main missing-precondition path
 - one regression fixture for the command's riskiest edge case
+
+Security-sensitive command or MCP updates should also add at least one regression that proves the shared hardening layer is actually exercised instead of bypassed.
 
 ## Non-Goals
 

@@ -25,6 +25,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 ## Current Architecture Snapshot
 
 - Blueprint uses MCP as the deterministic state engine for structured reads and writes
+- Shared runtime hardening now lives under `src/shared/security.ts`, with MCP helpers consuming it for path containment, safe JSON parsing, prompt-boundary checks, and identifier validation
 - Commands own UX and routing
 - Skills own orchestration
 - Agents own bounded deep work
@@ -113,6 +114,8 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - keep `add-backlog` routed through `blueprint_artifact_mutate_index` plus optional stub scaffolding
 - keep command-catalog rollout aligned with each shipped Wave 3, Wave 4, and Wave 5 command, including `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore`, `fast`, `quick`, `debug`, `docs-update`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `add-tests`, `pr-branch`, `ship`, and `cleanup`
 - keep regression coverage in place so the closed drift and discovery guarantees fail fast if they drift
+- keep the new shared security helper wired into future MCP persistence paths instead of reintroducing local path, parse, or prompt-boundary logic
+- keep high-risk maintenance specs and skills aligned around explicit resolved-target and report-before-mutate preflights
 
 ## Guardrail Snapshot
 
@@ -151,6 +154,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `code-review-fix` shipped on 2026-04-13 with a dedicated `/blu-code-review-fix` manifest, the discoverable `blueprint-review` skill, saved review loading through `blueprint_review_load_findings`, durable remediation persistence through `blueprint_review_record`, and explicit follow-up routing through `blueprint_state_update`
 - `audit-fix` shipped on 2026-04-13 with a dedicated `/blu-audit-fix` manifest, the discoverable `blueprint-review` skill, deterministic scope resolution through `blueprint_review_scope`, report-backed persistence through `blueprint_artifact_report_write`, optional todo capture through `blueprint_artifact_mutate_index`, and explicit follow-up routing through `blueprint_state_update`
 - `secure-phase` now uses `blueprint_review_record` plus the discoverable `blueprint-review` skill and `blueprint-security-auditor` contract to persist real `XX-SECURITY.md` content
+- shared runtime hardening now routes core path validation, JSON parsing, prompt-boundary checks, and hidden-control-character sanitization through `src/shared/security.ts`, with hooks reusing the same detector set for advisory parity
 - `review` shipped on 2026-04-13 with a dedicated `/blu-review` manifest, the discoverable `blueprint-review` skill, plan inventory plus plan-read MCP grounding, and peer-review persistence through `blueprint_review_record` as `XX-REVIEWS.md`
 - `ui-review` shipped on 2026-04-13 with a dedicated `/blu-ui-review` manifest, the discoverable `blueprint-review` skill, the bounded `blueprint-ui-auditor` agent contract, and UI audit persistence through `blueprint_review_record`
 - `docs/build/WAVE-2-AGENT-WORKFLOW.md`, `docs/build/WAVE-2-PARALLEL-CLOSEOUT-PLAN.md`, and `docs/build/WAVE-2-AUTO-AGENT-META-PROMPT.md` now define the anti-drift closeout workflow for the next 1-to-3-agent cycles

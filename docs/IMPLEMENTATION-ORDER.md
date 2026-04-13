@@ -75,6 +75,7 @@ Shipped in this wave: `note`, `add-todo`, `check-todos`, `add-backlog`, `review-
 - `undo`
 
 Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, and `ship`.
+Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, and `ship`.
 
 ### Wave 5: Workspace and maintenance
 
@@ -162,3 +163,13 @@ Shipped in this wave: `cleanup`.
 3. Preserve implemented-only routing while later commands remain planned or blocked.
 
 This sequence keeps the next implementation work aligned with the current runtime status instead of reopening already shipped Wave 2 closeout work.
+
+## Security Hardening Overlay
+
+Security hardening now rides on top of the shipped command waves instead of reopening them:
+
+1. Refresh the planning pack and keep security decisions locked in docs before widening runtime enforcement.
+2. Land shared MCP-first guardrails in `src/shared/security.ts` and route existing tool helpers through them.
+3. Apply prompt-boundary checks at artifact and report write boundaries, then align advisory hooks to the same detector set.
+4. Tighten shipped and planned maintenance contracts around shared preflight integrity checks without making later commands routable early.
+5. Refine `secure-phase` evidence guidance only after the earlier hardening layers are in place.

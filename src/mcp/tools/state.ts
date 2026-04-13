@@ -8,20 +8,24 @@ import {
   buildBlueprintReportPath,
   blueprintPathExists,
   BLUEPRINT_STATE_PATH,
-  ensureParentDirectory,
   ensureRepoRoot,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
   resolveBlueprintPath,
   toRepoRelativePath,
   validatePlanArtifactContent,
-  validateResearchArtifactContent
+  validateResearchArtifactContent,
+  writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
 import {
   blueprintDirectCommand,
   blueprintRunDirectCommand
 } from "../command-paths.js";
+import {
+  formatBlueprintPhasePrefix,
+  normalizeBlueprintPhaseRef
+} from "../../shared/security.js";
 
 export type BlueprintState = {
   projectStatus: string;
@@ -509,20 +513,11 @@ function parseStateDocument(raw: string): BlueprintState {
 }
 
 function normalizePhaseNumber(value: string): string {
-  return value
-    .split(".")
-    .map((segment) => {
-      const trimmed = segment.trim().replace(/^0+(?=\d)/, "");
-      return trimmed.length > 0 ? trimmed : "0";
-    })
-    .join(".");
+  return normalizeBlueprintPhaseRef(value);
 }
 
 function formatPhasePrefix(value: string): string {
-  const normalized = normalizePhaseNumber(value);
-  const [head, ...rest] = normalized.split(".");
-
-  return [head.padStart(2, "0"), ...rest].join(".");
+  return formatBlueprintPhasePrefix(value);
 }
 
 function extractPhasePlanIds(artifacts: Iterable<string>, phasePrefix: string, kind: "PLAN" | "SUMMARY"): string[] {
@@ -1235,8 +1230,11 @@ export async function blueprintPauseHandoffWrite(
     }
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, content, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, content, {
+      label: PAUSE_HANDOFF_REPORT_PATH
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing pause handoff: ${PAUSE_HANDOFF_REPORT_PATH}`);
@@ -1315,13 +1313,17 @@ export async function blueprintStateUpdate(
     return JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field]);
   });
 
-  await ensureParentDirectory(statePath);
-  await fs.writeFile(statePath, renderStateDocument(nextState), "utf8");
+  const warnings = [...(synced?.warnings ?? [])];
+  warnings.push(
+    ...await writeTextFile(statePath, renderStateDocument(nextState), {
+      label: BLUEPRINT_STATE_PATH
+    })
+  );
 
   return {
     updatedFields,
     statePath: toRepoRelativePath(projectRoot, statePath),
-    warnings: synced?.warnings ?? []
+    warnings
   };
 }
 
@@ -1338,8 +1340,9 @@ export async function blueprintStateSync(
       JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
   );
 
-  await ensureParentDirectory(statePath);
-  await fs.writeFile(statePath, renderStateDocument(nextState), "utf8");
+  await writeTextFile(statePath, renderStateDocument(nextState), {
+    label: BLUEPRINT_STATE_PATH
+  });
 
   return {
     syncedFields,

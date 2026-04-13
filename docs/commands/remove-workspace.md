@@ -91,6 +91,7 @@
 - Workspace deletion must always show the resolved path before confirmation, not just the logical workspace name.
 - Dirty nested repos or unmerged work inside the workspace should block removal by default.
 - Registry cleanup must not orphan sibling workspace entries or remove the wrong directory because of stale path resolution.
+- Removal should make registry provenance, resolved workspace membership, and rollback-safe failure behavior explicit before filesystem mutation.
 
 
 ## User Prompts And Confirmation Gates

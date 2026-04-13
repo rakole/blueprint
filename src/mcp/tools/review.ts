@@ -4,12 +4,12 @@ import path from "node:path";
 import * as z from "zod/v4";
 
 import {
-  ensureParentDirectory,
   ensureRepoRoot,
   resolveBlueprintPath,
   resolveRepoRelativePath,
   toRepoRelativePath,
-  validatePlanArtifactContent
+  validatePlanArtifactContent,
+  writeTextFile
 } from "./artifacts.js";
 import { blueprintPhaseLocate } from "./phase.js";
 
@@ -782,8 +782,11 @@ export async function blueprintReviewRecord(
     }
   }
 
-  await ensureParentDirectory(absolutePath);
-  await fs.writeFile(absolutePath, normalizedContent, "utf8");
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: reportPath
+    })
+  );
 
   if (exists) {
     warnings.push(`Replaced existing review artifact: ${reportPath}`);

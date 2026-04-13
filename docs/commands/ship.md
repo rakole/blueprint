@@ -105,6 +105,7 @@
 - Verification and review artifacts should be treated as gating evidence, not best-effort suggestions.
 - Shipping should honor normalized `git.*` and `planning.commit_docs` config rather than re-deriving branch policy from git state alone.
 - Shipping should stop on a dirty working tree or branch mismatch instead of guessing through uncommitted or off-scope repo state.
+- Shipping should make the resolved scope, source branch, base branch, and report-before-mutate path explicit before any push or PR step is confirmed.
 
 
 ## User Prompts And Confirmation Gates
