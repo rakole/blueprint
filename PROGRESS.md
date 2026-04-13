@@ -6,7 +6,7 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 10
+Total: 9
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -14,12 +14,11 @@ Total: 10
 | 2 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
 | 3 | `review` | ❌ | `planned` | 4 | `Quality And Shipping` | Medium |
 | 4 | `ui-review` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
-| 5 | `cleanup` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 6 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 7 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 8 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 9 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 10 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 5 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 6 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 7 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 8 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
+| 9 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -28,8 +27,8 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
 | 1 | `undo` | `review` | `ui-review` | Safe parallel set. |
-| 2 | `cleanup` | `new-workspace` | `reapply-patches` | Safe parallel set. |
-| 3 | `remove-workspace` | `workstreams` | `update` | Safe parallel set. |
+| 2 | `new-workspace` | `reapply-patches` | `update` | Safe parallel set. |
+| 3 | `remove-workspace` | `workstreams` | `none` | Cleanup is now shipped; the remaining workspace set is no longer a full three-command batch. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
@@ -39,7 +38,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 43
+Total: 44
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -86,3 +85,4 @@ Total: 43
 | 41 | `pr-branch` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 42 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
 | 43 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 44 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |

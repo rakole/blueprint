@@ -42,7 +42,7 @@ This repository still carries the planning pack that locked the product and arch
 - The bounded execution command `/blu-quick` is now shipped; it keeps lightweight repo work inside a reduced-ceremony path, uses optional discuss, research, and validation depth only after explicit confirmation, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`
 - The debug command `/blu-debug` is now shipped on April 13, 2026; it runs a structured investigation flow, persists `.blueprint/reports/debug-latest.md`, can capture explicit todo follow-ups, and routes broader fix work into existing implemented execution commands
 - The documentation command `/blu-docs-update` is now shipped on April 12, 2026; it scopes repo-doc edits narrowly, verifies claims against repo and Blueprint evidence, and persists a durable `.blueprint/reports/docs-update-latest.md` report
-- The maintenance commands `/blu-pr-branch` and `/blu-ship` are now shipped on April 13, 2026; `pr-branch` keeps `.blueprint/` filtering explicit and persists `.blueprint/reports/pr-branch-latest.md`, while `ship` reuses saved verification and review evidence, keeps push or PR creation confirmation-gated, and persists `.blueprint/reports/ship-latest.md` with manual fallback guidance when `gh` is unavailable
+- The maintenance commands `/blu-pr-branch`, `/blu-ship`, and `/blu-cleanup` are now shipped on April 13, 2026; `pr-branch` keeps `.blueprint/` filtering explicit and persists `.blueprint/reports/pr-branch-latest.md`, `ship` reuses saved verification and review evidence and persists `.blueprint/reports/ship-latest.md` with manual fallback guidance when `gh` is unavailable, and `cleanup` archives only completed-milestone phase directories after explicit confirmation and a durable `.blueprint/reports/cleanup-latest.md` plan
 - Runtime gate: `/blu`, `/blu-help`, and `/blu-progress` must still recommend only commands whose runtime catalog entry is `implemented`
 
 ## Install And Release
@@ -212,6 +212,7 @@ These runtime files exist today:
 - `commands/blu-docs-update.toml`
 - `commands/blu-pr-branch.toml`
 - `commands/blu-ship.toml`
+- `commands/blu-cleanup.toml`
 - `commands/blu-milestone-summary.toml`
 - `commands/blu-new-milestone.toml`
 - `commands/blu-plan-milestone-gaps.toml`

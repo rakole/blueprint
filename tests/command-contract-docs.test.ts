@@ -547,6 +547,33 @@ test("maintenance skill and ship docs keep the shipping contract explicit", asyn
   );
 });
 
+test("maintenance skill and cleanup docs keep the archival contract explicit", async () => {
+  const [cleanupDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/cleanup.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(cleanupDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(cleanupDoc, /`blueprint_project_status`/);
+  assert.match(cleanupDoc, /`blueprint_roadmap_read`/);
+  assert.match(cleanupDoc, /`blueprint_artifact_list`/);
+  assert.match(cleanupDoc, /`blueprint_artifact_summary_digest`/);
+  assert.match(cleanupDoc, /`blueprint_artifact_report_write`/);
+  assert.match(cleanupDoc, /`blueprint_state_update`/);
+  assert.match(cleanupDoc, /cleanup-latest\.md/);
+  assert.match(cleanupDoc, /Require confirmation before moving or deleting/i);
+  assert.match(cleanupDoc, /Never archives the current phase/i);
+  assert.match(
+    mcpToolsDoc,
+    /`cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `cleanup` \| `commands\/gsd\/cleanup\.md` \| GSD has an upstream workflow file \| `docs\/commands\/cleanup\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_roadmap_read`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+  );
+});
+
 test("code-review docs and reviewer agent are marked implemented in docs", async () => {
   const [skillsMarkdown, codeReviewDoc] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),

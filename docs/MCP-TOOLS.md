@@ -139,6 +139,7 @@ These tool names are part of the documented future contract, but they are not re
 - `ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped UI audit evidence as `XX-UI-REVIEW.md`.
 - `pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to keep review-branch preparation evidence-backed, report-backed, and explicit about `.blueprint/` filtering before any git mutation.
 - `ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep shipping evidence-backed, report-backed, explicit about push or PR mutation, and honest about the next safe follow-up when `gh` is unavailable.
+- `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection.
 
 ## Planned Command Notes
 
