@@ -98,6 +98,7 @@
 
 - Confirm overwrite when research already exists.
 - Force an explicit `view`, `skip`, or `update` path when `XX-RESEARCH.md` already exists.
+- Prefer Gemini CLI's built-in `ask_user` dialog for the `view`/`skip`/`update` choice and overwrite confirmation instead of a plain-text menu.
 
 
 ## Edge Cases
@@ -135,5 +136,4 @@
 - Direct `research-phase` happy-path fixture.
 - Existing research `view`, `skip`, and `update` fixture.
 - Invalid research-content rejection fixture.
-
 

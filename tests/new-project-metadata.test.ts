@@ -16,6 +16,8 @@ test("new-project manifest encodes the richer bootstrap flow without reviving GS
   assert.match(commandFile, /Use the `blueprint-bootstrap` skill/);
   assert.match(commandFile, /skills\/blueprint-bootstrap\/references\/questioning\.md/);
   assert.match(commandFile, /thread-following questions|thread-following project questioning/i);
+  assert.match(commandFile, /`ask_user`/);
+  assert.match(commandFile, /one focused question per `ask_user` call/i);
   assert.match(commandFile, /workflow preferences/i);
   assert.match(commandFile, /revision loop/i);
   assert.match(commandFile, /`blueprint-project-researcher`/);
@@ -49,6 +51,7 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /name: blueprint-bootstrap/);
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /references\/questioning\.md/);
+  assert.match(skillFile, /`ask_user`/);
   assert.match(skillFile, /mode/i);
   assert.match(skillFile, /granularity/i);
   assert.match(skillFile, /revision loop/i);
@@ -58,6 +61,8 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /next safe implemented command/i);
   assert.match(questioningRef, /thinking partner/i);
   assert.match(questioningRef, /Follow the thread/i);
+  assert.match(questioningRef, /Ask User Dialog Rule/);
+  assert.match(questioningRef, /one question at a time/i);
   assert.match(questioningRef, /Freeform Rule/);
   assert.match(questioningRef, /Decision Gate/);
   assert.match(questioningRef, /Anti-Patterns/);

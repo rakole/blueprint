@@ -93,6 +93,8 @@ test("discuss-phase command references only registered phase-discovery tool name
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
+  assert.match(commandFile, /`ask_user`/);
+  assert.match(commandFile, /one focused question per `ask_user` call/i);
   assert.match(commandFile, /workflow\.discuss_mode/);
   assert.match(commandFile, /workflow\.skip_discuss/);
   assert.match(commandFile, /workflow\.research_before_questions/);

@@ -25,6 +25,7 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
 
 ## Parity Goal
 
@@ -74,21 +75,23 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 ### `discuss-phase`
 
 1. Resolve the phase through MCP tools before asking the user to confirm any write path.
-2. Write `XX-CONTEXT.md` through `blueprint_artifact_scaffold`.
-3. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
-4. Require explicit overwrite confirmation before replacing existing context artifacts.
-5. End with a next safe action inside the implemented Blueprint surface.
+2. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, and resume-versus-discard choices instead of plain-text menus.
+3. Write `XX-CONTEXT.md` through `blueprint_artifact_scaffold`.
+4. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
+5. Require explicit overwrite confirmation before replacing existing context artifacts.
+6. End with a next safe action inside the implemented Blueprint surface.
 
 ### `research-phase`
 
 1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
 2. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
-3. Use `blueprint_artifact_scaffold` only to seed a missing research file.
-4. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
-5. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
-6. Require explicit overwrite confirmation before replacing existing research.
-7. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
-8. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+3. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
+4. Use `blueprint_artifact_scaffold` only to seed a missing research file.
+5. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
+6. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
+7. Require explicit overwrite confirmation before replacing existing research.
+8. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
+9. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
 
 ### `list-phase-assumptions`
 
@@ -105,9 +108,10 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 1. Inspect effective config through `blueprint_config_get`.
 2. Respect `workflow.ui_phase` and `workflow.ui_safety_gate`.
-3. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
-4. Require explicit overwrite confirmation before replacing an existing UI spec.
-5. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
+3. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
+4. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
+5. Require explicit overwrite confirmation before replacing an existing UI spec.
+6. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
 
 ## Non-Negotiables
 

@@ -98,6 +98,7 @@
 
 
 - Confirm replacement when a UI spec already exists.
+- Prefer Gemini CLI's built-in `ask_user` dialog for overwrite confirmation or focused contract-versus-skip decisions instead of a plain-text menu.
 - Honor effective-config gates before writing:
 - `workflow.ui_phase=false` should produce a documented skip rationale instead of a generated UI contract.
 - `workflow.ui_safety_gate=true` should require an explicit rationale when UI work is skipped.
@@ -138,5 +139,4 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `ui-phase` happy-path fixture.
-
 

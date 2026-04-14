@@ -141,6 +141,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /`blueprint-researcher` subagent/);
   assert.match(commandFile, /explicit confirmation/i);
+  assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /view/);
   assert.match(commandFile, /skip/);
   assert.match(commandFile, /update/);

@@ -24,6 +24,7 @@ Orchestrate Blueprint project initialization around the current MCP bootstrap pr
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
 
 ## Parity Goal
 
@@ -82,12 +83,12 @@ Current Blueprint delta:
 
 1. Run a real discovery loop before the first write unless `--auto` already includes enough project context.
 2. Use `questioning.md` as a background guide: start open, follow the thread, challenge vagueness, make abstract ideas concrete, and stop once the bootstrap brief is strong enough to write.
-3. When the user wants to explain freely, keep the interaction in freeform conversation. Short option lists are allowed only when they help the user react to a concrete tradeoff.
+3. When the user wants to explain freely, keep the interaction in freeform conversation. When a concrete tradeoff or workflow choice needs structure, prefer a one-question `ask_user` dialog over a plain-text menu.
 4. Capture enough context to support:
    - a substantive `PROJECT.md`
    - grouped and traceable bootstrap requirements
    - a credible first roadmap slice with success criteria
-5. In interactive mode, summarize your understanding and get explicit confirmation before the first persistent write.
+5. In interactive mode, summarize your understanding and get explicit confirmation before the first persistent write. Prefer `ask_user` for that approval gate.
 
 ### 3. Workflow Preferences
 
@@ -98,7 +99,8 @@ Current Blueprint delta:
    - parallelization posture
    - planning-doc git preference
    - key workflow gates such as research, plan check, and verifier
-3. Use `mcp_blueprint_blueprint_config_set` after initialization to persist repo-level choices, and only touch saved defaults when the user explicitly asks.
+3. Prefer `ask_user` when saved-default or workflow-preference choices are better expressed as labeled options with short descriptions.
+4. Use `mcp_blueprint_blueprint_config_set` after initialization to persist repo-level choices, and only touch saved defaults when the user explicitly asks.
 
 ### 4. Requirements And Roadmap Shaping
 

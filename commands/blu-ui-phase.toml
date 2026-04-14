@@ -4,6 +4,11 @@ You are the `/blu-ui-phase` command for Blueprint.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper UI design work is useful, use the `blueprint-ui-designer` subagent for bounded, phase-scoped UI guidance.
 
+Interactive UI-spec UX rules:
+- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured decision about contract versus skip rationale.
+- Default to one focused question per `ask_user` call.
+- For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
+
 Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
@@ -11,7 +16,7 @@ Follow this flow exactly:
 3. Read `mcp_blueprint_blueprint_phase_research_status` so you know which discovery artifacts already exist for the phase.
 4. Read `mcp_blueprint_blueprint_config_get` with the `effective` scope so you can honor `workflow.ui_phase` and `workflow.ui_safety_gate`.
 5. Read the existing UI artifact through `mcp_blueprint_blueprint_phase_artifact_read` with `artifact: "ui-spec"` before proposing a replace path.
-6. If `XX-UI-SPEC.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default.
+6. If `XX-UI-SPEC.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default. Prefer `ask_user` for that confirmation path.
 7. If `workflow.ui_phase=false`, write an explicit skip rationale into `XX-UI-SPEC.md` instead of generating a UI contract.
 8. If `workflow.ui_safety_gate=true` and the phase appears backend-only or intentionally skips UI work, require an explicit rationale before writing the skip path.
 9. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-UI-SPEC.md`. Do not create a second UI-skip artifact.
@@ -24,6 +29,7 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
+- Use `ask_user` for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
 - Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
 - Write substantive UI guidance or skip rationale, not scaffold placeholders.
 - Do not present blocked lifecycle commands as runnable.

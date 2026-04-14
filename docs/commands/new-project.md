@@ -33,6 +33,7 @@
 - Interactive bootstrap should begin with thread-following project questioning, not a rigid checklist.
 - The questioning loop should capture enough clarity around vision, audience, constraints, milestone scope, and success outcomes that authored bootstrap artifacts do not force downstream commands to guess.
 - Short option lists are allowed when they sharpen a concrete tradeoff, but the command should stay conversational and Gemini-native.
+- When structured choices help, interactive bootstrap should prefer Gemini CLI's built-in `ask_user` dialog, asked one focused question at a time with labeled options plus a typed custom-answer path.
 - In interactive mode, the command should summarize its understanding and secure explicit approval before the first persistent bootstrap write.
 - `--auto` may skip that approval loop only when the supplied brief is strong enough to synthesize a credible bootstrap seed.
 
@@ -102,11 +103,11 @@
 - When interactive and `~/.gemini/blueprint/defaults.json` exists, offer those saved defaults before asking project-specific setup questions.
 - In interactive mode, ask enough discovery questions to write a substantive project brief before the first persistent write.
 - Follow the thread of the user's idea instead of running a canned bootstrap survey.
-- Use concise conversational choices only when they help the user react to a real ambiguity or scope tradeoff.
+- Use concise conversational choices only when they help the user react to a real ambiguity or scope tradeoff, and prefer `ask_user` over plain-text numbered lists when a structured choice is useful.
 - `--auto` is a non-interactive bootstrap mode: apply saved defaults automatically when they are available and valid, skip follow-up questioning, and surface any assumptions explicitly in the written artifacts.
 - Confirm overwrite if `.blueprint/` already exists.
 - `--auto` must not bypass the overwrite confirmation gate.
-- In interactive mode, summarize your understanding and require explicit approval before the first persistent bootstrap write.
+- In interactive mode, summarize your understanding and require explicit approval before the first persistent bootstrap write, preferably through `ask_user`.
 - In interactive mode, requirements and roadmap shape should support a revision loop before the first persistent write when the user wants adjustments.
 - For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
 - if the repo is unmapped, route to `map-codebase`

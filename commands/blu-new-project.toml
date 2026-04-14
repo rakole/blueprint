@@ -20,6 +20,13 @@ Blueprint MCP access rules:
 - Translate any shorthand `blueprint_*` ids from older docs into their `mcp_blueprint_*` runtime FQNs before calling them.
 - Do not try to re-activate Blueprint skills as tools inside this command, and do not run `/blu-new-project` in the shell; it is a host CLI slash command, not a shell executable.
 
+Interactive question UX rules:
+- In interactive mode, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need a structured clarification, saved-default selection, workflow-preference choice, overwrite confirmation, or bootstrap approval decision.
+- Default to one focused question per `ask_user` call. Ask two tightly related questions together only when the answers are inseparable.
+- For concrete tradeoffs, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
+- When the user is already answering in rich freeform, let them finish in normal conversation and only return to `ask_user` for the next focused clarification.
+- Do not dump multiple unresolved bootstrap questions into a single assistant message when `ask_user` would fit better.
+
 Follow this flow exactly:
 
 1. Confirm the command is running from the target repository root. If not, stop with the precise repo-root error instead of guessing.
@@ -32,9 +39,10 @@ Follow this flow exactly:
    - Treat `skills/blueprint-bootstrap/references/questioning.md` as a background guide, not a script.
    - Challenge vague answers, make abstract ideas concrete, and surface who this is for, why it matters, and what "done" looks like.
    - If the user clearly wants to explain in freeform, stay in freeform instead of forcing rigid option picking.
-   - If short options would help, present them in normal host-CLI conversation as concise choices rather than shell prompts.
+   - If short options would help, use `ask_user` choice dialogs rather than plain-text numbered lists or multi-question dumps.
 7. Gather workflow preferences before writing when they matter to bootstrap quality:
    - Offer saved defaults first when they exist.
+   - Use `ask_user` for saved-default selection and repo-level workflow choices when structured options will make the decision clearer.
    - If defaults are not used, capture the repo's intended mode, granularity, parallelization posture, git-doc preference, and key workflow toggles with concise natural-language questions.
    - Persist chosen repo-level config through `mcp_blueprint_blueprint_config_set` after initialization, and only touch saved defaults when the user explicitly asks.
 8. Turn the discovered context into a bootstrap brief that is rich enough to drive authored artifacts:
@@ -43,7 +51,7 @@ Follow this flow exactly:
    - first-milestone framing
    - explicit assumptions
    - grouped requirement candidates, including deferred and out-of-scope cuts
-9. Before the first persistent write in interactive mode, summarize your understanding and get an explicit "ready to create the bootstrap" confirmation. `--auto` skips this gate but must still surface assumptions afterward.
+9. Before the first persistent write in interactive mode, summarize your understanding and get an explicit "ready to create the bootstrap" confirmation. Prefer `ask_user` for that approval gate. `--auto` skips this gate but must still surface assumptions afterward.
 10. Draft requirements and roadmap structure before writing:
    - Requirements should be specific, user-centered, and traceable.
    - Distinguish committed v1 scope from deferred or explicitly out-of-scope work.
