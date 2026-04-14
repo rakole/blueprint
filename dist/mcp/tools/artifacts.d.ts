@@ -239,6 +239,16 @@ export declare function validateResearchArtifactContent(content: string): {
     issues: string[];
     warnings: string[];
 };
+export declare function validateVerificationArtifactContent(content: string, summaryPaths?: string[]): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateUatArtifactContent(content: string, summaryPaths?: string[]): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
 export declare function validatePlanArtifactContent(content: string, expectedPhase?: string): {
     valid: boolean;
     issues: string[];
