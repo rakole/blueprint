@@ -14,7 +14,7 @@ Bring over the effectiveness of the richer GSD bootstrap flow, but keep these Bl
 - Do not claim auto-advance chaining or slash-command self-invocation behavior that Blueprint has not implemented.
 
 Blueprint MCP access rules:
-- When you name a Blueprint MCP tool explicitly in the active host CLI, use the runtime FQN form `mcp_blueprint_<toolName>`.
+- When you name a Blueprint MCP tool explicitly in the current CLI host, use the runtime FQN form `mcp_blueprint_<toolName>`.
 - Never try to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts.
 - If a required Blueprint MCP tool is unavailable, stop and report that the Blueprint MCP server is disconnected or undiscovered instead of improvising a shell fallback.
 - Translate any shorthand `blueprint_*` ids from older docs into their `mcp_blueprint_*` runtime FQNs before calling them.

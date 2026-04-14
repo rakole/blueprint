@@ -2,7 +2,7 @@
 
 ## Goal
 
-Blueprint is a host-native extension that keeps the command-driven methodology where it is useful, but re-implements runtime ownership around host CLI commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
+Blueprint is a host-native extension runtime for Gemini CLI and Tabnine CLI. It keeps the command-driven methodology where it is useful, but re-implements runtime ownership around host CLI commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
 
 The live runtime currently ships:
 
@@ -134,14 +134,16 @@ Lives in `.blueprint/`:
 
 ### Global state
 
-Lives in the active host CLI home, such as `~/.gemini/blueprint/` or `~/.tabnine/blueprint/`:
+Lives in `~/.<host>/blueprint/`:
 
 - `defaults.json`
 - `workspaces.json`
 - `updates/`
 - `patches/`
 
-Global state is intentionally narrow. Blueprint should not quietly accumulate project-like data outside the repo, and the only config layer outside the repo is the active host's Blueprint defaults file.
+Global state is intentionally narrow. Blueprint should not quietly accumulate project-like data outside the repo, and the only config layer outside the repo is the user-defaults file at `~/.<host>/blueprint/defaults.json`.
+
+In shared docs, `<host>` means `gemini` on Gemini CLI and `tabnine` on Tabnine CLI.
 
 ## Routing And Exposure Rules
 
@@ -158,7 +160,7 @@ The planning pack lands before new command surfaces, and runtime expansion pause
 
 ### 2. Host-native, not transliterated
 
-Blueprint is allowed to diverge from earlier planning assumptions where host CLI or extension constraints differ:
+Blueprint is allowed to diverge from earlier planning assumptions where the current host CLI or extension constraints differ:
 
 - no installer-managed runtime conversion
 - no slash-command chaining assumption

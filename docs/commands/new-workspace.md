@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`new-workspace` is Blueprint's command for create an isolated workspace with repo copies and independent project state. In Blueprint that means per-workspace `.blueprint/` state plus a global workspace registry under `~/.gemini/blueprint/`; the command should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that it can be implemented in isolation later.
+`new-workspace` is Blueprint's command for create an isolated workspace with repo copies and independent project state. In Blueprint that means per-workspace `.blueprint/` state plus a global workspace registry under `~/.<host>/blueprint/`; the command should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that it can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-new-workspace`
+- CLI command path: `/blu-new-workspace`
 - Root router form: `/blu new-workspace`
 - Argument hint: `--name <name> [--repos repo1,repo2] [--path /target] [--strategy worktree|clone] [--branch name] [--auto]`
 - `/blu-new-workspace --name feature-a --repos .`
@@ -37,7 +37,7 @@
 
 
 - `.blueprint/config.json` when a Blueprint project exists
-- `~/.gemini/blueprint/defaults.json` when project config is absent and global defaults are available
+- `~/.<host>/blueprint/defaults.json` when project config is absent and global defaults are available
 
 
 ## Blueprint And Global State Writes
@@ -91,7 +91,7 @@
 
 
 - Default workspace creation should resolve to `maintenance.workspace_root` from effective config when available, falling back to `~/blueprint-workspaces/<name>` only when no config layer overrides it.
-- Registry writes in `~/.gemini/blueprint/workspaces.json` must be transactional with filesystem creation so partial entries are not left behind.
+- Registry writes in `~/.<host>/blueprint/workspaces.json` must be transactional with filesystem creation so partial entries are not left behind.
 - Worktree mode should be preferred when safe, but the command needs a clean fallback to clone mode when the source repo cannot host worktrees.
 - The command should show the resolved workspace path, chosen strategy, and registry mutation plan explicitly before creation.
 

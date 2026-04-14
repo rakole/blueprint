@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines what is still pending before Blueprint should be treated as a public Gemini CLI extension.
+This document defines what is still pending before Blueprint should be treated as a public Gemini CLI or Tabnine CLI extension.
 
 It separates two kinds of pending work:
 
@@ -19,7 +19,7 @@ Priority uses a simple MoSCoW split:
 
 As of 2026-04-13, the repo has a real extension runtime, not just planning docs:
 
-- `gemini-extension.json`, `GEMINI.md`, `commands/`, `skills/`, `agents/`, and `hooks/hooks.json` all exist
+- `gemini-extension.json`, `tabnine-extension.json`, `GEMINI.md`, `TABNINE.md`, `commands/`, `skills/`, `agents/`, and `hooks/hooks.json` all exist
 - the MCP server and hooks build into `dist/`
 - the runtime command catalog tracks the retained commands across `implemented`, `repairing`, `planned`, and `blocked` states; see `docs/COMMAND-CATALOG.md` for the exact current mix
 
@@ -48,16 +48,16 @@ What remains closest on the roadmap:
 
 - Make GitHub install repeatable from a clean checkout.
   - Release flow must always run `npm ci`, `npm run build`, and verify that `dist/mcp/*` and `dist/hooks/*` are current.
-  - Blueprint's own Gemini constraints already require bundled `dist/` output before release.
+  - Blueprint's own host constraints already require bundled `dist/` output before release.
 - Keep the real install smoke test green and extend it toward publish-source coverage.
   - Current path: `npm run test:integration:extension` validates local-path `link` and local-path `install` inside a Linux container, checks the bundled MCP and hook entrypoints, and runs a gated live `/help` smoke when `GEMINI_API_KEY` is available.
   - Remaining release-path hardening: add a separate GitHub-source smoke after public publishing or tagged releases exist.
 - Add release automation or a release checklist that enforces build, test, and artifact verification before a tag is published.
   - There is currently no `.github/` release workflow in this repo.
-- Add `description` to `gemini-extension.json`.
-  - Gemini CLI's extension reference uses this as the short listing text on `geminicli.com/extensions`.
+- Add `description` to `gemini-extension.json` and `tabnine-extension.json`.
+  - The host extension reference uses this as the short listing text in extension listings.
 - Publish from a public GitHub repository and tag releases from the canonical install source.
-  - This is required for the intended install model: `gemini extensions install https://github.com/rakole/blueprint`.
+  - This is required for the intended install model: `gemini extensions install https://github.com/rakole/blueprint` or `tabnine extensions install https://github.com/rakole/blueprint`.
 
 ## Good To Have
 
@@ -81,8 +81,8 @@ What remains closest on the roadmap:
   - restart requirement after install or update
   - command-conflict troubleshooting
   - MCP server startup troubleshooting
-- Validate that agent-assisted flows degrade safely on the current Gemini CLI stable channel.
-  - Blueprint ships `agents/`, while Gemini CLI still describes sub-agents as a preview surface.
+- Validate that agent-assisted flows degrade safely on the current supported host channels.
+  - Blueprint ships `agents/`, while host subagent support may still be treated as preview.
 
 ## Could Have
 

@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`debug` is Blueprint's command for systematic debugging with persistent state across context resets. In Blueprint it is implemented as a Gemini-native investigation flow that keeps debugging evidence explicit, persists a durable `debug-latest` report through MCP, and routes broader fix work into the existing implemented execution commands instead of inventing hidden runtime state.
+`debug` is Blueprint's command for systematic debugging with persistent state across context resets. In Blueprint it is implemented as a host-native investigation flow that keeps debugging evidence explicit, persists a durable `debug-latest` report through MCP, and routes broader fix work into the existing implemented execution commands instead of inventing hidden runtime state.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-debug`
+- CLI command path: `/blu-debug`
 - Root router form: `/blu debug`
 - Argument hint: `[--diagnose] [issue description]`
 - `/blu-debug login-button-hangs-on-safari`

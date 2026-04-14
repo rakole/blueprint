@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`research-phase` is Blueprint's command for research how to implement a phase as a standalone discovery flow that usually feeds `/blu-plan-phase`. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
+`research-phase` is Blueprint's command for research how to implement a phase as a standalone discovery flow that usually feeds `/blu-plan-phase`. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-research-phase`
+- CLI command path: `/blu-research-phase`
 - Root router form: `/blu research-phase`
 - Argument hint: `[phase]`
 - `/blu-research-phase 3`

@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`resume-work` restores a paused Blueprint session from the canonical handoff and state artifacts, then surfaces the next safe implemented action. In Blueprint it stays Gemini-native and uses documented MCP tools for deterministic re-entry.
+`resume-work` restores a paused Blueprint session from the canonical handoff and state artifacts, then surfaces the next safe implemented action. In Blueprint it stays host-native and uses documented MCP tools for deterministic re-entry.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-resume-work`
+- CLI command path: `/blu-resume-work`
 - Root router form: `/blu resume-work`
 - Argument hint: `none`
 - `/blu-resume-work`

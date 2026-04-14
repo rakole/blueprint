@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-settings`
+- CLI command path: `/blu-settings`
 - Root router form: `/blu settings`
 - Argument hint: `none`
 - `/blu-settings`
@@ -37,14 +37,14 @@
 
 
 - `.blueprint/config.json`
-- `~/.gemini/blueprint/defaults.json` when present
+- `~/.<host>/blueprint/defaults.json` when present
 
 
 ## Blueprint And Global State Writes
 
 
 - `.blueprint/config.json`
-- `optional ~/.gemini/blueprint/defaults.json`
+- `optional ~/.<host>/blueprint/defaults.json`
 
 
 ## Required MCP Tools
@@ -98,7 +98,7 @@
 
 - Run a common settings pass for profile, research/plan/verify, Nyquist, UI, code review, commit-docs, branching, and worktree isolation before offering advanced keys.
 - Offer an advanced settings pass for gate, safety, timeout, template, response-language, and agent-skill fields.
-- Offer to save the resolved settings as `~/.gemini/blueprint/defaults.json` after project-local changes are applied.
+- Offer to save the resolved settings as `~/.<host>/blueprint/defaults.json` after project-local changes are applied.
 - Confirm broad config resets before applying them.
 
 

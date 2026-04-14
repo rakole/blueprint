@@ -23,7 +23,7 @@ Orchestrate Blueprint project initialization around the current MCP bootstrap pr
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
 
 ## Parity Goal
@@ -40,7 +40,7 @@ Current Blueprint delta:
 - persistent writes go through MCP tools into `.blueprint/`
 - no `.planning/` runtime state
 - no installer-managed runtime mutation
-- Gemini runtime FQNs for Blueprint MCP tools use the form `mcp_blueprint_<toolName>` when a prompt needs to name them explicitly
+- Host runtime FQNs for Blueprint MCP tools use the form `mcp_blueprint_<toolName>` when a prompt needs to name them explicitly
 - no GSD shell choreography, commit-per-stage behavior, or generated bootstrap instruction files unless Blueprint ships dedicated runtime support
 
 ## Required Inputs

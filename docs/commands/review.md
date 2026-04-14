@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`review` is Blueprint's command for request cross-AI peer review of phase plans from external AI CLIs. Blueprint now ships it as a Gemini-native peer-review command: it reads the saved phase plan set through dedicated phase-plan MCP tools, keeps reviewer availability explicit instead of assumed, preserves reviewer disagreement honestly, and persists the final result through the shared review MCP tools instead of prompt-only file writes.
+`review` is Blueprint's command for request cross-AI peer review of phase plans from external AI CLIs. Blueprint now ships it as a host-native peer-review command: it reads the saved phase plan set through dedicated phase-plan MCP tools, keeps reviewer availability explicit instead of assumed, preserves reviewer disagreement honestly, and persists the final result through the shared review MCP tools instead of prompt-only file writes.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-review`
+- CLI command path: `/blu-review`
 - Root router form: `/blu review`
 - Argument hint: `--phase N [--gemini] [--claude] [--codex] [--opencode] [--all]`
 - `/blu-review --phase 3 --all`

@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-pr-branch`
+- CLI command path: `/blu-pr-branch`
 - Root router form: `/blu pr-branch`
 - Argument hint: `[target branch, default: main]`
 - `/blu-pr-branch develop`

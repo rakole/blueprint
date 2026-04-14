@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`quick` is Blueprint's command for executing a quick task with Blueprint guarantees (atomic commits, state tracking) while skipping unnecessary ceremony. In Blueprint it is implemented as a Gemini-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, and records a durable quick-run report plus the next safe implemented action.
+`quick` is Blueprint's command for executing a quick task with Blueprint guarantees (atomic commits, state tracking) while skipping unnecessary ceremony. In Blueprint it is implemented as a host-native bounded-execution contract that keeps Blueprint-owned persistence on MCP rails, uses optional depth gates only when the user explicitly asks for them, and records a durable quick-run report plus the next safe implemented action.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-quick`
+- CLI command path: `/blu-quick`
 - Root router form: `/blu quick`
 - Argument hint: `[task description] [--full] [--validate] [--discuss] [--research] [--force]`
 - `/blu-quick --full`

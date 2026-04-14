@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-cleanup`
+- CLI command path: `/blu-cleanup`
 - Root router form: `/blu cleanup`
 - Argument hint: `none`
 - `/blu-cleanup`

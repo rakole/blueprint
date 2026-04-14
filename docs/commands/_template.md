@@ -12,7 +12,7 @@ One concise paragraph describing what the command should accomplish in Blueprint
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-<command>`
+- CLI command path: `/blu-<command>`
 - Root router form: `/blu <command>`
 - Argument hint: `<args and flags>`
 - `<example invocation>`
@@ -33,12 +33,12 @@ One concise paragraph describing what the command should accomplish in Blueprint
 ## Blueprint And Global State Reads
 
 - `.blueprint/...`
-- `~/.gemini/blueprint/...`
+- `~/.<host>/blueprint/...`
 
 ## Blueprint And Global State Writes
 
 - `.blueprint/...`
-- `~/.gemini/blueprint/...`
+- `~/.<host>/blueprint/...`
 
 ## Required MCP Tools
 

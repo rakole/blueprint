@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`docs-update` is Blueprint's command for generate or update project documentation verified against the codebase. In Blueprint it stays Gemini-native, keeps Blueprint-owned persistence on MCP rails, and treats repo documentation edits as explicit, reviewable mutations instead of hidden side effects.
+`docs-update` is Blueprint's command for generate or update project documentation verified against the codebase. In Blueprint it stays host-native, keeps Blueprint-owned persistence on MCP rails, and treats repo documentation edits as explicit, reviewable mutations instead of hidden side effects.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-docs-update`
+- CLI command path: `/blu-docs-update`
 - Root router form: `/blu docs-update`
 - Argument hint: `[--force] [--verify-only]`
 - `/blu-docs-update --verify-only`

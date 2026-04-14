@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`reapply-patches` is Blueprint's command for reapplying local modifications after a Blueprint update. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`reapply-patches` is Blueprint's command for reapplying local modifications after a Blueprint update. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-reapply-patches`
+- CLI command path: `/blu-reapply-patches`
 - Root router form: `/blu reapply-patches`
 - Argument hint: `none`
 - `/blu-reapply-patches`
@@ -88,7 +88,7 @@
 ## Risk Notes
 
 
-- Patch replay must target the global patch registry in `~/.gemini/blueprint/patches/`, not ad hoc files inside the installed extension copy.
+- Patch replay must target the global patch registry in `~/.<host>/blueprint/patches/`, not ad hoc files inside the installed extension copy.
 - Conflict reporting is more important than partial success; skipped or failed hunks need to be explicit and durable.
 - Patch selection should be auditable by patch id, source version, and repo compatibility before replay begins.
 - The command should show the resolved patch set, target repo compatibility, and report-before-mutate plan before replay confirmation.

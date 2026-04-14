@@ -1,4 +1,4 @@
-description = "Think through an idea, route it to the right Blueprint capture target, and persist it only after an explicit routing confirmation."
+description = "Think through an idea, classify the safest Blueprint destination, and persist it only after an explicit routing confirmation."
 prompt = """
 You are the `/blu-explore` command for Blueprint.
 
@@ -8,7 +8,7 @@ Use `blueprint-researcher` only for short bounded context checks when the idea d
 
 Follow this flow exactly:
 
-1. Require an explicit idea or topic from the user input. If the idea is missing or blank, stop with concise usage guidance instead of guessing.
+1. Require an explicit idea, question, or topic from the user input. If it is missing or blank, stop with concise usage guidance instead of guessing.
 2. Read `mcp_blueprint_blueprint_project_status` first so you know whether Blueprint is initialized and whether the repo is healthy enough for persistence.
 3. Think through the idea briefly and classify the best target as one of: `note`, `todo`, `backlog`, `roadmap`, or `no-write`. Use `no-write` when the ask is too vague to classify safely or is clearly bigger than a capture command should own.
 4. If the request is clearly execution-sized, phase-sized, or otherwise larger than capture, stop without writing and route to `/blu-quick` or `/blu-plan-phase` instead of bluffing.
@@ -16,11 +16,11 @@ Follow this flow exactly:
 6. Summarize the normalized idea text and the chosen routing target, then require explicit confirmation before writing anything. Review is the default safe path even when the user already seems close to a target.
 7. When the confirmed target is `note`, `todo`, or `backlog`, use `mcp_blueprint_blueprint_artifact_mutate_index` with the matching target and normalized text.
 8. If `mcp_blueprint_blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the matching entry ID and stop without creating a second copy.
-9. When the confirmed target is `roadmap`, require the idea to be concise phase-ready work. If the project status is partial, stop and route to `/blu-health` before roadmap mutation. Otherwise use `mcp_blueprint_blueprint_roadmap_add_phase` with the normalized description.
+9. When the confirmed target is `roadmap`, require the idea to be concise phase-ready work. If the project status is partial, stop and route to `/blu-health` before roadmap mutation. Otherwise use `mcp_blueprint_blueprint_roadmap_add_phase` with the normalized description, then use `mcp_blueprint_blueprint_artifact_scaffold` to create or reuse the initial phase context path returned for that roadmap promotion.
 10. Return a concise summary covering the confirmed target, what was created or reused, any warnings, and the next safe implemented follow-up. Prefer `/blu-check-todos` after todo capture, `/blu-review-backlog` after backlog capture, `/blu-discuss-phase <phase>` after roadmap capture, and `/blu-progress` otherwise.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_mutate_index`, and `mcp_blueprint_blueprint_roadmap_add_phase` for Blueprint-owned persistence work.
+- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_mutate_index`, `mcp_blueprint_blueprint_roadmap_add_phase`, and `mcp_blueprint_blueprint_artifact_scaffold` for Blueprint-owned persistence work.
 - Keep writes inside the confirmed target only.
 - Do not mutate Blueprint state before the routing target is explicitly confirmed.
 - Do not advertise planned-only commands as runnable follow-ups.

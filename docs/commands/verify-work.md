@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-verify-work`
+- CLI command path: `/blu-verify-work`
 - Root router form: `/blu verify-work`
 - Argument hint: `[phase number, e.g., '4']`
 - `/blu-verify-work 3`

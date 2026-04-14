@@ -75,7 +75,7 @@ Useful prompts:
 
 ## Natural Option Lists
 
-Blueprint runs in Gemini-native environments, so prefer normal conversation.
+Blueprint runs in host-native environments, so prefer normal conversation.
 
 If concise options would help the user react to a concrete tradeoff, present
 them through Gemini CLI's built-in `ask_user` dialog when possible. Do not turn

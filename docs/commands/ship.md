@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-ship`
+- CLI command path: `/blu-ship`
 - Root router form: `/blu ship`
 - Argument hint: `[phase number or milestone, e.g., '4' or 'v1.0']`
 - `/blu-ship 3 --draft`

@@ -7,11 +7,11 @@
 
 ## Purpose
 
-`new-project` is Blueprint's command for initialize a new project with deep context gathering and `PROJECT.md`. In Blueprint it stays Gemini-native and delegates persistence to documented MCP tools, but the orchestration depth must remain richer than a simple scaffold-only bootstrap.
+`new-project` is Blueprint's command for initialize a new project with deep context gathering and `PROJECT.md`. In Blueprint it stays host-native and delegates persistence to documented MCP tools, but the orchestration depth must remain richer than a simple scaffold-only bootstrap.
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-new-project`
+- CLI command path: `/blu-new-project`
 - Root router form: `/blu new-project`
 - Argument hint: `[--auto]`
 - `/blu-new-project --auto`
@@ -32,7 +32,7 @@
 
 - Interactive bootstrap should begin with thread-following project questioning, not a rigid checklist.
 - The questioning loop should capture enough clarity around vision, audience, constraints, milestone scope, and success outcomes that authored bootstrap artifacts do not force downstream commands to guess.
-- Short option lists are allowed when they sharpen a concrete tradeoff, but the command should stay conversational and Gemini-native.
+- Short option lists are allowed when they sharpen a concrete tradeoff, but the command should stay conversational and host-native.
 - When structured choices help, interactive bootstrap should prefer Gemini CLI's built-in `ask_user` dialog, asked one focused question at a time with labeled options plus a typed custom-answer path.
 - In interactive mode, the command should summarize its understanding and secure explicit approval before the first persistent bootstrap write.
 - `--auto` may skip that approval loop only when the supplied brief is strong enough to synthesize a credible bootstrap seed.
@@ -49,7 +49,7 @@
 
 ## Blueprint And Global State Reads
 
-- `~/.gemini/blueprint/defaults.json` when present
+- `~/.<host>/blueprint/defaults.json` when present
 
 ## Blueprint And Global State Writes
 
@@ -100,7 +100,7 @@
 
 ## User Prompts And Confirmation Gates
 
-- When interactive and `~/.gemini/blueprint/defaults.json` exists, offer those saved defaults before asking project-specific setup questions.
+- When interactive and `~/.<host>/blueprint/defaults.json` exists, offer those saved defaults before asking project-specific setup questions.
 - In interactive mode, ask enough discovery questions to write a substantive project brief before the first persistent write.
 - Follow the thread of the user's idea instead of running a canned bootstrap survey.
 - Use concise conversational choices only when they help the user react to a real ambiguity or scope tradeoff, and prefer `ask_user` over plain-text numbered lists when a structured choice is useful.

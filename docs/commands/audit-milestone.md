@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`audit-milestone` is Blueprint's command for audit milestone completion against original intent before archiving. In Blueprint it stays Gemini-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report before any archival step is attempted.
+`audit-milestone` is Blueprint's command for audit milestone completion against original intent before archiving. In Blueprint it stays host-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report before any archival step is attempted.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-audit-milestone`
+- CLI command path: `/blu-audit-milestone`
 - Root router form: `/blu audit-milestone`
 - Argument hint: `[version]`
 - `/blu-audit-milestone v1.0`

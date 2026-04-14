@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`ui-phase` is Blueprint's command for generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and now writes substantive UI-spec or skip-rationale content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
+`ui-phase` is Blueprint's command for generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and now writes substantive UI-spec or skip-rationale content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-ui-phase`
+- CLI command path: `/blu-ui-phase`
 - Root router form: `/blu ui-phase`
 - Argument hint: `[phase]`
 - `/blu-ui-phase 2`

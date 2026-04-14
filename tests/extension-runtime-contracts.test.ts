@@ -302,7 +302,7 @@ test("new-project manifest forbids shell execution and tool-name drift", async (
 
   assert.match(
     raw,
-    /When you name a Blueprint MCP tool explicitly in the active host CLI, use the runtime FQN form `mcp_blueprint_<toolName>`\./
+    /When you name a Blueprint MCP tool explicitly in the current CLI host, use the runtime FQN form `mcp_blueprint_<toolName>`\./
   );
   assert.match(
     raw,

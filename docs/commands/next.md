@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`next` is Blueprint's command for advancing to the next logical step in the Blueprint workflow. In Blueprint it stays Gemini-native, relies on documented read-only MCP tools, and keeps the repo-side contract explicit enough that routing remains implementation-aware instead of prompt-only guesswork.
+`next` is Blueprint's command for advancing to the next logical step in the Blueprint workflow. In Blueprint it stays host-native, relies on documented read-only MCP tools, and keeps the repo-side contract explicit enough that routing remains implementation-aware instead of prompt-only guesswork.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-next`
+- CLI command path: `/blu-next`
 - Root router form: `/blu next`
 - Argument hint: `none`
 - `/blu-next`

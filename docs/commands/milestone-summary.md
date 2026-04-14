@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`milestone-summary` is Blueprint's command for generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it stays Gemini-native, builds the final summary from saved roadmap and closeout evidence, writes a durable summary report for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
+`milestone-summary` is Blueprint's command for generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it stays host-native, builds the final summary from saved roadmap and closeout evidence, writes a durable summary report for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-milestone-summary`
+- CLI command path: `/blu-milestone-summary`
 - Root router form: `/blu milestone-summary`
 - Argument hint: `[version]`
 - `/blu-milestone-summary v1.0`

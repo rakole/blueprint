@@ -114,6 +114,7 @@ These tool names are part of the documented future contract, but they are not re
 - `map-codebase` uses `blueprint_project_status`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, and `blueprint_artifact_summary_digest`.
 - `add-backlog` uses `blueprint_artifact_mutate_index` and, when the user explicitly reserves a parking-lot phase, `blueprint_artifact_scaffold`.
 - `review-backlog` uses `blueprint_roadmap_promote_backlog`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to preview backlog candidates, append promoted roadmap phases, preserve backlog history through status transitions, and route the repo into `/blu-discuss-phase`.
+- `explore` uses `blueprint_project_status`, `blueprint_artifact_mutate_index`, `blueprint_roadmap_add_phase`, and `blueprint_artifact_scaffold` to classify ideas before persistence, keep capture writes confirmation-gated, and scaffold the first phase context when a confirmed idea is promoted directly into the active roadmap.
 - `discuss-phase` uses phase location/context, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update`.
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, discovery artifact read and write tools, scaffolding, config, and state update tools.
@@ -150,8 +151,8 @@ These tool names are part of the documented future contract, but they are not re
 
 ## Path Safety Rules
 
-- All tools operate relative to the repo root or the locked global Blueprint directory.
-- Config tools may read or write only `.blueprint/config.json` and the active host's Blueprint defaults file; they must not create ad hoc config files elsewhere.
+- All tools operate relative to the repo root or the locked host-global Blueprint directory.
+- Config tools may read or write only `.blueprint/config.json` and `~/.<host>/blueprint/defaults.json`; they must not create ad hoc config files elsewhere.
 - Tools must reject path traversal, absolute-path misuse for repo-relative inputs, null bytes, and symlink escapes.
 - Tools should use shared safe parsing with size limits for config, checkpoint, and registry-style JSON inputs.
 - Prompt-boundary-sensitive writes such as reports, phase artifacts, review artifacts, pause handoffs, and capture indexes should be checked through the shared security layer before persistence.

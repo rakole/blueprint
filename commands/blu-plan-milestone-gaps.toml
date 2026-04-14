@@ -22,6 +22,6 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_roadmap_add_phase`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
 - Keep the flow audit-first. Do not invent gap-closure phases from chat memory when the audit report is missing or empty.
-- Preserve the grouped-gap behavior from the locked Blueprint contract, while keeping Blueprint Gemini-native and MCP-owned rather than rewriting files directly.
+- Preserve the grouped-gap behavior from the locked Blueprint contract, while keeping Blueprint host-native and MCP-owned rather than rewriting files directly.
 - Do not recommend planned-only follow-ups. After creation, route to `/blu-discuss-phase <first new phase number>` instead of later milestone commands that are not yet implemented.
 """

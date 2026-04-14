@@ -25,11 +25,11 @@ Keep notes, todos, backlog entries, and ideation handoffs project-local, determi
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 
-Keep the useful capture behavior while preserving Blueprint's Gemini-native boundaries:
+Keep the useful capture behavior while preserving Blueprint's host-native boundaries:
 
 - capture state stays inside `.blueprint/`
 - MCP tools own durable writes and index repair
@@ -56,6 +56,7 @@ Keep the useful capture behavior while preserving Blueprint's Gemini-native boun
 - `blueprint_artifact_mutate_index`
 - `blueprint_artifact_scaffold`
 - `blueprint_project_status`
+- `blueprint_roadmap_add_phase`
 - `blueprint_state_update`
 - `blueprint_roadmap_promote_backlog`
 
@@ -121,7 +122,8 @@ Keep the useful capture behavior while preserving Blueprint's Gemini-native boun
 6. Confirm the final routing target and normalized text before any write. Review is the default safe path.
 7. Use `blueprint_artifact_mutate_index` for confirmed `note`, `todo`, or `backlog` writes, and treat duplicate descriptions as already captured work instead of creating a second copy.
 8. Use `blueprint_roadmap_add_phase` only when the confirmed target is roadmap-ready active work; if project health is partial, route to `/blu-health` before roadmap mutation.
-9. Keep follow-up guidance inside implemented commands only. Prefer `/blu-check-todos` after todo capture, `/blu-review-backlog` after backlog capture, `/blu-discuss-phase <phase>` after roadmap capture, and `/blu-progress` otherwise.
+9. After confirmed roadmap promotion, use `blueprint_artifact_scaffold` to create or reuse the initial phase context instead of hand-writing it.
+10. Keep follow-up guidance inside implemented commands only. Prefer `/blu-check-todos` after todo capture, `/blu-review-backlog` after backlog capture, `/blu-discuss-phase <phase>` after roadmap capture, and `/blu-progress` otherwise.
 
 ## Future Capture Guardrails
 

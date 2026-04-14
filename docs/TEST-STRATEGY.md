@@ -5,7 +5,7 @@
 - keep command behavior deterministic
 - keep artifact schemas stable
 - make it safe to implement commands one at a time
-- catch Gemini-specific integration issues early
+- catch host-specific integration issues early
 
 ## Test Layers
 
@@ -83,7 +83,7 @@ Cover:
 - command files resolve
 - MCP server paths resolve from the installed extension
 - hook paths resolve from the built `dist/` output for the shipped hooks
-- live interactive `/help` smoke when `GEMINI_API_KEY` is available
+- live interactive `/help` smoke when the current host's API key is available
 
 Current entrypoint:
 
@@ -94,7 +94,7 @@ Current entrypoint:
 The minimum smoke flow is:
 
 1. install Blueprint
-2. restart Gemini CLI
+2. restart the active host CLI
 3. `/blu-new-project`
 4. `/blu-discuss-phase`
 5. `/blu-plan-phase`

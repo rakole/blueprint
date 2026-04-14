@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`complete-milestone` is Blueprint's command for archive completed milestone and prepare for next version. In Blueprint it stays Gemini-native, uses a report-driven closeout flow gated by the saved milestone audit, writes a durable completion report, and re-anchors state on the next safe implemented archival follow-up instead of introducing a new milestone-state engine.
+`complete-milestone` is Blueprint's command for archive completed milestone and prepare for next version. In Blueprint it stays host-native, uses a report-driven closeout flow gated by the saved milestone audit, writes a durable completion report, and re-anchors state on the next safe implemented archival follow-up instead of introducing a new milestone-state engine.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-complete-milestone`
+- CLI command path: `/blu-complete-milestone`
 - Root router form: `/blu complete-milestone`
 - Argument hint: `<version>`
 - `/blu-complete-milestone v1.0`

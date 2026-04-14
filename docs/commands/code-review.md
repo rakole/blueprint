@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`code-review` is Blueprint's command for review source files changed during a phase for bugs, security issues, and code quality problems. Blueprint ships it as a Gemini-native review command: it resolves a deterministic repo-file scope from executed plan metadata or explicit file paths, audits that scope against saved phase evidence, and persists the result through the shared review MCP tools instead of prompt-only file writes.
+`code-review` is Blueprint's command for review source files changed during a phase for bugs, security issues, and code quality problems. Blueprint ships it as a host-native review command: it resolves a deterministic repo-file scope from executed plan metadata or explicit file paths, audits that scope against saved phase evidence, and persists the result through the shared review MCP tools instead of prompt-only file writes.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-code-review`
+- CLI command path: `/blu-code-review`
 - Root router form: `/blu code-review`
 - Argument hint: `<phase-number> [--depth=quick|standard|deep] [--files file1,file2,...]`
 - `/blu-code-review 3 --depth=deep`

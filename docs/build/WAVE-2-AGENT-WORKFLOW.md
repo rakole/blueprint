@@ -11,15 +11,15 @@ This workflow exists to close Wave 2 without drifting the shipped runtime while
 - Do not reintroduce `.planning/` as Blueprint runtime state.
 - Do not reintroduce legacy slash-command surfaces as a user-visible runtime escape hatch.
 
-## Packaging And Gemini Checks
+## Packaging And Host Checks
 
-- Review the Gemini extension packaging references before claiming parity:
+- Review the host extension packaging references before claiming parity:
   - https://geminicli.com/docs/extensions/reference/
   - https://geminicli.com/docs/extensions/best-practices/
   - https://geminicli.com/docs/core/subagents/
 - Keep bundled paths extension-safe and rooted at `${extensionPath}`.
 - Validate that runtime manifests still point at `${extensionPath}` in
-  `gemini-extension.json`.
+  `gemini-extension.json` and `tabnine-extension.json`.
 - Re-check command manifests against `commands/**/*.toml`.
 
 ## Shared Memory Protocol

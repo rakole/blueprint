@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now persists substantive context content and resumable checkpoint state through dedicated MCP tools, while still deferring legacy power-mode, chain-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now persists substantive context content and resumable checkpoint state through dedicated MCP tools, while still deferring legacy power-mode, chain-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-discuss-phase`
+- CLI command path: `/blu-discuss-phase`
 - Root router form: `/blu discuss-phase`
 - Argument hint: `<phase>`
 - `/blu-discuss-phase 3`

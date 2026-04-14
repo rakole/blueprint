@@ -22,14 +22,14 @@ Orchestrate Blueprint's post-execution validation, conversational UAT, and evide
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 
 Carry forward the useful validation intent while preserving Blueprint deltas:
 
 - execution summaries remain the source of truth for what was actually delivered
-- validation and UAT stay Gemini-native and MCP-owned instead of script-owned
+- validation and UAT stay host-native and MCP-owned instead of script-owned
 - conversational UAT is resumable through `XX-UAT.md`
 - test generation stays grounded in saved summaries plus validation or UAT evidence
 - follow-up fixes stay explicit instead of hidden in prompt-only prose

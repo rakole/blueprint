@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`add-todo` is Blueprint's command for capture idea or task as todo from current conversation context. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`add-todo` is Blueprint's command for capture idea or task as todo from current conversation context. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-add-todo`
+- CLI command path: `/blu-add-todo`
 - Root router form: `/blu add-todo`
 - Argument hint: `<description>`
 - `/blu-add-todo Add-retry-telemetry`

@@ -7,7 +7,7 @@ Use the `blueprint-router` skill as the primary orchestration contract when that
 Blueprint rules:
 - Blueprint commands live under `/blu` and `/blu-<command>`.
 - Use MCP tools for project and config reads. Do not invent state.
-- If you name a Blueprint MCP tool explicitly, use the host CLI runtime FQN form `mcp_blueprint_<toolName>`.
+- If you name a Blueprint MCP tool explicitly, use the current host's runtime FQN form `mcp_blueprint_<toolName>`.
 - Never attempt to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc SDK scripts.
 - Do not rely on slash-command chaining or undocumented aliases.
 - Only recommend or route commands whose `mcp_blueprint_blueprint_command_catalog` entry is `implemented: true`.
