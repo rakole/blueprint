@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`remove-phase` is Blueprint's command for remove a future phase from roadmap and renumber subsequent phases. In Blueprint it is implemented as a Gemini-native roadmap surgery flow that previews the impact, removes the requested future phase, deletes the matching phase directory, renumbers subsequent roadmap entries and phase directories, and then re-anchors `.blueprint/STATE.md` on the safest implemented follow-up.
+`remove-phase` is Blueprint's command for remove a future phase from roadmap and renumber subsequent phases. In Blueprint it is implemented as a host-native roadmap surgery flow that previews the impact, removes the requested future phase, deletes the matching phase directory, renumbers subsequent roadmap entries and phase directories, and then re-anchors `.blueprint/STATE.md` on the safest implemented follow-up.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-remove-phase`
+- CLI command path: `/blu-remove-phase`
 - Root router form: `/blu remove-phase`
 - Argument hint: `<phase-number>`
 - `/blu-remove-phase 7`

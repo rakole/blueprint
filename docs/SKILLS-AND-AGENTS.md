@@ -1,6 +1,6 @@
 # Blueprint Skills And Agents
 
-Implemented Blueprint skills are Gemini-discoverable bundles at `skills/<name>/SKILL.md`. Legacy flat `skills/*.md` mirrors may remain as repo-local compatibility docs during repair, but they are not runtime activation handles. Implemented Blueprint agents are Gemini subagent definition files under `agents/*.md`.
+Implemented Blueprint skills are host-discoverable bundles at `skills/<name>/SKILL.md`. Legacy flat `skills/*.md` mirrors may remain as repo-local compatibility docs during repair, but they are not runtime activation handles. Implemented Blueprint agents are host subagent definition files under `agents/*.md`.
 
 ## Shipped Skills
 

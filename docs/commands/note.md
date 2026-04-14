@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-note`
+- CLI command path: `/blu-note`
 - Root router form: `/blu note`
 - Argument hint: `<text>`
 - `/blu-note Investigate-sync-edge-cases`

@@ -152,7 +152,7 @@ Shipped in this wave: `cleanup`.
 - root `/blu` router contract
 - MCP server bootstrap
 - project/config/state/artifact tool primitives
-- config precedence and normalization across hardcoded defaults, `~/.gemini/blueprint/defaults.json`, repo config, and command flags
+- config precedence and normalization across hardcoded defaults, `~/.<host>/blueprint/defaults.json`, repo config, and command flags
 - config migration and repair for the legacy minimal Blueprint schema and removed repo-level hook/workspace toggles
 - doc fixtures and command spec tests
 

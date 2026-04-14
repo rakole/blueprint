@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-audit-fix`
+- CLI command path: `/blu-audit-fix`
 - Root router form: `/blu audit-fix`
 - Argument hint: `--source <audit-uat> [--severity <medium|high|all>] [--max N] [--dry-run]`
 - `/blu-audit-fix --dry-run`

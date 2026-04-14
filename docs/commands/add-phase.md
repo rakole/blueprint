@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`add-phase` is Blueprint's command for add phase to end of current milestone in roadmap. In Blueprint it stays Gemini-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state.
+`add-phase` is Blueprint's command for add phase to end of current milestone in roadmap. In Blueprint it stays host-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-add-phase`
+- CLI command path: `/blu-add-phase`
 - Root router form: `/blu add-phase`
 - Argument hint: `<description>`
 - `/blu-add-phase Notifications`

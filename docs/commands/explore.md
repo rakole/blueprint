@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`explore` is Blueprint's command for socratic ideation and idea routing — think through ideas before committing to plans. In Blueprint the shipped slice stays Gemini-native, classifies an idea into the right capture target, requires an explicit confirmation before writing, and uses documented MCP tools to persist only the chosen note, todo, backlog, or roadmap proposal.
+`explore` is Blueprint's command for socratic ideation and idea routing — think through ideas before committing to plans. In Blueprint the shipped slice stays host-native, classifies an idea into the right capture target, requires an explicit confirmation before writing, and uses documented MCP tools to persist only the chosen note, todo, backlog, or roadmap proposal.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-explore`
+- CLI command path: `/blu-explore`
 - Root router form: `/blu explore`
 - Argument hint: `<idea>`
 - `/blu-explore authentication-strategy`

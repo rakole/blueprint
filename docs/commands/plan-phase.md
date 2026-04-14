@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying Gemini-native.
+`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying host-native.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-plan-phase`
+- CLI command path: `/blu-plan-phase`
 - Root router form: `/blu plan-phase`
 - Argument hint: `[phase] [--auto] [--research] [--skip-research] [--gaps] [--skip-verify] [--prd <file>] [--reviews] [--text]`
 - `/blu-plan-phase 3`

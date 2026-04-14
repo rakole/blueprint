@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`health` is Blueprint's command for diagnose planning directory health and optionally repair issues. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`health` is Blueprint's command for diagnose planning directory health and optionally repair issues. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-health`
+- CLI command path: `/blu-health`
 - Root router form: `/blu health`
 - Argument hint: `[--repair]`
 - `/blu-health --repair`

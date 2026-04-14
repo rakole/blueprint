@@ -7,8 +7,10 @@
 | root router | `/blu` |
 | direct command entrypoint | `/blu-<command>` |
 | project state directory | `.blueprint/` |
-| global operational state | `~/.gemini/blueprint/` |
-| workflow contracts | Gemini-native skills, agents, hooks, and MCP tools |
+| global operational state | `~/.<host>/blueprint/` |
+| workflow contracts | host-native skills, agents, hooks, and MCP tools |
+
+In shared docs, `~/.<host>/blueprint/` means `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI.
 
 ## Retained Commands
 
@@ -61,11 +63,11 @@ For the runtime-level command matrix and hook coverage, see `docs/RUNTIME-REFERE
 
 ### `help`, `progress`, `next`, and `do`
 
-These remain Gemini-native router flows. They do not depend on slash-command chaining inside the runtime.
+These remain host-native router flows. They do not depend on slash-command chaining inside the runtime.
 
 ### `config.json` and saved defaults
 
-Blueprint stores normalized repo config in `.blueprint/config.json` and user defaults in `~/.gemini/blueprint/defaults.json`. It persists repo config in fully materialized form and keeps the same hardcoded-defaults -> user-defaults -> repo-config -> flag precedence model.
+Blueprint stores normalized repo config in `.blueprint/config.json` and user defaults in `~/.<host>/blueprint/defaults.json`. It persists repo config in fully materialized form and keeps the same hardcoded-defaults -> user-defaults -> repo-config -> flag precedence model.
 
 ### Hook config
 
@@ -77,11 +79,11 @@ Repo config does not own hook toggles. Blueprint hooks stay advisory and are con
 
 ### `reapply-patches`
 
-`/blu-reapply-patches` operates on a global patch registry in `~/.gemini/blueprint/patches/`, not on a copied extension install tree.
+`/blu-reapply-patches` operates on a global patch registry in `~/.<host>/blueprint/patches/`, not on a copied extension install tree.
 
 ### `new-workspace` and `remove-workspace`
 
-These rely on a global registry at `~/.gemini/blueprint/workspaces.json`. Blueprint intentionally omits `list-workspaces` as a first-class v1 command.
+These rely on a global registry at `~/.<host>/blueprint/workspaces.json`. Blueprint intentionally omits `list-workspaces` as a first-class v1 command.
 
 ### Worktree isolation versus workspace/workstream toggles
 
@@ -97,4 +99,4 @@ Blueprint keeps `map-codebase` as the sole brownfield-mapping command. `scan` an
 
 ## Porting Principle
 
-Blueprint is a Gemini-first redesign that keeps the methodology, command vocabulary, and artifact rhythm where that still serves the user.
+Blueprint is a dual-host redesign that keeps the methodology, command vocabulary, and artifact rhythm where that still serves the user.

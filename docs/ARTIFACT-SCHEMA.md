@@ -20,6 +20,8 @@ Blueprint-managed repositories store project state here:
   workstreams/
 ```
 
+In shared docs, `~/.<host>/blueprint/` means `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI.
+
 ## Core Top-Level Artifacts
 
 ### `PROJECT.md`
@@ -91,7 +93,7 @@ Minimum locked fields:
 Purpose:
 - Blueprint runtime configuration for the repo
 - persisted in normalized full form rather than as sparse overrides
-- merged with optional user defaults from `~/.gemini/blueprint/defaults.json`
+- merged with optional user defaults from the host-global defaults file at `~/.<host>/blueprint/defaults.json`
 
 Current normalized schema:
 
@@ -154,7 +156,7 @@ Current normalized schema:
     "always_confirm_external_services": true
   },
   "maintenance": {
-    "patch_registry": "~/.gemini/blueprint/patches",
+    "patch_registry": "~/.<host>/blueprint/patches",
     "workspace_root": "~/blueprint-workspaces"
   },
   "agent_skills": {}
@@ -162,10 +164,10 @@ Current normalized schema:
 ```
 
 Normalization and precedence rules:
-- Effective config precedence is hardcoded Blueprint defaults, then `~/.gemini/blueprint/defaults.json`, then `.blueprint/config.json`, then command flags.
+- Effective config precedence is hardcoded Blueprint defaults, then `~/.<host>/blueprint/defaults.json`, then `.blueprint/config.json`, then command flags.
 - `.blueprint/config.json` is persisted in normalized object form for every section, including `parallelization`, even if legacy or shorthand input was accepted at the tool boundary.
 - Repo config must not contain `workflow.use_workspaces`, `workflow.use_workstreams`, or repo-level `hooks.*` keys. Workspace and workstream behavior stays command-driven; hook activation stays extension-owned in `hooks/hooks.json`.
-- `~/.gemini/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
+- `~/.<host>/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.
 - Discovery runtime actively uses `workflow.discuss_mode`, `workflow.skip_discuss`, and `workflow.research_before_questions`. `workflow.auto_advance` remains a reserved compatibility field until a later lifecycle rollout makes it real.
 
@@ -404,7 +406,7 @@ Planned contents:
 Blueprint-global state lives here:
 
 ```text
-~/.gemini/blueprint/
+~/.<host>/blueprint/
   defaults.json
   workspaces.json
   updates/
@@ -421,4 +423,4 @@ Purpose:
 
 - `.blueprint/` is committed by default.
 - Commands that mutate project state should update `.blueprint/` deterministically.
-- Maintenance state and user defaults in `~/.gemini/blueprint/` are not project-tracked.
+- Maintenance state and user defaults in `~/.<host>/blueprint/` are not project-tracked.

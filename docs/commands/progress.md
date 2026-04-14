@@ -7,11 +7,11 @@
 
 ## Purpose
 
-`progress` is Blueprint's command for check project progress, show context, and route to next action. In Blueprint it stays read-oriented and Gemini-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
+`progress` is Blueprint's command for check project progress, show context, and route to next action. In Blueprint it stays read-oriented and host-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-progress`
+- CLI command path: `/blu-progress`
 - Root router form: `/blu progress`
 - Argument hint: `none`
 - `/blu-progress`
@@ -30,7 +30,7 @@
 
 ## Blueprint And Global State Reads
 
-- effective config via `.blueprint/config.json` and optional `~/.gemini/blueprint/defaults.json`
+- effective config via `.blueprint/config.json` and optional `~/.<host>/blueprint/defaults.json`
 
 ## Blueprint And Global State Writes
 

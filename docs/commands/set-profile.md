@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`set-profile` is Blueprint's command for switching the model profile for Blueprint agents (quality/balanced/budget/inherit). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`set-profile` is Blueprint's command for switching the model profile for Blueprint agents (quality/balanced/budget/inherit). In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-set-profile`
+- CLI command path: `/blu-set-profile`
 - Root router form: `/blu set-profile`
 - Argument hint: `<profile (quality|balanced|budget|inherit)>`
 - `/blu-set-profile quality`
@@ -95,7 +95,7 @@
 
 
 - Echo the old and new profile before saving.
-- Never offer to mutate `~/.gemini/blueprint/defaults.json`; this command is project-local only.
+- Never offer to mutate `~/.<host>/blueprint/defaults.json`; this command is project-local only.
 
 
 ## Edge Cases

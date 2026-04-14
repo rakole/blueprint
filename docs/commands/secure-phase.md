@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a Gemini-native security audit command: it reads saved phase evidence, drafts a phase-scoped security review, and persists the result through the dedicated review MCP tool instead of prompt-only file writes.
+`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native security audit command: it reads saved phase evidence, drafts a phase-scoped security review, and persists the result through the dedicated review MCP tool instead of prompt-only file writes.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-secure-phase`
+- CLI command path: `/blu-secure-phase`
 - Root router form: `/blu secure-phase`
 - Argument hint: `[phase number]`
 - `/blu-secure-phase 3`

@@ -12,7 +12,7 @@ Follow this flow exactly:
 1. Call `mcp_blueprint_blueprint_config_get` with `scope: "project"` to load the current repo profile from `.blueprint/config.json`.
 2. Echo the old `model_profile` value and the requested new value before saving.
 3. Call `mcp_blueprint_blueprint_config_set_profile` to write the new project-local profile.
-4. Do not call `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` and do not mutate the active host's Blueprint defaults file.
+4. Do not call `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` and do not mutate `~/.<host>/blueprint/defaults.json`.
 5. If the repository is not initialized or the config path is missing, stop with the precise project/config error instead of guessing.
 
 Response requirements:

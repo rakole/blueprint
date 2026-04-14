@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`validate-phase` is Blueprint's command for retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a Gemini-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next safe implemented step when validation succeeds.
+`validate-phase` is Blueprint's command for retroactively audit and fill Nyquist validation gaps for a completed phase. In Blueprint it is implemented as a host-native validation contract that reads execution summaries and validation artifacts through documented MCP tools, persists durable verification evidence, and keeps `verify-work` as the next safe implemented step when validation succeeds.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-validate-phase`
+- CLI command path: `/blu-validate-phase`
 - Root router form: `/blu validate-phase`
 - Argument hint: `[phase number]`
 - `/blu-validate-phase 3`

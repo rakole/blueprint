@@ -12,7 +12,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu`
+- CLI command path: `/blu`
 - Example: `/blu`
 - Example: `/blu plan phase 3`
 - Example: `/blu what should I do next`
@@ -35,7 +35,7 @@
 
 - `.blueprint/STATE.md` when present
 - `.blueprint/ROADMAP.md` when present
-- effective config via `.blueprint/config.json` and optional `~/.gemini/blueprint/defaults.json`
+- effective config via `.blueprint/config.json` and optional `~/.<host>/blueprint/defaults.json`
 - retained command catalog metadata
 
 ## Blueprint And Global State Writes

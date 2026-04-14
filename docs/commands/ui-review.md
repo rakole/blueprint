@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-ui-review`
+- CLI command path: `/blu-ui-review`
 - Root router form: `/blu ui-review`
 - Argument hint: `[phase]`
 - `/blu-ui-review 3`

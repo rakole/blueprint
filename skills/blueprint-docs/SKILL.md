@@ -23,12 +23,12 @@ and doc mutation remains reviewable and tightly scoped.
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 
 Carry forward the useful docs-update intent while preserving
-Blueprint's Gemini-native boundaries:
+Blueprint's host-native boundaries:
 
 - documentation updates stay grounded in repo and Blueprint evidence
 - verification-only runs stay read-only for repo docs

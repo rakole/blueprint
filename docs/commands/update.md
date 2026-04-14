@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`update` is Blueprint's command for preparing Blueprint extension update guidance and changelog review. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`update` is Blueprint's command for preparing Blueprint extension update guidance and changelog review. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-update`
+- CLI command path: `/blu-update`
 - Root router form: `/blu update`
 - Argument hint: `none`
 - `/blu-update`
@@ -42,7 +42,7 @@
 ## Blueprint And Global State Writes
 
 
-- `update plan metadata under ~/.gemini/blueprint/updates/`
+- `update plan metadata under ~/.<host>/blueprint/updates/`
 - `human-readable update checklist report`
 
 
@@ -87,7 +87,7 @@
 ## Risk Notes
 
 
-- Gemini extension updates happen outside the running interactive session, so `/blu-update` must remain advisory rather than self-mutating.
+- Host extension updates happen outside the running interactive session, so `/blu-update` must remain advisory rather than self-mutating.
 - The command should never write into the installed extension directory or assume a writable installation target.
 - Any update checklist should end with a restart expectation because extension changes load on the next session start.
 
@@ -124,7 +124,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
-- Never mutates the installed extension directory from inside the running Gemini session.
+- Never mutates the installed extension directory from inside the running host session.
 
 
 ## Test Cases
@@ -133,5 +133,4 @@
 - Workspace or maintenance fixture.
 - Dirty-tree or registry-conflict fixture.
 - Direct `update` happy-path fixture.
-
 

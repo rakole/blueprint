@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`list-phase-assumptions` is Blueprint's command for surface the agent's assumptions about a phase approach before planning. In Blueprint it stays Gemini-native, uses only read-oriented MCP tools, and remains purely conversational so users can correct misunderstandings before `discuss-phase` or `plan-phase`.
+`list-phase-assumptions` is Blueprint's command for surface the agent's assumptions about a phase approach before planning. In Blueprint it stays host-native, uses only read-oriented MCP tools, and remains purely conversational so users can correct misunderstandings before `discuss-phase` or `plan-phase`.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-list-phase-assumptions`
+- CLI command path: `/blu-list-phase-assumptions`
 - Root router form: `/blu list-phase-assumptions`
 - Argument hint: `[phase]`
 - `/blu-list-phase-assumptions 4`

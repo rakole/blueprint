@@ -14,7 +14,7 @@
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-review-backlog`
+- CLI command path: `/blu-review-backlog`
 - Root router form: `/blu review-backlog`
 - Argument hint: `none`
 - `/blu-review-backlog`

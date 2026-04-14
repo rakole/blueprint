@@ -7,11 +7,11 @@
 
 ## Purpose
 
-`map-codebase` is Blueprint's command for analyze a brownfield codebase with mapper-style passes and produce durable codebase documents. In Blueprint it stays Gemini-native, delegates persistence to documented MCP tools, and keeps the brownfield contract explicit without reviving omitted commands such as `scan` or `intel`.
+`map-codebase` is Blueprint's command for analyze a brownfield codebase with mapper-style passes and produce durable codebase documents. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the brownfield contract explicit without reviving omitted commands such as `scan` or `intel`.
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-map-codebase`
+- CLI command path: `/blu-map-codebase`
 - Root router form: `/blu map-codebase`
 - Argument hint: `[optional: specific area to map, e.g., 'api' or 'auth']`
 - `/blu-map-codebase auth`

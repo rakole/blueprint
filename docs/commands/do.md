@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`do` is Blueprint's command for routing freeform text to the right Blueprint command. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`do` is Blueprint's command for routing freeform text to the right Blueprint command. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-do`
+- CLI command path: `/blu-do`
 - Root router form: `/blu do`
 - Argument hint: `<description of what you want to do>`
 - `/blu-do set-up-roadmap-for-notifications`

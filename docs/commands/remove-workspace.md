@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`remove-workspace` is Blueprint's command for removing a workspace and cleaning up worktrees. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`remove-workspace` is Blueprint's command for removing a workspace and cleaning up worktrees. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-remove-workspace`
+- CLI command path: `/blu-remove-workspace`
 - Root router form: `/blu remove-workspace`
 - Argument hint: `<workspace-name>`
 - `/blu-remove-workspace feature-a`

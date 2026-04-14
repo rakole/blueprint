@@ -7,11 +7,11 @@
 
 ## Purpose
 
-`help` is Blueprint's command for showing available Blueprint commands and usage guidance. In Blueprint it stays Gemini-native and state-aware, but safe command recommendations must be limited to the shipped runtime surface.
+`help` is Blueprint's command for showing available Blueprint commands and usage guidance. In Blueprint it stays host-native and state-aware, but safe command recommendations must be limited to the shipped runtime surface.
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-help`
+- CLI command path: `/blu-help`
 - Root router form: `/blu help`
 - Argument hint: `none`
 - `/blu-help`

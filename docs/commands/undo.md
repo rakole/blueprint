@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`undo` is Blueprint's command for safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks.. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`undo` is Blueprint's command for safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks.. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-undo`
+- CLI command path: `/blu-undo`
 - Root router form: `/blu undo`
 - Argument hint: `--last N | --phase NN | --plan NN-MM`
 - `/blu-undo --phase 03`

@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`execute-phase` is Blueprint's command for execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a Gemini-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and hands off to the shipped `validate-phase` flow before `verify-work` continues the lifecycle.
+`execute-phase` is Blueprint's command for execute all plans in a phase with wave-based parallelization. In Blueprint it is implemented as a host-native runtime contract that delegates plan discovery and summary persistence to documented MCP tools, keeps the repo-side contract explicit, and hands off to the shipped `validate-phase` flow before `verify-work` continues the lifecycle.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-execute-phase`
+- CLI command path: `/blu-execute-phase`
 - Root router form: `/blu execute-phase`
 - Argument hint: `<phase-number> [--wave N] [--gaps-only] [--interactive]`
 - `/blu-execute-phase 3 --wave 2`

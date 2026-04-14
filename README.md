@@ -1,18 +1,20 @@
 # Blueprint
 
-Blueprint is in active implementation as a Gemini-family CLI extension that rethinks the useful parts of Get Shit Done as a host-native workflow for Gemini CLI and Tabnine CLI.
+Blueprint is in active implementation as a shared Gemini CLI and Tabnine CLI extension runtime that rethinks the useful parts of Get Shit Done as a host-native workflow.
 
 This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, peer-review, review-branch, and shipping commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
-- Global install target: `gemini extensions install https://github.com/rakole/blueprint` or the equivalent Tabnine CLI install flow
+- Global install target: `gemini extensions install https://github.com/rakole/blueprint` or `tabnine extensions install https://github.com/rakole/blueprint`
 - Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu-<command>` commands
 - Project state location: `.blueprint/`
-- Global mutable state location: `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI
-- Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in the active host's Blueprint defaults file
+- Global mutable state location: `~/.<host>/blueprint/`
+- Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in `~/.<host>/blueprint/defaults.json`
 - Runtime architecture: host CLI commands, Blueprint skills, Blueprint subagents, advisory hooks, and an extension-bundled MCP server
 - Delivery approach: docs-first planning pack first, then granular command-by-command implementation with repair checkpoints when runtime and docs drift
+
+In shared docs, `~/.<host>/blueprint/` means `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI. For now, Blueprint assumes one active host per machine.
 
 ## Current Status
 
@@ -52,10 +54,11 @@ Blueprint is intended to install from the public repository:
 
 ```bash
 gemini extensions install https://github.com/rakole/blueprint
+tabnine extensions install https://github.com/rakole/blueprint
 ```
 
-After install or update, restart the active host CLI before expecting `/blu` or `/blu-help`
-to appear in the active session.
+Install with the host CLI you are using. After install or update, restart that
+host before expecting `/blu` or `/blu-help` to appear in the active session.
 
 Release and operator verification should always confirm the bundled extension
 shape, not just the source tree:
@@ -63,20 +66,21 @@ shape, not just the source tree:
 1. `npm ci`
 2. `npm run build`
 3. `npm test`
-4. `gemini extensions validate . --debug`
-5. Clean-home smoke from a temporary home:
-   - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions link .`
-   - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions list`
-6. Restart the active host CLI with that clean home and confirm `/blu` plus `/blu-help`
-   load before treating the release candidate as publishable.
+4. `gemini extensions validate . --debug` or `tabnine extensions validate . --debug`
+5. Clean-home smoke from a temporary home with the chosen host CLI:
+   - `HOME="$TMPDIR/blueprint-host-home" gemini extensions link .`
+   - `HOME="$TMPDIR/blueprint-host-home" gemini extensions list`
+   - or the same commands with `tabnine`
+6. Restart that clean host session and confirm `/blu` plus `/blu-help` load
+   before treating the release candidate as publishable.
 
-`dist/` must be current before publishing because the host CLI loads the built MCP
-server and built hooks, not the TypeScript source files directly.
+`dist/` must be current before publishing because the active host loads the
+built MCP server and built hooks, not the TypeScript source files directly.
 
 Manifest hardening note: `excludeTools` is intentionally deferred for now. The
 extension should adopt it only after a focused compatibility pass proves the
-restricted tool surface will not break shipped command flows or the host CLI's own
-runtime expectations.
+restricted tool surface will not break shipped command flows or the host CLI's
+own runtime expectations.
 
 ## Retained Commands
 
@@ -157,12 +161,12 @@ Wave 5 workspace and maintenance:
 - `docs/ARCHITECTURE.md`: extension structure and runtime boundaries
 - `docs/ARTIFACT-SCHEMA.md`: `.blueprint/`, normalized config schema, and global-state schema
 - `docs/MCP-TOOLS.md`: current registered MCP tools plus planned future tool families
-- `docs/SKILLS-AND-AGENTS.md`: shipped and planned Gemini skills and subagents
+- `docs/SKILLS-AND-AGENTS.md`: shipped and planned host-discoverable skills and subagents
 - `docs/HOOKS-POLICIES.md`: advisory hooks and safety policy
 - `docs/COMMAND-BASELINE.md`: command scope and behavior baseline for Blueprint
 - `docs/RUNTIME-REFERENCE.md`: runtime-porting matrix for retained workflows and explicit Blueprint deltas
 - `docs/COMMAND-CATALOG.md`: retained-command index with wave, skill, status, write surface, and risk
-- `docs/GEMINI-CONSTRAINTS.md`: Gemini CLI restrictions that shaped the Blueprint design
+- `docs/GEMINI-CONSTRAINTS.md`: shared host-CLI restrictions that shaped the Blueprint design
 - `docs/IMPLEMENTATION-ORDER.md`: dependency-ordered command queue
 - `docs/PHASE-LIFECYCLE.md`: artifact flow across discuss, research, planning, execution, validation, and verification
 - `docs/TEST-STRATEGY.md`: test plan for docs, tools, commands, hooks, and E2E
@@ -174,7 +178,9 @@ Wave 5 workspace and maintenance:
 These runtime files exist today:
 
 - `gemini-extension.json`
+- `tabnine-extension.json`
 - `GEMINI.md`
+- `TABNINE.md`
 - `commands/blu.toml`
 - `commands/blu-new-project.toml`
 - `commands/blu-settings.toml`

@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`plan-milestone-gaps` is Blueprint's command for create phases to close all gaps identified by milestone audit. In Blueprint it stays Gemini-native, keeps the flow audit-first, groups related gaps into a few coherent follow-up phases, and delegates roadmap/state persistence to documented MCP tools instead of direct file rewrites.
+`plan-milestone-gaps` is Blueprint's command for create phases to close all gaps identified by milestone audit. In Blueprint it stays host-native, keeps the flow audit-first, groups related gaps into a few coherent follow-up phases, and delegates roadmap/state persistence to documented MCP tools instead of direct file rewrites.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-plan-milestone-gaps`
+- CLI command path: `/blu-plan-milestone-gaps`
 - Root router form: `/blu plan-milestone-gaps`
 - Argument hint: `none`
 - `/blu-plan-milestone-gaps`

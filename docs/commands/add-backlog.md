@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`add-backlog` is Blueprint's command for add an idea to the backlog parking lot (999.x numbering). In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`add-backlog` is Blueprint's command for add an idea to the backlog parking lot (999.x numbering). In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-add-backlog`
+- CLI command path: `/blu-add-backlog`
 - Root router form: `/blu add-backlog`
 - Argument hint: `<description>`
 - `/blu-add-backlog Offline-mode`

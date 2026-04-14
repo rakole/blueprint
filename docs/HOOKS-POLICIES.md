@@ -10,7 +10,7 @@ Blueprint keeps only advisory hooks in v1 planning.
 ### 1. Read-before-edit advisory
 
 Purpose:
-- remind Gemini to read an existing file before editing it
+- remind the active host agent to read an existing file before editing it
 - reduce edit loops and runtime rejections
 
 Scope:

@@ -29,11 +29,11 @@ Orchestrate Blueprint maintenance flows so git, workspace, cleanup, and patch op
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 
-Carry forward the useful maintenance intent while preserving Blueprint's Gemini-native boundaries:
+Carry forward the useful maintenance intent while preserving Blueprint's host-native boundaries:
 
 - confirmation comes before any destructive or git-mutating step
 - Blueprint-owned persistence stays inside documented MCP tools

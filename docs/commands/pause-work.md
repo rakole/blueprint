@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`pause-work` is Blueprint's command for create context handoff when pausing work mid-phase. In Blueprint it stays Gemini-native, persists the handoff through dedicated MCP tools, and keeps follow-up routing inside the implemented Blueprint surface.
+`pause-work` is Blueprint's command for create context handoff when pausing work mid-phase. In Blueprint it stays host-native, persists the handoff through dedicated MCP tools, and keeps follow-up routing inside the implemented Blueprint surface.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-pause-work`
+- CLI command path: `/blu-pause-work`
 - Root router form: `/blu pause-work`
 - Argument hint: `none`
 - `/blu-pause-work`

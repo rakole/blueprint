@@ -8,7 +8,7 @@ Follow this flow exactly:
 
 1. Call `mcp_blueprint_blueprint_project_status` first and stop unless the current repository is already initialized for Blueprint.
 2. Call `mcp_blueprint_blueprint_config_get` with `scope: "project"` to load the current repo config and surface any normalization or migration warnings before asking for changes.
-3. Call `mcp_blueprint_blueprint_config_get` with `scope: "defaults"` only when you need to show or compare saved defaults for the active Blueprint host.
+3. Call `mcp_blueprint_blueprint_config_get` with `scope: "defaults"` only when you need to show or compare saved defaults from `~/.<host>/blueprint/defaults.json`.
 4. Run a common settings pass first. Cover:
    - `model_profile`
    - `workflow.research`
@@ -35,7 +35,7 @@ Follow this flow exactly:
    - `git.quick_branch_template`
    - `agent_skills`
 6. Apply project-local changes only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`.
-7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to the active host's Blueprint defaults file. Use `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write.
+7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to `~/.<host>/blueprint/defaults.json`. Use `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write.
 8. Never write or reintroduce removed repo keys such as `workflow.use_workspaces`, `workflow.use_workstreams`, or `hooks.*`.
 9. If the user asks for a broad reset, confirm it before calling `mcp_blueprint_blueprint_config_set`.
 

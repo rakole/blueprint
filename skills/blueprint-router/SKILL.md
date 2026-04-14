@@ -1,7 +1,7 @@
 ---
 name: blueprint-router
 description: >
-  Gemini-native Blueprint routing and next-step guidance specialist. Use this
+  host-native Blueprint routing and next-step guidance specialist. Use this
   skill when `/blu`, `help`, `progress`, `next`, or `do`-style requests need
   safe command selection inside the implemented runtime surface. Example
   scenarios: choosing between `/blu-help` and `/blu-progress`, explaining why a
@@ -27,7 +27,7 @@ Provide implementation-aware routing and next-step guidance without advertising 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 
@@ -35,7 +35,7 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 
 - `/blu` and `/blu-<command>` naming
 - `.blueprint/` instead of `.planning/`
-- Gemini-native inline routing
+- host-native inline routing
 - no slash-command chaining
 - no hidden support commands
 

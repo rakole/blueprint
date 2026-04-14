@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`check-todos` is Blueprint's command for list pending todos and select one to work on. In Blueprint it stays Gemini-native, reads repo readiness through `blueprint_project_status`, and uses the shared capture index MCP tool to inspect pending todos plus mark a single todo active or completed when the user confirms that change.
+`check-todos` is Blueprint's command for list pending todos and select one to work on. In Blueprint it stays host-native, reads repo readiness through `blueprint_project_status`, and uses the shared capture index MCP tool to inspect pending todos plus mark a single todo active or completed when the user confirms that change.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-check-todos`
+- CLI command path: `/blu-check-todos`
 - Root router form: `/blu check-todos`
 - Argument hint: `[area filter]`
 - `/blu-check-todos auth`

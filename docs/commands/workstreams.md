@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`workstreams` is Blueprint's command for manage parallel workstreams — list, create, switch, status, progress, complete, and resume. In Blueprint it should stay Gemini-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`workstreams` is Blueprint's command for manage parallel workstreams — list, create, switch, status, progress, complete, and resume. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-workstreams`
+- CLI command path: `/blu-workstreams`
 - Root router form: `/blu workstreams`
 - Argument hint: `none`
 - `/blu-workstreams create backend-api`

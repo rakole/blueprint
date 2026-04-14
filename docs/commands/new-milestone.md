@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`new-milestone` is Blueprint's command for start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it stays Gemini-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, and starts the new milestone at the next whole-number phase instead of renumbering prior work.
+`new-milestone` is Blueprint's command for start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it stays host-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, and starts the new milestone at the next whole-number phase instead of renumbering prior work.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-new-milestone`
+- CLI command path: `/blu-new-milestone`
 - Root router form: `/blu new-milestone`
 - Argument hint: `[milestone name, e.g., 'v1.1 Notifications']`
 - `/blu-new-milestone v1.1-Platform`

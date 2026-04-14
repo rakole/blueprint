@@ -18,7 +18,7 @@ The governance handoff/resume pair now ships through `pause-work` and `resume-wo
 - dependency-ordered implementation queue
 - one spec file per retained command
 - command catalog and phase lifecycle references for quick lookup
-- Gemini-specific constraint notes to keep implementation aligned with the host CLI
+- host-specific constraint notes to keep implementation aligned with the active CLI host
 - runtime command manifests for the shipped Wave 0, discovery, planning, execution, validation/UAT, lightweight execution, governance, current roadmap-admin, review, docs, and maintenance surfaces
 - shipped `blueprint-roadmap-admin` skill file for the roadmap append, removal, gap-planning, and milestone audit slice
 - shipped Wave 0, discovery, planning, execution, validation, review, governance, roadmap-admin, docs, debug, and maintenance skill files in `skills/`
@@ -45,7 +45,7 @@ The next implementation slice should be freshly planned after Wave 2 closeout:
 
 ## Shared Risks To Watch
 
-- Gemini command routing may tempt inline duplication instead of reusing skills and MCP tools.
+- Host command routing may tempt inline duplication instead of reusing skills and MCP tools.
 - `update` must remain advisory; do not let implementation drift toward self-updating the extension.
 - workspace removal, patch replay, and undo need especially strict mutation boundaries.
 - keep `.blueprint/` artifacts stable while adding command code; later commands depend on early schema choices.

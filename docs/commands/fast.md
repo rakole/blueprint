@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`fast` is Blueprint's command for execute a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a Gemini-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, and updates state only when the repo is already initialized.
+`fast` is Blueprint's command for execute a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, and updates state only when the repo is already initialized.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-fast`
+- CLI command path: `/blu-fast`
 - Root router form: `/blu fast`
 - Argument hint: `[task description]`
 - `/blu-fast fix-readme-typo`

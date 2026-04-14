@@ -25,7 +25,7 @@ Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-de
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - For `mcp_blueprint_blueprint_artifact_scaffold`, pass repo-relative artifact paths such as `.blueprint/codebase/STACK.md`; do not guess bare names like `STACK` and do not pass absolute filesystem paths.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
-- Never run `/blu-*` in the shell. Blueprint slash commands are Gemini entrypoints, not shell executables.
+- Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 

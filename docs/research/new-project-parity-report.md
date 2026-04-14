@@ -22,7 +22,7 @@ The highest-value gaps called out in the original report are now closed:
 - Bootstrap traceability is now enforced in practice: requirement IDs and roadmap references are authored into the generated artifacts, and the test suite verifies that they are not left as placeholders.
 - Advisory hooks now ship under `src/hooks/` with `hooks/hooks.json`, so hook coverage is no longer a docs-only claim.
 - The command and tool tests now cover substantive artifact generation, saved-default provenance, malformed-default fallback, explicit bootstrap seeds, and brownfield routing.
-- The Blueprint `new-project` manifest and `blueprint-bootstrap` skill now encode a much richer bootstrap contract: deep questioning, saved-default-aware workflow preference capture, requirement and roadmap revision loops, and Gemini-safe questioning guidance through a local `questioning.md` reference pack.
+- The Blueprint `new-project` manifest and `blueprint-bootstrap` skill now encode a much richer bootstrap contract: deep questioning, saved-default-aware workflow preference capture, requirement and roadmap revision loops, and host-safe questioning guidance through a local `questioning.md` reference pack.
 - The bounded `blueprint-project-researcher` and `blueprint-roadmapper` contracts now carry stronger bootstrap-specific expectations for uncertainty surfacing, requirement-shaping notes, and roadmap-preserving revisions.
 
 ## Current Assessment
@@ -34,7 +34,7 @@ Current strengths:
 - deterministic `.blueprint/` initialization
 - normalized config seeding with provenance
 - substantive bootstrap artifact generation
-- prompt-level deep questioning guidance aligned to Gemini-native interaction
+- prompt-level deep questioning guidance aligned to host-native interaction
 - explicit requirements and roadmap revision-loop expectations before first-write persistence
 - explicit brownfield routing and provisional-roadmap signaling
 - test coverage for the current bootstrap contract
@@ -71,4 +71,4 @@ If `new-project` is revisited, the next repair slice should focus on behavior, n
 
 The original audit's core conclusion has changed.
 
-`/blu-new-project` is no longer just a safe bootstrap substrate. It now carries a materially richer Gemini-native bootstrap contract at the command, skill, and reference-pack layers. The remaining distance is mostly in optional research depth and end-to-end runtime behavior verification, not in artifact quality, brownfield routing, or missing runtime substrate.
+`/blu-new-project` is no longer just a safe bootstrap substrate. It now carries a materially richer host-native bootstrap contract at the command, skill, and reference-pack layers. The remaining distance is mostly in optional research depth and end-to-end runtime behavior verification, not in artifact quality, brownfield routing, or missing runtime substrate.

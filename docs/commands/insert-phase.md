@@ -9,12 +9,12 @@
 ## Purpose
 
 
-`insert-phase` is Blueprint's command for insert urgent work as decimal phase (e.g., 72.1) between existing phases. In Blueprint it is implemented as a Gemini-native roadmap insertion flow that reads the current roadmap first, derives the next decimal from the requested integer phase group, inserts the new roadmap line and Phase Details block without renumbering later phases, scaffolds the matching `.blueprint/phases/<phase-slug>/` directory, and then routes the repo back into discovery.
+`insert-phase` is Blueprint's command for insert urgent work as decimal phase (e.g., 72.1) between existing phases. In Blueprint it is implemented as a host-native roadmap insertion flow that reads the current roadmap first, derives the next decimal from the requested integer phase group, inserts the new roadmap line and Phase Details block without renumbering later phases, scaffolds the matching `.blueprint/phases/<phase-slug>/` directory, and then routes the repo back into discovery.
 
 
 ## Command Path And Examples
 
-- Gemini command path: `/blu-insert-phase`
+- CLI command path: `/blu-insert-phase`
 - Root router form: `/blu insert-phase`
 - Argument hint: `<after> <description>`
 - `/blu-insert-phase 3 Migration-cleanup`
