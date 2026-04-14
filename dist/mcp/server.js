@@ -32179,6 +32179,207 @@ var blueprintToolRegistry = Object.fromEntries(
 var blueprintToolNames = TOOL_DEFINITIONS.map(
   (definition) => definition.name
 );
+var SUMMARY_PATH_KEYS = [
+  "path",
+  "reportPath",
+  "configPath",
+  "statePath",
+  "roadmapPath",
+  "linkedPlanPath",
+  "sourcePath",
+  "targetPath",
+  "phaseDir"
+];
+var SUMMARY_COUNT_KEYS = [
+  ["commands", "commands"],
+  ["phases", "phases"],
+  ["plans", "plans"],
+  ["waves", "waves"],
+  ["summaries", "summaries"],
+  ["completedPlans", "completed plans"],
+  ["pendingPlans", "pending plans"],
+  ["artifacts", "artifacts"],
+  ["reports", "reports"],
+  ["files", "files"],
+  ["findings", "findings"],
+  ["followUps", "follow-ups"],
+  ["entries", "entries"],
+  ["backlogItems", "backlog items"],
+  ["selectedBacklogIds", "selected backlog items"],
+  ["promotedItems", "promoted items"],
+  ["missingPlans", "missing plans"],
+  ["createdFiles", "created files"],
+  ["reusedFiles", "reused files"],
+  ["updatedKeys", "updated keys"],
+  ["syncedFields", "synced fields"],
+  ["updatedFields", "updated fields"],
+  ["createdEntryIds", "created entries"],
+  ["matchedEntryIds", "matched entries"],
+  ["duplicateEntryIds", "duplicates"],
+  ["renumberedPhases", "renumbered phases"],
+  ["createdPhaseDirs", "phase directories"],
+  ["summaryPaths", "summary links"],
+  ["warnings", "warnings"],
+  ["issues", "issues"],
+  ["suggestedRepairs", "repairs"]
+];
+function getString(result, key) {
+  const value = result[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+function getBoolean(result, key) {
+  const value = result[key];
+  return typeof value === "boolean" ? value : null;
+}
+function getArrayCount(result, key) {
+  const value = result[key];
+  return Array.isArray(value) ? value.length : null;
+}
+function findSummaryPath(result) {
+  for (const key of SUMMARY_PATH_KEYS) {
+    const value = getString(result, key);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+function humanizeIdentifier(value) {
+  return value.replace(/[_-]+/g, " ").trim();
+}
+function formatByteCount(byteCount) {
+  if (byteCount < 1024) {
+    return `${byteCount} B`;
+  }
+  if (byteCount < 1024 * 1024) {
+    return `${(byteCount / 1024).toFixed(1)} KB`;
+  }
+  return `${(byteCount / (1024 * 1024)).toFixed(1)} MB`;
+}
+function cleanSentenceFragment(value) {
+  return value.trim().replace(/[.!\s]+$/u, "");
+}
+function buildSubject(toolName, result) {
+  const phaseNumber = getString(result, "phaseNumber");
+  const artifact = getString(result, "artifact");
+  const planId = getString(result, "planId");
+  const scope = getString(result, "scope");
+  if (phaseNumber && artifact) {
+    return `Phase ${phaseNumber} ${artifact.toLowerCase()}`;
+  }
+  if (phaseNumber && planId) {
+    return `Phase ${phaseNumber} plan ${planId}`;
+  }
+  if (phaseNumber) {
+    return `Phase ${phaseNumber}`;
+  }
+  if (scope && toolName.startsWith("blueprint_config_")) {
+    return `${scope} config`;
+  }
+  if (toolName === "blueprint_command_catalog") {
+    return "command catalog";
+  }
+  if (toolName === "blueprint_project_status") {
+    return "project status";
+  }
+  if (toolName === "blueprint_artifact_list") {
+    return "artifact inventory";
+  }
+  if (toolName === "blueprint_review_scope") {
+    return "review scope";
+  }
+  return humanizeIdentifier(toolName.replace(/^blueprint_/, ""));
+}
+function buildCountSummary(result) {
+  const fragments = [];
+  for (const [key, label] of SUMMARY_COUNT_KEYS) {
+    const count = getArrayCount(result, key);
+    if (count && count > 0) {
+      fragments.push(`${count} ${label}`);
+    }
+    if (fragments.length === 2) {
+      break;
+    }
+  }
+  return fragments;
+}
+function buildMutationFlags(result) {
+  const flags = [];
+  for (const key of ["created", "written", "updated", "deleted", "overwritten"]) {
+    if (getBoolean(result, key)) {
+      flags.push(key);
+    }
+  }
+  return flags;
+}
+function getOperationVerb(toolName) {
+  if (toolName.endsWith("_read") || toolName.endsWith("_get") || toolName.endsWith("_load")) {
+    return "Loaded";
+  }
+  if (toolName.endsWith("_write") || toolName.endsWith("_put")) {
+    return "Saved";
+  }
+  if (toolName.endsWith("_set") || toolName.endsWith("_update")) {
+    return "Updated";
+  }
+  if (toolName.endsWith("_list")) {
+    return "Listed";
+  }
+  if (toolName.endsWith("_index")) {
+    return "Indexed";
+  }
+  if (toolName.endsWith("_validate")) {
+    return "Validated";
+  }
+  if (toolName.endsWith("_status")) {
+    return "Checked";
+  }
+  return "Completed";
+}
+function summarizeToolResult(toolName, result) {
+  const subject = buildSubject(toolName, result);
+  const reason = getString(result, "reason");
+  const path7 = findSummaryPath(result);
+  const found = getBoolean(result, "found");
+  const phaseFound = getBoolean(result, "phaseFound");
+  const content = getString(result, "content");
+  const status = getString(result, "status");
+  const mutationFlags = buildMutationFlags(result);
+  const countSummary = buildCountSummary(result);
+  const operationVerb = getOperationVerb(toolName);
+  if (phaseFound === false) {
+    return reason ? `Phase lookup failed for ${subject}: ${cleanSentenceFragment(reason)}.` : `Phase lookup failed for ${subject}.`;
+  }
+  if (found === false) {
+    return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
+  }
+  const details = [];
+  if (path7) {
+    details.push(`at \`${path7}\``);
+  }
+  if (content) {
+    details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
+  }
+  if (mutationFlags.length > 0) {
+    details.push(`(${mutationFlags.join(", ")})`);
+  }
+  if (status && status !== "ok" && status !== "success") {
+    details.push(`status: ${status}`);
+  }
+  if (countSummary.length > 0) {
+    details.push(`(${countSummary.join(", ")})`);
+  }
+  const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
+  return `${operationVerb} ${subject}${detailSuffix}.`;
+}
+function createToolResponseContent(toolName, result) {
+  return [
+    {
+      type: "text",
+      text: summarizeToolResult(toolName, result)
+    }
+  ];
+}
 function createBlueprintServer() {
   const server = new McpServer({
     name: "blueprint",
@@ -32194,12 +32395,7 @@ function createBlueprintServer() {
       async (args) => {
         const result = await definition.handler(args);
         return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(result, null, 2)
-            }
-          ],
+          content: createToolResponseContent(definition.name, result),
           structuredContent: result
         };
       }
@@ -32224,6 +32420,8 @@ export {
   blueprintToolNames,
   blueprintToolRegistry,
   createBlueprintServer,
-  startServer
+  createToolResponseContent,
+  startServer,
+  summarizeToolResult
 };
 //# sourceMappingURL=server.js.map
