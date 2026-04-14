@@ -19566,22 +19566,55 @@ async function readRoadmapSignals(projectRoot) {
   try {
     const raw = await fs4.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
-    const phaseMatches = [
-      ...raw.matchAll(/^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm)
-    ];
-    const currentPhase = phaseMatches.find((match) => match[1] === " ")?.[2] ?? phaseMatches.at(-1)?.[2] ?? null;
+    const phases = [...raw.matchAll(
+      /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
+    )].map((match) => ({
+      phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
+      completed: match[1].toLowerCase() === "x"
+    }));
+    const currentPhase = phases.find((phase) => !phase.completed)?.phaseNumber ?? phases.at(-1)?.phaseNumber ?? null;
     return {
       currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
       currentPhase,
-      allPhasesComplete: phaseMatches.length > 0 && phaseMatches.every((match) => match[1].toLowerCase() === "x")
+      allPhasesComplete: phases.length > 0 && phases.every((phase) => phase.completed),
+      phases
     };
   } catch {
     return {
       currentMilestone: null,
       currentPhase: null,
-      allPhasesComplete: false
+      allPhasesComplete: false,
+      phases: []
     };
   }
+}
+function inspectMilestoneEvidence(phaseArtifacts, phases) {
+  const missingVerificationPhases = [];
+  const missingUatPhases = [];
+  for (const phase of phases) {
+    if (!phase.completed) {
+      continue;
+    }
+    const phasePrefix = formatBlueprintPhasePrefix(phase.phaseNumber);
+    const hasVerification = phaseArtifacts.some(
+      (artifact) => artifact.endsWith(`/${phasePrefix}-VERIFICATION.md`)
+    );
+    const hasUat = phaseArtifacts.some(
+      (artifact) => artifact.endsWith(`/${phasePrefix}-UAT.md`)
+    );
+    if (!hasVerification) {
+      missingVerificationPhases.push(phase.phaseNumber);
+    }
+    if (!hasUat) {
+      missingUatPhases.push(phase.phaseNumber);
+    }
+  }
+  return {
+    missingVerificationPhases,
+    missingUatPhases,
+    blockingPhase: missingVerificationPhases[0] ?? missingUatPhases[0] ?? null,
+    allCompletedPhasesReady: missingVerificationPhases.length === 0 && missingUatPhases.length === 0
+  };
 }
 async function deriveNextAction(args) {
   if (args.projectStatus === "uninitialized") {
@@ -19637,19 +19670,25 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.hasUat && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
-  if (args.allPhasesComplete && args.phaseArtifacts.hasVerification && args.phaseArtifacts.hasUat && !args.hasMilestoneAudit && implementedCommands.has(auditMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
+    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
+    return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && !args.hasMilestoneAudit && implementedCommands.has(auditMilestoneCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${auditMilestoneCommand}${milestoneSuffix} to audit milestone completion before archiving`;
   }
-  if (args.allPhasesComplete && args.phaseArtifacts.hasVerification && args.phaseArtifacts.hasUat && args.hasMilestoneAudit && !args.hasMilestoneCompletion && implementedCommands.has(completeMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && !args.hasMilestoneCompletion && implementedCommands.has(completeMilestoneCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${completeMilestoneCommand}${milestoneSuffix} to record milestone closeout after the audit`;
   }
-  if (args.allPhasesComplete && args.phaseArtifacts.hasVerification && args.phaseArtifacts.hasUat && args.hasMilestoneAudit && args.hasMilestoneCompletion && !args.hasMilestoneSummary && implementedCommands.has(milestoneSummaryCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && args.hasMilestoneCompletion && !args.hasMilestoneSummary && implementedCommands.has(milestoneSummaryCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${milestoneSummaryCommand}${milestoneSuffix} to generate the final milestone summary`;
   }
-  if (args.allPhasesComplete && args.phaseArtifacts.hasVerification && args.phaseArtifacts.hasUat && args.hasMilestoneAudit && args.hasMilestoneCompletion && args.hasMilestoneSummary && implementedCommands.has(newMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && args.hasMilestoneCompletion && args.hasMilestoneSummary && implementedCommands.has(newMilestoneCommand)) {
     return `Run ${newMilestoneCommand} to start the next milestone from the saved carry-forward summary`;
   }
   return args.currentPhase ? `${blueprintRunDirectCommand("progress")} to review Phase ${args.currentPhase} and the next safe action` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
@@ -19688,6 +19727,10 @@ async function buildSyncedState(projectRoot) {
     projectRoot,
     inspection.phases,
     currentPhase
+  );
+  const milestoneEvidence = inspectMilestoneEvidence(
+    inspection.phases,
+    roadmapSignals.phases
   );
   const bootstrapRouting = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
@@ -19737,6 +19780,7 @@ async function buildSyncedState(projectRoot) {
         hasMilestoneCompletion: milestoneCompletionReportPath !== null && inspection.reports.includes(milestoneCompletionReportPath),
         hasMilestoneSummary: milestoneSummaryReportPath !== null && inspection.reports.includes(milestoneSummaryReportPath),
         phaseArtifacts: currentPhaseArtifacts,
+        milestoneEvidence,
         bootstrapRouting,
         workflow: workflowRouting
       }),

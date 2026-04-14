@@ -18,8 +18,10 @@ const repoRoot = process.cwd();
 async function createMilestoneAuditRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-audit-milestone-"));
   const repoPath = path.join(tempRoot, "repo");
+  const priorPhaseDir = path.join(repoPath, ".blueprint/phases/03-execution");
   const phaseDir = path.join(repoPath, ".blueprint/phases/04-release-readiness");
 
+  await mkdir(priorPhaseDir, { recursive: true });
   await mkdir(phaseDir, { recursive: true });
   await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
@@ -65,6 +67,30 @@ async function createMilestoneAuditRepo(): Promise<string> {
   await writeFile(
     path.join(repoPath, ".blueprint/config.json"),
     JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+  await writeFile(
+    path.join(priorPhaseDir, "03-VERIFICATION.md"),
+    `# Phase 03: Execution - Verification
+
+**Status:** PASS
+
+## Validation Summary
+
+- Execution evidence for the earlier milestone phase is complete.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(priorPhaseDir, "03-UAT.md"),
+    `# Phase 03: Execution - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- Earlier milestone UAT closed without blocking issues.
+`,
     "utf8"
   );
   await writeFile(
@@ -158,7 +184,7 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 
 ## Recommendations
 
-- Route to /blu-audit-milestone once every roadmap phase is complete and UAT is present.
+- Route to /blu-audit-milestone once every roadmap phase is complete and each completed phase has validation plus UAT evidence.
 
 ## Sources
 

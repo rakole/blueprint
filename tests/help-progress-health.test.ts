@@ -226,12 +226,20 @@ Exercise the execute-phase router.
   return repoPath;
 }
 
-async function createMilestoneCloseoutRepo(reportStage: "none" | "audit" | "complete" | "summary"): Promise<string> {
+async function createMilestoneCloseoutRepo(
+  reportStage: "none" | "audit" | "complete" | "summary",
+  options: {
+    missingEarlierVerification?: boolean;
+    missingEarlierUat?: boolean;
+  } = {}
+): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-milestone-closeout-routing-"));
   const repoPath = path.join(tempRoot, "repo");
   const reportsDir = path.join(repoPath, ".blueprint/reports");
+  const earlierPhaseRoot = path.join(repoPath, ".blueprint/phases/02-validation-hardening");
   const phaseRoot = path.join(repoPath, ".blueprint/phases/03-milestone-closeout");
 
+  await mkdir(earlierPhaseRoot, { recursive: true });
   await mkdir(phaseRoot, { recursive: true });
   await mkdir(reportsDir, { recursive: true });
   await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
@@ -284,6 +292,40 @@ async function createMilestoneCloseoutRepo(reportStage: "none" | "audit" | "comp
     JSON.stringify({ version: 2 }, null, 2),
     "utf8"
   );
+  await writeFile(
+    path.join(earlierPhaseRoot, "02-01-SUMMARY.md"),
+    `# Phase 02: Validation Hardening - Summary
+
+## Result
+
+- Earlier milestone execution evidence is complete.
+`,
+    "utf8"
+  );
+  if (!options.missingEarlierVerification) {
+    await writeFile(
+      path.join(earlierPhaseRoot, "02-VERIFICATION.md"),
+      `# Phase 02: Validation Hardening - Verification
+
+## Result
+
+- Validation evidence is complete.
+`,
+      "utf8"
+    );
+  }
+  if (!options.missingEarlierUat) {
+    await writeFile(
+      path.join(earlierPhaseRoot, "02-UAT.md"),
+      `# Phase 02: Validation Hardening - UAT
+
+## Result
+
+- UAT evidence is complete.
+`,
+      "utf8"
+    );
+  }
   await writeFile(
     path.join(phaseRoot, "03-CONTEXT.md"),
     `# Phase 03: Milestone Closeout - Context
@@ -677,6 +719,23 @@ test("project status routes milestone closeout through audit, completion, summar
   assert.match(completeState.derivedStatus.nextAction, /\/blu-milestone-summary v2/);
   assert.match(summaryStatus.nextAction, /\/blu-new-milestone/);
   assert.match(summaryState.derivedStatus.nextAction, /\/blu-new-milestone/);
+});
+
+test("project status requires milestone-wide validation evidence before closeout routing", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    missingEarlierVerification: true
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
 });
 
 test("project status prefers reconciled roadmap signals over stale STATE.md values", async (t) => {
