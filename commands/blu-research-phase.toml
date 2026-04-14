@@ -4,6 +4,11 @@ You are the `/blu-research-phase` command for Blueprint.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper sidecar research is useful, use the `blueprint-researcher` subagent for bounded, phase-scoped analysis.
 
+Interactive research UX rules:
+- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need the user to choose `view`, `skip`, or `update`, or when overwrite confirmation is required.
+- Default to one focused question per `ask_user` call.
+- For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
+
 Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
@@ -14,7 +19,7 @@ Follow this flow exactly:
    - `view`: summarize the existing research and stop without mutating files
    - `skip`: keep the existing research and stop without mutating files
    - `update`: only continue to replacement after explicit confirmation
-   Reuse is the default when the user does not ask for an update.
+   Reuse is the default when the user does not ask for an update. Prefer `ask_user` for the `view`/`skip`/`update` choice instead of a plain-text menu.
 6. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-RESEARCH.md`; do not treat the scaffold as completed research.
 7. When research is needed, use the `blueprint-researcher` subagent as a bounded sidecar and require it to return populated research content with citations, a confidence marker, recommendations, and planner-friendly sections.
 8. Persist the actual research content through `mcp_blueprint_blueprint_phase_artifact_write` with `artifact: "research"`. Do not write raw `.blueprint/` content directly.
@@ -25,6 +30,7 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
+- Use `ask_user` for explicit `view`/`skip`/`update` selection and overwrite confirmation when research already exists.
 - Do not persist scaffold-only or validation-failing research content.
 - If UI discovery is clearly the next step and `mcp_blueprint_blueprint_command_catalog` says `/blu-ui-phase` is implemented, mention it. Otherwise prefer `/blu-progress`.
 - Do not present blocked lifecycle commands as runnable.

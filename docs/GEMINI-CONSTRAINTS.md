@@ -21,6 +21,7 @@ This file captures the Gemini-family CLI and extension constraints that material
 
 - Bundle runtime code into `dist/` before release so `gemini extensions install https://github.com/<repo>` and equivalent host-wrapper installs work without post-install setup.
 - Keep commands thin and deterministic by routing filesystem changes through MCP tools with explicit return shapes.
+- When Blueprint needs structured clarification or confirmation, prefer Gemini CLI's built-in `ask_user` dialog instead of imitating questionnaires in plain assistant prose.
 - Prefer direct command specs and shared contracts over hidden runtime conventions.
 - Separate project-local artifacts from maintenance-only global registries to keep `.blueprint/` portable across repos.
 - Treat config precedence, migration, and defaults loading as MCP-owned behavior rather than per-command prompt logic.

@@ -100,6 +100,7 @@
 
 - Confirm overwrite when a context artifact already exists.
 - Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
+- When structured discovery choices help, prefer Gemini CLI's built-in `ask_user` dialog asked one focused question at a time instead of a plain-text questionnaire.
 - Do not advertise follow-on execution or planning flows as runnable until those commands are implemented in the runtime catalog.
 
 
@@ -137,5 +138,4 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `discuss-phase` happy-path fixture.
-
 

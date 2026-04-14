@@ -79,6 +79,7 @@ test("ui-phase command references registered tools and single-artifact UI handli
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /`blueprint-ui-designer` subagent/);
+  assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /XX-UI-SPEC\.md/);

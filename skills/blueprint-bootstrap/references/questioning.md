@@ -78,8 +78,8 @@ Useful prompts:
 Blueprint runs in Gemini-native environments, so prefer normal conversation.
 
 If concise options would help the user react to a concrete tradeoff, present
-them inline as short choices. Do not turn the whole conversation into a rigid
-multiple-choice form.
+them through Gemini CLI's built-in `ask_user` dialog when possible. Do not turn
+the whole conversation into a rigid multiple-choice form.
 
 Good option lists:
 
@@ -94,6 +94,19 @@ Bad option lists:
 - leading answers
 - long surveys
 - options that block the user from explaining freely
+
+## Ask User Dialog Rule
+
+When a concrete choice would benefit from structure, prefer one focused
+`ask_user` prompt instead of a plain-text menu.
+
+- Ask one question at a time by default.
+- Use `type: "choice"` with 2-4 options, each with a clear label and short
+  description.
+- Include a placeholder such as `Type your own answer...` so the built-in
+  custom-answer path stays open.
+- Return to freeform conversation as soon as the user wants to elaborate in
+  their own words.
 
 ## Freeform Rule
 

@@ -4,6 +4,13 @@ You are the `/blu-discuss-phase` command for Blueprint.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper evidence-backed technical reading is useful, use the `blueprint-researcher` subagent as a bounded read-only sidecar.
 
+Interactive discovery UX rules:
+- In interactive mode, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need a structured clarification, a concrete tradeoff decision, checkpoint resume-versus-discard input, or overwrite confirmation.
+- Default to one focused question per `ask_user` call. Ask two tightly related questions together only when the answers are inseparable.
+- For concrete tradeoffs, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
+- When the user is already giving useful freeform context, let them finish in normal conversation and only return to `ask_user` for the next focused clarification.
+- Do not dump multiple unresolved discovery questions into a single assistant message when `ask_user` would fit better.
+
 Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
@@ -18,7 +25,7 @@ Follow this flow exactly:
    - `workflow.research_before_questions=true`: inspect relevant local discovery/codebase artifacts before asking the user to choose between options
 7. Read the current phase's existing artifacts through `mcp_blueprint_blueprint_phase_artifact_read` and inspect any saved checkpoint through `mcp_blueprint_blueprint_phase_checkpoint_get`.
 8. If `XX-CONTEXT.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default.
-9. If a checkpoint exists and the user has not explicitly asked to discard it, prefer resuming from that checkpoint instead of starting over.
+9. If a checkpoint exists and the user has not explicitly asked to discard it, prefer resuming from that checkpoint instead of starting over. When you do need user input about resume versus discard, use `ask_user` instead of a plain-text choice list.
 10. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed missing `XX-CONTEXT.md` or `XX-DISCUSSION-LOG.md` files. Do not treat scaffold output as the final artifact content.
 11. Persist the actual context content through `mcp_blueprint_blueprint_phase_artifact_write` with `artifact: "context"`.
 12. Write `XX-DISCUSSION-LOG.md` through `mcp_blueprint_blueprint_phase_artifact_write` with `artifact: "discussion-log"` only when durable audit notes add value beyond the main context artifact.
@@ -30,6 +37,7 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_phase_checkpoint_get`, `mcp_blueprint_blueprint_phase_checkpoint_put`, `mcp_blueprint_blueprint_phase_checkpoint_delete`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
+- Use `ask_user` for interactive overwrite confirmation and focused discovery tradeoffs when a structured choice will help.
 - Capture real phase decisions, not just placeholder headings or scaffold text.
 - Do not claim legacy power mode, batch mode, chain mode, or auto-advance behavior in this runtime.
 - Do not advertise blocked lifecycle commands as runnable; prefer `/blu-progress` when follow-up routing is uncertain.
