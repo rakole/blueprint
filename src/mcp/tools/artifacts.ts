@@ -53,6 +53,10 @@ export const SUPPORTED_SCAFFOLD_ARTIFACTS = [
   ...SUPPORTED_BOOTSTRAP_ARTIFACTS,
   ...CODEBASE_ARTIFACTS
 ] as const;
+const SCAFFOLD_PHASE_ARTIFACT_PATTERN =
+  /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|UI-SPEC))\.md)$/;
+const SCAFFOLD_ARTIFACT_PATH_GUIDANCE =
+  "Use repo-relative Blueprint artifact paths such as `.blueprint/codebase/STACK.md` or `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names like `STACK` and absolute filesystem paths are not supported.";
 
 export type SupportedScaffoldArtifact =
   (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
@@ -1194,7 +1198,22 @@ const artifactScaffoldInputSchema = {
   cwd: z.string().optional(),
   projectName: z.string().optional(),
   overwrite: z.boolean().optional(),
-  artifacts: z.array(z.string()).optional(),
+  artifacts: z
+    .array(
+      z
+        .union([
+          z.enum(SUPPORTED_SCAFFOLD_ARTIFACTS),
+          z
+            .string()
+            .regex(
+              SCAFFOLD_PHASE_ARTIFACT_PATTERN,
+              "Use a repo-relative phase artifact path such as `.blueprint/phases/03-auth/03-CONTEXT.md`."
+            )
+        ])
+        .describe(SCAFFOLD_ARTIFACT_PATH_GUIDANCE)
+    )
+    .optional()
+    .describe(SCAFFOLD_ARTIFACT_PATH_GUIDANCE),
   bootstrapSeed: z
     .object({
       vision: z.string().optional(),
@@ -1345,9 +1364,7 @@ function slugToTitle(value: string): string {
 }
 
 function parsePhaseArtifactRequest(artifact: string): PhaseArtifactRequest | null {
-  const match = artifact.match(
-    /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|UI-SPEC))\.md)$/
-  );
+  const match = artifact.match(SCAFFOLD_PHASE_ARTIFACT_PATTERN);
 
   if (!match) {
     return null;
@@ -2438,7 +2455,9 @@ function normalizeRequestedArtifacts(
       !SUPPORTED_SCAFFOLD_ARTIFACTS.includes(value as SupportedScaffoldArtifact) &&
       !parsePhaseArtifactRequest(value)
     ) {
-      throw new Error(`Unsupported Blueprint artifact requested: ${artifact}`);
+      throw new Error(
+        `Unsupported Blueprint artifact requested: ${artifact}. ${SCAFFOLD_ARTIFACT_PATH_GUIDANCE}`
+      );
     }
 
     return value;
