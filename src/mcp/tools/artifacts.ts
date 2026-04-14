@@ -1923,6 +1923,139 @@ export function validateResearchArtifactContent(content: string): {
   };
 }
 
+function containsReferencedSummaryPath(section: string, summaryPaths: string[]): boolean {
+  const normalizedSection = section.trim();
+
+  if (normalizedSection.length === 0 || summaryPaths.length === 0) {
+    return false;
+  }
+
+  return summaryPaths.some((summaryPath) => {
+    const fileName = summaryPath.split("/").pop() ?? summaryPath;
+    return normalizedSection.includes(summaryPath) || normalizedSection.includes(fileName);
+  });
+}
+
+function validateRequiredMarkdownSections(
+  content: string,
+  artifactLabel: string,
+  headings: readonly string[]
+): string[] {
+  const issues: string[] = [];
+
+  for (const heading of headings) {
+    if (!new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(content)) {
+      issues.push(`${artifactLabel} is missing required section: ${heading}.`);
+      continue;
+    }
+
+    if (extractMarkdownSection(content, heading).trim().length === 0) {
+      issues.push(`${artifactLabel} section ${heading} must not be empty.`);
+    }
+  }
+
+  return issues;
+}
+
+const REQUIRED_VERIFICATION_SECTIONS = [
+  "Validation Summary",
+  "Evidence Reviewed",
+  "Gaps Found",
+  "Suggested Repairs",
+  "Next Safe Action"
+] as const;
+
+export function validateVerificationArtifactContent(
+  content: string,
+  summaryPaths: string[] = []
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!/^# .+ - Verification\s*$/m.test(content)) {
+    issues.push("Verification artifact must start with a '# ... - Verification' heading.");
+  }
+
+  if (!/^\*\*Coverage:\*\*\s*.+$/m.test(content)) {
+    issues.push(
+      "Verification artifact must declare **Coverage:** with a brief summary of the validated summaries or plan slices."
+    );
+  }
+
+  issues.push(
+    ...validateRequiredMarkdownSections(
+      content,
+      "Verification artifact",
+      REQUIRED_VERIFICATION_SECTIONS
+    )
+  );
+
+  const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
+  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+    warnings.push(
+      "Verification artifact should cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
+const REQUIRED_UAT_SECTIONS = [
+  "UAT Summary",
+  "Questions Asked",
+  "Observed Behavior",
+  "Unresolved Gaps",
+  "Follow-Up Fixes",
+  "Next Safe Action"
+] as const;
+
+export function validateUatArtifactContent(
+  content: string,
+  summaryPaths: string[] = []
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!/^# .+ - UAT\s*$/m.test(content)) {
+    issues.push("UAT artifact must start with a '# ... - UAT' heading.");
+  }
+
+  if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
+    issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
+  }
+
+  issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
+
+  const uatSummary = extractMarkdownSection(content, "UAT Summary");
+  const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
+  if (
+    summaryPaths.length > 0 &&
+    !containsReferencedSummaryPath(`${uatSummary}\n${observedBehavior}`, summaryPaths)
+  ) {
+    warnings.push(
+      "UAT artifact should reference at least one saved execution summary path or filename in ## UAT Summary or ## Observed Behavior."
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
 export function validatePlanArtifactContent(
   content: string,
   expectedPhase?: string

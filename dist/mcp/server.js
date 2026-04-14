@@ -16164,6 +16164,83 @@ function validateResearchArtifactContent(content) {
     warnings
   };
 }
+function containsReferencedSummaryPath(section, summaryPaths) {
+  const normalizedSection = section.trim();
+  if (normalizedSection.length === 0 || summaryPaths.length === 0) {
+    return false;
+  }
+  return summaryPaths.some((summaryPath) => {
+    const fileName = summaryPath.split("/").pop() ?? summaryPath;
+    return normalizedSection.includes(summaryPath) || normalizedSection.includes(fileName);
+  });
+}
+function validateRequiredMarkdownSections(content, artifactLabel, headings) {
+  const issues = [];
+  for (const heading of headings) {
+    if (!new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(content)) {
+      issues.push(`${artifactLabel} is missing required section: ${heading}.`);
+      continue;
+    }
+    if (extractMarkdownSection(content, heading).trim().length === 0) {
+      issues.push(`${artifactLabel} section ${heading} must not be empty.`);
+    }
+  }
+  return issues;
+}
+function validateVerificationArtifactContent(content, summaryPaths = []) {
+  const issues = [];
+  const warnings = [];
+  if (!/^# .+ - Verification\s*$/m.test(content)) {
+    issues.push("Verification artifact must start with a '# ... - Verification' heading.");
+  }
+  if (!/^\*\*Coverage:\*\*\s*.+$/m.test(content)) {
+    issues.push(
+      "Verification artifact must declare **Coverage:** with a brief summary of the validated summaries or plan slices."
+    );
+  }
+  issues.push(
+    ...validateRequiredMarkdownSections(
+      content,
+      "Verification artifact",
+      REQUIRED_VERIFICATION_SECTIONS
+    )
+  );
+  const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
+  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+    warnings.push(
+      "Verification artifact should cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    );
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+function validateUatArtifactContent(content, summaryPaths = []) {
+  const issues = [];
+  const warnings = [];
+  if (!/^# .+ - UAT\s*$/m.test(content)) {
+    issues.push("UAT artifact must start with a '# ... - UAT' heading.");
+  }
+  if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
+    issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
+  }
+  issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
+  const uatSummary = extractMarkdownSection(content, "UAT Summary");
+  const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
+  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(`${uatSummary}
+${observedBehavior}`, summaryPaths)) {
+    warnings.push(
+      "UAT artifact should reference at least one saved execution summary path or filename in ## UAT Summary or ## Observed Behavior."
+    );
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
 function validatePlanArtifactContent(content, expectedPhase) {
   const issues = [];
   const warnings = [];
@@ -17365,7 +17442,7 @@ async function blueprintArtifactReportWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, REQUIRED_VERIFICATION_SECTIONS, REQUIRED_UAT_SECTIONS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -17667,6 +17744,21 @@ Generated by \`/blu-map-codebase\`.
       ".blueprint/codebase/INTEGRATIONS.md": "Integrations",
       ".blueprint/codebase/CONCERNS.md": "Concerns"
     };
+    REQUIRED_VERIFICATION_SECTIONS = [
+      "Validation Summary",
+      "Evidence Reviewed",
+      "Gaps Found",
+      "Suggested Repairs",
+      "Next Safe Action"
+    ];
+    REQUIRED_UAT_SECTIONS = [
+      "UAT Summary",
+      "Questions Asked",
+      "Observed Behavior",
+      "Unresolved Gaps",
+      "Follow-Up Fixes",
+      "Next Safe Action"
+    ];
     artifactToolDefinitions = [
       {
         name: "blueprint_artifact_scaffold",
@@ -21589,7 +21681,17 @@ async function blueprintPhaseValidationWrite(args) {
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const normalizedContent = normalizeTextContent3(args.content);
   const exists = await pathExists4(absolutePath);
-  const issues = normalizedContent.trim().length === 0 ? [`${args.artifact} content must not be empty.`] : [];
+  const validation = normalizedContent.trim().length === 0 ? {
+    valid: false,
+    issues: [`${args.artifact} content must not be empty.`],
+    warnings: []
+  } : args.artifact === "verification" ? validateVerificationArtifactContent(
+    normalizedContent,
+    summaryIndex.summaries.map((summary) => summary.path)
+  ) : validateUatArtifactContent(
+    normalizedContent,
+    summaryIndex.summaries.map((summary) => summary.path)
+  );
   const warnings = [];
   if (args.artifact === "uat") {
     const verificationPath = validationArtifactPathFor(resolved, "verification");
@@ -21615,8 +21717,8 @@ async function blueprintPhaseValidationWrite(args) {
         created: false,
         overwritten: false,
         status: "reused",
-        issues,
-        warnings
+        issues: validation.issues,
+        warnings: [...warnings, ...validation.warnings]
       };
     }
     if (!(args.overwrite ?? false)) {
@@ -21625,7 +21727,7 @@ async function blueprintPhaseValidationWrite(args) {
       );
     }
   }
-  if (issues.length > 0) {
+  if (!validation.valid) {
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -21638,8 +21740,8 @@ async function blueprintPhaseValidationWrite(args) {
       created: false,
       overwritten: false,
       status: "invalid",
-      issues,
-      warnings
+      issues: validation.issues,
+      warnings: validation.warnings
     };
   }
   warnings.push(
@@ -21662,8 +21764,8 @@ async function blueprintPhaseValidationWrite(args) {
     created: !exists,
     overwritten: exists,
     status: exists ? "updated" : "created",
-    issues,
-    warnings
+    issues: validation.issues,
+    warnings: [...warnings, ...validation.warnings]
   };
 }
 async function blueprintPhasePlanIndex(args = {}) {
