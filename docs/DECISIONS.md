@@ -11,7 +11,7 @@ This file records the product and architecture decisions that are locked for Blu
    `.planning/` becomes `.blueprint/` in every Blueprint-managed repository.
 
 3. `BP-003` Install model
-   Blueprint is installed as a Gemini CLI extension from GitHub, not by a custom npm installer.
+   Blueprint is installed as a Gemini-family CLI extension from GitHub, not by a custom npm installer.
 
 4. `BP-004` Delivery strategy
    Blueprint started with a docs-first planning pack. Runtime now ships one command at a time on top of those docs, with explicit drift-repair checkpoints when docs and code diverge.
@@ -32,7 +32,7 @@ This file records the product and architecture decisions that are locked for Blu
    Stateful operations are owned by an extension-bundled MCP server. Commands, skills, and agents orchestrate; they do not own persistence logic.
 
 10. `BP-010` Global state boundary
-    Global mutable state is allowed only under `~/.gemini/blueprint/` and only for non-project concerns such as workspace registry, update metadata, and patch registry.
+    Global mutable state is allowed only under the active host CLI home such as `~/.gemini/blueprint/` or `~/.tabnine/blueprint/`, and only for non-project concerns such as workspace registry, update metadata, and patch registry.
 
 11. `BP-011` Project-state ownership
     Project concerns live in `.blueprint/`, including roadmap, state, phases, reports, backlog, todos, notes, codebase mapping, and workstreams.
@@ -47,16 +47,16 @@ This file records the product and architecture decisions that are locked for Blu
     Blueprint will not depend on statusline injection, context-bridge files, or settings mutation for a status bar.
 
 15. `BP-015` No extension self-mutation
-    Blueprint commands do not rewrite the installed extension from inside Gemini.
+    Blueprint commands do not rewrite the installed extension from inside the active host CLI.
 
 16. `BP-016` `update` behavior
-    `/blu-update` is an advisor/checklist command because Gemini extension updates happen outside the active CLI session.
+    `/blu-update` is an advisor/checklist command because host CLI extension updates happen outside the active CLI session.
 
 17. `BP-017` `reapply-patches` behavior
-    `/blu-reapply-patches` uses a global patch registry in `~/.gemini/blueprint/patches/`; it does not patch the installed extension copy directly.
+    `/blu-reapply-patches` uses a global patch registry in the active host's Blueprint home; it does not patch the installed extension copy directly.
 
 18. `BP-018` Workspace strategy
-    `new-workspace` and `remove-workspace` remain supported without `list-workspaces`. The default workspace root is `~/blueprint-workspaces/<name>`, backed by `~/.gemini/blueprint/workspaces.json`.
+    `new-workspace` and `remove-workspace` remain supported without `list-workspaces`. The default workspace root is `~/blueprint-workspaces/<name>`, backed by the active host's workspace registry in its Blueprint home.
 
 19. `BP-019` Workstream scope
     `workstreams` is project-local and stores its state under `.blueprint/workstreams/`.
@@ -77,7 +77,7 @@ This file records the product and architecture decisions that are locked for Blu
     Every retained command must have its own spec in `docs/commands/<name>.md` before code work starts on that command.
 
 25. `BP-025` Config layering and defaults
-    `.blueprint/config.json` is the canonical repo-level Blueprint config and is stored in normalized full form. Optional user defaults live only in `~/.gemini/blueprint/defaults.json`, with effective config precedence of hardcoded defaults, then user defaults, then repo config, then command flags.
+    `.blueprint/config.json` is the canonical repo-level Blueprint config and is stored in normalized full form. Optional user defaults live only in the active host's Blueprint defaults file, with effective config precedence of hardcoded defaults, then user defaults, then repo config, then command flags.
 
 26. `BP-026` Hook config boundary
     Repo config does not enable or disable Blueprint hooks. Hook configuration lives in `hooks/hooks.json`, while `.blueprint/config.json` carries only project workflow, git, safety, and maintenance settings.

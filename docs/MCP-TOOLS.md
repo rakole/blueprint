@@ -151,7 +151,7 @@ These tool names are part of the documented future contract, but they are not re
 ## Path Safety Rules
 
 - All tools operate relative to the repo root or the locked global Blueprint directory.
-- Config tools may read or write only `.blueprint/config.json` and `~/.gemini/blueprint/defaults.json`; they must not create ad hoc config files elsewhere.
+- Config tools may read or write only `.blueprint/config.json` and the active host's Blueprint defaults file; they must not create ad hoc config files elsewhere.
 - Tools must reject path traversal, absolute-path misuse for repo-relative inputs, null bytes, and symlink escapes.
 - Tools should use shared safe parsing with size limits for config, checkpoint, and registry-style JSON inputs.
 - Prompt-boundary-sensitive writes such as reports, phase artifacts, review artifacts, pause handoffs, and capture indexes should be checked through the shared security layer before persistence.

@@ -1,17 +1,17 @@
 # Blueprint
 
-Blueprint is in active implementation as a Gemini CLI extension that rethinks the useful parts of Get Shit Done as a Gemini-native workflow.
+Blueprint is in active implementation as a Gemini-family CLI extension that rethinks the useful parts of Get Shit Done as a host-native workflow for Gemini CLI and Tabnine CLI.
 
 This repository still carries the planning pack that locked the product and architecture, but the live runtime now spans Wave 0, the shipped lifecycle slice (`discuss-phase` through `verify-work`) plus `/blu-add-tests`, governance handoff/resume, the current roadmap-admin slice including the Wave 2 milestone-closeout trio plus `insert-phase`, the shipped Wave 3 capture commands `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`, the shipped Wave 3 lightweight execution commands `/blu-fast` and `/blu-quick`, the shipped Wave 3 debug command `/blu-debug`, and the shipped Wave 4 review, remediation, docs, test-generation, peer-review, review-branch, and shipping commands. Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on April 11, 2026. Phase 3 discovery shipped the same day and remains in parity closeout while runtime routing stays limited to commands whose catalog entry is `implemented`.
 
 ## What Is Locked
 
-- Global install target: `gemini extensions install https://github.com/rakole/blueprint`
+- Global install target: `gemini extensions install https://github.com/rakole/blueprint` or the equivalent Tabnine CLI install flow
 - Brand and namespace: `blueprint`, with a root `/blu` router and direct `/blu-<command>` commands
 - Project state location: `.blueprint/`
-- Global mutable state location: `~/.gemini/blueprint/`
-- Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in `~/.gemini/blueprint/defaults.json`
-- Runtime architecture: Gemini commands, Gemini skills, Gemini subagents, advisory hooks, and an extension-bundled MCP server
+- Global mutable state location: `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI
+- Config layering: normalized repo config in `.blueprint/config.json`, optional user defaults in the active host's Blueprint defaults file
+- Runtime architecture: host CLI commands, Blueprint skills, Blueprint subagents, advisory hooks, and an extension-bundled MCP server
 - Delivery approach: docs-first planning pack first, then granular command-by-command implementation with repair checkpoints when runtime and docs drift
 
 ## Current Status
@@ -54,7 +54,7 @@ Blueprint is intended to install from the public repository:
 gemini extensions install https://github.com/rakole/blueprint
 ```
 
-After install or update, restart Gemini CLI before expecting `/blu` or `/blu-help`
+After install or update, restart the active host CLI before expecting `/blu` or `/blu-help`
 to appear in the active session.
 
 Release and operator verification should always confirm the bundled extension
@@ -67,15 +67,15 @@ shape, not just the source tree:
 5. Clean-home smoke from a temporary home:
    - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions link .`
    - `HOME="$TMPDIR/blueprint-gemini-home" gemini extensions list`
-6. Restart Gemini CLI with that clean home and confirm `/blu` plus `/blu-help`
+6. Restart the active host CLI with that clean home and confirm `/blu` plus `/blu-help`
    load before treating the release candidate as publishable.
 
-`dist/` must be current before publishing because Gemini loads the built MCP
+`dist/` must be current before publishing because the host CLI loads the built MCP
 server and built hooks, not the TypeScript source files directly.
 
 Manifest hardening note: `excludeTools` is intentionally deferred for now. The
 extension should adopt it only after a focused compatibility pass proves the
-restricted tool surface will not break shipped command flows or Gemini's own
+restricted tool surface will not break shipped command flows or the host CLI's own
 runtime expectations.
 
 ## Retained Commands

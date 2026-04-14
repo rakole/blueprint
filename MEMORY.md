@@ -26,6 +26,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 
 - Blueprint uses MCP as the deterministic state engine for structured reads and writes
 - Shared runtime hardening now lives under `src/shared/security.ts`, with MCP helpers consuming it for path containment, safe JSON parsing, prompt-boundary checks, and identifier validation
+- Blueprint now supports Gemini CLI and Tabnine CLI as two hosts for one shared runtime; host identity is injected at extension launch time and the MCP layer derives host-global Blueprint paths from that runtime context
 - Commands own UX and routing
 - Skills own orchestration
 - Agents own bounded deep work
@@ -53,6 +54,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Every Blueprint-managed repo or workspace gets its own `.blueprint/`
 - `.blueprint/` holds project truth such as `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, phase artifacts, backlog, todos, notes, reports, codebase docs, and workstreams
 - `~/.gemini/blueprint/` holds only cross-project operational data such as:
+- host-global Blueprint state lives under the active CLI home, currently `~/.gemini/blueprint/` for Gemini and `~/.tabnine/blueprint/` for Tabnine
 - workspace registry
 - update metadata
 - patch registry

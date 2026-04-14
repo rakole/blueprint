@@ -2,7 +2,7 @@
 
 ## Goal
 
-Blueprint is a Gemini-native extension that keeps the command-driven methodology where it is useful, but re-implements runtime ownership around Gemini commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
+Blueprint is a host-native extension that keeps the command-driven methodology where it is useful, but re-implements runtime ownership around host CLI commands, skills, advisory hooks, and MCP tools instead of installer-managed scripts.
 
 The live runtime currently ships:
 
@@ -28,7 +28,9 @@ Current source tree:
 ```text
 blueprint/
   gemini-extension.json
+  tabnine-extension.json
   GEMINI.md
+  TABNINE.md
   commands/
     blu.toml
     blu/
@@ -72,7 +74,7 @@ Planned later runtime surfaces, not registered today:
 ### 2. Skills
 
 - Skills hold orchestration rules for command families.
-- Gemini discovers shipped skills from `skills/<name>/SKILL.md`.
+- The active host CLI discovers shipped skills from `skills/<name>/SKILL.md`.
 - Legacy flat `skills/*.md` mirrors may remain in the repo during repair, but they are not runtime handles and must not be referenced as activation paths.
 - The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-capture`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, `blueprint-debug`, `blueprint-docs`, `blueprint-review`, `blueprint-roadmap-admin`, and `blueprint-maintenance`.
 - Planned skill families stay documented but non-routable until their commands actually ship.
@@ -81,7 +83,7 @@ Planned later runtime surfaces, not registered today:
 
 - Agents handle bounded deep work: project bootstrap research, codebase mapping, phase research, UI design, planning, execution, and verification.
 - They are optional bounded helpers, not an alternate persistence layer.
-- Gemini loads shipped agent contracts from `agents/*.md`, keyed by agent frontmatter metadata rather than repo file paths mentioned in prompts.
+- The active host CLI loads shipped agent contracts from `agents/*.md`, keyed by agent frontmatter metadata rather than repo file paths mentioned in prompts.
 - The currently shipped contract files cover `blueprint-project-researcher`, `blueprint-roadmapper`, `blueprint-mapper`, `blueprint-researcher`, `blueprint-ui-designer`, `blueprint-planner`, `blueprint-checker`, `blueprint-executor`, and `blueprint-verifier`.
 
 ### 4. MCP Server
@@ -95,7 +97,7 @@ Planned later runtime surfaces, not registered today:
 ### 5. Hooks
 
 - Blueprint ships three advisory hooks: `read-before-edit`, `.blueprint` write guard, and `workflow advisory`.
-- Hook source lives under `src/hooks/`; Gemini consumes the built commands listed in `hooks/hooks.json`.
+- Hook source lives under `src/hooks/`; the active host CLI consumes the built commands listed in `hooks/hooks.json`.
 - Hooks are advisory only. They may reuse the shared security detectors for consistency, but they do not become a hidden state engine or permission system.
 
 ## Command Dispatch Model
@@ -103,7 +105,7 @@ Planned later runtime surfaces, not registered today:
 ### Direct command
 
 - User calls `/blu-plan-phase 3`.
-- Gemini loads the command file.
+- The active host CLI loads the command file.
 - The command invokes the matching Blueprint skill by canonical skill name and documented MCP tools.
 - Optional bounded agents are used only where the command contract calls for them.
 
@@ -132,14 +134,14 @@ Lives in `.blueprint/`:
 
 ### Global state
 
-Lives in `~/.gemini/blueprint/`:
+Lives in the active host CLI home, such as `~/.gemini/blueprint/` or `~/.tabnine/blueprint/`:
 
 - `defaults.json`
 - `workspaces.json`
 - `updates/`
 - `patches/`
 
-Global state is intentionally narrow. Blueprint should not quietly accumulate project-like data outside the repo, and the only config layer outside the repo is the user-defaults file at `~/.gemini/blueprint/defaults.json`.
+Global state is intentionally narrow. Blueprint should not quietly accumulate project-like data outside the repo, and the only config layer outside the repo is the active host's Blueprint defaults file.
 
 ## Routing And Exposure Rules
 
@@ -154,9 +156,9 @@ Global state is intentionally narrow. Blueprint should not quietly accumulate pr
 
 The planning pack lands before new command surfaces, and runtime expansion pauses when drift repair is required.
 
-### 2. Gemini-native, not transliterated
+### 2. Host-native, not transliterated
 
-Blueprint is allowed to diverge from earlier planning assumptions where Gemini CLI or extension constraints differ:
+Blueprint is allowed to diverge from earlier planning assumptions where host CLI or extension constraints differ:
 
 - no installer-managed runtime conversion
 - no slash-command chaining assumption

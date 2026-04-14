@@ -8,7 +8,11 @@
       "command": "node",
       "args": [
         "${extensionPath}/dist/mcp/server.js"
-      ]
+      ],
+      "env": {
+        "BLUEPRINT_HOST": "gemini",
+        "BLUEPRINT_EXTENSION_PATH": "${extensionPath}"
+      }
     }
   }
 }

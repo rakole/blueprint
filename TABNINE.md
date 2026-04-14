@@ -12,7 +12,7 @@ Use direct commands in the /blu-<command> namespace when the user already knows 
 Current shipped direct commands: /blu-new-project, /blu-settings, /blu-set-profile, /blu-help, /blu-progress, /blu-health, /blu-map-codebase, /blu-discuss-phase, /blu-list-phase-assumptions, /blu-research-phase, /blu-ui-phase, /blu-plan-phase, /blu-execute-phase, /blu-validate-phase, /blu-verify-work, /blu-add-tests, /blu-fast, /blu-quick, /blu-debug, /blu-next, /blu-pause-work, /blu-resume-work, /blu-add-phase, /blu-insert-phase, /blu-remove-phase, /blu-plan-milestone-gaps, /blu-audit-milestone, /blu-complete-milestone, /blu-milestone-summary, /blu-new-milestone, /blu-note, /blu-add-todo, /blu-check-todos, /blu-add-backlog, /blu-review-backlog, /blu-explore, /blu-docs-update, /blu-code-review, /blu-code-review-fix, /blu-audit-fix, /blu-secure-phase, /blu-review, /blu-ui-review, /blu-pr-branch, /blu-ship, and /blu-cleanup.
 State Boundaries
 Project-local Blueprint state lives in .blueprint/.
-Global operational Blueprint state lives in ~/.gemini/blueprint/.
+Global operational Blueprint state lives in ~/.tabnine/blueprint/.
 .planning/ is not Blueprint runtime state and must not be used for shipped command persistence. It may still exist in this repo as implementation bookkeeping for the Blueprint build-out.
 Current Runtime Surface
 /blu-new-project bootstraps deterministic .blueprint/ artifacts and normalized repo config.
@@ -62,8 +62,8 @@ Mutation Rules
 Commands own UX and routing.
 MCP tools own persistent reads and writes.
 Do not create or mutate Blueprint artifacts through prompt-only prose when an MCP tool is responsible for the change.
-When you need to name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form mcp_blueprint_<toolName>.
-Never try to reach Blueprint MCP tools through shell wrappers such as mcp use ..., blueprint-mcp ..., or ad-hoc node -e SDK scripts. If a Blueprint MCP tool is unavailable, say the Blueprint MCP server is disconnected or undiscovered and ask the user to check /mcp or restart Gemini CLI.
+When you need to name a Blueprint MCP tool explicitly in Tabnine CLI, use the runtime FQN form mcp_blueprint_<toolName>.
+Never try to reach Blueprint MCP tools through shell wrappers such as mcp use ..., blueprint-mcp ..., or ad-hoc node -e SDK scripts. If a Blueprint MCP tool is unavailable, say the Blueprint MCP server is disconnected or undiscovered and ask the user to check /mcp or restart Tabnine CLI.
 Router Guidance
 Prefer safe inline routing when user intent is clear.
 Recommend the best direct /blu-<command> entrypoint when intent is ambiguous or the next action is risky.
