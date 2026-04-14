@@ -283,7 +283,19 @@ export declare const artifactToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         projectName: z.ZodOptional<z.ZodString>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
-        artifacts: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        artifacts: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodEnum<{
+            ".blueprint/PROJECT.md": ".blueprint/PROJECT.md";
+            ".blueprint/REQUIREMENTS.md": ".blueprint/REQUIREMENTS.md";
+            ".blueprint/ROADMAP.md": ".blueprint/ROADMAP.md";
+            ".blueprint/phases/": ".blueprint/phases/";
+            ".blueprint/codebase/STACK.md": ".blueprint/codebase/STACK.md";
+            ".blueprint/codebase/ARCHITECTURE.md": ".blueprint/codebase/ARCHITECTURE.md";
+            ".blueprint/codebase/STRUCTURE.md": ".blueprint/codebase/STRUCTURE.md";
+            ".blueprint/codebase/CONVENTIONS.md": ".blueprint/codebase/CONVENTIONS.md";
+            ".blueprint/codebase/TESTING.md": ".blueprint/codebase/TESTING.md";
+            ".blueprint/codebase/INTEGRATIONS.md": ".blueprint/codebase/INTEGRATIONS.md";
+            ".blueprint/codebase/CONCERNS.md": ".blueprint/codebase/CONCERNS.md";
+        }>, z.ZodString]>>>;
         bootstrapSeed: z.ZodOptional<z.ZodObject<{
             vision: z.ZodOptional<z.ZodString>;
             audience: z.ZodOptional<z.ZodObject<{
