@@ -168,6 +168,18 @@ type CurrentPhaseArtifactStatus = {
   warnings: string[];
 };
 
+type RoadmapPhaseSignal = {
+  phaseNumber: string;
+  completed: boolean;
+};
+
+type MilestoneEvidenceStatus = {
+  missingVerificationPhases: string[];
+  missingUatPhases: string[];
+  blockingPhase: string | null;
+  allCompletedPhasesReady: boolean;
+};
+
 type BootstrapRoutingSignals = {
   brownfieldDetected: boolean;
   codebaseMapped: boolean;
@@ -806,34 +818,78 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
   currentMilestone: string | null;
   currentPhase: string | null;
   allPhasesComplete: boolean;
+  phases: RoadmapPhaseSignal[];
 }> {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
 
   try {
     const raw = await fs.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
-    const phaseMatches = [
-      ...raw.matchAll(/^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm)
-    ];
+    const phases = [...raw.matchAll(
+      /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
+    )].map((match) => ({
+      phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
+      completed: match[1].toLowerCase() === "x"
+    }));
     const currentPhase =
-      phaseMatches.find((match) => match[1] === " ")?.[2] ??
-      phaseMatches.at(-1)?.[2] ??
+      phases.find((phase) => !phase.completed)?.phaseNumber ??
+      phases.at(-1)?.phaseNumber ??
       null;
 
     return {
       currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
       currentPhase,
       allPhasesComplete:
-        phaseMatches.length > 0 &&
-        phaseMatches.every((match) => match[1].toLowerCase() === "x")
+        phases.length > 0 &&
+        phases.every((phase) => phase.completed),
+      phases
     };
   } catch {
     return {
       currentMilestone: null,
       currentPhase: null,
-      allPhasesComplete: false
+      allPhasesComplete: false,
+      phases: []
     };
   }
+}
+
+function inspectMilestoneEvidence(
+  phaseArtifacts: string[],
+  phases: RoadmapPhaseSignal[]
+): MilestoneEvidenceStatus {
+  const missingVerificationPhases: string[] = [];
+  const missingUatPhases: string[] = [];
+
+  for (const phase of phases) {
+    if (!phase.completed) {
+      continue;
+    }
+
+    const phasePrefix = formatBlueprintPhasePrefix(phase.phaseNumber);
+    const hasVerification = phaseArtifacts.some((artifact) =>
+      artifact.endsWith(`/${phasePrefix}-VERIFICATION.md`)
+    );
+    const hasUat = phaseArtifacts.some((artifact) =>
+      artifact.endsWith(`/${phasePrefix}-UAT.md`)
+    );
+
+    if (!hasVerification) {
+      missingVerificationPhases.push(phase.phaseNumber);
+    }
+
+    if (!hasUat) {
+      missingUatPhases.push(phase.phaseNumber);
+    }
+  }
+
+  return {
+    missingVerificationPhases,
+    missingUatPhases,
+    blockingPhase: missingVerificationPhases[0] ?? missingUatPhases[0] ?? null,
+    allCompletedPhasesReady:
+      missingVerificationPhases.length === 0 && missingUatPhases.length === 0
+  };
 }
 
 async function deriveNextAction(args: {
@@ -846,6 +902,7 @@ async function deriveNextAction(args: {
   hasMilestoneCompletion: boolean;
   hasMilestoneSummary: boolean;
   phaseArtifacts: CurrentPhaseArtifactStatus;
+  milestoneEvidence: MilestoneEvidenceStatus;
   bootstrapRouting: BootstrapRoutingSignals;
   workflow: WorkflowRoutingSignals;
 }): Promise<string> {
@@ -955,8 +1012,24 @@ async function deriveNextAction(args: {
 
   if (
     args.allPhasesComplete &&
-    args.phaseArtifacts.hasVerification &&
-    args.phaseArtifacts.hasUat &&
+    args.milestoneEvidence.missingVerificationPhases.length > 0 &&
+    implementedCommands.has(validatePhaseCommand)
+  ) {
+    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.missingVerificationPhases.length === 0 &&
+    args.milestoneEvidence.missingUatPhases.length > 0 &&
+    implementedCommands.has(verifyWorkCommand)
+  ) {
+    return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
     !args.hasMilestoneAudit &&
     implementedCommands.has(auditMilestoneCommand)
   ) {
@@ -967,8 +1040,7 @@ async function deriveNextAction(args: {
 
   if (
     args.allPhasesComplete &&
-    args.phaseArtifacts.hasVerification &&
-    args.phaseArtifacts.hasUat &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
     args.hasMilestoneAudit &&
     !args.hasMilestoneCompletion &&
     implementedCommands.has(completeMilestoneCommand)
@@ -980,8 +1052,7 @@ async function deriveNextAction(args: {
 
   if (
     args.allPhasesComplete &&
-    args.phaseArtifacts.hasVerification &&
-    args.phaseArtifacts.hasUat &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
     args.hasMilestoneAudit &&
     args.hasMilestoneCompletion &&
     !args.hasMilestoneSummary &&
@@ -994,8 +1065,7 @@ async function deriveNextAction(args: {
 
   if (
     args.allPhasesComplete &&
-    args.phaseArtifacts.hasVerification &&
-    args.phaseArtifacts.hasUat &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
     args.hasMilestoneAudit &&
     args.hasMilestoneCompletion &&
     args.hasMilestoneSummary &&
@@ -1061,6 +1131,10 @@ async function buildSyncedState(projectRoot: string): Promise<{
     projectRoot,
     inspection.phases,
     currentPhase
+  );
+  const milestoneEvidence = inspectMilestoneEvidence(
+    inspection.phases,
+    roadmapSignals.phases
   );
   const bootstrapRouting: BootstrapRoutingSignals = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
@@ -1134,6 +1208,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
                 milestoneSummaryReportPath !== null &&
                 inspection.reports.includes(milestoneSummaryReportPath),
               phaseArtifacts: currentPhaseArtifacts,
+              milestoneEvidence,
               bootstrapRouting,
               workflow: workflowRouting
             }),
