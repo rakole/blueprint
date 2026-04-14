@@ -15,6 +15,10 @@ import {
   resolveBlueprintSkillPath
 } from "../src/mcp/runtime-vocabulary.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import {
+  shippedExtensionHosts,
+  type ExtensionHost
+} from "./helpers/extension-hosts.ts";
 
 const repoRoot = process.cwd();
 const execFileAsync = promisify(execFile);
@@ -102,7 +106,7 @@ async function assertGitTracksPath(relativePath: string): Promise<void> {
     });
   } catch {
     assert.fail(
-      `${relativePath} must be tracked because Git-installed Gemini extensions do not build Blueprint before launching runtime entrypoints.`
+      `${relativePath} must be tracked because Git-installed Blueprint extension hosts do not build runtime entrypoints before launching them.`
     );
   }
 }
@@ -168,28 +172,14 @@ function stripRuntimeToolFqns(markdown: string): string {
   return markdown.replace(/`mcp_blueprint_blueprint_[a-z0-9_]+`/g, "`<runtime-tool>`");
 }
 
-test("gemini extension discovery points at the built Blueprint MCP server", async () => {
-  const raw = await readRelativePath("gemini-extension.json");
-  const manifest = JSON.parse(raw) as {
-    name: string;
-    description: string;
-    contextFileName: string;
-    mcpServers?: {
-      blueprint?: {
-        command?: string;
-        args?: string[];
-      };
-    };
-  };
+test("host extension discovery manifests point at the built Blueprint MCP server", async () => {
+  const hosts = await shippedExtensionHosts(repoRoot);
 
-  assert.equal(manifest.name, "blueprint");
-  assert.equal(manifest.contextFileName, "GEMINI.md");
-  assert.match(manifest.description, /Blueprint/i);
-  assert.doesNotMatch(manifest.description, /scaffold/i);
-  assert.equal(manifest.mcpServers?.blueprint?.command, "node");
-  assert.deepEqual(manifest.mcpServers?.blueprint?.args, [
-    "${extensionPath}/dist/mcp/server.js"
-  ]);
+  assert.ok(hosts.length > 0, "At least one extension host manifest should ship");
+
+  for (const host of hosts) {
+    await assertHostManifest(host);
+  }
 });
 
 test("git-installed extension bundle includes the built runtime assets", async () => {
@@ -312,7 +302,7 @@ test("new-project manifest forbids shell execution and tool-name drift", async (
 
   assert.match(
     raw,
-    /When you name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form `mcp_blueprint_<toolName>`\./
+    /When you name a Blueprint MCP tool explicitly in the active host CLI, use the runtime FQN form `mcp_blueprint_<toolName>`\./
   );
   assert.match(
     raw,
@@ -328,7 +318,7 @@ test("new-project manifest forbids shell execution and tool-name drift", async (
   );
   assert.match(
     raw,
-    /do not run `\/blu-new-project` in the shell; it is a Gemini slash command, not a shell executable\./i
+    /do not run `\/blu-new-project` in the shell; it is a host CLI slash command, not a shell executable\./i
   );
 });
 
@@ -344,15 +334,16 @@ test("shipped direct commands no longer include deprecated compatibility manifes
 });
 
 test("active docs and runtime prompts do not mention colon-form direct commands", async () => {
+  const hosts = await shippedExtensionHosts(repoRoot);
   const paths = [
     "README.md",
-    "GEMINI.md",
     "AGENTS.md",
     "MEMORY.md",
     "commands/blu.toml",
     "docs/ARCHITECTURE.md",
     "docs/DECISIONS.md",
     "skills/blueprint-router/SKILL.md",
+    ...hosts.map((host) => host.contextFile),
     ...(await activeCommandDocs())
   ];
 
@@ -366,3 +357,44 @@ test("active docs and runtime prompts do not mention colon-form direct commands"
     );
   }
 });
+
+async function assertHostManifest(host: ExtensionHost): Promise<void> {
+  const raw = await readRelativePath(host.manifestFile);
+  const manifest = JSON.parse(raw) as {
+    name: string;
+    description: string;
+    contextFileName: string;
+    mcpServers?: {
+      blueprint?: {
+        command?: string;
+        args?: string[];
+        env?: Record<string, string>;
+      };
+    };
+  };
+
+  assert.equal(manifest.name, "blueprint");
+  assert.equal(
+    manifest.contextFileName,
+    host.contextFile,
+    `${host.manifestFile} should point at ${host.contextFile}`
+  );
+  assert.match(manifest.description, /Blueprint/i);
+  assert.doesNotMatch(manifest.description, /scaffold/i);
+  assert.equal(manifest.mcpServers?.blueprint?.command, "node");
+  assert.equal(
+    manifest.mcpServers?.blueprint?.args?.[0],
+    "${extensionPath}/dist/mcp/server.js",
+    `${host.manifestFile} should launch the built MCP server from extensionPath`
+  );
+  assert.equal(
+    manifest.mcpServers?.blueprint?.env?.BLUEPRINT_HOST,
+    host.id,
+    `${host.manifestFile} should pass the active Blueprint host into the MCP server`
+  );
+  assert.equal(
+    manifest.mcpServers?.blueprint?.env?.BLUEPRINT_EXTENSION_PATH,
+    "${extensionPath}",
+    `${host.manifestFile} should pass extensionPath into the MCP server`
+  );
+}

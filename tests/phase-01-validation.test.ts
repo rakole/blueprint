@@ -23,6 +23,10 @@ import {
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
+import {
+  shippedExtensionHosts,
+  type ExtensionHost
+} from "./helpers/extension-hosts.ts";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/new-project");
@@ -79,19 +83,14 @@ async function readJsonFile<T>(filePath: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
-test("root router and Gemini context stay aligned with the Phase 1 routing contract", async () => {
+test("root router and shipped host contexts stay aligned with the Phase 1 routing contract", async () => {
   const routerFile = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
-  const geminiFile = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
-  const manifest = await readJsonFile<{
-    name: string;
-    contextFileName: string;
-    mcpServers: Record<string, { command?: string; args?: string[] }>;
-  }>(path.join(repoRoot, "gemini-extension.json"));
   const requiredRouterTools = [
     "blueprint_project_status",
     "blueprint_command_catalog",
     "blueprint_config_get"
   ];
+  const hosts = await shippedExtensionHosts(repoRoot);
 
   for (const toolName of requiredRouterTools) {
     assert.ok(
@@ -103,12 +102,11 @@ test("root router and Gemini context stay aligned with the Phase 1 routing contr
 
   assert.match(routerFile, /slash-command chaining/i);
   assert.match(routerFile, /\/blu-new-project/);
-  assert.match(geminiFile, /\/blu-new-project/);
-  assert.match(geminiFile, /\.blueprint\//);
-  assert.match(geminiFile, /~\/\.gemini\/blueprint\//);
-  assert.equal(manifest.name, "blueprint");
-  assert.equal(manifest.contextFileName, "GEMINI.md");
-  assert.equal(manifest.mcpServers.blueprint.command, "node");
+  assert.ok(hosts.length > 0, "At least one extension host should ship a runtime context");
+
+  for (const host of hosts) {
+    await assertHostRuntimeContract(host);
+  }
 });
 
 test("config_set persists normalized project patches and rejects reserved repo keys", async (t) => {
@@ -221,3 +219,28 @@ test("project status flags partial Blueprint state instead of pretending the rep
   assert.ok(status.health.missingArtifacts.includes(".blueprint/STATE.md"));
   assert.match(status.health.warnings.join("\n"), /partially initialized/i);
 });
+
+async function assertHostRuntimeContract(host: ExtensionHost): Promise<void> {
+  const contextFile = await readFile(path.join(repoRoot, host.contextFile), "utf8");
+  const manifest = await readJsonFile<{
+    name: string;
+    contextFileName: string;
+    mcpServers: Record<string, { command?: string; args?: string[] }>;
+  }>(path.join(repoRoot, host.manifestFile));
+
+  assert.match(
+    contextFile,
+    /\/blu-new-project/,
+    `${host.contextFile} should advertise the new-project entrypoint`
+  );
+  assert.match(contextFile, /\.blueprint\//);
+  assert.match(
+    contextFile,
+    new RegExp(host.globalBlueprintRoot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    `${host.contextFile} should point at ${host.globalBlueprintRoot}`
+  );
+  assert.equal(manifest.name, "blueprint");
+  assert.equal(manifest.contextFileName, host.contextFile);
+  assert.equal(manifest.mcpServers.blueprint.command, "node");
+  assert.equal(manifest.mcpServers.blueprint.args?.[0], "${extensionPath}/dist/mcp/server.js");
+}

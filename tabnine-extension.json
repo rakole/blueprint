@@ -2,13 +2,17 @@
   "name": "blueprint",
   "description": "Tabnine CLI extension for Blueprint's command-driven repository planning, execution, and milestone workflows.",
   "version": "0.1.0",
-  "contextFileName": "GEMINI.md",
+  "contextFileName": "TABNINE.md",
   "mcpServers": {
     "blueprint": {
       "command": "node",
       "args": [
         "${extensionPath}/dist/mcp/server.js"
-      ]
+      ],
+      "env": {
+        "BLUEPRINT_HOST": "tabnine",
+        "BLUEPRINT_EXTENSION_PATH": "${extensionPath}"
+      }
     }
   }
 }

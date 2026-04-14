@@ -7,17 +7,22 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
+import {
+  extensionHostPath,
+  getExtensionHost
+} from "./lib/extension-hosts.mjs";
+
 const EXTENSION_NAME = "blueprint";
 
 function usage(exitCode = 0) {
   const text = `
 Usage:
-  node scripts/gemini-clean-home-smoke.mjs [--repo PATH] [--home PATH] [--gemini PATH] [--keep-home]
+  node scripts/gemini-clean-home-smoke.mjs [--host gemini|tabnine] [--repo PATH] [--home PATH] [--cli PATH] [--keep-home]
 
-Runs a repeatable clean-home Gemini CLI smoke flow for the Blueprint extension:
-  1. gemini extensions validate <repo> --debug
-  2. HOME=<clean> gemini extensions link <repo> --consent
-  3. HOME=<clean> gemini extensions list --output-format json
+Runs a repeatable clean-home Blueprint smoke flow for the selected CLI host:
+  1. <host-cli> extensions validate <repo> --debug
+  2. HOME=<clean> <host-cli> extensions link <repo> --consent
+  3. HOME=<clean> <host-cli> extensions list --output-format json
 `;
 
   const stream = exitCode === 0 ? process.stdout : process.stderr;
@@ -67,12 +72,23 @@ function resolvePath(value, fallback) {
   return path.resolve(fallback);
 }
 
-function resolveGeminiBinary(args) {
-  if (typeof args.gemini === "string" && args.gemini.trim().length > 0) {
-    return args.gemini.trim();
+function resolveCliBinary(args, host) {
+  const explicitBinary =
+    typeof args.cli === "string" && args.cli.trim().length > 0
+      ? args.cli.trim()
+      : typeof args[host.id] === "string" && args[host.id].trim().length > 0
+        ? args[host.id].trim()
+        : host.id === "gemini" &&
+            typeof args.gemini === "string" &&
+            args.gemini.trim().length > 0
+          ? args.gemini.trim()
+          : undefined;
+
+  if (explicitBinary) {
+    return explicitBinary;
   }
 
-  return "gemini";
+  return host.binaryName;
 }
 
 function buildCleanHomeEnv(homeRoot) {
@@ -86,13 +102,13 @@ function buildCleanHomeEnv(homeRoot) {
   };
 }
 
-async function ensureRepoLooksRunnable(repoRoot) {
-  await access(path.join(repoRoot, "gemini-extension.json"));
+async function ensureRepoLooksRunnable(repoRoot, host) {
+  await access(path.join(repoRoot, host.manifestFile));
   await access(path.join(repoRoot, "dist", "mcp", "server.js"));
 }
 
-async function prepareCleanHome(homeRoot) {
-  await mkdir(path.join(homeRoot, ".gemini"), { recursive: true });
+async function prepareCleanHome(homeRoot, host) {
+  await mkdir(extensionHostPath(homeRoot, host), { recursive: true });
   await mkdir(path.join(homeRoot, ".config"), { recursive: true });
   await mkdir(path.join(homeRoot, ".cache"), { recursive: true });
   await mkdir(path.join(homeRoot, ".local", "state"), { recursive: true });
@@ -152,24 +168,24 @@ function hasPtyWrapper() {
   return !probe.error && probe.status === 0;
 }
 
-function extractJsonArray(raw) {
+function extractJsonArray(raw, host) {
   const start = raw.indexOf("[");
   const end = raw.lastIndexOf("]");
 
   if (start === -1 || end === -1 || end < start) {
     throw new Error(
-      "gemini extensions list did not return a JSON array. Re-run the smoke with a TTY-capable environment."
+      `${host.binaryName} extensions list did not return a JSON array. Re-run the smoke with a TTY-capable environment.`
     );
   }
 
   return raw.slice(start, end + 1);
 }
 
-function verifyListedExtension(listOutput, repoRoot) {
-  const payload = JSON.parse(extractJsonArray(listOutput));
+function verifyListedExtension(listOutput, repoRoot, host) {
+  const payload = JSON.parse(extractJsonArray(listOutput, host));
 
   if (!Array.isArray(payload)) {
-    throw new Error("gemini extensions list JSON payload was not an array.");
+    throw new Error(`${host.binaryName} extensions list JSON payload was not an array.`);
   }
 
   const match = payload.find((entry) => {
@@ -183,7 +199,7 @@ function verifyListedExtension(listOutput, repoRoot) {
 
   if (!match) {
     throw new Error(
-      `gemini extensions list did not report ${EXTENSION_NAME} at ${repoRoot}.`
+      `${host.binaryName} extensions list did not report ${EXTENSION_NAME} at ${repoRoot}.`
     );
   }
 
@@ -192,51 +208,53 @@ function verifyListedExtension(listOutput, repoRoot) {
 
 async function runSmoke(args) {
   const repoRoot = resolvePath(args.repo, process.cwd());
-  const gemini = resolveGeminiBinary(args);
+  const host = getExtensionHost(args.host);
+  const cliBinary = resolveCliBinary(args, host);
   const explicitHome = typeof args.home === "string" && args.home.trim().length > 0;
   const homeRoot = explicitHome
     ? resolvePath(args.home, process.cwd())
-    : await mkdtemp(path.join(os.tmpdir(), "blueprint-gemini-home-"));
+    : await mkdtemp(path.join(os.tmpdir(), `blueprint-${host.id}-home-`));
   const keepHome = Boolean(args["keep-home"]);
   const cleanHomeEnv = buildCleanHomeEnv(homeRoot);
   let succeeded = false;
 
-  await ensureRepoLooksRunnable(repoRoot);
-  await prepareCleanHome(homeRoot);
+  await ensureRepoLooksRunnable(repoRoot, host);
+  await prepareCleanHome(homeRoot, host);
 
   process.stdout.write(`Repo: ${repoRoot}\n`);
-  process.stdout.write(`Gemini binary: ${gemini}\n`);
-  process.stdout.write(`Clean Gemini home: ${homeRoot}\n`);
+  process.stdout.write(`Host: ${host.displayName}\n`);
+  process.stdout.write(`CLI binary: ${cliBinary}\n`);
+  process.stdout.write(`Clean host home: ${homeRoot}\n`);
 
   try {
-    runCommand(gemini, ["extensions", "validate", repoRoot, "--debug"], {
+    runCommand(cliBinary, ["extensions", "validate", repoRoot, "--debug"], {
       cwd: repoRoot
     });
 
-    runCommand(gemini, ["extensions", "link", repoRoot, "--consent"], {
+    runCommand(cliBinary, ["extensions", "link", repoRoot, "--consent"], {
       cwd: repoRoot,
       env: cleanHomeEnv
     });
 
-    await access(path.join(homeRoot, ".gemini", "extensions", EXTENSION_NAME));
+    await access(extensionHostPath(homeRoot, host, "extensions", EXTENSION_NAME));
 
     const listCommand = ["extensions", "list", "--output-format", "json"];
     const listOutput = hasPtyWrapper()
-      ? runCommand("script", ["-q", "/dev/null", gemini, ...listCommand], {
+      ? runCommand("script", ["-q", "/dev/null", cliBinary, ...listCommand], {
           cwd: repoRoot,
           env: cleanHomeEnv,
           inheritStdin: true
         })
-      : runCommand(gemini, listCommand, {
+      : runCommand(cliBinary, listCommand, {
           cwd: repoRoot,
           env: cleanHomeEnv
         });
 
-    verifyListedExtension(listOutput, repoRoot);
+    verifyListedExtension(listOutput, repoRoot, host);
     succeeded = true;
 
     process.stdout.write(
-      `\nBlueprint clean-home smoke passed for ${repoRoot}.\n`
+      `\nBlueprint ${host.id} clean-home smoke passed for ${repoRoot}.\n`
     );
   } finally {
     if (!explicitHome && !keepHome && succeeded) {

@@ -14,20 +14,24 @@ import os from "node:os";
 import path from "node:path";
 
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
+import {
+  extensionHomePath,
+  extensionHosts,
+  type ExtensionHost
+} from "./helpers/extension-hosts.ts";
 
 const repoRoot = process.cwd();
 const liveGeminiApiKey = process.env.GEMINI_API_KEY ?? null;
 
 const shippedPaths = [
-  "gemini-extension.json",
-  "GEMINI.md",
+  ...extensionHosts.flatMap((host) => [host.manifestFile, host.contextFile]),
   "commands",
   "skills",
   "agents",
   "hooks",
   "dist",
   "package.json"
-] as const;
+];
 
 const excludedStagePaths = [
   "src",
@@ -37,8 +41,7 @@ const excludedStagePaths = [
 ] as const;
 
 const requiredInstalledPaths = [
-  "gemini-extension.json",
-  "GEMINI.md",
+  ...extensionHosts.flatMap((host) => [host.manifestFile, host.contextFile]),
   "commands/blu.toml",
   "commands/blu-help.toml",
   "skills/blueprint-router/SKILL.md",
@@ -49,7 +52,7 @@ const requiredInstalledPaths = [
   "dist/hooks/blueprint-write-guard.js",
   "dist/hooks/workflow-advisory.js",
   "package.json"
-] as const;
+];
 
 type ExecContext = {
   allowedExitCodes?: number[];
@@ -187,21 +190,53 @@ async function execInContainer(
   };
 }
 
-async function installGeminiCli(container: StartedTestContainer): Promise<void> {
+function resolveHostCliInstallCommand(host: ExtensionHost): string | null {
+  if (host.id === "gemini") {
+    return "npm install -g @google/gemini-cli";
+  }
+
+  return process.env.BLUEPRINT_TABNINE_CLI_INSTALL_COMMAND ?? null;
+}
+
+function hostSmokeSkipReason(host: ExtensionHost): string | false {
+  const installCommand = resolveHostCliInstallCommand(host);
+
+  if (installCommand) {
+    return false;
+  }
+
+  if (host.id === "tabnine") {
+    return "Set BLUEPRINT_TABNINE_CLI_INSTALL_COMMAND to enable Tabnine integration smoke.";
+  }
+
+  return `No install command configured for ${host.displayName}.`;
+}
+
+async function installHostCli(
+  container: StartedTestContainer,
+  host: ExtensionHost
+): Promise<void> {
+  const installCommand = resolveHostCliInstallCommand(host);
+
+  assert.ok(installCommand, `Missing CLI install command for ${host.displayName}`);
+
   await execInContainer(container, {
-    command: "npm install -g @google/gemini-cli"
+    command: installCommand
   });
 
   const version = await execInContainer(container, {
-    command: "gemini --version"
+    command: `${host.binaryName} --version`
   });
 
   assert.match(version.stdout, /\d+\.\d+\.\d+/);
 }
 
-async function validateStagedExtension(container: StartedTestContainer): Promise<void> {
+async function validateStagedExtension(
+  container: StartedTestContainer,
+  host: ExtensionHost
+): Promise<void> {
   await execInContainer(container, {
-    command: "gemini extensions validate /workspace/blueprint"
+    command: `${host.binaryName} extensions validate /workspace/blueprint`
   });
 }
 
@@ -218,6 +253,9 @@ const bundleRoot = process.argv[2];
 const metadataType = process.argv[3];
 const requiredPaths = JSON.parse(process.argv[4]);
 const forbiddenPaths = JSON.parse(process.argv[5]);
+const metadataFiles = JSON.parse(process.argv[6]);
+const manifestFile = process.argv[7];
+const contextFile = process.argv[8];
 
 async function pathExists(targetPath) {
   try {
@@ -248,8 +286,17 @@ assert.equal(
   "Bundle root should be addressable as a directory"
 );
 
-const installMetadataPath = path.join(installRoot, ".gemini-extension-install.json");
-assert.equal(await pathExists(installMetadataPath), true, "Gemini should record install metadata");
+const installMetadataPath = (await Promise.all(
+  metadataFiles.map(async (relativePath) => {
+    const candidatePath = path.join(installRoot, relativePath);
+    return (await pathExists(candidatePath)) ? candidatePath : null;
+  })
+)).find(Boolean);
+
+assert.ok(
+  installMetadataPath,
+  \`Expected install metadata inside \${installRoot} under one of: \${metadataFiles.join(", ")}\`
+);
 
 const installMetadata = JSON.parse(await readFile(installMetadataPath, "utf8"));
 assert.equal(installMetadata?.type, metadataType, "Install metadata should match the requested mode");
@@ -270,7 +317,8 @@ for (const relativePath of forbiddenPaths) {
   );
 }
 
-const manifest = JSON.parse(await readFile(path.join(bundleRoot, "gemini-extension.json"), "utf8"));
+const manifest = JSON.parse(await readFile(path.join(bundleRoot, manifestFile), "utf8"));
+assert.equal(manifest?.contextFileName, contextFile, "Active host manifest should point at its host-specific context file");
 const mcpArg = manifest?.mcpServers?.blueprint?.args?.[0] ?? "";
 
 assert.match(mcpArg, /dist[\\\\/]mcp[\\\\/]server\\.js$/);
@@ -315,10 +363,11 @@ console.log(JSON.stringify({
 
 async function assertInstalledBundle(
   container: StartedTestContainer,
+  host: ExtensionHost,
   installMode: "link" | "install",
   homeDir: string
 ): Promise<void> {
-  const installedDir = path.posix.join(homeDir, ".gemini/extensions/blueprint");
+  const installedDir = extensionHomePath(homeDir, host, "extensions", "blueprint");
   const bundleDir =
     installMode === "link" ? "/workspace/blueprint" : installedDir;
   const metadataType = installMode === "link" ? "link" : "local";
@@ -333,7 +382,10 @@ async function assertInstalledBundle(
       shellQuote(bundleDir),
       shellQuote(metadataType),
       shellQuote(JSON.stringify(requiredInstalledPaths)),
-      shellQuote(JSON.stringify(excludedStagePaths))
+      shellQuote(JSON.stringify(excludedStagePaths)),
+      shellQuote(JSON.stringify(host.installMetadataFiles)),
+      shellQuote(host.manifestFile),
+      shellQuote(host.contextFile)
     ].join(" "),
     env: {
       HOME: homeDir
@@ -343,17 +395,18 @@ async function assertInstalledBundle(
 
 async function runInstallModeSmoke(
   container: StartedTestContainer,
+  host: ExtensionHost,
   installMode: "link" | "install"
 ): Promise<void> {
-  const homeDir = `/tmp/gemini-home-${installMode}`;
-  const installedDir = path.posix.join(homeDir, ".gemini/extensions/blueprint");
+  const homeDir = `/tmp/${host.id}-home-${installMode}`;
+  const installedDir = extensionHomePath(homeDir, host, "extensions", "blueprint");
   const installCommand =
     installMode === "link"
-      ? "gemini extensions link /workspace/blueprint --consent"
-      : "gemini extensions install /workspace/blueprint --consent";
+      ? `${host.binaryName} extensions link /workspace/blueprint --consent`
+      : `${host.binaryName} extensions install /workspace/blueprint --consent`;
 
   await execInContainer(container, {
-    command: `rm -rf ${shellQuote(homeDir)} && mkdir -p ${shellQuote(homeDir)} ${shellQuote(path.posix.join(homeDir, ".gemini"))}`,
+    command: `rm -rf ${shellQuote(homeDir)} && mkdir -p ${shellQuote(homeDir)} ${shellQuote(extensionHomePath(homeDir, host))}`,
     env: {
       HOME: homeDir
     }
@@ -367,14 +420,14 @@ async function runInstallModeSmoke(
   });
 
   const extensionList = await execInContainer(container, {
-    command: "gemini extensions list",
+    command: `${host.binaryName} extensions list`,
     env: {
       HOME: homeDir
     }
   });
 
   const extensionEnablement = await execInContainer(container, {
-    command: `cat ${shellQuote(path.posix.join(homeDir, ".gemini/extensions/extension-enablement.json"))}`,
+    command: `cat ${shellQuote(extensionHomePath(homeDir, host, "extensions", "extension-enablement.json"))}`,
     env: {
       HOME: homeDir
     }
@@ -387,30 +440,32 @@ async function runInstallModeSmoke(
   );
 
   const debugList = await execInContainer(container, {
-    command: "gemini --debug --list-extensions",
-    // Gemini CLI may require auth before returning a clean exit status even
+    command: `${host.binaryName} --debug --list-extensions`,
+    // Some hosts may require auth before returning a clean exit status even
     // though the debug listing already surfaced the extension paths we need.
     allowedExitCodes: [0, 41],
     env: {
       HOME: homeDir,
-      ...(liveGeminiApiKey ? { GEMINI_API_KEY: liveGeminiApiKey } : {})
+      ...(host.id === "gemini" && liveGeminiApiKey
+        ? { GEMINI_API_KEY: liveGeminiApiKey }
+        : {})
     }
   });
 
   const combinedDebugOutput = `${debugList.stdout}\n${debugList.stderr}`;
   const expectedDebugPath =
     installMode === "install"
-      ? path.posix.join(installedDir, "GEMINI.md")
-      : "/workspace/blueprint/GEMINI.md";
+      ? path.posix.join(installedDir, host.contextFile)
+      : `/workspace/blueprint/${host.contextFile}`;
 
   assert.equal(
     combinedDebugOutput.includes(expectedDebugPath),
     true,
-    `${installMode} mode should surface Blueprint from a fresh Gemini CLI process`
+    `${installMode} mode should surface Blueprint from a fresh ${host.displayName} process`
   );
 
   void extensionList;
-  await assertInstalledBundle(container, installMode, homeDir);
+  await assertInstalledBundle(container, host, installMode, homeDir);
 }
 
 async function runLiveSmoke(container: StartedTestContainer): Promise<void> {
@@ -481,40 +536,58 @@ EOF`,
 }
 
 test(
-  "containerized Gemini CLI smoke validates staged Blueprint installs",
+  "containerized host smoke validates staged Blueprint installs",
   { timeout: 900_000 },
   async (t) => {
     const { stageRoot, extensionDir } = await stageShippedExtension();
-    let container: StartedTestContainer | null = null;
 
     t.after(async () => {
-      if (container) {
-        await container.stop({ remove: true, removeVolumes: true });
-      }
       await rm(stageRoot, { recursive: true, force: true });
     });
 
-    container = await startContainer(extensionDir);
+    for (const host of extensionHosts) {
+      await t.test(
+        `${host.displayName} install smoke`,
+        {
+          skip: hostSmokeSkipReason(host)
+        },
+        async (hostTest) => {
+          const container = await startContainer(extensionDir);
 
-    await installGeminiCli(container);
-    await validateStagedExtension(container);
+          hostTest.after(async () => {
+            await container.stop({ remove: true, removeVolumes: true });
+          });
 
-    await t.test("link mode registers the extension and preserves the shipped bundle", async () => {
-      await runInstallModeSmoke(container, "link");
-    });
+          await installHostCli(container, host);
+          await validateStagedExtension(container, host);
 
-    await t.test("install mode copies the extension and preserves the shipped bundle", async () => {
-      await runInstallModeSmoke(container, "install");
-    });
+          await hostTest.test(
+            "link mode registers the extension and preserves the shipped bundle",
+            async () => {
+              await runInstallModeSmoke(container, host, "link");
+            }
+          );
 
-    await t.test(
-      "auth-backed Gemini smoke validates the installed extension and a real prompt",
-      {
-        skip: liveGeminiApiKey ? false : "GEMINI_API_KEY not set; skipping live Gemini smoke"
-      },
-      async () => {
-        await runLiveSmoke(container);
-      }
-    );
+          await hostTest.test(
+            "install mode copies the extension and preserves the shipped bundle",
+            async () => {
+              await runInstallModeSmoke(container, host, "install");
+            }
+          );
+
+          if (host.id === "gemini") {
+            await hostTest.test(
+              "auth-backed Gemini smoke validates the installed extension and a real prompt",
+              {
+                skip: liveGeminiApiKey ? false : "GEMINI_API_KEY not set; skipping live Gemini smoke"
+              },
+              async () => {
+                await runLiveSmoke(container);
+              }
+            );
+          }
+        }
+      );
+    }
   }
 );

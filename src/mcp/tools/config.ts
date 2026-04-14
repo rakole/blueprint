@@ -1,6 +1,3 @@
-import { homedir } from "node:os";
-import path from "node:path";
-
 import * as z from "zod/v4";
 
 import {
@@ -11,6 +8,7 @@ import {
   toRepoRelativePath,
   writeJsonFile
 } from "./artifacts.js";
+import { getBlueprintRuntimeHost } from "../runtime-host.js";
 import { validateFieldNameSegment } from "../../shared/security.js";
 
 type ConfigScope = "project" | "defaults" | "effective";
@@ -143,70 +141,11 @@ type SeedProjectConfigResult = {
 };
 
 const MODEL_PROFILES = ["quality", "balanced", "budget", "inherit"] as const;
-
-const HARD_CODED_CONFIG: BlueprintConfig = {
-  version: 2,
-  mode: "interactive",
-  granularity: "standard",
-  model_profile: "balanced",
-  project_code: null,
-  phase_naming: "sequential",
-  response_language: null,
-  planning: {
-    commit_docs: true,
-    search_gitignored: false
-  },
-  workflow: {
-    research: true,
-    plan_check: true,
-    verifier: true,
-    nyquist_validation: true,
-    ui_phase: true,
-    ui_safety_gate: true,
-    code_review: true,
-    code_review_depth: "standard",
-    auto_advance: false,
-    research_before_questions: false,
-    discuss_mode: "discuss",
-    skip_discuss: false,
-    use_worktrees: true,
-    subagent_timeout: 300000
-  },
-  parallelization: {
-    enabled: true,
-    plan_level: true,
-    task_level: false,
-    skip_checkpoints: true,
-    max_concurrent_agents: 3,
-    min_plans_for_parallel: 2
-  },
-  git: {
-    branching_strategy: "none",
-    base_branch: null,
-    phase_branch_template: "blu/phase-{phase}-{slug}",
-    milestone_branch_template: "blu/{milestone}-{slug}",
-    quick_branch_template: null
-  },
-  gates: {
-    confirm_project: true,
-    confirm_phases: true,
-    confirm_roadmap: true,
-    confirm_breakdown: true,
-    confirm_plan: true,
-    execute_next_plan: true,
-    issues_review: true,
-    confirm_transition: true
-  },
-  safety: {
-    always_confirm_destructive: true,
-    always_confirm_external_services: true
-  },
-  maintenance: {
-    patch_registry: "~/.gemini/blueprint/patches",
-    workspace_root: "~/blueprint-workspaces"
-  },
-  agent_skills: {}
-};
+const HARD_CODED_CONFIG_VERSION = 2;
+const HOST_DEFAULT_PATCH_REGISTRIES = {
+  gemini: "~/.gemini/blueprint/patches",
+  tabnine: "~/.tabnine/blueprint/patches"
+} as const;
 
 const configGetInputSchema = {
   scope: z.enum(["project", "defaults", "effective"]).optional(),
@@ -236,7 +175,92 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function getDefaultUserConfigPath(defaultsPath?: string): string {
-  return defaultsPath ?? path.join(homedir(), ".gemini/blueprint/defaults.json");
+  return defaultsPath ?? getBlueprintRuntimeHost().defaultsPath;
+}
+
+function getHardCodedConfig(): BlueprintConfig {
+  return {
+    version: HARD_CODED_CONFIG_VERSION,
+    mode: "interactive",
+    granularity: "standard",
+    model_profile: "balanced",
+    project_code: null,
+    phase_naming: "sequential",
+    response_language: null,
+    planning: {
+      commit_docs: true,
+      search_gitignored: false
+    },
+    workflow: {
+      research: true,
+      plan_check: true,
+      verifier: true,
+      nyquist_validation: true,
+      ui_phase: true,
+      ui_safety_gate: true,
+      code_review: true,
+      code_review_depth: "standard",
+      auto_advance: false,
+      research_before_questions: false,
+      discuss_mode: "discuss",
+      skip_discuss: false,
+      use_worktrees: true,
+      subagent_timeout: 300000
+    },
+    parallelization: {
+      enabled: true,
+      plan_level: true,
+      task_level: false,
+      skip_checkpoints: true,
+      max_concurrent_agents: 3,
+      min_plans_for_parallel: 2
+    },
+    git: {
+      branching_strategy: "none",
+      base_branch: null,
+      phase_branch_template: "blu/phase-{phase}-{slug}",
+      milestone_branch_template: "blu/{milestone}-{slug}",
+      quick_branch_template: null
+    },
+    gates: {
+      confirm_project: true,
+      confirm_phases: true,
+      confirm_roadmap: true,
+      confirm_breakdown: true,
+      confirm_plan: true,
+      execute_next_plan: true,
+      issues_review: true,
+      confirm_transition: true
+    },
+    safety: {
+      always_confirm_destructive: true,
+      always_confirm_external_services: true
+    },
+    maintenance: {
+      patch_registry: getBlueprintRuntimeHost().patchRegistryPath,
+      workspace_root: "~/blueprint-workspaces"
+    },
+    agent_skills: {}
+  };
+}
+
+function alignHostSpecificMaintenanceDefaults(
+  config: BlueprintConfig,
+  warnings: string[]
+): void {
+  const runtimeHost = getBlueprintRuntimeHost();
+  const activeHostPatchRegistry = runtimeHost.patchRegistryPath;
+  const inactiveHostPatchRegistry =
+    runtimeHost.host === "gemini"
+      ? HOST_DEFAULT_PATCH_REGISTRIES.tabnine
+      : HOST_DEFAULT_PATCH_REGISTRIES.gemini;
+
+  if (config.maintenance.patch_registry === inactiveHostPatchRegistry) {
+    config.maintenance.patch_registry = activeHostPatchRegistry;
+    warnings.push(
+      `Aligned maintenance.patch_registry to the active ${runtimeHost.host} host default.`
+    );
+  }
 }
 
 function deepCloneObject(value: Record<string, unknown>): Record<string, unknown> {
@@ -345,11 +369,11 @@ function applyConfigLayer(
     const currentValue = target[key];
 
     if (fullPath === "version") {
-      if (value === HARD_CODED_CONFIG.version) {
+      if (value === HARD_CODED_CONFIG_VERSION) {
         target[key] = value;
       } else {
         warnings.push(
-          `Ignored unsupported config version ${String(value)}; using version ${HARD_CODED_CONFIG.version}`
+          `Ignored unsupported config version ${String(value)}; using version ${HARD_CODED_CONFIG_VERSION}`
         );
       }
       continue;
@@ -417,7 +441,7 @@ function normalizeConfigLayer(
     throw new Error("Blueprint config must be a JSON object.");
   }
 
-  const config = cloneConfig(HARD_CODED_CONFIG);
+  const config = getHardCodedConfig();
   const warnings: string[] = [];
   const coercedCandidate = coerceLegacyConfigCandidate(candidate, warnings);
   applyConfigLayer(
@@ -426,6 +450,7 @@ function normalizeConfigLayer(
     scope,
     warnings
   );
+  alignHostSpecificMaintenanceDefaults(config, warnings);
 
   return { config, warnings };
 }
@@ -567,7 +592,7 @@ async function composeConfig(
 
   warnings.push(...projectWarnings);
 
-  const config = cloneConfig(HARD_CODED_CONFIG);
+  const config = getHardCodedConfig();
 
   if (defaults.config) {
     applyConfigLayer(
@@ -636,7 +661,7 @@ export async function blueprintConfigGet(
 
     return {
       scope,
-      config: defaults.config ?? cloneConfig(HARD_CODED_CONFIG),
+      config: defaults.config ?? getHardCodedConfig(),
       provenance: {
         layersApplied: ["hardcoded", ...(defaults.config ? ["defaults"] : [])],
         defaultsPath: defaults.config ? defaults.path : null,
@@ -654,7 +679,7 @@ export async function blueprintConfigGet(
   if (!rawProjectConfig) {
     return {
       scope,
-      config: cloneConfig(HARD_CODED_CONFIG),
+      config: getHardCodedConfig(),
       provenance: {
         layersApplied: ["hardcoded"],
         defaultsPath,
