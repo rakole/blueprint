@@ -53,6 +53,10 @@ export const SUPPORTED_SCAFFOLD_ARTIFACTS = [
   ...SUPPORTED_BOOTSTRAP_ARTIFACTS,
   ...CODEBASE_ARTIFACTS
 ] as const;
+const SCAFFOLD_PHASE_ARTIFACT_PATTERN =
+  /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|UI-SPEC))\.md)$/;
+const SCAFFOLD_ARTIFACT_PATH_GUIDANCE =
+  "Use repo-relative Blueprint artifact paths such as `.blueprint/codebase/STACK.md` or `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names like `STACK` and absolute filesystem paths are not supported.";
 
 export type SupportedScaffoldArtifact =
   (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
@@ -1194,7 +1198,22 @@ const artifactScaffoldInputSchema = {
   cwd: z.string().optional(),
   projectName: z.string().optional(),
   overwrite: z.boolean().optional(),
-  artifacts: z.array(z.string()).optional(),
+  artifacts: z
+    .array(
+      z
+        .union([
+          z.enum(SUPPORTED_SCAFFOLD_ARTIFACTS),
+          z
+            .string()
+            .regex(
+              SCAFFOLD_PHASE_ARTIFACT_PATTERN,
+              "Use a repo-relative phase artifact path such as `.blueprint/phases/03-auth/03-CONTEXT.md`."
+            )
+        ])
+        .describe(SCAFFOLD_ARTIFACT_PATH_GUIDANCE)
+    )
+    .optional()
+    .describe(SCAFFOLD_ARTIFACT_PATH_GUIDANCE),
   bootstrapSeed: z
     .object({
       vision: z.string().optional(),
@@ -1345,9 +1364,7 @@ function slugToTitle(value: string): string {
 }
 
 function parsePhaseArtifactRequest(artifact: string): PhaseArtifactRequest | null {
-  const match = artifact.match(
-    /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|UI-SPEC))\.md)$/
-  );
+  const match = artifact.match(SCAFFOLD_PHASE_ARTIFACT_PATTERN);
 
   if (!match) {
     return null;
@@ -1923,6 +1940,139 @@ export function validateResearchArtifactContent(content: string): {
   };
 }
 
+function containsReferencedSummaryPath(section: string, summaryPaths: string[]): boolean {
+  const normalizedSection = section.trim();
+
+  if (normalizedSection.length === 0 || summaryPaths.length === 0) {
+    return false;
+  }
+
+  return summaryPaths.some((summaryPath) => {
+    const fileName = summaryPath.split("/").pop() ?? summaryPath;
+    return normalizedSection.includes(summaryPath) || normalizedSection.includes(fileName);
+  });
+}
+
+function validateRequiredMarkdownSections(
+  content: string,
+  artifactLabel: string,
+  headings: readonly string[]
+): string[] {
+  const issues: string[] = [];
+
+  for (const heading of headings) {
+    if (!new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(content)) {
+      issues.push(`${artifactLabel} is missing required section: ${heading}.`);
+      continue;
+    }
+
+    if (extractMarkdownSection(content, heading).trim().length === 0) {
+      issues.push(`${artifactLabel} section ${heading} must not be empty.`);
+    }
+  }
+
+  return issues;
+}
+
+const REQUIRED_VERIFICATION_SECTIONS = [
+  "Validation Summary",
+  "Evidence Reviewed",
+  "Gaps Found",
+  "Suggested Repairs",
+  "Next Safe Action"
+] as const;
+
+export function validateVerificationArtifactContent(
+  content: string,
+  summaryPaths: string[] = []
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!/^# .+ - Verification\s*$/m.test(content)) {
+    issues.push("Verification artifact must start with a '# ... - Verification' heading.");
+  }
+
+  if (!/^\*\*Coverage:\*\*\s*.+$/m.test(content)) {
+    issues.push(
+      "Verification artifact must declare **Coverage:** with a brief summary of the validated summaries or plan slices."
+    );
+  }
+
+  issues.push(
+    ...validateRequiredMarkdownSections(
+      content,
+      "Verification artifact",
+      REQUIRED_VERIFICATION_SECTIONS
+    )
+  );
+
+  const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
+  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+    warnings.push(
+      "Verification artifact should cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
+const REQUIRED_UAT_SECTIONS = [
+  "UAT Summary",
+  "Questions Asked",
+  "Observed Behavior",
+  "Unresolved Gaps",
+  "Follow-Up Fixes",
+  "Next Safe Action"
+] as const;
+
+export function validateUatArtifactContent(
+  content: string,
+  summaryPaths: string[] = []
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!/^# .+ - UAT\s*$/m.test(content)) {
+    issues.push("UAT artifact must start with a '# ... - UAT' heading.");
+  }
+
+  if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
+    issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
+  }
+
+  issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
+
+  const uatSummary = extractMarkdownSection(content, "UAT Summary");
+  const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
+  if (
+    summaryPaths.length > 0 &&
+    !containsReferencedSummaryPath(`${uatSummary}\n${observedBehavior}`, summaryPaths)
+  ) {
+    warnings.push(
+      "UAT artifact should reference at least one saved execution summary path or filename in ## UAT Summary or ## Observed Behavior."
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
 export function validatePlanArtifactContent(
   content: string,
   expectedPhase?: string
@@ -2305,7 +2455,9 @@ function normalizeRequestedArtifacts(
       !SUPPORTED_SCAFFOLD_ARTIFACTS.includes(value as SupportedScaffoldArtifact) &&
       !parsePhaseArtifactRequest(value)
     ) {
-      throw new Error(`Unsupported Blueprint artifact requested: ${artifact}`);
+      throw new Error(
+        `Unsupported Blueprint artifact requested: ${artifact}. ${SCAFFOLD_ARTIFACT_PATH_GUIDANCE}`
+      );
     }
 
     return value;

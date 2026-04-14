@@ -12,6 +12,8 @@ import {
   parseCaptureIndexDocument,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
+  validateUatArtifactContent,
+  validateVerificationArtifactContent,
   resolveBlueprintPath,
   toRepoRelativePath,
   writeJsonFile,
@@ -2730,10 +2732,22 @@ export async function blueprintPhaseValidationWrite(
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const normalizedContent = normalizeTextContent(args.content);
   const exists = await pathExists(absolutePath);
-  const issues =
+  const validation =
     normalizedContent.trim().length === 0
-      ? [`${args.artifact} content must not be empty.`]
-      : [];
+      ? {
+          valid: false,
+          issues: [`${args.artifact} content must not be empty.`],
+          warnings: [] as string[]
+        }
+      : args.artifact === "verification"
+        ? validateVerificationArtifactContent(
+            normalizedContent,
+            summaryIndex.summaries.map((summary) => summary.path)
+          )
+        : validateUatArtifactContent(
+            normalizedContent,
+            summaryIndex.summaries.map((summary) => summary.path)
+          );
   const warnings: string[] = [];
 
   if (args.artifact === "uat") {
@@ -2764,8 +2778,8 @@ export async function blueprintPhaseValidationWrite(
         created: false,
         overwritten: false,
         status: "reused",
-        issues,
-        warnings
+        issues: validation.issues,
+        warnings: [...warnings, ...validation.warnings]
       };
     }
 
@@ -2776,7 +2790,7 @@ export async function blueprintPhaseValidationWrite(
     }
   }
 
-  if (issues.length > 0) {
+  if (!validation.valid) {
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -2789,8 +2803,8 @@ export async function blueprintPhaseValidationWrite(
       created: false,
       overwritten: false,
       status: "invalid",
-      issues,
-      warnings
+      issues: validation.issues,
+      warnings: validation.warnings
     };
   }
 
@@ -2816,8 +2830,8 @@ export async function blueprintPhaseValidationWrite(
     created: !exists,
     overwritten: exists,
     status: exists ? "updated" : "created",
-    issues,
-    warnings
+    issues: validation.issues,
+    warnings: [...warnings, ...validation.warnings]
   };
 }
 

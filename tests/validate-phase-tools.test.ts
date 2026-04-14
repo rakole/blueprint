@@ -195,13 +195,27 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
     artifact: "verification",
     content: `# Phase 03: Phase Discovery - Verification
 
-## Coverage Summary
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
 
-- Audited the saved summary evidence for implementation completeness.
+## Validation Summary
 
-## Remaining Gaps
+- Execution evidence matches the expected phase outcome.
 
-- Continue with conversational UAT through verify-work.
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
 `
   });
   const read = await blueprintPhaseValidationRead({
@@ -215,20 +229,39 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
     artifact: "verification",
     content: `# Phase 03: Phase Discovery - Verification
 
-## Coverage Summary
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
 
-- Audited the saved summary evidence for implementation completeness.
+## Validation Summary
 
-## Remaining Gaps
+- Execution evidence matches the expected phase outcome.
 
-- Continue with conversational UAT through verify-work.
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
 `
   });
   const invalid = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "3",
     artifact: "verification",
-    content: "   ",
+    content: `# Phase 03: Phase Discovery - Verification
+
+## Validation Summary
+
+- Missing the coverage marker and the remaining required sections.
+`,
     overwrite: true
   });
 
@@ -246,12 +279,16 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   assert.deepEqual(read.summaryPaths, [".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"]);
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
-  assert.match(invalid.issues.join("\n"), /must not be empty/i);
+  assert.match(invalid.issues.join("\n"), /\*\*Coverage:\*\*/);
+  assert.match(invalid.issues.join("\n"), /Evidence Reviewed/);
+  assert.match(invalid.issues.join("\n"), /Gaps Found/);
+  assert.match(invalid.issues.join("\n"), /Suggested Repairs/);
+  assert.match(invalid.issues.join("\n"), /Next Safe Action/);
   assert.equal(context.phase?.artifacts.verification, verificationPath);
   assert.ok(listed.artifacts.phases.includes(verificationPath));
   assert.doesNotMatch(validation.issues.join("\n"), /VERIFICATION artifacts exist without a SUMMARY artifact/i);
   assert.doesNotMatch(validation.issues.join("\n"), /UAT artifacts exist without a VERIFICATION artifact/i);
   assert.match(afterStatus.nextAction, /\/blu-verify-work 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-verify-work 3/);
-  assert.match(verificationBody, /Coverage Summary/);
+  assert.match(verificationBody, /\*\*Coverage:\*\*/);
 });

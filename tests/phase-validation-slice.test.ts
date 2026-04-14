@@ -252,9 +252,27 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-## Findings
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+
+## Validation Summary
 
 - The validated feature set is ready for UAT.
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 4\`.
 `,
     overwrite: true
   });
@@ -269,9 +287,27 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-## Findings
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+
+## Validation Summary
 
 - The validated feature set is ready for UAT.
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 4\`.
 `
   });
   const verificationUpdated = await blueprintPhaseValidationWrite({
@@ -280,23 +316,75 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-## Findings
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+
+## Validation Summary
 
 - The validated feature set has a follow-up note.
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Gaps Found
+
+- Capture the follow-up note during UAT.
+
+## Suggested Repairs
+
+- Reconfirm the follow-up note during \`/blu-verify-work 4\`.
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 4\`.
 `,
     overwrite: true
   });
   const beforeUatStatus = await blueprintProjectStatus({ cwd: repoPath });
   const beforeUatState = await blueprintStateLoad({ cwd: repoPath });
+  const invalidUat = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "uat",
+    content: `# Phase 04: Validation - UAT
+
+## UAT Summary
+
+- Missing the required status line and the remaining UAT sections.
+`,
+    overwrite: true
+  });
   const uatCreated = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
     artifact: "uat",
     content: `# Phase 04: Validation - UAT
 
-## Results
+**Status:** PASS
+
+## UAT Summary
 
 - The user acceptance run passed.
+
+## Questions Asked
+
+- Did the validated feature behave as expected for the saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
 `,
     overwrite: true
   });
@@ -319,6 +407,10 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.equal(verificationUpdated.status, "updated");
   assert.match(beforeUatStatus.nextAction, /\/blu-verify-work 4/);
   assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-verify-work 4/);
+  assert.equal(invalidUat.status, "invalid");
+  assert.match(invalidUat.issues.join("\n"), /\*\*Status:\*\*/);
+  assert.match(invalidUat.issues.join("\n"), /Questions Asked/);
+  assert.match(invalidUat.issues.join("\n"), /Observed Behavior/);
   assert.equal(uatCreated.status, "created");
   assert.equal(uatRead.found, true);
   assert.match(uatRead.content ?? "", /user acceptance run passed/i);
