@@ -185,13 +185,15 @@ test("phase discovery skill and bounded agent contracts are marked implemented i
   );
 });
 
-test("capture skill and shipped note plus backlog docs are marked implemented in docs", async () => {
-  const [skillsMarkdown, noteDoc, addBacklogDoc, mcpToolsDoc, catalogMarkdown] = await Promise.all([
+test("capture skill and shipped note, backlog, and explore docs are marked implemented in docs", async () => {
+  const [skillsMarkdown, noteDoc, addBacklogDoc, exploreDoc, mcpToolsDoc, catalogMarkdown, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
     readRepoFile("docs/commands/note.md"),
     readRepoFile("docs/commands/add-backlog.md"),
+    readRepoFile("docs/commands/explore.md"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/COMMAND-CATALOG.md")
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
   ]);
 
   assert.match(
@@ -208,6 +210,22 @@ test("capture skill and shipped note plus backlog docs are marked implemented in
   assert.match(addBacklogDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_scaffold`/);
   assert.match(addBacklogDoc, /999\.x numbering/);
   assert.match(addBacklogDoc, /Confirm immediate phase-stub reservation when used\./);
+  assert.match(
+    catalogMarkdown,
+    /\| `explore` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \|/
+  );
+  assert.match(exploreDoc, /Primary skill: `blueprint-capture`/);
+  assert.match(exploreDoc, /Argument hint: `<topic>`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_project_status`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_add_phase`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_scaffold`/);
+  assert.match(exploreDoc, /Confirm the final routing target before any durable write\./);
+  assert.match(exploreDoc, /scaffolded phase context/i);
+  assert.match(
+    migrationMarkdown,
+    /\| `explore` \| `commands\/gsd\/explore\.md` \| GSD has an upstream workflow file \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_project_status`<br>`blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_artifact_scaffold` \| `blueprint-researcher` \|/
+  );
   assert.match(
     mcpToolsDoc,
     /\| `blueprint_artifact_mutate_index` \| Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos/
@@ -283,29 +301,6 @@ test("review-backlog docs and catalog metadata are marked implemented with the b
   assert.match(
     migrationMarkdown,
     /\| `review-backlog` \| `docs\/commands\/review-backlog\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
-  );
-});
-
-test("explore docs and catalog metadata are marked implemented with the ideation-routing tools", async () => {
-  const [catalogMarkdown, exploreDoc, migrationMarkdown] = await Promise.all([
-    readRepoFile("docs/COMMAND-CATALOG.md"),
-    readRepoFile("docs/commands/explore.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
-  ]);
-
-  assert.match(
-    catalogMarkdown,
-    /\| `explore` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-capture` \| `implemented` \| `the chosen target only: note, todo, backlog entry, or roadmap proposal` \| `Low: ideation-first, persistence second\.` \|/
-  );
-  assert.match(exploreDoc, /Primary skill: `blueprint-capture`/);
-  assert.match(exploreDoc, /Argument hint: `<idea>`/);
-  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
-  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_add_phase`/);
-  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_project_status`/);
-  assert.match(exploreDoc, /Requires explicit confirmation of the final routing target before any write\./);
-  assert.match(
-    migrationMarkdown,
-    /\| `explore` \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_project_status` \|/
   );
 });
 

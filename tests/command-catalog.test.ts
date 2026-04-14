@@ -335,6 +335,7 @@ test("explore is implemented once manifest, skill, and ideation-routing MCP tool
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_scaffold",
     "blueprint_artifact_mutate_index",
     "blueprint_project_status",
     "blueprint_roadmap_add_phase"

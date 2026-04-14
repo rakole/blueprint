@@ -16,6 +16,7 @@ test("explore manifest references capture skill, ideation-routing tools, and con
   assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_mutate_index/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /route to `\/blu-quick` or `\/blu-plan-phase`/);
   assert.match(commandFile, /require explicit confirmation before writing anything/i);
   assert.match(commandFile, /\/blu-new-project/);
@@ -36,6 +37,7 @@ test("blueprint-capture skill captures explore classification and confirmation b
   assert.match(skillFile, /blueprint_project_status/);
   assert.match(skillFile, /blueprint_artifact_mutate_index/);
   assert.match(skillFile, /blueprint_roadmap_add_phase/);
+  assert.match(skillFile, /blueprint_artifact_scaffold/);
   assert.match(skillFile, /`note`, `todo`, `backlog`, `roadmap`, or `no-write`/);
   assert.match(skillFile, /Confirm the final routing target and normalized text before any write/);
   assert.match(skillFile, /\/blu-check-todos/);

@@ -16,33 +16,38 @@
 
 - CLI command path: `/blu-explore`
 - Root router form: `/blu explore`
-- Argument hint: `<idea>`
+- Argument hint: `<topic>`
 - `/blu-explore authentication-strategy`
-- `/blu explore`
+- `/blu explore release workflow`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- Project context is preferred when the result should be persisted.
+- A non-empty idea, question, or topic is required.
+- Blueprint project context is required for durable writes.
+- The user must explicitly confirm the final route before any persistence.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes only the confirmed Blueprint capture or roadmap artifact for the chosen target.
+- User-facing result: a concise completion summary plus the next logical implemented action when applicable.
+- Repo side effects: writes only the confirmed target artifact path and leaves unrelated repo files untouched.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `blueprint_project_status` reads Blueprint readiness before persistence.
 
 
 ## Blueprint And Global State Writes
 
 
-- `the chosen target only: note, todo, backlog entry, or roadmap proposal`
+- `.blueprint/notes/NOTES.md`
+- `.blueprint/todos/TODO.md`
+- `.blueprint/backlog/BACKLOG.md`
+- `.blueprint/ROADMAP.md` plus `.blueprint/phases/<phase-slug>/` when the user explicitly promotes the explored idea into an active roadmap phase
 
 
 ## Required MCP Tools
@@ -50,6 +55,7 @@
 
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_roadmap_add_phase` -> `{phaseNumber, phaseDir, roadmapPath}`
+- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
 
@@ -84,12 +90,13 @@
 
 ## Shell Risk Profile
 
-- Low: ideation-first, persistence second.
+- Medium: ideation-first, but confirmed roadmap promotion can append a new active phase.
 
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the final routing target before writing exploration output.
+- Confirm the final routing target before any durable write.
+- Confirm the final phase description before promoting an explored idea directly into the active roadmap.
 
 
 ## Edge Cases
@@ -97,12 +104,14 @@
 
 - The input is too vague to classify cleanly into note, todo, backlog, or execution work.
 - The target item already exists or has already been promoted, completed, or archived.
+- The explored idea turns out to be ready for bounded execution now rather than capture or roadmap promotion.
 
 
 ## Failure Modes And Recovery
 
 
 - Repair malformed index files through MCP instead of raw append logic.
+- Use duplicate detection on capture-index routes instead of creating variant copies of the same idea.
 - Route oversized execution asks to `quick` or `plan-phase` instead of bluffing.
 
 
@@ -111,7 +120,7 @@
 
 - Capture outputs stay deterministic and append-only where expected.
 - If no Blueprint project exists, the command degrades to safe suggestion mode instead of inventing persistence.
-- Requires explicit confirmation of the final routing target before any write.
+- Confirm the final routing target before any durable write.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -122,6 +131,6 @@
 
 - Capture append fixture.
 - No-project graceful degradation fixture.
+- Roadmap-promotion fixture with scaffolded phase context.
 - Direct `explore` happy-path fixture.
-
 
