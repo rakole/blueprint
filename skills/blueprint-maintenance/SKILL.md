@@ -70,6 +70,12 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_artifact_report_write`
 - `blueprint_state_update`
 
+## Shared MCP Contracts
+
+- `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories, slugs, or filenames.
+- `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `trackedFiles`, and related file inputs only, and treat `inputsUsed` as the authoritative digest scope.
+- `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, or `cleanup-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
+
 ## Workflow Rules
 
 Shared rule for all maintenance flows:
@@ -87,7 +93,7 @@ Shared rule for all maintenance flows:
 7. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
 8. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, and included versus excluded scope before any git mutation.
 9. Create the review branch without rewriting or deleting the source branch in place.
-10. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/pr-branch-latest.md`.
+10. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, and use the returned `path` as the authoritative saved report location.
 11. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
 
 ### `ship`
@@ -101,7 +107,7 @@ Shared rule for all maintenance flows:
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the shipping plan stays grounded in the saved Blueprint evidence and the active diff.
 8. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
 9. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
-10. Persist the durable outcome through `blueprint_artifact_report_write` as `.blueprint/reports/ship-latest.md`, including manual fallback guidance when remote creation does not happen.
+10. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
 11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
 
 ### `cleanup`
@@ -114,7 +120,7 @@ Shared rule for all maintenance flows:
 6. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, and stop instead of guessing when saved evidence is incomplete.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` so the cleanup plan stays grounded in the saved milestone evidence and the selected directories.
 8. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior.
-9. Persist the approved cleanup plan through `blueprint_artifact_report_write` as `.blueprint/reports/cleanup-latest.md` before filesystem mutation begins.
+9. Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest` before filesystem mutation begins, and use the returned `path` as the authoritative saved report location.
 10. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
 11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
 

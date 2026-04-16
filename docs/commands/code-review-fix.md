@@ -55,6 +55,12 @@
 - `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Remediation Contract
+
+- Load the saved review baseline through `blueprint_review_load_findings` with `artifact: "code-review"` and treat the returned `findings`, `severityCounts`, and `followUps` as authoritative.
+- Do not recreate finding ids or severity from chat memory, current branch drift, or a second prompt-only review when the saved artifact already exists.
+- Persist the durable remediation summary through `blueprint_review_record` with `artifact: "review-fix"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW-FIX.md`.
+
 
 ## Skills And Subagents
 
@@ -128,5 +134,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `code-review-fix` happy-path fixture.
-
 

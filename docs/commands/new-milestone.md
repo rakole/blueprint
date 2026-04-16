@@ -61,6 +61,12 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Carry-Forward Contract
+
+- Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative carry-forward evidence scope.
+- Use `blueprint_artifact_scaffold` only to seed the next milestone starter docs and first context file. Do not treat scaffold text as the final authored milestone content.
+- Preserve the confirmed next phase number when building the first context path; do not invent or renumber historical phase directories manually.
+
 
 ## Skills And Subagents
 
@@ -139,5 +145,4 @@
 - Carry-forward default fixture.
 - Phase-number continuity fixture.
 - Direct `new-milestone` happy-path fixture.
-
 

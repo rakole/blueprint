@@ -20,9 +20,9 @@ Follow this flow exactly:
    - `skip`: keep the existing research and stop without mutating files
    - `update`: only continue to replacement after explicit confirmation
    Reuse is the default when the user does not ask for an update. Prefer `ask_user` for the `view`/`skip`/`update` choice instead of a plain-text menu.
-6. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-RESEARCH.md`; do not treat the scaffold as completed research.
+6. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-RESEARCH.md`. Pass only the repo-relative Blueprint artifact path for the resolved phase research file; never pass a bare artifact name or an absolute filesystem path. Do not treat the scaffold as completed research.
 7. When research is needed, use the `blueprint-researcher` subagent as a bounded sidecar and require it to return populated research content with citations, a confidence marker, recommendations, and planner-friendly sections.
-8. Persist the actual research content through `mcp_blueprint_blueprint_phase_artifact_write` with `artifact: "research"`. Do not write raw `.blueprint/` content directly.
+8. Persist the actual research content through `mcp_blueprint_blueprint_phase_artifact_write` with the resolved numeric `phase`, `artifact: "research"`, and the full final markdown body. Leave research validation in its default strict mode unless the user explicitly accepted a warned save, and use the returned `path` as authoritative. Do not write raw `.blueprint/` content directly.
 9. Call `mcp_blueprint_blueprint_state_update` with a synced base to record completion and set the next safe action. Prefer `/blu-ui-phase` only when the catalog says it is implemented; otherwise prefer `/blu-progress`.
 10. Return a concise summary covering the phase, whether research was viewed, reused, created, updated, or rejected by validation, any warnings, and the next safe action.
 
@@ -32,6 +32,7 @@ Response requirements:
 - Treat overwrite as an explicit confirmation path, not the default.
 - Use `ask_user` for explicit `view`/`skip`/`update` selection and overwrite confirmation when research already exists.
 - Do not persist scaffold-only or validation-failing research content.
+- Pass `phase` as the resolved numeric phase reference only; never pass phase directories, slugs, or filenames back into the phase-write tool.
 - If UI discovery is clearly the next step and `mcp_blueprint_blueprint_command_catalog` says `/blu-ui-phase` is implemented, mention it. Otherwise prefer `/blu-progress`.
 - Do not present blocked lifecycle commands as runnable.
 """

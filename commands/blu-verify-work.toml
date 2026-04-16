@@ -23,7 +23,7 @@ Follow this flow exactly:
    - `workflow.nyquist_validation=true`: call out any remaining acceptance gaps explicitly.
    - `workflow.nyquist_validation=false`: explicitly report that gap classification was informational only because normalized config disabled it.
 9. Use the `blueprint-verifier` subagent for bounded sidecar UAT work when the artifact needs to be created or updated. Require the result to include the observed user-facing behavior, pass/fail notes, unresolved gaps, and optional follow-up fix capture.
-10. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with `artifact: "uat"`. Do not write `XX-UAT.md` directly.
+10. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "uat"`, and the full final markdown body. Saved execution summaries plus an existing verification artifact are required, and the returned `path` plus `summaryPaths` are authoritative. Do not write `XX-UAT.md` directly.
 11. If verification reveals follow-up fixes, capture them in the same UAT artifact or in the next explicit follow-up note/state update; do not silently mutate unrelated code.
 12. Call `mcp_blueprint_blueprint_artifact_validate` after the write path and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
 13. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, which config gates shaped the pass, any gaps or follow-up captures, and the next safe implemented action.
@@ -33,5 +33,6 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep conversational UAT phase-scoped and summary-aware; do not validate unrelated repo files.
+- Use only the validation artifact enums that the tool owns, and do not hand-build UAT filenames or summary links manually.
 - Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """

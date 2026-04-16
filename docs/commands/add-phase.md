@@ -57,6 +57,12 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Phase Creation Contract
+
+- Call `blueprint_roadmap_add_phase` with only the confirmed phase description. Do not precompute the phase number, slug, or directory path yourself.
+- Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative new-phase metadata.
+- Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
+
 
 ## Skills And Subagents
 
@@ -131,5 +137,4 @@
 - Missing-description rejection fixture.
 - Renumbering or archival regression fixture.
 - Direct `add-phase` happy-path fixture.
-
 

@@ -52,6 +52,10 @@
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 
+## UI Review Artifact Contract
+
+- Persist the durable UI audit through `blueprint_review_record` with `artifact: "ui-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-UI-REVIEW.md`.
+
 
 ## Skills And Subagents
 
@@ -124,5 +128,4 @@
 - Phase review fixture with saved UI evidence.
 - Git or external CLI availability fixture.
 - Direct `ui-review` happy-path fixture.
-
 

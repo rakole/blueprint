@@ -55,6 +55,12 @@
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Report And Todo Contract
+
+- Persist the durable debug report through `blueprint_artifact_report_write` with the bare report name `debug-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+- When capturing a todo follow-up, append through `blueprint_artifact_mutate_index` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
+
 
 ## Skills And Subagents
 
@@ -127,5 +133,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `debug` happy-path fixture.
-
 

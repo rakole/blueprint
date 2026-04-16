@@ -75,6 +75,13 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - `blueprint-roadmapper`
 - `blueprint-verifier`
 
+## Shared MCP Contracts
+
+- `blueprint_roadmap_add_phase` and `blueprint_roadmap_insert_phase`: pass only the phase description plus the integer `after` anchor for insertion. Do not precompute phase numbers, slugs, or directory paths; use returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
+- `blueprint_artifact_scaffold`: pass only supported repo-relative Blueprint artifact paths. Use the scaffold to seed starter docs or `XX-CONTEXT.md`, not as the final authored milestone or phase content.
+- `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths` only, and treat `inputsUsed` as the authoritative digest scope.
+- `blueprint_artifact_report_write`: pass a bare report name such as `milestone-audit-v1` or `milestone-summary-v2`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
+
 ## Workflow Rules
 
 ### `add-phase`
@@ -118,7 +125,7 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 3. Require explicit overwrite confirmation before replacing an existing milestone audit report.
 4. Use `blueprint_artifact_summary_digest` with explicit milestone artifact paths when the command needs a compact roadmap-plus-evidence digest.
 5. Use `blueprint-verifier` when a second-pass evidence review helps explain gaps or stale assumptions.
-6. Keep milestone report output project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`.
+6. Keep milestone report output project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 7. If the audit surfaces actionable gaps and `plan-milestone-gaps` is implemented, route the follow-up there; otherwise treat planned-only milestone follow-up commands as unavailable.
 
 ### `plan-milestone-gaps`
@@ -139,7 +146,7 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 2. Fail fast when the matching milestone audit report is missing. Route the user to `/blu-audit-milestone` instead of inventing closeout evidence.
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before writing the completion report.
 4. Keep `complete-milestone` report-driven and state-driven. Do not rewrite `.blueprint/ROADMAP.md`, renumber phases, or invent a new `phase_mark_complete` substrate from the command prompt.
-5. Persist the completion report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`.
+5. Persist the completion report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 6. Require explicit overwrite confirmation before replacing an existing milestone completion report.
 7. Update `STATE.md` through `blueprint_state_update` so `/blu-complete-milestone` is the active command and the next safe implemented follow-up is `/blu-milestone-summary <milestone>`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
@@ -149,7 +156,7 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 1. Read the roadmap first and inspect `.blueprint/reports/` through `blueprint_artifact_list` so the summary stays grounded in the matching milestone audit and completion reports.
 2. Fail fast when either the audit report or completion report is missing. Route the user to `/blu-audit-milestone` or `/blu-complete-milestone` instead of fabricating missing inputs.
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-report inputs to build the milestone summary from durable evidence.
-4. Persist the summary report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`.
+4. Persist the summary report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 5. Require explicit overwrite confirmation before replacing an existing milestone summary report.
 6. Keep the flow skill-led. Do not pull in `blueprint-doc-writer` or any later-wave docs agent for this Wave 2 summary step.
 7. Update `STATE.md` through `blueprint_state_update` so `/blu-milestone-summary` is the active command and the next safe implemented follow-up is `/blu-new-milestone`.

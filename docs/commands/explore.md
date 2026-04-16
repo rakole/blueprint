@@ -58,6 +58,12 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
+## Routing Persistence Contract
+
+- Capture routes use `blueprint_artifact_mutate_index` in append mode: omit `action`, pass the normalized idea in `entry.text`, and use returned entry ids as authoritative.
+- Roadmap promotion uses `blueprint_roadmap_add_phase` with only the confirmed phase description. Treat the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
+- When scaffolding the roadmap route, build the initial context path from the returned `phaseDir` plus returned `phasePrefix`. Do not invent the phase slug or path from user prose.
+
 
 ## Skills And Subagents
 
@@ -133,4 +139,3 @@
 - No-project graceful degradation fixture.
 - Roadmap-promotion fixture with scaffolded phase context.
 - Direct `explore` happy-path fixture.
-

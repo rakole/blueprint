@@ -57,6 +57,12 @@
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
 - `blueprint_state_sync` -> `{syncedFields, warnings}`
 
+## Repair Contract
+
+- Keep config repairs project-local through `blueprint_config_set` with `scope: "project"`.
+- Pass a JSON-object `patch` only; do not try to repair config by writing sparse file fragments or manual config text.
+- Treat the returned `configPath` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -130,5 +136,4 @@
 - Legacy minimal-config migration fixture.
 - Malformed-config repair fixture.
 - Direct `health` happy-path fixture.
-
 

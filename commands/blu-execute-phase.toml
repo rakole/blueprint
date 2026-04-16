@@ -21,7 +21,7 @@ Follow this flow exactly:
    - `parallelization.enabled`, `parallelization.plan_level`, `parallelization.max_concurrent_agents`, and `parallelization.min_plans_for_parallel` control whether execution is parallel or sequential.
    - `workflow.use_worktrees` controls whether execution should describe worktree isolation.
    - `git.branching_strategy` controls whether execution stays on the current branch or uses phase/milestone-scoped branch guidance.
-9. Use the `blueprint-executor` subagent for bounded per-plan execution work. Keep each selected plan independent, preserve wave ordering, and persist one `XX-YY-SUMMARY.md` artifact per completed plan through `mcp_blueprint_blueprint_phase_summary_write`. Do not write summary files directly.
+9. Use the `blueprint-executor` subagent for bounded per-plan execution work. Keep each selected plan independent, preserve wave ordering, and persist one `XX-YY-SUMMARY.md` artifact per completed plan through `mcp_blueprint_blueprint_phase_summary_write`. Pass the resolved numeric `phase`, the numeric `planId` for the matching saved plan, and the full final summary content. The matching plan must already exist. Treat the returned `path` and `linkedPlanPath` as authoritative instead of rebuilding summary filenames manually.
 10. After summary writes finish, call `mcp_blueprint_blueprint_artifact_validate` and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the execute-phase command, and the next safe implemented action. Partial-wave or filtered runs must not mark the whole phase complete.
 11. Return a concise summary covering which plans or waves were executed, whether summaries were created, reused, or replaced, which config gates shaped execution, any warnings, and the next safe implemented action.
 
@@ -30,5 +30,6 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep plan execution plan-aware: respect dependency waves, do not collapse all plans into one monolithic task, and do not pretend filtered runs completed the full phase.
+- Never pass summary filenames, phase directories, or slug tokens where `mcp_blueprint_blueprint_phase_summary_write` expects a numeric `planId`.
 - Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """

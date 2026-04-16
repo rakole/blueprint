@@ -58,6 +58,11 @@
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
+## Digest And Report Contract
+
+- Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
+- Pass only the bare report name `milestone-audit-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
+
 
 ## Skills And Subagents
 
@@ -131,5 +136,4 @@
 - Roadmap mutation fixture.
 - Renumbering or archival regression fixture.
 - Direct `audit-milestone` happy-path fixture.
-
 

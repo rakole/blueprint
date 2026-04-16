@@ -51,6 +51,12 @@
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_config_set_profile` -> `{profile, updatedKeys, configPath}`
 
+## Profile Mutation Contract
+
+- Use `blueprint_config_set_profile` for project-local model-profile changes instead of emulating the write through `blueprint_config_set`.
+- Treat the returned `configPath` as authoritative.
+- This command must not mutate saved defaults.
+
 
 ## Skills And Subagents
 
@@ -128,5 +134,4 @@
 - Partially initialized Blueprint repo fixture.
 - Project-profile change with saved defaults already present.
 - Direct `set-profile` happy-path fixture.
-
 

@@ -34,8 +34,8 @@ Follow this flow exactly:
    - `git.milestone_branch_template`
    - `git.quick_branch_template`
    - `agent_skills`
-6. Apply project-local changes only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`.
-7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to `~/.<host>/blueprint/defaults.json`. Use `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write.
+6. Apply project-local changes only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`. Pass a JSON-object `patch` only; do not hand-edit sparse config files or pass arrays, strings, or raw file content.
+7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to `~/.<host>/blueprint/defaults.json`. Use `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write. Treat the returned `configPath` as authoritative instead of guessing the save target.
 8. Never write or reintroduce removed repo keys such as `workflow.use_workspaces`, `workflow.use_workstreams`, or `hooks.*`.
 9. If the user asks for a broad reset, confirm it before calling `mcp_blueprint_blueprint_config_set`.
 

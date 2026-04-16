@@ -50,6 +50,11 @@
 
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 
+## Capture Tool Contract
+
+- Call `blueprint_artifact_mutate_index` in append mode by omitting `action` and passing the todo text in `entry.text`.
+- Treat returned `createdEntryIds` or `duplicateEntryIds` as the authoritative todo identifiers. Do not synthesize `TODO-*` ids manually.
+
 
 ## Skills And Subagents
 
@@ -118,5 +123,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `add-todo` happy-path fixture.
-
 

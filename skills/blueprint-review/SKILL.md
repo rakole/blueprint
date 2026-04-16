@@ -80,6 +80,13 @@ non-routable until their extra MCP substrate lands.
 - `blueprint-verifier`
 - `blueprint-fixer`
 
+## Shared MCP Contracts
+
+- `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, and treat returned `files` as authoritative.
+- `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
+- `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
+
 ## Workflow Rules
 
 ### `code-review`
@@ -188,8 +195,8 @@ non-routable until their extra MCP substrate lands.
    when targeted checks need a second pass, and `blueprint-fixer` only when
    that agent is available and the fix scope stays narrow.
 7. Persist the durable remediation report through
-   `blueprint_artifact_report_write` using the canonical report name
-   `audit-fix-<phase>`.
+   `blueprint_artifact_report_write` using the bare canonical report name
+   `audit-fix-<phase>`, not a `.blueprint/reports/...` path.
 8. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
    the user explicitly asks to persist the follow-up or confirms that it should
    become a todo.

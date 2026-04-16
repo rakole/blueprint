@@ -62,6 +62,14 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Artifact Persistence Contract
+
+- Pass `phase` to `blueprint_phase_artifact_write` and `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, for example `"3"` or `3`.
+- Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
+- Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
+- Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
+
 
 ## Skills And Subagents
 
@@ -138,4 +146,3 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `discuss-phase` happy-path fixture.
-

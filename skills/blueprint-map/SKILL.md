@@ -24,6 +24,7 @@ Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-de
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - For `mcp_blueprint_blueprint_artifact_scaffold`, pass repo-relative artifact paths such as `.blueprint/codebase/STACK.md`; do not guess bare names like `STACK` and do not pass absolute filesystem paths.
+- For `mcp_blueprint_blueprint_artifact_summary_digest`, pass repo-relative evidence inputs only and treat the returned `inputsUsed` list as the authoritative digest scope.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 

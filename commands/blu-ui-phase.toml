@@ -19,9 +19,9 @@ Follow this flow exactly:
 6. If `XX-UI-SPEC.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default. Prefer `ask_user` for that confirmation path.
 7. If `workflow.ui_phase=false`, write an explicit skip rationale into `XX-UI-SPEC.md` instead of generating a UI contract.
 8. If `workflow.ui_safety_gate=true` and the phase appears backend-only or intentionally skips UI work, require an explicit rationale before writing the skip path.
-9. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-UI-SPEC.md`. Do not create a second UI-skip artifact.
+9. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-UI-SPEC.md`. Pass only the repo-relative Blueprint artifact path for the resolved phase UI spec; never pass a bare artifact name or an absolute filesystem path. Do not create a second UI-skip artifact.
 10. If deeper UI design work is useful, the output from the `blueprint-ui-designer` subagent must be concrete enough to write directly into the final artifact.
-11. Persist the actual UI contract or skip rationale through `mcp_blueprint_blueprint_phase_artifact_write` with `artifact: "ui-spec"`.
+11. Persist the actual UI contract or skip rationale through `mcp_blueprint_blueprint_phase_artifact_write` with the resolved numeric `phase`, `artifact: "ui-spec"`, and the full final markdown body. Use the returned `path` as authoritative and do not hand-build filenames or alternate skip-artifact paths.
 12. Call `mcp_blueprint_blueprint_state_update` to record that `/blu-ui-phase` completed and to set the next safe action.
 13. Return a concise summary covering the phase, config gates, reused versus replaced artifacts, any warnings, and the next safe action.
 
@@ -32,5 +32,6 @@ Response requirements:
 - Use `ask_user` for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
 - Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
 - Write substantive UI guidance or skip rationale, not scaffold placeholders.
+- Pass `phase` as the resolved numeric phase reference only; never pass phase directories, slugs, or filenames back into the phase-write tool.
 - Do not present blocked lifecycle commands as runnable.
 """

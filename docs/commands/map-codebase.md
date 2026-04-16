@@ -48,6 +48,13 @@
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
+## Mapping Artifact Contract
+
+- Use `blueprint_artifact_scaffold` only with the seven supported repo-relative codebase artifact paths under `.blueprint/codebase/`. Bare names and absolute paths are invalid.
+- Treat scaffold output as seeding or reuse only; the authored mapping content still needs to match the real repo evidence.
+- Pass only repo-relative evidence inputs to `blueprint_artifact_summary_digest`.
+- Treat the returned `inputsUsed` list as the authoritative digest scope.
+
 ## Skills And Subagents
 
 - Primary skill: `blueprint-map`
@@ -102,4 +109,3 @@
 - Fresh repo fixture.
 - Partially initialized Blueprint repo fixture.
 - Direct `map-codebase` happy-path fixture.
-

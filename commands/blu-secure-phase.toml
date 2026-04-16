@@ -13,7 +13,7 @@ Follow this flow exactly:
 5. If a `XX-SECURITY.md` artifact already exists, treat it as the audit baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
 6. Audit the phase against saved execution evidence, validation/UAT artifacts when present, the phase goal, and any explicit security expectations already recorded in the repo. Keep the audit grounded in artifacts or code, not chat memory alone.
 7. Use the `blueprint-security-auditor` subagent for bounded analysis when the phase spans multiple plans, touches risky surfaces, or already contains a prior security artifact that needs revision.
-8. Persist the actual security audit through `mcp_blueprint_blueprint_review_record` with `artifact: "security"`. Do not write `XX-SECURITY.md` directly.
+8. Persist the actual security audit through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "security"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-SECURITY.md` directly.
 9. End with a concise summary covering whether the security artifact was created, reused, or revised, the main security findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:

@@ -54,6 +54,11 @@
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
+## Peer-Review Persistence Contract
+
+- Read only the selected phase plans through `blueprint_phase_plan_read`; do not widen peer-review scope from unrelated repo drift.
+- Persist the durable peer-review artifact through `blueprint_review_record` with `artifact: "peer-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEWS.md`.
+
 
 ## Skills And Subagents
 
@@ -127,5 +132,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `review` happy-path fixture.
-
 

@@ -60,6 +60,11 @@ Blueprint's host-native boundaries:
 - `blueprint-doc-writer`
 - `blueprint-doc-verifier`
 
+## Shared MCP Contracts
+
+- `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, and `testFiles` only, and treat `inputsUsed` as the authoritative digest scope.
+- `blueprint_artifact_report_write`: pass the bare report name `docs-update-latest`, not `.blueprint/reports/docs-update-latest.md`. Use the returned `path` as the authoritative saved report location.
+
 ## Workflow Rules
 
 ### `docs-update`

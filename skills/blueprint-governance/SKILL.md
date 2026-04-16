@@ -57,6 +57,13 @@ Stay close to the locked governance contracts for settings, profile selection, a
 - `blueprint_artifact_list`
 - `blueprint_artifact_validate`
 
+## Shared MCP Contracts
+
+- `blueprint_config_get`: `scope` defaults to `effective`. Use `scope: "defaults"` only when the user wants to inspect or compare the host-global saved defaults file.
+- `blueprint_config_set`: `scope` defaults to `project`, and `patch` must be a JSON object. Use `scope: "defaults"` only after explicit user approval to change saved defaults.
+- `blueprint_config_set_profile`: use this dedicated tool instead of a general config patch when only `model_profile` should change.
+- `blueprint_pause_handoff_write`: `currentState` is required, list fields are optional and normalized, and omitting `nextAction` lets the tool derive the safest current follow-up. Use returned `handoff` and `path` as authoritative.
+
 ## Workflow Rules
 
 1. Diagnose before mutating.

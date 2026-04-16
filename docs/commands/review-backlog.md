@@ -56,6 +56,12 @@
 - `blueprint_roadmap_promote_backlog` -> `{status, backlogItems, promotedItems, createdPhaseDirs, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Backlog Promotion Contract
+
+- Start with `blueprint_roadmap_promote_backlog` in preview mode by passing `previewOnly: true`, or by omitting `backlogIds`, before asking the user to decide.
+- Promote only with confirmed `backlogIds` returned by the preview result. Do not derive backlog ids manually from prose or list order.
+- Treat returned `promotedItems` and `createdPhaseDirs` as the authoritative promotion result, including any reused reserved `999.x` phase directories.
+
 
 ## Skills And Subagents
 
@@ -128,5 +134,4 @@
 - Backlog preview fixture.
 - No-project graceful degradation fixture.
 - Direct `review-backlog` happy-path fixture.
-
 

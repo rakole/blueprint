@@ -57,6 +57,11 @@ host-native boundaries:
 
 - `blueprint-debugger`
 
+## Shared MCP Contracts
+
+- `blueprint_artifact_report_write`: pass the bare report name `debug-latest`, not `.blueprint/reports/debug-latest.md`. Use the returned `path` as the authoritative saved report location.
+- `blueprint_artifact_mutate_index`: use returned capture ids as authoritative follow-up todo ids and never create todo ids manually.
+
 ## Workflow Rules
 
 ### `debug`
@@ -79,7 +84,8 @@ host-native boundaries:
    route to `/blu-quick` for a bounded fix or `/blu-plan-phase` for a broader
    saved-plan rollout instead of widening the debug run indefinitely.
 7. Persist the durable report through `blueprint_artifact_report_write` with
-   the canonical `debug-latest` report name.
+   the bare canonical `debug-latest` report name, not a `.blueprint/reports/...`
+   path.
 8. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
    capture. Do not silently turn every finding into a todo.
 9. After persistence, update `STATE.md` through `blueprint_state_update` so the

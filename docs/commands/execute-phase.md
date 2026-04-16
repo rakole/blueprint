@@ -65,6 +65,14 @@
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Summary Persistence Contract
+
+- Persist execution evidence through `blueprint_phase_summary_write`; do not write raw `XX-YY-SUMMARY.md` files directly.
+- Pass `phase` as the resolved numeric phase reference and `planId` as the numeric id of the matching saved plan, for example `"01"` or `1`.
+- The matching `XX-YY-PLAN.md` must already exist before a summary can be written.
+- Pass the full final summary body and treat the returned `path` plus `linkedPlanPath` as authoritative instead of rebuilding summary filenames manually.
+- Do not pass summary filenames, phase slugs, phase directories, or combined tokens such as `03-01` where the tool expects `planId`.
+
 
 ## Skills And Subagents
 
@@ -143,5 +151,4 @@
 - Missing-artifact recovery fixture.
 - Parallelization and worktree-isolation fixture.
 - Wave-filtered direct `execute-phase` happy-path fixture.
-
 

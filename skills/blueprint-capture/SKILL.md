@@ -64,6 +64,13 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 
 - `blueprint-researcher`
 
+## Shared MCP Contracts
+
+- `blueprint_artifact_mutate_index`: omit `action` for append flows, pass the user text in `entry.text`, and use only returned `createdEntryIds`, `duplicateEntryIds`, `matchedEntryIds`, or `reservedPhase` as authoritative capture ids and reserved-stub metadata. Never synthesize capture ids manually.
+- `blueprint_roadmap_promote_backlog`: call with `previewOnly: true`, or with no `backlogIds`, for preview mode. Promote only with confirmed `backlogIds` from the preview result, and treat returned `promotedItems` plus `createdPhaseDirs` as authoritative.
+- `blueprint_roadmap_add_phase`: pass only the normalized phase-ready description. Do not precompute phase numbers, slugs, or phase directories; use the returned `phaseNumber`, `phasePrefix`, and `phaseDir`.
+- `blueprint_artifact_scaffold`: pass only supported repo-relative Blueprint artifact paths. Use scaffolding to seed a missing context file or reserved stub, not as the final filled-in content.
+
 ## Workflow Rules
 
 ### `note`
@@ -106,10 +113,10 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 
 1. Start with `blueprint_roadmap_promote_backlog` in preview mode so backlog review decisions come from the canonical backlog index instead of chat memory.
 2. Require explicit confirmation for each promote or remove decision; keep is the default safe path.
-3. Promote confirmed backlog items through `blueprint_roadmap_promote_backlog` so roadmap append logic, next-phase numbering, and reserved `999.x` stub reuse stay deterministic.
-4. After promotion, update the canonical backlog rows through `blueprint_artifact_mutate_index` with `action: "update"` so promoted items become `promoted` and clear any consumed reserved phase metadata.
+3. Promote confirmed backlog items through `blueprint_roadmap_promote_backlog` so roadmap append logic, next-phase numbering, and reserved `999.x` stub reuse stay deterministic. Use the preview result's `backlogId` values as the only valid promotion ids.
+4. After promotion, update the canonical backlog rows through `blueprint_artifact_mutate_index` with `action: "update"` so promoted items become `promoted` and clear any consumed reserved phase metadata. Reuse the same confirmed backlog ids instead of re-deriving them from prose.
 5. If the user explicitly removes backlog items from active consideration, mark them `archived` through `blueprint_artifact_mutate_index` instead of deleting history.
-6. Use `blueprint_state_update` so the next safe implemented action routes to `/blu-discuss-phase <first promoted phase>` when promotion happened, or `/blu-progress` when it did not.
+6. Use `blueprint_state_update` so the next safe implemented action routes to `/blu-discuss-phase <first promoted phase>` when promotion happened, or `/blu-progress` when it did not. Use the returned `promotedItems[0].phaseNumber` when a concrete promoted phase is needed for follow-up routing.
 7. Keep follow-up guidance inside implemented commands only.
 
 ### `explore`
