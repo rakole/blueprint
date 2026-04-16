@@ -23,10 +23,43 @@ Follow this flow exactly:
    - `workflow.nyquist_validation=true`: call out any remaining acceptance gaps explicitly.
    - `workflow.nyquist_validation=false`: explicitly report that gap classification was informational only because normalized config disabled it.
 9. Use the `blueprint-verifier` subagent for bounded sidecar UAT work when the artifact needs to be created or updated. Require the result to include the observed user-facing behavior, pass/fail notes, unresolved gaps, and optional follow-up fix capture.
-10. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "uat"`, and the full final markdown body. Saved execution summaries plus an existing verification artifact are required, and the returned `path` plus `summaryPaths` are authoritative. Do not write `XX-UAT.md` directly.
-11. If verification reveals follow-up fixes, capture them in the same UAT artifact or in the next explicit follow-up note/state update; do not silently mutate unrelated code.
-12. Call `mcp_blueprint_blueprint_artifact_validate` after the write path and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
-13. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, which config gates shaped the pass, any gaps or follow-up captures, and the next safe implemented action.
+10. Before calling `mcp_blueprint_blueprint_phase_validation_write`, rewrite the final UAT body so it matches this exact template and keep the section names unchanged:
+
+   ```md
+   # Phase XX: <Phase Name> - UAT
+
+   **Status:** PASS|FAIL|PARTIAL
+
+   ## UAT Summary
+
+   - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+   ## Questions Asked
+
+   - Question asked during the UAT pass, or `none`.
+
+   ## Observed Behavior
+
+   - Observed behavior tied to saved summary evidence.
+
+   ## Unresolved Gaps
+
+   - Explicit blocker, follow-up, or `none`.
+
+   ## Follow-Up Fixes
+
+   - Explicit follow-up fix, acceptance note, or `none`.
+
+   ## Next Safe Action
+
+   - `/blu-progress`
+   ```
+
+   Additional analysis is allowed only inside those sections. Do not rename headings such as `Questions Asked` or `Observed Behavior`, and do not replace the `**Status:**` line with a different label or value set.
+11. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "uat"`, and the full final markdown body. Saved execution summaries plus an existing verification artifact are required, and the returned `path` plus `summaryPaths` are authoritative. Do not write `XX-UAT.md` directly.
+12. If verification reveals follow-up fixes, capture them in the same UAT artifact or in the next explicit follow-up note/state update; do not silently mutate unrelated code.
+13. Call `mcp_blueprint_blueprint_artifact_validate` after the write path and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
+14. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, which config gates shaped the pass, any gaps or follow-up captures, and the next safe implemented action.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
