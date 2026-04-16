@@ -67,6 +67,42 @@
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; do not invent separate tool-owned artifacts.
 
+## Exact UAT Template
+
+Before persistence, normalize the final `XX-UAT.md` body into this exact shape:
+
+```md
+# Phase XX: <Phase Name> - UAT
+
+**Status:** PASS|FAIL|PARTIAL
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or `none`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or `none`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or `none`.
+
+## Next Safe Action
+
+- `/blu-progress`
+```
+
+Do not rename the headings or replace the `**Status:**` label. Keep summary references inside `## UAT Summary` or `## Observed Behavior` so the current `blueprint_phase_validation_write` validation passes cleanly.
+
 
 ## Skills And Subagents
 
@@ -139,4 +175,3 @@
 - Existing-UAT resume fixture.
 - Follow-up fix capture fixture.
 - Direct `verify-work` happy-path fixture.
-

@@ -250,6 +250,43 @@ UAT expectations:
 - should preserve resumable conversational state rather than acting like a one-shot transcript
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
 
+Exact persistence template:
+
+```md
+# Phase XX: <Phase Name> - UAT
+
+**Status:** PASS|FAIL|PARTIAL
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or `none`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or `none`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or `none`.
+
+## Next Safe Action
+
+- `/blu-progress`
+```
+
+Contract notes:
+- Keep the `**Status:**` marker exactly as written.
+- Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
+- Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
+
 ### `XX-SECURITY.md`
 
 `XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.

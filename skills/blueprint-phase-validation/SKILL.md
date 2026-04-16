@@ -106,6 +106,42 @@ When drafting `XX-VERIFICATION.md`, keep the final body in this exact shape befo
 
 Do not rename these headings, replace the `**Coverage:**` marker, or move summary citations outside `## Evidence Reviewed`. Extra detail is allowed only inside the required sections.
 
+## UAT Template
+
+When drafting `XX-UAT.md`, keep the final body in this exact shape before persistence:
+
+```md
+# Phase XX: <Phase Name> - UAT
+
+**Status:** PASS|FAIL|PARTIAL
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or `none`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or `none`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or `none`.
+
+## Next Safe Action
+
+- `/blu-progress`
+```
+
+Do not rename these headings, replace the `**Status:**` marker, or move summary references out of `## UAT Summary` and `## Observed Behavior`. Extra detail is allowed only inside the required sections.
+
 ## Workflow Rules
 
 ### `validate-phase`
@@ -126,9 +162,10 @@ Do not rename these headings, replace the `**Coverage:**` marker, or move summar
 3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
 5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
-6. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-7. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
-8. Update `STATE.md` with the UAT result and the next safe implemented action.
+6. Normalize the final UAT draft to the exact UAT template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths inside `## UAT Summary` or `## Observed Behavior`, and keep all required section names unchanged.
+7. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
+8. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
+9. Update `STATE.md` with the UAT result and the next safe implemented action.
 
 ### `add-tests`
 

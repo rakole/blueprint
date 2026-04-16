@@ -130,6 +130,46 @@ Do not rename headings, replace the `**Coverage:**` label, or move summary
 citations out of `## Evidence Reviewed`. Any extra detail must stay inside the
 required sections.
 
+## UAT Draft Template
+
+When the parent command asks for UAT output, produce the draft in this exact
+shape so it can be persisted without schema drift:
+
+```md
+# Phase XX: <Phase Name> - UAT
+
+**Status:** PASS|FAIL|PARTIAL
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification
+  artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or `none`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or `none`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or `none`.
+
+## Next Safe Action
+
+- `/blu-progress`
+```
+
+Do not rename headings, replace the `**Status:**` label, or move summary
+references out of `## UAT Summary` and `## Observed Behavior`. Any extra detail
+must stay inside the required sections.
+
 ## Outputs
 
 - verification or UAT findings grounded in saved artifacts
