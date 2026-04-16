@@ -50,6 +50,11 @@
 
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 
+## Capture Tool Contract
+
+- Call `blueprint_artifact_mutate_index` in append mode by omitting `action` and passing the note body in `entry.text`.
+- Treat returned `createdEntryIds` or `duplicateEntryIds` as the authoritative note identifiers. Do not synthesize `NOTE-*` ids manually.
+
 
 ## Skills And Subagents
 
@@ -121,5 +126,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `note` happy-path fixture.
-
 

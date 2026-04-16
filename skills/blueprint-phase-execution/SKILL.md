@@ -68,6 +68,12 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 - `blueprint-executor`
 - `blueprint-verifier`
 
+## Shared MCP Contracts
+
+- `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories or filenames.
+- `blueprint_phase_summary_write`: pass numeric `phase`, numeric `planId`, and full summary content. The matching plan must already exist, and the returned `path` plus `linkedPlanPath` are authoritative.
+- `blueprint_artifact_report_write`: pass a bare report name such as `quick-run-latest`, not `.blueprint/reports/quick-run-latest.md`. Use the returned `path` as authoritative.
+
 ## Workflow Rules
 
 1. Resolve the target phase before executing anything and stop if the phase cannot be inferred safely.
@@ -76,7 +82,7 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 4. Read the selected plan artifacts before delegating execution so wave ordering, dependencies, and acceptance criteria stay grounded in the saved plan set.
 5. Respect `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from normalized effective config when describing execution mode.
 6. Use `blueprint-executor` for bounded per-plan work instead of collapsing the entire phase into one task.
-7. Persist execution evidence through `blueprint_phase_summary_write`; do not write raw summary files directly.
+7. Persist execution evidence through `blueprint_phase_summary_write`; do not write raw summary files directly, and never pass summary filenames where the tool expects a numeric `planId`.
 8. Existing summaries require explicit overwrite confirmation before replacement. Reuse is the default.
 9. Keep partial-wave, `--wave`, and `--gaps-only` runs honest: they may advance execution coverage, but they must not claim the whole phase is complete while pending plans remain.
 10. After summary writes, refresh validation signals and update `STATE.md` so the next safe implemented action stays accurate.
@@ -84,7 +90,7 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 12. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
 13. For `/blu-quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.
 14. `/blu-quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
-15. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the canonical `quick-run-latest` report instead of inventing ad hoc state files.
+15. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest` instead of inventing ad hoc state files or passing a `.blueprint/reports/...` path.
 16. `/blu-quick` should prefer `/blu-progress` after completion unless a narrower implemented next step is obvious and safe.
 17. `/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, and do not create durable reports or phase artifacts.
 18. `/blu-fast` may update `STATE.md` only when Blueprint is initialized and healthy; partial repos should reroute to `/blu-health`, and uninitialized repos should stay in safe suggestion mode for Blueprint persistence.

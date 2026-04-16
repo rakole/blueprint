@@ -55,6 +55,14 @@
 - `blueprint_pause_handoff_write` -> `{path, written, created, overwritten, status, handoff}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Pause Handoff Contract
+
+- Persist pause state only through `blueprint_pause_handoff_write`; do not write `.blueprint/reports/pause-work-latest.md` directly.
+- `currentState` is required.
+- The list fields can be omitted and the tool will normalize them into the saved handoff shape.
+- Omit `nextAction` when the safest resume action should be derived from current Blueprint state.
+- Treat the returned `path` and `handoff` as authoritative instead of rebuilding report paths or inferred resume text manually.
+
 
 ## Skills And Subagents
 
@@ -132,5 +140,4 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `pause-work` happy-path fixture.
-
 

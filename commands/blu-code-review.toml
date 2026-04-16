@@ -9,13 +9,13 @@ Follow this flow exactly:
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
 3. Read `mcp_blueprint_blueprint_artifact_list` so you can confirm whether execution, validation, UAT, prior review, or security evidence already exists for the phase.
-4. Call `mcp_blueprint_blueprint_review_scope` with the resolved phase plus any explicit `--files` or `--depth` inputs. Treat its returned repo file list as the deterministic review scope.
+4. Call `mcp_blueprint_blueprint_review_scope` with the resolved numeric `phase` plus any explicit `--files` or `--depth` inputs. `files` must be repo-relative file paths only; do not pass directories, wildcards, `.blueprint/**`, or absolute filesystem paths. Omit `files` to let Blueprint derive scope from executed plans, and treat the returned repo file list as the deterministic review scope.
 5. If `mcp_blueprint_blueprint_review_scope` returns `status: "invalid"`, stop with the precise `reason` plus relevant warnings. If the phase has no `XX-YY-SUMMARY.md` artifacts and the user did not pass explicit files, route to `/blu-execute-phase <phase>` instead of guessing from git diff or chat memory.
 6. Require executed phase evidence unless the user supplied explicit repo files. Do not infer the review scope from unexecuted plans, current branch drift, or unstaged changes alone.
 7. If a `XX-REVIEW.md` artifact already exists, treat it as the review baseline. Read it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
 8. Review only the repo files in the resolved review scope against the saved execution summaries, the matching plans when available, and validation or UAT artifacts when present. Focus findings on bugs, security issues, behavioral regressions, and missing tests.
 9. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`.
-10. Persist the finished review through `mcp_blueprint_blueprint_review_record` with `artifact: "code-review"`. Do not write `XX-REVIEW.md` directly.
+10. Persist the finished review through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
 11. End with a concise summary covering whether the review artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:
@@ -28,6 +28,7 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the review grounded in saved artifacts and the concrete repo files returned by the review-scope tool.
+- Do not invent or widen review scope after `mcp_blueprint_blueprint_review_scope` returns; its `files` list is authoritative.
 - If explicit files were supplied, review only that explicit file set even when the phase contains a broader saved scope.
 - Recommend `/blu-code-review-fix` only when the review actually leaves concrete follow-up findings to address.
 """

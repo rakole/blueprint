@@ -12,8 +12,8 @@ Follow this flow exactly:
 4. If the list result has no matching pending todos, say so plainly and recommend `/blu-add-todo` for capture. Do not invent selection or completion changes.
 5. If the user only wants the current queue, return the matched pending todos concisely, with any active todo first, plus the safest implemented follow-up when helpful.
 6. If the user explicitly asks to mark a todo active/current or completed, require explicit confirmation before writing unless the request is already unmistakably explicit. Prefer exact todo IDs for mutations. If the selection is ambiguous, list the matching candidates and stop.
-7. For confirmed status changes, use `mcp_blueprint_blueprint_artifact_mutate_index` with `target: "todo"`, `action: "update"`, the chosen `match`, and `update.status` set to `active` or `completed`. Treat activation as exclusive: if the MCP tool reopens a previously active todo, report that plainly instead of hiding it.
-8. Return a concise summary covering the matched or updated todo IDs, the todo path, any warnings, and the next safe implemented follow-up.
+7. For confirmed status changes, use `mcp_blueprint_blueprint_artifact_mutate_index` with `target: "todo"`, `action: "update"`, the chosen `match`, and `update.status` set to `active` or `completed`. Todo updates require either `match.id` or exact `match.text`; do not guess from list order alone. Treat activation as exclusive: if the MCP tool reopens a previously active todo, report that plainly instead of hiding it.
+8. Return a concise summary covering the authoritative matched or updated todo IDs from the tool result, the todo path, any warnings, and the next safe implemented follow-up.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status` and `mcp_blueprint_blueprint_artifact_mutate_index` for Blueprint-owned state work.

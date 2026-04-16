@@ -59,6 +59,13 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## UI Persistence Contract
+
+- Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"2"` or `2`.
+- Use `blueprint_artifact_scaffold` only with the repo-relative UI-spec artifact path for the selected phase. Bare names such as `UI-SPEC` and absolute filesystem paths are invalid.
+- Persist the real final markdown through `blueprint_phase_artifact_write` with `artifact: "ui-spec"` and treat the returned `path` as authoritative instead of rebuilding filenames manually.
+- `XX-UI-SPEC.md` is the single durable output whether the phase gets a real UI contract or an explicit skip rationale. Do not invent a second skip artifact.
+
 
 ## Skills And Subagents
 
@@ -139,4 +146,3 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `ui-phase` happy-path fixture.
-

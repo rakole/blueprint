@@ -55,6 +55,13 @@
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
+## Digest And Report Contract
+
+- Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
+- Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening the filtered branch evidence after the tool returns.
+- Persist the durable report through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -140,5 +147,4 @@
 - Git or external CLI availability fixture.
 - Base-branch-from-config fixture.
 - Direct `pr-branch` happy-path fixture.
-
 

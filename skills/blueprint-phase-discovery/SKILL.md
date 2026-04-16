@@ -70,13 +70,20 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `blueprint-researcher`
 - `blueprint-ui-designer`
 
+## Shared MCP Contracts
+
+- `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` to let the runtime infer it from state or the roadmap. Never pass phase directories, slugs, or filenames.
+- `blueprint_phase_artifact_write`: pass numeric `phase`, the correct artifact enum, and full artifact content. The tool owns the final artifact `path`; use the returned `path` as authoritative and do not write raw filenames directly.
+- `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content.
+- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object. The tool owns the checkpoint filename and location.
+
 ## Workflow Rules
 
 ### `discuss-phase`
 
 1. Resolve the phase through MCP tools before asking the user to confirm any write path.
 2. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, and resume-versus-discard choices instead of plain-text menus.
-3. Write `XX-CONTEXT.md` through `blueprint_artifact_scaffold`.
+3. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
 4. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
 5. Require explicit overwrite confirmation before replacing existing context artifacts.
 6. End with a next safe action inside the implemented Blueprint surface.

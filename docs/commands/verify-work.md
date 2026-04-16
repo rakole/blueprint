@@ -59,6 +59,14 @@
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## UAT Persistence Contract
+
+- Persist conversational UAT through `blueprint_phase_validation_write`; do not write raw `XX-UAT.md` files directly.
+- Pass `phase` as the resolved numeric phase reference and `artifact: "uat"`.
+- UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact.
+- Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
+- Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; do not invent separate tool-owned artifacts.
+
 
 ## Skills And Subagents
 
@@ -131,5 +139,4 @@
 - Existing-UAT resume fixture.
 - Follow-up fix capture fixture.
 - Direct `verify-work` happy-path fixture.
-
 

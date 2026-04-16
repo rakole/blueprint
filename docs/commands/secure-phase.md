@@ -52,6 +52,10 @@
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
+## Security Artifact Contract
+
+- Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`.
+
 
 ## Skills And Subagents
 
@@ -123,5 +127,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `secure-phase` happy-path fixture.
-
 

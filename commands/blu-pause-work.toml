@@ -19,7 +19,7 @@ Follow this flow exactly:
    - human actions pending
    - modified files
    - context notes and the first next action when work resumes
-6. Persist the handoff only through `mcp_blueprint_blueprint_pause_handoff_write`. Do not write `.blueprint/reports/` directly.
+6. Persist the handoff only through `mcp_blueprint_blueprint_pause_handoff_write`. `currentState` is required; the list fields can be omitted and the tool will normalize them. Omit `nextAction` when the safest resume action should be derived from current state. Treat the returned `path` and `handoff` as authoritative. Do not write `.blueprint/reports/` directly.
 7. After the handoff is written, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-pause-work` as the active command and points the next safe implemented follow-up to `/blu-resume-work`.
 8. Return a concise completion summary covering the handoff path, whether it was created or updated, any overwrite warning, and the next safe implemented action.
 

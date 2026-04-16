@@ -54,6 +54,13 @@
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_config_set` -> `{scope, updatedKeys, config, provenance, configPath, warnings}`
 
+## Config Mutation Contract
+
+- `blueprint_config_get` defaults to `scope: "effective"` when scope is omitted. `/blu-settings` should use `scope: "project"` for repo-local editing and `scope: "defaults"` only when the user explicitly wants to inspect or change saved defaults.
+- `blueprint_config_set` defaults to `scope: "project"`. Pass a JSON-object `patch` only; do not try to write sparse file fragments or manual config text.
+- Use `scope: "defaults"` only after explicit user confirmation that saved defaults should be changed.
+- Treat the returned `configPath` as authoritative instead of reconstructing config paths manually.
+
 
 ## Skills And Subagents
 
@@ -137,5 +144,4 @@
 - `settings` common-pass-only fixture.
 - `settings` advanced-pass plus save-defaults fixture.
 - Direct `settings` happy-path fixture.
-
 

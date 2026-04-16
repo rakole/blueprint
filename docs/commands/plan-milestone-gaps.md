@@ -59,6 +59,11 @@
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Gap-Planning Contract
+
+- Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
+- Let `blueprint_roadmap_add_phase` assign each new phase number. Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative instead of inventing numbering or slugs manually.
+
 
 ## Skills And Subagents
 
@@ -135,5 +140,4 @@
 - No-actionable-gaps fixture.
 - Grouped gap-closure review fixture.
 - Direct `plan-milestone-gaps` happy-path fixture.
-
 

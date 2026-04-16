@@ -20,7 +20,7 @@ Follow this flow exactly:
    - `"artifacts": [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"]`
    - Never pass bare names like `"STACK"` and never pass absolute filesystem paths.
    - Do not replace existing codebase docs unless the user explicitly confirms a replace path.
-7. Call `mcp_blueprint_blueprint_artifact_summary_digest` with the repo evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`.
+7. Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`. Treat the returned `inputsUsed` list as the authoritative digest scope.
 8. Summarize which files were created, which were reused, and which warnings matter.
 9. End with the next logical Blueprint action, usually discovery or planning, based on the mapped repo state.
 

@@ -54,6 +54,13 @@
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
+## Digest And Report Contract
+
+- Pass only repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, and `testFiles` to `blueprint_artifact_summary_digest`.
+- Treat the returned `inputsUsed` list as the authoritative digest scope instead of re-describing or widening the evidence set afterward.
+- Persist the durable docs report through `blueprint_artifact_report_write` with the bare report name `docs-update-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -126,5 +133,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `docs-update` happy-path fixture.
-
 

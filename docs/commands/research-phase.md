@@ -59,6 +59,13 @@
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
 - `blueprint_state_update` -> `{updatedFields, statePath, warnings}`
 
+## Research Persistence Contract
+
+- Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"3"` or `3`.
+- Use `blueprint_artifact_scaffold` only with the repo-relative Blueprint research artifact path for the selected phase. Bare names such as `RESEARCH` and absolute paths are invalid.
+- Persist the final research body through `blueprint_phase_artifact_write` with `artifact: "research"` and treat the returned `path` as authoritative instead of deriving filenames from the phase slug.
+- `blueprint_phase_artifact_write` keeps research validation strict by default. Do not force a warn-only save just to bypass missing sections, citations, or other schema issues unless the user explicitly accepted that tradeoff.
+
 
 ## Skills And Subagents
 
@@ -136,4 +143,3 @@
 - Direct `research-phase` happy-path fixture.
 - Existing research `view`, `skip`, and `update` fixture.
 - Invalid research-content rejection fixture.
-

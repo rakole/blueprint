@@ -60,6 +60,13 @@
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Digest And Report Contract
+
+- Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
+- Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening shipping evidence after the tool returns.
+- Persist the durable shipping report through `blueprint_artifact_report_write` with the bare report name `ship-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -151,5 +158,4 @@
 - Git or external CLI availability fixture.
 - Branch-strategy-from-config fixture.
 - Direct `ship` happy-path fixture.
-
 

@@ -15,7 +15,7 @@ Follow this flow exactly:
 7. Confirm which reviewer CLIs are actually available before launch. Honor explicit flags such as `--gemini`, `--claude`, `--codex`, `--opencode`, or `--all`, but do not pretend an unavailable or unauthenticated reviewer ran successfully.
 8. When a requested reviewer is unavailable, record that honestly in the artifact instead of failing silently. Preserve partial fan-out results when at least one requested reviewer completed.
 9. Keep disagreement visible. If reviewers materially disagree, preserve the disagreement in the saved artifact instead of flattening it into a fake consensus.
-10. Persist the final peer-review artifact through `mcp_blueprint_blueprint_review_record` with `artifact: "peer-review"`. Do not write `XX-REVIEWS.md` directly.
+10. Persist the final peer-review artifact through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "peer-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEWS.md` directly.
 11. End with a concise summary covering which reviewers ran, which were unavailable, whether the artifact was created, reused, or revised, the main peer-review feedback, and the next logical implemented Blueprint action.
 
 Next-action rules:

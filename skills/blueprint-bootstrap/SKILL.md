@@ -70,6 +70,12 @@ Current Blueprint delta:
 - `skills/blueprint-bootstrap/references/questioning.md` is the questioning style guide for the bootstrap conversation.
 - Use the reference to improve how you ask, not to force a checklist on the user.
 
+## Shared MCP Contracts
+
+- `mcp_blueprint_blueprint_project_init` is the first persistent bootstrap write. Pass structured bootstrap context through `bootstrapSeed`, require explicit confirmation before `overwrite: true`, and use returned `createdPaths`, `configPath`, and `nextAction` as authoritative.
+- `mcp_blueprint_blueprint_config_set` defaults to project-local writes. Use `scope: "defaults"` only when the user explicitly asks to update saved defaults.
+- `mcp_blueprint_blueprint_artifact_scaffold` is a seeding tool, not the durable source of truth for authored bootstrap content once `project_init` has run.
+
 ## Workflow Rules
 
 ### 1. Preflight

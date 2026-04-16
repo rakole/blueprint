@@ -61,6 +61,14 @@
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Validation Persistence Contract
+
+- Persist verification evidence through `blueprint_phase_validation_write`; do not write raw validation files directly.
+- Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
+- Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
+- For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
+- `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
+
 
 ## Skills And Subagents
 
@@ -136,5 +144,4 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `validate-phase` happy-path fixture.
-
 

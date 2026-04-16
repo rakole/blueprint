@@ -85,6 +85,10 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - In `## Summary Draft`, provide concise markdown the parent command can persist
   through `blueprint_phase_summary_write`, including delivered work, evidence,
   and unresolved gaps when the run is partial.
+- Treat `blueprint_phase_summary_write` as phase-plus-plan keyed persistence:
+  the parent command should pass the resolved numeric phase, the numeric
+  `planId` for the matching saved plan, and the full summary body, then trust
+  the returned `path` and `linkedPlanPath` as authoritative.
 
 ## Deviation And Partial-Run Rules
 

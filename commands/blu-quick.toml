@@ -19,7 +19,7 @@ Follow this flow exactly:
    - use `blueprint-planner` only for a compact bounded checklist when the task needs brief structure but not a durable phase plan
    - use `blueprint-executor` only for bounded implementation work that stays inside the agreed quick-run scope
    - use `blueprint-verifier` only when `--validate` or `--full` was confirmed
-6. Persist the durable Blueprint report through `mcp_blueprint_blueprint_artifact_report_write` with the canonical report name `quick-run-latest`. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it.
+6. Persist the durable Blueprint report through `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest`, not a `.blueprint/reports/...` path. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it. Treat the returned `path` as authoritative.
 7. After the quick run completes, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-quick` as the active command and points to the next safe implemented action. Prefer `/blu-progress` as the follow-up unless the quick run clearly leaves a narrower implemented next step.
 8. Return a concise completion summary covering the bounded task, whether optional discuss, research, or validation depth was used, the report status, any warnings or deferred follow-up work, and the next safe implemented action.
 
@@ -27,6 +27,7 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/quick-run-latest.md` plus `.blueprint/STATE.md`.
 - Treat `--force` as the only way to bypass confirmation for replacing the canonical quick-run report.
+- Do not hand-build report paths; use the MCP return value as authoritative.
 - Do not invent phase plans, research artifacts, or validation artifacts as hidden side effects of `quick`.
 - Do not present planned-only commands as runnable follow-ups; use the command catalog to keep recommendations inside the implemented surface.
 """

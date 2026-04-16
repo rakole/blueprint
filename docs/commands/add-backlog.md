@@ -52,6 +52,13 @@
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 
+## Capture Tool Contract
+
+- Call `blueprint_artifact_mutate_index` in append mode by omitting `action` and passing the backlog text in `entry.text`.
+- Set `entry.reservePhaseStub=true` only after the user explicitly confirms that reservation.
+- Treat returned `createdEntryIds`, `duplicateEntryIds`, and `reservedPhase` as authoritative. Do not synthesize `BACKLOG-*` ids or `999.x` stub paths manually.
+- When a stub is reserved, scaffold only the returned `reservedPhase.artifactPaths` entry. Do not hand-write the reserved phase context file.
+
 
 ## Skills And Subagents
 
@@ -120,5 +127,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `add-backlog` happy-path fixture.
-
 

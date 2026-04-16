@@ -59,6 +59,12 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Phase Insertion Contract
+
+- Call `blueprint_roadmap_insert_phase` with only the confirmed integer anchor in `after` plus the phase description.
+- Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering or phase slugs manually.
+- Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
+
 
 ## Skills And Subagents
 
@@ -138,5 +144,4 @@
 - Conflicting-directory drift rejection fixture.
 - Later-phase non-renumbering regression fixture.
 - Direct `insert-phase` happy-path fixture.
-
 

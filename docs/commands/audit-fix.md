@@ -59,6 +59,14 @@
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Remediation Scope And Report Contract
+
+- Call `blueprint_review_scope` with the resolved numeric `phase`.
+- When explicit files are needed, pass only repo-relative file paths. Directories, wildcards, `.blueprint/**`, and absolute paths are invalid review-scope inputs.
+- Omit `files` to let Blueprint derive scope from executed plans and summaries, then treat the returned `files` list as authoritative instead of widening scope from git drift or chat memory.
+- Persist the durable remediation report through `blueprint_artifact_report_write` with the bare report name `audit-fix-<phase>`, not a `.blueprint/reports/...` path, and treat the returned `path` as authoritative.
+- When capturing a todo follow-up, append through `blueprint_artifact_mutate_index` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
+
 
 ## Skills And Subagents
 
@@ -136,5 +144,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `audit-fix` happy-path fixture.
-
 

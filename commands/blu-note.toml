@@ -8,10 +8,10 @@ Follow this flow exactly:
 
 1. Require explicit note text from the user input. If the note text is missing or blank, stop with concise usage guidance instead of guessing.
 2. If the user asks to `list`, `promote`, or use `--global`, explain that the currently shipped `note` slice only supports project-local note capture. Do not invent global-note behavior or silently route to planned-only follow-up commands.
-3. Use `mcp_blueprint_blueprint_artifact_mutate_index` with `target: "note"` and the normalized note text.
+3. Use `mcp_blueprint_blueprint_artifact_mutate_index` with `target: "note"` and `entry.text` set to the normalized note text. Omit `action` so the tool stays in append mode.
 4. If `mcp_blueprint_blueprint_artifact_mutate_index` returns `status: "project_missing"`, stop with safe suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
-5. If `mcp_blueprint_blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the matching note ID and stop without creating a second copy of the same note.
-6. Return a concise summary covering the note entry ID, the notes path, any warnings, and the next safe implemented follow-up. If a next step is helpful, prefer `/blu-progress`.
+5. If `mcp_blueprint_blueprint_artifact_mutate_index` returns `status: "duplicate"`, report the returned matching note ID and stop without creating a second copy of the same note. Do not synthesize note IDs such as `NOTE-001` manually.
+6. Return a concise summary covering the authoritative note entry ID from the tool result, the notes path, any warnings, and the next safe implemented follow-up. If a next step is helpful, prefer `/blu-progress`.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_artifact_mutate_index` for persistent state work.

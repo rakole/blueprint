@@ -8,7 +8,7 @@ Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp_blueprint_blueprint_review_load_findings` with `artifact: "code-review"` so you can load the saved `XX-REVIEW.md` findings, follow-ups, and severity counts for that phase.
+3. Read `mcp_blueprint_blueprint_review_load_findings` with the resolved numeric `phase` and `artifact: "code-review"` so you can load the saved `XX-REVIEW.md` findings, follow-ups, and severity counts for that phase. Treat the returned `findings`, `severityCounts`, and `followUps` as the authoritative remediation baseline instead of recreating findings from chat memory or current git drift.
 4. If `mcp_blueprint_blueprint_review_load_findings` returns `found: false`, stop with the precise reason and prefer `/blu-code-review <phase>` instead of guessing from chat memory or git drift.
 5. If the loaded review artifact has zero structured findings and no meaningful follow-up items, explain that there is no saved remediation target and prefer `/blu-progress`.
 6. If a `XX-REVIEW-FIX.md` artifact already exists in the resolved phase directory, treat it as the remediation baseline. Read it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
@@ -16,7 +16,7 @@ Follow this flow exactly:
 8. Keep repo mutation tightly bounded to the selected findings and the relevant repo files implicated by the saved review evidence. If the work expands into a broader implementation slice, stop and route to `/blu-audit-fix`, `/blu-quick`, or `/blu-plan-phase` instead of widening this command.
 9. Use the `blueprint-reviewer` subagent for a bounded second look when the saved findings are broad, severity is unclear, or the fix selection needs help. Use `blueprint-fixer` only when it is available and the fix scope remains narrow enough to stay review-driven.
 10. When you apply fixes, run the narrowest relevant verification you can justify from the repo's existing tooling. If you cannot run a reliable check, say so plainly in the artifact instead of fabricating a pass.
-11. Persist the durable remediation summary through `mcp_blueprint_blueprint_review_record` with `artifact: "review-fix"`. Do not write `XX-REVIEW-FIX.md` directly.
+11. Persist the durable remediation summary through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "review-fix"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW-FIX.md` directly.
 12. After the review-fix artifact path is settled, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-code-review-fix` as the active command and points to the next safe implemented action. Prefer `/blu-validate-phase <phase>` when behavior changed or verification evidence is now stale, `/blu-add-tests <phase>` when missing tests are the main remaining gap, and `/blu-progress` otherwise.
 13. Return a concise completion summary covering the selected phase, which findings were fixed or deferred, whether repo changes were applied, any verification that ran or was skipped, the `XX-REVIEW-FIX.md` status, and the next safe implemented action.
 
@@ -25,6 +25,7 @@ Response requirements:
 - Keep Blueprint-owned writes inside `XX-REVIEW-FIX.md` and `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Do not create git commits or branches automatically just because earlier tooling did; if the user wants git mutation beyond the bounded repo fix itself, ask explicitly.
+- Do not invent finding ids, severity counts, or follow-up lists after `mcp_blueprint_blueprint_review_load_findings`; its return payload is the remediation source of truth.
 - Do not guess missing findings from unstaged repo drift or chat memory when the saved review artifact is absent or too weak.
 - Keep next-step guidance inside implemented Blueprint commands only.
 """

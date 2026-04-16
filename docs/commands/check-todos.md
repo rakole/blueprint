@@ -51,6 +51,12 @@
 - `blueprint_artifact_mutate_index` -> `{targetPath, matchedEntryIds, entries, updatedCounts, summary}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
+## Todo Mutation Contract
+
+- List todos through `blueprint_artifact_mutate_index` with `action: "list"` and optional `filter` values.
+- Status changes must use `action: "update"` plus either `match.id` or exact `match.text`, and they must include `update.status`.
+- Treat returned `matchedEntryIds` as the authoritative todo selection. Do not guess from display order alone.
+
 
 ## Skills And Subagents
 
@@ -119,5 +125,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `check-todos` happy-path fixture.
-
 

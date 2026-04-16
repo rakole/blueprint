@@ -62,6 +62,13 @@
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Digest And Report Contract
+
+- Pass only repo-relative `artifactPaths` to `blueprint_artifact_summary_digest`.
+- Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening the cleanup evidence set after the tool returns.
+- Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -150,5 +157,4 @@
 - Completed-milestone archival fixture.
 - Dirty-tree or missing-evidence fixture.
 - Direct `cleanup` happy-path fixture.
-
 

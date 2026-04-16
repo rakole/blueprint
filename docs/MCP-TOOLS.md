@@ -149,6 +149,88 @@ These tool names are part of the documented future contract, but they are not re
 - Planned and blocked command specs may reference the future tool families above as implementation contracts.
 - Those commands remain non-routable until the tools are registered and the runtime catalog marks them `implemented`.
 
+## Model-Facing Call Contracts
+
+These notes are the shared prompt-facing contract for the current runtime. Command manifests, skills, agents, and command docs should follow them when they tell the model how to call Blueprint MCP tools safely.
+
+### Numeric Phase And Artifact IDs
+
+- Fields such as `phase`, `after`, and `planId` accept only numeric Blueprint references or numeric artifact ids.
+- Omit `phase` only when a command intentionally wants the runtime to infer the current phase from `STATE.md` or the roadmap.
+- Never pass phase directories, slugs, filenames, combined tokens such as `02-01`, or artifact frontmatter keys where the tool expects a numeric id.
+- Treat returned `phaseNumber`, `phasePrefix`, `planId`, `phaseDir`, `path`, and similar fields as authoritative. Do not derive replacement ids or paths from chat text when the tool already returned the canonical value.
+
+### Capture Index Mutations
+
+- `blueprint_artifact_mutate_index` defaults to append mode when `action` is omitted. Append flows should pass `target` plus `entry.text`.
+- Use only the returned `createdEntryIds`, `duplicateEntryIds`, `matchedEntryIds`, and `reservedPhase` fields as authoritative capture identifiers or reserved stub metadata. Do not invent `NOTE-*`, `TODO-*`, or `BACKLOG-*` ids manually.
+- `reservePhaseStub` applies only to backlog append requests. When a reserved stub is created, the returned `reservedPhase.phaseNumber`, `reservedPhase.phaseDir`, and `reservedPhase.artifactPaths` are authoritative.
+- Todo status changes must use `action: "update"` plus either `match.id` or exact `match.text`, and they must include `update.status`.
+- Backlog or batch status changes should use `updates[]` with canonical entry ids from prior tool output, and `reservedPhase: null` is the supported way to clear consumed reservation metadata.
+
+### Backlog Promotion
+
+- `blueprint_roadmap_promote_backlog` should be called with `previewOnly: true`, or with no `backlogIds`, when the command wants a deterministic preview without mutation.
+- Promotion calls should reuse only confirmed `backlogIds` returned by the preview result.
+- Treat returned `promotedItems`, `selectedBacklogIds`, and `createdPhaseDirs` as authoritative. Do not invent promoted phase numbers or reserved-stub reuse paths manually.
+
+### Scaffolding
+
+- `blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths.
+- Do not pass bare artifact names such as `STACK`, absolute filesystem paths, or ad hoc report filenames.
+- Use scaffolding only for first-write seeding or template regeneration. Do not treat scaffold output as the final persistent content for filled-in research, context, UI-spec, plan, summary, validation, or report artifacts.
+- Treat returned `createdFiles` and `reusedFiles` as authoritative for what the tool actually touched.
+
+### Roadmap Creation And Insertion
+
+- `blueprint_roadmap_add_phase` accepts only `description` plus optional `cwd`.
+- `blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`.
+- Do not precompute phase numbers, decimal suffixes, slugs, or phase directories in prompt logic. The tool owns numbering and conflict checks.
+- After the tool returns, use the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative when follow-on scaffolding or routing needs a concrete phase target.
+
+### Phase Artifact Writes And Checkpoints
+
+- `blueprint_phase_artifact_write` accepts numeric `phase`, enum `artifact`, and full `content`.
+- Do not pass artifact filenames, `phaseDir`, or `phasePrefix` into `blueprint_phase_artifact_write`; the tool owns the artifact path.
+- Research writes validate in `strict` mode by default. Use `validationMode: "warn"` only when the command intentionally wants warnings without blocking the write attempt.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object. The tool owns the checkpoint filename and location.
+- Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative for artifact and checkpoint persistence.
+
+### Plan, Summary, And Validation Artifacts
+
+- `blueprint_phase_plan_write` omits `planId` to auto-assign the next plan slot. When targeting an existing plan, pass only the numeric plan id.
+- `blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`. The matching plan must already exist.
+- `blueprint_phase_validation_write` requires numeric `phase`, enum `artifact` (`verification` or `uat`), and full validation content.
+- Verification and UAT writes both require saved execution summaries. UAT also requires an existing verification artifact.
+- Treat returned `path`, `linkedPlanPath`, `summaryPaths`, `planId`, and `status` as authoritative. Do not invent plan or summary filenames manually.
+
+### Review Scope And Review Persistence
+
+- `blueprint_review_scope` accepts repo-relative file paths only. Absolute paths, directories, wildcards, and `.blueprint/**` paths are rejected or skipped.
+- Omit `files` when the command wants review scope derived from executed plans and summaries.
+- `blueprint_review_record` requires numeric `phase`, enum `artifact`, and the full artifact `content`. The tool owns the final review filename.
+- `blueprint_review_load_findings` defaults `artifact` to `code-review` when it is omitted.
+- Treat returned `files`, `reportPath`, `counts`, `followUps`, `findings`, and `severityCounts` as authoritative review scope and review-artifact metadata.
+
+### Config, Bootstrap, And Pause Handoff
+
+- `blueprint_config_get` defaults `scope` to `effective`. `defaultsPath` is only an override for the host-global defaults file.
+- `blueprint_config_set` defaults `scope` to `project`, and `patch` must be a JSON object.
+- Use `blueprint_config_set` with `scope: "defaults"` only when the user explicitly wants saved-default changes.
+- Use `blueprint_config_set_profile` instead of a generic config patch when the only intended mutation is `model_profile`.
+- `blueprint_project_init` is the first persistent bootstrap write. `overwrite` requires explicit confirmation, and a structured `bootstrapSeed` is the supported way to pass authored startup context.
+- `blueprint_pause_handoff_write` requires `currentState`. Other list fields are optional and normalized, and omitting `nextAction` lets the tool derive the safest current next action.
+- Treat returned `configPath`, `updatedKeys`, `createdPaths`, `nextAction`, `path`, and `handoff` as authoritative.
+
+### Digests And Reports
+
+- `blueprint_artifact_summary_digest` accepts repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, `testFiles`, and `trackedFiles`.
+- Do not pass absolute paths or already-normalized report paths into the digest tool.
+- Treat returned `inputsUsed` as the authoritative digest scope that was actually summarized.
+- `blueprint_artifact_report_write` accepts a bare `reportName` such as `audit-fix-3`, `ship-latest`, or `quick-run-latest`.
+- Do not pass `.blueprint/reports/<name>.md`, absolute paths, or slash-separated report destinations into `blueprint_artifact_report_write`; the tool normalizes the slug and owns the final `path`.
+- Treat returned `path`, `written`, `created`, `overwritten`, and `status` as authoritative for report persistence.
+
 ## Path Safety Rules
 
 - All tools operate relative to the repo root or the locked host-global Blueprint directory.

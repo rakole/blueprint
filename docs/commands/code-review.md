@@ -53,6 +53,13 @@
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 
+## Review Scope Contract
+
+- Call `blueprint_review_scope` with the resolved numeric `phase`.
+- When explicit files are needed, pass only repo-relative file paths. Directories, wildcards, `.blueprint/**`, and absolute paths are invalid review-scope inputs.
+- Omit `files` to let Blueprint derive scope from executed plans and summaries, then treat the returned `files` list as authoritative instead of widening scope from chat memory or git drift.
+- Persist the final review through `blueprint_review_record` with `artifact: "code-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`.
+
 
 ## Skills And Subagents
 
@@ -122,5 +129,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `code-review` happy-path fixture.
-
 

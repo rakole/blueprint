@@ -69,6 +69,14 @@
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 
+## Bootstrap Contract
+
+- `blueprint_project_init` is the first persistent bootstrap write. Require explicit overwrite confirmation before calling it with `overwrite: true`.
+- Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
+- Use `blueprint_artifact_scaffold` only for deliberate extra Blueprint artifacts, with supported repo-relative Blueprint artifact paths only. Bare names and absolute paths are invalid.
+- Treat scaffold output as seeding, not final authored persistence.
+- `blueprint_config_set` expects a JSON-object `patch`. Keep repo writes at `scope: "project"` by default, and use `scope: "defaults"` only when the user explicitly approved changing saved defaults.
+
 ## Skills And Subagents
 
 - Primary skill: `blueprint-bootstrap`

@@ -34,6 +34,12 @@ artifact without guessing scope, risks, or follow-up fixes.
 - any prior `XX-REVIEW.md` artifact when the parent command is revising an
   existing review
 
+Treat the returned `blueprint_review_scope.files` list as authoritative:
+
+- review only repo-relative file paths the parent command already resolved
+- do not add directories, wildcards, `.blueprint/**` paths, or guessed git-diff files
+- if the scope looks incomplete, call it out as a blocker instead of widening it yourself
+
 ## Review Rules
 
 1. Stay scope-bound: review only the files and evidence the parent command

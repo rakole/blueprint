@@ -67,6 +67,13 @@
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Validation And Report Contract
+
+- Update verification coverage through `blueprint_phase_validation_write` with `artifact: "verification"` and the full final markdown body; do not edit `XX-VERIFICATION.md` directly.
+- Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
+- Persist the durable add-tests report through `blueprint_artifact_report_write` with the bare report name `add-tests-<phase>`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -142,5 +149,4 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `add-tests` happy-path fixture.
-
 

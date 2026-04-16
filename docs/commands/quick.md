@@ -55,6 +55,11 @@
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Quick Report Contract
+
+- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
+
 
 ## Skills And Subagents
 
@@ -138,5 +143,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `quick` happy-path fixture.
-
 
