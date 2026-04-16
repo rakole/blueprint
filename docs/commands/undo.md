@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`undo` is Blueprint's command for safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks.. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`undo` is Blueprint's command for safe git revert. In Blueprint it now ships as a confirmation-gated, report-backed maintenance flow that previews the revert scope first, makes dependency impact explicit, and limits git mutation to safe `git revert` style steps instead of destructive history rewrites.
 
 
 ## Command Path And Examples
@@ -24,6 +24,8 @@
 
 
 - The repo must be a git repository with recoverable commit history.
+- A clean working tree and a non-detached branch are required before any revert runs.
+- Replacing an existing undo report requires explicit overwrite confirmation.
 
 
 ## Outputs
@@ -36,23 +38,34 @@
 ## Blueprint And Global State Reads
 
 
-- none
+- `.blueprint/STATE.md` when current phase or next action context is needed
+- selected phase artifacts and saved reports under `.blueprint/phases/` and `.blueprint/reports/`
 
 
 ## Blueprint And Global State Writes
 
 
 - `git history through revert operations`
-- `undo report in .blueprint/reports/`
-- `.blueprint/STATE.md`
+- `.blueprint/reports/undo-latest.md`
+- `.blueprint/STATE.md` when the next safe action changes after undo
 
 
 ## Required MCP Tools
 
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
+
+## Digest And Report Contract
+
+- Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
+- Treat the returned `inputsUsed` list as the authoritative preview scope instead of widening revert evidence after the tool returns.
+- Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest`, not a `.blueprint/reports/...` path.
+- Treat the returned report `path` as authoritative.
 
 
 ## Skills And Subagents
@@ -93,12 +106,14 @@
 - Undo targets need dependency awareness so reverting a phase does not silently invalidate later validated work.
 - A dry-run summary should exist before any commit-level mutation is attempted.
 - The command should show the resolved revert target set, dependency impact, and report-before-mutate path before confirmation.
+- The command should stop on dirty-tree, detached-head, or in-progress-merge states instead of trying to recover implicitly.
 
 
 ## User Prompts And Confirmation Gates
 
 
 - Always require explicit confirmation after previewing the revert set.
+- Confirm report replacement before overwriting `.blueprint/reports/undo-latest.md`.
 
 
 ## Edge Cases
@@ -125,6 +140,8 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
+- Records the selected scope, candidate revert set, dependency impact, and mutation outcome in `.blueprint/reports/undo-latest.md`.
+- Never uses `git reset --hard`, implicit branch deletion, or other destructive history-rewrite shortcuts.
 
 
 ## Test Cases
@@ -132,6 +149,6 @@
 
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
+- Dirty-tree or stale-artifact fixture.
 - Direct `undo` happy-path fixture.
-
 

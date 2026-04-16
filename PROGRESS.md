@@ -1,22 +1,21 @@
 # Blueprint Progress
 
-Last updated: 2026-04-13
+Last updated: 2026-04-16
 
 Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
 
 ## Incomplete Commands (Priority Up)
 
-Total: 7
+Total: 6
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
 | 1 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
-| 2 | `undo` | ❌ | `planned` | 4 | `Quality And Shipping` | High |
-| 3 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 4 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 5 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 6 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 7 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 2 | `new-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 3 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 4 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
+| 5 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
+| 6 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -24,9 +23,8 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `undo` | `none` | `none` | `ui-review` is now shipped; only one unscheduled Wave 4 command remains. |
-| 2 | `new-workspace` | `reapply-patches` | `update` | Safe parallel set. |
-| 3 | `remove-workspace` | `workstreams` | `none` | Cleanup is now shipped; the remaining workspace set is no longer a full three-command batch. |
+| 1 | `new-workspace` | `reapply-patches` | `update` | `undo` is now shipped; the remaining maintenance work is the workspace and patch surface. |
+| 2 | `remove-workspace` | `workstreams` | `none` | Cleanup is now shipped; the remaining workspace set is no longer a full three-command batch. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
@@ -36,7 +34,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 46
+Total: 47
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -85,4 +83,5 @@ Total: 46
 | 43 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
 | 44 | `ui-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
 | 45 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 46 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 46 | `undo` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 47 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
