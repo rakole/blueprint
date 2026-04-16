@@ -63,6 +63,16 @@
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
+## Plan Persistence Contract
+
+
+- Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly.
+- Pass `phase` as the resolved phase number, for example `"3"` or `3`.
+- Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
+- Omit `planId` to let Blueprint auto-assign the next available plan slot.
+- If targeting a specific plan, pass only the numeric plan id. Prefer zero-padded string values such as `"01"` so the request matches Blueprint artifact naming, but numeric inputs such as `1` are also accepted.
+- Do not derive `planId` manually from a scaffold path and do not pass phase slugs, filenames, or combined tokens such as `02-01` as `planId`.
+
 
 ## Skills And Subagents
 
@@ -142,5 +152,3 @@
 - Config-conditioned planning fixture with research or UI gating disabled.
 - Existing-plan overwrite and plan-index refresh fixture.
 - Direct `plan-phase` happy-path fixture.
-
-
