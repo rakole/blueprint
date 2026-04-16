@@ -59,3 +59,43 @@ test("missing reads surface the reason without dumping the result object", () =>
 
   assert.equal(summary, "No Phase 7 research found: Artifact file does not exist yet.");
 });
+
+test("invalid write results do not claim an artifact was saved", () => {
+  const summary = summarizeToolResult("blueprint_phase_validation_write", {
+    phaseNumber: "3",
+    artifact: "verification",
+    path: ".blueprint/phases/03-validation-engine/03-VERIFICATION.md",
+    summaryPaths: [".blueprint/phases/03-validation-engine/03-01-SUMMARY.md"],
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    issues: ["Missing required sections."],
+    warnings: ["Validation contract mismatch."]
+  });
+
+  assert.equal(
+    summary,
+    "Did not save Phase 3 verification at `.blueprint/phases/03-validation-engine/03-VERIFICATION.md` status: invalid (1 summary links, 1 warnings)."
+  );
+});
+
+test("reused write results report preservation instead of a fresh save", () => {
+  const summary = summarizeToolResult("blueprint_phase_validation_write", {
+    phaseNumber: "3",
+    artifact: "verification",
+    path: ".blueprint/phases/03-validation-engine/03-VERIFICATION.md",
+    summaryPaths: [".blueprint/phases/03-validation-engine/03-01-SUMMARY.md"],
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "reused",
+    issues: [],
+    warnings: ["Preserved existing verification artifact because the content was unchanged."]
+  });
+
+  assert.equal(
+    summary,
+    "Reused existing Phase 3 verification at `.blueprint/phases/03-validation-engine/03-VERIFICATION.md` status: reused (1 summary links, 1 warnings)."
+  );
+});

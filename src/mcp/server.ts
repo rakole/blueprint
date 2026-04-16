@@ -267,6 +267,43 @@ function getOperationVerb(toolName: string): string {
   return "Completed";
 }
 
+function summarizeMutationOutcome(toolName: string, result: ToolResult): string | null {
+  const status = getString(result, "status");
+  const written = getBoolean(result, "written");
+  const updated = getBoolean(result, "updated");
+  const deleted = getBoolean(result, "deleted");
+
+  if (toolName.endsWith("_write") || toolName.endsWith("_put")) {
+    if (status === "reused" || written === false) {
+      if (status === "reused") {
+        return "Reused existing";
+      }
+
+      if (status === "invalid") {
+        return "Did not save";
+      }
+    }
+  }
+
+  if (toolName.endsWith("_set") || toolName.endsWith("_update")) {
+    if (status === "reused" || updated === false) {
+      if (status === "reused") {
+        return "Reused existing";
+      }
+
+      if (status === "invalid") {
+        return "Did not update";
+      }
+    }
+  }
+
+  if (toolName.endsWith("_delete") && deleted === false && status === "invalid") {
+    return "Did not delete";
+  }
+
+  return null;
+}
+
 export function summarizeToolResult(toolName: string, result: ToolResult): string {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
@@ -277,7 +314,7 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
   const status = getString(result, "status");
   const mutationFlags = buildMutationFlags(result);
   const countSummary = buildCountSummary(result);
-  const operationVerb = getOperationVerb(toolName);
+  const operationVerb = summarizeMutationOutcome(toolName, result) ?? getOperationVerb(toolName);
 
   if (phaseFound === false) {
     return reason
