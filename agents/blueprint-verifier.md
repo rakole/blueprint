@@ -94,6 +94,42 @@ gaps.
 - If there are no gaps, say so plainly and explain why the evidence is
   sufficient.
 
+## Verification Draft Template
+
+When the parent command asks for validation output, produce the draft in this
+exact shape so it can be persisted without schema drift:
+
+```md
+# Phase XX: <Phase Name> - Verification
+
+**Coverage:** Reviewed `<summary filename>` and any other saved phase summaries
+for validation evidence.
+
+## Validation Summary
+
+- Concise readiness result grounded in the saved summaries.
+
+## Evidence Reviewed
+
+- `.blueprint/phases/<phase-dir>/<summary-file>.md`
+
+## Gaps Found
+
+- Explicit blocker, follow-up, or `none`.
+
+## Suggested Repairs
+
+- Explicit next repair, follow-up, or `none`.
+
+## Next Safe Action
+
+- `/blu-verify-work <phase>`
+```
+
+Do not rename headings, replace the `**Coverage:**` label, or move summary
+citations out of `## Evidence Reviewed`. Any extra detail must stay inside the
+required sections.
+
 ## Outputs
 
 - verification or UAT findings grounded in saved artifacts
