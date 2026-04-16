@@ -2,18 +2,19 @@ import * as z from "zod/v4";
 type RoadmapReadArgs = {
     cwd?: string;
 };
+type NumericInput = string | number;
 type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
 };
 type RoadmapInsertPhaseArgs = {
     cwd?: string;
-    after: string;
+    after: NumericInput;
     description: string;
 };
 type RoadmapRemovePhaseArgs = {
     cwd?: string;
-    phase: string;
+    phase: NumericInput;
 };
 type RoadmapPromoteBacklogArgs = {
     cwd?: string;
@@ -22,7 +23,7 @@ type RoadmapPromoteBacklogArgs = {
 };
 type PhaseLookupArgs = {
     cwd?: string;
-    phase?: string;
+    phase?: NumericInput;
 };
 type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
 type PhaseValidationArtifactKind = "verification" | "uat";
@@ -48,19 +49,19 @@ type PhaseCheckpointPutArgs = PhaseLookupArgs & {
     checkpoint: Record<string, unknown>;
 };
 type PhasePlanReadArgs = PhaseLookupArgs & {
-    planId: string;
+    planId: NumericInput;
 };
 type PhasePlanWriteArgs = PhaseLookupArgs & {
-    planId?: string;
+    planId?: NumericInput;
     content: string;
     overwrite?: boolean;
     validationMode?: "strict" | "warn";
 };
 type PhaseSummaryReadArgs = PhaseLookupArgs & {
-    planId: string;
+    planId: NumericInput;
 };
 type PhaseSummaryWriteArgs = PhaseLookupArgs & {
-    planId: string;
+    planId: NumericInput;
     content: string;
     overwrite?: boolean;
 };
@@ -461,7 +462,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseLocateResult>;
 } | {
@@ -469,7 +470,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseContextResult>;
 } | {
@@ -477,7 +478,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseResearchStatusResult>;
 } | {
@@ -553,8 +554,8 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
-        planId: z.ZodString;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhasePlanReadResult>;
 } | {
@@ -562,8 +563,8 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
-        planId: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         content: z.ZodString;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         validationMode: z.ZodOptional<z.ZodEnum<{
@@ -585,8 +586,8 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
-        planId: z.ZodString;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseSummaryReadResult>;
 } | {
@@ -594,8 +595,8 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
-        planId: z.ZodString;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         content: z.ZodString;
         overwrite: z.ZodOptional<z.ZodBoolean>;
     };
@@ -605,7 +606,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointGetResult>;
 } | {
@@ -613,7 +614,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         checkpoint: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointPutResult>;
@@ -622,7 +623,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointDeleteResult>;
 })[];

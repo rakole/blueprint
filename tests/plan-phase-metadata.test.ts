@@ -30,7 +30,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /planner\/checker revision loop|re-run the checker/i);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /Omit `planId` to auto-assign the next available slot/i);
-  assert.match(commandFile, /Never pass a numeric `planId` value/i);
+  assert.match(commandFile, /numeric plan id when targeting a specific plan/i);
+  assert.match(commandFile, /numeric inputs such as `1` are accepted/i);
   assert.doesNotMatch(
     commandFile,
     /skills\/blueprint-phase-planning\.md|agents\/blueprint-(planner|checker)\.md/
@@ -55,7 +56,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /revision loop/i);
   assert.match(skillFile, /\/blu-progress/);
   assert.match(skillFile, /Omit `planId` to auto-assign the next slot/i);
-  assert.match(skillFile, /Never pass a numeric `planId` value/i);
+  assert.match(skillFile, /numeric plan id when targeting a specific plan/i);
+  assert.match(skillFile, /numeric inputs such as `1` are accepted/i);
 });
 
 test("plan-phase command doc explains the plan write contract for planId", async () => {
@@ -63,7 +65,7 @@ test("plan-phase command doc explains the plan write contract for planId", async
 
   assert.match(docFile, /## Plan Persistence Contract/);
   assert.match(docFile, /Omit `planId` to let Blueprint auto-assign the next available plan slot/i);
-  assert.match(docFile, /If targeting a specific plan, pass `planId` as a string/i);
-  assert.match(docFile, /Do not pass a numeric `planId` value/i);
+  assert.match(docFile, /If targeting a specific plan, pass only the numeric plan id/i);
+  assert.match(docFile, /numeric inputs such as `1` are also accepted/i);
   assert.match(docFile, /do not derive `planId` manually from a scaffold path/i);
 });

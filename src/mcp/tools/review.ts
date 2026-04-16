@@ -20,6 +20,8 @@ type ReviewArtifactKind =
   | "security"
   | "ui-review";
 
+type NumericInput = string | number;
+
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
 
 type ReviewFinding = {
@@ -31,7 +33,7 @@ type ReviewFinding = {
 
 type ReviewRecordArgs = {
   cwd?: string;
-  phase?: string;
+  phase?: NumericInput;
   artifact: ReviewArtifactKind;
   content: string;
   overwrite?: boolean;
@@ -61,7 +63,7 @@ type ReviewDepth = "quick" | "standard" | "deep";
 
 type ReviewScopeArgs = {
   cwd?: string;
-  phase?: string;
+  phase?: NumericInput;
   files?: string[];
   depth?: ReviewDepth;
 };
@@ -94,7 +96,7 @@ type ReviewScopeResult = {
 
 type ReviewLoadFindingsArgs = {
   cwd?: string;
-  phase?: string;
+  phase?: NumericInput;
   artifact?: ReviewArtifactKind;
 };
 
@@ -122,9 +124,11 @@ const REVIEW_ARTIFACT_SUFFIXES: Record<ReviewArtifactKind, string> = {
   "ui-review": "-UI-REVIEW.md"
 };
 
+const numericBlueprintInputSchema = z.union([z.string(), z.number()]);
+
 const reviewRecordInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum([
     "code-review",
     "peer-review",
@@ -138,14 +142,14 @@ const reviewRecordInputSchema = {
 
 const reviewScopeInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   files: z.array(z.string()).optional(),
   depth: z.enum(["quick", "standard", "deep"]).optional()
 };
 
 const reviewLoadFindingsInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   artifact: z
     .enum(["code-review", "peer-review", "review-fix", "security", "ui-review"])
     .optional()

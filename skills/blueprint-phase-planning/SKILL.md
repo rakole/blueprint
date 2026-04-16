@@ -68,11 +68,12 @@ Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 4. If UI planning is enabled, require a usable UI contract or explicit skip rationale before the plan is finalized.
 5. If a phase already has one or more `-PLAN.md` files, inspect them through `blueprint_phase_plan_index` and `blueprint_phase_plan_read`, then require explicit overwrite confirmation before replacement or targeted revision.
 6. Use `blueprint-planner` to draft one or more execution-ready plans with concrete frontmatter, dependency waves, repo paths, task-level `Read First`, task-level `Action`, and grep/test-verifiable `Acceptance Criteria`.
-7. Persist finalized plan content through `blueprint_phase_plan_write`. Pass `phase` as the resolved phase number and `content` as the full plan body. Omit `planId` to auto-assign the next slot, or pass it as a string when targeting a specific plan; prefer zero-padded values such as `"01"` so the request matches artifact naming. Never pass a numeric `planId` value or derive it manually from a scaffold path. Do not rely on scaffold text as the finished plan.
-8. Use `blueprint-checker` to review the saved plan set against phase evidence and locked Blueprint decisions.
-9. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
-10. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
-11. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
+7. Persist finalized plan content through `blueprint_phase_plan_write`. Pass `phase` as the resolved phase number and `content` as the full plan body. Omit `planId` to auto-assign the next slot, or pass only the numeric plan id when targeting a specific plan; prefer zero-padded string values such as `"01"` so the request matches artifact naming, but numeric inputs such as `1` are accepted. Never pass `phaseDir`, `phasePrefix`, a scaffolded filename, a slug such as `02-invoice-ingestion`, a combined token like `02-01`, or a frontmatter key name like `plan_id`. Do not rely on scaffold text as the finished plan.
+8. The saved plan must keep the exact Blueprint contract: frontmatter keys `phase`, `plan_id`, `title`, `wave`, `status`, `objective`, `depends_on`, `requirements`, `files_modified`, `read_first`, `acceptance_criteria`, and `autonomous`; body sections `## Goal`, `## Scope`, `## Tasks`, `## Verification`, and `## Must Haves`; and per-task subsections `#### Read First`, `#### Action`, and `#### Acceptance Criteria`.
+9. Use `blueprint-checker` to review the saved plan set against phase evidence and locked Blueprint decisions.
+10. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
+11. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+12. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
 
 ## Output Style
 

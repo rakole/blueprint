@@ -1,5 +1,6 @@
 import * as z from "zod/v4";
 type ReviewArtifactKind = "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
+type NumericInput = string | number;
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
 type ReviewFinding = {
     id: string;
@@ -9,7 +10,7 @@ type ReviewFinding = {
 };
 type ReviewRecordArgs = {
     cwd?: string;
-    phase?: string;
+    phase?: NumericInput;
     artifact: ReviewArtifactKind;
     content: string;
     overwrite?: boolean;
@@ -36,7 +37,7 @@ type ReviewRecordResult = {
 type ReviewDepth = "quick" | "standard" | "deep";
 type ReviewScopeArgs = {
     cwd?: string;
-    phase?: string;
+    phase?: NumericInput;
     files?: string[];
     depth?: ReviewDepth;
 };
@@ -67,7 +68,7 @@ type ReviewScopeResult = {
 };
 type ReviewLoadFindingsArgs = {
     cwd?: string;
-    phase?: string;
+    phase?: NumericInput;
     artifact?: ReviewArtifactKind;
 };
 type ReviewLoadFindingsResult = {
@@ -93,7 +94,7 @@ export declare const reviewToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
             standard: "standard";
@@ -107,7 +108,7 @@ export declare const reviewToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodOptional<z.ZodEnum<{
             "code-review": "code-review";
             "peer-review": "peer-review";
@@ -122,7 +123,7 @@ export declare const reviewToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             "code-review": "code-review";
             "peer-review": "peer-review";
