@@ -99,7 +99,7 @@ test("review docs and catalog metadata promote the peer-review slice to implemen
   );
   assert.match(
     implementationOrder,
-    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, and `ship`\./
+    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
   );
 });
 

@@ -74,13 +74,13 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories, slugs, or filenames.
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `trackedFiles`, and related file inputs only, and treat `inputsUsed` as the authoritative digest scope.
-- `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, or `cleanup-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
+- `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, `undo-latest`, or `cleanup-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
 
 ## Workflow Rules
 
 Shared rule for all maintenance flows:
 
-- run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer writing the durable maintenance report before the mutating step when the command owns one
+- run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow when the command owns a durable maintenance report
 
 ### `pr-branch`
 
@@ -110,6 +110,20 @@ Shared rule for all maintenance flows:
 10. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
 11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
 
+### `undo`
+
+1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
+2. Resolve the undo scope explicitly. Prefer the user-named phase or plan when one was provided; otherwise keep any `last N commits` request bounded to the current branch and recent history instead of guessing across unrelated work.
+3. Read `blueprint_phase_locate` when the user names a phase or plan so the revert target stays anchored to authoritative Blueprint metadata instead of filenames or chat memory.
+4. Inspect git status before mutation. A dirty working tree, detached HEAD, or in-progress merge is a hard stop for undo.
+5. Make the resolved target explicit before mutation: name the branch, candidate revert set, revert order, and any saved Blueprint evidence that would become stale if the revert succeeds.
+6. Read saved summaries, verification or UAT artifacts, review artifacts, shipping reports, and related evidence through `blueprint_artifact_list` before proposing the revert so dependency impact stays visible.
+7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the undo plan stays grounded in the selected evidence and candidate revert set.
+8. Require explicit confirmation that includes the exact revert scope, candidate commits, dependency-impact notes, the `undo-latest` report, and the precise git commands that will run.
+9. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location.
+10. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
+11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and the revert succeeds.
+
 ### `cleanup`
 
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
@@ -126,11 +140,12 @@ Shared rule for all maintenance flows:
 
 ## Planned Later Command Guardrail
 
-- `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `new-workspace`, `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
 
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, and end with the safest implemented follow-up or manual next step.
 - For `ship`, report the selected scope, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, and the safest implemented follow-up or manual next step.
+- For `undo`, report the resolved revert scope, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.

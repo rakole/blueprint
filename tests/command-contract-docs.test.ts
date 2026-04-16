@@ -569,6 +569,33 @@ test("maintenance skill and cleanup docs keep the archival contract explicit", a
   );
 });
 
+test("maintenance skill and undo docs keep the safe-revert contract explicit", async () => {
+  const [undoDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/undo.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
+  ]);
+
+  assert.match(undoDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(undoDoc, /`blueprint_project_status`/);
+  assert.match(undoDoc, /`blueprint_phase_locate`/);
+  assert.match(undoDoc, /`blueprint_artifact_list`/);
+  assert.match(undoDoc, /`blueprint_artifact_summary_digest`/);
+  assert.match(undoDoc, /`blueprint_artifact_report_write`/);
+  assert.match(undoDoc, /`blueprint_state_update`/);
+  assert.match(undoDoc, /undo-latest\.md/);
+  assert.match(undoDoc, /git revert/i);
+  assert.match(undoDoc, /git reset --hard/i);
+  assert.match(
+    mcpToolsDoc,
+    /`undo` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `undo` \| `docs\/commands\/undo\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+  );
+});
+
 test("code-review docs and reviewer agent are marked implemented in docs", async () => {
   const [skillsMarkdown, codeReviewDoc] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),

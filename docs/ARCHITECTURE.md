@@ -16,7 +16,7 @@ The live runtime currently ships:
 - the shipped Wave 3 debug command, `debug`
 - the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, and `ui-review`
 - the shipped Wave 4 docs command, `docs-update`
-- the shipped Wave 4 review-branch command, `pr-branch`
+- the shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`
 - the shipped Wave 5 maintenance command, `cleanup`
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.

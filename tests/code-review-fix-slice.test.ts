@@ -96,7 +96,7 @@ test("code-review-fix docs and catalog metadata promote the review-remediation s
   );
   assert.match(
     implementationOrder,
-    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, and `ship`\./
+    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
   );
 });
 

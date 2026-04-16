@@ -55,8 +55,8 @@ test("repo-facing status docs treat pr-branch as a shipped command", async () =>
     ]);
 
   assert.match(agentsFile, /`pr-branch` are also shipped|`pr-branch`/i);
-  assert.match(handoffFile, /shipped Wave 4 review-branch command `pr-branch`/i);
-  assert.match(architectureFile, /shipped Wave 4 review-branch command, `pr-branch`/i);
+  assert.match(handoffFile, /shipped Wave 4 maintenance commands `pr-branch`, `ship`, and `undo`/i);
+  assert.match(architectureFile, /shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`/i);
   assert.match(readmeFile, /The review-branch command `\/blu-pr-branch` is now shipped/i);
   assert.match(geminiFile, /`\/blu-pr-branch`/);
   assert.match(

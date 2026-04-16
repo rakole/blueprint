@@ -60,6 +60,7 @@ const IMPLEMENTED_COMMANDS = [
   "docs-update",
   "pr-branch",
   "ship",
+  "undo",
   "cleanup"
 ] as const;
 
@@ -871,6 +872,29 @@ test("cleanup is implemented once manifest, skill, and archival report MCP tools
     "blueprint_artifact_summary_digest",
     "blueprint_project_status",
     "blueprint_roadmap_read",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("undo is implemented once manifest, skill, and report-backed revert MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["undo"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("undo"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_list",
+    "blueprint_artifact_report_write",
+    "blueprint_artifact_summary_digest",
+    "blueprint_phase_locate",
+    "blueprint_project_status",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);

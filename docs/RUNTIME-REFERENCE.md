@@ -16,7 +16,7 @@ It exists so Blueprint contracts can be understood and maintained without consul
 
 - `/blu`, `help`, and `progress` remain implementation-aware and may only recommend commands whose catalog entry is `implemented`.
 - The retained runtime is Blueprint-native: `.blueprint/` owns project state, MCP tools own durable state changes, skills own orchestration, and hooks stay advisory.
-- Wave 2 roadmap administration, Wave 3 capture and lightweight execution, and the shipped Wave 4 review surfaces all remain locked to their documented command contracts.
+- Wave 2 roadmap administration, Wave 3 capture and lightweight execution, and the shipped Wave 4 review plus maintenance surfaces all remain locked to their documented command contracts.
 - Future metadata changes must stay aligned across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, this runtime reference, and the per-command specs in `docs/commands/`.
 
 ## Command Runtime Matrix
@@ -81,7 +81,7 @@ The command tables below map each retained Blueprint command to its current runt
 
 ### Wave 4: Quality and shipping
 
-`code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, and `pr-branch` are currently shipped in this wave. The remaining review and shipping commands stay documented until their extra substrate lands.
+`code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo` are currently shipped in this wave. Cleanup remains the shipped Wave 5 maintenance command.
 
 | Blueprint command | Command spec | Exact primary skill | Exact MCP destination | Optional agents | Hook involvement | Blueprint contract notes | Evidence state |
 |---|---|---|---|---|---|---|---|
@@ -95,7 +95,7 @@ The command tables below map each retained Blueprint command to its current runt
 | `add-tests` | `docs/commands/add-tests.md` | `blueprint-phase-validation` | `blueprint_phase_locate`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_phase_validation_read`<br>`blueprint_phase_validation_write`<br>`blueprint_artifact_list`<br>`blueprint_artifact_validate`<br>`blueprint_artifact_report_write`<br>`blueprint_state_load`<br>`blueprint_state_update` | `blueprint-executor`<br>`blueprint-verifier` | `read-before-edit`; `.blueprint` write guard; `workflow advisory` | Blueprint now ships `add-tests` as a narrow repo-test generation flow: ground new coverage in saved summaries plus validation or UAT evidence, keep repo mutation scoped to the selected tests, update `XX-VERIFICATION.md` through the validation substrate, and persist an `add-tests-<phase>` report for follow-up. | `locked`; `docs-aligned`; `needs-behavior-audit` |
 | `pr-branch` | `docs/commands/pr-branch.md` | `blueprint-maintenance` | `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write` | none | `read-before-edit`; `.blueprint` write guard; `workflow advisory` | Blueprint now ships `pr-branch` as a confirmation-gated clean review-branch preparation flow: inspect repo and config state first, make `.blueprint/` filtering explicit, persist `pr-branch-latest`, and never rewrite the source branch in place. | `locked`; `docs-aligned`; `needs-behavior-audit` |
 | `ship` | `docs/commands/ship.md` | `blueprint-maintenance` | `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` | none | `read-before-edit`; `.blueprint` write guard; `workflow advisory` | Blueprint now ships `ship` as a confirmation-gated shipping flow: inspect project and git state first, ground draft versus ready PR decisions in saved verification plus review evidence, persist `ship-latest`, and leave a durable manual fallback when `gh` cannot create the PR. | `locked`; `docs-aligned`; `needs-behavior-audit` |
-| `undo` | `docs/commands/undo.md` | `blueprint-maintenance` | `blueprint_project_status`<br>`blueprint_artifact_list`<br>`blueprint_state_update` | none | `read-before-edit`; `.blueprint` write guard; `workflow advisory` | Behavior audit still needed before claiming full parity. | `locked`; `docs-aligned`; `needs-behavior-audit` |
+| `undo` | `docs/commands/undo.md` | `blueprint-maintenance` | `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` | none | `read-before-edit`; `.blueprint` write guard; `workflow advisory` | Blueprint now ships `undo` as a confirmation-gated revert flow: resolve the target scope first, persist `undo-latest` before git mutation, make stale evidence impact explicit, and keep git changes limited to safe `git revert` style steps instead of destructive history rewrites. | `locked`; `docs-aligned`; `needs-behavior-audit` |
 
 ### Wave 5: Workspace and maintenance
 
