@@ -71,7 +71,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 ## Shared MCP Contracts
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories or filenames.
-- `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and full artifact content. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Use returned `path` and `summaryPaths` as authoritative.
+- `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and full artifact content. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
 - `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. Use the returned `path` as authoritative.
 
 ## Workflow Rules
@@ -83,7 +83,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
 5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
-6. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` to report which execution evidence actually backed the saved result.
+6. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
 7. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu-verify-work`, and fall back to `/blu-progress` only if runtime availability changes.
 
 ### `verify-work`
@@ -93,7 +93,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
 5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
-6. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact, and use the returned `summaryPaths` to report which execution evidence actually backed the saved result.
+6. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
 7. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
 8. Update `STATE.md` with the UAT result and the next safe implemented action.
 
