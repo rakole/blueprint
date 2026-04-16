@@ -24,6 +24,12 @@ test("validate-phase manifest references the validation tools, config gates, and
   assert.match(commandFile, /workflow\.verifier/);
   assert.match(commandFile, /workflow\.nyquist_validation/);
   assert.match(commandFile, /XX-VERIFICATION\.md/);
+  assert.match(commandFile, /\*\*Coverage:\*\*/);
+  assert.match(commandFile, /## Validation Summary/);
+  assert.match(commandFile, /## Evidence Reviewed/);
+  assert.match(commandFile, /## Gaps Found/);
+  assert.match(commandFile, /## Suggested Repairs/);
+  assert.match(commandFile, /## Next Safe Action/);
   assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
 });
@@ -41,5 +47,11 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(skillFile, /blueprint_phase_validation_write/);
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
+  assert.match(skillFile, /\*\*Coverage:\*\*/);
+  assert.match(skillFile, /## Validation Summary/);
+  assert.match(skillFile, /## Evidence Reviewed/);
+  assert.match(skillFile, /## Gaps Found/);
+  assert.match(skillFile, /## Suggested Repairs/);
+  assert.match(skillFile, /## Next Safe Action/);
   assert.match(skillFile, /\/blu-progress/);
 });

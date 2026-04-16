@@ -74,6 +74,38 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and full artifact content. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
 - `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. Use the returned `path` as authoritative.
 
+## Verification Template
+
+When drafting `XX-VERIFICATION.md`, keep the final body in this exact shape before persistence:
+
+```md
+# Phase XX: <Phase Name> - Verification
+
+**Coverage:** Reviewed `<summary filename>` and any other saved phase summaries for validation evidence.
+
+## Validation Summary
+
+- Concise readiness result grounded in the saved summaries.
+
+## Evidence Reviewed
+
+- `.blueprint/phases/<phase-dir>/<summary-file>.md`
+
+## Gaps Found
+
+- Explicit blocker, follow-up, or `none`.
+
+## Suggested Repairs
+
+- Explicit next repair, follow-up, or `none`.
+
+## Next Safe Action
+
+- `/blu-verify-work <phase>`
+```
+
+Do not rename these headings, replace the `**Coverage:**` marker, or move summary citations outside `## Evidence Reviewed`. Extra detail is allowed only inside the required sections.
+
 ## Workflow Rules
 
 ### `validate-phase`
@@ -83,8 +115,9 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
 5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
-6. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-7. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu-verify-work`, and fall back to `/blu-progress` only if runtime availability changes.
+6. Normalize the final validation draft to the exact verification template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths under `## Evidence Reviewed`, and keep all required section names unchanged.
+7. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
+8. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu-verify-work`, and fall back to `/blu-progress` only if runtime availability changes.
 
 ### `verify-work`
 
