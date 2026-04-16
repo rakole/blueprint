@@ -69,10 +69,12 @@ Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 5. If a phase already has one or more `-PLAN.md` files, inspect them through `blueprint_phase_plan_index` and `blueprint_phase_plan_read`, then require explicit overwrite confirmation before replacement or targeted revision.
 6. Use `blueprint-planner` to draft one or more execution-ready plans with concrete frontmatter, dependency waves, repo paths, task-level `Read First`, task-level `Action`, and grep/test-verifiable `Acceptance Criteria`.
 7. Persist finalized plan content through `blueprint_phase_plan_write`; do not rely on scaffold text as the finished plan.
-8. Use `blueprint-checker` to review the saved plan set against phase evidence and locked Blueprint decisions.
-9. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
-10. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
-11. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
+8. For every phase-scoped MCP call, pass only the resolved numeric `phaseNumber`; never pass `phaseDir`, `phasePrefix`, or a scaffolded filename as the `phase` argument. For plan reads and writes, pass only the numeric plan id such as `01` or `1`.
+9. The saved plan must keep the exact Blueprint contract: frontmatter keys `phase`, `plan_id`, `title`, `wave`, `status`, `objective`, `depends_on`, `requirements`, `files_modified`, `read_first`, `acceptance_criteria`, and `autonomous`; body sections `## Goal`, `## Scope`, `## Tasks`, `## Verification`, and `## Must Haves`; and per-task subsections `#### Read First`, `#### Action`, and `#### Acceptance Criteria`.
+10. Use `blueprint-checker` to review the saved plan set against phase evidence and locked Blueprint decisions.
+11. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
+12. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+13. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
 
 ## Output Style
 

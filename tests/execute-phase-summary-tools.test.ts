@@ -243,3 +243,34 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.match(afterStatus.nextAction, /\/blu-validate-phase 3/);
   assert.match(summaryBody, /summary artifact/i);
 });
+
+test("phase summary tools accept numeric phase and plan identifiers from runtime callers", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: 3,
+    planId: 1,
+    content: `# Phase 03: Phase Discovery - Summary
+
+## Result
+
+- Execution finished and produced a summary artifact.
+`
+  });
+  const read = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "03-phase-discovery",
+    planId: 1
+  });
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: 3 });
+
+  assert.equal(created.planId, "01");
+  assert.equal(created.phaseNumber, "3");
+  assert.equal(read.found, true);
+  assert.equal(read.planId, "01");
+  assert.deepEqual(index.completedPlans, ["01"]);
+});

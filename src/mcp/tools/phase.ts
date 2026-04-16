@@ -31,6 +31,8 @@ type RoadmapReadArgs = {
   cwd?: string;
 };
 
+type NumericInput = string | number;
+
 type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
@@ -38,13 +40,13 @@ type RoadmapAddPhaseArgs = {
 
 type RoadmapInsertPhaseArgs = {
   cwd?: string;
-  after: string;
+  after: NumericInput;
   description: string;
 };
 
 type RoadmapRemovePhaseArgs = {
   cwd?: string;
-  phase: string;
+  phase: NumericInput;
 };
 
 type RoadmapPromoteBacklogArgs = {
@@ -55,7 +57,7 @@ type RoadmapPromoteBacklogArgs = {
 
 type PhaseLookupArgs = {
   cwd?: string;
-  phase?: string;
+  phase?: NumericInput;
 };
 
 type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
@@ -89,22 +91,22 @@ type PhaseCheckpointPutArgs = PhaseLookupArgs & {
 };
 
 type PhasePlanReadArgs = PhaseLookupArgs & {
-  planId: string;
+  planId: NumericInput;
 };
 
 type PhasePlanWriteArgs = PhaseLookupArgs & {
-  planId?: string;
+  planId?: NumericInput;
   content: string;
   overwrite?: boolean;
   validationMode?: "strict" | "warn";
 };
 
 type PhaseSummaryReadArgs = PhaseLookupArgs & {
-  planId: string;
+  planId: NumericInput;
 };
 
 type PhaseSummaryWriteArgs = PhaseLookupArgs & {
-  planId: string;
+  planId: NumericInput;
   content: string;
   overwrite?: boolean;
 };
@@ -524,9 +526,11 @@ const roadmapPromoteBacklogInputSchema = {
   previewOnly: z.boolean().optional()
 };
 
+const numericBlueprintInputSchema = z.union([z.string(), z.number()]);
+
 const phaseLookupInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional()
+  phase: numericBlueprintInputSchema.optional()
 };
 
 const phaseArtifactInputSchema = {
@@ -561,45 +565,49 @@ const phaseValidationWriteInputSchema = {
 };
 const phasePlanReadInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
-  planId: z.string()
+  phase: numericBlueprintInputSchema.optional(),
+  planId: numericBlueprintInputSchema
 };
 const phasePlanWriteInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
-  planId: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  planId: numericBlueprintInputSchema.optional(),
   content: z.string(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
 };
 const phaseSummaryReadInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
-  planId: z.string()
+  phase: numericBlueprintInputSchema.optional(),
+  planId: numericBlueprintInputSchema
 };
 const phaseSummaryWriteInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
-  planId: z.string(),
+  phase: numericBlueprintInputSchema.optional(),
+  planId: numericBlueprintInputSchema,
   content: z.string(),
   overwrite: z.boolean().optional()
 };
 
 const phaseCheckpointPutInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   checkpoint: z.record(z.string(), z.unknown())
 };
 
-function normalizePhaseNumber(value: string): string {
-  return normalizeBlueprintPhaseRef(value);
+function normalizeBlueprintInput(value: NumericInput): string {
+  return typeof value === "number" ? String(value) : value;
 }
 
-function basePhaseNumber(value: string): string {
+function normalizePhaseNumber(value: NumericInput): string {
+  return normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
+}
+
+function basePhaseNumber(value: NumericInput): string {
   return normalizePhaseNumber(value).split(".")[0] ?? normalizePhaseNumber(value);
 }
 
-function comparePhaseNumbers(left: string, right: string): number {
+function comparePhaseNumbers(left: NumericInput, right: NumericInput): number {
   const leftParts = normalizePhaseNumber(left)
     .split(".")
     .map((segment) => Number.parseInt(segment, 10));
@@ -620,16 +628,16 @@ function comparePhaseNumbers(left: string, right: string): number {
   return 0;
 }
 
-function formatPhasePrefix(value: string): string {
-  return formatBlueprintPhasePrefix(value);
+function formatPhasePrefix(value: NumericInput): string {
+  return formatBlueprintPhasePrefix(normalizeBlueprintInput(value));
 }
 
-function extractPhaseNumberToken(value: string): string | null {
-  const match = value.trim().match(/(\d+(?:\.\d+)?)/);
+function extractPhaseNumberToken(value: NumericInput): string | null {
+  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
   return match ? normalizePhaseNumber(match[1]) : null;
 }
 
-function isIntegerPhaseNumber(value: string): boolean {
+function isIntegerPhaseNumber(value: NumericInput): boolean {
   return !normalizePhaseNumber(value).includes(".");
 }
 
@@ -1282,13 +1290,13 @@ async function readBacklogPromotionCandidates(projectRoot: string): Promise<{
 
 async function resolveRequestedPhase(
   projectRoot: string,
-  requestedPhase: string | undefined,
+  requestedPhase: NumericInput | undefined,
   phases: ParsedRoadmapPhase[]
 ): Promise<{
   phaseNumber: string | null;
   resolvedFrom: "explicit" | "state" | "roadmap";
 }> {
-  const explicit = requestedPhase?.trim();
+  const explicit = requestedPhase === undefined ? undefined : normalizeBlueprintInput(requestedPhase).trim();
 
   if (explicit) {
     return {
@@ -1401,8 +1409,8 @@ function checkpointPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "ph
   return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
 }
 
-function normalizePlanId(value: string): string {
-  return normalizeNumericArtifactId(value, "Plan id");
+function normalizePlanId(value: NumericInput): string {
+  return normalizeNumericArtifactId(normalizeBlueprintInput(value), "Plan id");
 }
 
 function parsePlanArtifactPath(

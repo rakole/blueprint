@@ -342,3 +342,30 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.match(afterStatus.nextAction, /\/blu-execute-phase 3/);
   assert.match(writtenBody, /Plan 02/);
 });
+
+test("phase planning tools accept numeric phase and plan identifiers from runtime callers", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: 3,
+    planId: 1,
+    content: validPlanContent("01", 1),
+    overwrite: true
+  });
+  const read = await blueprintPhasePlanRead({
+    cwd: repoPath,
+    phase: "03-phase-discovery",
+    planId: 1
+  });
+  const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: 3 });
+
+  assert.equal(created.planId, "01");
+  assert.equal(created.phaseNumber, "3");
+  assert.equal(read.found, true);
+  assert.equal(read.planId, "01");
+  assert.deepEqual(index.plans.map((plan) => plan.planId), ["01"]);
+});

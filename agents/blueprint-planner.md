@@ -63,6 +63,17 @@ guessing plan structure or dependency order.
 
 ## Required Plan Contract
 
+- Treat the `phase` tool argument and frontmatter field differently:
+  - tool argument `phase`: only the resolved numeric phase reference such as
+    `2` or `02`
+  - frontmatter `phase`: the same numeric phase reference normalized inside the
+    plan body
+- Treat the `planId` tool argument and frontmatter `plan_id` differently:
+  - tool argument `planId`: only the numeric plan id such as `1` or `01`
+  - frontmatter `plan_id`: the same numeric id rendered inside the YAML
+- Never pass a phase directory, slug, filename, or combined token like
+  `02-invoice-ingestion`, `02-01`, or `02-01-PLAN.md` to
+  `blueprint_phase_plan_write`.
 - Return full plan bodies, not outline notes or scaffold placeholders.
 - Every plan must include YAML frontmatter with:
   - `phase`
