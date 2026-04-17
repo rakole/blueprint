@@ -215,6 +215,65 @@ Validation expectations:
 - sources must include a URL, repo path, or cited file reference
 - scaffold-only placeholders are not considered valid completed research
 
+Exact persistence template:
+
+````md
+# Phase XX: <Phase Name> - Research
+
+**Researched:** <YYYY-MM-DD>
+**Domain:** <research domain>
+**Confidence:** LOW|MEDIUM|HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
+
+## Summary
+
+- <key conclusion>
+
+## User Constraints
+
+- <repo, product, or workflow constraint>
+
+## Standard Stack
+
+- <runtime, library, or shared repo pattern>
+
+## Architecture Patterns
+
+- <durable implementation pattern>
+
+## Don't Hand-Roll
+
+- <existing tool, helper, or platform feature>
+
+## Common Pitfalls
+
+- <failure mode or regression risk>
+
+## Code Examples
+
+```text
+<short code or pseudocode example>
+```
+
+## Recommendations
+
+- <prescriptive recommendation with tradeoffs>
+
+## Sources
+
+- <repo path, URL, or cited file reference> - why it matters
+````
+
+Contract notes:
+- Keep the `**Confidence:**` marker exactly as written.
+- Keep all required section names unchanged so `blueprint_phase_artifact_write` passes current research validation.
+- Replace every angle-bracket placeholder before persisting the artifact through MCP.
+
 ### `XX-VERIFICATION.md`
 
 `XX-VERIFICATION.md` is the phase-scoped validation contract for a completed phase.

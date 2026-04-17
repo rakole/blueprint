@@ -53,12 +53,14 @@ test("mapping and discovery specialist agents encode concrete output modes and r
 
   assert.match(researcher, /## Required Reads/);
   assert.match(researcher, /## Required Output Contract/);
+  assert.match(researcher, /Return content in this exact shape:/);
   assert.match(researcher, /## Revision Behavior/);
   assert.match(
     researcher,
     /preserve strong sections and\s+revise only the stale or weak parts/i
   );
   assert.match(researcher, /official docs or explicitly supplied external references/);
+  assert.match(researcher, /Replace every angle-bracket placeholder before returning the draft/i);
 
   assert.match(uiDesigner, /## Required Reads/);
   assert.match(uiDesigner, /## UI Decision Rules/);
