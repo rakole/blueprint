@@ -13,7 +13,7 @@ Follow this flow exactly:
 5. Read `mcp_blueprint_blueprint_artifact_list` to summarize existing and missing Blueprint artifacts.
 6. Read `mcp_blueprint_blueprint_artifact_validate` to collect validation issues and `suggestedRepairs`.
 7. In read-only mode, stop after reporting the diagnosis and the exact repair options.
-8. If `--repair` is present, require an explicit confirmation-style response before any write.
+8. If `--repair` is present, require an explicit confirmation-style response before any write. use `ask_user` for confirmation.
 9. After explicit confirmation, call `mcp_blueprint_blueprint_config_set` only when config normalization is required. Pass a JSON-object `patch` only, keep repairs project-local at `scope: "project"`, and treat the returned `configPath` as authoritative.
 10. After explicit confirmation, call `mcp_blueprint_blueprint_state_sync` only when state reconstruction is required.
 11. Re-read `mcp_blueprint_blueprint_project_status` if you need to summarize the post-repair next safe action.

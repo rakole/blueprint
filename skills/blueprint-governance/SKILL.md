@@ -28,6 +28,7 @@ Handle config, profile, and health flows with explicit state inspection and conf
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
+- for any interaction or confirmation required from user, make use of `ask_user`. Do not dump question / confirmation in plain text.
 
 ## Parity Goal
 
