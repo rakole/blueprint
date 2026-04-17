@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path7) {
-  if (!path7)
+function getElementAtPath(obj, path8) {
+  if (!path8)
     return obj;
-  return path7.reduce((acc, key) => acc?.[key], obj);
+  return path8.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path7, issues) {
+function prefixIssues(path8, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path7);
+    iss.path.unshift(path8);
     return iss;
   });
 }
@@ -10713,8 +10713,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path7) {
-      let input = path7;
+    function removeDotSegments(path8) {
+      let input = path8;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10913,8 +10913,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path7, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
+        const [path8, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path8 && path8 !== "/" ? path8 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -14276,12 +14276,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs6, exportName) {
+    function addFormats(ajv, list, fs7, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs6[f]);
+        ajv.addFormat(f, fs7[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -17864,15 +17864,15 @@ var init_command_paths = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { promises as fs2 } from "node:fs";
-import path4 from "node:path";
+import { promises as fs3 } from "node:fs";
+import path5 from "node:path";
 function normalizeTextContent(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
 }
 async function pathExists2(targetPath) {
   try {
-    await fs2.access(targetPath);
+    await fs3.access(targetPath);
     return true;
   } catch {
     return false;
@@ -18038,7 +18038,7 @@ function findPhaseArtifact(artifacts, suffix) {
 async function readRepoFileIfPresent(projectRoot, relativePath) {
   try {
     const absolutePath = resolveRepoRelativePath(projectRoot, relativePath);
-    return await fs2.readFile(absolutePath, "utf8");
+    return await fs3.readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -18068,7 +18068,7 @@ async function normalizeExplicitReviewFiles(projectRoot, files, warnings) {
     }
     let stats;
     try {
-      stats = await fs2.stat(absolutePath);
+      stats = await fs3.stat(absolutePath);
     } catch {
       warnings.push(`Skipped missing explicit review path: ${relativePath}`);
       continue;
@@ -18146,7 +18146,7 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
       }
       let stats;
       try {
-        stats = await fs2.stat(absolutePath);
+        stats = await fs3.stat(absolutePath);
       } catch {
         warnings.push(
           `Skipped missing repo path from ${planPath} review scope: ${relativePath}`
@@ -18222,7 +18222,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path4.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path5.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -18241,7 +18241,7 @@ async function blueprintReviewScope(args) {
     phase: {
       phaseNumber: located.phaseNumber,
       phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path4.basename(located.phaseDir)}`,
+      phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path5.basename(located.phaseDir)}`,
       phaseDir: located.phaseDir,
       resolvedFrom: located.resolvedFrom
     },
@@ -18290,7 +18290,7 @@ async function blueprintReviewRecord(args) {
     };
   }
   if (exists) {
-    const existingContent = await fs2.readFile(absolutePath, "utf8");
+    const existingContent = await fs3.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push("Preserved existing review artifact because the content was unchanged.");
       return {
@@ -18383,7 +18383,7 @@ async function blueprintReviewLoadFindings(args) {
       warnings: located.warnings
     };
   }
-  const content = await fs2.readFile(
+  const content = await fs3.readFile(
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
@@ -18654,14 +18654,14 @@ __export(project_exports, {
   blueprintProjectStatus: () => blueprintProjectStatus,
   projectToolDefinitions: () => projectToolDefinitions
 });
-import { promises as fs3 } from "node:fs";
-import path5 from "node:path";
+import { promises as fs4 } from "node:fs";
+import path6 from "node:path";
 function bundledUrl(relativePath) {
   return new URL(`../../../${relativePath}`, import.meta.url);
 }
 async function pathExists3(targetPath) {
   try {
-    await fs3.access(targetPath);
+    await fs4.access(targetPath);
     return true;
   } catch {
     return false;
@@ -18669,7 +18669,7 @@ async function pathExists3(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs3.readFile(path5.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs4.readFile(path6.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -18681,7 +18681,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs3.readFile(path5.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs4.readFile(path6.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -18696,13 +18696,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path5.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path6.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs3.readFile(path5.join(projectRoot, candidate), "utf8");
+      const raw = await fs4.readFile(path6.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -18885,7 +18885,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   const specUrl = bundledUrl(specPath);
   const manifestExists = await pathExists3(bundledUrl(manifestPath));
   const specExists = await pathExists3(specUrl);
-  const specMarkdown = specExists ? await fs3.readFile(specUrl, "utf8") : "";
+  const specMarkdown = specExists ? await fs4.readFile(specUrl, "utf8") : "";
   const requiredTools = parseRequiredTools(specMarkdown);
   const optionalAgents = parseOptionalAgents(specMarkdown, parsedRow.primarySkill);
   const availableOptionalAgents = [];
@@ -18912,7 +18912,7 @@ async function buildCommandCatalogEntry(parsedRow) {
   availableOptionalAgents.push(
     ...await resolveAvailableOptionalAgents(optionalAgents, async (relativePath) => {
       try {
-        return await fs3.readFile(bundledUrl(relativePath), "utf8");
+        return await fs4.readFile(bundledUrl(relativePath), "utf8");
       } catch {
         return null;
       }
@@ -18955,7 +18955,7 @@ async function buildCommandCatalogEntry(parsedRow) {
 async function readBundledCommandCatalog() {
   const commandCatalogPath = bundledUrl("docs/COMMAND-CATALOG.md");
   try {
-    const markdown = await fs3.readFile(commandCatalogPath, "utf8");
+    const markdown = await fs4.readFile(commandCatalogPath, "utf8");
     const commands = {};
     const waves = {};
     const aliases = {};
@@ -19235,7 +19235,7 @@ var init_project = __esm({
 });
 
 // src/mcp/tools/state.ts
-import { promises as fs4 } from "node:fs";
+import { promises as fs5 } from "node:fs";
 function normalizeTextContent2(content) {
   return `${content.replace(/\r\n/g, "\n").trimEnd()}
 `;
@@ -19371,7 +19371,7 @@ async function loadPauseHandoffReport(projectRoot) {
       warnings: []
     };
   }
-  const raw = await fs4.readFile(absolutePath, "utf8");
+  const raw = await fs5.readFile(absolutePath, "utf8");
   return {
     found: true,
     path: PAUSE_HANDOFF_REPORT_PATH,
@@ -19462,7 +19462,7 @@ function extractPhasePlanIds(artifacts, phasePrefix, kind) {
 }
 async function listImmediateDirectories2(rootPath) {
   try {
-    const entries = await fs4.readdir(rootPath, { withFileTypes: true });
+    const entries = await fs5.readdir(rootPath, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   } catch {
     return [];
@@ -19621,7 +19621,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   let researchValid = null;
   if (hasResearch) {
     try {
-      const raw = await fs4.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
+      const raw = await fs5.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
       const validation = validateResearchArtifactContent(raw);
       researchValid = validation.valid;
       for (const issue2 of validation.issues) {
@@ -19640,7 +19640,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   for (const planPath of planPaths) {
     try {
-      const raw = await fs4.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+      const raw = await fs5.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
       const validation = validatePlanArtifactContent(raw, normalizedPhase);
       for (const issue2 of validation.issues) {
         warnings.push(`${planPath}: ${issue2}`);
@@ -19687,7 +19687,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
 async function readRoadmapSignals(projectRoot) {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   try {
-    const raw = await fs4.readFile(roadmapPath, "utf8");
+    const raw = await fs5.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
     const phases = [...raw.matchAll(
       /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
@@ -19961,7 +19961,7 @@ async function blueprintPauseHandoffWrite(args) {
   const exists = await blueprintPathExists(absolutePath);
   const warnings = [];
   if (exists) {
-    const existingContent = await fs4.readFile(absolutePath, "utf8");
+    const existingContent = await fs5.readFile(absolutePath, "utf8");
     const existingHandoff = parsePauseHandoff(existingContent);
     if (JSON.stringify(comparablePauseHandoffRecord(existingHandoff)) === JSON.stringify(comparablePauseHandoffRecord(handoff))) {
       warnings.push("Preserved existing pause handoff because the content was unchanged.");
@@ -20003,7 +20003,7 @@ async function loadBlueprintState(cwd) {
   const projectRoot = await ensureRepoRoot(cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   try {
-    const raw = await fs4.readFile(statePath, "utf8");
+    const raw = await fs5.readFile(statePath, "utf8");
     return parseStateDocument(raw);
   } catch {
     return { ...DEFAULT_STATE };
@@ -20173,8 +20173,8 @@ var init_state = __esm({
 });
 
 // src/mcp/tools/phase.ts
-import { promises as fs5 } from "node:fs";
-import path6 from "node:path";
+import { promises as fs6 } from "node:fs";
+import path7 from "node:path";
 function normalizeBlueprintInput(value) {
   return typeof value === "number" ? String(value) : value;
 }
@@ -20521,7 +20521,7 @@ function removePhaseDetailsFromRoadmap(raw, phaseNumber) {
 }
 async function pathExists4(targetPath) {
   try {
-    await fs5.access(targetPath);
+    await fs6.access(targetPath);
     return true;
   } catch {
     return false;
@@ -20531,10 +20531,10 @@ async function listPhaseArtifacts(rootPath, projectRoot) {
   if (!await pathExists4(rootPath)) {
     return [];
   }
-  const entries = await fs5.readdir(rootPath, { withFileTypes: true });
+  const entries = await fs6.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path6.join(rootPath, entry.name);
+    const absolutePath = path7.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listPhaseArtifacts(absolutePath, projectRoot));
       continue;
@@ -20551,7 +20551,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
       reason: "missing"
     };
   }
-  const entries = await fs5.readdir(phasesRoot, { withFileTypes: true });
+  const entries = await fs6.readdir(phasesRoot, { withFileTypes: true });
   const target = normalizePhaseNumber3(phaseNumber);
   const matches = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).filter((directoryName) => {
     const prefix = extractPhaseNumberToken(directoryName);
@@ -20570,7 +20570,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
     };
   }
   return {
-    phaseDir: toRepoRelativePath(projectRoot, path6.join(phasesRoot, matches[0])),
+    phaseDir: toRepoRelativePath(projectRoot, path7.join(phasesRoot, matches[0])),
     reason: null
   };
 }
@@ -20581,7 +20581,7 @@ async function readRoadmap(projectRoot) {
       `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu-new-project before using phase discovery commands.`
     );
   }
-  const raw = await fs5.readFile(roadmapPath, "utf8");
+  const raw = await fs6.readFile(roadmapPath, "utf8");
   const parsed = parseRoadmapDocument(raw);
   return {
     path: `${BLUEPRINT_DIR}/ROADMAP.md`,
@@ -20617,7 +20617,7 @@ async function readBacklogPromotionCandidates(projectRoot) {
       warnings: ["No backlog index exists yet. Run /blu-add-backlog before reviewing backlog items."]
     };
   }
-  const rawBacklog = await fs5.readFile(backlogPath, "utf8");
+  const rawBacklog = await fs6.readFile(backlogPath, "utf8");
   const parsedBacklog = parseCaptureIndexDocument(rawBacklog, "backlog");
   const warnings = parsedBacklog.malformed ? [
     `Recovered non-canonical backlog index content while reading ${BLUEPRINT_BACKLOG_INDEX_PATH}.`
@@ -20692,7 +20692,7 @@ function buildLocateRecovery(reason) {
   ];
 }
 function fallbackPhaseName(phaseDir) {
-  return slugToTitle2(path6.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
+  return slugToTitle2(path7.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -20861,7 +20861,7 @@ async function blueprintRoadmapAddPhase(args) {
   const slug = slugifyPhaseName(normalizedDescription);
   const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
   const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
+  const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   const updatedRoadmap = appendPhaseDetailsToRoadmap(
     appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
     phaseNumber,
@@ -20877,7 +20877,7 @@ async function blueprintRoadmapAddPhase(args) {
   if (await pathExists4(phaseDirPath)) {
     warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
   } else {
-    await fs5.mkdir(phaseDirPath, { recursive: true });
+    await fs6.mkdir(phaseDirPath, { recursive: true });
   }
   return {
     phaseNumber,
@@ -20946,7 +20946,7 @@ async function blueprintRoadmapInsertPhase(args) {
     );
   }
   const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
+  const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   const insertedPhaseLines = insertPhaseLineToRoadmap(
     rawRoadmap,
     insertionAnchor,
@@ -20970,7 +20970,7 @@ async function blueprintRoadmapInsertPhase(args) {
   if (existingDecimalDirectory.phaseDir === phaseDir || await pathExists4(phaseDirPath)) {
     warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
   } else {
-    await fs5.mkdir(phaseDirPath, { recursive: true });
+    await fs6.mkdir(phaseDirPath, { recursive: true });
   }
   return {
     afterPhaseNumber,
@@ -20994,19 +20994,19 @@ function renameLeadingPhaseToken(entryName, phaseNumber, replacementPrefix) {
 }
 async function renamePhaseArtifactsInPlace(projectRoot, rootDirectoryPath, oldPhaseNumber, newPhasePrefix) {
   const renamedArtifacts = [];
-  const entries = await fs5.readdir(rootDirectoryPath, { withFileTypes: true });
+  const entries = await fs6.readdir(rootDirectoryPath, { withFileTypes: true });
   for (const entry of entries) {
-    const currentPath = path6.join(rootDirectoryPath, entry.name);
+    const currentPath = path7.join(rootDirectoryPath, entry.name);
     const renamedEntry = renameLeadingPhaseToken(entry.name, oldPhaseNumber, newPhasePrefix);
-    const nextPath = renamedEntry ? path6.join(rootDirectoryPath, renamedEntry) : currentPath;
+    const nextPath = renamedEntry ? path7.join(rootDirectoryPath, renamedEntry) : currentPath;
     if (renamedEntry) {
-      await fs5.rename(currentPath, nextPath);
+      await fs6.rename(currentPath, nextPath);
       renamedArtifacts.push({
         from: toRepoRelativePath(projectRoot, currentPath),
         to: toRepoRelativePath(projectRoot, nextPath)
       });
     }
-    const stats = await fs5.stat(nextPath);
+    const stats = await fs6.stat(nextPath);
     if (stats.isDirectory()) {
       renamedArtifacts.push(
         ...await renamePhaseArtifactsInPlace(
@@ -21087,7 +21087,7 @@ async function blueprintRoadmapRemovePhase(args) {
     ])
   );
   const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs5.readFile(roadmapPath, "utf8");
+  const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   const removedPhaseLine = removePhaseLineFromRoadmap(rawRoadmap, targetPhaseNumber);
   if (!removedPhaseLine.removed) {
     throw new Error(
@@ -21123,10 +21123,10 @@ async function blueprintRoadmapRemovePhase(args) {
       previousPhaseDir: locatedPhaseDirectory.phaseDir
     });
   }
-  await fs5.rm(targetPhaseDirPath, { recursive: true, force: true });
+  await fs6.rm(targetPhaseDirPath, { recursive: true, force: true });
   for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
     const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-    const previousDirectoryName = path6.basename(previousPhaseDirPath);
+    const previousDirectoryName = path7.basename(previousPhaseDirPath);
     const newPhasePrefix = formatPhasePrefix3(newPhaseNumber);
     const renamedDirectoryName = renameLeadingPhaseToken(
       previousDirectoryName,
@@ -21138,8 +21138,8 @@ async function blueprintRoadmapRemovePhase(args) {
         `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
       );
     }
-    const newPhaseDirPath = path6.join(path6.dirname(previousPhaseDirPath), renamedDirectoryName);
-    await fs5.rename(previousPhaseDirPath, newPhaseDirPath);
+    const newPhaseDirPath = path7.join(path7.dirname(previousPhaseDirPath), renamedDirectoryName);
+    await fs6.rename(previousPhaseDirPath, newPhaseDirPath);
     const renamedArtifacts = await renamePhaseArtifactsInPlace(
       projectRoot,
       newPhaseDirPath,
@@ -21191,7 +21191,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path6.basename(reservedPhaseDirPath),
+        path7.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix
       );
@@ -21200,8 +21200,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path6.join(
-        path6.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path7.join(
+        path7.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists4(promotedPhaseDirPath)) {
@@ -21210,7 +21210,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
         );
       }
       if (promotedPhaseDirPath !== reservedPhaseDirPath) {
-        await fs5.rename(reservedPhaseDirPath, promotedPhaseDirPath);
+        await fs6.rename(reservedPhaseDirPath, promotedPhaseDirPath);
       }
       await renamePhaseArtifactsInPlace(
         projectRoot,
@@ -21238,7 +21238,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
       warnings
     };
   }
-  await fs5.mkdir(desiredPhaseDirPath, { recursive: true });
+  await fs6.mkdir(desiredPhaseDirPath, { recursive: true });
   return {
     phaseDir: desiredPhaseDir,
     createdPhaseDir: true,
@@ -21318,7 +21318,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
   }
   const roadmap = await readRoadmap(projectRoot);
   const roadmapAbsolutePath = resolveBlueprintPath(projectRoot, roadmap.path);
-  let roadmapBody = await fs5.readFile(roadmapAbsolutePath, "utf8");
+  let roadmapBody = await fs6.readFile(roadmapAbsolutePath, "utf8");
   const roadmapPhases = [...roadmap.phases];
   const promotedItems = [];
   const createdPhaseDirs = [];
@@ -21531,7 +21531,7 @@ async function blueprintPhaseResearchStatus(args = {}) {
   if (researchPath) {
     const projectRoot = await ensureRepoRoot(args.cwd);
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
-    const raw = await fs5.readFile(absolutePath, "utf8");
+    const raw = await fs6.readFile(absolutePath, "utf8");
     const validation = validateResearchArtifactContent(raw);
     researchValid = validation.valid;
     researchIssues = validation.issues;
@@ -21595,7 +21595,7 @@ async function blueprintPhaseArtifactRead(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs5.readFile(absolutePath, "utf8"),
+    content: await fs6.readFile(absolutePath, "utf8"),
     reason: null
   };
 }
@@ -21608,7 +21608,7 @@ async function blueprintPhaseArtifactWrite(args) {
   const warnings = [];
   const validation = args.artifact === "research" ? validateResearchArtifactContent(normalizedContent) : null;
   if (exists) {
-    const existingContent = await fs5.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       return {
@@ -21734,7 +21734,7 @@ async function blueprintPhaseValidationRead(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs5.readFile(absolutePath, "utf8"),
+    content: await fs6.readFile(absolutePath, "utf8"),
     summaryPaths,
     reason: null
   };
@@ -21780,7 +21780,7 @@ async function blueprintPhaseValidationWrite(args) {
     }
   }
   if (exists) {
-    const existingContent = await fs5.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       return {
@@ -21875,7 +21875,7 @@ async function blueprintPhasePlanIndex(args = {}) {
       continue;
     }
     knownPlanIds.add(planId);
-    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const content = await fs6.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record2 = toPhasePlanRecord(planId, planPath, content, resolved.phaseNumber);
     plans.push(record2);
     const waveKey = String(record2.wave ?? "unassigned");
@@ -21952,7 +21952,7 @@ async function blueprintPhasePlanRead(args) {
       reason: `${pathValue} does not exist yet.`
     };
   }
-  const content = await fs5.readFile(absolutePath, "utf8");
+  const content = await fs6.readFile(absolutePath, "utf8");
   const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
   return {
     phaseFound: true,
@@ -22001,7 +22001,7 @@ async function blueprintPhasePlanWrite(args) {
   const exists = await pathExists4(absolutePath);
   const warnings = [];
   if (exists) {
-    const existingContent = await fs5.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
       return {
@@ -22108,7 +22108,7 @@ async function blueprintPhaseSummaryIndex(args = {}) {
       warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath}`);
       continue;
     }
-    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
+    const content = await fs6.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
     summaries.push(
       toPhaseSummaryRecord(planId, summaryPath, content, knownPlanPaths.get(planId) ?? null)
     );
@@ -22167,7 +22167,7 @@ async function blueprintPhaseSummaryRead(args) {
       reason: `${pathValue} does not exist yet.`
     };
   }
-  const content = await fs5.readFile(absolutePath, "utf8");
+  const content = await fs6.readFile(absolutePath, "utf8");
   const metadata = summarizeMarkdownContent(content);
   const linkedPlanPath = planPathFor(resolved, planId);
   return {
@@ -22208,7 +22208,7 @@ async function blueprintPhaseSummaryWrite(args) {
   const issues = normalizedContent.trim().length === 0 ? ["Execution summary content must not be empty."] : [];
   const warnings = [];
   if (exists) {
-    const existingContent = await fs5.readFile(absolutePath, "utf8");
+    const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
       warnings.push(`Preserved existing summary artifact because the content was unchanged.`);
       return {
@@ -22307,7 +22307,7 @@ async function blueprintPhaseCheckpointGet(args = {}) {
     };
   }
   const parsed = ensureCheckpointObject(
-    safeJsonParseObject(await fs5.readFile(absolutePath, "utf8"), {
+    safeJsonParseObject(await fs6.readFile(absolutePath, "utf8"), {
       label: checkpointPath,
       maxBytes: 256 * 1024
     }),
@@ -22334,7 +22334,7 @@ async function blueprintPhaseCheckpointPut(args) {
 `;
   const warnings = [];
   if (await pathExists4(absolutePath)) {
-    const existingRaw = await fs5.readFile(absolutePath, "utf8");
+    const existingRaw = await fs6.readFile(absolutePath, "utf8");
     if (existingRaw === nextRaw) {
       warnings.push(`Preserved existing discussion checkpoint because the content was unchanged.`);
       return {
@@ -22389,7 +22389,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
       reason: `${checkpointPath} did not exist.`
     };
   }
-  await fs5.rm(absolutePath, { force: true });
+  await fs6.rm(absolutePath, { force: true });
   return {
     phaseFound: true,
     phaseNumber: resolved.phaseNumber,
@@ -22995,8 +22995,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path8, errorMaps, issueData } = params;
+  const fullPath = [...path8, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -23111,11 +23111,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path8, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path8;
     this._key = key;
   }
   get path() {
@@ -32207,13 +32207,137 @@ var StdioServerTransport = class {
 };
 
 // src/mcp/server.ts
+import { pathToFileURL } from "node:url";
+
+// src/mcp/write-failure-log.ts
+init_artifacts();
+import { promises as fs2 } from "node:fs";
+import path4 from "node:path";
+var BLUEPRINT_DIR2 = ".blueprint";
+var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
+var LOG_SCHEMA_VERSION = 1;
+var MAX_DEPTH = 4;
+var MAX_ARRAY_ITEMS = 20;
+var MAX_OBJECT_KEYS = 25;
+var MAX_STRING_LENGTH = 800;
+var MAX_STACK_LENGTH = 4e3;
+function truncateString(value, maxLength = MAX_STRING_LENGTH) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength)}\u2026 [truncated ${value.length - maxLength} chars]`;
+}
+function sanitizeForLog(value, depth = 0, key = null) {
+  if (value === null || value === void 0) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.replace(/\r\n/g, "\n");
+    if (key === "content" || key === "currentState" || key === "contextNotes") {
+      return {
+        length: normalized.length,
+        preview: truncateString(normalized)
+      };
+    }
+    return truncateString(normalized);
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (Array.isArray(value)) {
+    if (depth >= MAX_DEPTH) {
+      return `[truncated array depth ${depth}]`;
+    }
+    const items = value.slice(0, MAX_ARRAY_ITEMS).map((entry) => sanitizeForLog(entry, depth + 1, key));
+    if (value.length > MAX_ARRAY_ITEMS) {
+      items.push(`[truncated ${value.length - MAX_ARRAY_ITEMS} more items]`);
+    }
+    return items;
+  }
+  if (typeof value === "object") {
+    if (depth >= MAX_DEPTH) {
+      return `[truncated object depth ${depth}]`;
+    }
+    const record2 = value;
+    const sanitized = Object.fromEntries(
+      Object.entries(record2).slice(0, MAX_OBJECT_KEYS).map(([entryKey, entryValue]) => [
+        entryKey,
+        sanitizeForLog(entryValue, depth + 1, entryKey)
+      ])
+    );
+    if (Object.keys(record2).length > MAX_OBJECT_KEYS) {
+      sanitized.__truncatedKeys = Object.keys(record2).length - MAX_OBJECT_KEYS;
+    }
+    return sanitized;
+  }
+  return String(value);
+}
+function toLoggedError(error2) {
+  if (error2 instanceof Error) {
+    return {
+      name: error2.name,
+      message: error2.message,
+      stack: typeof error2.stack === "string" ? truncateString(error2.stack, MAX_STACK_LENGTH) : null
+    };
+  }
+  return {
+    name: "NonErrorThrow",
+    message: typeof error2 === "string" ? truncateString(error2) : JSON.stringify(sanitizeForLog(error2)),
+    stack: null
+  };
+}
+async function appendFailureEntry(cwd, entry) {
+  try {
+    const projectRoot = await ensureRepoRoot(cwd);
+    const absoluteLogPath = path4.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs2.mkdir(path4.dirname(absoluteLogPath), { recursive: true });
+    await fs2.appendFile(
+      absoluteLogPath,
+      `${JSON.stringify({
+        ...entry,
+        projectRoot
+      })}
+`,
+      "utf8"
+    );
+    return toRepoRelativePath(projectRoot, absoluteLogPath);
+  } catch {
+    return null;
+  }
+}
+async function logRejectedMutationResult(toolName, args, result) {
+  return appendFailureEntry(typeof args.cwd === "string" ? args.cwd : void 0, {
+    schemaVersion: LOG_SCHEMA_VERSION,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    toolName,
+    failureKind: "rejected",
+    cwd: typeof args.cwd === "string" ? args.cwd : null,
+    request: sanitizeForLog(args),
+    result: sanitizeForLog(result)
+  });
+}
+async function logThrownMutationError(toolName, args, error2) {
+  return appendFailureEntry(typeof args.cwd === "string" ? args.cwd : void 0, {
+    schemaVersion: LOG_SCHEMA_VERSION,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    toolName,
+    failureKind: "exception",
+    cwd: typeof args.cwd === "string" ? args.cwd : null,
+    request: sanitizeForLog(args),
+    error: toLoggedError(error2)
+  });
+}
+
+// src/mcp/server.ts
 init_artifacts();
 init_config();
 init_phase();
 init_project();
 init_review();
 init_state();
-import { pathToFileURL } from "node:url";
 var TOOL_DEFINITIONS = [
   ...projectToolDefinitions,
   ...configToolDefinitions,
@@ -32237,6 +32361,36 @@ var REQUIRED_READ_PATH_TOOL_NAMES = [
 var REQUIRED_MAPPING_TOOL_NAMES = [
   "blueprint_artifact_summary_digest"
 ];
+var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
+  "blueprint_project_init",
+  "blueprint_config_set",
+  "blueprint_config_set_profile",
+  "blueprint_state_update",
+  "blueprint_pause_handoff_write",
+  "blueprint_state_sync",
+  "blueprint_roadmap_add_phase",
+  "blueprint_roadmap_insert_phase",
+  "blueprint_roadmap_remove_phase",
+  "blueprint_roadmap_promote_backlog",
+  "blueprint_phase_artifact_write",
+  "blueprint_phase_plan_write",
+  "blueprint_phase_summary_write",
+  "blueprint_phase_validation_write",
+  "blueprint_phase_checkpoint_put",
+  "blueprint_phase_checkpoint_delete",
+  "blueprint_artifact_scaffold",
+  "blueprint_artifact_mutate_index",
+  "blueprint_artifact_report_write",
+  "blueprint_review_record"
+]);
+var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
+  "invalid",
+  "project_missing",
+  "not_found",
+  "blocked",
+  "rejected",
+  "error"
+]);
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
     throw new Error(`Missing required config tool registration: ${toolName}`);
@@ -32448,7 +32602,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path7 = findSummaryPath(result);
+  const path8 = findSummaryPath(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
   const content = getString(result, "content");
@@ -32463,8 +32617,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path7) {
-    details.push(`at \`${path7}\``);
+  if (path8) {
+    details.push(`at \`${path8}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
@@ -32489,6 +32643,36 @@ function createToolResponseContent(toolName, result) {
     }
   ];
 }
+function isMutationTool(toolName) {
+  return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
+}
+function shouldLogMutationFailure(toolName, result) {
+  if (!isMutationTool(toolName)) {
+    return false;
+  }
+  const status = getString(result, "status");
+  if (status && MUTATION_FAILURE_STATUSES.has(status)) {
+    return true;
+  }
+  if (toolName.endsWith("_delete")) {
+    return getBoolean(result, "deleted") === false;
+  }
+  return false;
+}
+async function executeToolHandlerWithFailureLogging(definition, args) {
+  try {
+    const result = await definition.handler(args);
+    if (shouldLogMutationFailure(definition.name, result)) {
+      await logRejectedMutationResult(definition.name, args, result);
+    }
+    return result;
+  } catch (error2) {
+    if (isMutationTool(definition.name)) {
+      await logThrownMutationError(definition.name, args, error2);
+    }
+    throw error2;
+  }
+}
 function createBlueprintServer() {
   const server = new McpServer({
     name: "blueprint",
@@ -32502,7 +32686,7 @@ function createBlueprintServer() {
         inputSchema: definition.inputSchema ?? {}
       },
       async (args) => {
-        const result = await definition.handler(args);
+        const result = await executeToolHandlerWithFailureLogging(definition, args);
         return {
           content: createToolResponseContent(definition.name, result),
           structuredContent: result
@@ -32526,10 +32710,14 @@ if (isEntrypoint) {
   });
 }
 export {
+  BLUEPRINT_MUTATION_TOOL_NAMES,
   blueprintToolNames,
   blueprintToolRegistry,
   createBlueprintServer,
   createToolResponseContent,
+  executeToolHandlerWithFailureLogging,
+  isMutationTool,
+  shouldLogMutationFailure,
   startServer,
   summarizeToolResult
 };

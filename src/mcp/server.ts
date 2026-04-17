@@ -3,6 +3,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { pathToFileURL } from "node:url";
 import type { ZodType } from "zod/v4";
 
+import {
+  logRejectedMutationResult,
+  logThrownMutationError
+} from "./write-failure-log.js";
 import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
@@ -42,6 +46,36 @@ const REQUIRED_READ_PATH_TOOL_NAMES = [
 const REQUIRED_MAPPING_TOOL_NAMES = [
   "blueprint_artifact_summary_digest"
 ] as const;
+export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
+  "blueprint_project_init",
+  "blueprint_config_set",
+  "blueprint_config_set_profile",
+  "blueprint_state_update",
+  "blueprint_pause_handoff_write",
+  "blueprint_state_sync",
+  "blueprint_roadmap_add_phase",
+  "blueprint_roadmap_insert_phase",
+  "blueprint_roadmap_remove_phase",
+  "blueprint_roadmap_promote_backlog",
+  "blueprint_phase_artifact_write",
+  "blueprint_phase_plan_write",
+  "blueprint_phase_summary_write",
+  "blueprint_phase_validation_write",
+  "blueprint_phase_checkpoint_put",
+  "blueprint_phase_checkpoint_delete",
+  "blueprint_artifact_scaffold",
+  "blueprint_artifact_mutate_index",
+  "blueprint_artifact_report_write",
+  "blueprint_review_record"
+]);
+const MUTATION_FAILURE_STATUSES = new Set([
+  "invalid",
+  "project_missing",
+  "not_found",
+  "blocked",
+  "rejected",
+  "error"
+]);
 
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
@@ -367,6 +401,52 @@ export function createToolResponseContent(
   ];
 }
 
+export function isMutationTool(toolName: string): boolean {
+  return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
+}
+
+export function shouldLogMutationFailure(
+  toolName: string,
+  result: ToolResult
+): boolean {
+  if (!isMutationTool(toolName)) {
+    return false;
+  }
+
+  const status = getString(result, "status");
+
+  if (status && MUTATION_FAILURE_STATUSES.has(status)) {
+    return true;
+  }
+
+  if (toolName.endsWith("_delete")) {
+    return getBoolean(result, "deleted") === false;
+  }
+
+  return false;
+}
+
+export async function executeToolHandlerWithFailureLogging(
+  definition: ToolDefinition,
+  args: Record<string, unknown>
+): Promise<ToolResult> {
+  try {
+    const result = await definition.handler(args as Record<string, unknown>);
+
+    if (shouldLogMutationFailure(definition.name, result)) {
+      await logRejectedMutationResult(definition.name, args, result);
+    }
+
+    return result;
+  } catch (error) {
+    if (isMutationTool(definition.name)) {
+      await logThrownMutationError(definition.name, args, error);
+    }
+
+    throw error;
+  }
+}
+
 export function createBlueprintServer(): McpServer {
   const server = new McpServer({
     name: "blueprint",
@@ -381,7 +461,7 @@ export function createBlueprintServer(): McpServer {
         inputSchema: definition.inputSchema ?? {}
       },
       async (args: Record<string, unknown>) => {
-        const result = await definition.handler(args as Record<string, unknown>);
+        const result = await executeToolHandlerWithFailureLogging(definition, args);
 
         return {
           content: createToolResponseContent(definition.name, result),

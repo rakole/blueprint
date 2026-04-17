@@ -11,6 +11,7 @@ Blueprint-managed repositories store project state here:
   ROADMAP.md
   STATE.md
   config.json
+  mcp-write-failures.ndjson
   phases/
   reports/
   backlog/
@@ -170,6 +171,18 @@ Normalization and precedence rules:
 - `~/.<host>/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.
 - Discovery runtime actively uses `workflow.discuss_mode`, `workflow.skip_discuss`, and `workflow.research_before_questions`. `workflow.auto_advance` remains a reserved compatibility field until a later lifecycle rollout makes it real.
+
+### `mcp-write-failures.ndjson`
+
+Purpose:
+- append-only MCP-side diagnostics for failed Blueprint mutation attempts
+- preserve rejected write inputs, structured validation failures, and thrown mutation errors before the failure reaches the model
+
+Contract notes:
+- stored as newline-delimited JSON under `.blueprint/mcp-write-failures.ndjson`
+- written best-effort by the MCP server for mutating tools such as config, roadmap, phase, report, review, and capture writes
+- entries include timestamp, tool name, sanitized request fields, and either a rejected result payload or thrown error metadata
+- this is an operational debug log rather than a workflow artifact that commands should edit directly
 
 ## Phase Tree
 

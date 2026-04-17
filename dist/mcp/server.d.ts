@@ -7,6 +7,7 @@ type ToolDefinition = {
     inputSchema?: Record<string, ZodType>;
     handler: (args: Record<string, unknown>) => Promise<ToolResult>;
 };
+export declare const BLUEPRINT_MUTATION_TOOL_NAMES: Set<string>;
 export declare const blueprintToolRegistry: {
     [k: string]: ToolDefinition;
 };
@@ -16,6 +17,9 @@ export declare function createToolResponseContent(toolName: string, result: Tool
     type: "text";
     text: string;
 }>;
+export declare function isMutationTool(toolName: string): boolean;
+export declare function shouldLogMutationFailure(toolName: string, result: ToolResult): boolean;
+export declare function executeToolHandlerWithFailureLogging(definition: ToolDefinition, args: Record<string, unknown>): Promise<ToolResult>;
 export declare function createBlueprintServer(): McpServer;
 export declare function startServer(): Promise<void>;
 export {};
