@@ -11,6 +11,7 @@ Blueprint commands use MCP tools for deterministic state operations. This keeps 
 - Skills own orchestration.
 - Agents own bounded deep work.
 - Shared runtime security lives below the tool surface and is consumed by MCP tools rather than by command-only prompt logic.
+- Failed mutating tool calls should append a best-effort diagnostic entry to `.blueprint/mcp-write-failures.ndjson` before the rejection or exception is surfaced back to the model.
 
 ## Current Registered Tool Surface
 
