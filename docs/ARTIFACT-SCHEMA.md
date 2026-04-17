@@ -188,6 +188,10 @@ Contract notes:
 
 Each phase directory lives under `.blueprint/phases/<phase-slug>/`.
 
+Canonical source-of-truth note:
+- The runtime-owned contract registry under `src/mcp/artifact-contracts/` is the canonical source for scaffold templates, authoring templates, locked markers, required headings, and freehand policy.
+- This document is the human-readable reference and should stay aligned with the runtime contract registry rather than competing with it.
+
 Core phase artifacts:
 - `XX-CONTEXT.md`
 - `XX-RESEARCH.md`

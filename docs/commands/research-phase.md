@@ -63,61 +63,13 @@
 
 - Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"3"` or `3`.
 - Use `blueprint_artifact_scaffold` only with the repo-relative Blueprint research artifact path for the selected phase. Bare names such as `RESEARCH` and absolute paths are invalid.
+- Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before final normalization.
 - Persist the final research body through `blueprint_phase_artifact_write` with `artifact: "research"` and treat the returned `path` as authoritative instead of deriving filenames from the phase slug.
 - `blueprint_phase_artifact_write` keeps research validation strict by default. Do not force a warn-only save just to bypass missing sections, citations, or other schema issues unless the user explicitly accepted that tradeoff.
-- Normalize the final research draft to this exact template before calling `blueprint_phase_artifact_write`:
-
-````md
-# Phase XX: <Phase Name> - Research
-
-**Researched:** <YYYY-MM-DD>
-**Domain:** <research domain>
-**Confidence:** LOW|MEDIUM|HIGH
-
-## Phase Requirements
-
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
-
-## Summary
-
-- <key conclusion>
-
-## User Constraints
-
-- <repo, product, or workflow constraint>
-
-## Standard Stack
-
-- <runtime, library, or shared repo pattern>
-
-## Architecture Patterns
-
-- <durable implementation pattern>
-
-## Don't Hand-Roll
-
-- <existing tool, helper, or platform feature>
-
-## Common Pitfalls
-
-- <failure mode or regression risk>
-
-## Code Examples
-
-```text
-<short code or pseudocode example>
-```
-
-## Recommendations
-
-- <prescriptive recommendation with tradeoffs>
-
-## Sources
-
-- <repo path, URL, or cited file reference> - why it matters
-````
+- Normalize the final research draft to the returned `authoringTemplate`.
+- Keep the contract's required section names and locked markers unchanged.
+- Replace every placeholder signal before persistence.
+- Allow extra top-level headings only when the returned contract policy says they are supported.
 
 - Keep the section names unchanged and replace every angle-bracket placeholder before writing.
 

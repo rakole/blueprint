@@ -17,6 +17,7 @@ test("verify-work manifest references the UAT template, validation tools, and sa
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_write")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_validate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_load")));
@@ -24,18 +25,13 @@ test("verify-work manifest references the UAT template, validation tools, and sa
   assert.match(commandFile, /workflow\.verifier/);
   assert.match(commandFile, /workflow\.nyquist_validation/);
   assert.match(commandFile, /XX-UAT\.md/);
-  assert.match(commandFile, /\*\*Status:\*\*/);
-  assert.match(commandFile, /## UAT Summary/);
-  assert.match(commandFile, /## Questions Asked/);
-  assert.match(commandFile, /## Observed Behavior/);
-  assert.match(commandFile, /## Unresolved Gaps/);
-  assert.match(commandFile, /## Follow-Up Fixes/);
-  assert.match(commandFile, /## Next Safe Action/);
-  assert.match(commandFile, /\/blu-progress/);
+  assert.match(commandFile, /artifactId: "phase\.uat"/);
+  assert.match(commandFile, /authoringTemplate/);
+  assert.match(commandFile, /locked markers and required section names unchanged/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
 });
 
-test("verify-work skill captures the exact UAT template and verifier usage rules", async () => {
+test("verify-work skill captures the canonical UAT contract and verifier usage rules", async () => {
   const skillFile = await readFile(
     path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"),
     "utf8"
@@ -46,14 +42,9 @@ test("verify-work skill captures the exact UAT template and verifier usage rules
   assert.match(skillFile, /conversational UAT is resumable/i);
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
-  assert.match(skillFile, /\*\*Status:\*\*/);
-  assert.match(skillFile, /## UAT Summary/);
-  assert.match(skillFile, /## Questions Asked/);
-  assert.match(skillFile, /## Observed Behavior/);
-  assert.match(skillFile, /## Unresolved Gaps/);
-  assert.match(skillFile, /## Follow-Up Fixes/);
-  assert.match(skillFile, /## Next Safe Action/);
-  assert.match(skillFile, /\/blu-progress/);
+  assert.match(skillFile, /artifactId: "phase\.uat"/);
+  assert.match(skillFile, /locked markers and required section names unchanged/i);
 });

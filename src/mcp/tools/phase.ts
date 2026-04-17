@@ -12,6 +12,7 @@ import {
   parseCaptureIndexDocument,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
+  validateSummaryArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
   resolveBlueprintPath,
@@ -3275,7 +3276,10 @@ export async function blueprintPhaseSummaryWrite(
     normalizedContent.trim().length === 0
       ? ["Execution summary content must not be empty."]
       : [];
-  const warnings: string[] = [];
+  const warnings =
+    normalizedContent.trim().length === 0
+      ? ([] as string[])
+      : validateSummaryArtifactContent(normalizedContent).warnings;
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");

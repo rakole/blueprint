@@ -145,8 +145,9 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /view/);
   assert.match(commandFile, /skip/);
   assert.match(commandFile, /update/);
-  assert.match(commandFile, /matches this exact template/i);
-  assert.match(commandFile, /Do not rename headings such as `Phase Requirements` or `Recommendations`/);
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
+  assert.match(commandFile, /artifactId: "phase\.research"/);
+  assert.match(commandFile, /authoringTemplate/);
   assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);

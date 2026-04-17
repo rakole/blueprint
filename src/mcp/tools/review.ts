@@ -3,12 +3,14 @@ import path from "node:path";
 
 import * as z from "zod/v4";
 
+import { prepareTextForPersistence } from "../../shared/security.js";
 import {
   ensureRepoRoot,
   resolveBlueprintPath,
   resolveRepoRelativePath,
   toRepoRelativePath,
   validatePlanArtifactContent,
+  validateReviewArtifactContent,
   writeTextFile
 } from "./artifacts.js";
 import { blueprintPhaseLocate } from "./phase.js";
@@ -731,12 +733,16 @@ export async function blueprintReviewRecord(
     );
   }
 
-  const normalizedContent = normalizeTextContent(args.content);
-  const { counts, followUps } = collectReviewCounts(normalizedContent);
   const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;
+  const prepared = prepareTextForPersistence(normalizeTextContent(args.content), {
+    label: reportPath
+  });
+  const normalizedContent = normalizeTextContent(prepared.content);
+  const { counts, followUps } = collectReviewCounts(normalizedContent);
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists = await pathExists(absolutePath);
-  const warnings: string[] = [];
+  const warnings: string[] = [...prepared.warnings];
+  const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
 
   if (normalizedContent.trim().length === 0) {
     return {
@@ -752,7 +758,25 @@ export async function blueprintReviewRecord(
       status: "invalid",
       counts,
       followUps,
-      warnings: [`${reportPath} content must not be empty.`]
+      warnings: [...warnings, `${reportPath} content must not be empty.`]
+    };
+  }
+
+  if (!validation.valid) {
+    return {
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
+      phaseDir: located.phaseDir,
+      artifact: args.artifact,
+      reportPath,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      counts,
+      followUps,
+      warnings: [...warnings, ...validation.issues]
     };
   }
 
@@ -788,13 +812,16 @@ export async function blueprintReviewRecord(
 
   warnings.push(
     ...await writeTextFile(absolutePath, normalizedContent, {
-      label: reportPath
+      label: reportPath,
+      enforcePromptBoundary: false
     })
   );
 
   if (exists) {
     warnings.push(`Replaced existing review artifact: ${reportPath}`);
   }
+
+  warnings.push(...validation.warnings);
 
   return {
     phaseNumber: located.phaseNumber,

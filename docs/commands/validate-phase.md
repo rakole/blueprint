@@ -66,8 +66,10 @@
 - Persist verification evidence through `blueprint_phase_validation_write`; do not write raw validation files directly.
 - Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
 - Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
+- Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
 - `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
+- Keep the contract's required section names and locked markers unchanged, and allow extra top-level headings only when the returned contract policy says they are supported.
 
 
 ## Skills And Subagents
@@ -144,4 +146,3 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `validate-phase` happy-path fixture.
-

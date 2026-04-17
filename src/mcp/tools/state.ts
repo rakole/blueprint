@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 
 import * as z from "zod/v4";
 
+import { readArtifactContract } from "../artifact-contracts/index.js";
 import {
   BLUEPRINT_DIR,
   BLUEPRINT_REPORTS_PATH,
@@ -89,6 +90,20 @@ type PauseHandoffRecord = {
     missing: string[];
   };
 };
+
+const PAUSE_WORK_CONTRACT = readArtifactContract("report.pause-work");
+const [
+  PAUSE_CURRENT_STATE_HEADING,
+  PAUSE_COMPLETED_WORK_HEADING,
+  PAUSE_REMAINING_WORK_HEADING,
+  PAUSE_DECISIONS_HEADING,
+  PAUSE_BLOCKERS_HEADING,
+  PAUSE_HUMAN_ACTIONS_HEADING,
+  PAUSE_MODIFIED_FILES_HEADING,
+  PAUSE_BLUEPRINT_SNAPSHOT_HEADING,
+  PAUSE_NEXT_ACTION_HEADING,
+  PAUSE_CONTEXT_NOTES_HEADING
+] = PAUSE_WORK_CONTRACT.requiredHeadings;
 
 type PauseHandoffGetArgs = {
   cwd?: string;
@@ -327,28 +342,28 @@ active_command: ${record.activeCommand}
 
 # Pause Work Handoff
 
-## Current State
+## ${PAUSE_CURRENT_STATE_HEADING}
 
 ${record.currentState}
 
-${renderBulletSection("Completed Work", record.completedWork)}
-${renderBulletSection("Remaining Work", record.remainingWork)}
-${renderBulletSection("Decisions", record.decisions)}
-${renderBulletSection("Blockers", record.blockers)}
-${renderBulletSection("Human Actions Pending", record.humanActionsPending)}
-${renderBulletSection("Modified Files", record.modifiedFiles)}
-## Blueprint Snapshot
+${renderBulletSection(PAUSE_COMPLETED_WORK_HEADING, record.completedWork)}
+${renderBulletSection(PAUSE_REMAINING_WORK_HEADING, record.remainingWork)}
+${renderBulletSection(PAUSE_DECISIONS_HEADING, record.decisions)}
+${renderBulletSection(PAUSE_BLOCKERS_HEADING, record.blockers)}
+${renderBulletSection(PAUSE_HUMAN_ACTIONS_HEADING, record.humanActionsPending)}
+${renderBulletSection(PAUSE_MODIFIED_FILES_HEADING, record.modifiedFiles)}
+## ${PAUSE_BLUEPRINT_SNAPSHOT_HEADING}
 
 - Core artifacts: ${coreArtifacts}
 - Phase artifacts: ${phaseArtifacts}
 - Existing reports: ${reports}
 - Missing artifacts: ${missingArtifacts}
 
-## Next Action
+## ${PAUSE_NEXT_ACTION_HEADING}
 
 ${record.nextAction}
 
-## Context Notes
+## ${PAUSE_CONTEXT_NOTES_HEADING}
 
 ${record.contextNotes}
 `);
@@ -369,7 +384,7 @@ function parseSnapshotLine(section: string, label: string): string[] {
 
 function parsePauseHandoff(raw: string): PauseHandoffRecord {
   const frontmatter = parseFrontmatter(raw);
-  const snapshot = extractMarkdownSection(raw, "Blueprint Snapshot");
+  const snapshot = extractMarkdownSection(raw, PAUSE_BLUEPRINT_SNAPSHOT_HEADING);
 
   return {
     reportType: "pause-work",
@@ -386,15 +401,15 @@ function parsePauseHandoff(raw: string): PauseHandoffRecord {
         ? frontmatter.current_phase
         : null,
     activeCommand: frontmatter.active_command ?? PAUSE_WORK_COMMAND,
-    currentState: normalizeParagraph(extractMarkdownSection(raw, "Current State")),
-    completedWork: parseBulletSection(raw, "Completed Work"),
-    remainingWork: parseBulletSection(raw, "Remaining Work"),
-    decisions: parseBulletSection(raw, "Decisions"),
-    blockers: parseBulletSection(raw, "Blockers"),
-    humanActionsPending: parseBulletSection(raw, "Human Actions Pending"),
-    modifiedFiles: parseBulletSection(raw, "Modified Files"),
-    nextAction: normalizeParagraph(extractMarkdownSection(raw, "Next Action")),
-    contextNotes: normalizeParagraph(extractMarkdownSection(raw, "Context Notes")),
+    currentState: normalizeParagraph(extractMarkdownSection(raw, PAUSE_CURRENT_STATE_HEADING)),
+    completedWork: parseBulletSection(raw, PAUSE_COMPLETED_WORK_HEADING),
+    remainingWork: parseBulletSection(raw, PAUSE_REMAINING_WORK_HEADING),
+    decisions: parseBulletSection(raw, PAUSE_DECISIONS_HEADING),
+    blockers: parseBulletSection(raw, PAUSE_BLOCKERS_HEADING),
+    humanActionsPending: parseBulletSection(raw, PAUSE_HUMAN_ACTIONS_HEADING),
+    modifiedFiles: parseBulletSection(raw, PAUSE_MODIFIED_FILES_HEADING),
+    nextAction: normalizeParagraph(extractMarkdownSection(raw, PAUSE_NEXT_ACTION_HEADING)),
+    contextNotes: normalizeParagraph(extractMarkdownSection(raw, PAUSE_CONTEXT_NOTES_HEADING)),
     artifactSnapshot: {
       core: parseSnapshotLine(snapshot, "Core artifacts"),
       phaseArtifacts: parseSnapshotLine(snapshot, "Phase artifacts"),

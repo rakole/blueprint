@@ -74,6 +74,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | Tool | Purpose | Returns |
 |---|---|---|
 | `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding, not as the final persistence layer for filled-in artifacts | `{createdFiles, reusedFiles, warnings}` |
+| `blueprint_artifact_contract_read` | Read canonical artifact contracts, including scaffold templates, authoring templates, locked markers, and required headings | `{artifactId, contract}` or `{contracts}` |
 | `blueprint_artifact_list` | Enumerate known core, phase, codebase, and report artifacts | `{artifacts, reports, missing, warnings}` |
 | `blueprint_artifact_mutate_index` | Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
@@ -179,6 +180,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 ### Scaffolding
 
 - `blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths.
+- `blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract for a given artifact id such as `phase.research`, `phase.verification`, or `report.debug`.
 - Do not pass bare artifact names such as `STACK`, absolute filesystem paths, or ad hoc report filenames.
 - Use scaffolding only for first-write seeding or template regeneration. Do not treat scaffold output as the final persistent content for filled-in research, context, UI-spec, plan, summary, validation, or report artifacts.
 - Treat returned `createdFiles` and `reusedFiles` as authoritative for what the tool actually touched.
@@ -194,6 +196,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 - `blueprint_phase_artifact_write` accepts numeric `phase`, enum `artifact`, and full `content`.
 - Do not pass artifact filenames, `phaseDir`, or `phasePrefix` into `blueprint_phase_artifact_write`; the tool owns the artifact path.
+- When normalizing authored phase artifacts, prefer `blueprint_artifact_contract_read` over copied prompt-local templates.
 - Research writes validate in `strict` mode by default. Use `validationMode: "warn"` only when the command intentionally wants warnings without blocking the write attempt.
 - Research writes should be normalized to Blueprint's exact `XX-RESEARCH.md` template before calling the tool, and angle-bracket placeholders must be replaced with real content.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object. The tool owns the checkpoint filename and location.
@@ -211,6 +214,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 - `blueprint_review_scope` accepts repo-relative file paths only. Absolute paths, directories, wildcards, and `.blueprint/**` paths are rejected or skipped.
 - Omit `files` when the command wants review scope derived from executed plans and summaries.
+- Review-family commands should use `blueprint_artifact_contract_read` to fetch the canonical review artifact contract instead of embedding hand-copied templates.
 - `blueprint_review_record` requires numeric `phase`, enum `artifact`, and the full artifact `content`. The tool owns the final review filename.
 - `blueprint_review_load_findings` defaults `artifact` to `code-review` when it is omitted.
 - Treat returned `files`, `reportPath`, `counts`, `followUps`, `findings`, and `severityCounts` as authoritative review scope and review-artifact metadata.
@@ -230,6 +234,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_artifact_summary_digest` accepts repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, `testFiles`, and `trackedFiles`.
 - Do not pass absolute paths or already-normalized report paths into the digest tool.
 - Treat returned `inputsUsed` as the authoritative digest scope that was actually summarized.
+- Report-family commands should use `blueprint_artifact_contract_read` to fetch canonical report contracts when a known Blueprint report shape exists.
 - `blueprint_artifact_report_write` accepts a bare `reportName` such as `audit-fix-3`, `ship-latest`, `undo-latest`, or `quick-run-latest`.
 - Do not pass `.blueprint/reports/<name>.md`, absolute paths, or slash-separated report destinations into `blueprint_artifact_report_write`; the tool normalizes the slug and owns the final `path`.
 - Treat returned `path`, `written`, `created`, `overwritten`, and `status` as authoritative for report persistence.
