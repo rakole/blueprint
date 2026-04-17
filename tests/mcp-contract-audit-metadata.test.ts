@@ -14,6 +14,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
 
   assert.match(mcpToolsDoc, /## Model-Facing Call Contracts/);
   assert.match(mcpToolsDoc, /`blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths/i);
+  assert.match(mcpToolsDoc, /`blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract/i);
   assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`/i);
   assert.match(mcpToolsDoc, /`blueprint_review_scope` accepts repo-relative file paths only/i);
   assert.match(mcpToolsDoc, /`blueprint_config_set` defaults `scope` to `project`, and `patch` must be a JSON object/i);
@@ -49,9 +50,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
 
   assert.match(researchCommand, /default strict mode/i);
   assert.match(researchCommand, /returned `path` as authoritative/i);
-  assert.match(researchCommand, /matches this exact template/i);
+  assert.match(researchCommand, /artifactId: "phase\.research"/);
+  assert.match(researchCommand, /authoringTemplate/);
   assert.match(researchDoc, /## Research Persistence Contract/);
-  assert.match(researchDoc, /Normalize the final research draft to this exact template/i);
+  assert.match(researchDoc, /artifactId: "phase\.research"/);
   assert.match(researchDoc, /Bare names such as `RESEARCH` and absolute paths are invalid/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
@@ -61,8 +63,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
 
   assert.match(discoverySkill, /`blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
-  assert.match(discoverySkill, /### Exact `XX-RESEARCH\.md` Template/);
-  assert.match(discoverySkill, /Normalize the final research draft to the exact `XX-RESEARCH\.md` template above/i);
+  assert.match(discoverySkill, /Canonical Research Contract/);
+  assert.match(discoverySkill, /artifactId: "phase\.research"/);
 });
 
 test("execution and validation contracts stay explicit across manifests, docs, skills, and agent guidance", async () => {
@@ -103,10 +105,12 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   );
 
   assert.match(validateCommand, /returned `path` plus `summaryPaths` are authoritative/i);
+  assert.match(validateCommand, /artifactId: "phase\.verification"/);
   assert.match(validateDoc, /## Validation Persistence Contract/);
   assert.match(validateDoc, /`uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION\.md` artifact/i);
 
   assert.match(verifyCommand, /existing verification artifact are required/i);
+  assert.match(verifyCommand, /artifactId: "phase\.uat"/);
   assert.match(verifyDoc, /## UAT Persistence Contract/);
   assert.match(verifyDoc, /returned `path` plus `summaryPaths` as authoritative/i);
 
@@ -115,6 +119,9 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(addTestsDoc, /## Validation And Report Contract/);
   assert.match(addTestsDoc, /bare report name `add-tests-<phase>`/i);
   assert.match(validationSkill, /artifact enum `verification` or `uat`/i);
+  assert.match(validationSkill, /Canonical Validation Contracts/);
+  assert.match(validationSkill, /artifactId: "phase\.verification"/);
+  assert.match(validationSkill, /artifactId: "phase\.uat"/);
 });
 
 test("review contracts stay explicit across code-review, remediation, and reviewer surfaces", async () => {

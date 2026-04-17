@@ -111,20 +111,24 @@ test("blueprint_review_record writes a phase-scoped peer-review artifact with fo
 
   const content = `# Phase 03: Review Phase - Peer Reviews
 
-**Posture:** FOLLOW_UP
+**Reviewers:** codex, claude
 
-## Reviewers Run
+## Review Summary
 
-- codex: completed
-- claude: unavailable in this environment
+- Codex approved the phase direction, but reviewer availability still needs to be explicit before execution.
 
-## Summary
+## Reviewer Results
 
-- Codex approved the phase direction, but called out one revision before execution.
+- codex: requested a clearer fallback path when a requested reviewer CLI is unavailable.
+- claude: unavailable in this environment, so no second opinion was captured in this run.
 
 ## Findings
 
 - The plan needs a clearer fallback path when a requested reviewer CLI is unavailable.
+
+## Disagreements
+
+- none
 
 ## Follow-Ups
 
@@ -151,7 +155,7 @@ test("blueprint_review_record writes a phase-scoped peer-review artifact with fo
   ]);
 
   const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");
-  assert.match(saved, /\*\*Posture:\*\* FOLLOW_UP/);
+  assert.match(saved, /\*\*Reviewers:\*\* codex, claude/);
 
   await assert.rejects(
     () =>
@@ -159,7 +163,10 @@ test("blueprint_review_record writes a phase-scoped peer-review artifact with fo
         cwd: repoPath,
         phase: "3",
         artifact: "peer-review",
-        content: content.replace("FOLLOW_UP", "PASS")
+        content: content.replace(
+          "requested a clearer fallback path",
+          "requested a documented reviewer fallback path"
+        )
       }),
     /explicit overwrite confirmation/
   );

@@ -56,6 +56,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - `blueprint_phase_summary_read`
 - `blueprint_phase_validation_read`
 - `blueprint_phase_validation_write`
+- `blueprint_artifact_contract_read`
 - `blueprint_artifact_list`
 - `blueprint_config_get`
 - `blueprint_artifact_validate`
@@ -72,75 +73,16 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories or filenames.
 - `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and full artifact content. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
+- `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.verification` or `phase.uat` instead of relying on copied prompt-local templates.
 - `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. Use the returned `path` as authoritative.
 
-## Verification Template
+## Canonical Validation Contracts
 
-When drafting `XX-VERIFICATION.md`, keep the final body in this exact shape before persistence:
-
-```md
-# Phase XX: <Phase Name> - Verification
-
-**Coverage:** Reviewed `<summary filename>` and any other saved phase summaries for validation evidence.
-
-## Validation Summary
-
-- Concise readiness result grounded in the saved summaries.
-
-## Evidence Reviewed
-
-- `.blueprint/phases/<phase-dir>/<summary-file>.md`
-
-## Gaps Found
-
-- Explicit blocker, follow-up, or `none`.
-
-## Suggested Repairs
-
-- Explicit next repair, follow-up, or `none`.
-
-## Next Safe Action
-
-- `/blu-verify-work <phase>`
-```
-
-Do not rename these headings, replace the `**Coverage:**` marker, or move summary citations outside `## Evidence Reviewed`. Extra detail is allowed only inside the required sections.
-
-## UAT Template
-
-When drafting `XX-UAT.md`, keep the final body in this exact shape before persistence:
-
-```md
-# Phase XX: <Phase Name> - UAT
-
-**Status:** PASS|FAIL|PARTIAL
-
-## UAT Summary
-
-- Concise user-facing result grounded in the saved summaries and verification artifact.
-
-## Questions Asked
-
-- Question asked during the UAT pass, or `none`.
-
-## Observed Behavior
-
-- Observed behavior tied to saved summary evidence.
-
-## Unresolved Gaps
-
-- Explicit blocker, follow-up, or `none`.
-
-## Follow-Up Fixes
-
-- Explicit follow-up fix, acceptance note, or `none`.
-
-## Next Safe Action
-
-- `/blu-progress`
-```
-
-Do not rename these headings, replace the `**Status:**` marker, or move summary references out of `## UAT Summary` and `## Observed Behavior`. Extra detail is allowed only inside the required sections.
+- For `XX-VERIFICATION.md`, use `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` and normalize the final draft to the returned `authoringTemplate`.
+- For `XX-UAT.md`, use `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` and normalize the final draft to the returned `authoringTemplate`.
+- Keep each contract's locked markers and required section names unchanged.
+- Keep summary references in the contract-defined evidence sections.
+- Allow extra top-level headings only when the contract policy says they are supported.
 
 ## Workflow Rules
 
@@ -151,7 +93,7 @@ Do not rename these headings, replace the `**Status:**` marker, or move summary 
 3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
 5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
-6. Normalize the final validation draft to the exact verification template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths under `## Evidence Reviewed`, and keep all required section names unchanged.
+6. Normalize the final validation draft to the canonical `phase.verification` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths in the contract-defined evidence section, and keep all required section names unchanged.
 7. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
 8. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu-verify-work`, and fall back to `/blu-progress` only if runtime availability changes.
 
@@ -162,7 +104,7 @@ Do not rename these headings, replace the `**Status:**` marker, or move summary 
 3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
 5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
-6. Normalize the final UAT draft to the exact UAT template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths inside `## UAT Summary` or `## Observed Behavior`, and keep all required section names unchanged.
+6. Normalize the final UAT draft to the canonical `phase.uat` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths inside the contract-defined summary-aware sections, and keep all required section names unchanged.
 7. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
 8. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
 9. Update `STATE.md` with the UAT result and the next safe implemented action.

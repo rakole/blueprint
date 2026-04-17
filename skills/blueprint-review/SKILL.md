@@ -68,6 +68,7 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_review_scope`
 - `blueprint_review_load_findings`
 - `blueprint_review_record`
+- `blueprint_artifact_contract_read`
 - `blueprint_artifact_report_write`
 - `blueprint_artifact_mutate_index`
 - `blueprint_state_update`
@@ -84,6 +85,7 @@ non-routable until their extra MCP substrate lands.
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, and treat returned `files` as authoritative.
 - `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_artifact_contract_read`: read canonical review and report contracts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
 

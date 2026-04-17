@@ -1,0 +1,46 @@
+export type ArtifactContractScope = "phase" | "review" | "report";
+export type ArtifactContractFreehandPolicy = "additional-top-level-headings" | "locked-structure";
+export type ArtifactContractId = "phase.context" | "phase.discussion-log" | "phase.research" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix";
+export type ArtifactTemplateContext = {
+    phaseLabel?: string;
+    phasePrefix?: string;
+    phaseName?: string;
+    phaseDir?: string;
+    planId?: string;
+    domain?: string;
+    summaryFile?: string;
+    summaryPath?: string;
+    reportName?: string;
+    milestone?: string;
+    currentPhase?: string;
+    activeCommand?: string;
+};
+export type ArtifactContractDefinition = {
+    id: ArtifactContractId;
+    scope: ArtifactContractScope;
+    ownerTool: string;
+    pathOwner: string;
+    canonicalName: string;
+    canonicalFilePattern: string;
+    freehandPolicy: ArtifactContractFreehandPolicy;
+    requiredHeadings: string[];
+    lockedMarkers: string[];
+    placeholderSignals: string[];
+    notes: string[];
+    renderScaffoldTemplate: (context?: ArtifactTemplateContext) => string;
+    renderAuthoringTemplate: (context?: ArtifactTemplateContext) => string;
+};
+export type ArtifactContractReadResult = Omit<ArtifactContractDefinition, "renderScaffoldTemplate" | "renderAuthoringTemplate"> & {
+    scaffoldTemplate: string;
+    authoringTemplate: string;
+};
+export declare const artifactContractIds: ArtifactContractId[];
+export declare function getArtifactContract(contractId: ArtifactContractId): ArtifactContractDefinition;
+export declare function readArtifactContract(contractId: ArtifactContractId, context?: ArtifactTemplateContext): ArtifactContractReadResult;
+export declare function listArtifactContracts(): ArtifactContractReadResult[];
+export declare function renderArtifactAuthoringTemplate(contractId: ArtifactContractId, context?: ArtifactTemplateContext): string;
+export declare function renderArtifactScaffoldTemplate(contractId: ArtifactContractId, context?: ArtifactTemplateContext): string;
+export declare function resolvePhaseArtifactContractId(artifact: "context" | "discussion-log" | "research" | "ui-spec"): ArtifactContractId;
+export declare function resolveValidationArtifactContractId(artifact: "verification" | "uat"): ArtifactContractId;
+export declare function resolveReviewArtifactContractId(artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review"): ArtifactContractId;
+export declare function resolveReportContractId(name: string): ArtifactContractId | null;

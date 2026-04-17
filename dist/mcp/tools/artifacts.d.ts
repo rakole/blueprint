@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { type ArtifactContractId, listArtifactContracts, readArtifactContract } from "../artifact-contracts/index.js";
 export declare const BLUEPRINT_DIR = ".blueprint";
 export declare const BLUEPRINT_STATE_PATH = ".blueprint/STATE.md";
 export declare const BLUEPRINT_CONFIG_PATH = ".blueprint/config.json";
@@ -166,6 +167,9 @@ type ArtifactSummaryDigestArgs = {
     trackedFiles?: string[];
     artifactPaths?: string[];
 };
+type ArtifactContractReadArgs = {
+    artifactId?: ArtifactContractId;
+};
 type ArtifactReportWriteArgs = {
     cwd?: string;
     reportName: string;
@@ -181,6 +185,15 @@ type ArtifactSummaryDigestSection = {
 type ArtifactSummaryDigestResult = {
     digest: ArtifactSummaryDigestSection[];
     inputsUsed: string[];
+};
+type ArtifactContractReadResult = {
+    artifactId: ArtifactContractId;
+    contract: ReturnType<typeof readArtifactContract>;
+    contracts?: never;
+} | {
+    artifactId: null;
+    contract?: never;
+    contracts: ReturnType<typeof listArtifactContracts>;
 };
 type ArtifactReportWriteResult = {
     path: string;
@@ -249,6 +262,21 @@ export declare function validateUatArtifactContent(content: string, summaryPaths
     issues: string[];
     warnings: string[];
 };
+export declare function validateReviewArtifactContent(content: string, artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review"): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateReportArtifactContent(content: string, reportName: string): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateSummaryArtifactContent(content: string): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
 export declare function validatePlanArtifactContent(content: string, expectedPhase?: string): {
     valid: boolean;
     issues: string[];
@@ -275,8 +303,43 @@ export declare function blueprintArtifactList(args?: ArtifactListArgs): Promise<
 export declare function blueprintArtifactMutateIndex(args: ArtifactMutateIndexArgs): Promise<ArtifactMutateIndexResult>;
 export declare function blueprintArtifactValidate(args?: ArtifactValidateArgs): Promise<ArtifactValidateResult>;
 export declare function blueprintArtifactSummaryDigest(args?: ArtifactSummaryDigestArgs): Promise<ArtifactSummaryDigestResult>;
+export declare function blueprintArtifactContractRead(args?: ArtifactContractReadArgs): Promise<ArtifactContractReadResult>;
 export declare function blueprintArtifactReportWrite(args: ArtifactReportWriteArgs): Promise<ArtifactReportWriteResult>;
 export declare const artifactToolDefinitions: ({
+    name: string;
+    description: string;
+    inputSchema: {
+        artifactId: z.ZodOptional<z.ZodEnum<{
+            "phase.context": "phase.context";
+            "phase.discussion-log": "phase.discussion-log";
+            "phase.research": "phase.research";
+            "phase.ui-spec": "phase.ui-spec";
+            "phase.plan": "phase.plan";
+            "phase.summary": "phase.summary";
+            "phase.verification": "phase.verification";
+            "phase.uat": "phase.uat";
+            "review.code-review": "review.code-review";
+            "review.review-fix": "review.review-fix";
+            "review.peer-review": "review.peer-review";
+            "review.security": "review.security";
+            "review.ui-review": "review.ui-review";
+            "report.pause-work": "report.pause-work";
+            "report.milestone-audit": "report.milestone-audit";
+            "report.milestone-complete": "report.milestone-complete";
+            "report.milestone-summary": "report.milestone-summary";
+            "report.debug": "report.debug";
+            "report.quick-run": "report.quick-run";
+            "report.docs-update": "report.docs-update";
+            "report.pr-branch": "report.pr-branch";
+            "report.ship": "report.ship";
+            "report.undo": "report.undo";
+            "report.cleanup": "report.cleanup";
+            "report.add-tests": "report.add-tests";
+            "report.audit-fix": "report.audit-fix";
+        }>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<ArtifactContractReadResult>;
+} | {
     name: string;
     description: string;
     inputSchema: {

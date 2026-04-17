@@ -110,9 +110,9 @@ test("blueprint_review_record writes a phase-scoped UI review artifact with foll
 
   const content = `# Phase 06: UI Audit - UI Review
 
-**Posture:** FOLLOW_UP
+**Verdict:** FOLLOW_UP
 
-## UI Summary
+## UI Review Summary
 
 - The shipped dashboard honors the saved UI contract, but mobile empty states still need polish.
 
@@ -150,7 +150,7 @@ test("blueprint_review_record writes a phase-scoped UI review artifact with foll
   ]);
 
   const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");
-  assert.match(saved, /\*\*Posture:\*\* FOLLOW_UP/);
+  assert.match(saved, /\*\*Verdict:\*\* FOLLOW_UP/);
 
   await assert.rejects(
     () =>

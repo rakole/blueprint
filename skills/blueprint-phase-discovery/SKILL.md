@@ -55,6 +55,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `blueprint_phase_research_status`
 - `blueprint_phase_artifact_read`
 - `blueprint_phase_artifact_write`
+- `blueprint_artifact_contract_read`
 - `blueprint_phase_checkpoint_get`
 - `blueprint_phase_checkpoint_put`
 - `blueprint_phase_checkpoint_delete`
@@ -74,68 +75,20 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` to let the runtime infer it from state or the roadmap. Never pass phase directories, slugs, or filenames.
 - `blueprint_phase_artifact_write`: pass numeric `phase`, the correct artifact enum, and full artifact content. The tool owns the final artifact `path`; use the returned `path` as authoritative and do not write raw filenames directly.
+- `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.research` or `phase.uat` instead of relying on copied prompt-local templates.
 - `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content.
 - `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object. The tool owns the checkpoint filename and location.
 
 ## Workflow Rules
 
-### Exact `XX-RESEARCH.md` Template
+### Canonical Research Contract
 
-Use this exact template when `/blu-research-phase` creates or updates research:
+Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when `/blu-research-phase` creates or updates research.
 
-````md
-# Phase XX: <Phase Name> - Research
-
-**Researched:** <YYYY-MM-DD>
-**Domain:** <research domain>
-**Confidence:** LOW|MEDIUM|HIGH
-
-## Phase Requirements
-
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
-
-## Summary
-
-- <key conclusion>
-
-## User Constraints
-
-- <repo, product, or workflow constraint>
-
-## Standard Stack
-
-- <runtime, library, or shared repo pattern>
-
-## Architecture Patterns
-
-- <durable implementation pattern>
-
-## Don't Hand-Roll
-
-- <existing tool, helper, or platform feature>
-
-## Common Pitfalls
-
-- <failure mode or regression risk>
-
-## Code Examples
-
-```text
-<short code or pseudocode example>
-```
-
-## Recommendations
-
-- <prescriptive recommendation with tradeoffs>
-
-## Sources
-
-- <repo path, URL, or cited file reference> - why it matters
-````
-
-Keep the section names unchanged and replace every angle-bracket placeholder before writing.
+- Normalize the final draft to the returned `authoringTemplate`.
+- Keep the contract's required section names and locked markers unchanged.
+- Replace every placeholder signal before writing.
+- Allow extra top-level headings only when the contract policy says they are supported.
 
 ### `discuss-phase`
 
@@ -153,7 +106,7 @@ Keep the section names unchanged and replace every angle-bracket placeholder bef
 3. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
 4. Use `blueprint_artifact_scaffold` only to seed a missing research file.
 5. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
-6. Normalize the final research draft to the exact `XX-RESEARCH.md` template above before calling `blueprint_phase_artifact_write`.
+6. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
 7. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
 8. Require explicit overwrite confirmation before replacing existing research.
 9. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.

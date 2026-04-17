@@ -18,41 +18,16 @@ Follow this flow exactly:
    - `workflow.nyquist_validation=true`: call out Nyquist-style coverage expectations and remaining gap classes explicitly.
    - `workflow.nyquist_validation=false`: explicitly report that Nyquist-style coverage was informational only because normalized config disabled it.
 8. Use the `blueprint-verifier` subagent to audit the completed summaries, identify validation coverage gaps, and draft durable verification conclusions plus any follow-up recommendations. Keep the output phase-scoped and grounded in the existing summaries.
-9. Before calling `mcp_blueprint_blueprint_phase_validation_write`, rewrite the final verification body so it matches this exact template and keep the section names unchanged:
-
-   ```md
-   # Phase XX: <Phase Name> - Verification
-
-   **Coverage:** Reviewed `<summary filename>` and any other saved phase summaries for validation evidence.
-
-   ## Validation Summary
-
-   - Concise readiness result grounded in the saved summaries.
-
-   ## Evidence Reviewed
-
-   - `.blueprint/phases/<phase-dir>/<summary-file>.md`
-
-   ## Gaps Found
-
-   - Explicit blocker, follow-up, or `none`.
-
-   ## Suggested Repairs
-
-   - Explicit next repair, follow-up, or `none`.
-
-   ## Next Safe Action
-
-   - `/blu-verify-work <phase>`
-   ```
-
-   Additional analysis is allowed only inside those sections. Do not rename headings such as `Validation Summary` or `Evidence Reviewed`, and do not replace the `**Coverage:**` line with a different label.
+9. Before calling `mcp_blueprint_blueprint_phase_validation_write`, read the canonical contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.verification"` and normalize the final verification body to the returned `authoringTemplate`.
+   - Keep the contract's locked markers and required section names unchanged.
+   - Keep saved summary citations inside the contract's evidence section.
+   - Additional top-level headings are allowed only when the returned contract policy says they are.
 10. Persist the actual verification content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "verification"`, and the full final markdown body. Saved execution summaries are required for this write, and the returned `path` plus `summaryPaths` are authoritative; `written` and `status` are also authoritative for whether persistence actually happened. Only describe the artifact as persisted when `written` is `true`; if the tool returns `status: "reused"` or `status: "invalid"`, say that explicitly instead of claiming a save. Do not write `XX-VERIFICATION.md` directly.
 11. Call `mcp_blueprint_blueprint_artifact_validate` after the write path and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the validation command, and the next safe implemented action. Successful validation should normally route to `/blu-verify-work`; if runtime availability changes, fall back to `/blu-progress` instead of suggesting a blocked command. Keep the user-facing summary aligned with the actual write result rather than assuming persistence from a completed tool call.
 12. Return a concise summary covering whether validation was reconstructed or revised, how many summaries were audited, which config gates shaped the audit, any remaining coverage gaps, and the next safe implemented action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for Blueprint contract discovery and persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the audit grounded in saved execution evidence. Do not invent missing implementation details from chat memory.
