@@ -61,8 +61,63 @@ phase.
   - `## Code Examples`
   - `## Recommendations`
   - `## Sources`
+- Return content in this exact shape:
+
+````md
+# Phase XX: <Phase Name> - Research
+
+**Researched:** <YYYY-MM-DD>
+**Domain:** <research domain>
+**Confidence:** LOW|MEDIUM|HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
+
+## Summary
+
+- <key conclusion>
+
+## User Constraints
+
+- <repo, product, or workflow constraint>
+
+## Standard Stack
+
+- <runtime, library, or shared repo pattern>
+
+## Architecture Patterns
+
+- <durable implementation pattern>
+
+## Don't Hand-Roll
+
+- <existing tool, helper, or platform feature>
+
+## Common Pitfalls
+
+- <failure mode or regression risk>
+
+## Code Examples
+
+```text
+<short code or pseudocode example>
+```
+
+## Recommendations
+
+- <prescriptive recommendation with tradeoffs>
+
+## Sources
+
+- <repo path, URL, or cited file reference> - why it matters
+````
+
 - Use citations or repo-path evidence in `## Sources`.
 - Keep recommendations prescriptive and planner-friendly.
+- Replace every angle-bracket placeholder before returning the draft, and do not rename headings.
 - Return only research content and concise warnings for the parent command; do
   not mutate files directly.
 

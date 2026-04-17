@@ -49,7 +49,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
 
   assert.match(researchCommand, /default strict mode/i);
   assert.match(researchCommand, /returned `path` as authoritative/i);
+  assert.match(researchCommand, /matches this exact template/i);
   assert.match(researchDoc, /## Research Persistence Contract/);
+  assert.match(researchDoc, /Normalize the final research draft to this exact template/i);
   assert.match(researchDoc, /Bare names such as `RESEARCH` and absolute paths are invalid/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
@@ -59,6 +61,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
 
   assert.match(discoverySkill, /`blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
+  assert.match(discoverySkill, /### Exact `XX-RESEARCH\.md` Template/);
+  assert.match(discoverySkill, /Normalize the final research draft to the exact `XX-RESEARCH\.md` template above/i);
 });
 
 test("execution and validation contracts stay explicit across manifests, docs, skills, and agent guidance", async () => {

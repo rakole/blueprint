@@ -194,6 +194,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_phase_artifact_write` accepts numeric `phase`, enum `artifact`, and full `content`.
 - Do not pass artifact filenames, `phaseDir`, or `phasePrefix` into `blueprint_phase_artifact_write`; the tool owns the artifact path.
 - Research writes validate in `strict` mode by default. Use `validationMode: "warn"` only when the command intentionally wants warnings without blocking the write attempt.
+- Research writes should be normalized to Blueprint's exact `XX-RESEARCH.md` template before calling the tool, and angle-bracket placeholders must be replaced with real content.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object. The tool owns the checkpoint filename and location.
 - Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative for artifact and checkpoint persistence.
 

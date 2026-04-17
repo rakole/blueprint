@@ -79,6 +79,64 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 ## Workflow Rules
 
+### Exact `XX-RESEARCH.md` Template
+
+Use this exact template when `/blu-research-phase` creates or updates research:
+
+````md
+# Phase XX: <Phase Name> - Research
+
+**Researched:** <YYYY-MM-DD>
+**Domain:** <research domain>
+**Confidence:** LOW|MEDIUM|HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
+
+## Summary
+
+- <key conclusion>
+
+## User Constraints
+
+- <repo, product, or workflow constraint>
+
+## Standard Stack
+
+- <runtime, library, or shared repo pattern>
+
+## Architecture Patterns
+
+- <durable implementation pattern>
+
+## Don't Hand-Roll
+
+- <existing tool, helper, or platform feature>
+
+## Common Pitfalls
+
+- <failure mode or regression risk>
+
+## Code Examples
+
+```text
+<short code or pseudocode example>
+```
+
+## Recommendations
+
+- <prescriptive recommendation with tradeoffs>
+
+## Sources
+
+- <repo path, URL, or cited file reference> - why it matters
+````
+
+Keep the section names unchanged and replace every angle-bracket placeholder before writing.
+
 ### `discuss-phase`
 
 1. Resolve the phase through MCP tools before asking the user to confirm any write path.
@@ -95,10 +153,11 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 3. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
 4. Use `blueprint_artifact_scaffold` only to seed a missing research file.
 5. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
-6. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
-7. Require explicit overwrite confirmation before replacing existing research.
-8. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
-9. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+6. Normalize the final research draft to the exact `XX-RESEARCH.md` template above before calling `blueprint_phase_artifact_write`.
+7. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
+8. Require explicit overwrite confirmation before replacing existing research.
+9. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
+10. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
 
 ### `list-phase-assumptions`
 
