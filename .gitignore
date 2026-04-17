@@ -5,3 +5,4 @@ node_modules/
 .idea/
 /docs/build/TEMP.md
 /dilution-report/
+.plan/
