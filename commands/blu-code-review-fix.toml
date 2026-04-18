@@ -2,30 +2,39 @@ description = "Apply bounded fixes from a saved Blueprint phase code review, per
 prompt = """
 You are the `/blu-code-review-fix` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Use the `blueprint-reviewer` subagent for bounded reclassification when the saved review is broad or the requested fix selection is ambiguous, and use the `blueprint-fixer` subagent only when that runtime agent is actually available and the requested fix scope stays narrow.
+Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Use the `blueprint-reviewer` subagent for bounded reclassification when the saved review is broad or the requested fix selection is ambiguous.
+
+Interactive review-fix UX rules:
+- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured confirmation of which findings Blueprint is about to fix.
+- Default to one focused question per `ask_user` call.
+- For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 
 Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
 3. Read `mcp_blueprint_blueprint_review_load_findings` with the resolved numeric `phase` and `artifact: "code-review"` so you can load the saved `XX-REVIEW.md` findings, follow-ups, and severity counts for that phase. Treat the returned `findings`, `severityCounts`, and `followUps` as the authoritative remediation baseline instead of recreating findings from chat memory or current git drift.
-4. If `mcp_blueprint_blueprint_review_load_findings` returns `found: false`, stop with the precise reason and prefer `/blu-code-review <phase>` instead of guessing from chat memory or git drift.
-5. If the loaded review artifact has zero structured findings and no meaningful follow-up items, explain that there is no saved remediation target and prefer `/blu-progress`.
-6. If a `XX-REVIEW-FIX.md` artifact already exists in the resolved phase directory, treat it as the remediation baseline. Read it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
-7. Confirm the specific findings to fix before repo mutation unless the user already made that explicit through `--all`, `--auto`, or a clear natural-language instruction. Even with automatic selection, limit the fix set to high-confidence findings only.
-8. Keep repo mutation tightly bounded to the selected findings and the relevant repo files implicated by the saved review evidence. If the work expands into a broader implementation slice, stop and route to `/blu-audit-fix`, `/blu-quick`, or `/blu-plan-phase` instead of widening this command.
-9. Use the `blueprint-reviewer` subagent for a bounded second look when the saved findings are broad, severity is unclear, or the fix selection needs help. Use `blueprint-fixer` only when it is available and the fix scope remains narrow enough to stay review-driven.
-10. When you apply fixes, run the narrowest relevant verification you can justify from the repo's existing tooling. If you cannot run a reliable check, say so plainly in the artifact instead of fabricating a pass.
-11. Persist the durable remediation summary through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "review-fix"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW-FIX.md` directly.
-12. After the review-fix artifact path is settled, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-code-review-fix` as the active command and points to the next safe implemented action. Prefer `/blu-validate-phase <phase>` when behavior changed or verification evidence is now stale, `/blu-add-tests <phase>` when missing tests are the main remaining gap, and `/blu-progress` otherwise.
-13. Return a concise completion summary covering the selected phase, which findings were fixed or deferred, whether repo changes were applied, any verification that ran or was skipped, the `XX-REVIEW-FIX.md` status, and the next safe implemented action.
+4. Read `mcp_blueprint_blueprint_artifact_contract_read` for the canonical `review.review-fix` contract before you draft, revise, or validate `XX-REVIEW-FIX.md`. Use the returned template and required headings as the baseline instead of a copied prompt-local structure.
+5. If `mcp_blueprint_blueprint_review_load_findings` returns `found: false`, stop with the precise reason and prefer `/blu-code-review <phase>` instead of guessing from chat memory or git drift.
+6. If the loaded review artifact has zero structured findings and no meaningful follow-up items, explain that there is no saved remediation target and prefer `/blu-progress`.
+7. If a `XX-REVIEW-FIX.md` artifact already exists in the resolved phase directory, treat it as the remediation baseline. Read it before replacement, default to reuse, and require explicit overwrite confirmation before changing it. Prefer `ask_user` for that confirmation path.
+8. Confirm the specific findings to fix before repo mutation unless the user already made that explicit through `--all`, `--auto`, or a clear natural-language instruction. Use `ask_user` for that confirmation path when it is needed. Treat `--auto` as bounded automatic finding selection only; it does not authorize automatic commits, branch creation, or iterative re-review loops. Even with automatic selection, limit the fix set to high-confidence findings only.
+9. Keep repo mutation tightly bounded to the selected findings and the relevant repo files implicated by the saved review evidence. If the work expands into a broader implementation slice, stop and route to `/blu-audit-fix`, `/blu-quick`, or `/blu-plan-phase` instead of widening this command.
+10. Use the `blueprint-reviewer` subagent for a bounded second look when the saved findings are broad, severity is unclear, or the fix selection needs help.
+11. Report the resolved phase, selected finding ids, fix progress, and verification progress while the remediation is in flight, not only in the closing summary. Call out deferred findings and skipped checks explicitly as they become known.
+12. When you apply fixes, run the narrowest relevant verification you can justify from the repo's existing tooling. If you cannot run a reliable check, say so plainly in the artifact instead of fabricating a pass.
+13. Persist the durable remediation summary through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "review-fix"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW-FIX.md` directly.
+14. After the review-fix artifact path is settled, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-code-review-fix` as the active command and points to the next safe implemented action. Prefer `/blu-validate-phase <phase>` when behavior changed or verification evidence is now stale, `/blu-add-tests <phase>` when missing tests are the main remaining gap, and `/blu-progress` otherwise.
+15. Return a concise completion summary covering the selected phase, which findings were fixed or deferred, whether repo changes were applied, any verification that ran or was skipped, the `XX-REVIEW-FIX.md` status, and the next safe implemented action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_review_load_findings`, `mcp_blueprint_blueprint_review_record`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_review_load_findings`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_review_record`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `XX-REVIEW-FIX.md` and `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Do not create git commits or branches automatically just because earlier tooling did; if the user wants git mutation beyond the bounded repo fix itself, ask explicitly.
+- Use `ask_user` for overwrite confirmation and any confirmation step that narrows which findings Blueprint should remediate.
 - Do not invent finding ids, severity counts, or follow-up lists after `mcp_blueprint_blueprint_review_load_findings`; its return payload is the remediation source of truth.
 - Do not guess missing findings from unstaged repo drift or chat memory when the saved review artifact is absent or too weak.
+- Treat the canonical `review.review-fix` artifact contract as the only valid authoring template for `XX-REVIEW-FIX.md`; do not embed an older prompt-local variant.
 - Keep next-step guidance inside implemented Blueprint commands only.
 """

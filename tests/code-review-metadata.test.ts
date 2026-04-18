@@ -7,15 +7,21 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
 
-test("code-review manifest references the review tools, reviewer agent, and safe routing contract", async () => {
+test("code-review manifest references the review tools, canonical contract, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-code-review.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
   assert.match(commandFile, /`blueprint-reviewer` subagent/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
+  );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_scope")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
+  assert.match(commandFile, /review\.code-review/);
   assert.match(commandFile, /XX-REVIEW\.md/);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-secure-phase/);
@@ -33,6 +39,7 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-code-review/);
   assert.match(skillFile, /### `code-review`/);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_review_scope/);
   assert.match(skillFile, /blueprint-reviewer/);
   assert.match(skillFile, /XX-REVIEW\.md/);
