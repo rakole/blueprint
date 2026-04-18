@@ -1127,6 +1127,162 @@ function removePhaseDetailsFromRoadmap(
   };
 }
 
+function replacePhaseLineCompletionMarker(
+  raw: string,
+  phaseNumber: string,
+  completed: boolean
+): {
+  content: string;
+  found: boolean;
+  changed: boolean;
+} {
+  const marker = completed ? "x" : " ";
+  const pattern = new RegExp(
+    `^(- \\[)([ xX])(\\] (?:\\*\\*)?Phase ${escapeForRegex(phaseNumber)}: [^\\n]+)$`,
+    "m"
+  );
+  const match = raw.match(pattern);
+
+  if (!match) {
+    return {
+      content: raw,
+      found: false,
+      changed: false
+    };
+  }
+
+  const changed = (match[2]?.toLowerCase() === "x") !== completed;
+
+  return {
+    content: raw.replace(pattern, `$1${marker}$3`),
+    found: true,
+    changed
+  };
+}
+
+function replacePhaseDetailStatus(
+  raw: string,
+  phaseNumber: string,
+  nextStatus: string
+): {
+  content: string;
+  found: boolean;
+  changed: boolean;
+} {
+  const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!phaseDetailsSectionPattern.test(raw)) {
+    return {
+      content: raw,
+      found: false,
+      changed: false
+    };
+  }
+
+  let found = false;
+  let changed = false;
+  const content = raw.replace(
+    phaseDetailsSectionPattern,
+    (_full, header: string, body: string) => {
+      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
+        (match) => match[1].trimEnd()
+      );
+      const nextBlocks = blocks.map((block) => {
+        const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
+
+        if (!match || normalizePhaseNumber(match[1]) !== phaseNumber) {
+          return block;
+        }
+
+        found = true;
+
+        if (/^\*\*Status\*\*:\s*(.+)$/m.test(block)) {
+          const existingStatus = block.match(/^\*\*Status\*\*:\s*(.+)$/m)?.[1]?.trim() ?? "";
+
+          if (existingStatus.toLowerCase() === nextStatus.toLowerCase()) {
+            return block;
+          }
+
+          changed = true;
+          return block.replace(/^\*\*Status\*\*:\s*(.+)$/m, `**Status**: ${nextStatus}`);
+        }
+
+        changed = true;
+        return `${block}\n**Status**: ${nextStatus}`;
+      });
+
+      return `${header}${nextBlocks.join("\n\n")}\n`;
+    }
+  );
+
+  return {
+    content,
+    found,
+    changed
+  };
+}
+
+async function syncRoadmapPhaseCompletion(
+  projectRoot: string,
+  resolved: ResolvedPhaseLocation
+): Promise<string[]> {
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  if (!(await pathExists(roadmapPath))) {
+    return [];
+  }
+
+  const phaseArtifacts = await listPhaseArtifacts(
+    resolveBlueprintPath(projectRoot, resolved.phaseDir),
+    projectRoot
+  );
+  const hasSummaries = phaseArtifacts.some((artifact) => artifact.endsWith("-SUMMARY.md"));
+  const hasVerification = phaseArtifacts.includes(
+    validationArtifactPathFor(resolved, "verification")
+  );
+  const hasUat = phaseArtifacts.includes(validationArtifactPathFor(resolved, "uat"));
+  const completed = hasSummaries && hasVerification && hasUat;
+  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+  const phaseLineSync = replacePhaseLineCompletionMarker(
+    rawRoadmap,
+    resolved.phaseNumber,
+    completed
+  );
+
+  if (!phaseLineSync.found) {
+    return [
+      `ROADMAP completion sync could not find Phase ${resolved.phaseNumber} in ${BLUEPRINT_DIR}/ROADMAP.md.`
+    ];
+  }
+
+  const detailStatus =
+    completed
+      ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "completed")
+      : phaseLineSync.changed
+        ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "in_progress")
+        : {
+            content: phaseLineSync.content,
+            found: false,
+            changed: false
+          };
+
+  if (!phaseLineSync.changed && !detailStatus.changed) {
+    return [];
+  }
+
+  const warnings = await writeTextFile(roadmapPath, detailStatus.content, {
+    label: `${BLUEPRINT_DIR}/ROADMAP.md`
+  });
+
+  warnings.push(
+    completed
+      ? `Marked Phase ${resolved.phaseNumber} completed in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      : `Reopened Phase ${resolved.phaseNumber} in ${BLUEPRINT_DIR}/ROADMAP.md until validation evidence is complete.`
+  );
+
+  return warnings;
+}
+
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.access(targetPath);
@@ -2774,6 +2930,7 @@ export async function blueprintPhaseValidationWrite(
 
     if (existingContent === normalizedContent) {
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+      warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
 
       return {
         phaseNumber: resolved.phaseNumber,
@@ -2826,6 +2983,8 @@ export async function blueprintPhaseValidationWrite(
   if (exists) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
   }
+
+  warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
 
   return {
     phaseNumber: resolved.phaseNumber,

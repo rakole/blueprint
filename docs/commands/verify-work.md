@@ -30,7 +30,7 @@
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: writes `XX-UAT.md` through MCP, may record explicit follow-up fix capture in the same artifact, and updates `.blueprint/STATE.md` when the next safe action changes.
+- Repo side effects: writes `XX-UAT.md` through MCP, marks the phase complete in `.blueprint/ROADMAP.md` once execution, validation, and UAT evidence all exist, may record explicit follow-up fix capture in the same artifact, and updates `.blueprint/STATE.md` when the next safe action changes.
 
 
 ## Blueprint And Global State Reads
@@ -43,6 +43,7 @@
 ## Blueprint And Global State Writes
 
 - `phase XX-UAT.md`
+- `.blueprint/ROADMAP.md` when the phase completion signal becomes durable
 - `.blueprint/STATE.md`
 - optional explicit follow-up fix capture in the same UAT artifact
 
@@ -136,6 +137,7 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 - Creates or updates only the declared artifacts for this command.
 - Uses execution summaries as the source of truth for conversational UAT coverage.
 - Persists UAT evidence through `blueprint_phase_validation_write` rather than direct file writes.
+- Marks the matching `ROADMAP.md` phase complete only after summary, verification, and UAT evidence all exist.
 - Keeps `XX-UAT.md` resumable and explicit about unresolved gaps or follow-up captures.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
