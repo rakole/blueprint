@@ -15,14 +15,14 @@ Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` instead of guessing.
-3. Read `mcp_blueprint_blueprint_phase_context` so you know the phase requirements, existing discovery artifacts, and any missing artifacts.
+3. Read `mcp_blueprint_blueprint_phase_context` so you know the phase requirements, existing discovery artifacts, any mapped codebase summaries already available for brownfield grounding, and any missing artifacts.
 4. Read `mcp_blueprint_blueprint_roadmap_read` so your summary stays aligned with the active milestone and the roadmap's phase naming.
 5. Read `mcp_blueprint_blueprint_artifact_list` before writing so you can report the current phase artifact inventory accurately.
 6. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` and honor these runtime behaviors:
    - `workflow.discuss_mode="discuss"`: run focused gray-area questioning and capture actual decisions
    - `workflow.discuss_mode="assumptions"`: surface evidence-backed assumptions, ask only for corrections, then capture the corrected decisions
    - `workflow.skip_discuss=true`: prefer a single-pass, repo-evidence-driven context capture instead of a long interactive loop
-   - `workflow.research_before_questions=true`: inspect relevant local discovery/codebase artifacts before asking the user to choose between options
+   - `workflow.research_before_questions=true`: inspect relevant local discovery artifacts and any mapped codebase summaries before asking the user to choose between options
 7. Read the current phase's existing artifacts through `mcp_blueprint_blueprint_phase_artifact_read` and inspect any saved checkpoint through `mcp_blueprint_blueprint_phase_checkpoint_get`.
 8. If `XX-CONTEXT.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default.
 9. If a checkpoint exists and the user has not explicitly asked to discard it, prefer resuming from that checkpoint instead of starting over. When you do need user input about resume versus discard, use `ask_user` instead of a plain-text choice list.

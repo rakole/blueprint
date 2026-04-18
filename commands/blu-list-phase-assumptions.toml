@@ -10,8 +10,8 @@ Follow this flow exactly:
 2. Read `mcp_blueprint_blueprint_project_status` so your response stays grounded in repository readiness and the current safe next action.
 3. Read `mcp_blueprint_blueprint_roadmap_read` so you can summarize the roadmap goal, list valid phases when the requested phase is missing, and avoid guessing a replacement phase.
 4. If `mcp_blueprint_blueprint_phase_locate` reports `found: false`, stop with the precise `reason`, include the roadmap's available phase numbers and names, and offer only implemented recovery guidance.
-5. Read `mcp_blueprint_blueprint_phase_context` for the resolved phase so you understand requirements, existing discovery artifacts, and missing context.
-6. Base your answer on the saved roadmap and phase context. Surface assumptions across these five areas:
+5. Read `mcp_blueprint_blueprint_phase_context` for the resolved phase so you understand requirements, existing discovery artifacts, any mapped brownfield codebase summaries already available, and missing context.
+6. Base your answer on the saved roadmap, phase context, and any mapped codebase summaries exposed there before widening into fresh repo rereads. Surface assumptions across these five areas:
    - technical approach
    - implementation order
    - scope boundaries

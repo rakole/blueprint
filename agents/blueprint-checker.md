@@ -27,6 +27,8 @@ by missing prerequisites.
 ## Required Reads
 
 - resolved phase goal, requirements, and context supplied by the parent command
+- any mapped `.blueprint/codebase/` summaries the parent command supplies for
+  brownfield grounding
 - the saved `-PLAN.md` artifacts under review, not just summaries of them
 - research, UI-spec, and other discovery artifacts when normalized config says
   they matter for this phase

@@ -49,7 +49,7 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
+- `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
@@ -122,5 +122,4 @@
 - Roadmap mutation fixture.
 - Renumbering or archival regression fixture.
 - Direct `list-phase-assumptions` happy-path fixture.
-
 

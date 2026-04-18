@@ -158,6 +158,52 @@ test("map-codebase scaffolds the stable codebase bundle and builds deterministic
   assert.match(summaries, /@octokit\/rest|src\/integrations\/github\.ts/);
 });
 
+test("artifact summary digest combines saved artifact summaries with live repo evidence inputs", async (t) => {
+  const repoPath = await createRepoFromFixture("brownfield-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({ cwd: repoPath });
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [...CODEBASE_ARTIFACTS]
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/codebase/STACK.md"),
+    "# Stack\n\nHand-edited stack notes.\n",
+    "utf8"
+  );
+  const evidence = await collectRepoEvidence(repoPath);
+  const digest = await blueprintArtifactSummaryDigest({
+    cwd: repoPath,
+    artifactPaths: [
+      ".blueprint/codebase/STACK.md",
+      ".blueprint/codebase/ARCHITECTURE.md"
+    ],
+    packageJsonPath: "package.json",
+    docFiles: evidence.docFiles,
+    sourceFiles: evidence.sourceFiles,
+    testFiles: evidence.testFiles,
+    trackedFiles: evidence.trackedFiles
+  });
+
+  assert.ok(
+    digest.digest.some((section) => section.artifact === ".blueprint/codebase/STACK.md")
+  );
+  assert.match(
+    digest.digest.find((section) => section.artifact === ".blueprint/codebase/STACK.md")?.summary ?? "",
+    /Hand-edited stack notes/i
+  );
+  assert.ok(digest.digest.some((section) => section.artifact === "repo-evidence/source"));
+  assert.ok(digest.digest.some((section) => section.artifact === "repo-evidence/docs"));
+  assert.ok(digest.digest.some((section) => section.artifact === "repo-evidence/tests"));
+  assert.ok(digest.digest.some((section) => section.artifact === "repo-evidence/tracked"));
+  assert.ok(digest.inputsUsed.includes(".blueprint/codebase/STACK.md"));
+  assert.ok(digest.inputsUsed.includes("package.json"));
+  assert.ok(digest.inputsUsed.includes("docs/architecture.md"));
+});
+
 test("map-codebase reuses edited codebase docs by default and warns before replace", async (t) => {
   const repoPath = await createRepoFromFixture("brownfield-repo");
   t.after(async () => {

@@ -81,6 +81,8 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 ## Workflow Rules
 
+0. Treat `blueprint_phase_context.codebase` as reusable brownfield repo evidence when it is present. Prefer the saved `.blueprint/codebase/` summaries before re-reading broad repo surfaces, and call out when the codebase bundle is missing or incomplete.
+
 ### Canonical Research Contract
 
 Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when `/blu-research-phase` creates or updates research.

@@ -28,6 +28,8 @@ guessing plan structure or dependency order.
 
 - resolved phase context, roadmap slice, requirements, and active-state summary
   supplied by the parent command
+- any mapped `.blueprint/codebase/` summaries the parent command supplies for
+  brownfield grounding
 - existing plan inventory plus any current `-PLAN.md` artifacts when the parent
   is updating rather than creating
 - research and UI-spec artifacts when normalized config says those gates are

@@ -53,7 +53,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_roadmap_remove_phase` | Remove and renumber phase entries | `{removedPhase, renumberedPhases, roadmapPath}` |
 | `blueprint_roadmap_promote_backlog` | Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999.x` phase stubs when present | `{status, backlogItems, selectedBacklogIds, promotedItems, createdPhaseDirs, warnings}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
-| `blueprint_phase_context` | Summarize phase boundary and existing artifacts | `{phase, requirements, missingArtifacts}` |
+| `blueprint_phase_context` | Summarize phase boundary, existing artifacts, and any mapped codebase context | `{phase, codebase, requirements, missingArtifacts}` |
 | `blueprint_phase_research_status` | Report discovery readiness for context, research, and UI-spec artifacts | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
 | `blueprint_phase_artifact_read` | Read phase-scoped discovery artifacts such as `CONTEXT`, `DISCUSSION-LOG`, `RESEARCH`, or `UI-SPEC` | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
 | `blueprint_phase_artifact_write` | Persist substantive phase-scoped discovery artifact content with overwrite protection and research validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
@@ -78,7 +78,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_artifact_list` | Enumerate known core, phase, codebase, and report artifacts | `{artifacts, reports, missing, warnings}` |
 | `blueprint_artifact_mutate_index` | Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
-| `blueprint_artifact_summary_digest` | Build digests from artifacts, code, tests, and reports | `{digest, inputsUsed}` |
+| `blueprint_artifact_summary_digest` | Build digests from saved artifacts plus optional code, tests, docs, and tracked-file inputs | `{digest, inputsUsed}` |
 | `blueprint_artifact_report_write` | Persist durable report artifacts such as milestone audits with overwrite protection | `{path, written, created, overwritten, status, warnings}` |
 
 ### Review
@@ -231,7 +231,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 ### Digests And Reports
 
-- `blueprint_artifact_summary_digest` accepts repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, `testFiles`, and `trackedFiles`.
+- `blueprint_artifact_summary_digest` accepts repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, `testFiles`, and `trackedFiles`, and it can combine saved artifact summaries with live repo-file evidence in one digest.
 - Do not pass absolute paths or already-normalized report paths into the digest tool.
 - Treat returned `inputsUsed` as the authoritative digest scope that was actually summarized.
 - Report-family commands should use `blueprint_artifact_contract_read` to fetch canonical report contracts when a known Blueprint report shape exists.
