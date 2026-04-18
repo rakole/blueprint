@@ -364,6 +364,56 @@ Contract notes:
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
 - Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
 
+### `XX-REVIEW-FIX.md`
+
+`XX-REVIEW-FIX.md` is the phase-scoped remediation summary contract for review-driven follow-up work.
+
+Minimum expected structure:
+- `**Status:** APPLIED|PARTIAL|SKIPPED`
+- `## Findings Addressed`
+- `## Changes Made`
+- `## Verification`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Review-fix expectations:
+- must stay grounded in findings loaded from the saved `XX-REVIEW.md` baseline rather than a fresh prompt-only review
+- should summarize only the selected remediation pass instead of restating every open issue in the phase
+- should capture concrete verification evidence for applied changes and keep unresolved work explicit
+
+Exact persistence template:
+
+```md
+# Phase XX: <Phase Name> - Review Fix
+
+**Status:** APPLIED|PARTIAL|SKIPPED
+
+## Findings Addressed
+
+- Finding id or summary addressed in this remediation pass.
+
+## Changes Made
+
+- Concrete remediation completed.
+
+## Verification
+
+- Validation or test evidence for the applied fix, or `none`.
+
+## Follow-Ups
+
+- Remaining work, deferred item, or `none`.
+
+## Next Safe Action
+
+- /blu-progress
+```
+
+Contract notes:
+- Keep the `**Status:**` marker exactly as written.
+- Keep all required section names unchanged so `blueprint_review_record` continues to recognize the canonical review-fix artifact contract.
+- `## Findings Addressed` is the locked heading for remediation scope; do not rename it to `Findings Fixed`, `Resolved Findings`, or similar variants.
+
 ### `XX-SECURITY.md`
 
 `XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.
