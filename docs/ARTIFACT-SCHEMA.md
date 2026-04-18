@@ -364,6 +364,59 @@ Contract notes:
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
 - Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
 
+### `XX-REVIEW-FIX.md`
+
+`XX-REVIEW-FIX.md` is the phase-scoped bounded remediation contract for a saved review pass.
+
+Canonical source-of-truth note:
+- The runtime contract registry under `src/mcp/artifact-contracts/` is canonical. This section is the human-readable mirror of the `review.review-fix` contract and should stay aligned with it.
+
+Minimum expected structure:
+- `**Status:** APPLIED|PARTIAL|SKIPPED`
+- `## Findings Addressed`
+- `## Changes Made`
+- `## Verification`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Review-fix expectations:
+- should summarize only the saved findings addressed in this remediation pass
+- should record concrete repo changes and verification evidence, or `none` when a finding was skipped without code changes
+- should keep deferred or partial follow-up work explicit instead of implying an automatic re-review or commit loop
+
+Exact persistence template:
+
+```md
+# Phase XX: <Phase Name> - Review Fix
+
+**Status:** APPLIED|PARTIAL|SKIPPED
+
+## Findings Addressed
+
+- Finding id or summary addressed in this remediation pass.
+
+## Changes Made
+
+- Concrete remediation completed.
+
+## Verification
+
+- Validation or test evidence for the applied fix, or `none`.
+
+## Follow-Ups
+
+- Remaining work, deferred item, or `none`.
+
+## Next Safe Action
+
+- /blu-progress
+```
+
+Contract notes:
+- Keep the `**Status:**` marker exactly as written.
+- Keep all required section names unchanged so `blueprint_review_record` stays aligned with the canonical runtime contract.
+- If this document and the runtime registry ever drift, follow `src/mcp/artifact-contracts/` and repair this doc to match.
+
 ### `XX-SECURITY.md`
 
 `XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.
