@@ -444,7 +444,7 @@ test("review skill and security auditor are marked implemented in docs for secur
 
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-review` \| `implemented` \| Reviews, review-fix loops, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
+    /\| `blueprint-review` \| `implemented` \| Reviews, bounded remediation, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
   );
   assert.match(
     skillsMarkdown,
