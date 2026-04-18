@@ -314,10 +314,10 @@ test("blueprint_review_scope honors workflow.code_review and workflow.code_revie
   assert.equal(deepDefault.reviewMode.depth, "deep");
 });
 
-test("blueprint_review_scope falls back to git diff when summary evidence does not provide changed files", async (t) => {
+test("blueprint_review_scope does not use live git drift when saved summary and plan evidence are missing", async (t) => {
   const repoPath = await createCodeReviewRepo({
-    withSummary: false,
-    planFilesModified: []
+    withPlan: false,
+    withSummary: false
   });
 
   await writeFile(
@@ -346,9 +346,14 @@ test("blueprint_review_scope falls back to git diff when summary evidence does n
     phase: "5"
   });
 
-  assert.equal(scoped.status, "ready");
-  assert.deepEqual(scoped.files, ["src/git-fallback.ts"]);
-  assert.equal(scoped.reviewMode.source, "git-diff");
+  const warnings = scoped.warnings.join("\n");
+  assert.equal(scoped.status, "invalid");
+  assert.deepEqual(scoped.files, []);
+  assert.equal(scoped.reviewMode.source, "phase-plans");
+  assert.match(scoped.reason ?? "", /saved SUMMARY and PLAN artifacts were missing/i);
+  assert.match(warnings, /No saved SUMMARY artifacts were found/i);
+  assert.match(warnings, /No saved PLAN artifacts were found/i);
+  assert.doesNotMatch(warnings, /git diff fallback/i);
 });
 
 test("blueprint_review_scope reports invalid when no executed evidence or explicit files exist", async (t) => {
@@ -367,8 +372,9 @@ test("blueprint_review_scope reports invalid when no executed evidence or explic
 
   assert.equal(scoped.status, "invalid");
   assert.equal(scoped.files.length, 0);
-  assert.match(scoped.reason ?? "", /could not derive any reviewable repo files/i);
-  assert.match(scoped.warnings.join("\n"), /git diff fallback could not be read/i);
+  assert.match(scoped.reason ?? "", /saved SUMMARY and PLAN artifacts were missing/i);
+  assert.match(scoped.warnings.join("\n"), /No saved SUMMARY artifacts were found/i);
+  assert.match(scoped.warnings.join("\n"), /No saved PLAN artifacts were found/i);
 });
 
 test("code-review is exposed as an implemented review command with the scope tool and reviewer agent", async () => {

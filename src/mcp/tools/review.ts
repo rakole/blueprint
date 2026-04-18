@@ -1,7 +1,5 @@
 import { promises as fs } from "node:fs";
-import { execFile as execFileCallback } from "node:child_process";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import * as z from "zod/v4";
 
@@ -17,8 +15,6 @@ import {
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
 import { blueprintPhaseLocate } from "./phase.js";
-
-const execFileAsync = promisify(execFileCallback);
 
 type ReviewArtifactKind =
   | "code-review"
@@ -67,7 +63,7 @@ type ReviewRecordResult = {
 };
 
 type ReviewDepth = "quick" | "standard" | "deep";
-type ReviewModeSource = "explicit-files" | "phase-plans" | "git-diff";
+type ReviewModeSource = "explicit-files" | "phase-plans";
 
 type ReviewScopeArgs = {
   cwd?: string;
@@ -526,6 +522,13 @@ async function deriveReviewFilesFromSummaries(
   const summaryFiles = located.artifacts.filter((artifact) =>
     artifact.endsWith("-SUMMARY.md")
   );
+
+  if (summaryFiles.length === 0) {
+    warnings.push(
+      "No saved execution summaries were found for the selected phase, so Blueprint could not derive a review scope from summary evidence."
+    );
+  }
+
   const resolvedFiles = new Set<string>();
 
   for (const summaryPath of summaryFiles) {
@@ -589,45 +592,6 @@ async function deriveReviewFilesFromSummaries(
   }
 
   return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
-}
-
-async function deriveReviewFilesFromGitDiff(
-  projectRoot: string,
-  warnings: string[]
-): Promise<string[]> {
-  const candidates = new Set<string>();
-
-  try {
-    const [trackedResult, untrackedResult] = await Promise.all([
-      execFileAsync("git", ["diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD", "--"], {
-        cwd: projectRoot,
-        maxBuffer: 1024 * 1024
-      }),
-      execFileAsync("git", ["ls-files", "--others", "--exclude-standard"], {
-        cwd: projectRoot,
-        maxBuffer: 1024 * 1024
-      })
-    ]);
-
-    for (const output of [trackedResult.stdout, untrackedResult.stdout]) {
-      for (const line of output.split("\n")) {
-        const candidate = line.trim();
-
-        if (candidate.length > 0) {
-          candidates.add(candidate);
-        }
-      }
-    }
-  } catch (error) {
-    warnings.push(
-      error instanceof Error
-        ? `Git diff fallback could not be read for review scope: ${error.message}`
-        : "Git diff fallback could not be read for review scope."
-    );
-    return [];
-  }
-
-  return normalizeReviewFiles(projectRoot, [...candidates], warnings, "git diff");
 }
 
 async function deriveReviewFilesFromPlans(
@@ -890,22 +854,15 @@ export async function blueprintReviewScope(
     if (summaryFiles.length > 0) {
       files = summaryFiles;
     } else {
-      const gitDiffFiles = await deriveReviewFilesFromGitDiff(projectRoot, warnings);
-
-      if (gitDiffFiles.length > 0) {
-        files = gitDiffFiles;
-        source = "git-diff";
-      } else {
-        files = await deriveReviewFilesFromPlans(
-          projectRoot,
-          {
-            phaseNumber: located.phaseNumber,
-            phasePrefix: located.phasePrefix,
-            artifacts: located.artifacts
-          },
-          warnings
-        );
-      }
+      files = await deriveReviewFilesFromPlans(
+        projectRoot,
+        {
+          phaseNumber: located.phaseNumber,
+          phasePrefix: located.phasePrefix,
+          artifacts: located.artifacts
+        },
+        warnings
+      );
     }
   }
   const artifacts = {
@@ -922,6 +879,21 @@ export async function blueprintReviewScope(
   };
 
   if (files.length === 0) {
+    const missingSummaries = artifacts.summaries.length === 0;
+    const missingPlans = artifacts.plans.length === 0;
+
+    if (missingSummaries) {
+      warnings.push(
+        "No saved SUMMARY artifacts were found for this phase; implicit review scope resolution requires saved execution evidence."
+      );
+    }
+
+    if (missingPlans) {
+      warnings.push(
+        "No saved PLAN artifacts were found for this phase; implicit review scope resolution requires saved plan metadata."
+      );
+    }
+
     return {
       status: "invalid",
       phase: {
@@ -942,7 +914,13 @@ export async function blueprintReviewScope(
       reason:
         explicitFiles.length > 0
           ? "No valid repo files remained in the explicit review scope."
-          : "Blueprint could not derive any reviewable repo files from the executed phase plans. Re-run with explicit --files paths or restore the saved plan metadata.",
+          : missingSummaries && missingPlans
+            ? "Blueprint could not derive any reviewable repo files because saved SUMMARY and PLAN artifacts were missing for this phase. Re-run with explicit --files paths or restore the saved evidence."
+            : missingSummaries
+              ? "Blueprint could not derive any reviewable repo files because saved SUMMARY artifacts were missing for this phase. Re-run with explicit --files paths or restore the saved summaries."
+              : missingPlans
+                ? "Blueprint could not derive any reviewable repo files because saved PLAN artifacts were missing for this phase. Re-run with explicit --files paths or restore the saved plans."
+                : "Blueprint could not derive any reviewable repo files from the saved SUMMARY/PLAN evidence. Re-run with explicit --files paths or update the saved artifacts to include repo file paths.",
       warnings: [...warnings, ...reviewSettings.warnings]
     };
   }
