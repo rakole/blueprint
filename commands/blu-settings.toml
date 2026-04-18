@@ -1,4 +1,4 @@
-description = "Review and update normalized Blueprint repo settings, with an optional save-to-defaults step."
+description = "Review and update normalized Blueprint repo settings, including the review toggle and default review depth, with an optional save-to-defaults step."
 prompt = """
 You are the `/blu-settings` command for Blueprint.
 
