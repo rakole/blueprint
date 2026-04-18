@@ -20747,6 +20747,19 @@ function parseStateDocument(raw) {
 function normalizePhaseNumber2(value) {
   return normalizeBlueprintPhaseRef(value);
 }
+function comparePhaseNumbers(left, right) {
+  const leftParts = normalizePhaseNumber2(left).split(".").map((segment) => Number.parseInt(segment, 10));
+  const rightParts = normalizePhaseNumber2(right).split(".").map((segment) => Number.parseInt(segment, 10));
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = leftParts[index] ?? 0;
+    const rightValue = rightParts[index] ?? 0;
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+  return 0;
+}
 function formatPhasePrefix2(value) {
   return formatBlueprintPhasePrefix(value);
 }
@@ -21132,8 +21145,14 @@ async function buildSyncedState(projectRoot) {
     warnings.push("ROADMAP.md is missing; state sync fell back to the last known milestone and phase.");
   }
   const projectStatus = inspection.readiness;
-  const currentPhase2 = roadmapSignals.currentPhase ?? existingState.currentPhase;
+  const statePhaseIsAheadOfRoadmap = roadmapSignals.currentPhase !== null && existingState.currentPhase.length > 0 && comparePhaseNumbers(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
+  const currentPhase2 = statePhaseIsAheadOfRoadmap ? existingState.currentPhase : roadmapSignals.currentPhase ?? existingState.currentPhase;
   const currentMilestone = roadmapSignals.currentMilestone ?? existingState.currentMilestone;
+  if (statePhaseIsAheadOfRoadmap && roadmapSignals.currentPhase !== null) {
+    warnings.push(
+      `STATE.md is ahead of ROADMAP.md: current phase ${existingState.currentPhase} will be used instead of the stale roadmap phase ${roadmapSignals.currentPhase}.`
+    );
+  }
   const milestoneAuditReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
   const milestoneCompletionReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-complete-${currentMilestone}`);
   const milestoneSummaryReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-summary-${currentMilestone}`);
@@ -21495,7 +21514,7 @@ function normalizePhaseNumber3(value) {
 function basePhaseNumber(value) {
   return normalizePhaseNumber3(value).split(".")[0] ?? normalizePhaseNumber3(value);
 }
-function comparePhaseNumbers(left, right) {
+function comparePhaseNumbers2(left, right) {
   const leftParts = normalizePhaseNumber3(left).split(".").map((segment) => Number.parseInt(segment, 10));
   const rightParts = normalizePhaseNumber3(right).split(".").map((segment) => Number.parseInt(segment, 10));
   const length = Math.max(leftParts.length, rightParts.length);
@@ -22543,7 +22562,7 @@ async function blueprintRoadmapRemovePhase(args) {
       `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
     );
   }
-  if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
+  if (comparePhaseNumbers2(targetPhaseNumber, currentPhaseNumber) <= 0) {
     throw new Error(
       `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
     );
