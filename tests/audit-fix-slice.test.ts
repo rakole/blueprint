@@ -9,9 +9,11 @@ import { blueprintToolNames } from "../src/mcp/server.js";
 const repoRoot = process.cwd();
 
 test("audit-fix docs and catalog metadata promote the remediation slice to implemented", async () => {
-  const [catalogMarkdown, implementationOrder] = await Promise.all([
+  const [catalogMarkdown, implementationOrder, auditFixDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/audit-fix.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
   assert.match(
@@ -22,6 +24,13 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
     implementationOrder,
     /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
   );
+  assert.match(auditFixDoc, /--source <review\|security\|verification\|uat\|all>/);
+  assert.match(auditFixDoc, /--severity <medium\|high\|all>/);
+  assert.match(auditFixDoc, /--max N/);
+  assert.match(auditFixDoc, /--dry-run/);
+  assert.match(auditFixDoc, /ask_user/);
+  assert.match(auditFixDoc, /## In-Flight Progress Contract/);
+  assert.match(runtimeReference, /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./);
 });
 
 test("audit-fix is exposed as an implemented remediation command with the registered tools", async () => {

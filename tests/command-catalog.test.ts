@@ -623,6 +623,7 @@ test("code-review-fix is implemented once manifest, review skill, and findings t
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_phase_locate",
     "blueprint_review_load_findings",
     "blueprint_review_record",
@@ -661,6 +662,14 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
     artifactSchema,
     /`## Findings Addressed` is the locked heading for remediation scope/
   );
+  assert.match(
+    artifactSchema,
+    /### `reports\/audit-fix-<phase>\.md`[\s\S]*## Evidence Used[\s\S]*## Fix Scope[\s\S]*## Changes Applied[\s\S]*## Remaining Gaps[\s\S]*## Next Safe Action/
+  );
+  assert.match(
+    artifactSchema,
+    /do not route through `blueprint_review_record`/
+  );
 
   assert.match(
     skillsAndAgents,
@@ -691,7 +700,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
 
   assert.match(
     runtimeReference,
-    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
   );
   assert.match(
     runtimeReference,
@@ -703,7 +712,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     runtimeReference,
-    /The planned `blueprint-fixer` remains unshipped while deeper remediation-loop parity is still under audit\./
+    /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./
   );
 
   assert.match(
@@ -724,7 +733,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     migrationDoc,
-    /do not claim the planned `blueprint-fixer` as an implemented runtime path\./
+    /Do not claim the planned `blueprint-fixer` as an implemented runtime path or active dependency\./
   );
   assert.doesNotMatch(
     migrationDoc,
