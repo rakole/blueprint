@@ -79,7 +79,6 @@ non-routable until their extra MCP substrate lands.
 - `blueprint-security-auditor`
 - `blueprint-ui-auditor`
 - `blueprint-verifier`
-- `blueprint-fixer`
 
 ## Shared MCP Contracts
 
@@ -120,19 +119,30 @@ non-routable until their extra MCP substrate lands.
    proposing any repo mutation.
 2. Use `blueprint_review_load_findings` for the findings baseline; do not infer
    fix scope from chat memory or raw git drift when review evidence is missing.
-3. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
+3. Read the canonical review-fix contract through
+   `blueprint_artifact_contract_read` before drafting `XX-REVIEW-FIX.md`, then
+   use the returned template as the baseline for the persisted artifact.
+4. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
    route back to `/blu-code-review <phase>` or `/blu-progress` instead of
    bluffing.
-4. Require explicit confirmation of the selected findings unless the user
+5. Use Gemini CLI's `ask_user` tool for overwrite confirmation and for any
+   structured confirmation of which findings Blueprint is about to fix.
+6. Treat `--auto` as bounded finding selection only. It may skip the manual
+   selection step for a narrow, high-confidence saved finding set, but it does
+   not authorize automatic commits, branch creation, or iterative re-review
+   loops.
+7. Require explicit confirmation of the selected findings unless the user
    clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
-5. Keep repo mutation tightly bounded to the selected review findings and the
+8. Keep repo mutation tightly bounded to the selected review findings and the
    implicated repo files.
-6. Use `blueprint-reviewer` for bounded reclassification when the saved review
-   is broad or ambiguous, and `blueprint-fixer` only when that agent is
-   available and the fix scope stays narrow.
-7. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
+9. Use `blueprint-reviewer` for bounded reclassification when the saved review
+   is broad or ambiguous.
+10. Report the resolved phase, selected finding ids, remediation progress, and
+    verification progress while work is in flight, not only in the closing
+    summary.
+11. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
    `blueprint_review_record` with the `review-fix` artifact.
-8. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
+12. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
    inside implemented commands. Prefer `/blu-validate-phase <phase>` when
    behavior changed, `/blu-add-tests <phase>` when missing tests are the main
    remaining gap, and `/blu-progress` otherwise.

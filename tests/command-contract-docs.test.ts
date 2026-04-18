@@ -444,7 +444,7 @@ test("review skill and security auditor are marked implemented in docs for secur
 
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-review` \| `implemented` \| Reviews, review-fix loops, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
+    /\| `blueprint-review` \| `implemented` \| Reviews, bounded remediation, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
   );
   assert.match(
     skillsMarkdown,
@@ -677,16 +677,19 @@ test("code-review-fix docs and migration notes keep the review-remediation contr
   assert.match(codeReviewFixDoc, /Primary skill: `blueprint-review`/);
   assert.match(codeReviewFixDoc, /`blueprint_phase_locate`/);
   assert.match(codeReviewFixDoc, /`blueprint_review_load_findings`/);
+  assert.match(codeReviewFixDoc, /`blueprint_artifact_contract_read`/);
   assert.match(codeReviewFixDoc, /`blueprint_review_record`/);
   assert.match(codeReviewFixDoc, /`blueprint_state_update`/);
+  assert.match(codeReviewFixDoc, /## In-Flight Progress Contract/);
+  assert.match(codeReviewFixDoc, /`--auto` is a bounded finding-selection shortcut only/i);
   assert.match(codeReviewFixDoc, /phase XX-REVIEW-FIX\.md/);
   assert.match(
     mcpToolsDoc,
-    /`code-review-fix` uses `blueprint_phase_locate`, `blueprint_review_load_findings`, `blueprint_review_record`, and `blueprint_state_update`/
+    /`code-review-fix` uses `blueprint_phase_locate`, `blueprint_review_load_findings`, `blueprint_artifact_contract_read`, `blueprint_review_record`, and `blueprint_state_update`/
   );
   assert.match(
     migrationMarkdown,
-    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \|/
+    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_record`<br>`blueprint_state_update` \|/
   );
 });
 

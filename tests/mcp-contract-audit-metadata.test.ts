@@ -155,13 +155,20 @@ test("review contracts stay explicit across code-review, remediation, and review
 
   assert.match(codeReviewCommand, /`files` must be repo-relative file paths only/i);
   assert.match(codeReviewCommand, /do not pass directories, wildcards, `?\.blueprint\/\*\*`?, or absolute filesystem paths/i);
+  assert.match(codeReviewCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
+  assert.match(codeReviewCommand, /review\.code-review/i);
   assert.match(codeReviewCommand, /returned repo file list as the deterministic review scope/i);
   assert.match(codeReviewDoc, /## Review Scope Contract/);
   assert.match(codeReviewDoc, /Directories, wildcards, `?\.blueprint\/\*\*`?, and absolute paths are invalid/i);
 
   assert.match(codeReviewFixCommand, /authoritative remediation baseline/i);
+  assert.match(codeReviewFixCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
+  assert.match(codeReviewFixCommand, /ask_user/i);
+  assert.match(codeReviewFixCommand, /bounded automatic finding selection only/i);
   assert.match(codeReviewFixCommand, /returned `reportPath` as authoritative/i);
   assert.match(codeReviewFixDoc, /## Remediation Contract/);
+  assert.match(codeReviewFixDoc, /`blueprint_artifact_contract_read`/i);
+  assert.match(codeReviewFixDoc, /## In-Flight Progress Contract/);
   assert.match(codeReviewFixDoc, /Do not recreate finding ids or severity/i);
 
   assert.match(auditFixCommand, /bare canonical report name `audit-fix-<phase>`/i);
@@ -174,6 +181,7 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(reviewDoc, /## Peer-Review Persistence Contract/);
   assert.match(reviewSkill, /`blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts/i);
   assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW\.md`/i);
+  assert.match(reviewSkill, /Read the canonical review-fix contract through\s+`blueprint_artifact_contract_read` before drafting `XX-REVIEW-FIX\.md`/i);
   assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS\.md`/i);
   assert.match(reviewSkill, /Directories, wildcards, absolute paths, and `?\.blueprint\/\*\*`? paths are invalid or skipped/i);
   assert.match(reviewSkill, /returned `findings` and `severityCounts` as the authoritative fix baseline/i);

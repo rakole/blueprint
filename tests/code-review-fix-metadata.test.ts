@@ -7,7 +7,7 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
 
-test("code-review-fix manifest references findings tools, review agents, and safe follow-up routing", async () => {
+test("code-review-fix manifest references findings tools, canonical contracts, and safe follow-up routing", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-code-review-fix.toml"),
     "utf8"
@@ -15,14 +15,21 @@ test("code-review-fix manifest references findings tools, review agents, and saf
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
   assert.match(commandFile, /`blueprint-reviewer` subagent/);
-  assert.match(commandFile, /`blueprint-fixer` subagent/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(
     commandFile,
     new RegExp(blueprintRuntimeToolFqn("blueprint_review_load_findings"))
   );
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
+  );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
+  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /review\.review-fix/);
+  assert.match(commandFile, /selected finding ids, fix progress, and verification progress/i);
+  assert.match(commandFile, /`--auto` as bounded automatic finding selection only/i);
   assert.match(commandFile, /XX-REVIEW-FIX\.md/);
   assert.match(commandFile, /\/blu-code-review/);
   assert.match(commandFile, /\/blu-audit-fix/);
@@ -44,9 +51,15 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
   assert.match(skillFile, /\/blu-code-review-fix/);
   assert.match(skillFile, /### `code-review-fix`/);
   assert.match(skillFile, /blueprint_review_load_findings/);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_state_update/);
-  assert.match(skillFile, /`blueprint-fixer`/);
+  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /`--auto` as bounded finding selection only/i);
   assert.match(skillFile, /XX-REVIEW-FIX\.md/);
+  assert.match(
+    skillFile,
+    /selected finding ids,\s+remediation progress,\s+and\s+verification progress/i
+  );
   assert.match(skillFile, /\/blu-validate-phase <phase>/);
   assert.match(skillFile, /\/blu-add-tests <phase>/);
   assert.match(skillFile, /\/blu-progress/);
