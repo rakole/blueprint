@@ -50,6 +50,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
 
 The planned `blueprint-fixer` remains future inventory only. Implemented Blueprint commands do not route it yet.
+
 ## Command To Agent Expectations
 
 - `new-project` may use `blueprint-project-researcher` for brownfield or fuzzy-context bootstrap discovery and `blueprint-roadmapper` for requirement-to-phase shaping plus roadmap revisions.

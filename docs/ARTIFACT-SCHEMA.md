@@ -370,7 +370,6 @@ Contract notes:
 
 Canonical source-of-truth note:
 - The runtime contract registry under `src/mcp/artifact-contracts/` is canonical. This section is the human-readable mirror of the `review.review-fix` contract and should stay aligned with it.
-
 Minimum expected structure:
 - `**Status:** APPLIED|PARTIAL|SKIPPED`
 - `## Findings Addressed`
@@ -437,7 +436,7 @@ Security audit expectations:
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
 
-### XX-REVIEW.md
+### `XX-REVIEW.md`
 
 `XX-REVIEW.md` is the phase-scoped code review contract for a completed phase.
 
@@ -457,25 +456,6 @@ Code review expectations:
 - severity summary must maintain machine-extractable counts for critical/high/medium/low/unknown counts
 - findings must cite evidence and impact for each issue
 - follow-up work should be explicit rather than buried in findings prose
-
-### XX-REVIEW-FIX.md
-
-`XX-REVIEW-FIX.md` is the phase-scoped remediation summary for a review pass.
-
-Minimum expected structure:
-- `**Status:** APPLIED|PARTIAL|SKIPPED`
-- `## Findings Addressed`
-- `## Changes Made`
-- `## Verification`
-- `## Follow-Ups`
-- `## Next Safe Action`
-
-Review fix expectations:
-- must cite the findings addressed in the remediation pass
-- changes made should describe concrete repo mutation or artifact updates
-- verification evidence must be grounded in test or tool output
-- Blueprint-native review fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
-
 
 ## Supporting Trees
 
