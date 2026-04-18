@@ -368,6 +368,8 @@ Contract notes:
 
 `XX-REVIEW-FIX.md` is the phase-scoped remediation summary contract for review-driven follow-up work.
 
+Canonical source-of-truth note:
+- The runtime contract registry under `src/mcp/artifact-contracts/` is canonical. This section is the human-readable mirror of the `review.review-fix` contract and should stay aligned with it.
 Minimum expected structure:
 - `**Status:** APPLIED|PARTIAL|SKIPPED`
 - `## Findings Addressed`
@@ -414,6 +416,7 @@ Contract notes:
 - Keep the `**Status:**` marker exactly as written.
 - Keep all required section names unchanged so `blueprint_review_record` continues to recognize the canonical review-fix artifact contract.
 - `## Findings Addressed` is the locked heading for remediation scope; do not rename it to `Findings Fixed`, `Resolved Findings`, or similar variants.
+- If this document and the runtime registry ever drift, follow `src/mcp/artifact-contracts/` and repair this doc to match.
 
 ### `XX-SECURITY.md`
 

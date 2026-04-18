@@ -406,6 +406,9 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["code-review"].availableOptionalAgents, [
     "blueprint-reviewer"
   ]);
+  assert.deepEqual(catalog.commands["code-review-fix"].availableOptionalAgents, [
+    "blueprint-reviewer"
+  ]);
   assert.deepEqual(catalog.commands["audit-fix"].availableOptionalAgents.sort(), [
     "blueprint-reviewer",
     "blueprint-verifier"
