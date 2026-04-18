@@ -50,7 +50,7 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
+- `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`

@@ -3455,6 +3455,69 @@ function summarizeArtifactContent(content: string): {
   };
 }
 
+function buildRepoEvidenceDigestSections(args: {
+  packageJsonPath: string | null;
+  readmePath: string | null;
+  sourceFiles: string[];
+  testFiles: string[];
+  docFiles: string[];
+  trackedFiles: string[];
+}): ArtifactSummaryDigestSection[] {
+  const sections: ArtifactSummaryDigestSection[] = [];
+
+  if (args.packageJsonPath || args.sourceFiles.length > 0) {
+    sections.push({
+      artifact: "repo-evidence/source",
+      title: "Repo Source Evidence",
+      summary:
+        args.sourceFiles.length > 0
+          ? `Source evidence spans ${summarizeTopDirectories(args.sourceFiles).join(", ") || "the repo root"} with ${args.sourceFiles.length} repo file(s) in scope.`
+          : `Package evidence is anchored in ${args.packageJsonPath ?? "package.json"} even though no explicit source files were supplied.`,
+      evidence: uniqueSorted(
+        [args.packageJsonPath, ...args.sourceFiles.slice(0, 4)].filter(
+          (value): value is string => Boolean(value)
+        )
+      )
+    });
+  }
+
+  if (args.docFiles.length > 0 || args.readmePath) {
+    sections.push({
+      artifact: "repo-evidence/docs",
+      title: "Repo Documentation Evidence",
+      summary:
+        args.docFiles.length > 0
+          ? `Documentation evidence includes ${args.docFiles.length} file(s) rooted in ${summarizeTopDirectories(args.docFiles).join(", ")}.`
+          : `Documentation evidence is currently anchored in ${args.readmePath ?? "README.md"}.`,
+      evidence: uniqueSorted(
+        [args.readmePath, ...args.docFiles.slice(0, 4)].filter(
+          (value): value is string => Boolean(value)
+        )
+      )
+    });
+  }
+
+  if (args.testFiles.length > 0) {
+    sections.push({
+      artifact: "repo-evidence/tests",
+      title: "Repo Test Evidence",
+      summary: `Test evidence includes ${args.testFiles.length} file(s) rooted in ${summarizeTopDirectories(args.testFiles).join(", ")}.`,
+      evidence: uniqueSorted(args.testFiles.slice(0, 5))
+    });
+  }
+
+  if (args.trackedFiles.length > 0) {
+    sections.push({
+      artifact: "repo-evidence/tracked",
+      title: "Repo Tracked File Evidence",
+      summary: `Tracked-file evidence includes ${args.trackedFiles.length} repo file(s) that can ground the current digest scope.`,
+      evidence: uniqueSorted(args.trackedFiles.slice(0, 5))
+    });
+  }
+
+  return sections;
+}
+
 async function buildArtifactDigestSections(
   projectRoot: string,
   artifactPaths: string[]
@@ -3485,14 +3548,6 @@ export async function blueprintArtifactSummaryDigest(
 ): Promise<ArtifactSummaryDigestResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const artifactPaths = normalizeInputPaths(projectRoot, args.artifactPaths);
-
-  if (artifactPaths.length > 0) {
-    return {
-      digest: await buildArtifactDigestSections(projectRoot, artifactPaths),
-      inputsUsed: artifactPaths
-    };
-  }
-
   const packageJsonPath = await normalizeOptionalRepoPath(
     projectRoot,
     args.packageJsonPath,
@@ -3503,6 +3558,31 @@ export async function blueprintArtifactSummaryDigest(
   const testFiles = normalizeInputPaths(projectRoot, args.testFiles);
   const docFiles = normalizeInputPaths(projectRoot, args.docFiles);
   const trackedFiles = normalizeInputPaths(projectRoot, args.trackedFiles);
+
+  if (artifactPaths.length > 0) {
+    const digest = await buildArtifactDigestSections(projectRoot, artifactPaths);
+    const repoEvidenceDigest = buildRepoEvidenceDigestSections({
+      packageJsonPath,
+      readmePath,
+      sourceFiles,
+      testFiles,
+      docFiles,
+      trackedFiles
+    });
+
+    return {
+      digest: [...digest, ...repoEvidenceDigest],
+      inputsUsed: uniqueSorted([
+        ...artifactPaths,
+        packageJsonPath ?? "",
+        readmePath ?? "",
+        ...sourceFiles,
+        ...testFiles,
+        ...docFiles,
+        ...trackedFiles
+      ]).filter((value) => value.length > 0)
+    };
+  }
 
   let packageManifest: PackageManifest = {};
 

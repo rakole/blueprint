@@ -27,6 +27,8 @@ phase.
 ## Required Reads
 
 - phase context and requirement mapping supplied by the parent command
+- any mapped `.blueprint/codebase/` summaries the parent command supplies for
+  brownfield grounding
 - any existing `XX-RESEARCH.md` when the parent is evaluating an update path
 - existing `XX-CONTEXT.md`, `XX-UI-SPEC.md`, summaries, or verification notes
   when they materially change the phase boundary or constraints

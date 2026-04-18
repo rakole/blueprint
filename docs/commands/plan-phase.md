@@ -52,7 +52,7 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, requirements, missingArtifacts}`
+- `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`

@@ -170,6 +170,17 @@ type PhaseContextResult = {
             summaries: string[];
         };
     } | null;
+    codebase: {
+        mapped: boolean;
+        artifacts: string[];
+        missingArtifacts: string[];
+        digest: Array<{
+            artifact: string;
+            title: string;
+            summary: string;
+        }>;
+        warnings: string[];
+    };
     requirements: string[];
     missingArtifacts: string[];
     warnings: string[];

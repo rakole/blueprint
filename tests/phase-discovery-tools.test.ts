@@ -5,7 +5,10 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
+import {
+  CODEBASE_ARTIFACTS,
+  blueprintArtifactScaffold
+} from "../src/mcp/tools/artifacts.js";
 import {
   blueprintPhaseContext,
   blueprintPhaseLocate,
@@ -208,8 +211,16 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
 
   await blueprintArtifactScaffold({
     cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+    artifacts: [
+      ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
+      ...CODEBASE_ARTIFACTS
+    ]
   });
+  await writeFile(
+    path.join(repoPath, ".blueprint/codebase/ARCHITECTURE.md"),
+    "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
+    "utf8"
+  );
 
   const roadmap = await blueprintRoadmapRead({ cwd: repoPath });
   const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "03" });
@@ -232,6 +243,14 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
     context.phase?.artifacts.context,
     ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
   );
+  assert.equal(context.codebase.mapped, true);
+  assert.ok(context.codebase.artifacts.includes(".blueprint/codebase/ARCHITECTURE.md"));
+  assert.equal(context.codebase.digest.length, CODEBASE_ARTIFACTS.length);
+  assert.match(
+    context.codebase.digest.find((entry) => entry.artifact.endsWith("ARCHITECTURE.md"))?.summary ?? "",
+    /MCP tools and command manifests anchor the runtime layout/i
+  );
+  assert.match(context.warnings.join("\n"), /Mapped codebase summaries are available/i);
 });
 
 test("phase locate reports missing roadmap phases without escaping the Blueprint root", async (t) => {
