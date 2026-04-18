@@ -326,15 +326,23 @@ function normalizeFindingSummary(item: string): string {
     .trim();
 }
 
-function parseFindingsFromArtifact(content: string): {
+function resolveFindingsHeadingPattern(artifact: ReviewArtifactKind): RegExp {
+  if (artifact === "review-fix") {
+    return /^(findings addressed|findings)$/i;
+  }
+
+  return /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i;
+}
+
+function parseFindingsFromArtifact(
+  content: string,
+  artifact: ReviewArtifactKind
+): {
   findings: ReviewFinding[];
   severityCounts: Record<ReviewFindingSeverity, number>;
   followUps: string[];
 } {
-  const entries = extractMarkdownSectionEntries(
-    content,
-    /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i
-  );
+  const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings: ReviewFinding[] = [];
   const seenSummaries = new Set<string>();
   const severityCounts = emptySeverityCounts();
@@ -369,13 +377,16 @@ function parseFindingsFromArtifact(content: string): {
   };
 }
 
-function collectReviewCounts(content: string): {
+function collectReviewCounts(
+  content: string,
+  artifact: ReviewArtifactKind
+): {
   counts: ReviewRecordResult["counts"];
   followUps: string[];
 } {
   const findings = extractMarkdownSectionItems(
     content,
-    /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i
+    resolveFindingsHeadingPattern(artifact)
   );
   const followUps = extractMarkdownSectionItems(
     content,
@@ -983,7 +994,7 @@ export async function blueprintReviewRecord(
     label: reportPath
   });
   const normalizedContent = normalizeTextContent(prepared.content);
-  const { counts, followUps } = collectReviewCounts(normalizedContent);
+  const { counts, followUps } = collectReviewCounts(normalizedContent, args.artifact);
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists = await pathExists(absolutePath);
   const warnings: string[] = [...prepared.warnings];
@@ -1146,7 +1157,7 @@ export async function blueprintReviewLoadFindings(
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
-  const parsed = parseFindingsFromArtifact(content);
+  const parsed = parseFindingsFromArtifact(content, artifact);
 
   return {
     phaseFound: true,

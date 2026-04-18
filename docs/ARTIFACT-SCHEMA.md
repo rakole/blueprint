@@ -380,6 +380,7 @@ Review-fix expectations:
 - must stay grounded in findings loaded from the saved `XX-REVIEW.md` baseline rather than a fresh prompt-only review
 - should summarize only the selected remediation pass instead of restating every open issue in the phase
 - should capture concrete verification evidence for applied changes and keep unresolved work explicit
+- Blueprint-native review-fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
 
 Exact persistence template:
 
@@ -431,6 +432,27 @@ Security audit expectations:
 - should distinguish confirmed mitigations from missing or partial controls, even when those distinctions stay inside the existing `Findings` and `Follow-Ups` sections
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
+
+### `XX-REVIEW.md`
+
+`XX-REVIEW.md` is the phase-scoped code review contract for a completed phase.
+
+Minimum expected structure:
+- `**Verdict:** PASS|FOLLOW_UP|BLOCKED`
+- `## Review Summary`
+- `## Scope Reviewed`
+- `## Evidence Reviewed`
+- `## Positive Signals`
+- `## Severity Summary`
+- `## Findings`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Code review expectations:
+- must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
+- severity summary must maintain machine-extractable counts for critical/high/medium/low/unknown counts
+- findings must cite evidence and impact for each issue
+- follow-up work should be explicit rather than buried in findings prose
 
 ## Supporting Trees
 
