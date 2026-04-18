@@ -364,7 +364,7 @@ Contract notes:
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
 - Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
 
-### `XX-SECURITY.md`
+### XX-SECURITY.md
 
 `XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.
 
@@ -381,6 +381,46 @@ Security audit expectations:
 - should distinguish confirmed mitigations from missing or partial controls, even when those distinctions stay inside the existing `Findings` and `Follow-Ups` sections
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
+
+### XX-REVIEW.md
+
+`XX-REVIEW.md` is the phase-scoped code review contract for a completed phase.
+
+Minimum expected structure:
+- `**Verdict:** PASS|FOLLOW_UP|BLOCKED`
+- `## Review Summary`
+- `## Scope Reviewed`
+- `## Evidence Reviewed`
+- `## Positive Signals`
+- `## Severity Summary`
+- `## Findings`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Code review expectations:
+- must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
+- severity summary must maintain machine-extractable counts for critical/high/medium/low/unknown counts
+- findings must cite evidence and impact for each issue
+- follow-up work should be explicit rather than buried in findings prose
+
+### XX-REVIEW-FIX.md
+
+`XX-REVIEW-FIX.md` is the phase-scoped remediation summary for a review pass.
+
+Minimum expected structure:
+- `**Status:** APPLIED|PARTIAL|SKIPPED`
+- `## Findings Addressed`
+- `## Changes Made`
+- `## Verification`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Review fix expectations:
+- must cite the findings addressed in the remediation pass
+- changes made should describe concrete repo mutation or artifact updates
+- verification evidence must be grounded in test or tool output
+- Blueprint-native review fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
+
 
 ## Supporting Trees
 
