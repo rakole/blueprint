@@ -35,7 +35,7 @@ type ReviewRecordResult = {
     warnings: string[];
 };
 type ReviewDepth = "quick" | "standard" | "deep";
-type ReviewModeSource = "explicit-files" | "phase-plans" | "git-diff";
+type ReviewModeSource = "explicit-files" | "phase-plans";
 type ReviewScopeArgs = {
     cwd?: string;
     phase?: NumericInput;

@@ -18745,6 +18745,16 @@ async function blueprintArtifactReportWrite(args) {
       warnings: ["Report content must not be empty."]
     };
   }
+  if (!validation.valid) {
+    return {
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      warnings: [...validation.issues]
+    };
+  }
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
@@ -19170,9 +19180,7 @@ var init_command_paths = __esm({
 
 // src/mcp/tools/review.ts
 import { promises as fs3 } from "node:fs";
-import { execFile as execFileCallback } from "node:child_process";
 import path5 from "node:path";
-import { promisify } from "node:util";
 function normalizeTextContent(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
@@ -19410,6 +19418,11 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
   const summaryFiles = located.artifacts.filter(
     (artifact) => artifact.endsWith("-SUMMARY.md")
   );
+  if (summaryFiles.length === 0) {
+    warnings.push(
+      "No saved execution summaries were found for the selected phase, so Blueprint could not derive a review scope from summary evidence."
+    );
+  }
   const resolvedFiles = /* @__PURE__ */ new Set();
   for (const summaryPath2 of summaryFiles) {
     const content = await readRepoFileIfPresent(projectRoot, summaryPath2);
@@ -19459,35 +19472,6 @@ async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
     }
   }
   return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
-}
-async function deriveReviewFilesFromGitDiff(projectRoot, warnings) {
-  const candidates = /* @__PURE__ */ new Set();
-  try {
-    const [trackedResult, untrackedResult] = await Promise.all([
-      execFileAsync("git", ["diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD", "--"], {
-        cwd: projectRoot,
-        maxBuffer: 1024 * 1024
-      }),
-      execFileAsync("git", ["ls-files", "--others", "--exclude-standard"], {
-        cwd: projectRoot,
-        maxBuffer: 1024 * 1024
-      })
-    ]);
-    for (const output of [trackedResult.stdout, untrackedResult.stdout]) {
-      for (const line of output.split("\n")) {
-        const candidate = line.trim();
-        if (candidate.length > 0) {
-          candidates.add(candidate);
-        }
-      }
-    }
-  } catch (error2) {
-    warnings.push(
-      error2 instanceof Error ? `Git diff fallback could not be read for review scope: ${error2.message}` : "Git diff fallback could not be read for review scope."
-    );
-    return [];
-  }
-  return normalizeReviewFiles(projectRoot, [...candidates], warnings, "git diff");
 }
 async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
   const summaryPlanIds = new Set(
@@ -19679,21 +19663,15 @@ async function blueprintReviewScope(args) {
     if (summaryFiles.length > 0) {
       files = summaryFiles;
     } else {
-      const gitDiffFiles = await deriveReviewFilesFromGitDiff(projectRoot, warnings);
-      if (gitDiffFiles.length > 0) {
-        files = gitDiffFiles;
-        source = "git-diff";
-      } else {
-        files = await deriveReviewFilesFromPlans(
-          projectRoot,
-          {
-            phaseNumber: located.phaseNumber,
-            phasePrefix: located.phasePrefix,
-            artifacts: located.artifacts
-          },
-          warnings
-        );
-      }
+      files = await deriveReviewFilesFromPlans(
+        projectRoot,
+        {
+          phaseNumber: located.phaseNumber,
+          phasePrefix: located.phasePrefix,
+          artifacts: located.artifacts
+        },
+        warnings
+      );
     }
   }
   const artifacts = {
@@ -19705,6 +19683,18 @@ async function blueprintReviewScope(args) {
     security: findPhaseArtifact(located.artifacts, "-SECURITY.md")
   };
   if (files.length === 0) {
+    const missingSummaries = artifacts.summaries.length === 0;
+    const missingPlans = artifacts.plans.length === 0;
+    if (missingSummaries) {
+      warnings.push(
+        "No saved SUMMARY artifacts were found for this phase; implicit review scope resolution requires saved execution evidence."
+      );
+    }
+    if (missingPlans) {
+      warnings.push(
+        "No saved PLAN artifacts were found for this phase; implicit review scope resolution requires saved plan metadata."
+      );
+    }
     return {
       status: "invalid",
       phase: {
@@ -19720,7 +19710,7 @@ async function blueprintReviewScope(args) {
         source
       },
       artifacts,
-      reason: explicitFiles.length > 0 ? "No valid repo files remained in the explicit review scope." : "Blueprint could not derive any reviewable repo files from the executed phase plans. Re-run with explicit --files paths or restore the saved plan metadata.",
+      reason: explicitFiles.length > 0 ? "No valid repo files remained in the explicit review scope." : missingSummaries && missingPlans ? "Blueprint could not derive any reviewable repo files because saved SUMMARY and PLAN artifacts were missing for this phase. Re-run with explicit --files paths or restore the saved evidence." : missingSummaries ? "Blueprint could not derive any reviewable repo files because saved SUMMARY artifacts were missing for this phase. Re-run with explicit --files paths or restore the saved summaries." : missingPlans ? "Blueprint could not derive any reviewable repo files because saved PLAN artifacts were missing for this phase. Re-run with explicit --files paths or restore the saved plans." : "Blueprint could not derive any reviewable repo files from the saved SUMMARY/PLAN evidence. Re-run with explicit --files paths or update the saved artifacts to include repo file paths.",
       warnings: [...warnings, ...reviewSettings.warnings]
     };
   }
@@ -19918,7 +19908,7 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var execFileAsync, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewToolDefinitions;
+var REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
@@ -19927,7 +19917,6 @@ var init_review = __esm({
     init_artifacts();
     init_config();
     init_phase();
-    execFileAsync = promisify(execFileCallback);
     REVIEW_ARTIFACT_SUFFIXES = {
       "code-review": "-REVIEW.md",
       "peer-review": "-REVIEWS.md",
