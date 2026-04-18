@@ -14581,9 +14581,29 @@ function renderCodeReviewTemplate(context) {
 
 **Verdict:** PASS|FOLLOW_UP|BLOCKED
 
+## Review Summary
+
+- Concise synthesis of the review outcome, including a severity summary such as critical/high/medium/low/unknown counts.
+
 ## Scope Reviewed
 
 - Repo-relative file path or saved plan-derived scope.
+
+## Evidence Reviewed
+
+- Saved phase artifacts, repo files, or cited references reviewed.
+
+## Positive Signals
+
+- Confirmed passes, mitigations, or coverage strengths.
+
+## Severity Summary
+
+- critical: 0
+- high: 0
+- medium: 0
+- low: 0
+- unknown: 0
 
 ## Findings
 
@@ -15334,10 +15354,22 @@ var init_artifact_contracts = __esm({
         canonicalName: "Code Review",
         canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-REVIEW.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Scope Reviewed", "Findings", "Follow-Ups", "Next Safe Action"],
+        requiredHeadings: [
+          "Review Summary",
+          "Scope Reviewed",
+          "Evidence Reviewed",
+          "Positive Signals",
+          "Severity Summary",
+          "Findings",
+          "Follow-Ups",
+          "Next Safe Action"
+        ],
         lockedMarkers: ["**Verdict:**"],
         placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
-        notes: ["Findings and follow-ups must remain machine-extractable."],
+        notes: [
+          "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
+          "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable."
+        ],
         renderScaffoldTemplate: renderCodeReviewTemplate,
         renderAuthoringTemplate: renderCodeReviewTemplate
       },
@@ -19138,7 +19170,9 @@ var init_command_paths = __esm({
 
 // src/mcp/tools/review.ts
 import { promises as fs3 } from "node:fs";
+import { execFile as execFileCallback } from "node:child_process";
 import path5 from "node:path";
+import { promisify } from "node:util";
 function normalizeTextContent(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
@@ -19244,11 +19278,14 @@ function inferFindingSeverity(heading, item) {
 function normalizeFindingSummary(item) {
   return item.replace(/^\[(?:critical|high|medium|low|p[0-3])\]\s*[:\-]?\s*/i, "").replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "").replace(/^severity\s*[:\-]\s*(?:critical|high|medium|low)\s*[:\-]?\s*/i, "").trim();
 }
-function parseFindingsFromArtifact(content) {
-  const entries = extractMarkdownSectionEntries(
-    content,
-    /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i
-  );
+function resolveFindingsHeadingPattern(artifact) {
+  if (artifact === "review-fix") {
+    return /^(findings addressed|findings)$/i;
+  }
+  return /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i;
+}
+function parseFindingsFromArtifact(content, artifact) {
+  const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings = [];
   const seenSummaries = /* @__PURE__ */ new Set();
   const severityCounts = emptySeverityCounts();
@@ -19278,10 +19315,10 @@ function parseFindingsFromArtifact(content) {
     )
   };
 }
-function collectReviewCounts(content) {
+function collectReviewCounts(content, artifact) {
   const findings = extractMarkdownSectionItems(
     content,
-    /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i
+    resolveFindingsHeadingPattern(artifact)
   );
   const followUps = extractMarkdownSectionItems(
     content,
@@ -19317,6 +19354,9 @@ async function readRepoFileIfPresent(projectRoot, relativePath) {
   }
 }
 async function normalizeExplicitReviewFiles(projectRoot, files, warnings) {
+  return normalizeReviewFiles(projectRoot, files, warnings, "explicit review");
+}
+async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
   const resolvedFiles = /* @__PURE__ */ new Set();
   for (const rawFile of files) {
     const requestedPath = rawFile.trim();
@@ -19328,14 +19368,14 @@ async function normalizeExplicitReviewFiles(projectRoot, files, warnings) {
       absolutePath = resolveRepoRelativePath(projectRoot, requestedPath);
     } catch (error2) {
       warnings.push(
-        error2 instanceof Error ? error2.message : `Could not resolve explicit review path: ${requestedPath}`
+        error2 instanceof Error ? error2.message : `Could not resolve ${sourceLabel} path: ${requestedPath}`
       );
       continue;
     }
     const relativePath = toRepoRelativePath(projectRoot, absolutePath);
     if (relativePath.startsWith(".blueprint/")) {
       warnings.push(
-        `Skipped Blueprint artifact path from explicit review scope: ${relativePath}`
+        `Skipped Blueprint artifact path from ${sourceLabel} scope: ${relativePath}`
       );
       continue;
     }
@@ -19343,16 +19383,111 @@ async function normalizeExplicitReviewFiles(projectRoot, files, warnings) {
     try {
       stats = await fs3.stat(absolutePath);
     } catch {
-      warnings.push(`Skipped missing explicit review path: ${relativePath}`);
+      warnings.push(`Skipped missing ${sourceLabel} path: ${relativePath}`);
       continue;
     }
     if (!stats.isFile()) {
-      warnings.push(`Skipped non-file explicit review path: ${relativePath}`);
+      warnings.push(`Skipped non-file ${sourceLabel} path: ${relativePath}`);
       continue;
     }
     resolvedFiles.add(relativePath);
   }
-  return [...resolvedFiles];
+  return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
+}
+function extractPathCandidates(text) {
+  const candidates = /* @__PURE__ */ new Set();
+  for (const match of text.matchAll(/`([^`]+)`/g)) {
+    candidates.add(match[1].trim());
+  }
+  for (const match of text.matchAll(
+    /(?:^|[\s("'`])((?:\.{1,2}\/)?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)(?=$|[\s"'`),.;:!?])/g
+  )) {
+    candidates.add(match[1].trim());
+  }
+  return [...candidates].filter((candidate) => candidate.length > 0);
+}
+async function deriveReviewFilesFromSummaries(projectRoot, located, warnings) {
+  const summaryFiles = located.artifacts.filter(
+    (artifact) => artifact.endsWith("-SUMMARY.md")
+  );
+  const resolvedFiles = /* @__PURE__ */ new Set();
+  for (const summaryPath2 of summaryFiles) {
+    const content = await readRepoFileIfPresent(projectRoot, summaryPath2);
+    if (content === null) {
+      warnings.push(`Skipped unreadable summary artifact while deriving review scope: ${summaryPath2}`);
+      continue;
+    }
+    const summaryEntries = extractMarkdownSectionEntries(
+      content,
+      /^(changes made|evidence)$/i
+    );
+    for (const entry of summaryEntries) {
+      for (const candidate of extractPathCandidates(entry.items.join("\n"))) {
+        let absolutePath;
+        try {
+          absolutePath = resolveRepoRelativePath(projectRoot, candidate);
+        } catch (error2) {
+          warnings.push(
+            error2 instanceof Error ? error2.message : `Could not resolve summary-derived review path from ${summaryPath2}: ${candidate}`
+          );
+          continue;
+        }
+        const relativePath = toRepoRelativePath(projectRoot, absolutePath);
+        if (relativePath.startsWith(".blueprint/")) {
+          warnings.push(
+            `Skipped Blueprint artifact path from ${summaryPath2} review scope: ${relativePath}`
+          );
+          continue;
+        }
+        let stats;
+        try {
+          stats = await fs3.stat(absolutePath);
+        } catch {
+          warnings.push(
+            `Skipped missing repo path from ${summaryPath2} review scope: ${relativePath}`
+          );
+          continue;
+        }
+        if (!stats.isFile()) {
+          warnings.push(
+            `Skipped non-file repo path from ${summaryPath2} review scope: ${relativePath}`
+          );
+          continue;
+        }
+        resolvedFiles.add(relativePath);
+      }
+    }
+  }
+  return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
+}
+async function deriveReviewFilesFromGitDiff(projectRoot, warnings) {
+  const candidates = /* @__PURE__ */ new Set();
+  try {
+    const [trackedResult, untrackedResult] = await Promise.all([
+      execFileAsync("git", ["diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD", "--"], {
+        cwd: projectRoot,
+        maxBuffer: 1024 * 1024
+      }),
+      execFileAsync("git", ["ls-files", "--others", "--exclude-standard"], {
+        cwd: projectRoot,
+        maxBuffer: 1024 * 1024
+      })
+    ]);
+    for (const output of [trackedResult.stdout, untrackedResult.stdout]) {
+      for (const line of output.split("\n")) {
+        const candidate = line.trim();
+        if (candidate.length > 0) {
+          candidates.add(candidate);
+        }
+      }
+    }
+  } catch (error2) {
+    warnings.push(
+      error2 instanceof Error ? `Git diff fallback could not be read for review scope: ${error2.message}` : "Git diff fallback could not be read for review scope."
+    );
+    return [];
+  }
+  return normalizeReviewFiles(projectRoot, [...candidates], warnings, "git diff");
 }
 async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
   const summaryPlanIds = new Set(
@@ -19437,19 +19572,51 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
   }
   return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
 }
+function resolveConfiguredReviewDepth(value, warnings) {
+  if (value === "quick" || value === "standard" || value === "deep") {
+    return value;
+  }
+  if (value !== void 0) {
+    warnings.push(
+      `Ignoring invalid workflow.code_review_depth value and using standard instead: ${String(value)}`
+    );
+  }
+  return "standard";
+}
+async function resolveReviewSettings(projectRoot, requestedDepth) {
+  try {
+    const config2 = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    const warnings = [...config2.warnings];
+    return {
+      allowed: config2.config.workflow.code_review,
+      depth: requestedDepth ?? resolveConfiguredReviewDepth(config2.config.workflow.code_review_depth, warnings),
+      warnings
+    };
+  } catch {
+    return {
+      allowed: true,
+      depth: requestedDepth ?? "standard",
+      warnings: ["Blueprint review config could not be read; using standard depth."]
+    };
+  }
+}
 async function blueprintReviewScope(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate({
     cwd: projectRoot,
     phase: args.phase
   });
+  const reviewSettings = await resolveReviewSettings(projectRoot, args.depth);
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     return {
       status: "invalid",
       phase: null,
       files: [],
       reviewMode: {
-        depth: args.depth ?? "standard",
+        depth: reviewSettings.depth,
         source: (args.files?.length ?? 0) > 0 ? "explicit-files" : "phase-plans"
       },
       artifacts: {
@@ -19461,7 +19628,35 @@ async function blueprintReviewScope(args) {
         security: null
       },
       reason: located.reason ?? "Phase could not be resolved for review scoping.",
-      warnings: located.warnings
+      warnings: [...located.warnings, ...reviewSettings.warnings]
+    };
+  }
+  if (!reviewSettings.allowed) {
+    const artifacts2 = {
+      plans: located.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right)),
+      summaries: located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right)),
+      verification: findPhaseArtifact(located.artifacts, "-VERIFICATION.md"),
+      uat: findPhaseArtifact(located.artifacts, "-UAT.md"),
+      existingReview: findPhaseArtifact(located.artifacts, "-REVIEW.md"),
+      security: findPhaseArtifact(located.artifacts, "-SECURITY.md")
+    };
+    return {
+      status: "invalid",
+      phase: {
+        phaseNumber: located.phaseNumber,
+        phasePrefix: located.phasePrefix,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path5.basename(located.phaseDir)}`,
+        phaseDir: located.phaseDir,
+        resolvedFrom: located.resolvedFrom
+      },
+      files: [],
+      reviewMode: {
+        depth: reviewSettings.depth,
+        source: (args.files?.length ?? 0) > 0 ? "explicit-files" : "phase-plans"
+      },
+      artifacts: artifacts2,
+      reason: "workflow.code_review is disabled in the effective Blueprint config.",
+      warnings: [...located.warnings, ...reviewSettings.warnings]
     };
   }
   const warnings = [...located.warnings];
@@ -19470,17 +19665,37 @@ async function blueprintReviewScope(args) {
     args.files ?? [],
     warnings
   );
-  const derivedFiles = await deriveReviewFilesFromPlans(
-    projectRoot,
-    {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      artifacts: located.artifacts
-    },
-    warnings
-  );
-  const files = [.../* @__PURE__ */ new Set([...explicitFiles, ...derivedFiles])];
-  const source = explicitFiles.length > 0 && derivedFiles.length > 0 ? "mixed" : explicitFiles.length > 0 ? "explicit-files" : "phase-plans";
+  let files = [];
+  let source = "phase-plans";
+  if (explicitFiles.length > 0) {
+    files = explicitFiles;
+    source = "explicit-files";
+  } else {
+    const summaryFiles = await deriveReviewFilesFromSummaries(
+      projectRoot,
+      { artifacts: located.artifacts },
+      warnings
+    );
+    if (summaryFiles.length > 0) {
+      files = summaryFiles;
+    } else {
+      const gitDiffFiles = await deriveReviewFilesFromGitDiff(projectRoot, warnings);
+      if (gitDiffFiles.length > 0) {
+        files = gitDiffFiles;
+        source = "git-diff";
+      } else {
+        files = await deriveReviewFilesFromPlans(
+          projectRoot,
+          {
+            phaseNumber: located.phaseNumber,
+            phasePrefix: located.phasePrefix,
+            artifacts: located.artifacts
+          },
+          warnings
+        );
+      }
+    }
+  }
   const artifacts = {
     plans: located.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right)),
     summaries: located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right)),
@@ -19501,12 +19716,12 @@ async function blueprintReviewScope(args) {
       },
       files,
       reviewMode: {
-        depth: args.depth ?? "standard",
+        depth: reviewSettings.depth,
         source
       },
       artifacts,
       reason: explicitFiles.length > 0 ? "No valid repo files remained in the explicit review scope." : "Blueprint could not derive any reviewable repo files from the executed phase plans. Re-run with explicit --files paths or restore the saved plan metadata.",
-      warnings
+      warnings: [...warnings, ...reviewSettings.warnings]
     };
   }
   return {
@@ -19520,12 +19735,12 @@ async function blueprintReviewScope(args) {
     },
     files,
     reviewMode: {
-      depth: args.depth ?? "standard",
+      depth: reviewSettings.depth,
       source
     },
     artifacts,
     reason: null,
-    warnings
+    warnings: [...warnings, ...reviewSettings.warnings]
   };
 }
 async function blueprintReviewRecord(args) {
@@ -19544,7 +19759,7 @@ async function blueprintReviewRecord(args) {
     label: reportPath
   });
   const normalizedContent = normalizeTextContent(prepared.content);
-  const { counts, followUps } = collectReviewCounts(normalizedContent);
+  const { counts, followUps } = collectReviewCounts(normalizedContent, args.artifact);
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists = await pathExists2(absolutePath);
   const warnings = [...prepared.warnings];
@@ -19683,7 +19898,7 @@ async function blueprintReviewLoadFindings(args) {
     resolveBlueprintPath(projectRoot, artifactPath),
     "utf8"
   );
-  const parsed = parseFindingsFromArtifact(content);
+  const parsed = parseFindingsFromArtifact(content, artifact);
   return {
     phaseFound: true,
     found: true,
@@ -19703,14 +19918,16 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewToolDefinitions;
+var execFileAsync, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
     init_v4();
     init_security();
     init_artifacts();
+    init_config();
     init_phase();
+    execFileAsync = promisify(execFileCallback);
     REVIEW_ARTIFACT_SUFFIXES = {
       "code-review": "-REVIEW.md",
       "peer-review": "-REVIEWS.md",

@@ -35,6 +35,7 @@ type ReviewRecordResult = {
     warnings: string[];
 };
 type ReviewDepth = "quick" | "standard" | "deep";
+type ReviewModeSource = "explicit-files" | "phase-plans" | "git-diff";
 type ReviewScopeArgs = {
     cwd?: string;
     phase?: NumericInput;
@@ -53,7 +54,7 @@ type ReviewScopeResult = {
     files: string[];
     reviewMode: {
         depth: ReviewDepth;
-        source: "phase-plans" | "explicit-files" | "mixed";
+        source: ReviewModeSource;
     };
     artifacts: {
         plans: string[];
