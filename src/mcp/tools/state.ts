@@ -543,6 +543,27 @@ function normalizePhaseNumber(value: string): string {
   return normalizeBlueprintPhaseRef(value);
 }
 
+function comparePhaseNumbers(left: string, right: string): number {
+  const leftParts = normalizePhaseNumber(left)
+    .split(".")
+    .map((segment) => Number.parseInt(segment, 10));
+  const rightParts = normalizePhaseNumber(right)
+    .split(".")
+    .map((segment) => Number.parseInt(segment, 10));
+  const length = Math.max(leftParts.length, rightParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = leftParts[index] ?? 0;
+    const rightValue = rightParts[index] ?? 0;
+
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+
+  return 0;
+}
+
 function formatPhasePrefix(value: string): string {
   return formatBlueprintPhasePrefix(value);
 }
@@ -1120,8 +1141,22 @@ async function buildSyncedState(projectRoot: string): Promise<{
   }
 
   const projectStatus = inspection.readiness;
-  const currentPhase = roadmapSignals.currentPhase ?? existingState.currentPhase;
+  const statePhaseIsAheadOfRoadmap =
+    roadmapSignals.currentPhase !== null &&
+    existingState.currentPhase.length > 0 &&
+    comparePhaseNumbers(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
+  const currentPhase =
+    statePhaseIsAheadOfRoadmap
+      ? existingState.currentPhase
+      : (roadmapSignals.currentPhase ?? existingState.currentPhase);
   const currentMilestone = roadmapSignals.currentMilestone ?? existingState.currentMilestone;
+
+  if (statePhaseIsAheadOfRoadmap && roadmapSignals.currentPhase !== null) {
+    warnings.push(
+      `STATE.md is ahead of ROADMAP.md: current phase ${existingState.currentPhase} will be used instead of the stale roadmap phase ${roadmapSignals.currentPhase}.`
+    );
+  }
+
   const milestoneAuditReportPath =
     currentMilestone === null
       ? null

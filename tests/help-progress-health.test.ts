@@ -226,6 +226,96 @@ Exercise the execute-phase router.
   return repoPath;
 }
 
+async function createStaleRoadmapAdvancedStateRepo(): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-stale-roadmap-state-"));
+  const repoPath = path.join(tempRoot, "repo");
+  const completedPhaseRoot = path.join(repoPath, ".blueprint/phases/04-results-dashboard");
+  const nextPhaseRoot = path.join(repoPath, ".blueprint/phases/05-rule-management");
+
+  await mkdir(completedPhaseRoot, { recursive: true });
+  await mkdir(nextPhaseRoot, { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Stale Progress Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [x] **Phase 1: Foundation**
+- [x] **Phase 2: Discovery**
+- [x] **Phase 3: Delivery**
+- [ ] **Phase 4: Results Dashboard**
+- [ ] **Phase 5: Rule Management**
+
+## Phase Details
+
+### Phase 4: Results Dashboard
+**Goal**: Close out dashboard work before moving on.
+**Requirements**: RCA-04
+**Status**: completed
+
+### Phase 5: Rule Management
+**Goal**: Start the next planned milestone slice.
+**Requirements**: RCA-05
+**Status**: planned
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: 5
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-18T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  for (const artifact of [
+    "04-CONTEXT.md",
+    "04-RESEARCH.md",
+    "04-UI-SPEC.md",
+    "04-01-PLAN.md",
+    "04-01-SUMMARY.md",
+    "04-VERIFICATION.md",
+    "04-UAT.md"
+  ]) {
+    await writeFile(path.join(completedPhaseRoot, artifact), "# Completed\n", "utf8");
+  }
+
+  await writeFile(
+    path.join(nextPhaseRoot, "05-CONTEXT.md"),
+    `# Phase 05: Rule Management - Context
+
+## Decisions
+
+- Phase 5 is the real next slice even if Phase 4's roadmap checkbox drifted.
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 async function createMilestoneCloseoutRepo(
   reportStage: "none" | "audit" | "complete" | "summary",
   options: {
@@ -786,6 +876,24 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
   assert.equal(status.currentMilestone, "v3");
   assert.equal(status.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-health/);
+});
+
+test("project status prefers a later stored phase when roadmap completion drift leaves the prior phase unchecked", async (t) => {
+  const repoPath = await createStaleRoadmapAdvancedStateRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.currentPhase, "5");
+  assert.equal(state.derivedStatus.currentPhase, "5");
+  assert.match(status.nextAction, /\/blu-research-phase 5/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-research-phase 5/);
+  assert.doesNotMatch(status.nextAction, /Phase 4/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /Phase 4/);
 });
 
 test("project status reports malformed config as a health warning instead of throwing", async (t) => {
