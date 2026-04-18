@@ -366,7 +366,7 @@ Contract notes:
 
 ### `XX-REVIEW-FIX.md`
 
-`XX-REVIEW-FIX.md` is the phase-scoped bounded remediation contract for a saved review pass.
+`XX-REVIEW-FIX.md` is the phase-scoped remediation summary contract for review-driven follow-up work.
 
 Canonical source-of-truth note:
 - The runtime contract registry under `src/mcp/artifact-contracts/` is canonical. This section is the human-readable mirror of the `review.review-fix` contract and should stay aligned with it.
@@ -380,9 +380,10 @@ Minimum expected structure:
 - `## Next Safe Action`
 
 Review-fix expectations:
-- should summarize only the saved findings addressed in this remediation pass
-- should record concrete repo changes and verification evidence, or `none` when a finding was skipped without code changes
-- should keep deferred or partial follow-up work explicit instead of implying an automatic re-review or commit loop
+- must stay grounded in findings loaded from the saved `XX-REVIEW.md` baseline rather than a fresh prompt-only review
+- should summarize only the selected remediation pass instead of restating every open issue in the phase
+- should capture concrete verification evidence for applied changes and keep unresolved work explicit
+- Blueprint-native review-fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
 
 Exact persistence template:
 
@@ -414,7 +415,8 @@ Exact persistence template:
 
 Contract notes:
 - Keep the `**Status:**` marker exactly as written.
-- Keep all required section names unchanged so `blueprint_review_record` stays aligned with the canonical runtime contract.
+- Keep all required section names unchanged so `blueprint_review_record` continues to recognize the canonical review-fix artifact contract.
+- `## Findings Addressed` is the locked heading for remediation scope; do not rename it to `Findings Fixed`, `Resolved Findings`, or similar variants.
 - If this document and the runtime registry ever drift, follow `src/mcp/artifact-contracts/` and repair this doc to match.
 
 ### `XX-SECURITY.md`

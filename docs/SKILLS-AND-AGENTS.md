@@ -48,6 +48,8 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | Agent | Status | Purpose |
 |---|---|---|
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
+
+The planned `blueprint-fixer` remains future inventory only. Implemented Blueprint commands do not route it yet.
 ## Command To Agent Expectations
 
 - `new-project` may use `blueprint-project-researcher` for brownfield or fuzzy-context bootstrap discovery and `blueprint-roadmapper` for requirement-to-phase shaping plus roadmap revisions.
@@ -68,8 +70,8 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `plan-milestone-gaps` may use `blueprint-roadmapper` for grouped gap-closure proposals, and `new-milestone` may use it for carry-forward synthesis.
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.
-- `code-review-fix` uses `blueprint-reviewer` today; the planned `blueprint-fixer` agent remains unshipped.
-- `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`; the planned `blueprint-fixer` agent remains unshipped.
+- `code-review-fix` may use `blueprint-reviewer`.
+- `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
