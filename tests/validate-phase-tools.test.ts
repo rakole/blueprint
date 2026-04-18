@@ -35,6 +35,13 @@ async function createValidationReadyRepo(): Promise<string> {
 ## Phases
 
 - [ ] **Phase 3: Phase Discovery** - Validate the completed plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Validate the completed plans.
+**Requirements**: VAL-01
+**Status**: planned
 `,
     "utf8"
   );
@@ -291,4 +298,83 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   assert.match(afterStatus.nextAction, /\/blu-verify-work 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-verify-work 3/);
   assert.match(verificationBody, /\*\*Coverage:\*\*/);
+});
+
+test("validation tools mark ROADMAP phase completion after UAT closes", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
+`
+  });
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: `# Phase 03: Phase Discovery - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- UAT closed without blocking issues.
+
+## Questions Asked
+
+- Did the delivered behavior match the saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
+`
+  });
+
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(roadmapBody, /- \[x\] \*\*Phase 3: Phase Discovery\*\* - Validate the completed plans/);
+  assert.match(roadmapBody, /### Phase 3: Phase Discovery[\s\S]*\*\*Status\*\*: completed/);
+  assert.match(status.nextAction, /\/blu-audit-milestone v1/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
 });

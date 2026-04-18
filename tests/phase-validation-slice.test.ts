@@ -23,8 +23,10 @@ const repoRoot = process.cwd();
 async function createValidationRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-validation-slice-"));
   const repoPath = path.join(tempRoot, "repo");
+  const completedPhaseDir = path.join(repoPath, ".blueprint/phases/03-execution");
   const phaseDir = path.join(repoPath, ".blueprint/phases/04-phase-validation");
 
+  await mkdir(completedPhaseDir, { recursive: true });
   await mkdir(phaseDir, { recursive: true });
   await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
@@ -47,6 +49,7 @@ async function createValidationRepo(): Promise<string> {
 ### Phase 4: Validation
 **Goal**: Persist verification and UAT evidence.
 **Requirements**: EXEC-01
+**Status**: planned
 `,
     "utf8"
   );
@@ -68,6 +71,30 @@ async function createValidationRepo(): Promise<string> {
     "utf8"
   );
   await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
+  await writeFile(
+    path.join(completedPhaseDir, "03-VERIFICATION.md"),
+    `# Phase 03: Execution - Verification
+
+**Status:** PASS
+
+## Validation Summary
+
+- Phase 3 already has completed validation evidence.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(completedPhaseDir, "03-UAT.md"),
+    `# Phase 03: Execution - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- Phase 3 already has completed UAT evidence.
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(phaseDir, "04-01-PLAN.md"),
     `---
@@ -188,7 +215,7 @@ test("phase validation docs and catalog metadata promote validate-phase and veri
   );
   assert.match(
     catalogMarkdown,
-    /\| `verify-work` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-UAT\.md; \.blueprint\/STATE\.md; optional explicit follow-up fix capture` \| `Low: writes resumable UAT artifacts and follow-up state\.` \|/
+    /\| `verify-work` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-UAT\.md; \.blueprint\/ROADMAP\.md when completion evidence closes; \.blueprint\/STATE\.md; optional explicit follow-up fix capture` \| `Low: writes resumable UAT artifacts, closes roadmap completion, and records follow-up state\.` \|/
   );
   assert.match(
     skillsMarkdown,
@@ -397,6 +424,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   const artifactList = await blueprintArtifactList({ cwd: repoPath });
   const afterUatStatus = await blueprintProjectStatus({ cwd: repoPath });
   const afterUatState = await blueprintStateLoad({ cwd: repoPath });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
 
   assert.match(beforeValidationStatus.nextAction, /\/blu-validate-phase 4/);
   assert.match(beforeValidationState.derivedStatus.nextAction, /\/blu-validate-phase 4/);
@@ -425,8 +453,10 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.ok(
     artifactList.artifacts.phases.includes(".blueprint/phases/04-phase-validation/04-UAT.md")
   );
-  assert.match(afterUatStatus.nextAction, /\/blu-progress/);
-  assert.match(afterUatState.derivedStatus.nextAction, /\/blu-progress/);
+  assert.match(roadmapBody, /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+  assert.match(roadmapBody, /### Phase 4: Validation[\s\S]*\*\*Status\*\*: completed/);
+  assert.match(afterUatStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.match(afterUatState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
 });
 
 test("validate-phase and verify-work command docs keep the validation skill and MCP contracts explicit", async () => {
