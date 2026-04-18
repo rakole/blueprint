@@ -68,8 +68,8 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `plan-milestone-gaps` may use `blueprint-roadmapper` for grouped gap-closure proposals, and `new-milestone` may use it for carry-forward synthesis.
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.
-- `code-review-fix` currently exposes `blueprint-reviewer` as the shipped optional agent when a bounded remediation pass needs saved findings clarified; the dedicated `blueprint-fixer` agent remains planned later.
-- `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`; the dedicated `blueprint-fixer` agent remains planned later while remediation stays bounded and skill-led.
+- `code-review-fix` uses `blueprint-reviewer` today; the planned `blueprint-fixer` agent remains unshipped.
+- `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`; the planned `blueprint-fixer` agent remains unshipped.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
