@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later.
+`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later. The common settings pass includes the review defaults that make `/blu-code-review` meaningful, namely `workflow.code_review` and `workflow.code_review_depth`.
 
 
 ## Command Path And Examples
@@ -103,7 +103,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Run a common settings pass for profile, research/plan/verify, Nyquist, UI, code review, commit-docs, branching, and worktree isolation before offering advanced keys.
+- Run a common settings pass for profile, research/plan/verify, Nyquist, UI, the `/blu-code-review` review toggle and depth, commit-docs, branching, and worktree isolation before offering advanced keys.
 - Offer an advanced settings pass for gate, safety, timeout, template, response-language, and agent-skill fields.
 - Offer to save the resolved settings as `~/.<host>/blueprint/defaults.json` after project-local changes are applied.
 - Confirm broad config resets before applying them.
@@ -134,6 +134,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Persists project config in normalized full form and never treats `.blueprint/config.json` as a sparse override file.
 - Never stores hook enablement in repo config; hook control remains in `hooks/hooks.json`.
+- Keeps `workflow.code_review` and `workflow.code_review_depth` in the normalized config so `/blu-code-review` can read them as real defaults.
 
 
 ## Test Cases
@@ -144,4 +145,3 @@
 - `settings` common-pass-only fixture.
 - `settings` advanced-pass plus save-defaults fixture.
 - Direct `settings` happy-path fixture.
-
