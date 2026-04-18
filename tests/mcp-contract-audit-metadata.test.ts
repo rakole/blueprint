@@ -15,6 +15,10 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   assert.match(mcpToolsDoc, /## Model-Facing Call Contracts/);
   assert.match(mcpToolsDoc, /`blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths/i);
   assert.match(mcpToolsDoc, /`blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract/i);
+  assert.match(
+    mcpToolsDoc,
+    /Review-family commands must use `blueprint_artifact_contract_read` to fetch the canonical review artifact contract/i
+  );
   assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`/i);
   assert.match(mcpToolsDoc, /`blueprint_review_scope` accepts repo-relative file paths only/i);
   assert.match(mcpToolsDoc, /`blueprint_config_set` defaults `scope` to `project`, and `patch` must be a JSON object/i);
@@ -168,6 +172,9 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(reviewCommand, /artifact: "peer-review"/i);
   assert.match(reviewCommand, /returned `reportPath` as authoritative/i);
   assert.match(reviewDoc, /## Peer-Review Persistence Contract/);
+  assert.match(reviewSkill, /`blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts/i);
+  assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW\.md`/i);
+  assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS\.md`/i);
   assert.match(reviewSkill, /Directories, wildcards, absolute paths, and `?\.blueprint\/\*\*`? paths are invalid or skipped/i);
   assert.match(reviewSkill, /returned `findings` and `severityCounts` as the authoritative fix baseline/i);
   assert.match(reviewerAgent, /returned `blueprint_review_scope\.files` list as authoritative/i);

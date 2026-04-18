@@ -85,7 +85,7 @@ non-routable until their extra MCP substrate lands.
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, and treat returned `files` as authoritative.
 - `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
-- `blueprint_artifact_contract_read`: read canonical review and report contracts instead of relying on copied prompt-local templates.
+- `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
 
@@ -95,20 +95,21 @@ non-routable until their extra MCP substrate lands.
 
 1. Resolve the target phase first and read the current Blueprint artifact
    inventory before reviewing code.
-2. Use `blueprint_review_scope` to derive the deterministic repo file list from
+2. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW.md`, then use the returned template as the baseline for the persisted artifact.
+3. Use `blueprint_review_scope` to derive the deterministic repo file list from
    executed plan metadata or explicit file arguments; do not guess from git
    diff alone.
-3. Require executed phase evidence unless the user supplied an explicit file
+4. Require executed phase evidence unless the user supplied an explicit file
    scope.
-4. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
+5. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
    to reuse unless the user explicitly asks for an update.
-5. Keep findings grounded in the selected repo files plus saved execution,
+6. Keep findings grounded in the selected repo files plus saved execution,
    validation, or UAT artifacts.
-6. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
+7. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
    or a deep pass that benefits from a bounded second look.
-7. Persist the finished review through `blueprint_review_record` with the
+8. Persist the finished review through `blueprint_review_record` with the
    `code-review` artifact.
-8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+9. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-secure-phase <phase>` when the phase still lacks a security artifact,
    `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
    otherwise `/blu-progress`.
@@ -211,22 +212,23 @@ non-routable until their extra MCP substrate lands.
 1. Resolve the target phase and read the current Blueprint artifact inventory
    before launching peer review so plan, execution, or prior review evidence is
    visible.
-2. Read the saved plan set through `blueprint_phase_plan_index` and
+2. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS.md`, then use the returned template as the baseline for the persisted artifact.
+3. Read the saved plan set through `blueprint_phase_plan_index` and
    `blueprint_phase_plan_read`; do not guess the review scope from unstaged repo
    drift, chat memory, or unrelated files.
-3. If there are no saved `XX-YY-PLAN.md` artifacts for the phase, route to
+4. If there are no saved `XX-YY-PLAN.md` artifacts for the phase, route to
    `/blu-plan-phase <phase>` instead of bluffing through a planless peer review.
-4. Inspect any existing `XX-REVIEWS.md` before proposing replacement and
+5. Inspect any existing `XX-REVIEWS.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update.
-5. Confirm which reviewer CLIs are actually available and authenticated before
+6. Confirm which reviewer CLIs are actually available and authenticated before
    launch. Honor explicit reviewer flags, but never claim an unavailable
    reviewer ran successfully.
-6. Preserve disagreement between reviewers instead of flattening it into a fake
+7. Preserve disagreement between reviewers instead of flattening it into a fake
    consensus, and record partial reviewer availability honestly when only some
    requested reviewers ran.
-7. Persist the finished peer-review artifact through `blueprint_review_record`
+8. Persist the finished peer-review artifact through `blueprint_review_record`
    with the `peer-review` artifact.
-8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+9. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-plan-phase <phase>` when meaningful plan revisions remain,
    `/blu-execute-phase <phase>` when the review passes and execution has not
    started, `/blu-code-review <phase>` when execution exists but code review is
