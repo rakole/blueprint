@@ -3668,6 +3668,17 @@ export async function blueprintArtifactReportWrite(
     };
   }
 
+  if (!validation.valid) {
+    return {
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      warnings: [...validation.issues]
+    };
+  }
+
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
 

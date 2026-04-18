@@ -15,6 +15,35 @@ import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 
+function milestoneAuditReportContent(additional = ""): string {
+  return `# Milestone Audit: v2
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/03-execution/03-VERIFICATION.md
+- .blueprint/phases/03-execution/03-UAT.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+- .blueprint/phases/04-release-readiness/04-UAT.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
+${additional}`;
+}
+
 async function createMilestoneAuditRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-audit-milestone-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -244,12 +273,7 @@ test("artifact report write is registered and persists milestone audit reports w
   const created = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "milestone-audit-v2",
-    content: `# Milestone Audit: v2
-
-## Outcome
-
-- PASS
-`
+    content: milestoneAuditReportContent()
   });
   const reportPath = path.join(repoPath, created.path);
   const createdBody = await readFile(reportPath, "utf8");
@@ -262,7 +286,7 @@ test("artifact report write is registered and persists milestone audit reports w
   const updated = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "milestone audit v2",
-    content: `${createdBody}\n## Recommendations\n\n- Proceed carefully.\n`,
+    content: milestoneAuditReportContent("\n## Recommendations\n\n- Proceed carefully.\n"),
     overwrite: true
   });
 
@@ -272,6 +296,55 @@ test("artifact report write is registered and persists milestone audit reports w
   assert.ok(listed.reports.includes(".blueprint/reports/milestone-audit-v2.md"));
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
+});
+
+test("artifact report write rejects malformed audit-fix reports before persistence", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "audit-fix-04",
+    content: `# Audit Fix Report: Phase 04
+
+## Evidence Used
+
+- .blueprint/phases/04-release-readiness/04-01-SUMMARY.md
+`
+  });
+
+  assert.equal(invalid.path, ".blueprint/reports/audit-fix-04.md");
+  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.written, false);
+  assert.equal(invalid.created, false);
+  assert.equal(invalid.overwritten, false);
+  assert.match(invalid.warnings.join("\n"), /Fix Scope/);
+  assert.match(invalid.warnings.join("\n"), /Changes Applied/);
+  assert.match(invalid.warnings.join("\n"), /Remaining Gaps/);
+  assert.match(invalid.warnings.join("\n"), /Next Safe Action/);
+  await assert.rejects(() => readFile(path.join(repoPath, invalid.path), "utf8"), /ENOENT/);
+});
+
+test("artifact report write keeps non-contract report behavior unchanged", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "custom-health-check",
+    content: `# Custom Health Check
+
+- Reports without strict contracts remain writable.
+`
+  });
+
+  assert.equal(created.path, ".blueprint/reports/custom-health-check.md");
+  assert.equal(created.status, "created");
+  assert.equal(created.written, true);
 });
 
 test("artifact summary digest can summarize explicit milestone artifact paths", async (t) => {
@@ -320,12 +393,7 @@ test("project status routes fully verified milestones to audit-milestone until t
   await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "milestone-audit-v2",
-    content: `# Milestone Audit: v2
-
-## Outcome
-
-- PASS
-`
+    content: milestoneAuditReportContent()
   });
 
   const afterStatus = await blueprintProjectStatus({ cwd: repoPath });

@@ -285,10 +285,22 @@ test("review and report contracts validate canonical sections while keeping extr
 
 - Extra operational notes are allowed.
 `;
+  const thinAuditFixReport = `# Audit Fix Report: Phase 04
+
+## Evidence Used
+
+- .blueprint/phases/04-release-readiness/04-01-SUMMARY.md
+`;
+  const customReport = `# Team Notes
+
+- Non-contract report payloads stay permissive.
+`;
 
   const reviewValidation = validateReviewArtifactContent(review, "code-review");
   const thinReviewValidation = validateReviewArtifactContent(thinReview, "code-review");
   const reportValidation = validateReportArtifactContent(report, "debug-latest");
+  const thinAuditFixValidation = validateReportArtifactContent(thinAuditFixReport, "audit-fix-04");
+  const customReportValidation = validateReportArtifactContent(customReport, "custom-team-notes");
 
   assert.equal(reviewValidation.valid, true, reviewValidation.issues.join("\n"));
   assert.equal(thinReviewValidation.valid, false);
@@ -297,6 +309,12 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.match(thinReviewValidation.issues.join("\n"), /Positive Signals/);
   assert.match(thinReviewValidation.issues.join("\n"), /Severity Summary/);
   assert.equal(reportValidation.valid, true, reportValidation.issues.join("\n"));
+  assert.equal(thinAuditFixValidation.valid, false);
+  assert.match(thinAuditFixValidation.issues.join("\n"), /Fix Scope/);
+  assert.match(thinAuditFixValidation.issues.join("\n"), /Changes Applied/);
+  assert.match(thinAuditFixValidation.issues.join("\n"), /Remaining Gaps/);
+  assert.match(thinAuditFixValidation.issues.join("\n"), /Next Safe Action/);
+  assert.equal(customReportValidation.valid, true, customReportValidation.issues.join("\n"));
 });
 
 test("contract registry remains listable through the direct helper", () => {
