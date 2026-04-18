@@ -577,6 +577,7 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_list",
+    "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_review_record",
     "blueprint_review_scope"
