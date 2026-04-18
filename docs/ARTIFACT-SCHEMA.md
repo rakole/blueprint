@@ -524,6 +524,60 @@ Contract notes:
 - Replacing an existing milestone summary requires explicit confirmation.
 - The report should stay project-local in `.blueprint/reports/`.
 
+### `reports/audit-fix-<phase>.md`
+
+Purpose:
+- durable remediation report for `/blu-audit-fix`
+- evidence-backed record of classification filters, bounded mutation outcome, and next safe routing
+
+Canonical source-of-truth note:
+- The runtime contract registry under `src/mcp/artifact-contracts/` is canonical. This section mirrors the `report.audit-fix` contract and should stay aligned with it.
+
+Minimum locked sections:
+- `## Evidence Used`
+- `## Fix Scope`
+- `## Changes Applied`
+- `## Remaining Gaps`
+- `## Next Safe Action`
+
+Audit-fix report expectations:
+- must stay evidence-first and cite saved review, security, verification, or UAT artifacts selected by `--source`
+- should record `--severity`, `--max`, and `--dry-run` settings used for this run
+- should capture stop-on-first-failure behavior when the capped mutation loop halts early
+- should include verification outcome and commit traceability (`pre-fix HEAD`, created commit SHA(s), or `none`)
+- should keep follow-up todo capture explicit when requested
+
+Exact persistence template:
+
+```md
+# Audit Fix Report
+
+## Evidence Used
+
+- Saved evidence reviewed for this run.
+
+## Fix Scope
+
+- Selected source, severity, cap, and candidate scope.
+
+## Changes Applied
+
+- Applied fixes, dry-run classification output, or `none`.
+
+## Remaining Gaps
+
+- Remaining gap, stop reason, or `none`.
+
+## Next Safe Action
+
+- /blu-progress
+```
+
+Contract notes:
+- Keep required section names unchanged so `blueprint_artifact_report_write` continues to recognize the canonical audit-fix report contract.
+- Persist this report through `blueprint_artifact_report_write` with the bare report name `audit-fix-<phase>`; do not route through `blueprint_review_record`.
+- Replacing an existing audit-fix report requires explicit confirmation.
+
 ### `reports/pause-work-latest.md`
 
 Purpose:

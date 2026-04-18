@@ -656,14 +656,31 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   assert.match(auditFixDoc, /`blueprint_artifact_report_write`/);
   assert.match(auditFixDoc, /`blueprint_artifact_mutate_index`/);
   assert.match(auditFixDoc, /`blueprint_state_update`/);
+  assert.match(auditFixDoc, /--source <review\|security\|verification\|uat\|all>/);
+  assert.match(auditFixDoc, /--severity <medium\|high\|all>/);
+  assert.match(auditFixDoc, /--max N/);
+  assert.match(auditFixDoc, /--dry-run/);
+  assert.match(auditFixDoc, /ask_user/);
+  assert.match(auditFixDoc, /## In-Flight Progress Contract/);
+  assert.match(auditFixDoc, /stop on first failed fix attempt or failed required verification/i);
+  assert.match(auditFixDoc, /commit traceability/i);
+  assert.match(auditFixDoc, /planned inventory and is not a required runtime path/i);
   assert.match(auditFixDoc, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
   assert.match(
     mcpToolsDoc,
-    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update`/
+    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first/
   );
   assert.match(
     migrationMarkdown,
     /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
+  );
+  assert.match(
+    migrationMarkdown,
+    /ask_user confirmation for non-trivial mutation and todo capture/
+  );
+  assert.match(
+    migrationMarkdown,
+    /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./
   );
 });
 

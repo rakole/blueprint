@@ -49,7 +49,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 |---|---|---|
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
 
-The planned `blueprint-fixer` remains future inventory only. Implemented Blueprint commands do not route it yet.
+The planned `blueprint-fixer` remains future inventory only. Implemented Blueprint commands do not route it yet, and it is not a required runtime path for `code-review-fix` or `audit-fix`.
 
 ## Command To Agent Expectations
 
@@ -73,6 +73,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `code-review` uses `blueprint-reviewer`.
 - `code-review-fix` may use `blueprint-reviewer`.
 - `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`.
+- `audit-fix` keeps mutation confirmation-gated and report-backed; non-trivial fixes and todo capture should use Gemini CLI `ask_user` confirmation before persistence.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
