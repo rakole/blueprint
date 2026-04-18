@@ -364,7 +364,58 @@ Contract notes:
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
 - Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
 
-### XX-SECURITY.md
+### `XX-REVIEW-FIX.md`
+
+`XX-REVIEW-FIX.md` is the phase-scoped remediation summary contract for review-driven follow-up work.
+
+Minimum expected structure:
+- `**Status:** APPLIED|PARTIAL|SKIPPED`
+- `## Findings Addressed`
+- `## Changes Made`
+- `## Verification`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Review-fix expectations:
+- must stay grounded in findings loaded from the saved `XX-REVIEW.md` baseline rather than a fresh prompt-only review
+- should summarize only the selected remediation pass instead of restating every open issue in the phase
+- should capture concrete verification evidence for applied changes and keep unresolved work explicit
+- Blueprint-native review-fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
+
+Exact persistence template:
+
+```md
+# Phase XX: <Phase Name> - Review Fix
+
+**Status:** APPLIED|PARTIAL|SKIPPED
+
+## Findings Addressed
+
+- Finding id or summary addressed in this remediation pass.
+
+## Changes Made
+
+- Concrete remediation completed.
+
+## Verification
+
+- Validation or test evidence for the applied fix, or `none`.
+
+## Follow-Ups
+
+- Remaining work, deferred item, or `none`.
+
+## Next Safe Action
+
+- /blu-progress
+```
+
+Contract notes:
+- Keep the `**Status:**` marker exactly as written.
+- Keep all required section names unchanged so `blueprint_review_record` continues to recognize the canonical review-fix artifact contract.
+- `## Findings Addressed` is the locked heading for remediation scope; do not rename it to `Findings Fixed`, `Resolved Findings`, or similar variants.
+
+### `XX-SECURITY.md`
 
 `XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.
 
@@ -382,7 +433,7 @@ Security audit expectations:
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
 
-### XX-REVIEW.md
+### `XX-REVIEW.md`
 
 `XX-REVIEW.md` is the phase-scoped code review contract for a completed phase.
 
@@ -402,25 +453,6 @@ Code review expectations:
 - severity summary must maintain machine-extractable counts for critical/high/medium/low/unknown counts
 - findings must cite evidence and impact for each issue
 - follow-up work should be explicit rather than buried in findings prose
-
-### XX-REVIEW-FIX.md
-
-`XX-REVIEW-FIX.md` is the phase-scoped remediation summary for a review pass.
-
-Minimum expected structure:
-- `**Status:** APPLIED|PARTIAL|SKIPPED`
-- `## Findings Addressed`
-- `## Changes Made`
-- `## Verification`
-- `## Follow-Ups`
-- `## Next Safe Action`
-
-Review fix expectations:
-- must cite the findings addressed in the remediation pass
-- changes made should describe concrete repo mutation or artifact updates
-- verification evidence must be grounded in test or tool output
-- Blueprint-native review fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
-
 
 ## Supporting Trees
 

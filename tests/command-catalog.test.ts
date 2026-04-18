@@ -629,6 +629,106 @@ test("code-review-fix is implemented once manifest, review skill, and findings t
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("review-fix inventory docs stay aligned with the shipped Blueprint runtime", async () => {
+  const [
+    artifactSchema,
+    skillsAndAgents,
+    runtimeReference,
+    commandCatalogDoc,
+    migrationDoc
+  ] = await Promise.all([
+    readRelativePath("docs/ARTIFACT-SCHEMA.md"),
+    readRelativePath("docs/SKILLS-AND-AGENTS.md"),
+    readRelativePath("docs/RUNTIME-REFERENCE.md"),
+    readRelativePath("docs/COMMAND-CATALOG.md"),
+    readRelativePath("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.ok(artifactSchema);
+  assert.ok(skillsAndAgents);
+  assert.ok(runtimeReference);
+  assert.ok(commandCatalogDoc);
+  assert.ok(migrationDoc);
+
+  assert.match(
+    artifactSchema,
+    /### `XX-REVIEW-FIX\.md`[\s\S]*\*\*Status:\*\* APPLIED\|PARTIAL\|SKIPPED[\s\S]*## Findings Addressed[\s\S]*## Changes Made[\s\S]*## Verification[\s\S]*## Follow-Ups[\s\S]*## Next Safe Action/
+  );
+  assert.match(
+    artifactSchema,
+    /`## Findings Addressed` is the locked heading for remediation scope/
+  );
+
+  assert.match(
+    skillsAndAgents,
+    /\| `blueprint-fixer` \| `planned` \| Apply targeted fixes from review output \|/
+  );
+  assert.match(
+    skillsAndAgents,
+    /The planned `blueprint-fixer` remains future inventory only\./
+  );
+  assert.match(
+    skillsAndAgents,
+    /`code-review-fix` may use `blueprint-reviewer`\./
+  );
+  assert.match(
+    skillsAndAgents,
+    /`audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`\./
+  );
+  assert.doesNotMatch(
+    skillsAndAgents,
+    /`code-review-fix` and `audit-fix` use `blueprint-fixer`\./
+  );
+
+  assert.match(
+    commandCatalogDoc,
+    /\| `code-review-fix` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEW-FIX\.md; code changes for selected findings; \.blueprint\/STATE\.md` \| `High: selected findings can trigger bounded repo remediation plus review-fix\/state updates\.` \|/
+  );
+  assert.doesNotMatch(commandCatalogDoc, /optional iteration loop/);
+
+  assert.match(
+    runtimeReference,
+    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /The planned `blueprint-fixer`, per-fix commits, and implicit auto re-review loop are not shipped behavior\./
+  );
+  assert.match(
+    runtimeReference,
+    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /The planned `blueprint-fixer` remains unshipped while deeper remediation-loop parity is still under audit\./
+  );
+
+  assert.match(
+    migrationDoc,
+    /`code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo` are currently shipped in this wave\./
+  );
+  assert.match(
+    migrationDoc,
+    /\| `code-review-fix` \| `commands\/gsd\/code-review-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+  );
+  assert.match(
+    migrationDoc,
+    /do not claim the planned `blueprint-fixer`, per-fix commits, or an implicit auto re-review loop as shipped Blueprint behavior\./
+  );
+  assert.match(
+    migrationDoc,
+    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+  );
+  assert.match(
+    migrationDoc,
+    /do not claim the planned `blueprint-fixer` as an implemented runtime path\./
+  );
+  assert.doesNotMatch(
+    migrationDoc,
+    /High-risk planned flows such as `quick`, `code-review-fix`, `audit-fix`, `ship`, `undo`/
+  );
+});
+
 test("audit-fix is implemented once manifest, review skill, and remediation MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["audit-fix"];

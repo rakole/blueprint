@@ -19,7 +19,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
 | `blueprint-debug` | `implemented` | Debug investigations and recovery plans | `debug` |
 | `blueprint-docs` | `implemented` | Documentation generation and verification | `docs-update` |
-| `blueprint-review` | `implemented` | Reviews, review-fix loops, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
+| `blueprint-review` | `implemented` | Reviews, bounded remediation, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
 | `blueprint-roadmap-admin` | `implemented` | Roadmap append, milestone audits, and future roadmap/milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 | `blueprint-maintenance` | `implemented` | Git, review-branch prep, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
 
@@ -48,6 +48,9 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | Agent | Status | Purpose |
 |---|---|---|
 | `blueprint-fixer` | `planned` | Apply targeted fixes from review output |
+
+The planned `blueprint-fixer` remains future inventory only. Implemented Blueprint commands do not route it yet.
+
 ## Command To Agent Expectations
 
 - `new-project` may use `blueprint-project-researcher` for brownfield or fuzzy-context bootstrap discovery and `blueprint-roadmapper` for requirement-to-phase shaping plus roadmap revisions.
@@ -68,7 +71,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 - `plan-milestone-gaps` may use `blueprint-roadmapper` for grouped gap-closure proposals, and `new-milestone` may use it for carry-forward synthesis.
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.
-- `code-review-fix` uses `blueprint-reviewer`.
+- `code-review-fix` may use `blueprint-reviewer`.
 - `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
