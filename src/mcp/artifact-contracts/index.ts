@@ -384,9 +384,29 @@ function renderCodeReviewTemplate(context?: ArtifactTemplateContext): string {
 
 **Verdict:** PASS|FOLLOW_UP|BLOCKED
 
+## Review Summary
+
+- Concise synthesis of the review outcome, including a severity summary such as critical/high/medium/low/unknown counts.
+
 ## Scope Reviewed
 
 - Repo-relative file path or saved plan-derived scope.
+
+## Evidence Reviewed
+
+- Saved phase artifacts, repo files, or cited references reviewed.
+
+## Positive Signals
+
+- Confirmed passes, mitigations, or coverage strengths.
+
+## Severity Summary
+
+- critical: 0
+- high: 0
+- medium: 0
+- low: 0
+- unknown: 0
 
 ## Findings
 
@@ -1067,10 +1087,22 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Code Review",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-REVIEW.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Scope Reviewed", "Findings", "Follow-Ups", "Next Safe Action"],
+    requiredHeadings: [
+      "Review Summary",
+      "Scope Reviewed",
+      "Evidence Reviewed",
+      "Positive Signals",
+      "Severity Summary",
+      "Findings",
+      "Follow-Ups",
+      "Next Safe Action"
+    ],
     lockedMarkers: ["**Verdict:**"],
     placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
-    notes: ["Findings and follow-ups must remain machine-extractable."],
+    notes: [
+      "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
+      "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable."
+    ],
     renderScaffoldTemplate: renderCodeReviewTemplate,
     renderAuthoringTemplate: renderCodeReviewTemplate
   },

@@ -214,7 +214,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 - `blueprint_review_scope` accepts repo-relative file paths only. Absolute paths, directories, wildcards, and `.blueprint/**` paths are rejected or skipped.
 - Omit `files` when the command wants review scope derived from executed plans and summaries.
-- Review-family commands should use `blueprint_artifact_contract_read` to fetch the canonical review artifact contract instead of embedding hand-copied templates.
+- Review-family commands must use `blueprint_artifact_contract_read` to fetch the canonical review artifact contract before drafting or updating `XX-REVIEW.md`, `XX-REVIEW-FIX.md`, `XX-SECURITY.md`, `XX-REVIEWS.md`, or `XX-UI-REVIEW.md` instead of embedding hand-copied templates.
 - `blueprint_review_record` requires numeric `phase`, enum `artifact`, and the full artifact `content`. The tool owns the final review filename.
 - `blueprint_review_load_findings` defaults `artifact` to `code-review` when it is omitted.
 - Treat returned `files`, `reportPath`, `counts`, `followUps`, `findings`, and `severityCounts` as authoritative review scope and review-artifact metadata.
