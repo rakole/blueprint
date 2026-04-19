@@ -95,13 +95,25 @@ async function createValidationReadyRepo(): Promise<string> {
 
 - Completed summaries should become the source of truth for validation.
 
+## Locked Decisions From Context
+
+- Validation remains downstream of saved execution evidence, not discovery alone.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/.
 
 ## Standard Stack
 
-- TypeScript
+- TypeScript on Node.js
+
+## Installation And Setup
+
+- Run validate-phase tests with saved discovery and execution artifacts present.
+
+## Alternatives Considered
+
+- Allowing validation to proceed without checking saved research quality was rejected.
 
 ## Architecture Patterns
 
@@ -111,9 +123,27 @@ async function createValidationReadyRepo(): Promise<string> {
 
 - Use dedicated validation artifact writes instead of raw file edits.
 
+## Anti-Patterns
+
+- Treating malformed research as good enough for downstream planning and validation.
+
+## State Of The Art
+
+- Validation flows now rely on artifact-backed readiness checks across the lifecycle.
+
 ## Common Pitfalls
 
 - Treating a fully executed phase as validated before a verification artifact exists.
+
+## Open Questions
+
+- Should validate-phase surface research repair hints more prominently in user summaries?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Validation prerequisites | HIGH | The test fixture exercises readiness against saved artifacts. |
 
 ## Code Examples
 
@@ -127,7 +157,7 @@ await blueprintPhaseValidationWrite({ cwd: repoPath, phase: "3", artifact: "veri
 
 ## Sources
 
-- \`src/mcp/tools/phase.ts\`
+- \`src/mcp/tools/phase.ts\` - validation artifact persistence and readiness rules.
 `,
     "utf8"
   );

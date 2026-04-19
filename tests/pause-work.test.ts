@@ -90,6 +90,10 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 - The phase is execution-ready and should normally route to execute-phase.
 
+## Locked Decisions From Context
+
+- Resume should reconstruct from saved Blueprint artifacts rather than chat history alone.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/.
@@ -99,6 +103,14 @@ async function createExecutionReadyRepo(): Promise<string> {
 - TypeScript
 - node:test via tsx --test
 
+## Installation And Setup
+
+- Exercise pause-work against a repo fixture with saved discovery artifacts.
+
+## Alternatives Considered
+
+- A chat-only handoff was rejected because it would lose durable project context.
+
 ## Architecture Patterns
 
 - Commands stay thin; MCP tools own persistence.
@@ -107,9 +119,27 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 - Reuse Blueprint state and artifact helpers.
 
+## Anti-Patterns
+
+- Assuming research can be dropped from the handoff because it is "just discovery."
+
+## State Of The Art
+
+- Pause-work now treats saved research as durable state for later recovery.
+
 ## Common Pitfalls
 
 - Letting a stale handoff permanently override later commands.
+
+## Open Questions
+
+- Should future pause reports summarize research validity explicitly?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Pause recovery | HIGH | The fixture includes the saved research artifact used during resume. |
 
 ## Code Examples
 
@@ -123,7 +153,7 @@ await blueprintPauseHandoffWrite({ cwd: repoPath, currentState: "Paused." });
 
 ## Sources
 
-- \`src/mcp/tools/state.ts\`
+- \`src/mcp/tools/state.ts\` - pause handoff persistence and resumed routing logic.
 `,
     "utf8"
   );

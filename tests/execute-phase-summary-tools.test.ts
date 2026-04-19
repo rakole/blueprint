@@ -88,13 +88,25 @@ async function createExecutionRepo(): Promise<string> {
 
 - Execution should stay plan-aware and summary-backed.
 
+## Locked Decisions From Context
+
+- Execution summaries should remain linked to saved plan and discovery evidence.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/.
 
 ## Standard Stack
 
-- TypeScript
+- TypeScript on Node.js
+
+## Installation And Setup
+
+- Run execution summary fixtures after seeding the saved research artifact for the phase.
+
+## Alternatives Considered
+
+- Generating summaries without the saved discovery trail was rejected as too lossy.
 
 ## Architecture Patterns
 
@@ -104,9 +116,27 @@ async function createExecutionRepo(): Promise<string> {
 
 - Use phase summary read/write helpers instead of raw file writes.
 
+## Anti-Patterns
+
+- Letting execution proceed as if research were optional once coding starts.
+
+## State Of The Art
+
+- Execution reporting now keeps saved discovery evidence available across the lifecycle.
+
 ## Common Pitfalls
 
 - Treating a plan as executed before a summary exists.
+
+## Open Questions
+
+- Should execution summaries quote the key research recommendation that was followed?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Execution summary grounding | HIGH | The fixture verifies summary flows against saved discovery evidence. |
 
 ## Code Examples
 
@@ -120,7 +150,7 @@ await blueprintPhaseSummaryWrite({ cwd: repoPath, phase: "3", planId: "01", cont
 
 ## Sources
 
-- \`src/mcp/tools/phase.ts\`
+- \`src/mcp/tools/phase.ts\` - summary indexing and phase-routing substrate.
 `,
     "utf8"
   );

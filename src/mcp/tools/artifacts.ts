@@ -1725,6 +1725,38 @@ function containsSourceEvidence(section: string): boolean {
   return /https?:\/\/|`[^`]+`|\.blueprint\/|docs\/|src\/|tests\//.test(section);
 }
 
+function stripResearchPlaceholderSignals(section: string): string {
+  return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
+    (acc, signal) => acc.split(signal).join(""),
+    section.replace(/\r\n/g, "\n")
+  );
+}
+
+function countResearchContentWords(section: string): number {
+  return section.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
+}
+
+function hasSubstantiveResearchSection(section: string, heading: string): boolean {
+  const normalized = stripResearchPlaceholderSignals(section);
+  const meaningfulLines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .map((line) => line.replace(/^(?:[-*]\s*)+/, "").trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !/^[#>*`|_\-\s]+$/.test(line))
+    .filter((line) => !/^why it matters\.?$/i.test(line));
+
+  if (meaningfulLines.length === 0) {
+    return false;
+  }
+
+  if (heading === "Code Examples") {
+    return /```[\s\S]*```/.test(normalized) && countResearchContentWords(normalized) >= 3;
+  }
+
+  return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
+}
+
 export function validateResearchArtifactContent(content: string): {
   valid: boolean;
   issues: string[];
@@ -1758,9 +1790,30 @@ export function validateResearchArtifactContent(content: string): {
   }
 
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    if (!new RegExp(`(?:^|\\n)## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(content)) {
+    if (
+      !new RegExp(`(?:^|\\n)## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(
+        content
+      )
+    ) {
       issues.push(`Research artifact is missing required section: ${heading}.`);
+      continue;
     }
+
+    const section = extractMarkdownSection(content, heading);
+
+    if (!hasSubstantiveResearchSection(section, heading)) {
+      issues.push(
+        `Research artifact section ${heading} must contain substantive content after placeholders are removed.`
+      );
+    }
+  }
+
+  const phaseRequirements = extractMarkdownSection(content, "Phase Requirements");
+
+  if (!hasRequirementTableRows(phaseRequirements)) {
+    issues.push(
+      "Research artifact section Phase Requirements must include at least one populated requirement row."
+    );
   }
 
   const recommendations = extractMarkdownSection(content, "Recommendations");
@@ -1876,6 +1929,34 @@ function countNonEmptyContractSections(
     (count, heading) => count + (extractMarkdownSection(content, heading).trim().length > 0 ? 1 : 0),
     0
   );
+}
+
+function hasRequirementTableRows(section: string): boolean {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .some((line) => {
+      if (!/^\|.*\|$/.test(line)) {
+        return false;
+      }
+
+      const cells = line
+        .slice(1, -1)
+        .split("|")
+        .map((cell) => cell.trim());
+
+      if (cells.length < 3) {
+        return false;
+      }
+
+      const isHeader =
+        /^id$/i.test(cells[0] ?? "") &&
+        /^description$/i.test(cells[1] ?? "") &&
+        /^research support$/i.test(cells[2] ?? "");
+      const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+      return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
+    });
 }
 
 function isExplicitUiSkipRationale(content: string): boolean {

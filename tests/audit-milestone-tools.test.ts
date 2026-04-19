@@ -185,13 +185,25 @@ Prepare the milestone for the final audit.
 
 - The final completed phase should route to a milestone audit once validation and UAT exist.
 
+## Locked Decisions From Context
+
+- Audit reports should stay evidence-backed and phase-scoped.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/reports/.
 
 ## Standard Stack
 
-- TypeScript
+- TypeScript on Node.js
+
+## Installation And Setup
+
+- Run audit fixtures with the phase research artifact already saved under .blueprint/.
+
+## Alternatives Considered
+
+- Recomputing discovery context from scratch during audit was rejected as needlessly lossy.
 
 ## Architecture Patterns
 
@@ -201,9 +213,27 @@ Prepare the milestone for the final audit.
 
 - Do not write reports outside the Blueprint artifact tool surface.
 
+## Anti-Patterns
+
+- Auditing milestone completion without reading the saved discovery trail.
+
+## State Of The Art
+
+- Milestone audits now consume the saved Blueprint artifact graph instead of ad hoc notes.
+
 ## Common Pitfalls
 
 - Recommending phase discovery after the milestone is already complete.
+
+## Open Questions
+
+- Should milestone audits call out stale research validity separately from missing research?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Milestone audit routing | HIGH | The fixture controls the saved audit and research evidence path. |
 
 ## Code Examples
 
@@ -217,7 +247,7 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 
 ## Sources
 
-- \`src/mcp/tools/state.ts\`
+- \`src/mcp/tools/state.ts\` - milestone readiness and next-action routing logic.
 `,
     "utf8"
   );

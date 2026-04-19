@@ -176,6 +176,10 @@ function validResearchContent(): string {
 
 - The plan-phase command needs first-class plan artifact tooling.
 
+## Locked Decisions From Context
+
+- Planning must preserve implemented-only routing and MCP-owned persistence.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/.
@@ -185,6 +189,14 @@ function validResearchContent(): string {
 - TypeScript
 - node:test via tsx --test
 
+## Installation And Setup
+
+- Run plan-phase fixtures after seeding context and research under .blueprint/phases/.
+
+## Alternatives Considered
+
+- Planner-generated fallback research was rejected because it weakens the discovery contract.
+
 ## Architecture Patterns
 
 - Commands stay thin; MCP tools own persistence.
@@ -193,9 +205,27 @@ function validResearchContent(): string {
 
 - Reuse existing phase resolution helpers and state sync flows.
 
+## Anti-Patterns
+
+- Letting plan generation normalize away missing or weak research evidence.
+
+## State Of The Art
+
+- Plan-phase consumes saved discovery artifacts through MCP-backed readiness checks.
+
 ## Common Pitfalls
 
 - Accepting scaffold-only plans as real outputs.
+
+## Open Questions
+
+- Should future planning parity require explicit alternatives carry-forward in plan text?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Planning readiness | HIGH | The fixture controls the exact research content supplied to the planner. |
 
 ## Code Examples
 

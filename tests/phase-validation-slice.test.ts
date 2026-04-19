@@ -153,13 +153,25 @@ autonomous: true
 
 - The phase is ready for validation once summaries exist.
 
+## Locked Decisions From Context
+
+- Preserve summary-aware validation before any UAT step.
+
 ## User Constraints
 
 - Keep validation writes inside .blueprint/.
 
 ## Standard Stack
 
-- TypeScript
+- TypeScript on Node.js
+
+## Installation And Setup
+
+- Run the saved summary and verification fixtures through the standard test harness.
+
+## Alternatives Considered
+
+- Direct prompt-only validation was rejected in favor of artifact-backed evidence reads.
 
 ## Architecture Patterns
 
@@ -169,9 +181,27 @@ autonomous: true
 
 - Don't write verification or UAT artifacts outside the phase tool surface.
 
+## Anti-Patterns
+
+- Treating verification as complete without durable summary evidence.
+
+## State Of The Art
+
+- Summary-aware validation is the current lifecycle substrate for this runtime slice.
+
 ## Common Pitfalls
 
 - Treating validation evidence as optional noise.
+
+## Open Questions
+
+- Should validation also require explicit evidence for skipped checks?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Validation routing | HIGH | The test fixture controls the saved summary and verification inputs. |
 
 ## Code Examples
 
@@ -185,7 +215,7 @@ await blueprintPhaseValidationWrite({ cwd: repoPath, phase: "4", artifact: "veri
 
 ## Sources
 
-- \`src/mcp/tools/phase.ts\`
+- \`src/mcp/tools/phase.ts\` - phase validation reads and writes for this lifecycle slice.
 `,
     "utf8"
   );

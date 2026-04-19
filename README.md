@@ -4,7 +4,26 @@ Blueprint is a Gemini CLI extension for running a structured, artifact-backed pr
 
 The workflow is inspired by GSD, but Blueprint's skills, workflows, commands, and runtime are custom-built for Blueprint.
 
-This README documents the shipped user-facing surface only. If a command is not listed here, you should treat it as not public yet.
+This README documents the shipped user-facing surface and the active implementation only. If a command is not listed here, you should treat it as not public yet.
+
+## Current Runtime Layout
+
+The active implementation lives in the repo runtime surfaces below:
+
+- `commands/blu-help.toml`
+- `commands/blu-progress.toml`
+- `commands/blu-health.toml`
+- `commands/blu-map-codebase.toml`
+- `commands/blu-debug.toml`
+- `commands/blu-docs-update.toml`
+- `commands/blu-review.toml`
+- `commands/blu-code-review.toml`
+- `commands/blu-code-review-fix.toml`
+- `commands/blu-audit-fix.toml`
+- `commands/blu-ui-review.toml`
+- `commands/blu-ship.toml`
+- `skills/blueprint-router.md`
+- `skills/blueprint-maintenance/SKILL.md`
 
 ## What Blueprint Gives You
 

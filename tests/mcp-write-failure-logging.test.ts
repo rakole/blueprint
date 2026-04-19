@@ -71,6 +71,10 @@ function validResearchContent(summary: string): string {
 
 - ${summary}
 
+## Locked Decisions From Context
+
+- Mutating MCP tools must log rejected writes before surfacing the failure.
+
 ## User Constraints
 
 - Keep the log inside .blueprint/.
@@ -78,6 +82,14 @@ function validResearchContent(summary: string): string {
 ## Standard Stack
 
 - TypeScript
+
+## Installation And Setup
+
+- Run the mutation failure tests against the local MCP write-failure log fixture.
+
+## Alternatives Considered
+
+- Silent rejection without an append-only failure log was rejected as too opaque.
 
 ## Architecture Patterns
 
@@ -87,9 +99,27 @@ function validResearchContent(summary: string): string {
 
 - Reuse existing phase artifact validation.
 
+## Anti-Patterns
+
+- Dropping the failing tool context when the write is rejected.
+
+## State Of The Art
+
+- Blueprint keeps best-effort mutation diagnostics in .blueprint/mcp-write-failures.ndjson.
+
 ## Common Pitfalls
 
 - Returning schema rejections without preserving the rejected payload details anywhere durable.
+
+## Open Questions
+
+- Should the failure log record more derived validation metadata for research writes?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Failure logging | HIGH | The test fixture verifies the write-failure log behavior directly. |
 
 ## Code Examples
 

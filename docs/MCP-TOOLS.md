@@ -118,7 +118,7 @@ These tool names are part of the documented future contract, but they are not re
 - `review-backlog` uses `blueprint_roadmap_promote_backlog`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to preview backlog candidates, append promoted roadmap phases, preserve backlog history through status transitions, and route the repo into `/blu-discuss-phase`.
 - `explore` uses `blueprint_project_status`, `blueprint_artifact_mutate_index`, `blueprint_roadmap_add_phase`, and `blueprint_artifact_scaffold` to classify ideas before persistence, keep capture writes confirmation-gated, and scaffold the first phase context when a confirmed idea is promoted directly into the active roadmap.
 - `discuss-phase` uses phase location/context, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update`.
-- `research-phase` uses phase location/context, research status, discovery artifact read and write tools, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
+- `research-phase` uses phase location/context, research status, discovery artifact read and write tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, discovery artifact read and write tools, scaffolding, config, and state update tools.
 - `plan-phase` uses plan index, plan read and write tools, config, artifact validation, and state update tools.
 - `execute-phase` uses plan index/read, summary index/read/write, config, artifact validation, and state update tools.

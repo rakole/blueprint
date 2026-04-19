@@ -14,14 +14,26 @@
 
 - Healthy router fixtures should include valid discovery research when a phase already claims research exists.
 
+## Locked Decisions From Context
+
+- Router and status surfaces must stay limited to implemented commands.
+
 ## User Constraints
 
 - Keep `.blueprint/` as runtime truth.
 
 ## Standard Stack
 
-- TypeScript
-- node:test
+- TypeScript on Node.js
+- node:test in the local fixture suite
+
+## Installation And Setup
+
+- Run initialized fixture checks against the saved discovery artifacts and codebase bundle.
+
+## Alternatives Considered
+
+- Docs-only routing was rejected because runtime status must come from live artifacts.
 
 ## Architecture Patterns
 
@@ -31,9 +43,27 @@
 
 - Reuse command catalog availability checks.
 
+## Anti-Patterns
+
+- Treating placeholder research text as completed research or bypassing the catalog gate.
+
+## State Of The Art
+
+- Healthy router fixtures now preserve the full research contract used by lifecycle status reads.
+
 ## Common Pitfalls
 
 - Treating placeholder research text as completed research.
+
+## Open Questions
+
+- Should initialized fixtures also carry explicit UI-skip rationale when UI work is out of scope?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Router fixture validity | HIGH | The fixture is maintained in-repo and checked by runtime status tests. |
 
 ## Code Examples
 
