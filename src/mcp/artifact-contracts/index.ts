@@ -896,8 +896,17 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: ["Phase Boundary", "Decisions", "Dependencies", "Open Questions"],
     lockedMarkers: [],
-    placeholderSignals: ["Goal:", "In scope:", "Out of scope:", "Question 1:"],
-    notes: ["Discovery context is phase-scoped and MCP-owned."],
+    placeholderSignals: [
+      "Goal:",
+      "In scope:",
+      "Out of scope:",
+      "Question 1:",
+      "Capture the confirmed choices for this phase here."
+    ],
+    notes: [
+      "Discovery context is phase-scoped and MCP-owned.",
+      "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
+    ],
     renderScaffoldTemplate: renderContextTemplate,
     renderAuthoringTemplate: renderContextTemplate
   },
@@ -911,8 +920,15 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: ["Summary", "Notes", "Follow-Ups"],
     lockedMarkers: [],
-    placeholderSignals: ["Timestamped notes:", "Follow-up 1:"],
-    notes: ["Discussion logs are optional supporting artifacts."],
+    placeholderSignals: [
+      "Record the major discussion outcomes and unresolved questions here.",
+      "Timestamped notes:",
+      "Follow-up 1:"
+    ],
+    notes: [
+      "Discussion logs are optional supporting artifacts.",
+      "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
+    ],
     renderScaffoldTemplate: renderDiscussionLogTemplate,
     renderAuthoringTemplate: renderDiscussionLogTemplate
   },
@@ -979,9 +995,16 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Next Safe Action"
     ],
     lockedMarkers: [],
-    placeholderSignals: ["Goal 1:", "Screen/state 1:", "Component 1:", "Accessibility note 1:"],
+    placeholderSignals: [
+      "Choose one: UI contract or explicit skip rationale.",
+      "Goal 1:",
+      "Screen/state 1:",
+      "Component 1:",
+      "Accessibility note 1:"
+    ],
     notes: [
-      "The same durable artifact covers both a real UI contract and an explicit skip rationale."
+      "The same durable artifact covers both a real UI contract and an explicit skip rationale.",
+      "Write validation requires an H1 title and Outcome Mode; explicit skip rationale may use a populated `## Rationale` section instead of the full UI contract."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderUiSpecTemplate(context)),
     renderAuthoringTemplate: renderUiSpecTemplate

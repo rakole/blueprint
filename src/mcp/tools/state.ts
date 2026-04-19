@@ -989,11 +989,22 @@ async function deriveNextAction(args: {
   }
 
   if (
+    args.workflow.researchEnabled &&
     args.phaseArtifacts.hasResearch &&
     args.phaseArtifacts.researchValid === false &&
     implementedCommands.has(researchPhaseCommand)
   ) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to repair invalid phase research`;
+  }
+
+  if (
+    !args.workflow.researchEnabled &&
+    args.phaseArtifacts.hasContext &&
+    args.workflow.uiPhaseEnabled &&
+    !args.phaseArtifacts.hasUiSpec &&
+    implementedCommands.has(uiPhaseCommand)
+  ) {
+    return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
 
   if (

@@ -148,6 +148,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, /artifactId: "phase\.research"/);
   assert.match(commandFile, /authoringTemplate/);
+  assert.match(commandFile, /artifact_read` for the current `context` artifact before drafting|actual current context content/i);
+  assert.match(commandFile, /PROJECT\.md/);
+  assert.match(commandFile, /REQUIREMENTS\.md/);
+  assert.match(commandFile, /STATE\.md/);
   assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);

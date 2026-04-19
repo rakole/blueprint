@@ -150,3 +150,104 @@ test("ui-phase keeps UI output in a single reusable file for either contract or 
   assert.match(body.content ?? "", /Outcome Mode/);
   assert.match(body.content ?? "", /Explicit skip rationale/i);
 });
+
+test("phase artifact writes validate context, discussion-log, and ui-spec content", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidContext = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "context",
+    content: `# Phase 03 Context
+
+## Decisions
+- Capture the confirmed choices for this phase here.
+`
+  });
+  const invalidDiscussion = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "discussion-log",
+    content: `# Phase 03 Discussion Log
+
+## Summary
+- Record the major discussion outcomes and unresolved questions here.
+`
+  });
+  const invalidUiSpec = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## User Experience Goals
+- Keep the UI guidance phase-scoped.
+
+## Outcome Mode
+`
+  });
+  const invalidUiSpecPlaceholder = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- Choose one: UI contract or explicit skip rationale.
+`
+  });
+  const validContext = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "context",
+    content: `# Phase 03 Context
+
+## Decisions
+- Capture durable discuss-phase decisions in the phase artifact.
+`,
+    overwrite: true
+  });
+  const validDiscussion = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "discussion-log",
+    content: `# Phase 03 Discussion Log
+
+## Notes
+- 2026-04-19: Confirmed resumability stays phase-scoped.
+`,
+    overwrite: true
+  });
+  const validUiSpec = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- Explicit skip rationale
+
+## Rationale
+- No frontend surface changes are in scope for this phase.
+`,
+    overwrite: true
+  });
+
+  assert.equal(invalidContext.status, "invalid");
+  assert.match(invalidContext.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
+  assert.equal(invalidDiscussion.status, "invalid");
+  assert.match(invalidDiscussion.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
+  assert.equal(invalidUiSpec.status, "invalid");
+  assert.match(invalidUiSpec.validation?.issues.join("\n") ?? "", /Outcome Mode must not be empty/i);
+  assert.equal(invalidUiSpecPlaceholder.status, "invalid");
+  assert.match(
+    invalidUiSpecPlaceholder.validation?.issues.join("\n") ?? "",
+    /placeholder scaffold text/i
+  );
+  assert.equal(validContext.status, "created");
+  assert.equal(validDiscussion.status, "created");
+  assert.equal(validUiSpec.status, "created");
+});

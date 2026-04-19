@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying host-native.
+`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, read the actual current context and relevant discovery artifact content, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying host-native.
 
 
 ## Command Path And Examples
@@ -54,6 +54,7 @@
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_plan_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}`
@@ -67,6 +68,7 @@
 
 
 - Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly.
+- Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
@@ -139,6 +141,7 @@
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Uses the plan index plus dedicated plan read/write tools to persist actual plan content instead of scaffold-only placeholders.
+- Reads actual current context content and relevant discovery artifact content before drafting or revising plans instead of relying on status-only discovery signals.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Derives research, plan-check, Nyquist, UI-gate, and planning-confirmation behavior from normalized effective config instead of re-deriving defaults inside the command.

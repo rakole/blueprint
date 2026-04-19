@@ -211,6 +211,46 @@ Auxiliary phase artifacts:
 - `XX-UI-SPEC.md` (used for either a UI design contract or an explicit rationale that UI work was intentionally skipped)
 - `XX-UI-REVIEW.md`
 
+### `XX-CONTEXT.md`
+
+`XX-CONTEXT.md` is the durable discuss-phase context artifact for a single phase.
+
+Validation expectations:
+- must start with an H1 title
+- must not persist scaffold placeholders such as `Goal:` or `Question 1:`
+- must populate at least one contract section from `Phase Boundary`, `Decisions`, `Dependencies`, or `Open Questions`
+- missing contract sections are currently warnings, not hard failures
+
+### `XX-DISCUSSION-LOG.md`
+
+`XX-DISCUSSION-LOG.md` is the durable supporting log for discuss-phase notes and follow-ups.
+
+Validation expectations:
+- must start with an H1 title
+- must not persist scaffold placeholders such as `Timestamped notes:` or `Follow-up 1:`
+- must populate at least one contract section from `Summary`, `Notes`, or `Follow-Ups`
+- missing contract sections are currently warnings, not hard failures
+
+### `XX-UI-SPEC.md`
+
+`XX-UI-SPEC.md` is the single durable UI artifact for either a real UI contract or an explicit skip rationale.
+
+Validation expectations:
+- must start with an H1 title
+- must include a populated `## Outcome Mode`
+- UI contract mode may use the full canonical section set from the runtime contract registry
+- explicit skip mode must include a populated `## Rationale`
+- scaffold placeholders such as `Goal 1:` or `Component 1:` are rejected on write
+
+### `XX-DISCUSS-CHECKPOINT.json`
+
+`XX-DISCUSS-CHECKPOINT.json` is temporary resumability state for `discuss-phase`.
+
+Structured persistence expectations:
+- top-level JSON value must be an object
+- persisted checkpoints must include at least one resumability field such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `answers`, `notes`, `resumeHint`, or `updatedAt`
+- legacy object-shaped checkpoints may still be read for compatibility, but new writes should use the structured resumability shape
+
 ### `XX-RESEARCH.md`
 
 `XX-RESEARCH.md` is the planner-facing research contract for a single phase.

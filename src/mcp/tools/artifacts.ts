@@ -9,6 +9,7 @@ import {
   listArtifactContracts,
   readArtifactContract,
   renderArtifactScaffoldTemplate,
+  resolvePhaseArtifactContractId,
   resolveReportContractId,
   resolveReviewArtifactContractId
 } from "../artifact-contracts/index.js";
@@ -1864,6 +1865,91 @@ function validateContractBackedMarkdown(
     valid: issues.length === 0,
     issues,
     warnings: []
+  };
+}
+
+function countNonEmptyContractSections(
+  content: string,
+  headings: readonly string[]
+): number {
+  return headings.reduce(
+    (count, heading) => count + (extractMarkdownSection(content, heading).trim().length > 0 ? 1 : 0),
+    0
+  );
+}
+
+function isExplicitUiSkipRationale(content: string): boolean {
+  return /## Outcome Mode\s*\n(?:- |\d+\.\s+)?Explicit skip rationale\b/i.test(content);
+}
+
+export function validatePhaseArtifactContent(
+  content: string,
+  artifact: "context" | "discussion-log" | "research" | "ui-spec"
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  if (artifact === "research") {
+    return validateResearchArtifactContent(content);
+  }
+
+  const contractId = resolvePhaseArtifactContractId(artifact);
+  const contract = readArtifactContract(contractId);
+  const artifactLabel =
+    artifact === "context"
+      ? "Context artifact"
+      : artifact === "discussion-log"
+        ? "Discussion log artifact"
+        : "UI spec artifact";
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!/^# .+\S\s*$/m.test(content)) {
+    issues.push(`${artifactLabel} must start with a markdown H1 title.`);
+  }
+
+  issues.push(
+    ...contract.placeholderSignals
+      .filter((signal) => signal.length > 0 && content.includes(signal))
+      .map((signal) => `${artifactLabel} still contains placeholder scaffold text: ${signal}.`)
+  );
+
+  const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
+
+  if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
+    if (extractMarkdownSection(content, "Outcome Mode").trim().length === 0) {
+      issues.push("UI spec artifact section Outcome Mode must not be empty.");
+    }
+    if (extractMarkdownSection(content, "Rationale").trim().length === 0) {
+      issues.push(
+        "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
+      );
+    }
+  } else if (presentRequiredSections === 0) {
+    issues.push(
+      `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
+    );
+  }
+
+  const missingRequiredSections = contract.requiredHeadings.filter(
+    (heading) => extractMarkdownSection(content, heading).trim().length === 0
+  );
+
+  if (artifact === "ui-spec" && missingRequiredSections.includes("Outcome Mode")) {
+    issues.push("UI spec artifact section Outcome Mode must not be empty.");
+  }
+
+  if (missingRequiredSections.length > 0) {
+    warnings.push(
+      `${artifactLabel} is missing recommended contract sections: ${missingRequiredSections.join(", ")}.`
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
   };
 }
 

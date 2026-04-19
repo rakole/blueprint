@@ -226,6 +226,136 @@ Exercise the execute-phase router.
   return repoPath;
 }
 
+async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-ui-discovery-routing-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-phase-discovery"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: UI Discovery Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 2: Phase Discovery**
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 2
+- Active command: /blu-discuss-phase
+- Next action: Run /blu-discuss-phase to finish discovery
+- Last updated: 2026-04-19T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          research: false,
+          ui_phase: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-phase-discovery/02-CONTEXT.md"),
+    `# Phase 02: Phase Discovery - Context
+
+## Decisions
+- UI discovery should still be requested even when research is disabled.
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+async function createUiDiscoveryWithoutResearchButInvalidResearchRepo(): Promise<string> {
+  const repoPath = await createUiDiscoveryWithoutResearchRepo();
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-phase-discovery/02-RESEARCH.md"),
+    `# Phase 02: Phase Discovery - Research
+
+**Researched:** <YYYY-MM-DD>
+**Domain:** <research domain>
+**Confidence:** LOW|MEDIUM|HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
+
+## Summary
+
+- <key conclusion>
+
+## User Constraints
+
+- <repo, product, or workflow constraint>
+
+## Standard Stack
+
+- <runtime, library, or shared repo pattern>
+
+## Architecture Patterns
+
+- <durable implementation pattern>
+
+## Don't Hand-Roll
+
+- <existing tool, helper, or platform feature>
+
+## Common Pitfalls
+
+- <failure mode or regression risk>
+
+## Code Examples
+
+\`\`\`text
+<short code or pseudocode example>
+\`\`\`
+
+## Recommendations
+
+- <prescriptive recommendation with tradeoffs>
+
+## Sources
+
+- <repo path, URL, or cited file reference> - why it matters
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 async function createStaleRoadmapAdvancedStateRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-stale-roadmap-state-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -778,6 +908,36 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-validate-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
+test("project status routes to ui-phase when research is disabled but UI discovery is still required", async (t) => {
+  const repoPath = await createUiDiscoveryWithoutResearchRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "2");
+  assert.equal(state.derivedStatus.currentPhase, "2");
+  assert.match(status.nextAction, /\/blu-ui-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+});
+
+test("project status ignores stale invalid research when research is disabled", async (t) => {
+  const repoPath = await createUiDiscoveryWithoutResearchButInvalidResearchRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-ui-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.doesNotMatch(status.nextAction, /\/blu-research-phase 2/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-research-phase 2/);
 });
 
 test("project status routes milestone closeout through audit, completion, summary, and next milestone in order", async (t) => {
