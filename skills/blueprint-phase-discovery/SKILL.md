@@ -55,6 +55,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `blueprint_phase_research_status`
 - `blueprint_phase_artifact_read`
 - `blueprint_phase_artifact_write`
+- `blueprint_phase_plan_index`
 - `blueprint_artifact_contract_read`
 - `blueprint_phase_checkpoint_get`
 - `blueprint_phase_checkpoint_put`
@@ -77,7 +78,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `blueprint_phase_artifact_write`: pass numeric `phase`, the correct artifact enum, and full artifact content. The tool owns the final artifact `path`; use the returned `path` as authoritative and do not write raw filenames directly.
 - `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.research` or `phase.uat` instead of relying on copied prompt-local templates.
 - `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content.
-- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object. The tool owns the checkpoint filename and location.
+- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using the structured discuss-checkpoint shape, with at least one resumability field such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `answers`, `notes`, `resumeHint`, or `updatedAt`. The tool owns the checkpoint filename and location.
 
 ## Workflow Rules
 
@@ -95,24 +96,29 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 ### `discuss-phase`
 
 1. Resolve the phase through MCP tools before asking the user to confirm any write path.
-2. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, and resume-versus-discard choices instead of plain-text menus.
-3. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
-4. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
-5. Require explicit overwrite confirmation before replacing existing context artifacts.
-6. End with a next safe action inside the implemented Blueprint surface.
+2. Ground the flow in actual repo context before questioning: read the substantive project brief, requirements, and workflow posture already surfaced through `blueprint_phase_context`, then read the current `XX-CONTEXT.md`, `XX-DISCUSSION-LOG.md`, and earlier phase context artifacts when they materially reduce duplicate questions.
+3. Read `blueprint_phase_plan_index` before refreshing context so the command can warn that saved plans do not change automatically; users must re-run `/blu-plan-phase` if refreshed discovery should affect planning.
+4. Read the canonical contracts through `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting context and `artifactId: "phase.discussion-log"` before drafting any durable discussion log.
+5. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus.
+6. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, and record deferred or scope-creep ideas without pretending power, chain, or auto modes are shipped.
+7. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
+8. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
+9. Require explicit overwrite confirmation before replacing existing context artifacts.
+10. End with a next safe action inside the implemented Blueprint surface.
 
 ### `research-phase`
 
 1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
-2. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
-3. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
-4. Use `blueprint_artifact_scaffold` only to seed a missing research file.
-5. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
-6. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
-7. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
-8. Require explicit overwrite confirmation before replacing existing research.
-9. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
-10. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in the saved discovery context, not only status metadata.
+3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
+4. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
+5. Use `blueprint_artifact_scaffold` only to seed a missing research file.
+6. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
+7. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
+8. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
+9. Require explicit overwrite confirmation before replacing existing research.
+10. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
+11. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
 
 ### `list-phase-assumptions`
 

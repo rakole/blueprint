@@ -15,6 +15,7 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_context")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_research_status")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_artifact_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_write")));
@@ -26,6 +27,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /workflow\.plan_check/);
+  assert.match(commandFile, /actual saved context content|current context artifact content/i);
+  assert.match(commandFile, /relevant discovery artifacts/i);
   assert.match(commandFile, /explicit confirmation path/i);
   assert.match(commandFile, /planner\/checker revision loop|re-run the checker/i);
   assert.match(commandFile, /\/blu-progress/);
@@ -68,4 +71,6 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /If targeting a specific plan, pass only the numeric plan id/i);
   assert.match(docFile, /numeric inputs such as `1` are also accepted/i);
   assert.match(docFile, /do not derive `planId` manually from a scaffold path/i);
+  assert.match(docFile, /actual current `XX-CONTEXT\.md` content/i);
+  assert.match(docFile, /relevant discovery artifacts/i);
 });

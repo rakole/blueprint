@@ -13,7 +13,7 @@ Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read` with `artifact: "research"`, and `mcp_blueprint_blueprint_state_load` so you understand the phase boundary, requirement mapping, any mapped brownfield codebase summaries already available, current artifact state, and current workflow posture.
+3. Read `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read` for the current `context` artifact before drafting, `mcp_blueprint_blueprint_phase_artifact_read` with `artifact: "research"`, and `mcp_blueprint_blueprint_state_load` so you understand the phase boundary, the actual saved context content, requirement mapping, any mapped brownfield codebase summaries already available, current artifact state, and current workflow posture already grounded in `PROJECT.md`, `REQUIREMENTS.md`, and `STATE.md`.
 4. Read `mcp_blueprint_blueprint_command_catalog` before recommending any next command so routing stays limited to runtime-implemented commands.
 5. If `XX-RESEARCH.md` already exists, inspect it and take an explicit path:
    - `view`: summarize the existing research and stop without mutating files
@@ -21,7 +21,7 @@ Follow this flow exactly:
    - `update`: only continue to replacement after explicit confirmation
    Reuse is the default when the user does not ask for an update. Prefer `ask_user` for the `view`/`skip`/`update` choice instead of a plain-text menu.
 6. Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing `XX-RESEARCH.md`. Pass only the repo-relative Blueprint artifact path for the resolved phase research file; never pass a bare artifact name or an absolute filesystem path. Do not treat the scaffold as completed research.
-7. When research is needed, use the `blueprint-researcher` subagent as a bounded sidecar and require it to return populated research content with citations, a confidence marker, recommendations, and planner-friendly sections. Reuse the saved codebase bundle exposed through phase context before rereading broad repo surfaces when it is present.
+7. When research is needed, use the `blueprint-researcher` subagent as a bounded sidecar and require it to return populated research content with citations, a confidence marker, recommendations, and planner-friendly sections. Reuse the saved codebase bundle exposed through phase context before rereading broad repo surfaces when it is present, and keep the draft anchored to the actual current context content instead of only status metadata.
 8. Before calling `mcp_blueprint_blueprint_phase_artifact_write`, read the canonical contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.research"` and normalize the final research body to the returned `authoringTemplate`.
    - Keep the contract's locked markers and required section names unchanged.
    - Replace every placeholder signal before attempting the MCP write.
@@ -31,10 +31,11 @@ Follow this flow exactly:
 11. Return a concise summary covering the phase, whether research was viewed, reused, created, updated, or rejected by validation, any warnings, and the next safe action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for Blueprint contract discovery and persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_command_catalog`, and `mcp_blueprint_blueprint_state_update` for Blueprint contract discovery and persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Use `ask_user` for explicit `view`/`skip`/`update` selection and overwrite confirmation when research already exists.
+- Read and use the actual current context artifact content before drafting or revising research; do not rely on status-only signals.
 - Do not persist scaffold-only or validation-failing research content.
 - Normalize the draft to the canonical `phase.research` authoring template before writing, keep the required section names unchanged, and replace every placeholder signal with real content.
 - Pass `phase` as the resolved numeric phase reference only; never pass phase directories, slugs, or filenames back into the phase-write tool.

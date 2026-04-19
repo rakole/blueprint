@@ -11,6 +11,7 @@ import {
   ensureParentDirectory,
   ensureRepoRoot,
   parseCaptureIndexDocument,
+  validatePhaseArtifactContent,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
   validateSummaryArtifactContent,
@@ -88,8 +89,10 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
   overwrite?: boolean;
 };
 
+type PhaseCheckpointRecord = Record<string, unknown>;
+
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
-  checkpoint: Record<string, unknown>;
+  checkpoint: PhaseCheckpointRecord;
 };
 
 type PhasePlanReadArgs = PhaseLookupArgs & {
@@ -548,22 +551,22 @@ const phaseLookupInputSchema = {
 
 const phaseArtifactInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
 };
 const phaseValidationArtifactInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["verification", "uat"])
 };
 const phasePlanInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional()
+  phase: numericBlueprintInputSchema.optional()
 };
 
 const phaseArtifactWriteInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
   content: z.string(),
   overwrite: z.boolean().optional(),
@@ -571,7 +574,7 @@ const phaseArtifactWriteInputSchema = {
 };
 const phaseValidationWriteInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["verification", "uat"]),
   content: z.string(),
   overwrite: z.boolean().optional()
@@ -602,10 +605,49 @@ const phaseSummaryWriteInputSchema = {
   overwrite: z.boolean().optional()
 };
 
+const phaseCheckpointQuestionSchema = z.object({
+  prompt: z.string(),
+  response: z.string().optional(),
+  status: z.enum(["pending", "answered", "skipped"]).optional()
+});
+
+const phaseCheckpointSchema = z
+  .object({
+    mode: z.string().min(1).optional(),
+    pendingTopics: z.array(z.string()).optional(),
+    completedTopics: z.array(z.string()).optional(),
+    currentQuestion: z.string().optional(),
+    answers: z.array(phaseCheckpointQuestionSchema).optional(),
+    notes: z.array(z.string()).optional(),
+    resumeHint: z.string().optional(),
+    updatedAt: z.string().optional()
+  })
+  .catchall(z.unknown())
+  .superRefine((value, context) => {
+    const structuredKeys = [
+      "mode",
+      "pendingTopics",
+      "completedTopics",
+      "currentQuestion",
+      "answers",
+      "notes",
+      "resumeHint",
+      "updatedAt"
+    ];
+
+    if (!structuredKeys.some((key) => key in value)) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Checkpoint must include resumability fields such as mode, pendingTopics, currentQuestion, answers, notes, resumeHint, or updatedAt."
+      });
+    }
+  });
+
 const phaseCheckpointPutInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
-  checkpoint: z.record(z.string(), z.unknown())
+  checkpoint: phaseCheckpointSchema
 };
 
 function normalizeBlueprintInput(value: NumericInput): string {
@@ -1785,12 +1827,26 @@ function toPhaseSummaryRecord(
 function ensureCheckpointObject(
   checkpoint: unknown,
   checkpointPath: string
-): Record<string, unknown> {
+): PhaseCheckpointRecord {
   if (typeof checkpoint !== "object" || checkpoint === null || Array.isArray(checkpoint)) {
     throw new Error(`${checkpointPath} must contain a JSON object.`);
   }
 
-  return checkpoint as Record<string, unknown>;
+  return checkpoint as PhaseCheckpointRecord;
+}
+
+function ensureCheckpointForPersistence(
+  checkpoint: unknown,
+  checkpointPath: string
+): PhaseCheckpointRecord {
+  const parsed = phaseCheckpointSchema.safeParse(ensureCheckpointObject(checkpoint, checkpointPath));
+
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((issue) => issue.message).join("; ");
+    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
+  }
+
+  return parsed.data as PhaseCheckpointRecord;
 }
 
 async function resolveLocatedPhaseForMutation(
@@ -2817,10 +2873,7 @@ export async function blueprintPhaseArtifactWrite(
   const normalizedContent = normalizeTextContent(args.content);
   const exists = await pathExists(absolutePath);
   const warnings: string[] = [];
-  const validation =
-    args.artifact === "research"
-      ? validateResearchArtifactContent(normalizedContent)
-      : null;
+  const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
@@ -2839,15 +2892,12 @@ export async function blueprintPhaseArtifactWrite(
         created: false,
         overwritten: false,
         status: "reused",
-        validation:
-          validation
-            ? {
-                valid: validation.valid,
-                issues: validation.issues,
-                warnings: validation.warnings,
-                suggestedRepairs: []
-              }
-            : null,
+        validation: {
+          valid: validation.valid,
+          issues: validation.issues,
+          warnings: validation.warnings,
+          suggestedRepairs: []
+        },
         warnings
       };
     }
@@ -2859,7 +2909,18 @@ export async function blueprintPhaseArtifactWrite(
     }
   }
 
-  if (validation && !validation.valid && (args.validationMode ?? "strict") === "strict") {
+  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+    const suggestedRepairs =
+      args.artifact === "research"
+        ? ["Add the required research sections, confidence marker, and at least one cited source before retrying."]
+        : args.artifact === "ui-spec"
+          ? [
+              "Add a populated Outcome Mode section plus either the contract headings or an explicit skip Rationale before retrying."
+            ]
+          : [
+              `Add a real ${args.artifact} artifact title, remove scaffold placeholders, and populate at least one contract section before retrying.`
+            ];
+
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -2875,9 +2936,7 @@ export async function blueprintPhaseArtifactWrite(
         valid: false,
         issues: validation.issues,
         warnings: validation.warnings,
-        suggestedRepairs: [
-          "Add the required research sections, confidence marker, and at least one cited source before retrying."
-        ]
+        suggestedRepairs
       },
       warnings: []
     };
@@ -2904,16 +2963,13 @@ export async function blueprintPhaseArtifactWrite(
     created: !exists,
     overwritten: exists,
     status: exists ? "updated" : "created",
-    validation:
-      validation
-        ? {
-            valid: validation.valid,
-            issues: validation.issues,
-            warnings: validation.warnings,
-            suggestedRepairs: []
-          }
-        : null,
-    warnings: [...warnings, ...(validation?.warnings ?? [])]
+    validation: {
+      valid: validation.valid,
+      issues: validation.issues,
+      warnings: validation.warnings,
+      suggestedRepairs: []
+    },
+    warnings: [...warnings, ...validation.warnings]
   };
 }
 
@@ -3685,7 +3741,7 @@ export async function blueprintPhaseCheckpointPut(
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const checkpointPath = checkpointPathFor(resolved);
   const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
-  const nextCheckpoint = ensureCheckpointObject(args.checkpoint, checkpointPath);
+  const nextCheckpoint = ensureCheckpointForPersistence(args.checkpoint, checkpointPath);
   const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}\n`;
   const warnings: string[] = [];
 

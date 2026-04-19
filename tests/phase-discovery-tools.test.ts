@@ -10,8 +10,11 @@ import {
   blueprintArtifactScaffold
 } from "../src/mcp/tools/artifacts.js";
 import {
+  phaseToolDefinitions,
   blueprintPhaseContext,
+  blueprintPhaseCheckpointPut,
   blueprintPhaseLocate,
+  blueprintPhasePlanIndex,
   blueprintPhaseResearchStatus,
   blueprintRoadmapRead
 } from "../src/mcp/tools/phase.js";
@@ -203,6 +206,37 @@ test("phase discovery MCP tools are registered in the Blueprint server", () => {
   }
 });
 
+test("phase lifecycle tool schemas accept numeric JSON phase refs and plan ids", () => {
+  const tool = (name: string) => phaseToolDefinitions.find((definition) => definition.name === name);
+
+  for (const toolName of [
+    "blueprint_phase_plan_index",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
+    "blueprint_phase_validation_read",
+    "blueprint_phase_validation_write",
+    "blueprint_phase_checkpoint_get",
+    "blueprint_phase_checkpoint_put",
+    "blueprint_phase_checkpoint_delete",
+    "blueprint_phase_summary_index"
+  ]) {
+    const definition = tool(toolName);
+    assert.ok(definition, `${toolName} should exist`);
+    assert.equal(definition.inputSchema.phase.safeParse(3).success, true, `${toolName} should accept numeric phase refs`);
+  }
+
+  for (const toolName of [
+    "blueprint_phase_plan_read",
+    "blueprint_phase_plan_write",
+    "blueprint_phase_summary_read",
+    "blueprint_phase_summary_write"
+  ]) {
+    const definition = tool(toolName);
+    assert.ok(definition, `${toolName} should exist`);
+    assert.equal(definition.inputSchema.planId.safeParse(3).success, true, `${toolName} should accept numeric plan ids`);
+  }
+});
+
 test("phase tools resolve roadmap-backed phase details and artifact paths", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -314,6 +348,49 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.equal(after.researchValid, false);
   assert.match(after.researchIssues.join("\n"), /placeholder/i);
   assert.match(uiSpec, /Outcome Mode/);
+});
+
+test("phase plan indexing and checkpoint persistence accept numeric inputs", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpoint = await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: 3,
+    checkpoint: {
+      mode: "discuss",
+      pendingTopics: ["Scope boundaries"],
+      updatedAt: "2026-04-19T00:00:00.000Z"
+    }
+  });
+  const indexed = await blueprintPhasePlanIndex({ cwd: repoPath, phase: 3 });
+
+  assert.equal(checkpoint.updated, true);
+  assert.equal(checkpoint.path, ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json");
+  assert.equal(indexed.phaseFound, true);
+  assert.deepEqual(indexed.missingPlans, [
+    ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+  ]);
+});
+
+test("checkpoint persistence rejects arbitrary JSON objects without resumability fields", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintPhaseCheckpointPut({
+      cwd: repoPath,
+      phase: 3,
+      checkpoint: {
+        random: true
+      }
+    }),
+    /structured discuss checkpoint/i
+  );
 });
 
 test("phase locate returns structured recovery when ROADMAP.md is missing", async (t) => {

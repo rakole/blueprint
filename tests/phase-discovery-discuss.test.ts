@@ -78,6 +78,8 @@ test("discuss-phase command references only registered phase-discovery tool name
     "blueprint_artifact_list",
     "blueprint_config_get",
     "blueprint_phase_artifact_read",
+    "blueprint_phase_plan_index",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_artifact_write",
     "blueprint_phase_checkpoint_get",
     "blueprint_phase_checkpoint_put",
@@ -98,7 +100,17 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /workflow\.discuss_mode/);
   assert.match(commandFile, /workflow\.skip_discuss/);
   assert.match(commandFile, /workflow\.research_before_questions/);
-  assert.match(commandFile, /power mode|chain mode|auto-advance/i);
+  assert.match(commandFile, /phase\.context/);
+  assert.match(commandFile, /phase\.discussion-log/);
+  assert.match(commandFile, /PROJECT\.md/);
+  assert.match(commandFile, /REQUIREMENTS\.md/);
+  assert.match(commandFile, /STATE\.md/);
+  assert.match(commandFile, /existing plans.*\/blu-plan-phase|plan inventory.*\/blu-plan-phase/i);
+  assert.match(commandFile, /gray areas/i);
+  assert.match(commandFile, /next area|more questions/i);
+  assert.match(commandFile, /canonical references/i);
+  assert.match(commandFile, /scope-creep|deferred ideas/i);
+  assert.match(commandFile, /power mode|chain mode|auto mode|auto-advance/i);
   assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
 });

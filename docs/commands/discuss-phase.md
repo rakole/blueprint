@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now persists substantive context content and resumable checkpoint state through dedicated MCP tools, while still deferring legacy power-mode, chain-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
@@ -36,6 +36,7 @@
 ## Blueprint And Global State Reads
 
 - effective Blueprint config through `blueprint_config_get`
+- current phase plan inventory through `blueprint_phase_plan_index`
 
 
 ## Blueprint And Global State Writes
@@ -54,6 +55,8 @@
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
 - `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}`
@@ -65,10 +68,12 @@
 ## Artifact Persistence Contract
 
 - Pass `phase` to `blueprint_phase_artifact_write` and `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, for example `"3"` or `3`.
+- Read `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting or revising `XX-CONTEXT.md`.
+- Read `blueprint_artifact_contract_read` with `artifactId: "phase.discussion-log"` before drafting or revising `XX-DISCUSSION-LOG.md`.
 - Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
 - Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
 - Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
-- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss-checkpoint shape. Include at least one resumability field such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `answers`, `notes`, `resumeHint`, or `updatedAt`. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
 
 
 ## Skills And Subagents
@@ -109,6 +114,8 @@
 - Confirm overwrite when a context artifact already exists.
 - Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
 - When structured discovery choices help, prefer Gemini CLI's built-in `ask_user` dialog asked one focused question at a time instead of a plain-text questionnaire.
+- Identify gray areas from repo evidence first, let the user choose which area to discuss next, and support iterative `next area` or `more questions` loops.
+- Inspect the saved plan inventory before rewriting context and warn that refreshed context does not rewrite existing plans unless the user re-runs `/blu-plan-phase`.
 - Do not advertise follow-on execution or planning flows as runnable until those commands are implemented in the runtime catalog.
 
 
@@ -119,6 +126,7 @@
 - Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
 - `workflow.discuss_mode` may switch the command into an evidence-first assumptions flow rather than an interview-style loop.
 - `workflow.skip_discuss=true` should shorten the discussion path instead of pretending no context capture is needed.
+- Earlier phase context artifacts may contain canonical references or deferred ideas that should be reused instead of re-elicited.
 
 
 ## Failure Modes And Recovery
@@ -135,6 +143,9 @@
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Persists real phase decisions into `XX-CONTEXT.md`, not only scaffold placeholders.
+- Reads actual saved context and discussion content, plus the canonical `phase.context` and `phase.discussion-log` contracts, before drafting updates.
+- Warns clearly when refreshed discovery leaves existing saved plans unchanged until `/blu-plan-phase` is run again.
+- Captures canonical references plus deferred or scope-creep ideas when they surface during gray-area discussion.
 - Uses checkpoint persistence only as a resumability aid and deletes the checkpoint after successful completion.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

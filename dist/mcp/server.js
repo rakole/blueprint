@@ -15091,6 +15091,18 @@ function listArtifactContracts() {
 function renderArtifactScaffoldTemplate(contractId, context) {
   return getArtifactContract(contractId).renderScaffoldTemplate(context);
 }
+function resolvePhaseArtifactContractId(artifact) {
+  switch (artifact) {
+    case "context":
+      return "phase.context";
+    case "discussion-log":
+      return "phase.discussion-log";
+    case "research":
+      return "phase.research";
+    case "ui-spec":
+      return "phase.ui-spec";
+  }
+}
 function resolveReviewArtifactContractId(artifact) {
   switch (artifact) {
     case "code-review":
@@ -15163,8 +15175,17 @@ var init_artifact_contracts = __esm({
         freehandPolicy: "additional-top-level-headings",
         requiredHeadings: ["Phase Boundary", "Decisions", "Dependencies", "Open Questions"],
         lockedMarkers: [],
-        placeholderSignals: ["Goal:", "In scope:", "Out of scope:", "Question 1:"],
-        notes: ["Discovery context is phase-scoped and MCP-owned."],
+        placeholderSignals: [
+          "Goal:",
+          "In scope:",
+          "Out of scope:",
+          "Question 1:",
+          "Capture the confirmed choices for this phase here."
+        ],
+        notes: [
+          "Discovery context is phase-scoped and MCP-owned.",
+          "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
+        ],
         renderScaffoldTemplate: renderContextTemplate,
         renderAuthoringTemplate: renderContextTemplate
       },
@@ -15178,8 +15199,15 @@ var init_artifact_contracts = __esm({
         freehandPolicy: "additional-top-level-headings",
         requiredHeadings: ["Summary", "Notes", "Follow-Ups"],
         lockedMarkers: [],
-        placeholderSignals: ["Timestamped notes:", "Follow-up 1:"],
-        notes: ["Discussion logs are optional supporting artifacts."],
+        placeholderSignals: [
+          "Record the major discussion outcomes and unresolved questions here.",
+          "Timestamped notes:",
+          "Follow-up 1:"
+        ],
+        notes: [
+          "Discussion logs are optional supporting artifacts.",
+          "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
+        ],
         renderScaffoldTemplate: renderDiscussionLogTemplate,
         renderAuthoringTemplate: renderDiscussionLogTemplate
       },
@@ -15246,9 +15274,16 @@ var init_artifact_contracts = __esm({
           "Next Safe Action"
         ],
         lockedMarkers: [],
-        placeholderSignals: ["Goal 1:", "Screen/state 1:", "Component 1:", "Accessibility note 1:"],
+        placeholderSignals: [
+          "Choose one: UI contract or explicit skip rationale.",
+          "Goal 1:",
+          "Screen/state 1:",
+          "Component 1:",
+          "Accessibility note 1:"
+        ],
         notes: [
-          "The same durable artifact covers both a real UI contract and an explicit skip rationale."
+          "The same durable artifact covers both a real UI contract and an explicit skip rationale.",
+          "Write validation requires an H1 title and Outcome Mode; explicit skip rationale may use a populated `## Rationale` section instead of the full UI contract."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderUiSpecTemplate(context)),
         renderAuthoringTemplate: renderUiSpecTemplate
@@ -17443,6 +17478,62 @@ function validateContractBackedMarkdown(content, contractId, artifactLabel) {
     valid: issues.length === 0,
     issues,
     warnings: []
+  };
+}
+function countNonEmptyContractSections(content, headings) {
+  return headings.reduce(
+    (count, heading) => count + (extractMarkdownSection(content, heading).trim().length > 0 ? 1 : 0),
+    0
+  );
+}
+function isExplicitUiSkipRationale(content) {
+  return /## Outcome Mode\s*\n(?:- |\d+\.\s+)?Explicit skip rationale\b/i.test(content);
+}
+function validatePhaseArtifactContent(content, artifact) {
+  if (artifact === "research") {
+    return validateResearchArtifactContent(content);
+  }
+  const contractId = resolvePhaseArtifactContractId(artifact);
+  const contract = readArtifactContract(contractId);
+  const artifactLabel = artifact === "context" ? "Context artifact" : artifact === "discussion-log" ? "Discussion log artifact" : "UI spec artifact";
+  const issues = [];
+  const warnings = [];
+  if (!/^# .+\S\s*$/m.test(content)) {
+    issues.push(`${artifactLabel} must start with a markdown H1 title.`);
+  }
+  issues.push(
+    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal)).map((signal) => `${artifactLabel} still contains placeholder scaffold text: ${signal}.`)
+  );
+  const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
+  if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
+    if (extractMarkdownSection(content, "Outcome Mode").trim().length === 0) {
+      issues.push("UI spec artifact section Outcome Mode must not be empty.");
+    }
+    if (extractMarkdownSection(content, "Rationale").trim().length === 0) {
+      issues.push(
+        "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
+      );
+    }
+  } else if (presentRequiredSections === 0) {
+    issues.push(
+      `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
+    );
+  }
+  const missingRequiredSections = contract.requiredHeadings.filter(
+    (heading) => extractMarkdownSection(content, heading).trim().length === 0
+  );
+  if (artifact === "ui-spec" && missingRequiredSections.includes("Outcome Mode")) {
+    issues.push("UI spec artifact section Outcome Mode must not be empty.");
+  }
+  if (missingRequiredSections.length > 0) {
+    warnings.push(
+      `${artifactLabel} is missing recommended contract sections: ${missingRequiredSections.join(", ")}.`
+    );
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
   };
 }
 function validateVerificationArtifactContent(content, summaryPaths = []) {
@@ -21404,8 +21495,11 @@ async function deriveNextAction(args) {
   if (args.workflow.researchEnabled && args.phaseArtifacts.hasContext && !args.phaseArtifacts.hasResearch && implementedCommands.has(researchPhaseCommand)) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to capture phase research`;
   }
-  if (args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === false && implementedCommands.has(researchPhaseCommand)) {
+  if (args.workflow.researchEnabled && args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === false && implementedCommands.has(researchPhaseCommand)) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to repair invalid phase research`;
+  }
+  if (!args.workflow.researchEnabled && args.phaseArtifacts.hasContext && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
+    return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
   if (args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === true && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
@@ -22622,6 +22716,14 @@ function ensureCheckpointObject(checkpoint, checkpointPath) {
   }
   return checkpoint;
 }
+function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
+  const parsed = phaseCheckpointSchema.safeParse(ensureCheckpointObject(checkpoint, checkpointPath));
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((issue2) => issue2.message).join("; ");
+    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
+  }
+  return parsed.data;
+}
 async function resolveLocatedPhaseForMutation(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate(args);
@@ -23435,7 +23537,7 @@ async function blueprintPhaseArtifactWrite(args) {
   const normalizedContent = normalizeTextContent3(args.content);
   const exists = await pathExists4(absolutePath);
   const warnings = [];
-  const validation = args.artifact === "research" ? validateResearchArtifactContent(normalizedContent) : null;
+  const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
   if (exists) {
     const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
@@ -23451,12 +23553,12 @@ async function blueprintPhaseArtifactWrite(args) {
         created: false,
         overwritten: false,
         status: "reused",
-        validation: validation ? {
+        validation: {
           valid: validation.valid,
           issues: validation.issues,
           warnings: validation.warnings,
           suggestedRepairs: []
-        } : null,
+        },
         warnings
       };
     }
@@ -23466,7 +23568,12 @@ async function blueprintPhaseArtifactWrite(args) {
       );
     }
   }
-  if (validation && !validation.valid && (args.validationMode ?? "strict") === "strict") {
+  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
+    const suggestedRepairs = args.artifact === "research" ? ["Add the required research sections, confidence marker, and at least one cited source before retrying."] : args.artifact === "ui-spec" ? [
+      "Add a populated Outcome Mode section plus either the contract headings or an explicit skip Rationale before retrying."
+    ] : [
+      `Add a real ${args.artifact} artifact title, remove scaffold placeholders, and populate at least one contract section before retrying.`
+    ];
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -23482,9 +23589,7 @@ async function blueprintPhaseArtifactWrite(args) {
         valid: false,
         issues: validation.issues,
         warnings: validation.warnings,
-        suggestedRepairs: [
-          "Add the required research sections, confidence marker, and at least one cited source before retrying."
-        ]
+        suggestedRepairs
       },
       warnings: []
     };
@@ -23508,13 +23613,13 @@ async function blueprintPhaseArtifactWrite(args) {
     created: !exists,
     overwritten: exists,
     status: exists ? "updated" : "created",
-    validation: validation ? {
+    validation: {
       valid: validation.valid,
       issues: validation.issues,
       warnings: validation.warnings,
       suggestedRepairs: []
-    } : null,
-    warnings: [...warnings, ...validation?.warnings ?? []]
+    },
+    warnings: [...warnings, ...validation.warnings]
   };
 }
 async function blueprintPhaseValidationRead(args) {
@@ -24160,7 +24265,7 @@ async function blueprintPhaseCheckpointPut(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const checkpointPath = checkpointPathFor(resolved);
   const absolutePath = resolveBlueprintPath(projectRoot, checkpointPath);
-  const nextCheckpoint = ensureCheckpointObject(args.checkpoint, checkpointPath);
+  const nextCheckpoint = ensureCheckpointForPersistence(args.checkpoint, checkpointPath);
   const nextRaw = `${JSON.stringify(nextCheckpoint, null, 2)}
 `;
   const warnings = [];
@@ -24232,7 +24337,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema2, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointPutInputSchema, phaseToolDefinitions;
+var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema2, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointQuestionSchema, phaseCheckpointSchema, phaseCheckpointPutInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -24279,21 +24384,21 @@ var init_phase = __esm({
     };
     phaseArtifactInputSchema = {
       cwd: string2().optional(),
-      phase: string2().optional(),
+      phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["context", "discussion-log", "research", "ui-spec"])
     };
     phaseValidationArtifactInputSchema = {
       cwd: string2().optional(),
-      phase: string2().optional(),
+      phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["verification", "uat"])
     };
     phasePlanInputSchema = {
       cwd: string2().optional(),
-      phase: string2().optional()
+      phase: numericBlueprintInputSchema2.optional()
     };
     phaseArtifactWriteInputSchema = {
       cwd: string2().optional(),
-      phase: string2().optional(),
+      phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["context", "discussion-log", "research", "ui-spec"]),
       content: string2(),
       overwrite: boolean2().optional(),
@@ -24301,7 +24406,7 @@ var init_phase = __esm({
     };
     phaseValidationWriteInputSchema = {
       cwd: string2().optional(),
-      phase: string2().optional(),
+      phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["verification", "uat"]),
       content: string2(),
       overwrite: boolean2().optional()
@@ -24331,10 +24436,42 @@ var init_phase = __esm({
       content: string2(),
       overwrite: boolean2().optional()
     };
+    phaseCheckpointQuestionSchema = object2({
+      prompt: string2(),
+      response: string2().optional(),
+      status: _enum(["pending", "answered", "skipped"]).optional()
+    });
+    phaseCheckpointSchema = object2({
+      mode: string2().min(1).optional(),
+      pendingTopics: array(string2()).optional(),
+      completedTopics: array(string2()).optional(),
+      currentQuestion: string2().optional(),
+      answers: array(phaseCheckpointQuestionSchema).optional(),
+      notes: array(string2()).optional(),
+      resumeHint: string2().optional(),
+      updatedAt: string2().optional()
+    }).catchall(unknown()).superRefine((value, context) => {
+      const structuredKeys = [
+        "mode",
+        "pendingTopics",
+        "completedTopics",
+        "currentQuestion",
+        "answers",
+        "notes",
+        "resumeHint",
+        "updatedAt"
+      ];
+      if (!structuredKeys.some((key) => key in value)) {
+        context.addIssue({
+          code: "custom",
+          message: "Checkpoint must include resumability fields such as mode, pendingTopics, currentQuestion, answers, notes, resumeHint, or updatedAt."
+        });
+      }
+    });
     phaseCheckpointPutInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
-      checkpoint: record(string2(), unknown())
+      checkpoint: phaseCheckpointSchema
     };
     phaseToolDefinitions = [
       {

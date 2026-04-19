@@ -45,8 +45,9 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
     content: string;
     overwrite?: boolean;
 };
+type PhaseCheckpointRecord = Record<string, unknown>;
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
-    checkpoint: Record<string, unknown>;
+    checkpoint: PhaseCheckpointRecord;
 };
 type PhasePlanReadArgs = PhaseLookupArgs & {
     planId: NumericInput;
@@ -497,7 +498,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhasePlanIndexResult>;
 } | {
@@ -505,7 +506,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             context: "context";
             "discussion-log": "discussion-log";
@@ -519,7 +520,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             context: "context";
             "discussion-log": "discussion-log";
@@ -539,7 +540,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             verification: "verification";
             uat: "uat";
@@ -551,7 +552,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             verification: "verification";
             uat: "uat";
@@ -589,7 +590,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseSummaryIndexResult>;
 } | {
@@ -626,7 +627,24 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
-        checkpoint: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+        checkpoint: z.ZodObject<{
+            mode: z.ZodOptional<z.ZodString>;
+            pendingTopics: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            completedTopics: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            currentQuestion: z.ZodOptional<z.ZodString>;
+            answers: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                prompt: z.ZodString;
+                response: z.ZodOptional<z.ZodString>;
+                status: z.ZodOptional<z.ZodEnum<{
+                    pending: "pending";
+                    answered: "answered";
+                    skipped: "skipped";
+                }>>;
+            }, z.core.$strip>>>;
+            notes: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            resumeHint: z.ZodOptional<z.ZodString>;
+            updatedAt: z.ZodOptional<z.ZodString>;
+        }, z.core.$catchall<z.ZodUnknown>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointPutResult>;
 } | {

@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`research-phase` is Blueprint's command for research how to implement a phase as a standalone discovery flow that usually feeds `/blu-plan-phase`. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and must produce planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
+`research-phase` is Blueprint's command for research how to implement a phase as a standalone discovery flow that usually feeds `/blu-plan-phase`. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and must read the actual current context content before drafting planner-friendly, cited, confidence-tagged phase research rather than a scaffold-only placeholder.
 
 
 ## Command Path And Examples
@@ -37,6 +37,7 @@
 
 
 - `.blueprint/STATE.md`
+- current phase `XX-CONTEXT.md` content through `blueprint_phase_artifact_read`
 
 
 ## Blueprint And Global State Writes
@@ -136,6 +137,7 @@
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
+- Reads the actual saved context content before drafting or revising research instead of relying on status-only readiness signals.
 - Persists populated research content through MCP rather than raw prompt-side file writes.
 - Uses a research schema with citations, confidence, recommendations, and planner-friendly sections.
 - Uses only documented MCP tools for persistent state changes.

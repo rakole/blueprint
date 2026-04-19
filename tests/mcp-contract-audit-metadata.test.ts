@@ -52,9 +52,12 @@ test("discovery contracts stay explicit across discuss, research, and ui command
 
   assert.match(discussCommand, /repo-relative Blueprint artifact paths such as `?\.blueprint\/phases\//i);
   assert.match(discussCommand, /`checkpoint` must be a JSON object/i);
+  assert.match(discussCommand, /at least one resumability field such as `mode`, `pendingTopics`/i);
   assert.match(discussCommand, /returned `path` as the authoritative saved filename/i);
   assert.match(discussDoc, /## Artifact Persistence Contract/);
   assert.match(discussDoc, /resolved numeric phase reference only/i);
+  assert.match(discussDoc, /structured discuss-checkpoint shape/i);
+  assert.match(discussDoc, /at least one resumability field such as `mode`, `pendingTopics`/i);
 
   assert.match(researchCommand, /default strict mode/i);
   assert.match(researchCommand, /returned `path` as authoritative/i);
@@ -70,6 +73,7 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(uiDoc, /single durable output/i);
 
   assert.match(discoverySkill, /`blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object/i);
+  assert.match(discoverySkill, /at least one resumability field such as `mode`, `pendingTopics`/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
   assert.match(discoverySkill, /Canonical Research Contract/);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);

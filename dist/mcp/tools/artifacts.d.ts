@@ -252,6 +252,11 @@ export declare function validateResearchArtifactContent(content: string): {
     issues: string[];
     warnings: string[];
 };
+export declare function validatePhaseArtifactContent(content: string, artifact: "context" | "discussion-log" | "research" | "ui-spec"): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
 export declare function validateVerificationArtifactContent(content: string, summaryPaths?: string[]): {
     valid: boolean;
     issues: string[];
