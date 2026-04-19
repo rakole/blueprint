@@ -282,7 +282,9 @@ export declare function validateSummaryArtifactContent(content: string): {
     issues: string[];
     warnings: string[];
 };
-export declare function validatePlanArtifactContent(content: string, expectedPhase?: string): {
+export declare function validatePlanArtifactContent(content: string, expectedPhase?: string, options?: {
+    strict?: boolean;
+}): {
     valid: boolean;
     issues: string[];
     warnings: string[];
