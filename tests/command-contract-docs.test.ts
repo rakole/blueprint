@@ -451,6 +451,10 @@ test("review skill and security auditor are marked implemented in docs for secur
     /\| `blueprint-security-auditor` \| `implemented` \| Verify threat mitigations and security coverage \|/
   );
   assert.match(securePhaseDoc, /Primary skill: `blueprint-review`/);
+  assert.match(securePhaseDoc, /`blueprint_phase_plan_index`/);
+  assert.match(securePhaseDoc, /`blueprint_phase_plan_read`/);
+  assert.match(securePhaseDoc, /`blueprint_artifact_contract_read`/);
+  assert.match(securePhaseDoc, /review\.security/);
   assert.match(securePhaseDoc, /`blueprint_review_record`/);
   assert.match(securePhaseDoc, /`blueprint-security-auditor`/);
   assert.match(securePhaseDoc, /phase XX-SECURITY\.md/);

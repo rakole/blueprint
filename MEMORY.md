@@ -108,7 +108,7 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - keep `execute-phase` routed through the plan index plus dedicated summary read/write MCP tools
 - keep `code-review` routed through `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, and `blueprint_review_record`
 - keep `audit-fix` routed through `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update`
-- keep `secure-phase` routed through `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record`
+- keep `secure-phase` routed through `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and `blueprint_review_record`
 - keep `ui-review` routed through `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record`
 - keep `docs-update` routed through its evidence-backed docs-report substrate
 - keep `note` routed through `blueprint_artifact_mutate_index`
@@ -158,7 +158,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - `code-review` shipped on 2026-04-13 with a dedicated `/blu-code-review` manifest, the discoverable `blueprint-review` skill, the bounded `blueprint-reviewer` agent contract, deterministic scope resolution through `blueprint_review_scope`, and review persistence through `blueprint_review_record`
 - `code-review-fix` shipped on 2026-04-13 with a dedicated `/blu-code-review-fix` manifest, the discoverable `blueprint-review` skill, saved review loading through `blueprint_review_load_findings`, durable remediation persistence through `blueprint_review_record`, and explicit follow-up routing through `blueprint_state_update`
 - `audit-fix` shipped on 2026-04-13 with a dedicated `/blu-audit-fix` manifest, the discoverable `blueprint-review` skill, deterministic scope resolution through `blueprint_review_scope`, report-backed persistence through `blueprint_artifact_report_write`, optional todo capture through `blueprint_artifact_mutate_index`, and explicit follow-up routing through `blueprint_state_update`
-- `secure-phase` now uses `blueprint_review_record` plus the discoverable `blueprint-review` skill and `blueprint-security-auditor` contract to persist real `XX-SECURITY.md` content
+- `secure-phase` now uses `blueprint_artifact_contract_read` plus `blueprint_review_record`, the discoverable `blueprint-review` skill, and the `blueprint-security-auditor` contract to persist real `XX-SECURITY.md` content through a threat-register-shaped review contract
+- `secure-phase` now also uses `blueprint_phase_plan_index` plus `blueprint_phase_plan_read` so the saved phase threat model is read from executed plan evidence before the audit is written
+- `secure-phase` now treats the saved phase threat model as the bounded review scope, lets the user verify or explicitly accept open threats, and blocks advancement while any threat remains open
+- `blueprint_review_record` now counts open security threats from the Threat Register as findings so security artifacts do not under-report risk when Findings stays empty
 - shared runtime hardening now routes core path validation, JSON parsing, prompt-boundary checks, and hidden-control-character sanitization through `src/shared/security.ts`, with hooks reusing the same detector set for advisory parity
 - `review` shipped on 2026-04-13 with a dedicated `/blu-review` manifest, the discoverable `blueprint-review` skill, plan inventory plus plan-read MCP grounding, and peer-review persistence through `blueprint_review_record` as `XX-REVIEWS.md`
 - `ui-review` shipped on 2026-04-13 with a dedicated `/blu-ui-review` manifest, the discoverable `blueprint-review` skill, the bounded `blueprint-ui-auditor` agent contract, and UI audit persistence through `blueprint_review_record`

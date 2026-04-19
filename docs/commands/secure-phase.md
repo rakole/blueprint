@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native security audit command: it reads saved phase evidence, drafts a phase-scoped security review, and persists the result through the dedicated review MCP tool instead of prompt-only file writes.
+`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native threat-verification command: it reads saved phase evidence, loads the canonical `review.security` contract before drafting, uses the phase plan index and plan reader to parse the saved phase threat model from plan evidence, builds a threat register, and keeps the audit bounded to the declared threats and mitigations instead of running a generic security scan.
 
 
 ## Command Path And Examples
@@ -29,14 +29,14 @@
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
+- User-facing result: a concise completion summary, then either a verification-or-acceptance decision for open threats or a blocked advancement result when threats remain open.
 - Repo side effects: Writes only the declared phase-scoped security artifact for this command.
 
 
 ## Blueprint And Global State Reads
 
 
-- Phase resolution and artifact inventory through the documented phase and artifact MCP tools
+- Phase resolution, artifact inventory, phase plan index/read, and the saved phase threat model plus related phase evidence through the documented phase and artifact MCP tools
 
 
 ## Blueprint And Global State Writes
@@ -50,11 +50,18 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
+- `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
 ## Security Artifact Contract
 
+- Read the canonical `review.security` contract through `blueprint_artifact_contract_read` before drafting or revising `XX-SECURITY.md`, and use the returned template and required headings as the baseline instead of a copied prompt-local variant.
+- Use `blueprint_phase_plan_index` and `blueprint_phase_plan_read` to parse the saved phase threat model from the executed plan evidence before building the threat register.
+- Keep the returned template's threat register, accepted risks, and audit-trail structure explicit even when the final audit concludes there are no open threats.
 - Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`.
+- Do not compute a next action until all threats are closed or explicitly accepted.
 
 
 ## Skills And Subagents
@@ -92,7 +99,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- None unless follow-up fixes are requested immediately.
+- Present the user with the choice to verify open threats or explicitly accept them. If threats remain open, block advancement and do not emit a next-step route.
 
 
 ## Edge Cases
@@ -118,7 +125,9 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
-- Distinguishes confirmed mitigations, missing or partial controls, suspicious artifact content, and explicit hardening follow-ups inside the saved security evidence.
+- Distinguishes confirmed mitigations, open threats, accepted risks, suspicious artifact content, and explicit hardening follow-ups inside the saved security evidence.
+- Parses the saved phase threat model, builds a threat register, and keeps the audit bounded to declared threats and mitigations.
+- Blocks advancement while any threat remains open.
 
 
 ## Test Cases
@@ -127,4 +136,3 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `secure-phase` happy-path fixture.
-

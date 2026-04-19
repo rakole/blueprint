@@ -486,13 +486,27 @@ function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
 
 - Saved phase artifacts, repo paths, or cited references reviewed.
 
+## Threat Register
+
+| Threat ID | Disposition | Status | Evidence / Note |
+|-----------|-------------|--------|-----------------|
+| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |
+
+## Accepted Risks
+
+- Accepted threat reference plus rationale, or \`none\`.
+
 ## Findings
 
-- Confirmed mitigation, missing control, or \`none\`.
+- Open threat, missing control, or risk decision that needs explicit attention, or \`none\`.
 
 ## Follow-Ups
 
 - Explicit hardening step, validation gap, or \`none\`.
+
+## Security Audit Trail
+
+- Audit date, threat counts, and verifier note.
 
 ## Next Safe Action
 
@@ -1144,10 +1158,30 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Security Review",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-SECURITY.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Security Summary", "Evidence Reviewed", "Findings", "Follow-Ups", "Next Safe Action"],
+    requiredHeadings: [
+      "Security Summary",
+      "Evidence Reviewed",
+      "Threat Register",
+      "Accepted Risks",
+      "Findings",
+      "Follow-Ups",
+      "Security Audit Trail",
+      "Next Safe Action"
+    ],
     lockedMarkers: ["**Posture:**"],
-    placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
-    notes: ["Security artifacts should distinguish confirmed mitigations from missing controls."],
+    placeholderSignals: [
+      "PASS|FOLLOW_UP|BLOCKED",
+      "Concise security posture grounded in saved evidence.",
+      "Saved phase artifacts, repo paths, or cited references reviewed.",
+      "| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |",
+      "Accepted threat reference plus rationale, or `none`.",
+      "Open threat, missing control, or risk decision that needs explicit attention, or `none`.",
+      "Explicit hardening step, validation gap, or `none`.",
+      "Audit date, threat counts, and verifier note."
+    ],
+    notes: [
+      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
+    ],
     renderScaffoldTemplate: renderSecurityTemplate,
     renderAuthoringTemplate: renderSecurityTemplate
   },

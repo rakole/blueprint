@@ -233,6 +233,127 @@ function extractMarkdownSectionItems(
   return [...new Set(items)];
 }
 
+function normalizeReviewListItem(item: string): string {
+  return normalizeFindingSummary(item)
+    .replace(/^`+|`+$/g, "")
+    .replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isPlaceholderReviewListItem(item: string): boolean {
+  const normalized = normalizeReviewListItem(item);
+
+  return (
+    normalized.length === 0 ||
+    normalized === "none" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "not applicable" ||
+    normalized === "no finding" ||
+    normalized === "no findings" ||
+    normalized === "no follow up" ||
+    normalized === "no follow ups" ||
+    normalized === "no follow-up" ||
+    normalized === "no follow-ups"
+  );
+}
+
+function collectSubstantiveReviewItems(
+  content: string,
+  headingPattern: RegExp
+): string[] {
+  return extractMarkdownSectionItems(content, headingPattern).filter(
+    (item) => !isPlaceholderReviewListItem(item)
+  );
+}
+
+function extractMarkdownSectionContent(
+  content: string,
+  headingPattern: RegExp
+): string[] {
+  const lines = content.split("\n");
+  const sections: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index].match(/^(##+)\s+(.+)$/);
+
+    if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
+      continue;
+    }
+
+    const sectionLevel = headingMatch[1].length;
+    const sectionLines: string[] = [];
+
+    for (let innerIndex = index + 1; innerIndex < lines.length; innerIndex += 1) {
+      const nextHeadingMatch = lines[innerIndex].match(/^(##+)\s+(.+)$/);
+
+      if (nextHeadingMatch && nextHeadingMatch[1].length <= sectionLevel) {
+        break;
+      }
+
+      sectionLines.push(lines[innerIndex]);
+    }
+
+    sections.push(sectionLines.join("\n"));
+  }
+
+  return sections;
+}
+
+function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const seenSummaries = new Set<string>();
+
+  for (const section of extractMarkdownSectionContent(content, /^Threat Register$/i)) {
+    for (const line of section.split("\n")) {
+      const trimmed = line.trim();
+
+      if (!trimmed.startsWith("|")) {
+        continue;
+      }
+
+      const cells = trimmed
+        .split("|")
+        .map((cell) => cell.trim())
+        .slice(1, -1);
+
+      if (cells.length < 4) {
+        continue;
+      }
+
+      const [threatId, disposition, status, evidence] = cells;
+
+      if (
+        threatId.length === 0 ||
+        threatId === "Threat ID" ||
+        threatId === "---" ||
+        !/\bopen\b/i.test(status)
+      ) {
+        continue;
+      }
+
+      const summary = normalizeFindingSummary(
+        `Open threat ${threatId}: ${evidence.length > 0 ? evidence : `${disposition} ${status}`}`
+      );
+
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+
+      seenSummaries.add(summary);
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: "unknown",
+        summary,
+        sourceSection: "Threat Register"
+      });
+    }
+  }
+
+  return findings;
+}
+
 function extractMarkdownSectionEntries(
   content: string,
   headingPattern: RegExp
@@ -345,6 +466,10 @@ function parseFindingsFromArtifact(
 
   for (const entry of entries) {
     for (const item of entry.items) {
+      if (isPlaceholderReviewListItem(item)) {
+        continue;
+      }
+
       const summary = normalizeFindingSummary(item);
 
       if (summary.length === 0 || seenSummaries.has(summary)) {
@@ -363,10 +488,27 @@ function parseFindingsFromArtifact(
     }
   }
 
+  if (artifact === "security") {
+    for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
+      if (seenSummaries.has(threatFinding.summary)) {
+        continue;
+      }
+
+      seenSummaries.add(threatFinding.summary);
+      severityCounts[threatFinding.severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: threatFinding.severity,
+        summary: threatFinding.summary,
+        sourceSection: threatFinding.sourceSection
+      });
+    }
+  }
+
   return {
     findings,
     severityCounts,
-    followUps: extractMarkdownSectionItems(
+    followUps: collectSubstantiveReviewItems(
       content,
       /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
     )
@@ -380,22 +522,15 @@ function collectReviewCounts(
   counts: ReviewRecordResult["counts"];
   followUps: string[];
 } {
-  const findings = extractMarkdownSectionItems(
-    content,
-    resolveFindingsHeadingPattern(artifact)
-  );
-  const followUps = extractMarkdownSectionItems(
-    content,
-    /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
-  );
+  const parsedFindings = parseFindingsFromArtifact(content, artifact);
 
   return {
     counts: {
       sections: countMarkdownSections(content),
-      findings: findings.length,
-      followUps: followUps.length
+      findings: parsedFindings.findings.length,
+      followUps: parsedFindings.followUps.length
     },
-    followUps
+    followUps: parsedFindings.followUps
   };
 }
 

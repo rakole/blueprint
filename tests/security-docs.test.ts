@@ -47,8 +47,13 @@ test("maintenance and security review docs reflect the tightened hardening guida
   assert.match(maintenanceSkill, /resolved target/i);
   assert.match(
     reviewSkill,
-    /confirmed mitigations, missing or partial controls, suspicious\s+artifact content/i
+    /confirmed mitigations, open threats, accepted risks/i
   );
+  assert.match(securePhaseDoc, /parses? the saved phase threat model/i);
+  assert.match(securePhaseDoc, /builds? a threat register/i);
+  assert.match(securePhaseDoc, /verify open threats or explicitly accept them/i);
+  assert.match(securePhaseDoc, /blocks? advancement while any threat remains open/i);
+  assert.match(securePhaseDoc, /bounded to the declared threats and mitigations/i);
   assert.match(securePhaseDoc, /suspicious artifact content/i);
   assert.match(shipDoc, /resolved scope, source branch, base branch, and report-before-mutate path/i);
   assert.match(cleanupDoc, /resolved phase-directory set, protected exclusions, and final archive destination/i);

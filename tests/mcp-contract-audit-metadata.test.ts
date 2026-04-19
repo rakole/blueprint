@@ -25,6 +25,10 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   assert.match(mcpToolsDoc, /`blueprint_project_init` is the first persistent bootstrap write/i);
   assert.match(mcpToolsDoc, /`blueprint_pause_handoff_write` requires `currentState`/i);
   assert.match(mcpToolsDoc, /`blueprint_artifact_report_write` accepts a bare `reportName`/i);
+  assert.match(
+    mcpToolsDoc,
+    /`secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_artifact_contract_read`, and `blueprint_review_record`/i
+  );
 });
 
 test("discovery contracts stay explicit across discuss, research, and ui command surfaces", async () => {
