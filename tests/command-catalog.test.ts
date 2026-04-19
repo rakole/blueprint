@@ -385,7 +385,8 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["explore"].availableOptionalAgents, [
     "blueprint-researcher"
   ]);
-  assert.deepEqual(catalog.commands["ui-phase"].availableOptionalAgents, [
+  assert.deepEqual(catalog.commands["ui-phase"].availableOptionalAgents.sort(), [
+    "blueprint-checker",
     "blueprint-ui-designer"
   ]);
   assert.deepEqual(catalog.commands["validate-phase"].availableOptionalAgents, [

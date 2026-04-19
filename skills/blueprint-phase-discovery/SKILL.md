@@ -135,10 +135,13 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 1. Inspect effective config through `blueprint_config_get`.
 2. Respect `workflow.ui_phase` and `workflow.ui_safety_gate`.
-3. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
-4. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
-5. Require explicit overwrite confirmation before replacing an existing UI spec.
-6. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
+3. Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting, revising, or persisting `XX-UI-SPEC.md`.
+4. Read any existing `XX-UI-SPEC.md` through `blueprint_phase_artifact_read` before proposing replacement so reuse remains the default.
+5. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
+6. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
+7. Require explicit overwrite confirmation before replacing an existing UI spec.
+8. When deeper design work is needed, use `blueprint-ui-designer` for the draft and `blueprint-checker` for a bounded review loop before persistence. If the checker requests revisions, update only the affected sections, re-normalize to the same `authoringTemplate`, and re-run the checker before saving.
+9. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
 
 ## Non-Negotiables
 

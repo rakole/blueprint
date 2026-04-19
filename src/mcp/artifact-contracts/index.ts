@@ -250,21 +250,47 @@ function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
 
 - Choose one: UI contract or explicit skip rationale.
 
+## Rationale
+
+- For Explicit skip rationale, explain why UI work is out of scope, note any safety-gate implications, and name a revisit trigger. Delete this section for UI contract mode.
+
 ## User Experience Goals
 
-- Goal 1:
+- Goal 1: <primary UX objective for this phase>
+- Primary user outcome: <the user-facing outcome this phase must improve>
+
+## Visual Design Decisions
+
+- Spacing and layout: <grid, rhythm, or layout constraints>
+- Typography: <type scale, emphasis, or readability decisions>
+- Color and contrast: <palette, semantic color, and contrast rules>
+- Motion and feedback: <loading, hover, or transition guidance>
+- Copy and content: <voice, terminology, and label constraints>
 
 ## Screens And States
 
-- Screen/state 1:
+- Screen/state 1: <named screen or state in scope>
+- Loading, empty, error, and success states: <required state behavior>
+- Responsive behavior: <desktop, tablet, and mobile expectations>
 
 ## Components And Constraints
 
-- Component 1:
+- Component 1: <component, pattern, or surface in scope>
+- Existing design-system or registry primitives to reuse: <existing primitives or \`none\`>
+- New component or token justification: <new primitives needed or \`none\`>
+- Density and interaction constraints: <layout density, touch targets, or gesture rules>
 
 ## Accessibility And Content
 
-- Accessibility note 1:
+- Accessibility note 1: <keyboard, focus, contrast, or assistive-tech guidance>
+- Content hierarchy and empty-state guidance: <content hierarchy and empty-state behavior>
+- Localization or content safety notes: <localization, moderation, or terminology notes>
+
+## Registry And Design-System Safety
+
+- Registry and design-system safety: <how the draft avoids forking the registry or design system>
+- Token and theming compatibility: <token, theme, or brand-system compatibility notes>
+- Revisit trigger if the scope changes: <when this contract must be revisited>
 
 ## Next Safe Action
 
@@ -1035,22 +1061,43 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     requiredHeadings: [
       "Outcome Mode",
       "User Experience Goals",
+      "Visual Design Decisions",
       "Screens And States",
       "Components And Constraints",
       "Accessibility And Content",
+      "Registry And Design-System Safety",
       "Next Safe Action"
     ],
     lockedMarkers: [],
     placeholderSignals: [
       "Choose one: UI contract or explicit skip rationale.",
-      "Goal 1:",
-      "Screen/state 1:",
-      "Component 1:",
-      "Accessibility note 1:"
+      "- For Explicit skip rationale, explain why UI work is out of scope, note any safety-gate implications, and name a revisit trigger. Delete this section for UI contract mode.",
+      "Goal 1: <primary UX objective for this phase>",
+      "Primary user outcome: <the user-facing outcome this phase must improve>",
+      "Spacing and layout: <grid, rhythm, or layout constraints>",
+      "Typography: <type scale, emphasis, or readability decisions>",
+      "Color and contrast: <palette, semantic color, and contrast rules>",
+      "Motion and feedback: <loading, hover, or transition guidance>",
+      "Copy and content: <voice, terminology, and label constraints>",
+      "Screen/state 1: <named screen or state in scope>",
+      "Loading, empty, error, and success states: <required state behavior>",
+      "Responsive behavior: <desktop, tablet, and mobile expectations>",
+      "Component 1: <component, pattern, or surface in scope>",
+      "Existing design-system or registry primitives to reuse: <existing primitives or `none`>",
+      "New component or token justification: <new primitives needed or `none`>",
+      "Density and interaction constraints: <layout density, touch targets, or gesture rules>",
+      "Accessibility note 1: <keyboard, focus, contrast, or assistive-tech guidance>",
+      "Content hierarchy and empty-state guidance: <content hierarchy and empty-state behavior>",
+      "Localization or content safety notes: <localization, moderation, or terminology notes>",
+      "Registry and design-system safety: <how the draft avoids forking the registry or design system>",
+      "Token and theming compatibility: <token, theme, or brand-system compatibility notes>",
+      "Revisit trigger if the scope changes: <when this contract must be revisited>"
     ],
     notes: [
       "The same durable artifact covers both a real UI contract and an explicit skip rationale.",
-      "Write validation requires an H1 title and Outcome Mode; explicit skip rationale may use a populated `## Rationale` section instead of the full UI contract."
+      "Write validation requires an H1 title and Outcome Mode; explicit skip rationale may use a populated `## Rationale` section instead of the full UI contract.",
+      "The canonical authoring template includes an optional `## Rationale` branch for skip mode; remove it when the artifact stays in full UI-contract mode.",
+      "A real UI contract must lock concrete visual and UX decisions before planning, including spacing, typography, color, copy/content, state behavior, and registry or design-system safety."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderUiSpecTemplate(context)),
     renderAuthoringTemplate: renderUiSpecTemplate

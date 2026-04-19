@@ -60,7 +60,7 @@ discovery flows.
 ## Required Output Contract
 
 - Start with `## Outcome Mode` and make the mode explicit: `UI Contract` or
-  `Skip Rationale`.
+  `Explicit skip rationale`.
 - For a UI contract, include concrete interaction, design-system, state, and
   acceptance guidance that the parent can write directly into
   `XX-UI-SPEC.md`.
