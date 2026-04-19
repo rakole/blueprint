@@ -66,6 +66,7 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "blueprint_phase_locate",
     "blueprint_phase_research_status",
     "blueprint_config_get",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_artifact_read",
     "blueprint_phase_artifact_write",
     "blueprint_artifact_scaffold",
@@ -79,7 +80,10 @@ test("ui-phase command references registered tools and single-artifact UI handli
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /`blueprint-ui-designer` subagent/);
+  assert.match(commandFile, /`blueprint-checker` subagent/);
   assert.match(commandFile, /`ask_user`/);
+  assert.match(commandFile, /artifactId: "phase\.ui-spec"/);
+  assert.match(commandFile, /authoringTemplate/);
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /XX-UI-SPEC\.md/);
@@ -102,8 +106,39 @@ test("ui-phase keeps UI output in a single reusable file for either contract or 
 ## Outcome Mode
 - UI contract
 
-## Constraints
-- Keep a single durable file for either outcome.
+## User Experience Goals
+- Keep the UI guidance phase-scoped.
+
+## Visual Design Decisions
+- Spacing and layout: preserve the current dashboard rhythm.
+- Typography: reuse the app heading and body scales.
+- Color and contrast: stick with the shipped semantic palette.
+- Motion and feedback: limit motion to status transitions.
+- Copy and content: keep labels concise and task-oriented.
+
+## Screens And States
+- Screen/state 1: dashboard overview.
+- Loading, empty, error, and success states: specify all four states.
+- Responsive behavior: preserve a single-column mobile fallback.
+
+## Components And Constraints
+- Component 1: dashboard shell.
+- Existing design-system or registry primitives to reuse: existing panel and button primitives.
+- New component or token justification: none.
+- Density and interaction constraints: keep table density unchanged.
+
+## Accessibility And Content
+- Accessibility note 1: preserve keyboard navigation and visible focus.
+- Content hierarchy and empty-state guidance: empty states should point users to the next safe action.
+- Localization or content safety notes: avoid hard-coded status jargon.
+
+## Registry And Design-System Safety
+- Registry and design-system safety: do not fork the current component registry.
+- Token and theming compatibility: keep existing tokens untouched.
+- Revisit trigger if the scope changes: revisit only if the phase adds a net-new surface.
+
+## Next Safe Action
+- /blu-plan-phase 3
 `
   });
   const second = await blueprintPhaseArtifactWrite({
@@ -115,8 +150,39 @@ test("ui-phase keeps UI output in a single reusable file for either contract or 
 ## Outcome Mode
 - UI contract
 
-## Constraints
-- Keep a single durable file for either outcome.
+## User Experience Goals
+- Keep the UI guidance phase-scoped.
+
+## Visual Design Decisions
+- Spacing and layout: preserve the current dashboard rhythm.
+- Typography: reuse the app heading and body scales.
+- Color and contrast: stick with the shipped semantic palette.
+- Motion and feedback: limit motion to status transitions.
+- Copy and content: keep labels concise and task-oriented.
+
+## Screens And States
+- Screen/state 1: dashboard overview.
+- Loading, empty, error, and success states: specify all four states.
+- Responsive behavior: preserve a single-column mobile fallback.
+
+## Components And Constraints
+- Component 1: dashboard shell.
+- Existing design-system or registry primitives to reuse: existing panel and button primitives.
+- New component or token justification: none.
+- Density and interaction constraints: keep table density unchanged.
+
+## Accessibility And Content
+- Accessibility note 1: preserve keyboard navigation and visible focus.
+- Content hierarchy and empty-state guidance: empty states should point users to the next safe action.
+- Localization or content safety notes: avoid hard-coded status jargon.
+
+## Registry And Design-System Safety
+- Registry and design-system safety: do not fork the current component registry.
+- Token and theming compatibility: keep existing tokens untouched.
+- Revisit trigger if the scope changes: revisit only if the phase adds a net-new surface.
+
+## Next Safe Action
+- /blu-plan-phase 3
 `
   });
   const replaced = await blueprintPhaseArtifactWrite({
@@ -183,10 +249,20 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
     artifact: "ui-spec",
     content: `# Phase 03 UI Spec
 
-## User Experience Goals
-- Keep the UI guidance phase-scoped.
+## Outcome Mode
+`
+  });
+  const invalidUiContractMissingSections = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
 
 ## Outcome Mode
+- UI contract
+
+## User Experience Goals
+- Keep the UI guidance phase-scoped.
 `
   });
   const invalidUiSpecPlaceholder = await blueprintPhaseArtifactWrite({
@@ -197,6 +273,16 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
 
 ## Outcome Mode
 - Choose one: UI contract or explicit skip rationale.
+`
+  });
+  const invalidLegacySkipWithoutRationale = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- Skip Rationale
 `
   });
   const validContext = await blueprintPhaseArtifactWrite({
@@ -228,7 +314,7 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
     content: `# Phase 03 UI Spec
 
 ## Outcome Mode
-- Explicit skip rationale
+- Skip Rationale
 
 ## Rationale
 - No frontend surface changes are in scope for this phase.
@@ -242,10 +328,20 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
   assert.match(invalidDiscussion.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
   assert.equal(invalidUiSpec.status, "invalid");
   assert.match(invalidUiSpec.validation?.issues.join("\n") ?? "", /Outcome Mode must not be empty/i);
+  assert.equal(invalidUiContractMissingSections.status, "invalid");
+  assert.match(
+    invalidUiContractMissingSections.validation?.issues.join("\n") ?? "",
+    /missing required contract sections/i
+  );
   assert.equal(invalidUiSpecPlaceholder.status, "invalid");
   assert.match(
     invalidUiSpecPlaceholder.validation?.issues.join("\n") ?? "",
     /placeholder scaffold text/i
+  );
+  assert.equal(invalidLegacySkipWithoutRationale.status, "invalid");
+  assert.match(
+    invalidLegacySkipWithoutRationale.validation?.issues.join("\n") ?? "",
+    /must include a non-empty Rationale section/i
   );
   assert.equal(validContext.status, "created");
   assert.equal(validDiscussion.status, "created");

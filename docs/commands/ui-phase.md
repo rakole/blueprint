@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`ui-phase` is Blueprint's command for generate UI design contract (UI-SPEC.md) for frontend phases. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and now writes substantive UI-spec or skip-rationale content through dedicated phase-artifact write primitives instead of stopping at scaffold creation.
+`ui-phase` is Blueprint's command for generating a UI design contract (`UI-SPEC.md`) for frontend phases. In Blueprint it stays host-native, delegates persistence to documented MCP tools, reads the canonical `phase.ui-spec` contract before drafting or persisting, and uses a bounded checker review loop so designer output is revised before anything is saved.
 
 
 ## Command Path And Examples
@@ -54,6 +54,7 @@
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
@@ -62,7 +63,10 @@
 ## UI Persistence Contract
 
 - Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"2"` or `2`.
+- Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting or revising `XX-UI-SPEC.md`, and normalize the final draft to the returned `authoringTemplate`.
+- Read any existing `XX-UI-SPEC.md` through `blueprint_phase_artifact_read` before proposing replacement so overwrite confirmation stays explicit and reuse remains the default.
 - Use `blueprint_artifact_scaffold` only with the repo-relative UI-spec artifact path for the selected phase. Bare names such as `UI-SPEC` and absolute filesystem paths are invalid.
+- Use `blueprint-ui-designer` to draft the phase-scoped UI guidance when deeper design work is useful, then use `blueprint-checker` to review the draft against the phase requirements, locked Blueprint decisions, and discovery artifacts before any persistence step. If the checker requests revisions, update only the affected sections, re-normalize the draft to the same `authoringTemplate`, and re-run the checker before saving.
 - Persist the real final markdown through `blueprint_phase_artifact_write` with `artifact: "ui-spec"` and treat the returned `path` as authoritative instead of rebuilding filenames manually.
 - `XX-UI-SPEC.md` is the single durable output whether the phase gets a real UI contract or an explicit skip rationale. Do not invent a second skip artifact.
 
@@ -73,6 +77,7 @@
 - Primary skill: `blueprint-phase-discovery`
 - Optional subagents:
 - `blueprint-ui-designer`
+- `blueprint-checker`
 
 
 ## Dependencies
@@ -109,6 +114,7 @@
 - Honor effective-config gates before writing:
 - `workflow.ui_phase=false` should produce a documented skip rationale instead of a generated UI contract.
 - `workflow.ui_safety_gate=true` should require an explicit rationale when UI work is skipped.
+- Keep the checker-and-revision gate bounded: revise only the affected sections, then re-run the checker before persisting the final artifact.
 
 
 ## Edge Cases
@@ -136,6 +142,8 @@
 - Uses `XX-UI-SPEC.md` as the single phase-scoped durable output, whether the result is a full UI contract or a documented skip rationale.
 - Respects effective-config UI gates before generating or skipping UI output.
 - Persists substantive UI guidance or skip rationale into `XX-UI-SPEC.md`, not only scaffold placeholders.
+- Reads the canonical `phase.ui-spec` contract before drafting or revising the artifact.
+- Uses a checker-reviewed revision loop before persistence.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 

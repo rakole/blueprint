@@ -1960,7 +1960,11 @@ function hasRequirementTableRows(section: string): boolean {
 }
 
 function isExplicitUiSkipRationale(content: string): boolean {
-  return /## Outcome Mode\s*\n(?:- |\d+\.\s+)?Explicit skip rationale\b/i.test(content);
+  const outcomeMode = extractMarkdownSection(content, "Outcome Mode");
+
+  return /(?:^|\n)\s*(?:[-*]\s+|\d+\.\s+)?(?:explicit\s+)?skip rationale\b/im.test(
+    outcomeMode
+  );
 }
 
 export function validatePhaseArtifactContent(
@@ -1997,6 +2001,9 @@ export function validatePhaseArtifactContent(
   );
 
   const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
+  const missingRequiredSections = contract.requiredHeadings.filter(
+    (heading) => extractMarkdownSection(content, heading).trim().length === 0
+  );
 
   if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
     if (extractMarkdownSection(content, "Outcome Mode").trim().length === 0) {
@@ -2007,21 +2014,21 @@ export function validatePhaseArtifactContent(
         "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
       );
     }
+  } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
+    issues.push(
+      `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    );
   } else if (presentRequiredSections === 0) {
     issues.push(
       `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
     );
   }
 
-  const missingRequiredSections = contract.requiredHeadings.filter(
-    (heading) => extractMarkdownSection(content, heading).trim().length === 0
-  );
-
   if (artifact === "ui-spec" && missingRequiredSections.includes("Outcome Mode")) {
     issues.push("UI spec artifact section Outcome Mode must not be empty.");
   }
 
-  if (missingRequiredSections.length > 0) {
+  if (artifact !== "ui-spec" && missingRequiredSections.length > 0) {
     warnings.push(
       `${artifactLabel} is missing recommended contract sections: ${missingRequiredSections.join(", ")}.`
     );

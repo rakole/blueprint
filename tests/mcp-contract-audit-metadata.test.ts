@@ -68,8 +68,14 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchDoc, /Bare names such as `RESEARCH` and absolute paths are invalid/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
+  assert.match(uiCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
+  assert.match(uiCommand, /`blueprint-checker`/i);
+  assert.match(uiCommand, /artifactId: "phase\.ui-spec"/i);
+  assert.match(uiCommand, /authoringTemplate/i);
   assert.match(uiCommand, /Do not create a second UI-skip artifact/i);
   assert.match(uiDoc, /## UI Persistence Contract/);
+  assert.match(uiDoc, /canonical `phase\.ui-spec` contract/i);
+  assert.match(uiDoc, /bounded checker review loop/i);
   assert.match(uiDoc, /single durable output/i);
 
   assert.match(discoverySkill, /`blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object/i);
@@ -77,6 +83,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
   assert.match(discoverySkill, /Canonical Research Contract/);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);
+  assert.match(discoverySkill, /artifactId: "phase\.ui-spec"/);
+  assert.match(discoverySkill, /blueprint-checker/i);
 });
 
 test("execution and validation contracts stay explicit across manifests, docs, skills, and agent guidance", async () => {

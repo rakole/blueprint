@@ -113,6 +113,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const single = await blueprintArtifactContractRead({ artifactId: "phase.research" });
   const listed = await blueprintArtifactContractRead({});
   const researchContract = readArtifactContract("phase.research");
+  const uiContract = readArtifactContract("phase.ui-spec");
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
   const securityContract = readArtifactContract("review.security");
@@ -141,6 +142,39 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   ]);
   assert.ok(Array.isArray(listed.contracts));
   assert.ok(listed.contracts.length >= 10);
+  assert.deepEqual(uiContract.requiredHeadings, [
+    "Outcome Mode",
+    "User Experience Goals",
+    "Visual Design Decisions",
+    "Screens And States",
+    "Components And Constraints",
+    "Accessibility And Content",
+    "Registry And Design-System Safety",
+    "Next Safe Action"
+  ]);
+  assert.match(uiContract.authoringTemplate, /Spacing and layout:/);
+  assert.match(uiContract.authoringTemplate, /Typography:/);
+  assert.match(uiContract.authoringTemplate, /Color and contrast:/);
+  assert.match(uiContract.authoringTemplate, /Copy and content:/);
+  assert.match(uiContract.authoringTemplate, /## Rationale/);
+  assert.match(uiContract.authoringTemplate, /Registry and design-system safety:/);
+  assert.match(uiContract.notes.join("\n"), /spacing, typography, color, copy\/content/i);
+  assert.match(uiContract.notes.join("\n"), /optional `## Rationale` branch/i);
+  assert.ok(
+    uiContract.placeholderSignals.includes(
+      "Spacing and layout: <grid, rhythm, or layout constraints>"
+    )
+  );
+  assert.ok(
+    uiContract.placeholderSignals.includes(
+      "Typography: <type scale, emphasis, or readability decisions>"
+    )
+  );
+  assert.ok(
+    uiContract.placeholderSignals.includes(
+      "Registry and design-system safety: <how the draft avoids forking the registry or design system>"
+    )
+  );
   assert.deepEqual(reviewContract.requiredHeadings, [
     "Review Summary",
     "Scope Reviewed",

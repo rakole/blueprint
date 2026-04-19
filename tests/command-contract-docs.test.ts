@@ -337,7 +337,7 @@ test("phase planning skill and bounded planning agents are marked implemented in
   );
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-checker` \| `implemented` \| Verify plan quality before execution \|/
+    /\| `blueprint-checker` \| `implemented` \| Verify plan quality before execution and UI-spec readiness before persistence \|/
   );
 });
 

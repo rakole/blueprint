@@ -31,7 +31,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-roadmapper` | `implemented` | Build roadmap candidates, coverage notes, and revision-safe milestone structure |
 | `blueprint-mapper` | `implemented` | Create codebase mapping outputs |
 | `blueprint-planner` | `implemented` | Create plan files |
-| `blueprint-checker` | `implemented` | Verify plan quality before execution |
+| `blueprint-checker` | `implemented` | Verify plan quality before execution and UI-spec readiness before persistence |
 | `blueprint-executor` | `implemented` | Execute plan tasks and produce summaries |
 | `blueprint-verifier` | `implemented` | Verify execution results and UAT evidence |
 | `blueprint-researcher` | `implemented` | Phase-specific technical research |
@@ -59,7 +59,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `pause-work` and `resume-work` remain governance-owned and do not require dedicated subagents.
 - `discuss-phase` may use `blueprint-researcher` selectively.
 - `research-phase` uses `blueprint-researcher`.
-- `ui-phase` uses `blueprint-ui-designer`.
+- `ui-phase` uses `blueprint-ui-designer` for draft generation and `blueprint-checker` for bounded revision review before persistence.
 - `list-phase-assumptions` may use `blueprint-researcher`.
 - `plan-phase` uses `blueprint-planner` and `blueprint-checker`.
 - `execute-phase` uses `blueprint-executor`.

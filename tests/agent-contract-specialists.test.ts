@@ -41,6 +41,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   const mapper = await readAgent("blueprint-mapper");
   const researcher = await readAgent("blueprint-researcher");
   const uiDesigner = await readAgent("blueprint-ui-designer");
+  const checker = await readAgent("blueprint-checker");
 
   assert.match(mapper, /## Focus Modes/);
   assert.match(
@@ -53,7 +54,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
 
   assert.match(researcher, /## Required Reads/);
   assert.match(researcher, /## Required Output Contract/);
-  assert.match(researcher, /Return content in this exact shape:/);
+  assert.match(researcher, /Return content as the populated research body/i);
   assert.match(researcher, /## Revision Behavior/);
   assert.match(
     researcher,
@@ -64,9 +65,16 @@ test("mapping and discovery specialist agents encode concrete output modes and r
 
   assert.match(uiDesigner, /## Required Reads/);
   assert.match(uiDesigner, /## UI Decision Rules/);
-  assert.match(uiDesigner, /UI Contract` or\s+`Skip Rationale/);
+  assert.match(uiDesigner, /UI Contract` or\s+`Explicit skip rationale/);
   assert.match(uiDesigner, /safety-gate/i);
   assert.match(uiDesigner, /Do not invent a second artifact for skipped UI work/);
+
+  assert.match(checker, /## Purpose/);
+  assert.match(checker, /phase UI spec goal-backward/i);
+  assert.match(checker, /XX-UI-SPEC\.md/);
+  assert.match(checker, /phase\.ui-spec/);
+  assert.match(checker, /bounded/i);
+  assert.match(checker, /re-run\s+the checker/i);
 });
 
 test("docs specialist agents encode scoped drafting and evidence-backed verification rules", async () => {

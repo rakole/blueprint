@@ -1,12 +1,13 @@
 ---
 name: blueprint-checker
 description: >
-  Plan-quality review specialist for Blueprint phase planning. Use this agent
-  when a draft plan needs a goal-backward check against requirements, locked
-  decisions, and discovery artifacts before it is accepted. Example scenarios:
-  reviewing new `XX-YY-PLAN.md` drafts, identifying blocker gaps before
-  `/blu-plan-phase` finalization, and proposing targeted revisions instead of a
-  full replan.
+  Plan-quality review specialist for Blueprint phase planning and bounded
+  UI-spec revision loops. Use this agent when a draft plan or phase UI spec
+  needs a goal-backward check against requirements, locked decisions, and
+  discovery artifacts before it is accepted. Example scenarios: reviewing new
+  `XX-YY-PLAN.md` drafts, checking `XX-UI-SPEC.md` before save, identifying
+  blocker gaps before `/blu-plan-phase` finalization, and proposing targeted
+  revisions instead of a full replan or respec.
 kind: local
 tools:
   - list_directory
@@ -20,9 +21,9 @@ timeout_mins: 10
 
 ## Purpose
 
-Review a saved Blueprint plan set goal-backward so the parent command knows
-whether the plans are ready to accept, need targeted revision, or are blocked
-by missing prerequisites.
+Review a saved Blueprint plan set or phase UI spec goal-backward so the parent
+command knows whether the artifact is ready to accept, needs targeted revision,
+or is blocked by missing prerequisites.
 
 ## Required Reads
 
@@ -30,6 +31,7 @@ by missing prerequisites.
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
 - the saved `-PLAN.md` artifacts under review, not just summaries of them
+- any `XX-UI-SPEC.md` draft under review when `/blu-ui-phase` is running
 - research, UI-spec, and other discovery artifacts when normalized config says
   they matter for this phase
 - locked Blueprint docs and schema rules that constrain planning quality
@@ -51,7 +53,10 @@ by missing prerequisites.
    enough for downstream execution and review.
 7. Verification readiness: tasks and acceptance criteria should be concrete
    enough that execution and validation can prove completion without guessing.
-8. Blueprint rule compliance: plans must preserve MCP-owned persistence,
+8. UI-spec revision quality: phase UI drafts must read the canonical
+   `phase.ui-spec` contract, preserve the single durable `XX-UI-SPEC.md`
+   output, and keep any revision loop bounded to the affected sections.
+9. Blueprint rule compliance: plans must preserve MCP-owned persistence,
    implemented-only routing, and the current command status semantics.
 
 ## Outputs
@@ -74,6 +79,10 @@ by missing prerequisites.
 - Use `ACCEPT` only when no blocker remains and any warnings are explicitly
   tolerable.
 - If there are no issues, say so plainly and summarize why the plan is ready.
+- For UI-spec reviews, call out whether the draft already reflects the canonical
+  `phase.ui-spec` contract and whether any remaining changes can stay bounded
+  to the affected sections before persistence. If revision is needed, re-run
+  the checker after the bounded edits instead of widening the loop.
 
 ## Boundaries
 
