@@ -38,6 +38,7 @@
 - effective Blueprint config through `blueprint_config_get`
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation and UAT artifacts through `blueprint_phase_validation_read`
+- canonical authoring templates through `blueprint_artifact_contract_read`
 
 
 ## Blueprint And Global State Writes
@@ -55,6 +56,7 @@
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
 - `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
+- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
