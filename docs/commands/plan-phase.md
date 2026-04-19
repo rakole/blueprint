@@ -11,12 +11,17 @@
 
 `plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, read the actual current context and relevant discovery artifact content, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying host-native.
 
+Interactive planning UX rules:
+- Prefer Gemini CLI's built-in `ask_user` dialog over plain assistant prose whenever you need overwrite confirmation or a structured reuse/revise/replace decision about an existing plan.
+- Default to one focused question per `ask_user` call.
+- For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
+
 
 ## Command Path And Examples
 
 - CLI command path: `/blu-plan-phase`
 - Root router form: `/blu plan-phase`
-- Argument hint: `[phase] [--auto] [--research] [--skip-research] [--gaps] [--skip-verify] [--prd <file>] [--reviews] [--text]`
+- Argument hint: `[phase]`
 - `/blu-plan-phase 3`
 - `/blu plan-phase`
 
@@ -55,6 +60,7 @@
 - `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_plan_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}`
@@ -67,6 +73,7 @@
 ## Plan Persistence Contract
 
 
+- Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` before drafting or revising `XX-YY-PLAN.md`, and normalize the final draft to `contract.authoringTemplate`.
 - Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
@@ -116,6 +123,7 @@
 
 - Confirm destructive replanning when plans already exist.
 - Prefer reusing the existing plan index and reading existing plan files before creating replacements.
+- Use `ask_user` for overwrite confirmation and any reuse/revise/replace decision when one or more plan files already exist.
 
 
 ## Edge Cases
@@ -142,6 +150,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses the plan index plus dedicated plan read/write tools to persist actual plan content instead of scaffold-only placeholders.
 - Reads actual current context content and relevant discovery artifact content before drafting or revising plans instead of relying on status-only discovery signals.
+- Reads the canonical `phase.plan` contract and normalizes the final draft to `contract.authoringTemplate` before writing.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Derives research, plan-check, Nyquist, UI-gate, and planning-confirmation behavior from normalized effective config instead of re-deriving defaults inside the command.

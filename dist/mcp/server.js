@@ -17383,6 +17383,23 @@ function extractMarkdownSection(markdown, heading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function stripPlanPlaceholderSignals(section) {
+  return [...PLAN_PLACEHOLDER_SIGNALS, ...PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS].reduce(
+    (acc, signal) => acc.split(signal).join(""),
+    section.replace(/\r\n/g, "\n")
+  );
+}
+function extractPlanTemplatePlaceholderListItems(template) {
+  return ["Verification", "Must Haves"].flatMap((heading) => {
+    const section = extractMarkdownSection(template, heading);
+    return section.split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line));
+  });
+}
+function hasSubstantivePlanListContent(section) {
+  const normalizedSection = stripPlanPlaceholderSignals(section);
+  const bulletLines = normalizedSection.split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line)).filter((line) => !/^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(line));
+  return bulletLines.length > 0;
+}
 function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -17781,9 +17798,8 @@ function validateSummaryArtifactContent(content) {
     warnings
   };
 }
-function validatePlanArtifactContent(content, expectedPhase) {
+function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   const issues = [];
-  const warnings = [];
   const metadata = parsePlanFrontmatter(content);
   if (!extractFrontmatter(content)) {
     issues.push("Plan artifact must start with YAML-style frontmatter.");
@@ -17856,19 +17872,17 @@ function validatePlanArtifactContent(content, expectedPhase) {
     }
   }
   const verificationSection = extractMarkdownSection(content, "Verification");
-  if (!/^- /m.test(verificationSection)) {
-    warnings.push(
-      "Plan artifact should include at least one verification bullet under ## Verification."
-    );
+  if (!hasSubstantivePlanListContent(verificationSection)) {
+    issues.push("Plan artifact must include at least one substantive verification bullet under ## Verification.");
   }
   const mustHavesSection = extractMarkdownSection(content, "Must Haves");
-  if (!/^- /m.test(mustHavesSection)) {
-    warnings.push("Plan artifact should include at least one bullet under ## Must Haves.");
+  if (!hasSubstantivePlanListContent(mustHavesSection)) {
+    issues.push("Plan artifact must include at least one substantive bullet under ## Must Haves.");
   }
   return {
     valid: issues.length === 0,
     issues,
-    warnings,
+    warnings: [],
     metadata
   };
 }
@@ -19070,7 +19084,7 @@ async function blueprintArtifactReportWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, REQUIRED_VERIFICATION_SECTIONS, REQUIRED_UAT_SECTIONS, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, REQUIRED_VERIFICATION_SECTIONS, REQUIRED_UAT_SECTIONS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -19200,11 +19214,15 @@ var init_artifacts = __esm({
     RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = readArtifactContract(
       "phase.research"
     ).placeholderSignals;
-    REQUIRED_PLAN_SECTIONS = readArtifactContract("phase.plan").requiredHeadings;
+    PLAN_CONTRACT = readArtifactContract("phase.plan");
+    REQUIRED_PLAN_SECTIONS = PLAN_CONTRACT.requiredHeadings;
     PLAN_PLACEHOLDER_SIGNALS = [
-      ...readArtifactContract("phase.plan").placeholderSignals,
+      ...PLAN_CONTRACT.placeholderSignals,
       "*Generated by `blueprint_artifact_scaffold`*"
     ];
+    PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS = extractPlanTemplatePlaceholderListItems(
+      PLAN_CONTRACT.authoringTemplate
+    );
     ARTIFACT_RENDERERS = {
       ".blueprint/PROJECT.md": renderProjectArtifact,
       ".blueprint/REQUIREMENTS.md": renderRequirementsArtifact,
@@ -24095,9 +24113,54 @@ async function blueprintPhasePlanWrite(args) {
   const pathValue = planPathFor(resolved, planId2);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = normalizeTextContent3(args.content);
-  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber);
-  const exists = await pathExists4(absolutePath);
+  const strictValidation = (args.validationMode ?? "strict") === "strict";
+  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber, {
+    strict: strictValidation
+  });
   const warnings = [];
+  const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
+  if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId2) {
+    const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId2}".`;
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      validation: {
+        valid: false,
+        issues: [...validation.issues, issue2],
+        warnings: validation.warnings
+      },
+      warnings: []
+    };
+  }
+  if (!validation.valid && strictValidation) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      validation: {
+        valid: false,
+        issues: validation.issues,
+        warnings: validation.warnings
+      },
+      warnings: []
+    };
+  }
+  const exists = await pathExists4(absolutePath);
   if (exists) {
     const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
@@ -24126,26 +24189,6 @@ async function blueprintPhasePlanWrite(args) {
         `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
       );
     }
-  }
-  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId: planId2,
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: validation.issues,
-        warnings: validation.warnings
-      },
-      warnings: []
-    };
   }
   warnings.push(
     ...await writeTextFile(absolutePath, normalizedContent, {

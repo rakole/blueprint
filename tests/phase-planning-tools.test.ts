@@ -299,6 +299,62 @@ Ship the plan-phase runtime.
 `;
 }
 
+function hollowPlanContent(planId: string, wave: number): string {
+  return `---
+phase: 3
+plan_id: "${planId}"
+title: "Plan ${planId}"
+wave: ${wave}
+status: planned
+objective: "Ship the plan-phase runtime."
+depends_on: []
+requirements:
+  - LIFE-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/phase-planning-tools.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan ${planId}
+
+## Goal
+
+Ship the plan-phase runtime.
+
+## Scope
+
+- Add phase plan indexing and writing support.
+
+## Tasks
+
+### Task 1: Add the MCP plan tools
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Add Blueprint plan index, read, and write support with overwrite protection.
+
+#### Acceptance Criteria
+
+- src/mcp/tools/phase.ts contains blueprintPhasePlanWrite
+
+## Verification
+
+- Replace with the exact checks that prove this plan is complete.
+
+## Must Haves
+
+- Replace with the goal-backward must-haves this plan cannot drop.
+`;
+}
+
 test("phase planning MCP tools are registered in the Blueprint server", () => {
   for (const toolName of [
     "blueprint_phase_plan_index",
@@ -371,6 +427,80 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.match(invalid.validation.issues.join("\n"), /frontmatter|required section/i);
   assert.match(afterStatus.nextAction, /\/blu-execute-phase 3/);
   assert.match(writtenBody, /Plan 02/);
+});
+
+test("phase planning strict writes reject hollow verification and must-have sections", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const warned = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "03",
+    content: hollowPlanContent("03", 3),
+    overwrite: true,
+    validationMode: "warn"
+  });
+  const warnedRead = await blueprintPhasePlanRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "03"
+  });
+  const rejected = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "04",
+    content: hollowPlanContent("04", 4),
+    overwrite: true
+  });
+
+  assert.equal(warned.status, "created");
+  assert.equal(warned.validation?.valid, false);
+  assert.match(warned.validation?.issues.join("\n") ?? "", /Verification/);
+  assert.match(warned.validation?.issues.join("\n") ?? "", /Must Haves/);
+  assert.equal(warnedRead.validation?.valid, false);
+  assert.match(warnedRead.validation?.issues.join("\n") ?? "", /Verification/);
+  assert.match(warnedRead.validation?.issues.join("\n") ?? "", /Must Haves/);
+  assert.equal(rejected.status, "invalid");
+  assert.equal(rejected.validation?.valid, false);
+  assert.match(rejected.validation?.issues.join("\n") ?? "", /Verification/);
+  assert.match(rejected.validation?.issues.join("\n") ?? "", /Must Haves/);
+});
+
+test("phase planning writes reject plan_id values that disagree with the target plan slot", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const mismatchedWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("02", 1),
+    overwrite: true
+  });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validPlanContent("02", 2),
+    overwrite: true
+  });
+  const mismatchedReuse = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: 2,
+    content: validPlanContent("03", 2)
+  });
+
+  assert.equal(mismatchedWrite.status, "invalid");
+  assert.match(mismatchedWrite.validation?.issues.join("\n") ?? "", /must match the requested planId/i);
+  assert.equal(created.status, "created");
+  assert.equal(mismatchedReuse.status, "invalid");
+  assert.match(mismatchedReuse.validation?.issues.join("\n") ?? "", /must match the requested planId/i);
 });
 
 test("phase planning tools accept numeric phase and plan identifiers from runtime callers", async (t) => {

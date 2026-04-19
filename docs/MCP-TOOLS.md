@@ -74,7 +74,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | Tool | Purpose | Returns |
 |---|---|---|
 | `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding, not as the final persistence layer for filled-in artifacts | `{createdFiles, reusedFiles, warnings}` |
-| `blueprint_artifact_contract_read` | Read canonical artifact contracts, including scaffold templates, authoring templates, locked markers, and required headings | `{artifactId, contract}` or `{contracts}` |
+| `blueprint_artifact_contract_read` | Read canonical artifact contracts, including scaffold templates, locked markers, and required headings | `{artifactId, contract}` or `{artifactId: null, contracts}` |
 | `blueprint_artifact_list` | Enumerate known core, phase, codebase, and report artifacts | `{artifacts, reports, missing, warnings}` |
 | `blueprint_artifact_mutate_index` | Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
@@ -120,7 +120,7 @@ These tool names are part of the documented future contract, but they are not re
 - `discuss-phase` uses phase location/context, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update`.
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, the canonical UI-spec contract read, discovery artifact read and write tools, scaffolding, config, a bounded checker review loop, and state update tools.
-- `plan-phase` uses plan index, plan read and write tools, config, artifact validation, and state update tools.
+- `plan-phase` uses the canonical `phase.plan` contract read, plan index, plan read and write tools, config, artifact validation, and state update tools.
 - `execute-phase` uses plan index/read, summary index/read/write, config, artifact validation, and state update tools.
 - `fast` uses `blueprint_project_status` and `blueprint_state_update` to keep trivial inline execution inside the implemented command surface without inventing extra Blueprint artifacts.
 - `quick` uses `blueprint_project_status`, `blueprint_command_catalog`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep bounded quick runs report-backed and routed inside the implemented command surface.
@@ -180,7 +180,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 ### Scaffolding
 
 - `blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths.
-- `blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract for a given artifact id such as `phase.research`, `phase.verification`, or `report.debug`.
+- `blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract object for a given artifact id such as `phase.research`, `phase.verification`, or `report.debug`; `contract.authoringTemplate` holds the authoring template.
 - Do not pass bare artifact names such as `STACK`, absolute filesystem paths, or ad hoc report filenames.
 - Use scaffolding only for first-write seeding or template regeneration. Do not treat scaffold output as the final persistent content for filled-in research, context, UI-spec, plan, summary, validation, or report artifacts.
 - Treat returned `createdFiles` and `reusedFiles` as authoritative for what the tool actually touched.

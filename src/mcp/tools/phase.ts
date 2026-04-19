@@ -3366,9 +3366,61 @@ export async function blueprintPhasePlanWrite(
   const pathValue = planPathFor(resolved, planId);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = normalizeTextContent(args.content);
-  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber);
-  const exists = await pathExists(absolutePath);
+  const strictValidation = (args.validationMode ?? "strict") === "strict";
+  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber, {
+    strict: strictValidation
+  });
   const warnings: string[] = [];
+  const normalizedFrontmatterPlanId =
+    validation.metadata.planId && /^\d+$/.test(validation.metadata.planId)
+      ? normalizePlanId(validation.metadata.planId)
+      : null;
+
+  if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId) {
+    const issue = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId}".`;
+
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      validation: {
+        valid: false,
+        issues: [...validation.issues, issue],
+        warnings: validation.warnings
+      },
+      warnings: []
+    };
+  }
+
+  if (!validation.valid && strictValidation) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      validation: {
+        valid: false,
+        issues: validation.issues,
+        warnings: validation.warnings
+      },
+      warnings: []
+    };
+  }
+
+  const exists = await pathExists(absolutePath);
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
@@ -3401,27 +3453,6 @@ export async function blueprintPhasePlanWrite(
         `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
       );
     }
-  }
-
-  if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: validation.issues,
-        warnings: validation.warnings
-      },
-      warnings: []
-    };
   }
 
   warnings.push(
