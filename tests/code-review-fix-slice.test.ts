@@ -95,7 +95,7 @@ test("code-review-fix docs and catalog metadata promote the review-remediation s
 
   assert.match(
     catalogMarkdown,
-    /\| `code-review-fix` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEW-FIX\.md; code changes; \.blueprint\/STATE\.md` \| `High: automated fixes plus optional iteration loop\.` \|/
+    /\| `code-review-fix` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEW-FIX\.md; code changes for selected findings; \.blueprint\/STATE\.md` \| `High: selected findings can trigger bounded repo remediation plus review-fix\/state updates\.` \|/
   );
   assert.match(
     implementationOrder,
@@ -226,6 +226,7 @@ test("code-review-fix is exposed as an implemented remediation command with the 
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_review_load_findings",
+    "blueprint_artifact_contract_read",
     "blueprint_review_record",
     "blueprint_state_update"
   ]);
