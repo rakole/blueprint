@@ -178,6 +178,10 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 - <key conclusion>
 
+## Locked Decisions From Context
+
+- <phase decision preserved from context>
+
 ## User Constraints
 
 - <repo, product, or workflow constraint>
@@ -185,6 +189,14 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 ## Standard Stack
 
 - <runtime, library, or shared repo pattern>
+
+## Installation And Setup
+
+- <installation or setup guidance>
+
+## Alternatives Considered
+
+- <alternative considered and tradeoff>
 
 ## Architecture Patterns
 
@@ -194,9 +206,27 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 - <existing tool, helper, or platform feature>
 
+## Anti-Patterns
+
+- <anti-pattern detail or implementation to avoid>
+
+## State Of The Art
+
+- <current ecosystem or repo update>
+
 ## Common Pitfalls
 
 - <failure mode or regression risk>
+
+## Open Questions
+
+- <open question that still needs an answer>
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| <topic> | LOW|MEDIUM|HIGH | <evidence-backed confidence explanation> |
 
 ## Code Examples
 
@@ -943,11 +973,18 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     requiredHeadings: [
       "Phase Requirements",
       "Summary",
+      "Locked Decisions From Context",
       "User Constraints",
       "Standard Stack",
+      "Installation And Setup",
+      "Alternatives Considered",
       "Architecture Patterns",
       "Don't Hand-Roll",
+      "Anti-Patterns",
+      "State Of The Art",
       "Common Pitfalls",
+      "Open Questions",
+      "Confidence Breakdown",
       "Code Examples",
       "Recommendations",
       "Sources"
@@ -962,18 +999,27 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<phase requirement>",
       "<evidence-backed guidance>",
       "<key conclusion>",
+      "<phase decision preserved from context>",
       "<repo, product, or workflow constraint>",
       "<runtime, library, or shared repo pattern>",
+      "<installation or setup guidance>",
+      "<alternative considered and tradeoff>",
       "<durable implementation pattern>",
       "<existing tool, helper, or platform feature>",
+      "<anti-pattern detail or implementation to avoid>",
+      "<current ecosystem or repo update>",
       "<failure mode or regression risk>",
+      "<open question that still needs an answer>",
+      "<topic>",
+      "<evidence-backed confidence explanation>",
       "<short code or pseudocode example>",
       "<prescriptive recommendation with tradeoffs>",
       "<repo path, URL, or cited file reference>"
     ],
     notes: [
       "Research writes validate in strict mode by default.",
-      "Additional top-level headings are allowed, but required headings and the confidence marker stay locked."
+      "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
+      "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
     renderAuthoringTemplate: renderResearchTemplate

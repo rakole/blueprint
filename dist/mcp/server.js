@@ -14381,6 +14381,10 @@ function renderResearchTemplate(context) {
 
 - <key conclusion>
 
+## Locked Decisions From Context
+
+- <phase decision preserved from context>
+
 ## User Constraints
 
 - <repo, product, or workflow constraint>
@@ -14388,6 +14392,14 @@ function renderResearchTemplate(context) {
 ## Standard Stack
 
 - <runtime, library, or shared repo pattern>
+
+## Installation And Setup
+
+- <installation or setup guidance>
+
+## Alternatives Considered
+
+- <alternative considered and tradeoff>
 
 ## Architecture Patterns
 
@@ -14397,9 +14409,27 @@ function renderResearchTemplate(context) {
 
 - <existing tool, helper, or platform feature>
 
+## Anti-Patterns
+
+- <anti-pattern detail or implementation to avoid>
+
+## State Of The Art
+
+- <current ecosystem or repo update>
+
 ## Common Pitfalls
 
 - <failure mode or regression risk>
+
+## Open Questions
+
+- <open question that still needs an answer>
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| <topic> | LOW|MEDIUM|HIGH | <evidence-backed confidence explanation> |
 
 ## Code Examples
 
@@ -15222,11 +15252,18 @@ var init_artifact_contracts = __esm({
         requiredHeadings: [
           "Phase Requirements",
           "Summary",
+          "Locked Decisions From Context",
           "User Constraints",
           "Standard Stack",
+          "Installation And Setup",
+          "Alternatives Considered",
           "Architecture Patterns",
           "Don't Hand-Roll",
+          "Anti-Patterns",
+          "State Of The Art",
           "Common Pitfalls",
+          "Open Questions",
+          "Confidence Breakdown",
           "Code Examples",
           "Recommendations",
           "Sources"
@@ -15241,18 +15278,27 @@ var init_artifact_contracts = __esm({
           "<phase requirement>",
           "<evidence-backed guidance>",
           "<key conclusion>",
+          "<phase decision preserved from context>",
           "<repo, product, or workflow constraint>",
           "<runtime, library, or shared repo pattern>",
+          "<installation or setup guidance>",
+          "<alternative considered and tradeoff>",
           "<durable implementation pattern>",
           "<existing tool, helper, or platform feature>",
+          "<anti-pattern detail or implementation to avoid>",
+          "<current ecosystem or repo update>",
           "<failure mode or regression risk>",
+          "<open question that still needs an answer>",
+          "<topic>",
+          "<evidence-backed confidence explanation>",
           "<short code or pseudocode example>",
           "<prescriptive recommendation with tradeoffs>",
           "<repo path, URL, or cited file reference>"
         ],
         notes: [
           "Research writes validate in strict mode by default.",
-          "Additional top-level headings are allowed, but required headings and the confidence marker stay locked."
+          "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
+          "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
@@ -17387,6 +17433,26 @@ function parsePlanFrontmatter(content) {
 function containsSourceEvidence(section) {
   return /https?:\/\/|`[^`]+`|\.blueprint\/|docs\/|src\/|tests\//.test(section);
 }
+function stripResearchPlaceholderSignals(section) {
+  return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
+    (acc, signal) => acc.split(signal).join(""),
+    section.replace(/\r\n/g, "\n")
+  );
+}
+function countResearchContentWords(section) {
+  return section.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
+}
+function hasSubstantiveResearchSection(section, heading) {
+  const normalized = stripResearchPlaceholderSignals(section);
+  const meaningfulLines = normalized.split("\n").map((line) => line.trim()).map((line) => line.replace(/^(?:[-*]\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line)).filter((line) => !/^why it matters\.?$/i.test(line));
+  if (meaningfulLines.length === 0) {
+    return false;
+  }
+  if (heading === "Code Examples") {
+    return /```[\s\S]*```/.test(normalized) && countResearchContentWords(normalized) >= 3;
+  }
+  return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
+}
 function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
@@ -17411,9 +17477,24 @@ function validateResearchArtifactContent(content) {
     );
   }
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    if (!new RegExp(`(?:^|\\n)## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(content)) {
+    if (!new RegExp(`(?:^|\\n)## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(
+      content
+    )) {
       issues.push(`Research artifact is missing required section: ${heading}.`);
+      continue;
     }
+    const section = extractMarkdownSection(content, heading);
+    if (!hasSubstantiveResearchSection(section, heading)) {
+      issues.push(
+        `Research artifact section ${heading} must contain substantive content after placeholders are removed.`
+      );
+    }
+  }
+  const phaseRequirements = extractMarkdownSection(content, "Phase Requirements");
+  if (!hasRequirementTableRows(phaseRequirements)) {
+    issues.push(
+      "Research artifact section Phase Requirements must include at least one populated requirement row."
+    );
   }
   const recommendations = extractMarkdownSection(content, "Recommendations");
   if (!/^- /m.test(recommendations)) {
@@ -17485,6 +17566,20 @@ function countNonEmptyContractSections(content, headings) {
     (count, heading) => count + (extractMarkdownSection(content, heading).trim().length > 0 ? 1 : 0),
     0
   );
+}
+function hasRequirementTableRows(section) {
+  return section.split("\n").map((line) => line.trim()).some((line) => {
+    if (!/^\|.*\|$/.test(line)) {
+      return false;
+    }
+    const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+    if (cells.length < 3) {
+      return false;
+    }
+    const isHeader = /^id$/i.test(cells[0] ?? "") && /^description$/i.test(cells[1] ?? "") && /^research support$/i.test(cells[2] ?? "");
+    const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+    return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
+  });
 }
 function isExplicitUiSkipRationale(content) {
   return /## Outcome Mode\s*\n(?:- |\d+\.\s+)?Explicit skip rationale\b/i.test(content);
@@ -23458,15 +23553,28 @@ async function blueprintPhaseResearchStatus(args = {}) {
   const researchPath = artifacts?.research ?? null;
   let researchValid = null;
   let researchIssues = [];
+  let researchUnreadable = false;
   const warnings = [...context.warnings];
   if (researchPath) {
     const projectRoot = await ensureRepoRoot(args.cwd);
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
-    const raw = await fs6.readFile(absolutePath, "utf8");
-    const validation = validateResearchArtifactContent(raw);
-    researchValid = validation.valid;
-    researchIssues = validation.issues;
-    warnings.push(...validation.warnings);
+    try {
+      const raw = await fs6.readFile(absolutePath, "utf8");
+      const validation = validateResearchArtifactContent(raw);
+      researchValid = validation.valid;
+      researchIssues = validation.issues;
+      warnings.push(...validation.warnings);
+    } catch (error2) {
+      researchUnreadable = true;
+      researchValid = false;
+      const reason = error2 instanceof Error && error2.message.trim().length > 0 ? error2.message : "unknown read failure";
+      researchIssues = [
+        `Research artifact at ${researchPath} could not be read: ${reason}.`
+      ];
+      warnings.push(
+        `Research artifact at ${researchPath} is stale, deleted, or unreadable: ${reason}.`
+      );
+    }
   }
   return {
     hasContext: Boolean(artifacts?.context),
@@ -23478,7 +23586,7 @@ async function blueprintPhaseResearchStatus(args = {}) {
     researchValid,
     researchIssues,
     suggestedRepairs: researchIssues.length > 0 ? [
-      "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
+      researchUnreadable ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.` : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
     ] : [],
     warnings
   };

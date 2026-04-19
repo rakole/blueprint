@@ -55,6 +55,7 @@
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
@@ -64,10 +65,10 @@
 
 - Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"3"` or `3`.
 - Use `blueprint_artifact_scaffold` only with the repo-relative Blueprint research artifact path for the selected phase. Bare names such as `RESEARCH` and absolute paths are invalid.
-- Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before final normalization.
+- Read the canonical `phase.research` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising `XX-RESEARCH.md`, and reuse the returned `authoringTemplate` for the final normalization pass.
 - Persist the final research body through `blueprint_phase_artifact_write` with `artifact: "research"` and treat the returned `path` as authoritative instead of deriving filenames from the phase slug.
 - `blueprint_phase_artifact_write` keeps research validation strict by default. Do not force a warn-only save just to bypass missing sections, citations, or other schema issues unless the user explicitly accepted that tradeoff.
-- Normalize the final research draft to the returned `authoringTemplate`.
+- Normalize the final research draft to the returned `authoringTemplate` after drafting and before persistence.
 - Keep the contract's required section names and locked markers unchanged.
 - Replace every placeholder signal before persistence.
 - Allow extra top-level headings only when the returned contract policy says they are supported.

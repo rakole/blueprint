@@ -150,6 +150,10 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 - Plans are ready for execution and no summary artifacts exist yet.
 
+## Locked Decisions From Context
+
+- Router surfaces must stay limited to implemented commands.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/.
@@ -159,6 +163,14 @@ async function createExecutionReadyRepo(): Promise<string> {
 - TypeScript
 - node:test via tsx --test
 
+## Installation And Setup
+
+- Run router and health fixtures against repos seeded with discovery artifacts.
+
+## Alternatives Considered
+
+- Recommending next steps from docs alone was rejected in favor of runtime status reads.
+
 ## Architecture Patterns
 
 - Commands stay thin; MCP tools own persistence.
@@ -167,9 +179,27 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 - Reuse the existing plan and summary index flow.
 
+## Anti-Patterns
+
+- Recommending planning or execution from malformed discovery evidence.
+
+## State Of The Art
+
+- Router and health flows now derive lifecycle guidance from saved artifact validity.
+
 ## Common Pitfalls
 
 - Treating a missing summary as completed execution.
+
+## Open Questions
+
+- Should health repair suggest regenerating stale research automatically in later waves?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Routing guidance | HIGH | The fixture asserts the next-step outcome from controlled artifact state. |
 
 ## Code Examples
 
@@ -183,7 +213,7 @@ await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
 
 ## Sources
 
-- \`src/mcp/tools/phase.ts\`
+- \`src/mcp/tools/phase.ts\` - lifecycle routing and artifact readiness checks.
 `,
     "utf8"
   );
@@ -316,6 +346,10 @@ async function createUiDiscoveryWithoutResearchButInvalidResearchRepo(): Promise
 
 - <key conclusion>
 
+## Locked Decisions From Context
+
+- <phase decision preserved from context>
+
 ## User Constraints
 
 - <repo, product, or workflow constraint>
@@ -323,6 +357,14 @@ async function createUiDiscoveryWithoutResearchButInvalidResearchRepo(): Promise
 ## Standard Stack
 
 - <runtime, library, or shared repo pattern>
+
+## Installation And Setup
+
+- <installation or setup guidance>
+
+## Alternatives Considered
+
+- <alternative considered and tradeoff>
 
 ## Architecture Patterns
 
@@ -332,9 +374,27 @@ async function createUiDiscoveryWithoutResearchButInvalidResearchRepo(): Promise
 
 - <existing tool, helper, or platform feature>
 
+## Anti-Patterns
+
+- <anti-pattern detail or implementation to avoid>
+
+## State Of The Art
+
+- <current ecosystem or repo update>
+
 ## Common Pitfalls
 
 - <failure mode or regression risk>
+
+## Open Questions
+
+- <open question that still needs an answer>
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| <topic> | LOW|MEDIUM|HIGH | <evidence-backed confidence explanation> |
 
 ## Code Examples
 
@@ -573,6 +633,10 @@ async function createMilestoneCloseoutRepo(
 
 - The final completed phase should route to the milestone audit first, then completion, then summary, then the next milestone start.
 
+## Locked Decisions From Context
+
+- Milestone closeout should stay report-backed and avoid hidden command expansion.
+
 ## User Constraints
 
 - Keep writes inside .blueprint/.
@@ -583,6 +647,14 @@ async function createMilestoneCloseoutRepo(
 - TypeScript
 - node:test via tsx --test
 
+## Installation And Setup
+
+- Run closeout fixtures after seeding roadmap, reports, and the saved research artifact.
+
+## Alternatives Considered
+
+- Manual closeout summaries without the saved research trail were rejected.
+
 ## Architecture Patterns
 
 - Use durable milestone reports as routing checkpoints.
@@ -592,10 +664,28 @@ async function createMilestoneCloseoutRepo(
 
 - Reuse the existing roadmap, artifact, and state MCP substrates.
 
+## Anti-Patterns
+
+- Treating milestone closeout as complete without discovery evidence from the active phase.
+
+## State Of The Art
+
+- Closeout routing now combines saved reports and discovery artifacts for the next safe action.
+
 ## Common Pitfalls
 
 - Skipping the audit report gate and jumping straight to archival.
 - Treating invalid research as good enough to continue closeout routing.
+
+## Open Questions
+
+- Should later milestone flows summarize research confidence in the final report?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| Milestone closeout routing | HIGH | The fixture controls the saved reports and active-phase artifacts. |
 
 ## Code Examples
 
@@ -605,12 +695,12 @@ await blueprintStateLoad({ cwd: repoPath });
 
 ## Recommendations
 
-- Route to \`/blu-audit-milestone v2\` when all milestone phases are complete and no milestone audit report exists.
-- Advance sequentially through completion, summary, and \`new-milestone\` once each report appears.
+- Route to /blu-audit-milestone v2 when all milestone phases are complete and no milestone audit report exists.
+- Advance sequentially through completion, summary, and new-milestone once each report appears.
 
 ## Sources
 
-- src/mcp/tools/state.ts
+- src/mcp/tools/state.ts - closeout routing and phase-status derivation.
 `,
     "utf8"
   );

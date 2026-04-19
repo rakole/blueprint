@@ -255,15 +255,22 @@ Structured persistence expectations:
 
 `XX-RESEARCH.md` is the planner-facing research contract for a single phase.
 
-Minimum required structure:
+Canonical template structure:
 - `**Confidence:** LOW|MEDIUM|HIGH`
 - `## Phase Requirements`
 - `## Summary`
+- `## Locked Decisions From Context`
 - `## User Constraints`
 - `## Standard Stack`
+- `## Installation And Setup`
+- `## Alternatives Considered`
 - `## Architecture Patterns`
 - `## Don't Hand-Roll`
+- `## Anti-Patterns`
+- `## State Of The Art`
 - `## Common Pitfalls`
+- `## Open Questions`
+- `## Confidence Breakdown`
 - `## Code Examples`
 - `## Recommendations`
 - `## Sources`
@@ -272,6 +279,8 @@ Validation expectations:
 - recommendations should be prescriptive rather than descriptive
 - sources must include a URL, repo path, or cited file reference
 - scaffold-only placeholders are not considered valid completed research
+- the canonical authoring template is MCP-owned and should be supplied to drafting before the final write step so the research body is shaped from the same contract throughout
+- current validation keys off the canonical heading set and also requires the `## Phase Requirements` table to include at least one populated requirement row
 
 Exact persistence template:
 
@@ -292,6 +301,10 @@ Exact persistence template:
 
 - <key conclusion>
 
+## Locked Decisions From Context
+
+- <phase decision preserved from context>
+
 ## User Constraints
 
 - <repo, product, or workflow constraint>
@@ -299,6 +312,14 @@ Exact persistence template:
 ## Standard Stack
 
 - <runtime, library, or shared repo pattern>
+
+## Installation And Setup
+
+- <installation or setup guidance>
+
+## Alternatives Considered
+
+- <alternative considered and tradeoff>
 
 ## Architecture Patterns
 
@@ -308,9 +329,27 @@ Exact persistence template:
 
 - <existing tool, helper, or platform feature>
 
+## Anti-Patterns
+
+- <anti-pattern detail or implementation to avoid>
+
+## State Of The Art
+
+- <current ecosystem or repo update>
+
 ## Common Pitfalls
 
 - <failure mode or regression risk>
+
+## Open Questions
+
+- <open question that still needs an answer>
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| <topic> | LOW|MEDIUM|HIGH | <evidence-backed confidence explanation> |
 
 ## Code Examples
 

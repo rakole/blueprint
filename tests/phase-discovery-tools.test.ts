@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -348,6 +348,26 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.equal(after.researchValid, false);
   assert.match(after.researchIssues.join("\n"), /placeholder/i);
   assert.match(uiSpec, /Outcome Mode/);
+});
+
+test("phase research status returns warnings instead of throwing for unreadable saved research paths", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await symlink(
+    "missing-research-target.md",
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md")
+  );
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.hasResearch, true);
+  assert.equal(status.researchValid, false);
+  assert.match(status.researchIssues.join("\n"), /could not be read/i);
+  assert.match(status.warnings.join("\n"), /stale|deleted|unreadable/i);
+  assert.match(status.suggestedRepairs.join("\n"), /restore or regenerate/i);
 });
 
 test("phase plan indexing and checkpoint persistence accept numeric inputs", async (t) => {

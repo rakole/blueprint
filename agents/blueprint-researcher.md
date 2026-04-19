@@ -51,73 +51,11 @@ phase.
 
 ## Required Output Contract
 
+- The parent command supplies the canonical `phase.research` authoring template and contract requirements through MCP; draft directly against that template instead of inventing a separate outline.
 - Include `**Confidence:** LOW|MEDIUM|HIGH`.
-- Include these sections exactly once:
-  - `## Phase Requirements`
-  - `## Summary`
-  - `## User Constraints`
-  - `## Standard Stack`
-  - `## Architecture Patterns`
-  - `## Don't Hand-Roll`
-  - `## Common Pitfalls`
-  - `## Code Examples`
-  - `## Recommendations`
-  - `## Sources`
-- Return content in this exact shape:
-
-````md
-# Phase XX: <Phase Name> - Research
-
-**Researched:** <YYYY-MM-DD>
-**Domain:** <research domain>
-**Confidence:** LOW|MEDIUM|HIGH
-
-## Phase Requirements
-
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| <requirement-id> | <phase requirement> | <evidence-backed guidance> |
-
-## Summary
-
-- <key conclusion>
-
-## User Constraints
-
-- <repo, product, or workflow constraint>
-
-## Standard Stack
-
-- <runtime, library, or shared repo pattern>
-
-## Architecture Patterns
-
-- <durable implementation pattern>
-
-## Don't Hand-Roll
-
-- <existing tool, helper, or platform feature>
-
-## Common Pitfalls
-
-- <failure mode or regression risk>
-
-## Code Examples
-
-```text
-<short code or pseudocode example>
-```
-
-## Recommendations
-
-- <prescriptive recommendation with tradeoffs>
-
-## Sources
-
-- <repo path, URL, or cited file reference> - why it matters
-````
-
-- Use citations or repo-path evidence in `## Sources`.
+- Preserve the canonical section names and ordering from the supplied template, including any extra research sections the parent command passes in.
+- Return content as the populated research body, plus concise warnings when evidence is weak or assumptions are inferred.
+- Keep citations and repo-path evidence in `## Sources`.
 - Keep recommendations prescriptive and planner-friendly.
 - Replace every angle-bracket placeholder before returning the draft, and do not rename headings.
 - Return only research content and concise warnings for the parent command; do
@@ -143,5 +81,4 @@ phase.
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual
   expansion before writing.
-- Do not widen into roadmap mutations, `.planning/`, or hidden legacy slash-command behavior
-  behavior.
+- Do not widen into roadmap mutations, `.planning/`, or hidden legacy slash-command behavior.

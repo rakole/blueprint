@@ -2778,17 +2778,34 @@ export async function blueprintPhaseResearchStatus(
   const researchPath = artifacts?.research ?? null;
   let researchValid: boolean | null = null;
   let researchIssues: string[] = [];
+  let researchUnreadable = false;
   const warnings = [...context.warnings];
 
   if (researchPath) {
     const projectRoot = await ensureRepoRoot(args.cwd);
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
-    const raw = await fs.readFile(absolutePath, "utf8");
-    const validation = validateResearchArtifactContent(raw);
+    try {
+      const raw = await fs.readFile(absolutePath, "utf8");
+      const validation = validateResearchArtifactContent(raw);
 
-    researchValid = validation.valid;
-    researchIssues = validation.issues;
-    warnings.push(...validation.warnings);
+      researchValid = validation.valid;
+      researchIssues = validation.issues;
+      warnings.push(...validation.warnings);
+    } catch (error) {
+      researchUnreadable = true;
+      researchValid = false;
+      const reason =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "unknown read failure";
+
+      researchIssues = [
+        `Research artifact at ${researchPath} could not be read: ${reason}.`
+      ];
+      warnings.push(
+        `Research artifact at ${researchPath} is stale, deleted, or unreadable: ${reason}.`
+      );
+    }
   }
 
   return {
@@ -2800,12 +2817,13 @@ export async function blueprintPhaseResearchStatus(
     uiSpecPath: artifacts?.uiSpec ?? null,
     researchValid,
     researchIssues,
-    suggestedRepairs:
-      researchIssues.length > 0
-        ? [
-            "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
-          ]
-        : [],
+    suggestedRepairs: researchIssues.length > 0
+      ? [
+          researchUnreadable
+            ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.`
+            : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
+        ]
+      : [],
     warnings
   };
 }
