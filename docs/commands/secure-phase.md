@@ -52,7 +52,7 @@
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
-- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, template, requiredHeadings}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
 ## Security Artifact Contract
@@ -99,7 +99,17 @@
 ## User Prompts And Confirmation Gates
 
 
+- Use Gemini CLI's `ask_user` tool for overwrite confirmation before replacing an existing `XX-SECURITY.md`.
+- Use Gemini CLI's `ask_user` tool for the structured verify-versus-accept decision when open threats remain.
 - Present the user with the choice to verify open threats or explicitly accept them. If threats remain open, block advancement and do not emit a next-step route.
+
+
+## In-Flight Progress Contract
+
+
+- Report the resolved phase, threat-register coverage, and whether the existing `XX-SECURITY.md` artifact is being reused or revised while the audit is running.
+- When open threats remain, report whether the command is waiting on verification or explicit acceptance before advancing.
+- Closing summary must include whether the security artifact was created, reused, or revised, plus the blocked-versus-cleared status for the threat register.
 
 
 ## Edge Cases
@@ -124,6 +134,7 @@
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Uses Gemini-native `ask_user` confirmation for overwrite and verify-versus-accept decision paths.
 - Leaves unrelated repo files untouched.
 - Distinguishes confirmed mitigations, open threats, accepted risks, suspicious artifact content, and explicit hardening follow-ups inside the saved security evidence.
 - Parses the saved phase threat model, builds a threat register, and keeps the audit bounded to declared threats and mitigations.
