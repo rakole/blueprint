@@ -206,6 +206,16 @@ test("review persistence sanitizes hidden control characters and records the war
 
 - .blueprint/phases/05-security-audit/05-01-SUMMARY.md
 
+## Threat Register
+
+| Threat ID | Disposition | Status | Evidence / Note |
+|-----------|-------------|--------|-----------------|
+| T-01 | mitigate | closed | Hidden control text was sanitized before persistence. |
+
+## Accepted Risks
+
+- none
+
 ## Findings
 
 - The review path is MCP-owned and phase-scoped.
@@ -213,6 +223,10 @@ test("review persistence sanitizes hidden control characters and records the war
 ## Follow-Ups
 
 - Add shared prompt-boundary hardening before the next maintenance rollout.
+
+## Security Audit Trail
+
+- 2026-04-19: persisted after sanitizing hidden control characters.
 
 ## Next Safe Action
 

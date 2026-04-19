@@ -14,8 +14,19 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   assert.match(commandFile, /`blueprint-security-auditor` subagent/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
+  );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, /XX-SECURITY\.md/);
+  assert.match(commandFile, /phase_plan_index/i);
+  assert.match(commandFile, /phase_plan_read/i);
+  assert.match(commandFile, /build the bounded threat register/i);
+  assert.match(commandFile, /verify (?:those )?threats or explicitly accept them/i);
+  assert.match(commandFile, /do not emit next-step routing when any threat remains open/i);
   assert.match(commandFile, /\/blu-validate-phase/);
   assert.match(commandFile, /\/blu-verify-work/);
   assert.match(commandFile, /\/blu-progress/);
@@ -31,8 +42,15 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-secure-phase/);
   assert.match(skillFile, /blueprint-security-auditor/);
+  assert.match(skillFile, /blueprint_phase_plan_index/);
+  assert.match(skillFile, /blueprint_phase_plan_read/);
   assert.match(skillFile, /blueprint_review_record/);
   assert.match(skillFile, /XX-SECURITY\.md/);
+  assert.match(skillFile, /blueprint_phase_plan_index/);
+  assert.match(skillFile, /blueprint_phase_plan_read/);
+  assert.match(skillFile, /build a threat\s+register/i);
+  assert.match(skillFile, /verify open threats or explicitly accept\s+them/i);
+  assert.match(skillFile, /block advancement when any threat remains open/i);
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-progress/);
 });

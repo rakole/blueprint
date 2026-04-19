@@ -1854,6 +1854,12 @@ function validateContractBackedMarkdown(
     ...validateRequiredMarkdownSections(content, artifactLabel, contract.requiredHeadings)
   );
 
+  issues.push(
+    ...contract.placeholderSignals
+      .filter((signal) => signal.length > 0 && content.includes(signal))
+      .map((signal) => `${artifactLabel} still contains placeholder scaffold text: ${signal}.`)
+  );
+
   return {
     valid: issues.length === 0,
     issues,

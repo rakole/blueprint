@@ -14680,13 +14680,27 @@ function renderSecurityTemplate(context) {
 
 - Saved phase artifacts, repo paths, or cited references reviewed.
 
+## Threat Register
+
+| Threat ID | Disposition | Status | Evidence / Note |
+|-----------|-------------|--------|-----------------|
+| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |
+
+## Accepted Risks
+
+- Accepted threat reference plus rationale, or \`none\`.
+
 ## Findings
 
-- Confirmed mitigation, missing control, or \`none\`.
+- Open threat, missing control, or risk decision that needs explicit attention, or \`none\`.
 
 ## Follow-Ups
 
 - Explicit hardening step, validation gap, or \`none\`.
+
+## Security Audit Trail
+
+- Audit date, threat counts, and verifier note.
 
 ## Next Safe Action
 
@@ -15411,10 +15425,30 @@ var init_artifact_contracts = __esm({
         canonicalName: "Security Review",
         canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-SECURITY.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Security Summary", "Evidence Reviewed", "Findings", "Follow-Ups", "Next Safe Action"],
+        requiredHeadings: [
+          "Security Summary",
+          "Evidence Reviewed",
+          "Threat Register",
+          "Accepted Risks",
+          "Findings",
+          "Follow-Ups",
+          "Security Audit Trail",
+          "Next Safe Action"
+        ],
         lockedMarkers: ["**Posture:**"],
-        placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
-        notes: ["Security artifacts should distinguish confirmed mitigations from missing controls."],
+        placeholderSignals: [
+          "PASS|FOLLOW_UP|BLOCKED",
+          "Concise security posture grounded in saved evidence.",
+          "Saved phase artifacts, repo paths, or cited references reviewed.",
+          "| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |",
+          "Accepted threat reference plus rationale, or `none`.",
+          "Open threat, missing control, or risk decision that needs explicit attention, or `none`.",
+          "Explicit hardening step, validation gap, or `none`.",
+          "Audit date, threat counts, and verifier note."
+        ],
+        notes: [
+          "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
+        ],
         renderScaffoldTemplate: renderSecurityTemplate,
         renderAuthoringTemplate: renderSecurityTemplate
       },
@@ -17402,6 +17436,9 @@ function validateContractBackedMarkdown(content, contractId, artifactLabel) {
     ...validateLockedMarkers(content, artifactLabel, contract.lockedMarkers),
     ...validateRequiredMarkdownSections(content, artifactLabel, contract.requiredHeadings)
   );
+  issues.push(
+    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal)).map((signal) => `${artifactLabel} still contains placeholder scaffold text: ${signal}.`)
+  );
   return {
     valid: issues.length === 0,
     issues,
@@ -19231,6 +19268,73 @@ function extractMarkdownSectionItems(content, headingPattern) {
   }
   return [...new Set(items)];
 }
+function normalizeReviewListItem(item) {
+  return normalizeFindingSummary(item).replace(/^`+|`+$/g, "").replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "").trim().toLowerCase();
+}
+function isPlaceholderReviewListItem(item) {
+  const normalized = normalizeReviewListItem(item);
+  return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "na" || normalized === "not applicable" || normalized === "no finding" || normalized === "no findings" || normalized === "no follow up" || normalized === "no follow ups" || normalized === "no follow-up" || normalized === "no follow-ups";
+}
+function collectSubstantiveReviewItems(content, headingPattern) {
+  return extractMarkdownSectionItems(content, headingPattern).filter(
+    (item) => !isPlaceholderReviewListItem(item)
+  );
+}
+function extractMarkdownSectionContent(content, headingPattern) {
+  const lines = content.split("\n");
+  const sections = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index].match(/^(##+)\s+(.+)$/);
+    if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
+      continue;
+    }
+    const sectionLevel = headingMatch[1].length;
+    const sectionLines = [];
+    for (let innerIndex = index + 1; innerIndex < lines.length; innerIndex += 1) {
+      const nextHeadingMatch = lines[innerIndex].match(/^(##+)\s+(.+)$/);
+      if (nextHeadingMatch && nextHeadingMatch[1].length <= sectionLevel) {
+        break;
+      }
+      sectionLines.push(lines[innerIndex]);
+    }
+    sections.push(sectionLines.join("\n"));
+  }
+  return sections;
+}
+function parseSecurityThreatRegisterFindings(content) {
+  const findings = [];
+  const seenSummaries = /* @__PURE__ */ new Set();
+  for (const section of extractMarkdownSectionContent(content, /^Threat Register$/i)) {
+    for (const line of section.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("|")) {
+        continue;
+      }
+      const cells = trimmed.split("|").map((cell) => cell.trim()).slice(1, -1);
+      if (cells.length < 4) {
+        continue;
+      }
+      const [threatId, disposition, status, evidence] = cells;
+      if (threatId.length === 0 || threatId === "Threat ID" || threatId === "---" || !/\bopen\b/i.test(status)) {
+        continue;
+      }
+      const summary = normalizeFindingSummary(
+        `Open threat ${threatId}: ${evidence.length > 0 ? evidence : `${disposition} ${status}`}`
+      );
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+      seenSummaries.add(summary);
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: "unknown",
+        summary,
+        sourceSection: "Threat Register"
+      });
+    }
+  }
+  return findings;
+}
 function extractMarkdownSectionEntries(content, headingPattern) {
   const lines = content.split("\n");
   const entries = [];
@@ -19299,6 +19403,9 @@ function parseFindingsFromArtifact(content, artifact) {
   const severityCounts = emptySeverityCounts();
   for (const entry of entries) {
     for (const item of entry.items) {
+      if (isPlaceholderReviewListItem(item)) {
+        continue;
+      }
       const summary = normalizeFindingSummary(item);
       if (summary.length === 0 || seenSummaries.has(summary)) {
         continue;
@@ -19314,31 +19421,39 @@ function parseFindingsFromArtifact(content, artifact) {
       });
     }
   }
+  if (artifact === "security") {
+    for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
+      if (seenSummaries.has(threatFinding.summary)) {
+        continue;
+      }
+      seenSummaries.add(threatFinding.summary);
+      severityCounts[threatFinding.severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: threatFinding.severity,
+        summary: threatFinding.summary,
+        sourceSection: threatFinding.sourceSection
+      });
+    }
+  }
   return {
     findings,
     severityCounts,
-    followUps: extractMarkdownSectionItems(
+    followUps: collectSubstantiveReviewItems(
       content,
       /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
     )
   };
 }
 function collectReviewCounts(content, artifact) {
-  const findings = extractMarkdownSectionItems(
-    content,
-    resolveFindingsHeadingPattern(artifact)
-  );
-  const followUps = extractMarkdownSectionItems(
-    content,
-    /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
-  );
+  const parsedFindings = parseFindingsFromArtifact(content, artifact);
   return {
     counts: {
       sections: countMarkdownSections(content),
-      findings: findings.length,
-      followUps: followUps.length
+      findings: parsedFindings.findings.length,
+      followUps: parsedFindings.followUps.length
     },
-    followUps
+    followUps: parsedFindings.followUps
   };
 }
 function parsePlanIdForSuffix(pathValue, phasePrefix2, suffix) {

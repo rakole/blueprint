@@ -27,6 +27,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const listed = await blueprintArtifactContractRead({});
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
+  const securityContract = readArtifactContract("review.security");
 
   assert.equal(single.artifactId, "phase.research");
   assert.match(single.contract.authoringTemplate, /^# Phase XX: <Phase Name> - Research$/m);
@@ -43,10 +44,25 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Follow-Ups",
     "Next Safe Action"
   ]);
+  assert.deepEqual(securityContract.requiredHeadings, [
+    "Security Summary",
+    "Evidence Reviewed",
+    "Threat Register",
+    "Accepted Risks",
+    "Findings",
+    "Follow-Ups",
+    "Security Audit Trail",
+    "Next Safe Action"
+  ]);
+  assert.match(reviewContract.authoringTemplate, /\*\*Verdict:\*\* PASS\|FOLLOW_UP\|BLOCKED/);
   assert.match(reviewContract.authoringTemplate, /## Review Summary/);
   assert.match(reviewContract.authoringTemplate, /## Evidence Reviewed/);
   assert.match(reviewContract.authoringTemplate, /## Positive Signals/);
   assert.match(reviewContract.authoringTemplate, /## Severity Summary/);
+  assert.match(securityContract.authoringTemplate, /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/);
+  assert.match(securityContract.authoringTemplate, /## Threat Register/);
+  assert.match(securityContract.authoringTemplate, /## Accepted Risks/);
+  assert.match(securityContract.authoringTemplate, /## Security Audit Trail/);
   assert.deepEqual(
     pauseContract.requiredHeadings,
     [
@@ -259,6 +275,36 @@ test("review and report contracts validate canonical sections while keeping extr
 
 - /blu-progress
 `;
+  const securityContract = readArtifactContract("review.security");
+  const securityScaffoldValidation = validateReviewArtifactContent(
+    securityContract.authoringTemplate,
+    "security"
+  );
+  const thinSecurityReview = `# Phase 05: Security - Security Review
+
+**Posture:** PASS
+
+## Security Summary
+
+- Saved evidence looks stable.
+
+## Evidence Reviewed
+
+- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
+
+## Findings
+
+- none
+
+## Follow-Ups
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
+`;
+  const thinSecurityValidation = validateReviewArtifactContent(thinSecurityReview, "security");
   const report = `# Debug Report
 
 ## Problem Statement
@@ -295,9 +341,18 @@ test("review and report contracts validate canonical sections while keeping extr
 
 - Non-contract report payloads stay permissive.
 `;
-
   const reviewValidation = validateReviewArtifactContent(review, "code-review");
   const thinReviewValidation = validateReviewArtifactContent(thinReview, "code-review");
+  assert.match(
+    securityContract.authoringTemplate,
+    /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/
+  );
+  assert.equal(securityScaffoldValidation.valid, false);
+  assert.match(securityScaffoldValidation.issues.join("\n"), /placeholder scaffold text/i);
+  assert.equal(thinSecurityValidation.valid, false);
+  assert.match(thinSecurityValidation.issues.join("\n"), /Threat Register/);
+  assert.match(thinSecurityValidation.issues.join("\n"), /Accepted Risks/);
+  assert.match(thinSecurityValidation.issues.join("\n"), /Security Audit Trail/);
   const reportValidation = validateReportArtifactContent(report, "debug-latest");
   const thinAuditFixValidation = validateReportArtifactContent(thinAuditFixReport, "audit-fix-04");
   const customReportValidation = validateReportArtifactContent(customReport, "custom-team-notes");

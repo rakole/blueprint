@@ -155,18 +155,23 @@ non-routable until their extra MCP substrate lands.
    summaries, validation, and UAT artifacts when they exist.
 3. Inspect any existing `XX-SECURITY.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update.
-4. Keep the audit grounded in saved repo evidence, phase goals, and the actual
-   implementation surface under review.
-5. Distinguish confirmed mitigations, missing or partial controls, suspicious
-   artifact content, and follow-up hardening work explicitly inside the saved
-   security artifact.
-6. Use `blueprint-security-auditor` when the phase spans multiple plans,
+4. Read `blueprint_phase_plan_index` and `blueprint_phase_plan_read` so the
+   saved phase threat model can be parsed from executed plan evidence, then
+   build a threat register from the declared threats and mitigations.
+5. Keep the audit bounded to that declared security scope rather than a broad
+   scan.
+6. Distinguish confirmed mitigations, open threats, accepted risks, and
+   follow-up hardening work explicitly inside the saved security artifact.
+7. Present the user with the choice to verify open threats or explicitly accept
+   them, and block advancement when any threat remains open instead of always
+   computing a next action.
+8. Use `blueprint-security-auditor` when the phase spans multiple plans,
    touches risky surfaces, or needs a higher-confidence mitigation review.
-7. Persist finished security evidence through `blueprint_review_record` with the
+9. Persist finished security evidence through `blueprint_review_record` with the
    `security` artifact.
-8. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+10. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
-   depending on which lifecycle artifacts already exist.
+   only after all threats are closed or accepted.
 
 ### `ui-review`
 

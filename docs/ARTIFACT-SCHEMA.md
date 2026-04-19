@@ -426,13 +426,19 @@ Minimum expected structure:
 - `**Posture:** PASS|FOLLOW_UP|BLOCKED`
 - `## Security Summary`
 - `## Evidence Reviewed`
+- `## Threat Register`
+- `## Accepted Risks`
 - `## Findings`
 - `## Follow-Ups`
+- `## Security Audit Trail`
 - `## Next Safe Action`
 
 Security audit expectations:
 - must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
-- should distinguish confirmed mitigations from missing or partial controls, even when those distinctions stay inside the existing `Findings` and `Follow-Ups` sections
+- should distinguish confirmed mitigations from missing or partial controls, while keeping threat dispositions and accepted-risk handling explicit
+- should keep the threat register or equivalent security disposition shape explicit instead of accepting scaffold-only placeholder markers as complete
+- should require the `Threat Register`, `Accepted Risks`, and `Security Audit Trail` sections so the security artifact cannot collapse back into a generic findings-only review
+- should treat `none` bullets as empty entries rather than real findings or follow-up items
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
 
