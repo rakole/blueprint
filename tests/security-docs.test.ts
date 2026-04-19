@@ -51,7 +51,10 @@ test("maintenance and security review docs reflect the tightened hardening guida
   );
   assert.match(securePhaseDoc, /parses? the saved phase threat model/i);
   assert.match(securePhaseDoc, /builds? a threat register/i);
+  assert.match(securePhaseDoc, /ask_user/i);
   assert.match(securePhaseDoc, /verify open threats or explicitly accept them/i);
+  assert.match(securePhaseDoc, /In-Flight Progress Contract/i);
+  assert.match(securePhaseDoc, /threat-register coverage/i);
   assert.match(securePhaseDoc, /blocks? advancement while any threat remains open/i);
   assert.match(securePhaseDoc, /bounded to the declared threats and mitigations/i);
   assert.match(securePhaseDoc, /suspicious artifact content/i);
