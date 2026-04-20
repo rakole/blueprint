@@ -198,11 +198,80 @@ Exercise validation routing.
   );
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary
+    `# Phase 03: Phase Discovery - Summary 01
 
-## Result
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    `---
+phase: 3
+plan_id: "02"
+title: "Validation Plan 02"
+wave: 1
+status: planned
+objective: "Exercise invalid summary indexing."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan 02
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 02
+
+**Plan:** \`03-02-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -312,9 +381,17 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
 
   assert.match(beforeStatus.nextAction, /\/blu-validate-phase 3/);
   assert.equal(created.status, "created");
+  assert.deepEqual(created.summaryPaths, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
   assert.equal(read.found, true);
-  assert.deepEqual(read.summaryPaths, [".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"]);
+  assert.deepEqual(read.summaryPaths, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
   assert.equal(reused.status, "reused");
+  assert.deepEqual(reused.summaryPaths, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.issues.join("\n"), /\*\*Coverage:\*\*/);
   assert.match(invalid.issues.join("\n"), /Evidence Reviewed/);
@@ -323,6 +400,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   assert.match(invalid.issues.join("\n"), /Next Safe Action/);
   assert.equal(context.phase?.artifacts.verification, verificationPath);
   assert.ok(listed.artifacts.phases.includes(verificationPath));
+  assert.equal(validation.valid, false);
   assert.doesNotMatch(validation.issues.join("\n"), /VERIFICATION artifacts exist without a SUMMARY artifact/i);
   assert.doesNotMatch(validation.issues.join("\n"), /UAT artifacts exist without a VERIFICATION artifact/i);
   assert.match(afterStatus.nextAction, /\/blu-verify-work 3/);
@@ -330,11 +408,314 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   assert.match(verificationBody, /\*\*Coverage:\*\*/);
 });
 
+test("validation tools do not re-check roadmap completion when a plan summary is still missing", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await rm(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"));
+
+  const verification = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
+`
+  });
+  const uat = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: `# Phase 03: Phase Discovery - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- UAT closed without blocking issues.
+
+## Questions Asked
+
+- Did the delivered behavior match the saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
+`
+  });
+
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.deepEqual(verification.summaryPaths, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+  assert.deepEqual(uat.summaryPaths, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+  assert.doesNotMatch(roadmapBody, /\*\*Status\*\*: completed/);
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+});
+
+test("validation tools refuse unchanged invalid VERIFICATION artifacts", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const verificationPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"
+  );
+  const invalidContent = `# Phase 03: Phase Discovery - Verification
+
+## Validation Summary
+
+- Missing the coverage marker and the remaining required sections.
+`;
+
+  await writeFile(verificationPath, invalidContent, "utf8");
+
+  const reused = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: invalidContent
+  });
+
+  assert.equal(reused.status, "invalid");
+  assert.equal(reused.written, false);
+  assert.match(reused.issues.join("\n"), /\*\*Coverage:\*\*/);
+  assert.match(reused.issues.join("\n"), /Evidence Reviewed/);
+});
+
+test("validation tools reject template-grade verification and UAT placeholder bodies", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const verificationPlaceholder = `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` and any other saved phase summaries for validation evidence.
+
+## Validation Summary
+
+- Concise readiness result grounded in the saved summaries.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- Explicit blocker, follow-up, or \`none\`.
+
+## Suggested Repairs
+
+- Explicit next repair, follow-up, or \`none\`.
+
+## Next Safe Action
+
+- /blu-verify-work 3
+`;
+
+  const invalidVerification = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: verificationPlaceholder
+  });
+
+  assert.equal(invalidVerification.status, "invalid");
+  assert.match(invalidVerification.issues.join("\n"), /placeholder scaffold text/i);
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
+`
+  });
+
+  const uatPlaceholder = `# Phase 03: Phase Discovery - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or \`none\`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence such as \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or \`none\`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or \`none\`.
+
+## Next Safe Action
+
+- /blu-progress
+`;
+
+  const invalidUat = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: uatPlaceholder
+  });
+
+  assert.equal(invalidUat.status, "invalid");
+  assert.match(invalidUat.issues.join("\n"), /placeholder scaffold text/i);
+});
+
+test("validation tools reject orphan summaries when the matching plan artifact is missing", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 02
+
+**Plan:** \`03-02-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await rm(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"));
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, false);
+  assert.match(validation.issues.join("\n"), /03-02-SUMMARY\.md/);
+  assert.match(validation.issues.join("\n"), /no matching plan artifact exists for this summary/i);
+});
+
 test("validation tools mark ROADMAP phase completion after UAT closes", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 02
+
+**Plan:** \`03-02-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
+`,
+    "utf8"
+  );
 
   await blueprintPhaseValidationWrite({
     cwd: repoPath,
@@ -407,4 +788,165 @@ test("validation tools mark ROADMAP phase completion after UAT closes", async (t
   assert.match(roadmapBody, /### Phase 3: Phase Discovery[\s\S]*\*\*Status\*\*: completed/);
   assert.match(status.nextAction, /\/blu-audit-milestone v1/);
   assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
+});
+
+test("validation tools reopen stale completed roadmap details even when the checkbox is already unchecked", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Validation Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Validate the completed plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Validate the completed plans.
+**Requirements**: VAL-01
+**Status**: completed
+`,
+    "utf8"
+  );
+
+  const verification = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
+`
+  });
+
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(verification.status, "created");
+  assert.match(verification.warnings.join("\n"), /Reopened Phase 3 in \.blueprint\/ROADMAP\.md/);
+  assert.doesNotMatch(roadmapBody, /\*\*Status\*\*:\s*completed/);
+  assert.match(roadmapBody, /\*\*Status\*\*:\s*in_progress/);
+  assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Phase Discovery\*\*/);
+});
+
+test("validation tools do not complete the roadmap when UAT evidence is invalid", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 02
+
+**Plan:** \`03-02-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
+`,
+    "utf8"
+  );
+
+  const verificationContent = `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 3\`.
+`;
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: verificationContent
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UAT.md"),
+    `# Phase 03: Phase Discovery - UAT
+
+## UAT Summary
+
+- Missing the required status, observed behavior, and follow-up sections.
+`,
+    "utf8"
+  );
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: verificationContent
+  });
+
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.doesNotMatch(roadmapBody, /- \[x\] \*\*Phase 3: Phase Discovery\*\*/);
+  assert.doesNotMatch(roadmapBody, /\*\*Status\*\*:\s*completed/);
+  assert.match(status.nextAction, /\/blu-verify-work 3/);
 });

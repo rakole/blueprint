@@ -219,6 +219,7 @@ export type PlanArtifactMetadata = {
     planId: string | null;
     title: string | null;
     wave: number | null;
+    gapClosure: boolean;
     status: string | null;
     objective: string | null;
     dependsOn: string[];
@@ -277,7 +278,21 @@ export declare function validateReportArtifactContent(content: string, reportNam
     issues: string[];
     warnings: string[];
 };
+type SummaryValidationOptions = {
+    linkedPlanPath?: string | null;
+    requirePlanMarker?: boolean;
+};
 export declare function validateSummaryArtifactContent(content: string): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateSummaryPlanReference(content: string, options?: SummaryValidationOptions): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateStrictSummaryArtifactContent(content: string, options?: SummaryValidationOptions): {
     valid: boolean;
     issues: string[];
     warnings: string[];

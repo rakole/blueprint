@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
@@ -243,14 +244,24 @@ await blueprintPhasePlanWrite({ phase: "3", content, overwrite: true });
 `;
 }
 
-function validPlanContent(planId: string, wave: number, dependsOn: string[] = []): string {
+function validPlanContent(
+  planId: string,
+  wave: number,
+  options: {
+    dependsOn?: string[];
+    gapClosure?: boolean;
+  } = {}
+): string {
+  const dependsOn = options.dependsOn ?? [];
+  const gapClosure = options.gapClosure ?? false;
+
   return `---
 phase: 3
 plan_id: "${planId}"
 title: "Plan ${planId}"
 wave: ${wave}
 status: planned
-objective: "Ship the plan-phase runtime."
+${gapClosure ? "gap_closure: true\n" : ""}objective: "Ship the plan-phase runtime."
 depends_on: ${dependsOn.length === 0 ? "[]" : `[${dependsOn.join(", ")}]`}
 requirements:
   - LIFE-01
@@ -300,13 +311,25 @@ Ship the plan-phase runtime.
 }
 
 function hollowPlanContent(planId: string, wave: number): string {
+  return hollowPlanContentWithOptions(planId, wave);
+}
+
+function hollowPlanContentWithOptions(
+  planId: string,
+  wave: number,
+  options: {
+    gapClosure?: boolean;
+  } = {}
+): string {
+  const gapClosure = options.gapClosure ?? false;
+
   return `---
 phase: 3
 plan_id: "${planId}"
 title: "Plan ${planId}"
 wave: ${wave}
 status: planned
-objective: "Ship the plan-phase runtime."
+${gapClosure ? "gap_closure: true\n" : ""}objective: "Ship the plan-phase runtime."
 depends_on: []
 requirements:
   - LIFE-01
@@ -365,6 +388,13 @@ test("phase planning MCP tools are registered in the Blueprint server", () => {
   }
 });
 
+test("phase planning contract authoring template exposes optional gap closure frontmatter", () => {
+  const contract = readArtifactContract("phase.plan");
+
+  assert.match(contract.authoringTemplate, /gap_closure: true/);
+  assert.match(contract.notes.join("\n"), /Optional `gap_closure: true` frontmatter/i);
+});
+
 test("phase planning tools write, read, and index execution-ready plan artifacts", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -375,14 +405,22 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   const created = await blueprintPhasePlanWrite({
     cwd: repoPath,
     phase: "3",
-    content: validPlanContent("01", 1),
+    content: validPlanContent("01", 1, { gapClosure: true }),
     overwrite: true
   });
   const second = await blueprintPhasePlanWrite({
     cwd: repoPath,
     phase: "3",
-    content: validPlanContent("02", 2, ["01"]),
+    content: validPlanContent("02", 2, { dependsOn: ["01"] }),
     overwrite: true
+  });
+  const malformedGapClosure = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "03",
+    content: hollowPlanContentWithOptions("03", 3, { gapClosure: true }),
+    overwrite: true,
+    validationMode: "warn"
   });
   const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "03" });
   const readFirstPlan = await blueprintPhasePlanRead({
@@ -394,7 +432,7 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validPlanContent("01", 1)
+    content: validPlanContent("01", 1, { gapClosure: true })
   });
   const invalid = await blueprintPhasePlanWrite({
     cwd: repoPath,
@@ -412,7 +450,13 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.match(beforeStatus.nextAction, /\/blu-plan-phase 3/);
   assert.equal(created.status, "created");
   assert.equal(second.status, "created");
-  assert.equal(index.plans.length, 2);
+  assert.equal(malformedGapClosure.status, "created");
+  assert.equal(malformedGapClosure.validation?.valid, false);
+  assert.equal(index.plans.length, 3);
+  assert.equal(index.plans.find((plan) => plan.planId === "01")?.gapClosure, true);
+  assert.equal(index.plans.find((plan) => plan.planId === "02")?.gapClosure, false);
+  assert.equal(index.plans.find((plan) => plan.planId === "03")?.gapClosure, true);
+  assert.deepEqual(index.gapClosurePlans, ["01"]);
   assert.deepEqual(index.waves["1"], [
     ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
   ]);
@@ -422,6 +466,7 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.deepEqual(index.missingPlans, []);
   assert.equal(readFirstPlan.found, true);
   assert.equal(readFirstPlan.validation?.valid, true);
+  assert.equal(readFirstPlan.metadata?.gapClosure, true);
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.validation.issues.join("\n"), /frontmatter|required section/i);
@@ -513,7 +558,7 @@ test("phase planning tools accept numeric phase and plan identifiers from runtim
     cwd: repoPath,
     phase: 3,
     planId: 1,
-    content: validPlanContent("01", 1),
+    content: validPlanContent("01", 1, { gapClosure: true }),
     overwrite: true
   });
   const read = await blueprintPhasePlanRead({
@@ -527,5 +572,6 @@ test("phase planning tools accept numeric phase and plan identifiers from runtim
   assert.equal(created.phaseNumber, "3");
   assert.equal(read.found, true);
   assert.equal(read.planId, "01");
+  assert.equal(read.metadata?.gapClosure, true);
   assert.deepEqual(index.plans.map((plan) => plan.planId), ["01"]);
 });

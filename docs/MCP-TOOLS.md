@@ -57,10 +57,10 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_phase_research_status` | Report discovery readiness for context, research, and UI-spec artifacts | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
 | `blueprint_phase_artifact_read` | Read phase-scoped discovery artifacts such as `CONTEXT`, `DISCUSSION-LOG`, `RESEARCH`, or `UI-SPEC` | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
 | `blueprint_phase_artifact_write` | Persist substantive phase-scoped discovery artifact content with overwrite protection and research validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
-| `blueprint_phase_plan_index` | Index plan files and execution readiness across waves | `{plans, waves, missingPlans}` |
+| `blueprint_phase_plan_index` | Index plan files, execution readiness across waves, and explicit gap-closure targets | `{plans, waves, missingPlans, gapClosurePlans}` |
 | `blueprint_phase_plan_read` | Read a phase-scoped plan artifact together with parsed metadata and validation signals | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}` |
-| `blueprint_phase_plan_write` | Persist substantive phase-scoped plan artifact content with overwrite protection and validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}` |
-| `blueprint_phase_summary_index` | Index execution summaries and report completed versus pending plans | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}` |
+| `blueprint_phase_plan_write` | Persist substantive phase-scoped plan artifact content with overwrite protection and validation; optional `gap_closure: true` frontmatter marks an explicit gap-closure plan | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}` |
+| `blueprint_phase_summary_index` | Index execution summaries, validate them, and report completed versus pending plans | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}` |
 | `blueprint_phase_summary_read` | Read a phase-scoped summary artifact together with linked plan metadata | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}` |
 | `blueprint_phase_summary_write` | Persist substantive phase-scoped summary content for an existing plan | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}` |
 | `blueprint_phase_validation_read` | Read a phase-scoped validation artifact and its execution-summary coverage | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}` |
@@ -121,7 +121,7 @@ These tool names are part of the documented future contract, but they are not re
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, the canonical UI-spec contract read, discovery artifact read and write tools, scaffolding, config, a bounded checker review loop, and state update tools.
 - `plan-phase` uses the canonical `phase.plan` contract read, plan index, plan read and write tools, config, artifact validation, and state update tools.
-- `execute-phase` uses plan index/read, summary index/read/write, config, artifact validation, and state update tools.
+- `execute-phase` uses plan index/read, `blueprint_artifact_contract_read` for the phase.summary contract before summary authoring, summary index/read/write, config, artifact validation, and state update tools.
 - `fast` uses `blueprint_project_status` and `blueprint_state_update` to keep trivial inline execution inside the implemented command surface without inventing extra Blueprint artifacts.
 - `quick` uses `blueprint_project_status`, `blueprint_command_catalog`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep bounded quick runs report-backed and routed inside the implemented command surface.
 - `validate-phase` and `verify-work` use summary index/read, validation read/write, config, artifact validation, and state update tools.
@@ -205,10 +205,12 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 ### Plan, Summary, And Validation Artifacts
 
 - `blueprint_phase_plan_write` omits `planId` to auto-assign the next plan slot. When targeting an existing plan, pass only the numeric plan id.
+- `blueprint_phase_plan_index` and `blueprint_phase_plan_read` surface an explicit `gapClosure` signal from optional `gap_closure: true` plan frontmatter. `--gaps-only` should target those plans rather than inferring gap closure from missing summaries alone.
 - `blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`. The matching plan must already exist.
 - `blueprint_phase_validation_write` requires numeric `phase`, enum `artifact` (`verification` or `uat`), and full validation content.
 - Verification and UAT writes both require saved execution summaries. UAT also requires an existing verification artifact.
-- Treat returned `path`, `linkedPlanPath`, `summaryPaths`, `planId`, and `status` as authoritative. Do not invent plan or summary filenames manually.
+- Treat returned `path`, `linkedPlanPath`, `summaryPaths`, `planId`, `gapClosurePlans`, and `status` as authoritative. Do not invent plan or summary filenames manually.
+- Validation reads and writes expose only summaries whose `**Plan:**` marker matches the linked plan path; invalid summaries stay out of `summaryPaths`.
 
 ### Review Scope And Review Persistence
 

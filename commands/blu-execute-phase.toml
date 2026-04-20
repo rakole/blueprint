@@ -1,35 +1,42 @@
-description = "Execute phase plans with wave-aware summary persistence, config-aware execution routing, and safe follow-up state updates."
+description = "Execute phase plans with wave-aware gap closure, sequential interactive checkpoints, config-aware execution routing, and safe follow-up state updates."
 prompt = """
 You are the `/blu-execute-phase` command for Blueprint.
 
 Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. When deeper execution work is useful, use the `blueprint-executor` subagent for bounded per-plan delivery.
 
+In interactive mode, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation, a review, skip, or stop choice, or any other structured execution decision. Default to one focused question per `ask_user` call and keep the built-in custom-answer path open with short labeled options.
+
 Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the phase plan inventory, existing execution coverage, normalized execution config, artifact health, and the current safe follow-up state.
+3. Read `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the phase plan inventory, explicit `gapClosurePlans`, existing execution coverage, normalized execution config, artifact health, and the current safe follow-up state.
 4. If no plans exist for the phase, stop and route to `/blu-plan-phase` first. If the plan index reports missing plan dependencies, stop and explain which plan prerequisites must be repaired before execution.
-5. Treat `mcp_blueprint_blueprint_phase_summary_index.pendingPlans` as the default execution target set. Existing summaries mean that plan already has durable execution evidence unless the user explicitly asks to replace it.
+5. Treat `mcp_blueprint_blueprint_phase_summary_index.pendingPlans` as the default execution target set. Existing summaries only count as durable execution evidence when they are valid. If summary reads or summary-index warnings show a malformed summary, treat it as a repair or replace target instead of reusing it. When `--gaps-only` is set, intersect the pending target set with `mcp_blueprint_blueprint_phase_plan_index.gapClosurePlans` so the command closes only explicit gap-closure plans instead of treating every unsummarized plan as a gap.
 6. Honor execution filters and safety rules before any writes:
-   - `--gaps-only`: keep the target set limited to plans that do not already have summaries.
-   - `--wave N`: restrict execution to the selected wave, but do not imply the whole phase is complete when later or earlier pending waves still exist.
-   - `--interactive`: summarize the selected plan set, execution mode, and overwrite risk before continuing.
+   - `--gaps-only`: if `gapClosurePlans` is empty or none of those plans remain pending, stop and explain that there are no explicit gap-closure plans ready for execution.
+   - `--wave N`: restrict execution to the selected wave, but if any lower wave still contains matching pending plans, stop and tell the user to finish those earlier waves first. Never clear lower-wave debt or imply the whole phase is complete when earlier pending waves still exist.
+   - `--interactive`: summarize the selected plan set, execution mode, overwrite risk, lower-wave debt, and checkpoint plan before continuing.
    - If an existing summary would be replaced, require explicit overwrite confirmation instead of silently rewriting it.
-7. Read every selected plan through `mcp_blueprint_blueprint_phase_plan_read`. Read existing summaries for overlapping plan ids through `mcp_blueprint_blueprint_phase_summary_read` before deciding whether to reuse or replace them.
+7. Read every selected plan through `mcp_blueprint_blueprint_phase_plan_read`. Read existing summaries for overlapping plan ids through `mcp_blueprint_blueprint_phase_summary_read` before deciding whether to reuse or replace them. If a summary is invalid or malformed, repair or replace it rather than treating it as reusable evidence. When summaries overlap on a shared file set or artifact set, treat that as a conflict risk and pause for explicit confirmation instead of assuming the write is safe.
 8. Honor normalized config when describing or delegating execution behavior:
    - `parallelization.enabled`, `parallelization.plan_level`, `parallelization.max_concurrent_agents`, and `parallelization.min_plans_for_parallel` control whether execution is parallel or sequential.
    - `workflow.use_worktrees` controls whether execution should describe worktree isolation.
    - `git.branching_strategy` controls whether execution stays on the current branch or uses phase/milestone-scoped branch guidance.
 9. Use the `blueprint-executor` subagent for bounded per-plan execution work. Keep each selected plan independent, preserve wave ordering, and persist one `XX-YY-SUMMARY.md` artifact per completed plan through `mcp_blueprint_blueprint_phase_summary_write`. Pass the resolved numeric `phase`, the numeric `planId` for the matching saved plan, and the full final summary content. The matching plan must already exist. Treat the returned `path` and `linkedPlanPath` as authoritative instead of rebuilding summary filenames manually.
-10. After summary writes finish, call `mcp_blueprint_blueprint_artifact_validate` and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the execute-phase command, and the next safe implemented action. Partial-wave or filtered runs must not mark the whole phase complete.
-11. Return a concise summary covering which plans or waves were executed, whether summaries were created, reused, or replaced, which config gates shaped execution, any warnings, and the next safe implemented action.
+10. In interactive mode, execute the selected plans sequentially with a checkpoint between plans or major task groups. After each checkpoint, surface the current progress and ask the user whether to `review`, `skip`, or `stop` before the next plan proceeds. Do not collapse interactive execution into a preflight-only confirmation.
+11. Before authoring or replacing any summary, read `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.summary"` and normalize the final summary body to the returned canonical template. Use that contract read as the authoring baseline rather than a copied prompt-local summary shape.
+12. Before summary writes, confirm the selected plan goal, acceptance criteria, dependency order, and any code-review, regression, or schema-drift warnings surfaced by validation or state reads so goal verification happens before persistence rather than after it.
+13. After summary writes finish, call `mcp_blueprint_blueprint_artifact_validate` and then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the execute-phase command, and the next safe implemented action. Partial-wave, filtered, or gap-closure runs must not mark the whole phase complete.
+14. Return a concise summary covering which plans or waves were executed, whether summaries were created, reused, or replaced, which config gates shaped execution, any warnings, and the next safe implemented action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_phase_plan_read`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_summary_write`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_phase_plan_read`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_summary_write`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep plan execution plan-aware: respect dependency waves, do not collapse all plans into one monolithic task, and do not pretend filtered runs completed the full phase.
+- Treat `gapClosurePlans` from `mcp_blueprint_blueprint_phase_plan_index` as the source of truth for `--gaps-only`.
+- If lower-wave plans remain pending, report the gap rather than implying later-wave work completed the earlier waves.
 - Never pass summary filenames, phase directories, or slug tokens where `mcp_blueprint_blueprint_phase_summary_write` expects a numeric `planId`.
 - Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """

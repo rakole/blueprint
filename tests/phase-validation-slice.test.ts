@@ -72,14 +72,80 @@ async function createValidationRepo(): Promise<string> {
   );
   await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
   await writeFile(
+    path.join(completedPhaseDir, "03-01-PLAN.md"),
+    `---
+phase: 3
+plan_id: "01"
+title: "Execution Plan 01"
+wave: 1
+status: done
+objective: "Exercise verification and UAT handoff."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 03: Execution - Plan 01
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(completedPhaseDir, "03-01-SUMMARY.md"),
+    `# Phase 03: Execution - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution completed and produced a summary artifact.
+
+## Changes Made
+
+- Captured the completed execution-plan work in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
     path.join(completedPhaseDir, "03-VERIFICATION.md"),
     `# Phase 03: Execution - Verification
 
-**Status:** PASS
+**Coverage:** Reviewed prior execution evidence for the completed phase.
 
 ## Validation Summary
 
 - Phase 3 already has completed validation evidence.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-execution/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 3\`.
 `,
     "utf8"
   );
@@ -92,6 +158,26 @@ async function createValidationRepo(): Promise<string> {
 ## UAT Summary
 
 - Phase 3 already has completed UAT evidence.
+
+## Questions Asked
+
+- Did the completed execution summary match the expected behavior for Phase 3?
+
+## Observed Behavior
+
+- The recorded execution evidence in \`.blueprint/phases/03-execution/03-01-SUMMARY.md\` remained consistent with the Phase 3 outcome.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
 `,
     "utf8"
   );
@@ -120,9 +206,57 @@ autonomous: true
     path.join(phaseDir, "04-01-SUMMARY.md"),
     `# Phase 04: Validation - Summary 01
 
-## Result
+**Plan:** \`04-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution completed and produced a summary artifact.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "04-02-SUMMARY.md"),
+    `# Phase 04: Validation - Summary 02
+
+**Plan:** \`04-99-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution completed and produced a summary artifact.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -461,6 +595,12 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.equal(verificationCreated.status, "created");
   assert.equal(verificationRead.found, true);
   assert.match(verificationRead.content ?? "", /ready for UAT/);
+  assert.deepEqual(verificationCreated.summaryPaths, [
+    ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"
+  ]);
+  assert.deepEqual(verificationRead.summaryPaths, [
+    ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"
+  ]);
   assert.equal(verificationReused.status, "reused");
   assert.equal(verificationUpdated.status, "updated");
   assert.match(beforeUatStatus.nextAction, /\/blu-verify-work 4/);
@@ -487,6 +627,76 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.match(roadmapBody, /### Phase 4: Validation[\s\S]*\*\*Status\*\*: completed/);
   assert.match(afterUatStatus.nextAction, /\/blu-audit-milestone v2/);
   assert.match(afterUatState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
+});
+
+test("verify-work refuses to persist UAT when the verification artifact is invalid", async (t) => {
+  const repoPath = await createValidationRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "verification",
+    content: `# Phase 04: Validation - Verification
+
+## Validation Summary
+
+- This verification artifact is malformed.
+`,
+    overwrite: true
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/04-phase-validation/04-VERIFICATION.md"),
+    `# Phase 04: Validation - Verification
+
+## Validation Summary
+
+- This verification artifact is malformed.
+`,
+    "utf8"
+  );
+
+  await assert.rejects(
+    () =>
+      blueprintPhaseValidationWrite({
+        cwd: repoPath,
+        phase: "4",
+        artifact: "uat",
+        content: `# Phase 04: Validation - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- The user acceptance run passed.
+
+## Questions Asked
+
+- Did the validated feature behave as expected for the saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
+`,
+        overwrite: true
+      }),
+    /must have a valid VERIFICATION artifact before UAT/
+  );
 });
 
 test("validate-phase and verify-work command docs keep the validation skill and MCP contracts explicit", async () => {
