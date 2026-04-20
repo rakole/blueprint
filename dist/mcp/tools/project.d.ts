@@ -101,6 +101,12 @@ export declare const projectToolDefinitions: ({
             nonGoals: z.ZodOptional<z.ZodArray<z.ZodString>>;
             requirements: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
+                scope: z.ZodOptional<z.ZodEnum<{
+                    committed: "committed";
+                    deferred: "deferred";
+                    out_of_scope: "out_of_scope";
+                }>>;
+                group: z.ZodOptional<z.ZodString>;
                 requirement: z.ZodString;
                 status: z.ZodString;
                 notes: z.ZodString;

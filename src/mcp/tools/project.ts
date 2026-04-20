@@ -13,6 +13,7 @@ import {
   inspectBootstrapArtifacts,
   type BootstrapArtifactDiagnostics,
   type BootstrapAssessment,
+  type BootstrapRequirementRow,
   type BootstrapRoadmapPhase,
   type BootstrapSeed
 } from "./artifacts.js";
@@ -148,6 +149,8 @@ const projectInitInputSchema = {
         .array(
           z.object({
             id: z.string(),
+            scope: z.enum(["committed", "deferred", "out_of_scope"]).optional(),
+            group: z.string().optional(),
             requirement: z.string(),
             status: z.string(),
             notes: z.string()
@@ -341,11 +344,13 @@ function buildBootstrapSeed(
       : `Bootstrap ${projectName} with durable planning artifacts and explicit next-step guidance.`;
   const currentMilestone =
     assessment.repoShape === "brownfield" ? "v1-existing-repo-alignment" : "v1";
-  const requirements =
+  const requirements: BootstrapRequirementRow[] =
     assessment.repoShape === "brownfield"
       ? [
           {
             id: "RQ-01",
+            scope: "committed",
+            group: "Repo alignment",
             requirement:
               "Capture the current repo intent, boundaries, and maintenance constraints before deeper lifecycle work.",
             status: "Pending",
@@ -353,6 +358,8 @@ function buildBootstrapSeed(
           },
           {
             id: "RQ-02",
+            scope: "committed",
+            group: "Traceability",
             requirement:
               "Preserve requirement-to-roadmap traceability as Blueprint takes ownership of planning artifacts.",
             status: "Pending",
@@ -360,21 +367,36 @@ function buildBootstrapSeed(
           },
           {
             id: "RQ-03",
+            scope: "deferred",
+            group: "Codebase mapping follow-through",
             requirement:
               "Map the existing codebase before later roadmap phases are treated as durable implementation commitments.",
             status: "Pending",
             notes: `Routes brownfield repos to \`${blueprintDirectCommand("map-codebase")}\`.`
+          },
+          {
+            id: "RQ-04",
+            scope: "out_of_scope",
+            group: "Future expansion cuts",
+            requirement:
+              "Do not promote implementation work or long-horizon automation until the mapped baseline is understood.",
+            status: "Pending",
+            notes: "Keeps brownfield bootstrap narrower than execution planning."
           }
         ]
       : [
           {
             id: "RQ-01",
+            scope: "committed",
+            group: "Product direction",
             requirement: `Clarify the product direction and first milestone for ${projectName}.`,
             status: "Pending",
             notes: "Bootstrap project requirement."
           },
           {
             id: "RQ-02",
+            scope: "committed",
+            group: "Delivery boundaries",
             requirement:
               "Record constraints, non-goals, and success boundaries before later planning commands run.",
             status: "Pending",
@@ -382,10 +404,21 @@ function buildBootstrapSeed(
           },
           {
             id: "RQ-03",
+            scope: "deferred",
+            group: "Follow-through planning",
             requirement:
               "Create planning artifacts that later commands can trust without relying on scaffold-only placeholders.",
             status: "Pending",
             notes: "Traceability requirement."
+          },
+          {
+            id: "RQ-04",
+            scope: "out_of_scope",
+            group: "Explicit bootstrap cuts",
+            requirement:
+              "Do not turn the bootstrap draft into a full implementation backlog or execution plan.",
+            status: "Pending",
+            notes: "Keeps the bootstrap narrower than later work streams."
           }
         ];
   const roadmapPhases: BootstrapRoadmapPhase[] =

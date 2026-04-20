@@ -126,7 +126,13 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
     roadmapDoc,
     /Replace this starter roadmap with real phase goals before execution\./
   );
+  assert.match(projectDoc, /## Bootstrap Shape/);
+  assert.match(projectDoc, /## Scope Posture/);
   assert.match(requirementsDoc, /\| RQ-01 \|/);
+  assert.match(requirementsDoc, /## Scope Summary/);
+  assert.match(requirementsDoc, /## Committed V1 Scope/);
+  assert.match(requirementsDoc, /## Deferred Scope/);
+  assert.match(requirementsDoc, /## Out-of-Scope Cuts/);
   assert.match(requirementsDoc, /## Traceability Notes/);
   assert.match(roadmapDoc, /Requirements: RQ-01, RQ-02/);
   assert.match(roadmapDoc, /Success Criteria:/);
@@ -246,15 +252,27 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
       requirements: [
         {
           id: "BP-01",
+          scope: "committed",
+          group: "Workflow",
           requirement: "Capture the solo-maintainer workflow clearly.",
           status: "Pending",
           notes: "Custom seed requirement."
         },
         {
           id: "BP-02",
+          scope: "deferred",
+          group: "Follow-up planning",
           requirement: "Keep roadmap phases traceable to bootstrap requirements.",
           status: "Pending",
           notes: "Custom traceability requirement."
+        },
+        {
+          id: "BP-03",
+          scope: "out_of_scope",
+          group: "Explicit cuts",
+          requirement: "Avoid turning bootstrap into a full execution backlog.",
+          status: "Pending",
+          notes: "Custom out-of-scope requirement."
         }
       ],
       roadmapPhases: [
@@ -278,11 +296,22 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
     "utf8"
   );
   const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const projectDoc = await readFile(path.join(repoPath, ".blueprint/PROJECT.md"), "utf8");
   const status = await blueprintProjectStatus({ cwd: repoPath });
 
   assert.match(requirementsDoc, /\| BP-01 \| Capture the solo-maintainer workflow clearly\./);
+  assert.match(requirementsDoc, /## Committed V1 Scope/);
+  assert.match(requirementsDoc, /## Deferred Scope/);
+  assert.match(requirementsDoc, /## Out-of-Scope Cuts/);
+  assert.match(requirementsDoc, /### Workflow/);
+  assert.match(requirementsDoc, /### Follow-up planning/);
+  assert.match(requirementsDoc, /### Explicit cuts/);
   assert.match(roadmapDoc, /Phase 1: Define Workflow \(Requirements: BP-01, BP-02\)/);
   assert.match(roadmapDoc, /The initial milestone scope is explicit and traceable\./);
+  assert.match(projectDoc, /## Scope Posture/);
+  assert.match(projectDoc, /Committed v1: BP-01/);
+  assert.match(projectDoc, /Deferred: BP-02/);
+  assert.match(projectDoc, /Out-of-scope: BP-03/);
   assert.equal(status.currentMilestone, "v2");
   assert.equal(status.currentPhase, "1");
 });
