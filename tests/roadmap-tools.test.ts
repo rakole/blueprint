@@ -5,7 +5,7 @@ import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { blueprintToolNames } from "../src/mcp/server.js";
+import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
 import {
   blueprintRoadmapAddPhase,
   blueprintRoadmapInsertPhase,
@@ -89,6 +89,48 @@ async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
   await writeFile(
     path.join(repoPath, ".blueprint/config.json"),
     JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+async function createAuditBackedRoadmapRepo(): Promise<string> {
+  const repoPath = await createRoadmapRepo("2.2");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| GAP-001 | Restore milestone audit traceability | done | Previously assigned to Phase 2. |
+| GAP-002 | Reconcile integration checks | done | Previously assigned to Phase 2. |
+| GAP-003 | Fix release flow handoff | done | Previously assigned to Phase 2. |
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+async function createAlreadyRepairedAuditBackedRoadmapRepo(): Promise<string> {
+  const repoPath = await createRoadmapRepo("2.2");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| GAP-001 | Restore milestone audit traceability | pending | Previously assigned to Phase 2. Reassigned to Phase 3 (Audit Gap Closure) from .blueprint/reports/milestone-audit-v2.md. |
+| GAP-002 | Reconcile integration checks | pending | Previously assigned to Phase 2. Reassigned to Phase 3 (Audit Gap Closure) from .blueprint/reports/milestone-audit-v2.md. |
+| GAP-003 | Fix release flow handoff | done | Previously assigned to Phase 2. |
+`,
     "utf8"
   );
 
@@ -181,6 +223,26 @@ test("roadmap tools register blueprint_roadmap_remove_phase", () => {
   );
 });
 
+test("blueprint_roadmap_remove_phase input schema accepts numeric phase ids and force overrides", () => {
+  const definition = blueprintToolRegistry.blueprint_roadmap_remove_phase;
+
+  assert.equal(
+    definition.inputSchema.phase.safeParse(2).success,
+    true,
+    "blueprint_roadmap_remove_phase should accept integer numeric phase ids"
+  );
+  assert.equal(
+    definition.inputSchema.phase.safeParse(2.1).success,
+    true,
+    "blueprint_roadmap_remove_phase should accept decimal numeric phase ids"
+  );
+  assert.equal(
+    definition.inputSchema.force.safeParse(true).success,
+    true,
+    "blueprint_roadmap_remove_phase should accept an explicit force override"
+  );
+});
+
 test("roadmap tools register blueprint_roadmap_insert_phase", () => {
   assert.ok(
     blueprintToolNames.includes("blueprint_roadmap_insert_phase"),
@@ -253,6 +315,100 @@ test("blueprint_roadmap_add_phase rejects when the confirmed next phase is stale
   );
 });
 
+test("blueprint_roadmap_add_phase persists audit-backed gap details and repairs requirement traceability", async (t) => {
+  const repoPath = await createAuditBackedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Audit Gap Closure",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Close milestone audit gaps and restore requirement traceability.",
+      successCriteria: "Repair the affected requirements and document the closure path.",
+      repairRequirementIds: ["GAP-001", "GAP-002"],
+      gapGroups: [
+        {
+          category: "requirement",
+          rows: [
+            {
+              gapId: "REQ-01",
+              surface: "GAP-001",
+              evidence: "Requirements table still shows the requirement as done.",
+              repair: "Reset to pending and assign Phase 3."
+            }
+          ]
+        },
+        {
+          category: "integration",
+          rows: [
+            {
+              gapId: "INT-01",
+              surface: "release checklist",
+              evidence: "Integration checks are still grouped under the old milestone flow.",
+              repair: "Document the closure handoff in the new phase."
+            }
+          ]
+        }
+      ]
+    }
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+
+  assert.equal(result.phaseNumber, "3");
+  assert.equal(result.phasePrefix, "03");
+  assert.match(roadmapBody, /## Audit-Backed Gap Details/);
+  assert.match(roadmapBody, /## Requirement Traceability Repair/);
+  assert.match(roadmapBody, /\*\*Source Audit\*\*: .blueprint\/reports\/milestone-audit-v2\.md/);
+  assert.match(roadmapBody, /\*\*Requirements\*\*: GAP-001, GAP-002/);
+  assert.match(roadmapBody, /\| REQ-01 \| GAP-001 \| Requirements table still shows the requirement as done\./);
+  assert.match(
+    requirementsBody,
+    /\| GAP-001 \| Restore milestone audit traceability \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+  assert.match(
+    requirementsBody,
+    /\| GAP-002 \| Reconcile integration checks \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+  assert.match(requirementsBody, /\| GAP-003 \| Fix release flow handoff \| done \| Previously assigned to Phase 2\. \|/);
+});
+
+test("blueprint_roadmap_add_phase keeps requirement reassignment notes idempotent when rerun against repaired rows", async (t) => {
+  const repoPath = await createAlreadyRepairedAuditBackedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Audit Gap Closure",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Close milestone audit gaps and restore requirement traceability.",
+      successCriteria: "Repair the affected requirements and document the closure path.",
+      repairRequirementIds: ["GAP-001", "GAP-002"]
+    }
+  });
+
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+  const reassignmentNote =
+    "Reassigned to Phase 3 (Audit Gap Closure) from .blueprint/reports/milestone-audit-v2.md.";
+  const noteMatches = requirementsBody.match(new RegExp(reassignmentNote.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? [];
+
+  assert.equal(noteMatches.length, 2);
+  assert.match(
+    requirementsBody,
+    /\| GAP-001 \| Restore milestone audit traceability \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+  assert.match(
+    requirementsBody,
+    /\| GAP-002 \| Reconcile integration checks \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+});
+
 test("blueprint_roadmap_add_phase preserves the sequential dependency chain in roadmap details", async (t) => {
   const repoPath = await createRoadmapRepo();
   t.after(async () => {
@@ -314,7 +470,7 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
 
   const result = await blueprintRoadmapInsertPhase({
     cwd: repoPath,
-    after: "2",
+    after: 2,
     description: "API Stabilization"
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
@@ -337,6 +493,7 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
     await pathExists(path.join(repoPath, ".blueprint/phases/04-release-hardening")),
     true
   );
+  assert.match(roadmapBody, /\*\*Inserted\*\*: yes/);
   assert.match(
     roadmapBody,
     /Phase 2: Core Runtime[\s\S]*Phase 2\.1: API Stabilization[\s\S]*Phase 4: Release Hardening/
@@ -530,7 +687,43 @@ test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (
         after: "2.1",
         description: "Emergency follow-up"
       }),
-    /cannot be used as an insertion target/
+    /not a valid Blueprint integer phase number|cannot be used as an insertion target/
+  );
+});
+
+test("blueprint_roadmap_insert_phase rejects decimal-looking integer anchors before normalization", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  for (const after of ["2.0", "02.0"]) {
+    await assert.rejects(
+      () =>
+        blueprintRoadmapInsertPhase({
+          cwd: repoPath,
+          after,
+          description: "Emergency follow-up"
+        }),
+      /not a valid Blueprint integer phase number|cannot be used as an insertion target/
+    );
+  }
+});
+
+test("blueprint_roadmap_insert_phase rejects malformed free-text insertion anchors", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapInsertPhase({
+        cwd: repoPath,
+        after: "phase 2 please",
+        description: "Emergency follow-up"
+      }),
+    /not a valid Blueprint integer phase number/
   );
 });
 
@@ -582,13 +775,38 @@ test("blueprint_roadmap_remove_phase rejects current or past phases", async (t) 
     () =>
       blueprintRoadmapRemovePhase({
         cwd: repoPath,
-        phase: "2.1"
+        phase: 2.1
       }),
     /Only future phases can be removed/
   );
 });
 
-test("blueprint_roadmap_remove_phase rejects phases with execution evidence", async (t) => {
+test("blueprint_roadmap_remove_phase reports recovery candidates when the target phase is missing", async (t) => {
+  const repoPath = await createRoadmapRepo("1");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapRemovePhase({
+        cwd: repoPath,
+        phase: 9
+      }),
+    (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+
+      assert.match(message, /Phase 9 does not exist in \.blueprint\/ROADMAP\.md\./);
+      assert.match(message, /Nearest valid phase candidate/);
+      assert.match(message, /Active milestone candidate: v1/);
+      assert.match(message, /\/blu-progress/);
+
+      return true;
+    }
+  );
+});
+
+test("blueprint_roadmap_remove_phase requires force before removing phases with execution evidence", async (t) => {
   const repoPath = await createRoadmapRepo("1");
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -607,8 +825,30 @@ test("blueprint_roadmap_remove_phase rejects phases with execution evidence", as
     () =>
       blueprintRoadmapRemovePhase({
         cwd: repoPath,
-        phase: "2.1"
+        phase: 2.1
       }),
     /already has execution evidence/
+  );
+
+  const result = await blueprintRoadmapRemovePhase({
+    cwd: repoPath,
+    phase: 2.1,
+    force: true
+  });
+  const after = await blueprintRoadmapRead({ cwd: repoPath });
+
+  assert.equal(result.removedPhase.phaseNumber, "2.1");
+  assert.ok(
+    result.warnings.some((warning) => warning.includes("explicit force confirmation")),
+    "force removal should report that execution evidence was bypassed explicitly"
+  );
+  assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1"]);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-planning-drift-recovery")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-validation-parity")),
+    true
   );
 });

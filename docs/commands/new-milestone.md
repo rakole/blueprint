@@ -27,6 +27,7 @@
 - A matching `milestone-summary-<version>.md` report should already exist in `.blueprint/reports/`.
 - Carry-forward is the default. A fresh reset is allowed only after explicit confirmation.
 - Replacing the existing top-level milestone starter docs requires explicit overwrite confirmation.
+- Read the canonical `report.milestone-summary` contract before building carry-forward seed text, and read `phase.context` before scaffolding the first context artifact for the next milestone.
 
 
 ## Outputs
@@ -40,6 +41,7 @@
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
@@ -57,12 +59,15 @@
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Carry-Forward Contract
 
+- Read `report.milestone-summary` through `blueprint_artifact_contract_read` before deriving carry-forward seed text, and normalize any summary-derived seed text to the returned `authoringTemplate` when the contract provides one.
+- Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative carry-forward evidence scope.
 - Use `blueprint_artifact_scaffold` only to seed the next milestone starter docs and first context file. Do not treat scaffold text as the final authored milestone content.
 - Preserve the confirmed next phase number when building the first context path; do not invent or renumber historical phase directories manually.
@@ -105,6 +110,7 @@
 
 - Carry-forward is the default path. Require explicit confirmation only when the user wants a fresh reset instead.
 - Require explicit overwrite confirmation before replacing the existing milestone starter docs.
+- Prefer Gemini CLI `ask_user` for the reset-vs-carry-forward and overwrite confirmation gates.
 
 
 ## Edge Cases
@@ -145,4 +151,3 @@
 - Carry-forward default fixture.
 - Phase-number continuity fixture.
 - Direct `new-milestone` happy-path fixture.
-

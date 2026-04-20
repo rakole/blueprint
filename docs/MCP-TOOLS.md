@@ -37,7 +37,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_state_load` | Load stored state together with derived routing signals | `{state, blockers, derivedStatus}` |
+| `blueprint_state_load` | Load stored state together with derived routing signals, including `derivedStatus.milestoneAudit` | `{state, blockers, derivedStatus}` |
 | `blueprint_state_update` | Patch `STATE.md` deterministically | `{updatedFields, statePath, warnings}` |
 | `blueprint_pause_handoff_get` | Read the latest `pause-work` handoff report | `{found, path, handoff, reason, warnings}` |
 | `blueprint_pause_handoff_write` | Persist the latest `pause-work` handoff report with overwrite protection | `{path, written, created, overwritten, status, handoff, warnings}` |
@@ -48,8 +48,8 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | Tool | Purpose | Returns |
 |---|---|---|
 | `blueprint_roadmap_read` | Load roadmap, milestone, and phase list | `{roadmap, milestone, phases}` |
-| `blueprint_roadmap_add_phase` | Append the next whole-number phase and derive the matching `.blueprint/phases/<phase-slug>/` directory | `{phaseNumber, phaseDir, roadmapPath}` |
-| `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phaseDir, roadmapPath}` |
+| `blueprint_roadmap_add_phase` | Append the next whole-number phase and derive the matching `.blueprint/phases/<phase-slug>/` directory without mutating code or git history | `{phaseNumber, phaseDir, roadmapPath}` |
+| `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase via numeric `after` without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phasePrefix, phaseDir, roadmapPath}` |
 | `blueprint_roadmap_remove_phase` | Remove and renumber phase entries | `{removedPhase, renumberedPhases, roadmapPath}` |
 | `blueprint_roadmap_promote_backlog` | Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999.x` phase stubs when present | `{status, backlogItems, selectedBacklogIds, promotedItems, createdPhaseDirs, warnings}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
@@ -57,10 +57,10 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_phase_research_status` | Report discovery readiness for context, research, and UI-spec artifacts | `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}` |
 | `blueprint_phase_artifact_read` | Read phase-scoped discovery artifacts such as `CONTEXT`, `DISCUSSION-LOG`, `RESEARCH`, or `UI-SPEC` | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` |
 | `blueprint_phase_artifact_write` | Persist substantive phase-scoped discovery artifact content with overwrite protection and research validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}` |
-| `blueprint_phase_plan_index` | Index plan files and execution readiness across waves | `{plans, waves, missingPlans}` |
+| `blueprint_phase_plan_index` | Index plan files, execution readiness across waves, and explicit gap-closure targets | `{plans, waves, missingPlans, gapClosurePlans}` |
 | `blueprint_phase_plan_read` | Read a phase-scoped plan artifact together with parsed metadata and validation signals | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}` |
-| `blueprint_phase_plan_write` | Persist substantive phase-scoped plan artifact content with overwrite protection and validation | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}` |
-| `blueprint_phase_summary_index` | Index execution summaries and report completed versus pending plans | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}` |
+| `blueprint_phase_plan_write` | Persist substantive phase-scoped plan artifact content with overwrite protection and validation; optional `gap_closure: true` frontmatter marks an explicit gap-closure plan | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}` |
+| `blueprint_phase_summary_index` | Index execution summaries, validate them, and report completed versus pending plans | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}` |
 | `blueprint_phase_summary_read` | Read a phase-scoped summary artifact together with linked plan metadata | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}` |
 | `blueprint_phase_summary_write` | Persist substantive phase-scoped summary content for an existing plan | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}` |
 | `blueprint_phase_validation_read` | Read a phase-scoped validation artifact and its execution-summary coverage | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}` |
@@ -121,7 +121,7 @@ These tool names are part of the documented future contract, but they are not re
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, the canonical UI-spec contract read, discovery artifact read and write tools, scaffolding, config, a bounded checker review loop, and state update tools.
 - `plan-phase` uses the canonical `phase.plan` contract read, plan index, plan read and write tools, config, artifact validation, and state update tools.
-- `execute-phase` uses plan index/read, summary index/read/write, config, artifact validation, and state update tools.
+- `execute-phase` uses plan index/read, `blueprint_artifact_contract_read` for the phase.summary contract before summary authoring, summary index/read/write, config, artifact validation, and state update tools.
 - `fast` uses `blueprint_project_status` and `blueprint_state_update` to keep trivial inline execution inside the implemented command surface without inventing extra Blueprint artifacts.
 - `quick` uses `blueprint_project_status`, `blueprint_command_catalog`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep bounded quick runs report-backed and routed inside the implemented command surface.
 - `validate-phase` and `verify-work` use summary index/read, validation read/write, `blueprint_artifact_contract_read`, config, artifact validation, and state update tools so their required tool shapes stay contract-derived.
@@ -129,13 +129,13 @@ These tool names are part of the documented future contract, but they are not re
 - `pause-work` and `resume-work` use state load and update tools together with pause handoff read and write support.
 - `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status`.
 - `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update`.
-- `insert-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_insert_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to insert the next decimal phase after an existing integer anchor and route the repo back into `/blu-discuss-phase`.
-- `remove-phase` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_roadmap_remove_phase`, and `blueprint_state_update`.
-- `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update`.
-- `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write`.
-- `complete-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit into `milestone-complete-<version>.md` and route to `/blu-milestone-summary <milestone>`.
-- `milestone-summary` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit plus completion evidence into `milestone-summary-<version>.md` and route to `/blu-new-milestone`.
-- `new-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to carry forward from the saved milestone summary, preserve historical phase artifacts, and scaffold the next whole-number phase context.
+- `insert-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_insert_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to insert the next decimal phase after an existing integer anchor, record a durable `roadmapEvolutionNotes` entry in `STATE.md`, and route the repo back into `/blu-discuss-phase`.
+- `remove-phase` uses `blueprint_roadmap_read`, `blueprint_phase_locate`, `blueprint_roadmap_remove_phase`, and `blueprint_state_update`, with `force: true` reserved for a separately confirmed execution-evidence removal path.
+- `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update` to compare audit-backed requirement, integration, flow, and optional gaps, repair traceability where needed, and append grouped roadmap phases without touching code or git history.
+- `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to compare roadmap intent against completed evidence and author `report.milestone-audit` with grouped gap sections plus traceability notes before routing gaps into implemented follow-up commands.
+- `complete-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_state_load`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit into `report.milestone-complete`, fail fast until `derivedStatus.milestoneAudit.readyForCompletion` is true, and route to `/blu-milestone-summary <milestone>`.
+- `milestone-summary` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit plus completion evidence into `report.milestone-summary` and route to `/blu-new-milestone`.
+- `new-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to carry forward from the saved milestone summary, preserve historical phase artifacts, and scaffold the next whole-number phase context.
 - `code-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_review_scope`, and `blueprint_review_record` to derive a deterministic repo-file scope from executed plans or explicit file paths and persist `XX-REVIEW.md` against the canonical review contract.
 - `code-review-fix` uses `blueprint_phase_locate`, `blueprint_review_load_findings`, `blueprint_artifact_contract_read`, `blueprint_review_record`, and `blueprint_state_update` to load saved review findings, keep remediation bounded, persist `XX-REVIEW-FIX.md` against the canonical review-fix contract, and route follow-up through implemented commands only.
 - `audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first (`--source`), bounded by severity and cap (`--severity`, `--max`), confirmation-gated for non-trivial mutation and todo capture, stop-on-first-failure in mutation mode, report-backed, and routed inside implemented follow-up commands.
@@ -190,7 +190,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_roadmap_add_phase` accepts only `description` plus optional `cwd`.
 - `blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`.
 - Do not precompute phase numbers, decimal suffixes, slugs, or phase directories in prompt logic. The tool owns numbering and conflict checks.
-- After the tool returns, use the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative when follow-on scaffolding or routing needs a concrete phase target.
+- After the tool returns, use the returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative when follow-on scaffolding or routing needs a concrete phase target.
 
 ### Phase Artifact Writes And Checkpoints
 
@@ -205,10 +205,12 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 ### Plan, Summary, And Validation Artifacts
 
 - `blueprint_phase_plan_write` omits `planId` to auto-assign the next plan slot. When targeting an existing plan, pass only the numeric plan id.
+- `blueprint_phase_plan_index` and `blueprint_phase_plan_read` surface an explicit `gapClosure` signal from optional `gap_closure: true` plan frontmatter. `--gaps-only` should target those plans rather than inferring gap closure from missing summaries alone.
 - `blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`. The matching plan must already exist.
 - `blueprint_phase_validation_write` requires numeric `phase`, enum `artifact` (`verification` or `uat`), and full validation content.
 - Verification and UAT writes both require saved execution summaries. UAT also requires an existing verification artifact.
-- Treat returned `path`, `linkedPlanPath`, `summaryPaths`, `planId`, and `status` as authoritative. Do not invent plan or summary filenames manually.
+- Treat returned `path`, `linkedPlanPath`, `summaryPaths`, `planId`, `gapClosurePlans`, and `status` as authoritative. Do not invent plan or summary filenames manually.
+- Validation reads and writes expose only summaries whose `**Plan:**` marker matches the linked plan path; invalid summaries stay out of `summaryPaths`.
 
 ### Review Scope And Review Persistence
 

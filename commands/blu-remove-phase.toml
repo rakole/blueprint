@@ -8,17 +8,20 @@ Follow this flow exactly:
 
 1. Require an explicit phase number from the user input. If the phase number is missing or blank, stop with concise usage guidance instead of guessing.
 2. Read `mcp_blueprint_blueprint_roadmap_read` first so you know the active milestone, the current phase inventory, and any roadmap recovery warnings before mutating anything.
-3. Read `mcp_blueprint_blueprint_artifact_list` for the requested phase so you can preview any existing phase artifacts or drift before removal.
-4. Summarize the target phase, the current milestone, and the expected renumbering impact, then require explicit confirmation before mutation. Review is the default safe path.
-5. Use `mcp_blueprint_blueprint_roadmap_remove_phase` with the confirmed phase number. It must enforce the future-phase guard, delete the removed phase directory, renumber subsequent roadmap phases and phase directories, and return the removed phase plus renumbered phase details.
-6. Use `mcp_blueprint_blueprint_state_update` with `base: "synced"` to record `/blu-remove-phase` as the active command while keeping the current milestone and phase synchronized. Point the next safe implemented follow-up at `/blu-progress`.
-7. Return a concise summary covering the removed phase, any renumbered phases, warnings or drift notes, and the next safe Blueprint action.
+3. Read `mcp_blueprint_blueprint_phase_locate` for the requested phase so you can preview any existing phase artifacts or drift before removal.
+4. Summarize the target phase, the current milestone, and the expected renumbering impact, then require explicit confirmation before mutation. Prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation. Review is the default safe path.
+5. If `mcp_blueprint_blueprint_phase_locate` or the preview shows execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT`, stop on the default safe path and require a second explicit destructive confirmation before continuing. Only then call `mcp_blueprint_blueprint_roadmap_remove_phase` with `force: true`.
+6. Use `mcp_blueprint_blueprint_roadmap_remove_phase` with the confirmed phase number. It must enforce the future-phase guard, delete the removed phase directory, renumber subsequent roadmap phases and phase directories, and return the removed phase plus renumbered phase details.
+7. Use `mcp_blueprint_blueprint_state_update` with `base: "synced"` to record `/blu-remove-phase` as the active command while keeping the current milestone and phase synchronized. Point the next safe implemented follow-up at `/blu-progress`.
+8. Return a concise summary covering the removed phase, any renumbered phases, warnings or drift notes, and the next safe Blueprint action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_roadmap_remove_phase`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_roadmap_remove_phase`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/`, and `.blueprint/STATE.md`.
 - Do not remove current or past phases.
 - Do not hide renumbering behind implicit execution; always require explicit confirmation before the mutation step.
+- Prefer Gemini CLI `ask_user` for the destructive confirmation gate instead of a prose-only prompt.
+- Do not use `force: true` unless the user explicitly confirmed removal after execution evidence was shown in the preview.
 - Do not advertise unimplemented roadmap commands as follow-up steps.
 - Keep the follow-up inside the shipped Blueprint surface; prefer `/blu-progress` after roadmap surgery.
 """

@@ -3,10 +3,29 @@ type RoadmapReadArgs = {
     cwd?: string;
 };
 type NumericInput = string | number;
+type AuditBackedGapCategory = "requirement" | "integration" | "flow" | "optional";
+type AuditBackedGapRow = {
+    gapId: string;
+    surface: string;
+    evidence: string;
+    repair: string;
+};
+type AuditBackedGapGroup = {
+    category: AuditBackedGapCategory;
+    rows: AuditBackedGapRow[];
+};
+type RoadmapAuditBackedDetails = {
+    sourceReportPath?: string;
+    goal?: string;
+    successCriteria?: string;
+    repairRequirementIds?: string[];
+    gapGroups?: AuditBackedGapGroup[];
+};
 type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
     expectedPhaseNumber?: string;
+    auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 type RoadmapInsertPhaseArgs = {
     cwd?: string;
@@ -16,6 +35,7 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
     cwd?: string;
     phase: NumericInput;
+    force?: boolean;
 };
 type RoadmapPromoteBacklogArgs = {
     cwd?: string;
@@ -293,6 +313,7 @@ type PhasePlanRecord = {
     path: string;
     title: string | null;
     wave: number | null;
+    gapClosure: boolean;
     status: string | null;
     objective: string | null;
     dependsOn: string[];
@@ -314,6 +335,7 @@ type PhasePlanIndexResult = {
     plans: PhasePlanRecord[];
     waves: Record<string, string[]>;
     missingPlans: string[];
+    gapClosurePlans: string[];
     warnings: string[];
 };
 type PhasePlanReadResult = {
@@ -452,6 +474,26 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         description: z.ZodString;
         expectedPhaseNumber: z.ZodOptional<z.ZodString>;
+        auditBackedDetails: z.ZodOptional<z.ZodObject<{
+            sourceReportPath: z.ZodOptional<z.ZodString>;
+            goal: z.ZodOptional<z.ZodString>;
+            successCriteria: z.ZodOptional<z.ZodString>;
+            repairRequirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            gapGroups: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                category: z.ZodEnum<{
+                    optional: "optional";
+                    requirement: "requirement";
+                    integration: "integration";
+                    flow: "flow";
+                }>;
+                rows: z.ZodArray<z.ZodObject<{
+                    gapId: z.ZodString;
+                    surface: z.ZodString;
+                    evidence: z.ZodString;
+                    repair: z.ZodString;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapAddPhaseResult>;
 } | {
@@ -459,7 +501,7 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        after: z.ZodString;
+        after: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         description: z.ZodString;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapInsertPhaseResult>;
@@ -468,7 +510,8 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodString;
+        phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+        force: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapRemovePhaseResult>;
 } | {

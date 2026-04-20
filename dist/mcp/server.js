@@ -14504,6 +14504,7 @@ phase: ${phasePrefix(context)}
 plan_id: "${planId(context)}"
 title: "${phaseLabel(context)} plan ${planId(context)}"
 wave: 1
+# Optional: gap_closure: true
 status: planned
 objective: "Replace with a concrete, execution-ready goal."
 depends_on: []
@@ -14888,6 +14889,24 @@ active_command: ${activeCommand(context)}
 function renderMilestoneAuditTemplate(context) {
   return `# Milestone ${milestone(context)} - Audit
 
+**Verdict:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Decision basis: <which evidence determined the verdict>
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
+
 ## Original Intent Snapshot
 
 - Locked milestone intent and source evidence.
@@ -14896,9 +14915,36 @@ function renderMilestoneAuditTemplate(context) {
 
 - Completed phase evidence reviewed for this milestone.
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
 ## Gaps Found
 
-- Archival gap, stale assumption, or \`none\`.
+- Requirement gaps: none
+- Integration gaps: none
+- Flow gaps: none
+- Optional gaps: none
 
 ## Archival Blockers
 
@@ -14911,48 +14957,77 @@ function renderMilestoneAuditTemplate(context) {
 function renderMilestoneCompleteTemplate(context) {
   return `# Milestone ${milestone(context)} - Completion
 
+**Decision:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Audit Report Used:** <saved milestone audit report path>
+**Evidence Ledger:** <roadmap, validation, UAT, carry-forward evidence ledger>
+
 ## Completion Decision
 
-- Whether the milestone is ready to close and why.
+- Decision: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Closeout basis: <which saved evidence determined the decision>
 
 ## Audit Report Used
 
-- Saved milestone audit report path or \`none\`.
+- <saved milestone audit report path>
 
-## Completion Rationale
+## Milestone Evidence Ledger
 
-- Concise closeout rationale grounded in saved evidence.
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
 
 ## Residual Watch Items
 
-- Remaining watch item or \`none\`.
+- <remaining watch item or none>
 
 ## Next Safe Action
 
-- /blu-progress`;
+- /blu-milestone-summary`;
 }
 function renderMilestoneSummaryTemplate(context) {
   return `# Milestone ${milestone(context)} - Summary
 
+**Sources Reviewed:** <saved audit report, completion report, and roadmap evidence>
+**Evidence Ledger:** <audit, completion, roadmap, carry-forward evidence ledger>
+**Carry-Forward Context:** <seed context for /blu-new-milestone>
+
 ## Scope Summary
 
-- Concise milestone scope and outcome summary.
+- Concise milestone scope and outcome summary grounded in saved reports.
 
 ## Source Reports Used
 
-- Saved milestone reports and supporting artifacts reviewed.
+- <saved milestone audit report path>
+- <saved milestone completion report path>
+
+## Milestone Evidence Ledger
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Audit report | <audit report evidence> | PASS|GAP|BLOCKED | <what the audit report proves> |
+| Completion report | <completion report evidence> | PASS|GAP|BLOCKED | <what the completion report proves> |
+| Roadmap context | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Carry-forward context | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the carry-forward evidence proves> |
 
 ## Shipped Outcomes
 
-- Major delivered outcomes.
+- <major delivered outcome>
 
 ## Deferred Follow-Ups
 
-- Deferred item or \`none\`.
+- <deferred item or none>
 
 ## Recommended Carry-Forward Context
 
-- Context that should seed the next milestone.`;
+- <context that should seed the next milestone>
+
+## Next Safe Action
+
+- /blu-new-milestone`;
 }
 function renderDebugTemplate() {
   return `# Debug Report
@@ -15453,6 +15528,7 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Plan frontmatter keys and task subsections are locked for MCP parsing.",
+          "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
           "Additional top-level headings are allowed, but required plan sections must remain unchanged."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderPlanTemplate(context)),
@@ -15470,10 +15546,16 @@ var init_artifact_contracts = __esm({
         lockedMarkers: ["**Plan:**", "**Status:**"],
         placeholderSignals: [
           "COMPLETED|PARTIAL|BLOCKED",
-          "Concise delivery summary grounded in the completed work."
+          "Concise delivery summary grounded in the completed work.",
+          "Explicit code, config, or artifact changes completed for this plan.",
+          "Command, test, or evidence that supports the reported outcome.",
+          "Remaining gap, handoff, or `none`.",
+          "or other saved repo evidence if helpful."
         ],
         notes: [
-          "Summary artifacts stay linked to a saved plan and should remain grounded in completed work."
+          "Summary artifacts stay linked to a saved plan and should remain grounded in completed work.",
+          "The locked `Plan` and `Status` markers remain required, but scaffold placeholder values are rejected by write validation.",
+          "Untouched scaffold prose in Changes Made, Verification, Follow-Ups, and Evidence is also rejected."
         ],
         renderScaffoldTemplate: renderSummaryTemplate,
         renderAuthoringTemplate: renderSummaryTemplate
@@ -15699,10 +15781,32 @@ var init_artifact_contracts = __esm({
         canonicalName: "Milestone Audit Report",
         canonicalFilePattern: `.blueprint/reports/${reportName(void 0, "milestone-audit-<milestone>")}.md`,
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Original Intent Snapshot", "Roadmap And Phase Evidence", "Gaps Found", "Archival Blockers", "Next Safe Action"],
-        lockedMarkers: [],
-        placeholderSignals: ["<milestone-version>"],
-        notes: ["Audit-milestone owns this report through blueprint_artifact_report_write."],
+        requiredHeadings: [
+          "Audit Verdict",
+          "Milestone Evidence Dimensions",
+          "Original Intent Snapshot",
+          "Roadmap And Phase Evidence",
+          "Requirement Gaps",
+          "Integration Gaps",
+          "Flow Gaps",
+          "Optional Gaps",
+          "Gaps Found",
+          "Archival Blockers",
+          "Next Safe Action"
+        ],
+        lockedMarkers: ["**Verdict:**", "**Evidence Dimensions:**"],
+        placeholderSignals: [
+          "<milestone-version>",
+          "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+          "<roadmap evidence>",
+          "<validation evidence>",
+          "<uat evidence>",
+          "<carry-forward evidence>"
+        ],
+        notes: [
+          "Audit-milestone owns this report through blueprint_artifact_report_write.",
+          "The audit contract captures a concrete verdict and milestone-level evidence dimensions."
+        ],
         renderScaffoldTemplate: renderMilestoneAuditTemplate,
         renderAuthoringTemplate: renderMilestoneAuditTemplate
       },
@@ -15714,10 +15818,28 @@ var init_artifact_contracts = __esm({
         canonicalName: "Milestone Completion Report",
         canonicalFilePattern: ".blueprint/reports/milestone-complete-<milestone>.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Completion Decision", "Audit Report Used", "Completion Rationale", "Residual Watch Items", "Next Safe Action"],
-        lockedMarkers: [],
-        placeholderSignals: ["<milestone-version>"],
-        notes: ["Complete-milestone owns this report through blueprint_artifact_report_write."],
+        requiredHeadings: [
+          "Completion Decision",
+          "Audit Report Used",
+          "Milestone Evidence Ledger",
+          "Residual Watch Items",
+          "Next Safe Action"
+        ],
+        lockedMarkers: ["**Decision:**", "**Audit Report Used:**", "**Evidence Ledger:**"],
+        placeholderSignals: [
+          "<milestone-version>",
+          "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+          "<saved milestone audit report path>",
+          "<roadmap, validation, UAT, carry-forward evidence ledger>",
+          "<roadmap evidence>",
+          "<validation evidence>",
+          "<uat evidence>",
+          "<carry-forward evidence>"
+        ],
+        notes: [
+          "Complete-milestone owns this report through blueprint_artifact_report_write.",
+          "The completion contract captures a closeout decision and an evidence ledger backed by saved reports."
+        ],
         renderScaffoldTemplate: renderMilestoneCompleteTemplate,
         renderAuthoringTemplate: renderMilestoneCompleteTemplate
       },
@@ -15729,10 +15851,32 @@ var init_artifact_contracts = __esm({
         canonicalName: "Milestone Summary Report",
         canonicalFilePattern: ".blueprint/reports/milestone-summary-<milestone>.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Scope Summary", "Source Reports Used", "Shipped Outcomes", "Deferred Follow-Ups", "Recommended Carry-Forward Context"],
-        lockedMarkers: [],
-        placeholderSignals: ["<milestone-version>"],
-        notes: ["New-milestone uses this report as the default carry-forward seed."],
+        requiredHeadings: [
+          "Scope Summary",
+          "Source Reports Used",
+          "Milestone Evidence Ledger",
+          "Shipped Outcomes",
+          "Deferred Follow-Ups",
+          "Recommended Carry-Forward Context",
+          "Next Safe Action"
+        ],
+        lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
+        placeholderSignals: [
+          "<milestone-version>",
+          "<saved audit report, completion report, and roadmap evidence>",
+          "<audit, completion, roadmap, carry-forward evidence ledger>",
+          "<seed context for /blu-new-milestone>",
+          "<saved milestone audit report path>",
+          "<saved milestone completion report path>",
+          "<audit report evidence>",
+          "<completion report evidence>",
+          "<roadmap evidence>",
+          "<carry-forward evidence>"
+        ],
+        notes: [
+          "New-milestone uses this report as the default carry-forward seed.",
+          "The summary contract captures the saved milestone sources, evidence ledger, and next milestone handoff context."
+        ],
         renderScaffoldTemplate: renderMilestoneSummaryTemplate,
         renderAuthoringTemplate: renderMilestoneSummaryTemplate
       },
@@ -17477,6 +17621,9 @@ function extractMarkdownSection(markdown, heading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function extractMarkdownTableRows(section) {
+  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)).map((line) => parseMarkdownTableCells(line));
+}
 function stripPlanPlaceholderSignals(section) {
   return [...PLAN_PLACEHOLDER_SIGNALS, ...PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS].reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -17523,6 +17670,7 @@ function parsePlanFrontmatter(content) {
       planId: null,
       title: null,
       wave: null,
+      gapClosure: false,
       status: null,
       objective: null,
       dependsOn: [],
@@ -17573,11 +17721,13 @@ function parsePlanFrontmatter(content) {
   }
   const waveValue = scalars.get("wave");
   const autonomousValue = scalars.get("autonomous");
+  const gapClosureValue = scalars.get("gap_closure");
   return {
     phase: scalars.get("phase") ?? null,
     planId: scalars.get("plan_id") ?? null,
     title: scalars.get("title") ?? null,
     wave: waveValue && /^\d+$/.test(waveValue) ? Number.parseInt(waveValue, 10) : null,
+    gapClosure: gapClosureValue === "true",
     status: scalars.get("status") ?? null,
     objective: scalars.get("objective") ?? null,
     dependsOn: arrays.get("depends_on") ?? [],
@@ -17700,6 +17850,206 @@ function validateRequiredMarkdownSections(content, artifactLabel, headings) {
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
+function validateMilestoneEvidenceLedger(content, artifactLabel, sectionHeading, requiredRows) {
+  const issues = [];
+  const section = extractMarkdownSection(content, sectionHeading);
+  const evidenceRows = section.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+  if (evidenceRows.length < requiredRows.length) {
+    issues.push(
+      `${artifactLabel} section ${sectionHeading} must include evidence rows for ${requiredRows.map((row) => row.label).join(", ")}.`
+    );
+  }
+  const rowLabels = [];
+  for (const row of evidenceRows) {
+    const cells = parseMarkdownTableCells(row);
+    if (cells.length !== 4) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must keep each evidence row in the Dimension, Evidence, Status, and Notes columns.`
+      );
+      continue;
+    }
+    const [dimension, evidence, status, notes] = cells;
+    rowLabels.push(dimension);
+    if (!/^(PASS|GAP|BLOCKED)$/i.test(status)) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must use PASS, GAP, or BLOCKED for ${dimension}.`
+      );
+    }
+    if (!evidence || !notes) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must keep evidence and notes populated for ${dimension}.`
+      );
+    }
+  }
+  for (const requiredRow of requiredRows) {
+    if (!rowLabels.some((label) => requiredRow.pattern.test(label))) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} is missing a ${requiredRow.label} row.`
+      );
+    }
+  }
+  return issues;
+}
+function validateMilestoneReportReferences(content, artifactLabel, sectionHeading, requiredMentions) {
+  const issues = [];
+  const section = extractMarkdownSection(content, sectionHeading);
+  if (!/^- /m.test(section)) {
+    issues.push(
+      `${artifactLabel} section ${sectionHeading} must include at least one bullet with saved report references.`
+    );
+  }
+  for (const mention of requiredMentions) {
+    if (!new RegExp(escapeRegex2(mention), "i").test(section)) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must reference ${mention}.`
+      );
+    }
+  }
+  return issues;
+}
+function parseMarkdownTableCells(line) {
+  if (!/^\|.*\|$/.test(line)) {
+    return [];
+  }
+  return line.slice(1, -1).split("|").map((cell) => cell.trim());
+}
+function isMarkdownTableRow(line) {
+  const cells = parseMarkdownTableCells(line);
+  return cells.length > 0 && !cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+function isMarkdownTableHeaderRow(line) {
+  const cells = parseMarkdownTableCells(line).map((cell) => cell.toLowerCase());
+  if (cells.length === 0) {
+    return false;
+  }
+  const headerPatterns = [
+    ["dimension", "evidence", "status", "notes"],
+    ["requirement", "task or check", "evidence", "coverage state", "notes"],
+    ["id", "description", "research support"],
+    ["requirement", "task or check", "evidence", "coverage state"],
+    ["gap id", "surface", "evidence", "repair"]
+  ];
+  return headerPatterns.some(
+    (pattern) => pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
+  );
+}
+function summarizeMarkdownTableRow(line) {
+  const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+  if (cells.length === 0) {
+    return "";
+  }
+  if (cells.length >= 4) {
+    const label = cells[0] ?? "";
+    const evidence = cells[1] ?? "";
+    const status = cells[2] ?? "";
+    const note = cells[3] ?? "";
+    const summary = [label, status].filter((value) => value.length > 0).join(": ");
+    const withEvidence = evidence.length > 0 ? `${summary}${summary.length > 0 ? ": " : ""}${evidence}` : summary;
+    return note.length > 0 ? `${withEvidence}${withEvidence.length > 0 ? " - " : ""}${note}` : withEvidence;
+  }
+  if (cells.length === 3) {
+    const summary = [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+    return cells[2]?.length > 0 ? `${summary}${summary.length > 0 ? " - " : ""}${cells[2]}` : summary;
+  }
+  if (cells.length === 2) {
+    return [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+  }
+  return cells[0] ?? "";
+}
+function scoreDigestSectionHeading(heading) {
+  const normalized = heading.trim().toLowerCase();
+  const highPriorityPatterns = [
+    /(?:^|\b)verdict(?:\b|$)/i,
+    /(?:^|\b)decision(?:\b|$)/i,
+    /(?:^|\b)evidence(?:\b|$)/i,
+    /next safe action/i,
+    /source reports used/i,
+    /recommended carry-forward context/i,
+    /milestone evidence dimensions/i,
+    /roadmap and phase evidence/i,
+    /audit report used/i
+  ];
+  const mediumPriorityPatterns = [
+    /(?:^|\b)rationale(?:\b|$)/i,
+    /(?:^|\b)summary(?:\b|$)/i,
+    /(?:^|\b)carry-forward(?:\b|$)/i,
+    /(?:^|\b)follow[- ]ups?(?:\b|$)/i,
+    /(?:^|\b)blockers?(?:\b|$)/i,
+    /(?:^|\b)gaps?(?:\b|$)/i,
+    /(?:^|\b)outcomes?(?:\b|$)/i,
+    /(?:^|\b)watch items?(?:\b|$)/i,
+    /(?:^|\b)completion(?:\b|$)/i,
+    /(?:^|\b)intent(?:\b|$)/i
+  ];
+  if (highPriorityPatterns.some((pattern) => pattern.test(normalized))) {
+    return 2;
+  }
+  if (mediumPriorityPatterns.some((pattern) => pattern.test(normalized))) {
+    return 1;
+  }
+  return 0;
+}
+function summarizeMarkdownSectionBody(section) {
+  const lines = section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("## "));
+  if (lines.length === 0) {
+    return "";
+  }
+  const verdictLine = lines.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
+  if (verdictLine) {
+    return verdictLine.replace(/^[-*+]\s*/, "").trim();
+  }
+  const tableRows = lines.filter(
+    (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
+  );
+  if (tableRows.length > 0) {
+    return tableRows.slice(0, 4).map((line) => summarizeMarkdownTableRow(line)).filter((line) => line.length > 0).join("; ");
+  }
+  const bullets = lines.filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0);
+  if (bullets.length > 0) {
+    return bullets.slice(0, 2).join("; ");
+  }
+  return lines[0] ?? "";
+}
+function splitMarkdownSections(lines) {
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    if (/^##\s+/.test(line)) {
+      if (current) {
+        sections.push(current);
+      }
+      current = {
+        heading: line.replace(/^##\s+/, "").trim(),
+        body: []
+      };
+      continue;
+    }
+    if (!current) {
+      continue;
+    }
+    current.body.push(line);
+  }
+  if (current) {
+    sections.push(current);
+  }
+  return sections;
+}
+function summarizePreambleLines(lines) {
+  const synopsis = [];
+  for (const line of lines) {
+    if (line.startsWith("**") && /:\s*/.test(line)) {
+      synopsis.push(line.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
+      continue;
+    }
+    if (/^[-*+]\s+/.test(line)) {
+      synopsis.push(line.replace(/^[-*+]\s+/, "").trim());
+    }
+  }
+  if (synopsis.length > 0) {
+    return synopsis;
+  }
+  return lines.map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).slice(0, 2);
+}
 function validateValidationScaffoldPlaceholders(content, artifactLabel) {
   return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
     ({ pattern, signal }) => {
@@ -17821,7 +18171,7 @@ function validatePhaseArtifactContent(content, artifact) {
 function validateVerificationArtifactContent(content, summaryPaths = []) {
   const issues = [];
   const warnings = [];
-  if (!/^# .+ - Verification\s*$/m.test(content)) {
+  if (!/^# .+ - Verification(?:\r?\n|$)/.test(content)) {
     issues.push("Verification artifact must start with a '# ... - Verification' heading.");
   }
   if (!/^\*\*Coverage:\*\*\s*.+$/m.test(content)) {
@@ -17848,6 +18198,13 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
       REQUIRED_VERIFICATION_SECTIONS
     )
   );
+  for (const placeholderBody of VERIFICATION_PLACEHOLDER_BODIES) {
+    if (content.includes(placeholderBody)) {
+      issues.push(
+        `Verification artifact still contains placeholder scaffold text: ${placeholderBody}`
+      );
+    }
+  }
   const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
   if (!hasCoverageTableRows(requirementCoverage)) {
     issues.push(
@@ -17855,7 +18212,7 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
     );
   }
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
-  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+  if (!containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
     issues.push(
       "Verification artifact must cite at least one saved execution summary path or filename under ## Evidence Reviewed."
     );
@@ -17869,7 +18226,7 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
 function validateUatArtifactContent(content, summaryPaths = []) {
   const issues = [];
   const warnings = [];
-  if (!/^# .+ - UAT\s*$/m.test(content)) {
+  if (!/^# .+ - UAT(?:\r?\n|$)/.test(content)) {
     issues.push("UAT artifact must start with a '# ... - UAT' heading.");
   }
   if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
@@ -17887,15 +18244,17 @@ function validateUatArtifactContent(content, summaryPaths = []) {
   }
   issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
+  for (const placeholderBody of UAT_PLACEHOLDER_BODIES) {
+    if (content.includes(placeholderBody)) {
+      issues.push(`UAT artifact still contains placeholder scaffold text: ${placeholderBody}`);
+    }
+  }
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
   const sessionState = extractMarkdownSection(content, "Session State");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
-  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(
-    `${uatSummary}
+  if (!containsReferencedSummaryPath(`${uatSummary}
 ${sessionState}
-${observedBehavior}`,
-    summaryPaths
-  )) {
+${observedBehavior}`, summaryPaths)) {
     issues.push(
       "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
     );
@@ -17922,30 +18281,217 @@ function validateReportArtifactContent(content, reportName2) {
       warnings: []
     };
   }
-  return validateContractBackedMarkdown(content, contractId, "Report artifact");
+  const isMilestoneAudit = contractId === "report.milestone-audit";
+  const milestoneAuditGapHeadings = [
+    "Requirement Gaps",
+    "Integration Gaps",
+    "Flow Gaps",
+    "Optional Gaps"
+  ];
+  const hasStructuredMilestoneAuditGapSections = isMilestoneAudit ? milestoneAuditGapHeadings.some(
+    (heading) => new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(content)
+  ) : false;
+  const hasLegacyMilestoneAuditGapSummary = isMilestoneAudit ? /(?:^|\n)## Gaps Found\s*$/m.test(content) : false;
+  const legacyMilestoneAuditCompatibility = isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
+  const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
+  if (!validation.valid && !legacyMilestoneAuditCompatibility) {
+    return validation;
+  }
+  if (isMilestoneAudit) {
+    const issues = [];
+    const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
+    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
+    const requirementGaps = extractMarkdownSection(content, "Requirement Gaps");
+    const integrationGaps = extractMarkdownSection(content, "Integration Gaps");
+    const flowGaps = extractMarkdownSection(content, "Flow Gaps");
+    const optionalGaps = extractMarkdownSection(content, "Optional Gaps");
+    const hasStructuredGapSections = [requirementGaps, integrationGaps, flowGaps, optionalGaps].some((section) => section.length > 0) || hasStructuredMilestoneAuditGapSections;
+    const hasLegacyGapSummary = hasLegacyMilestoneAuditGapSummary;
+    const evidenceRows = evidenceDimensions.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+    const gapSections = [
+      ["Requirement Gaps", requirementGaps],
+      ["Integration Gaps", integrationGaps],
+      ["Flow Gaps", flowGaps],
+      ["Optional Gaps", optionalGaps]
+    ];
+    if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
+      issues.push(
+        "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
+      );
+    }
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
+      issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
+    }
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Dimensions", [
+        { label: "Roadmap intent", pattern: /Roadmap intent/i },
+        { label: "Validation evidence", pattern: /Validation evidence/i },
+        { label: "UAT evidence", pattern: /UAT evidence/i },
+        { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
+      ])
+    );
+    if (hasStructuredGapSections) {
+      for (const [heading, section] of gapSections) {
+        const rows = extractMarkdownTableRows(section);
+        if (rows.length === 0) {
+          issues.push(`Report artifact section ${heading} must include at least one structured gap row.`);
+          continue;
+        }
+        for (const row of rows) {
+          if (row.length !== 4) {
+            issues.push(
+              `Report artifact section ${heading} must keep each gap row in the Gap ID, Surface, Evidence, and Repair columns.`
+            );
+            continue;
+          }
+        }
+      }
+    }
+    if (!hasStructuredGapSections && hasLegacyGapSummary) {
+      const filteredValidationIssues = validation.issues.filter(
+        (issue2) => !milestoneAuditGapHeadings.some(
+          (heading) => issue2.includes(`missing required section: ${heading}`) || issue2.includes(`section ${heading} must not be empty.`)
+        )
+      );
+      return {
+        valid: issues.length === 0 && filteredValidationIssues.length === 0,
+        issues: [...filteredValidationIssues, ...issues],
+        warnings: []
+      };
+    }
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+  if (contractId === "report.milestone-complete") {
+    const issues = [];
+    const completionDecision = extractMarkdownSection(content, "Completion Decision");
+    if (!/^- Decision:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(completionDecision)) {
+      issues.push(
+        "Report artifact section Completion Decision must include a concrete Decision line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
+      );
+    }
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(completionDecision)) {
+      issues.push(
+        "Report artifact section Completion Decision still contains scaffold decision placeholder text."
+      );
+    }
+    issues.push(
+      ...validateMilestoneReportReferences(content, "Report artifact", "Audit Report Used", [
+        "milestone-audit"
+      ])
+    );
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Ledger", [
+        { label: "Roadmap intent", pattern: /Roadmap intent/i },
+        { label: "Validation evidence", pattern: /Validation evidence/i },
+        { label: "UAT evidence", pattern: /UAT evidence/i },
+        { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
+      ])
+    );
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+  if (contractId === "report.milestone-summary") {
+    const issues = [];
+    issues.push(
+      ...validateMilestoneReportReferences(content, "Report artifact", "Source Reports Used", [
+        "milestone-audit",
+        "milestone-complete"
+      ])
+    );
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Ledger", [
+        { label: "Audit report", pattern: /Audit report/i },
+        { label: "Completion report", pattern: /Completion report/i },
+        { label: "Roadmap context", pattern: /Roadmap context/i },
+        { label: "Carry-forward context", pattern: /Carry-forward context/i }
+      ])
+    );
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+  return validation;
+}
+function normalizeSummaryPlanReference(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("`") && trimmed.endsWith("`") || trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+function extractSummaryPlanReference(content) {
+  const match = content.match(/^\*\*Plan:\*\*\s*(.+)$/m);
+  return match ? normalizeSummaryPlanReference(match[1]) : null;
 }
 function validateSummaryArtifactContent(content) {
   const contract = readArtifactContract("phase.summary");
   const issues = [];
   const warnings = [];
-  if (!/^# .+ - Summary(?:\s+\d+)?\s*$/m.test(content)) {
-    warnings.push("Summary artifact should start with a '# ... - Summary' heading.");
+  const normalizedContent = content.replace(/\r\n/g, "\n");
+  if (!/^# .+ - Summary(?:\s+\d+)?(?:\n|$)/.test(normalizedContent)) {
+    issues.push("Summary artifact must start with a '# ... - Summary' heading.");
   }
-  const missingMarkers = validateLockedMarkers(
-    content,
-    "Summary artifact",
-    contract.lockedMarkers
+  issues.push(
+    ...validateLockedMarkers(normalizedContent, "Summary artifact", contract.lockedMarkers),
+    ...validateRequiredMarkdownSections(
+      normalizedContent,
+      "Summary artifact",
+      contract.requiredHeadings
+    )
   );
-  const missingSections = validateRequiredMarkdownSections(
-    content,
-    "Summary artifact",
-    contract.requiredHeadings
+  issues.push(
+    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && normalizedContent.includes(signal)).map((signal) => `Summary artifact still contains placeholder scaffold text: ${signal}.`)
   );
-  warnings.push(...missingMarkers, ...missingSections);
   return {
-    valid: issues.length === 0 && warnings.length === 0,
+    valid: issues.length === 0,
     issues,
     warnings
+  };
+}
+function validateSummaryPlanReference(content, options = {}) {
+  const issues = [];
+  const warnings = [];
+  const normalizedContent = content.replace(/\r\n/g, "\n");
+  const summaryPlanReference = extractSummaryPlanReference(normalizedContent);
+  if (summaryPlanReference) {
+    if (options.linkedPlanPath === void 0 || options.linkedPlanPath === null) {
+      issues.push("Summary artifact must reference a matching plan artifact.");
+    } else {
+      const expectedPlanPath = options.linkedPlanPath;
+      const expectedPlanFile = path3.basename(expectedPlanPath);
+      if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
+        issues.push(
+          `Summary artifact **Plan:** marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}.`
+        );
+      }
+    }
+  } else if (options.requirePlanMarker) {
+    issues.push(
+      "Summary artifact must include a **Plan:** marker that references the matching plan artifact."
+    );
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+function validateStrictSummaryArtifactContent(content, options = {}) {
+  const summaryValidation = validateSummaryArtifactContent(content);
+  const planValidation = validateSummaryPlanReference(content, options);
+  return {
+    valid: summaryValidation.valid && planValidation.valid,
+    issues: [...summaryValidation.issues, ...planValidation.issues],
+    warnings: [...summaryValidation.warnings, ...planValidation.warnings]
   };
 }
 function validatePlanArtifactContent(content, expectedPhase, options = {}) {
@@ -18897,6 +19443,29 @@ async function blueprintArtifactValidate(args = {}) {
       );
     }
   }
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-SUMMARY.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const linkedPlanPath = artifact.replace(/-SUMMARY\.md$/, "-PLAN.md");
+    const linkedPlanExists = await pathExists(resolveBlueprintPath(projectRoot, linkedPlanPath));
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const validation = validateStrictSummaryArtifactContent(raw, {
+      linkedPlanPath: linkedPlanExists ? linkedPlanPath : null
+    });
+    for (const issue2 of validation.issues) {
+      issues.push(`${artifact}: ${issue2}`);
+    }
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed phase summaries through /blu-execute-phase before validation-dependent commands."
+      );
+    }
+    if (!linkedPlanExists) {
+      issues.push(`${artifact}: no matching plan artifact exists for this summary.`);
+    }
+  }
   return {
     valid: issues.length === 0,
     issues,
@@ -19053,10 +19622,40 @@ function summarizeArtifactContent(content) {
     (line) => line.length > 0 && !line.startsWith("*Generated by")
   );
   const heading = meaningfulLines.find((line) => line.startsWith("#"));
-  const bodyLine = meaningfulLines.find((line) => !line.startsWith("#"));
+  const h1Index = meaningfulLines.findIndex((line) => /^#\s+/.test(line));
+  const firstSectionIndex = meaningfulLines.findIndex(
+    (line, index) => index > h1Index && /^##\s+/.test(line)
+  );
+  const preambleLines = h1Index >= 0 ? meaningfulLines.slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length).filter((line) => !line.startsWith("#")) : [];
+  const sections = splitMarkdownSections(meaningfulLines).map((section, index) => {
+    const summary = summarizeMarkdownSectionBody(section.body.join("\n"));
+    return {
+      ...section,
+      index,
+      summary,
+      score: scoreDigestSectionHeading(section.heading)
+    };
+  });
+  const prioritizedSections = sections.filter((section) => section.score > 0).sort((left, right) => right.score - left.score || left.index - right.index);
+  const selectedSectionIndexes = /* @__PURE__ */ new Set();
+  const preferredSections = prioritizedSections.length > 0 ? prioritizedSections.slice(0, 6) : sections.slice(0, 2);
+  for (const section of preferredSections) {
+    selectedSectionIndexes.add(section.index);
+  }
+  if (selectedSectionIndexes.size < 2) {
+    for (const section of sections.slice(0, 2)) {
+      selectedSectionIndexes.add(section.index);
+    }
+  }
+  const summaryParts = [
+    ...summarizePreambleLines(preambleLines),
+    ...sections.filter((section) => selectedSectionIndexes.has(section.index)).map((section) => {
+      return section.summary.length > 0 ? `${section.heading}: ${section.summary}` : section.heading;
+    })
+  ].filter((part) => part.length > 0);
   return {
     title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
-    summary: bodyLine ?? "Artifact content is present and available for review.",
+    summary: summaryParts.length > 0 ? summaryParts.join(" | ") : "Artifact content is present and available for review.",
     evidence: []
   };
 }
@@ -19274,7 +19873,7 @@ async function blueprintArtifactReportWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, REQUIRED_UAT_SECTIONS, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -19619,7 +20218,20 @@ Generated by \`/blu-map-codebase\`.
     REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
       "phase.verification"
     ).requiredHeadings;
+    VERIFICATION_PLACEHOLDER_BODIES = [
+      "and any other saved phase summaries for validation evidence.",
+      "Concise readiness result grounded in the saved summaries.",
+      "Explicit blocker, follow-up, or `none`.",
+      "Explicit next repair, follow-up, or `none`."
+    ];
     REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings;
+    UAT_PLACEHOLDER_BODIES = [
+      "Concise user-facing result grounded in the saved summaries and verification artifact.",
+      "Question asked during the UAT pass, or `none`.",
+      "Observed behavior tied to saved summary evidence such as",
+      "Explicit blocker, follow-up, or `none`.",
+      "Explicit follow-up fix, acceptance note, or `none`."
+    ];
     artifactToolDefinitions = [
       {
         name: "blueprint_artifact_contract_read",
@@ -21339,6 +21951,22 @@ var init_project = __esm({
 
 // src/mcp/tools/state.ts
 import { promises as fs5 } from "node:fs";
+function emptyMilestoneAuditReportStatus() {
+  return {
+    found: false,
+    verdict: null,
+    gapSections: {
+      requirement: [],
+      integration: [],
+      flow: [],
+      optional: []
+    },
+    hasActionableGaps: false,
+    hasArchivalBlockers: false,
+    nextSafeAction: null,
+    readyForCompletion: false
+  };
+}
 function normalizeTextContent2(content) {
   return `${content.replace(/\r\n/g, "\n").trimEnd()}
 `;
@@ -21519,6 +22147,11 @@ function buildPauseHandoffNextAction(currentPhase2, handoff) {
 }
 function renderStateDocument(state) {
   const blockers = state.blockers.length === 0 ? "- none" : state.blockers.map((item) => `- ${item}`).join("\n");
+  const roadmapEvolutionNotes = state.roadmapEvolutionNotes.length === 0 ? "" : `
+## Roadmap Evolution Notes
+
+${state.roadmapEvolutionNotes.map((item) => `- ${item}`).join("\n")}
+`;
   return `# Blueprint State
 
 - Project status: ${state.projectStatus}
@@ -21531,6 +22164,7 @@ function renderStateDocument(state) {
 ## Blockers
 
 ${blockers}
+${roadmapEvolutionNotes}
 `;
 }
 function parseStateDocument(raw) {
@@ -21538,8 +22172,10 @@ function parseStateDocument(raw) {
     const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
     return match ? match[1].trim() : null;
   };
-  const blockersSection = raw.match(/## Blockers\s+([\s\S]*)$/m)?.[1] ?? "";
+  const blockersSection = extractMarkdownSection3(raw, "Blockers");
+  const roadmapEvolutionNotesSection = extractMarkdownSection3(raw, "Roadmap Evolution Notes");
   const blockers = blockersSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line && line !== "none");
+  const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line !== "none");
   return {
     projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
     currentMilestone: getLineValue("Current milestone") ?? DEFAULT_STATE.currentMilestone,
@@ -21547,7 +22183,8 @@ function parseStateDocument(raw) {
     activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
     nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
     lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
-    blockers
+    blockers,
+    roadmapEvolutionNotes
   };
 }
 function normalizePhaseNumber2(value) {
@@ -21575,6 +22212,97 @@ function extractPhasePlanIds(artifacts, phasePrefix2, kind) {
   return [...new Set(
     [...artifacts].map((artifact) => artifact.match(matcher)?.[1]?.padStart(2, "0") ?? null).filter((value) => value !== null)
   )].sort();
+}
+function extractPhaseArtifactDirectory(artifacts, phasePrefix2) {
+  const matcher = new RegExp(
+    `^${BLUEPRINT_DIR.replace(".", "\\.")}/phases/([^/]+)/${phasePrefix2.replace(".", "\\.")}-`
+  );
+  for (const artifact of artifacts) {
+    const match = artifact.match(matcher);
+    if (match) {
+      return match[1] ?? null;
+    }
+  }
+  return null;
+}
+function phaseArtifactPathsForDirectory(artifacts, phaseDir) {
+  if (!phaseDir) {
+    return [];
+  }
+  const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir}/`;
+  return artifacts.filter((artifact) => artifact.startsWith(prefix));
+}
+async function collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix2) {
+  const warnings = [];
+  const summaryPaths = [];
+  const summaryIds = [];
+  const phaseSummaryPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right));
+  const knownPlanPaths = new Map(
+    phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).map((artifact) => [extractPhasePlanIds([artifact], phasePrefix2, "PLAN")[0] ?? null, artifact]).filter((entry) => entry[0] !== null)
+  );
+  for (const summaryPath2 of phaseSummaryPaths) {
+    const summaryId = extractPhasePlanIds([summaryPath2], phasePrefix2, "SUMMARY")[0] ?? null;
+    if (!summaryId) {
+      warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
+      continue;
+    }
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: knownPlanPaths.get(summaryId) ?? null
+    });
+    if (validation.valid) {
+      summaryPaths.push(summaryPath2);
+      summaryIds.push(summaryId);
+      continue;
+    }
+    warnings.push(
+      `${summaryPath2}: summary artifact is invalid and does not count as completed execution evidence.`
+    );
+    warnings.push(...validation.issues.map((issue2) => `${summaryPath2}: ${issue2}`));
+    warnings.push(...validation.warnings.map((warning) => `${summaryPath2}: ${warning}`));
+    if (!knownPlanPaths.has(summaryId)) {
+      warnings.push(`${summaryPath2}: no matching plan artifact exists for this summary.`);
+    }
+  }
+  const pendingPlanIds = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).map((artifact) => extractPhasePlanIds([artifact], phasePrefix2, "PLAN")[0] ?? null).filter((planId2) => planId2 !== null && !summaryIds.includes(planId2));
+  return { summaryIds, summaryPaths, pendingPlanIds, warnings };
+}
+async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifacts, phasePrefix2, summaryPaths) {
+  const warnings = [];
+  let hasVerification = false;
+  let hasUat = false;
+  if (summaryPaths.length === 0) {
+    warnings.push(
+      `${phasePrefix2}: no valid execution summaries were found, so VERIFICATION and UAT evidence cannot count toward milestone closeout.`
+    );
+    return { hasVerification: false, hasUat: false, warnings };
+  }
+  for (const artifact of ["verification", "uat"]) {
+    const artifactPath = phaseArtifacts.find(
+      (candidate) => candidate.endsWith(
+        artifact === "verification" ? `${phasePrefix2}-VERIFICATION.md` : `${phasePrefix2}-UAT.md`
+      )
+    );
+    if (!artifactPath) {
+      continue;
+    }
+    const content = await fs5.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths);
+    if (validation.valid) {
+      if (artifact === "verification") {
+        hasVerification = true;
+      } else {
+        hasUat = true;
+      }
+      continue;
+    }
+    warnings.push(
+      `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
+    );
+    warnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
+    warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+  return { hasVerification, hasUat, warnings };
 }
 async function listImmediateDirectories2(rootPath) {
   try {
@@ -21711,23 +22439,32 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const phaseDir = matchingPhaseDirs[0];
   const phasePrefix2 = formatPhasePrefix2(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
-  const phaseArtifacts = new Set(
-    inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`))
-  );
+  const phaseArtifacts = inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`));
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix2}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix2}-UI-SPEC.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix2}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix2}-UAT.md`;
-  const hasContext = phaseArtifacts.has(contextPath);
-  const hasResearch = phaseArtifacts.has(researchPath);
-  const hasUiSpec = phaseArtifacts.has(uiSpecPath);
-  const hasVerification = phaseArtifacts.has(verificationPath);
-  const hasUat = phaseArtifacts.has(uatPath);
-  const planPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-PLAN.md"));
-  const summaryPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-SUMMARY.md"));
+  const hasContext = phaseArtifacts.includes(contextPath);
+  const hasResearch = phaseArtifacts.includes(researchPath);
+  const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
+  const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix2, "PLAN");
-  const summaryIds = extractPhasePlanIds(phaseArtifacts, phasePrefix2, "SUMMARY");
+  const {
+    summaryIds,
+    summaryPaths,
+    warnings: summaryWarnings
+  } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix2);
+  const {
+    hasVerification,
+    hasUat,
+    warnings: validationWarnings
+  } = await inspectValidatedPhaseValidationArtifacts(
+    projectRoot,
+    phaseArtifacts,
+    phasePrefix2,
+    summaryPaths
+  );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
   const hasPendingExecution = planIds.some((planId2) => !summaryIds.includes(planId2));
@@ -21776,6 +22513,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       `Current phase ${currentPhase2} has a UAT artifact without a VERIFICATION artifact; confirm validation evidence is not missing.`
     );
   }
+  warnings.push(...summaryWarnings, ...validationWarnings);
   return {
     currentPhase: currentPhase2,
     phaseDir,
@@ -21827,20 +22565,40 @@ async function readRoadmapSignals(projectRoot) {
     };
   }
 }
-function inspectMilestoneEvidence(phaseArtifacts, phases) {
+async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
   const missingVerificationPhases = [];
   const missingUatPhases = [];
+  const pendingSummaryCoveragePhases = [];
+  const warnings = [];
   for (const phase of phases) {
     if (!phase.completed) {
       continue;
     }
     const phasePrefix2 = formatBlueprintPhasePrefix(phase.phaseNumber);
-    const hasVerification = phaseArtifacts.some(
-      (artifact) => artifact.endsWith(`/${phasePrefix2}-VERIFICATION.md`)
+    const phaseDir = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix2);
+    const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir);
+    const {
+      summaryPaths,
+      pendingPlanIds,
+      warnings: summaryWarnings
+    } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseScopedArtifacts, phasePrefix2);
+    if (pendingPlanIds.length > 0) {
+      pendingSummaryCoveragePhases.push(phase.phaseNumber);
+      warnings.push(
+        `Phase ${phase.phaseNumber} has pending execution plans without valid summaries; milestone closeout remains blocked until the summary trail is complete.`
+      );
+    }
+    const {
+      hasVerification,
+      hasUat,
+      warnings: validationWarnings
+    } = await inspectValidatedPhaseValidationArtifacts(
+      projectRoot,
+      phaseScopedArtifacts,
+      phasePrefix2,
+      summaryPaths
     );
-    const hasUat = phaseArtifacts.some(
-      (artifact) => artifact.endsWith(`/${phasePrefix2}-UAT.md`)
-    );
+    warnings.push(...summaryWarnings, ...validationWarnings);
     if (!hasVerification) {
       missingVerificationPhases.push(phase.phaseNumber);
     }
@@ -21851,9 +22609,119 @@ function inspectMilestoneEvidence(phaseArtifacts, phases) {
   return {
     missingVerificationPhases,
     missingUatPhases,
-    blockingPhase: missingVerificationPhases[0] ?? missingUatPhases[0] ?? null,
-    allCompletedPhasesReady: missingVerificationPhases.length === 0 && missingUatPhases.length === 0
+    pendingSummaryCoveragePhases,
+    blockingPhase: missingVerificationPhases[0] ?? missingUatPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
+    allCompletedPhasesReady: missingVerificationPhases.length === 0 && missingUatPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
+    warnings
   };
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function extractMarkdownSectionLines(content, heading) {
+  const lines = content.split(/\r?\n/);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
+  const startIndex = lines.findIndex((line) => headingPattern.test(line.trim()));
+  if (startIndex === -1) {
+    return [];
+  }
+  const sectionLines = [];
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (/^##\s+/.test(line)) {
+      break;
+    }
+    if (line.length === 0) {
+      continue;
+    }
+    sectionLines.push(line);
+  }
+  return sectionLines;
+}
+function normalizeReportSignalLine(line) {
+  return line.replace(/^[*-]\s+/, "").replace(/`/g, "").trim().replace(/[.]+$/, "").toLowerCase();
+}
+function isNoneLikeReportSignal(line) {
+  const normalized = normalizeReportSignalLine(line);
+  return normalized === "none" || normalized === "n/a" || normalized === "na" || normalized.startsWith("no gaps") || normalized.startsWith("no actionable gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no archival blockers");
+}
+function extractBlueprintCommand(line) {
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
+  return match?.[0]?.trim() ?? null;
+}
+function parseMilestoneAuditGapSection(section) {
+  return extractMarkdownTableRows(section).flatMap((row) => {
+    if (row.length !== 4) {
+      return [];
+    }
+    const [gapId, surface, evidence, repair] = row.map((cell) => cell.trim());
+    return [
+      {
+        gapId,
+        surface,
+        evidence,
+        repair
+      }
+    ];
+  });
+}
+function hasActionableMilestoneAuditGap(rows) {
+  return rows.some((row) => {
+    return [row.gapId, row.surface, row.evidence, row.repair].some(
+      (value) => !isNoneLikeReportSignal(value)
+    );
+  });
+}
+async function inspectMilestoneAuditReportStatus(args) {
+  if (args.currentMilestone === null) {
+    return emptyMilestoneAuditReportStatus();
+  }
+  const reportPath = buildBlueprintReportPath(`milestone-audit-${args.currentMilestone}`);
+  if (!args.reports.includes(reportPath)) {
+    return emptyMilestoneAuditReportStatus();
+  }
+  try {
+    const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
+    const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
+    const requirementGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection3(raw, "Requirement Gaps")
+    );
+    const integrationGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection3(raw, "Integration Gaps")
+    );
+    const flowGapRows = parseMilestoneAuditGapSection(extractMarkdownSection3(raw, "Flow Gaps"));
+    const optionalGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection3(raw, "Optional Gaps")
+    );
+    const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
+    const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
+    const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
+    const verdict = auditVerdictLines.map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
+    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
+    const nextSafeAction = nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    const gapSections = {
+      requirement: requirementGapRows,
+      integration: integrationGapRows,
+      flow: flowGapRows,
+      optional: optionalGapRows
+    };
+    const hasStructuredGapSections = Object.values(gapSections).some((rows) => rows.length > 0);
+    const actionableGaps = hasActionableMilestoneAuditGap(requirementGapRows) || hasActionableMilestoneAuditGap(integrationGapRows) || hasActionableMilestoneAuditGap(flowGapRows) || hasActionableMilestoneAuditGap(optionalGapRows) || !hasStructuredGapSections && gapsFound.some((line) => !isNoneLikeReportSignal(line));
+    return {
+      found: true,
+      verdict,
+      gapSections,
+      hasActionableGaps: actionableGaps,
+      hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
+      nextSafeAction,
+      readyForCompletion: verdict === "READY_TO_CLOSE" && !verdictBlocksCompletion && !actionableGaps && archivalBlockers.every(isNoneLikeReportSignal)
+    };
+  } catch {
+    return {
+      ...emptyMilestoneAuditReportStatus(),
+      found: true
+    };
+  }
 }
 async function deriveNextAction(args) {
   if (args.projectStatus === "uninitialized") {
@@ -21877,6 +22745,7 @@ async function deriveNextAction(args) {
   const validatePhaseCommand = blueprintDirectCommand("validate-phase");
   const verifyWorkCommand = blueprintDirectCommand("verify-work");
   const auditMilestoneCommand = blueprintDirectCommand("audit-milestone");
+  const planMilestoneGapsCommand = blueprintDirectCommand("plan-milestone-gaps");
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
@@ -21918,19 +22787,27 @@ async function deriveNextAction(args) {
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && !args.hasMilestoneAudit && implementedCommands.has(auditMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && !args.milestoneAuditReport.found && implementedCommands.has(auditMilestoneCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${auditMilestoneCommand}${milestoneSuffix} to audit milestone completion before archiving`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && !args.hasMilestoneCompletion && implementedCommands.has(completeMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" && args.milestoneAuditReport.nextSafeAction && implementedCommands.has(
+    args.milestoneAuditReport.nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? ""
+  )) {
+    return args.milestoneAuditReport.nextSafeAction;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && (args.milestoneAuditReport.hasActionableGaps || args.milestoneAuditReport.hasArchivalBlockers) && implementedCommands.has(planMilestoneGapsCommand)) {
+    return `Run ${planMilestoneGapsCommand} to close milestone gaps before archival`;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.milestoneAuditReport.readyForCompletion && !args.hasMilestoneCompletion && implementedCommands.has(completeMilestoneCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${completeMilestoneCommand}${milestoneSuffix} to record milestone closeout after the audit`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && args.hasMilestoneCompletion && !args.hasMilestoneSummary && implementedCommands.has(milestoneSummaryCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.hasMilestoneCompletion && !args.hasMilestoneSummary && implementedCommands.has(milestoneSummaryCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${milestoneSummaryCommand}${milestoneSuffix} to generate the final milestone summary`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && args.hasMilestoneCompletion && args.hasMilestoneSummary && implementedCommands.has(newMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.hasMilestoneCompletion && args.hasMilestoneSummary && implementedCommands.has(newMilestoneCommand)) {
     return `Run ${newMilestoneCommand} to start the next milestone from the saved carry-forward summary`;
   }
   return args.currentPhase ? `${blueprintRunDirectCommand("progress")} to review Phase ${args.currentPhase} and the next safe action` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
@@ -21962,9 +22839,13 @@ async function buildSyncedState(projectRoot) {
       `STATE.md is ahead of ROADMAP.md: current phase ${existingState.currentPhase} will be used instead of the stale roadmap phase ${roadmapSignals.currentPhase}.`
     );
   }
-  const milestoneAuditReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
   const milestoneCompletionReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-complete-${currentMilestone}`);
   const milestoneSummaryReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-summary-${currentMilestone}`);
+  const milestoneAuditReport = await inspectMilestoneAuditReportStatus({
+    projectRoot,
+    currentMilestone,
+    reports: inspection.reports
+  });
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
@@ -21976,7 +22857,8 @@ async function buildSyncedState(projectRoot) {
     inspection.phases,
     currentPhase2
   );
-  const milestoneEvidence = inspectMilestoneEvidence(
+  const milestoneEvidence = await inspectMilestoneEvidence(
+    projectRoot,
     inspection.phases,
     roadmapSignals.phases
   );
@@ -22011,6 +22893,7 @@ async function buildSyncedState(projectRoot) {
     blockers.push(`${PAUSE_HANDOFF_BLOCKER_PREFIX}${pauseHandoff.path}.`);
   }
   warnings.push(...currentPhaseArtifacts.warnings);
+  warnings.push(...milestoneEvidence.warnings);
   warnings.push(...pauseHandoff.warnings);
   return {
     state: {
@@ -22024,7 +22907,7 @@ async function buildSyncedState(projectRoot) {
         currentPhase: currentPhase2,
         currentMilestone,
         allPhasesComplete: roadmapSignals.allPhasesComplete,
-        hasMilestoneAudit: milestoneAuditReportPath !== null && inspection.reports.includes(milestoneAuditReportPath),
+        milestoneAuditReport,
         hasMilestoneCompletion: milestoneCompletionReportPath !== null && inspection.reports.includes(milestoneCompletionReportPath),
         hasMilestoneSummary: milestoneSummaryReportPath !== null && inspection.reports.includes(milestoneSummaryReportPath),
         phaseArtifacts: currentPhaseArtifacts,
@@ -22033,9 +22916,11 @@ async function buildSyncedState(projectRoot) {
         workflow: workflowRouting
       }),
       blockers,
+      roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
       lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
     },
-    warnings
+    warnings,
+    milestoneAuditReport
   };
 }
 async function blueprintPauseHandoffGet(args = {}) {
@@ -22137,10 +23022,12 @@ async function loadBlueprintState(cwd) {
 async function blueprintStateLoad(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const state = inspection.readiness === "uninitialized" ? await loadBlueprintState(projectRoot) : (await buildSyncedState(projectRoot)).state;
+  const syncedState = inspection.readiness === "uninitialized" ? null : await buildSyncedState(projectRoot);
+  const state = inspection.readiness === "uninitialized" ? await loadBlueprintState(projectRoot) : syncedState.state;
   const currentPhase2 = inspection.readiness === "uninitialized" ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
+  const milestoneAuditReport = inspection.readiness === "uninitialized" ? emptyMilestoneAuditReportStatus() : syncedState.milestoneAuditReport;
   return {
     state,
     blockers,
@@ -22148,7 +23035,8 @@ async function blueprintStateLoad(args = {}) {
       projectStatus: inspection.readiness,
       currentPhase: currentPhase2,
       nextAction,
-      hasBlockers: blockers.length > 0
+      hasBlockers: blockers.length > 0,
+      milestoneAudit: milestoneAuditReport
     }
   };
 }
@@ -22163,6 +23051,7 @@ async function blueprintStateUpdate(args = {}) {
     ...currentState,
     ...patch,
     blockers: patch.blockers ?? currentState.blockers,
+    roadmapEvolutionNotes: patch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
     lastUpdated: patch.lastUpdated ?? (/* @__PURE__ */ new Date()).toISOString()
   };
   const updatedFields = [
@@ -22234,6 +23123,7 @@ var init_state = __esm({
       activeCommand: blueprintDirectCommand("new-project"),
       nextAction: blueprintRunDirectCommand("new-project"),
       blockers: [],
+      roadmapEvolutionNotes: [],
       lastUpdated: (/* @__PURE__ */ new Date(0)).toISOString()
     };
     PAUSE_HANDOFF_REPORT_PATH = `${BLUEPRINT_REPORTS_PATH}/pause-work-latest.md`;
@@ -22250,6 +23140,7 @@ var init_state = __esm({
         activeCommand: string2().optional(),
         nextAction: string2().optional(),
         blockers: array(string2()).optional(),
+        roadmapEvolutionNotes: array(string2()).optional(),
         lastUpdated: string2().optional()
       }).optional()
     };
@@ -22342,6 +23233,16 @@ function formatPhasePrefix3(value) {
 function extractPhaseNumberToken(value) {
   const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
   return match ? normalizePhaseNumber3(match[1]) : null;
+}
+function extractExactPhaseNumberToken(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : null;
+  }
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  return normalizePhaseNumber3(trimmed);
 }
 function isIntegerPhaseNumber(value) {
   return !normalizePhaseNumber3(value).includes(".");
@@ -22520,21 +23421,169 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
   }
   return content;
 }
-function buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber = null) {
-  return `### Phase ${phaseNumber}: ${phaseName}
-**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
-**Requirements**: none yet
-**Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
-**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
-**Status**: planned
-`;
+function titleCaseAuditBackedCategory(category) {
+  return category.split("-").map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`).join(" ");
 }
-function appendPhaseDetailsToRoadmap(raw, phaseNumber, phaseName, dependsOnPhaseNumber = null) {
+function normalizeRoadmapDetailList(values) {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+function renderAuditBackedGapGroups(gapGroups) {
+  const renderedGroups = (gapGroups ?? []).filter((group) => group.rows.length > 0).map((group) => {
+    const rows = group.rows.map(
+      (row) => `| ${row.gapId.trim()} | ${row.surface.trim()} | ${row.evidence.trim()} | ${row.repair.trim()} |`
+    ).join("\n");
+    return `### ${titleCaseAuditBackedCategory(group.category)} Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${rows}`;
+  });
+  return renderedGroups.join("\n\n");
+}
+function renderRequirementTraceabilityRepairSection(requirementIds, phaseNumber, sourceReportPath) {
+  const ids = normalizeRoadmapDetailList(requirementIds);
+  if (ids.length === 0) {
+    return "";
+  }
+  const reportReference = sourceReportPath?.trim() || "milestone audit";
+  const rows = ids.map(
+    (requirementId) => `| ${requirementId} | pending | Phase ${phaseNumber} | Reassigned from ${reportReference}. |`
+  ).join("\n");
+  return `## Requirement Traceability Repair
+
+| Requirement ID | Status | Assignment | Notes |
+|----------------|--------|------------|-------|
+${rows}`;
+}
+function buildPhaseDetailBlock(options) {
+  const goal = options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
+  const requirements = normalizeRoadmapDetailList(options.requirements);
+  const successCriteria = options.successCriteria?.trim() || "Persist context, planning, execution, validation, and UAT evidence for this phase.";
+  const auditBackedDetails = options.auditBackedDetails ?? null;
+  const auditSections = auditBackedDetails ? [
+    "## Audit-Backed Gap Details",
+    `**Source Audit**: ${auditBackedDetails.sourceReportPath?.trim() || "none"}`,
+    `**Traceability Repair**: ${normalizeRoadmapDetailList(auditBackedDetails.repairRequirementIds).join(", ") || "none"}`,
+    renderAuditBackedGapGroups(auditBackedDetails.gapGroups),
+    renderRequirementTraceabilityRepairSection(
+      auditBackedDetails.repairRequirementIds,
+      options.phaseNumber,
+      auditBackedDetails.sourceReportPath
+    )
+  ].filter((section) => section.trim().length > 0).join("\n\n") : "";
+  return `### Phase ${options.phaseNumber}: ${options.phaseName}
+**Goal**: ${goal}
+**Requirements**: ${requirements.length > 0 ? requirements.join(", ") : "none yet"}
+**Depends on**: ${options.dependsOnPhaseNumber ? `Phase ${options.dependsOnPhaseNumber}` : "none"}
+${options.insertedMarker ? `**Inserted**: ${options.insertedMarker}
+` : ""}**Success Criteria**: ${successCriteria}
+**Status**: planned
+${auditSections ? `
+${auditSections}
+` : ""}`;
+}
+function parseRequirementTableRow(line) {
+  if (!/^\|.*\|$/.test(line)) {
+    return null;
+  }
+  const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+  if (cells.length !== 4) {
+    return null;
+  }
+  const [id, requirement, status, notes] = cells;
+  if (/^id$/i.test(id) && /^requirement$/i.test(requirement) && /^status$/i.test(status) && /^notes$/i.test(notes)) {
+    return null;
+  }
+  if (cells.every((cell) => /^-+$/.test(cell.replace(/:/g, "")))) {
+    return null;
+  }
+  return {
+    id,
+    requirement,
+    status,
+    notes
+  };
+}
+function renderRequirementTableRow(row) {
+  return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
+}
+async function repairRequirementsTraceability(projectRoot, requirementIds, phaseNumber, phaseName, sourceReportPath) {
+  const normalizedRequirementIds = [
+    ...new Set(requirementIds.map((value) => value.trim()).filter((value) => value.length > 0))
+  ];
+  if (normalizedRequirementIds.length === 0) {
+    return {
+      content: "",
+      warnings: []
+    };
+  }
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+  if (!await pathExists4(requirementsPath)) {
+    throw new Error(
+      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
+    );
+  }
+  const rawRequirements = await fs6.readFile(requirementsPath, "utf8");
+  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+  if (!requirementsSectionPattern.test(rawRequirements)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+    );
+  }
+  const remainingRequirementIds = new Set(normalizedRequirementIds);
+  const noteSource = sourceReportPath?.trim() || "the milestone audit report";
+  let updated = false;
+  const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
+  const content = rawRequirements.replace(
+    requirementsSectionPattern,
+    (_full, header, body) => {
+      const nextBody = body.split("\n").map((line) => {
+        const row = parseRequirementTableRow(line);
+        if (!row || !remainingRequirementIds.has(row.id)) {
+          return line;
+        }
+        remainingRequirementIds.delete(row.id);
+        const notes = row.notes.trim();
+        const nextNotes = notes.includes(reassignmentNote) ? notes : notes.length > 0 ? `${notes} ${reassignmentNote}` : reassignmentNote;
+        const nextStatus = "pending";
+        if (row.status.trim() === nextStatus && nextNotes === row.notes) {
+          return line;
+        }
+        updated = true;
+        return renderRequirementTableRow({
+          ...row,
+          status: nextStatus,
+          notes: nextNotes
+        });
+      }).join("\n");
+      return `${header}${nextBody}
+`;
+    }
+  );
+  if (remainingRequirementIds.size > 0) {
+    throw new Error(
+      `Requirement traceability repair could not find requirement IDs in ${BLUEPRINT_DIR}/REQUIREMENTS.md: ${[
+        ...remainingRequirementIds
+      ].join(", ")}`
+    );
+  }
+  return {
+    content,
+    warnings: updated ? [
+      `Reset requirements ${normalizedRequirementIds.join(", ")} to pending and reassigned them to Phase ${phaseNumber}.`
+    ] : [`Requirements ${normalizedRequirementIds.join(", ")} already reflected the requested repair.`]
+  };
+}
+function appendPhaseDetailsToRoadmap(raw, phaseNumber, phaseName, detailOptions = {}) {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber);
+  const detailBlock = buildPhaseDetailBlock({
+    phaseNumber,
+    phaseName,
+    ...detailOptions
+  });
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (phaseDetailsSectionPattern.test(raw)) {
     return raw.replace(
@@ -22555,12 +23604,18 @@ ${detailBlock.trimEnd()}`;
 
 ${detailBlock}`;
 }
-function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseName, dependsOnPhaseNumber) {
+function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseName, dependsOnPhaseNumber, detailOptions = {}) {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber).trimEnd();
+  const detailBlock = buildPhaseDetailBlock({
+    phaseNumber,
+    phaseName,
+    dependsOnPhaseNumber,
+    insertedMarker: "yes",
+    ...detailOptions
+  }).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phaseDetailsSectionPattern.test(raw)) {
     throw new Error(
@@ -22741,21 +23796,39 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
     resolveBlueprintPath(projectRoot, resolved.phaseDir),
     projectRoot
   );
-  const summaryPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
-  const hasSummaries = summaryPaths.length > 0;
-  const verificationAccepted = await isAcceptedValidationArtifact(
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
     projectRoot,
-    resolved,
-    "verification",
-    summaryPaths
+    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
   );
-  const uatAccepted = await isAcceptedValidationArtifact(
-    projectRoot,
-    resolved,
-    "uat",
-    summaryPaths
-  );
-  const completed = hasSummaries && verificationAccepted && uatAccepted;
+  const validationWarnings = [];
+  let hasValidVerification = false;
+  let hasValidUat = false;
+  for (const artifact of ["verification", "uat"]) {
+    const artifactPath = validationArtifactPathFor(resolved, artifact);
+    if (!phaseArtifacts.includes(artifactPath)) {
+      continue;
+    }
+    const content = await fs6.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths);
+    if (validation.valid) {
+      if (artifact === "verification") {
+        hasValidVerification = true;
+      } else {
+        hasValidUat = true;
+      }
+      continue;
+    }
+    validationWarnings.push(
+      `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
+    );
+    validationWarnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
+    validationWarnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && hasValidUat;
   const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -22767,31 +23840,18 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
       `ROADMAP completion sync could not find Phase ${resolved.phaseNumber} in ${BLUEPRINT_DIR}/ROADMAP.md.`
     ];
   }
-  const detailStatus = completed ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "completed") : phaseLineSync.changed ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "in_progress") : {
-    content: phaseLineSync.content,
-    found: false,
-    changed: false
-  };
+  const detailStatus = completed ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "completed") : replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "in_progress");
   if (!phaseLineSync.changed && !detailStatus.changed) {
     return [];
   }
   const warnings = await writeTextFile(roadmapPath, detailStatus.content, {
     label: `${BLUEPRINT_DIR}/ROADMAP.md`
   });
+  warnings.push(...summaryWarnings, ...validationWarnings);
   warnings.push(
     completed ? `Marked Phase ${resolved.phaseNumber} completed in ${BLUEPRINT_DIR}/ROADMAP.md.` : `Reopened Phase ${resolved.phaseNumber} in ${BLUEPRINT_DIR}/ROADMAP.md until validation evidence is complete.`
   );
   return warnings;
-}
-async function isAcceptedValidationArtifact(projectRoot, resolved, artifact, summaryPaths) {
-  const artifactPath = validationArtifactPathFor(resolved, artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
-  if (!await pathExists4(absolutePath)) {
-    return false;
-  }
-  const content = await fs6.readFile(absolutePath, "utf8");
-  const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths);
-  return validation.valid && validation.warnings.length === 0;
 }
 async function pathExists4(targetPath) {
   try {
@@ -23031,6 +24091,36 @@ function buildLocateRecovery(reason) {
     "Use /blu-progress if you need the safest currently implemented next action."
   ];
 }
+function formatRoadmapPhaseCandidate(phase) {
+  return `Phase ${phase.phaseNumber}: ${phase.phaseName}`;
+}
+function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
+  const orderedPhases = [...roadmap.phases].sort(
+    (left, right) => comparePhaseNumbers2(left.phaseNumber, right.phaseNumber)
+  );
+  const lowerCandidates = orderedPhases.filter(
+    (phase) => comparePhaseNumbers2(phase.phaseNumber, targetPhaseNumber) < 0
+  );
+  const higherCandidates = orderedPhases.filter(
+    (phase) => comparePhaseNumbers2(phase.phaseNumber, targetPhaseNumber) > 0
+  );
+  const nearestCandidates = [lowerCandidates.at(-1), higherCandidates[0]].filter(
+    (phase) => phase !== void 0
+  );
+  const recovery = [];
+  if (nearestCandidates.length > 0) {
+    recovery.push(
+      `Nearest valid phase candidate${nearestCandidates.length > 1 ? "s" : ""}: ${nearestCandidates.map((phase) => formatRoadmapPhaseCandidate(phase)).join("; ")}`
+    );
+  }
+  if (roadmap.milestone) {
+    recovery.push(`Active milestone candidate: ${roadmap.milestone}`);
+  }
+  recovery.push(
+    "Use /blu-progress to confirm the safest currently implemented next action."
+  );
+  return recovery;
+}
 function fallbackPhaseName(phaseDir) {
   return slugToTitle2(path7.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
 }
@@ -23094,6 +24184,7 @@ function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
     path: pathValue,
     title: validation.metadata.title,
     wave: validation.metadata.wave,
+    gapClosure: validation.metadata.gapClosure,
     status: validation.metadata.status,
     objective: validation.metadata.objective,
     dependsOn: validation.metadata.dependsOn,
@@ -23130,6 +24221,41 @@ function toPhaseSummaryRecord(planId2, pathValue, content, linkedPlanPath) {
     title: metadata.title,
     summary: metadata.summary
   };
+}
+async function collectValidatedSummaryPaths(projectRoot, summaries) {
+  const summaryPaths = [];
+  const warnings = [];
+  for (const summary of summaries) {
+    const content = await fs6.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: summary.linkedPlanPath
+    });
+    if (validation.valid) {
+      summaryPaths.push(summary.path);
+      continue;
+    }
+    warnings.push(
+      `${summary.path}: summary artifact is invalid and does not count as completed execution evidence.`
+    );
+    warnings.push(...validation.issues.map((issue2) => `${summary.path}: ${issue2}`));
+    warnings.push(...validation.warnings.map((warning) => `${summary.path}: ${warning}`));
+  }
+  return { summaryPaths, warnings };
+}
+function collectReferencedValidatedSummaryPaths(content, summaries, completedPlans) {
+  const references = /* @__PURE__ */ new Map();
+  for (const summary of summaries) {
+    if (!completedPlans.has(summary.planId)) {
+      continue;
+    }
+    const fileName = summary.path.split("/").pop() ?? summary.path;
+    const firstMatch = [summary.path, fileName].map((candidate) => content.indexOf(candidate)).filter((index) => index >= 0).sort((left, right) => left - right)[0];
+    if (firstMatch === void 0) {
+      continue;
+    }
+    references.set(summary.path, firstMatch);
+  }
+  return [...references.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0])).map(([summaryPath2]) => summaryPath2);
 }
 function ensureCheckpointObject(checkpoint, checkpointPath) {
   if (typeof checkpoint !== "object" || checkpoint === null || Array.isArray(checkpoint)) {
@@ -23198,6 +24324,7 @@ async function blueprintRoadmapRead(args = {}) {
 async function blueprintRoadmapAddPhase(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const normalizedDescription = normalizePhaseDescription(args.description);
+  const auditBackedDetails = args.auditBackedDetails ?? null;
   if (normalizedDescription.length === 0) {
     throw new Error(
       "Phase description required. Re-run /blu-add-phase with a concise description."
@@ -23216,12 +24343,25 @@ async function blueprintRoadmapAddPhase(args) {
     const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slug}`;
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
     const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
+    const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
+      projectRoot,
+      auditBackedDetails.repairRequirementIds,
+      phaseNumber,
+      normalizedDescription,
+      auditBackedDetails.sourceReportPath
+    ) : null;
     const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
     const updatedRoadmap = appendPhaseDetailsToRoadmap(
       appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
       phaseNumber,
       normalizedDescription,
-      dependsOnPhaseNumber
+      auditBackedDetails ? {
+        dependsOnPhaseNumber,
+        goal: auditBackedDetails.goal ?? "Close the audit-identified milestone gaps and restore requirement traceability.",
+        requirements: auditBackedDetails.repairRequirementIds,
+        successCriteria: auditBackedDetails.successCriteria ?? "Persist audit-backed gap details and repair traceability for the affected requirements.",
+        auditBackedDetails
+      } : { dependsOnPhaseNumber }
     );
     const warnings = [];
     const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
@@ -23230,6 +24370,18 @@ async function blueprintRoadmapAddPhase(args) {
         label: roadmap.path
       })
     );
+    if (requirementRepair) {
+      warnings.push(...requirementRepair.warnings);
+      warnings.push(
+        ...await writeTextFile(
+          resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
+          requirementRepair.content,
+          {
+            label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
+          }
+        )
+      );
+    }
     if (await pathExists4(phaseDirPath)) {
       warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
     } else {
@@ -23257,10 +24409,16 @@ async function blueprintRoadmapInsertPhase(args) {
       "Phase description required. Re-run /blu-insert-phase with an integer phase number such as 3 and a concise description."
     );
   }
-  const afterPhaseNumber = extractPhaseNumberToken(args.after ?? "");
+  const afterPhaseNumber = extractExactPhaseNumberToken(args.after ?? "");
   if (!afterPhaseNumber) {
+    const afterInput = normalizeBlueprintInput(args.after ?? "").trim();
+    if (afterInput.length === 0) {
+      throw new Error(
+        "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      );
+    }
     throw new Error(
-      "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      `Phase ${afterInput} is not a valid Blueprint integer phase number. Re-run /blu-insert-phase with an existing integer phase number such as 3.`
     );
   }
   if (!isIntegerPhaseNumber(afterPhaseNumber)) {
@@ -23404,8 +24562,13 @@ async function blueprintRoadmapRemovePhase(args) {
   }
   const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
   if (!targetPhase) {
+    const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
     throw new Error(
-      `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      [
+        `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
+        "Recovery:",
+        ...recovery.map((entry) => `- ${entry}`)
+      ].join("\n")
     );
   }
   const currentState = await loadBlueprintState(projectRoot);
@@ -23431,9 +24594,15 @@ async function blueprintRoadmapRemovePhase(args) {
   const executionArtifacts = removedArtifacts.filter(
     (artifactPath) => /-SUMMARY\.md$/i.test(artifactPath) || /-VERIFICATION\.md$/i.test(artifactPath) || /-UAT\.md$/i.test(artifactPath)
   );
+  const warnings = [];
   if (executionArtifacts.length > 0) {
-    throw new Error(
-      `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Remove those artifacts explicitly before removing the phase.`
+    if (!args.force) {
+      throw new Error(
+        `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+      );
+    }
+    warnings.push(
+      `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
     );
   }
   const renumberTargets = findPhaseRenumberTargets(roadmap.phases, targetPhaseNumber);
@@ -23455,7 +24624,6 @@ async function blueprintRoadmapRemovePhase(args) {
     removedPhaseLine.content,
     targetPhaseNumber
   );
-  const warnings = [];
   if (!removedPhaseDetails.removed) {
     warnings.push(
       `Phase ${targetPhaseNumber} did not have a matching entry under the roadmap's "## Phase Details" section.`
@@ -23694,7 +24862,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
       appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
       phaseNumber,
       phaseName,
-      dependsOnPhaseNumber
+      { dependsOnPhaseNumber }
     );
     roadmapPhases.push({
       phaseNumber,
@@ -24071,7 +25239,6 @@ async function blueprintPhaseValidationRead(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate(args);
   const resolved = toResolvedPhaseLocation(located);
-  const summaryPaths = located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right));
   if (!resolved) {
     return {
       phaseFound: false,
@@ -24083,7 +25250,7 @@ async function blueprintPhaseValidationRead(args) {
       artifact: args.artifact,
       path: null,
       content: null,
-      summaryPaths,
+      summaryPaths: [],
       reason: located.reason
     };
   }
@@ -24100,10 +25267,20 @@ async function blueprintPhaseValidationRead(args) {
       artifact: args.artifact,
       path: artifactPath,
       content: null,
-      summaryPaths,
+      summaryPaths: [],
       reason: `${artifactPath} does not exist yet.`
     };
   }
+  const content = await fs6.readFile(absolutePath, "utf8");
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const summaryPaths = collectReferencedValidatedSummaryPaths(
+    content,
+    summaryIndex.summaries,
+    new Set(summaryIndex.completedPlans)
+  );
   return {
     phaseFound: true,
     found: true,
@@ -24113,7 +25290,7 @@ async function blueprintPhaseValidationRead(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs6.readFile(absolutePath, "utf8"),
+    content,
     summaryPaths,
     reason: null
   };
@@ -24129,38 +25306,75 @@ async function blueprintPhaseValidationWrite(args) {
       `Phase ${resolved.phaseNumber} could not be resolved for validation persistence.`
     );
   }
-  if (summaryIndex.summaries.length === 0) {
+  const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
+    projectRoot,
+    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+  );
+  const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
+  const warnings = [...summaryWarnings];
+  if (summaryPaths.length === 0) {
     throw new Error(
-      `Phase ${resolved.phaseNumber} does not have execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} before writing ${args.artifact} artifacts.`
+      `Phase ${resolved.phaseNumber} does not have any valid execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} after fixing summary artifacts before writing ${artifactLabel} artifacts.`
     );
   }
   const artifactPath = validationArtifactPathFor(resolved, args.artifact);
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const normalizedContent = normalizeTextContent3(args.content);
   const exists = await pathExists4(absolutePath);
+  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
+    normalizedContent,
+    summaryIndex.summaries,
+    new Set(summaryIndex.completedPlans)
+  );
   const validation = normalizedContent.trim().length === 0 ? {
     valid: false,
     issues: [`${args.artifact} content must not be empty.`],
     warnings: []
-  } : args.artifact === "verification" ? validateVerificationArtifactContent(
-    normalizedContent,
-    summaryIndex.summaries.map((summary) => summary.path)
-  ) : validateUatArtifactContent(
-    normalizedContent,
-    summaryIndex.summaries.map((summary) => summary.path)
-  );
-  const warnings = [];
+  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, referencedSummaryPaths) : validateUatArtifactContent(normalizedContent, referencedSummaryPaths);
   if (args.artifact === "uat") {
     const verificationPath = validationArtifactPathFor(resolved, "verification");
-    if (!await pathExists4(resolveBlueprintPath(projectRoot, verificationPath))) {
+    const verificationAbsolutePath = resolveBlueprintPath(projectRoot, verificationPath);
+    if (!await pathExists4(verificationAbsolutePath)) {
       throw new Error(
         `Phase ${resolved.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${resolved.phaseNumber} first.`
+      );
+    }
+    const verificationContent = await fs6.readFile(verificationAbsolutePath, "utf8");
+    const verificationSummaryPaths = collectReferencedValidatedSummaryPaths(
+      verificationContent,
+      summaryIndex.summaries,
+      new Set(summaryIndex.completedPlans)
+    );
+    const verificationValidation = validateVerificationArtifactContent(
+      verificationContent,
+      verificationSummaryPaths
+    );
+    if (!verificationValidation.valid) {
+      throw new Error(
+        `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT. Repair the verification evidence before writing ${artifactLabel} artifacts.`
       );
     }
   }
   if (exists) {
     const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
+      if (!validation.valid) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          summaryPaths: referencedSummaryPaths,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: validation.issues,
+          warnings: [...warnings, ...validation.warnings]
+        };
+      }
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
       return {
@@ -24170,7 +25384,7 @@ async function blueprintPhaseValidationWrite(args) {
         phaseDir: resolved.phaseDir,
         artifact: args.artifact,
         path: artifactPath,
-        summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+        summaryPaths: referencedSummaryPaths,
         written: false,
         created: false,
         overwritten: false,
@@ -24194,7 +25408,7 @@ async function blueprintPhaseValidationWrite(args) {
       phaseDir: resolved.phaseDir,
       artifact: args.artifact,
       path: artifactPath,
-      summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+      summaryPaths: referencedSummaryPaths,
       written: false,
       created: false,
       overwritten: false,
@@ -24219,7 +25433,7 @@ async function blueprintPhaseValidationWrite(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+    summaryPaths: referencedSummaryPaths,
     written: true,
     created: !exists,
     overwritten: exists,
@@ -24242,6 +25456,7 @@ async function blueprintPhasePlanIndex(args = {}) {
       plans: [],
       waves: {},
       missingPlans: [],
+      gapClosurePlans: [],
       warnings: located.reason ? [located.reason] : []
     };
   }
@@ -24250,6 +25465,7 @@ async function blueprintPhasePlanIndex(args = {}) {
   const waves = {};
   const warnings = [];
   const knownPlanIds = /* @__PURE__ */ new Set();
+  const gapClosurePlans = /* @__PURE__ */ new Set();
   for (const planPath of planPaths) {
     const planId2 = parsePlanArtifactPath(planPath, resolved.phasePrefix);
     if (!planId2) {
@@ -24260,6 +25476,9 @@ async function blueprintPhasePlanIndex(args = {}) {
     const content = await fs6.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record2 = toPhasePlanRecord(planId2, planPath, content, resolved.phaseNumber);
     plans.push(record2);
+    if (record2.valid && record2.gapClosure) {
+      gapClosurePlans.add(planId2);
+    }
     const waveKey = String(record2.wave ?? "unassigned");
     waves[waveKey] ??= [];
     waves[waveKey].push(planPath);
@@ -24292,6 +25511,7 @@ async function blueprintPhasePlanIndex(args = {}) {
     plans,
     waves,
     missingPlans: [...new Set(missingPlans)],
+    gapClosurePlans: [...gapClosurePlans].sort((left, right) => left.localeCompare(right)),
     warnings
   };
 }
@@ -24349,6 +25569,7 @@ async function blueprintPhasePlanRead(args) {
     metadata: {
       title: validation.metadata.title,
       wave: validation.metadata.wave,
+      gapClosure: validation.metadata.gapClosure,
       status: validation.metadata.status,
       objective: validation.metadata.objective,
       dependsOn: validation.metadata.dependsOn,
@@ -24516,10 +25737,21 @@ async function blueprintPhaseSummaryIndex(args = {}) {
       continue;
     }
     const content = await fs6.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: knownPlanPaths.get(planId2) ?? null
+    });
     summaries.push(
       toPhaseSummaryRecord(planId2, summaryPath2, content, knownPlanPaths.get(planId2) ?? null)
     );
-    completedPlans.add(planId2);
+    if (validation.valid) {
+      completedPlans.add(planId2);
+    } else {
+      warnings.push(
+        `${summaryPath2}: summary artifact is invalid and does not count as completed execution evidence.`
+      );
+      warnings.push(...validation.issues.map((issue2) => `${summaryPath2}: ${issue2}`));
+      warnings.push(...validation.warnings.map((warning) => `${summaryPath2}: ${warning}`));
+    }
     if (!knownPlanPaths.has(planId2)) {
       warnings.push(`${summaryPath2}: no matching plan artifact exists for this summary.`);
     }
@@ -24611,9 +25843,30 @@ async function blueprintPhaseSummaryWrite(args) {
   const pathValue = summaryPathFor(resolved, planId2);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = normalizeTextContent3(args.content);
+  const validation = validateStrictSummaryArtifactContent(normalizedContent, {
+    linkedPlanPath: plan.path,
+    requirePlanMarker: true
+  });
+  const issues = normalizedContent.trim().length === 0 ? ["Execution summary content must not be empty."] : validation.issues;
+  const warnings = [...validation.warnings];
   const exists = await pathExists4(absolutePath);
-  const issues = normalizedContent.trim().length === 0 ? ["Execution summary content must not be empty."] : [];
-  const warnings = normalizedContent.trim().length === 0 ? [] : validateSummaryArtifactContent(normalizedContent).warnings;
+  if (!validation.valid) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: pathValue,
+      linkedPlanPath: plan.path,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues,
+      warnings
+    };
+  }
   if (exists) {
     const existingContent = await fs6.readFile(absolutePath, "utf8");
     if (existingContent === normalizedContent) {
@@ -24639,23 +25892,6 @@ async function blueprintPhaseSummaryWrite(args) {
         `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
       );
     }
-  }
-  if (issues.length > 0) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId: planId2,
-      path: pathValue,
-      linkedPlanPath: plan.path,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      issues,
-      warnings
-    };
   }
   warnings.push(
     ...await writeTextFile(absolutePath, normalizedContent, {
@@ -24833,16 +26069,36 @@ var init_phase = __esm({
     roadmapAddPhaseInputSchema = {
       cwd: string2().optional(),
       description: string2(),
-      expectedPhaseNumber: string2().optional()
+      expectedPhaseNumber: string2().optional(),
+      auditBackedDetails: object2({
+        sourceReportPath: string2().optional(),
+        goal: string2().optional(),
+        successCriteria: string2().optional(),
+        repairRequirementIds: array(string2()).optional(),
+        gapGroups: array(
+          object2({
+            category: _enum(["requirement", "integration", "flow", "optional"]),
+            rows: array(
+              object2({
+                gapId: string2(),
+                surface: string2(),
+                evidence: string2(),
+                repair: string2()
+              })
+            )
+          })
+        ).optional()
+      }).optional()
     };
     roadmapInsertPhaseInputSchema = {
       cwd: string2().optional(),
-      after: string2(),
+      after: union([string2(), number2()]),
       description: string2()
     };
     roadmapRemovePhaseInputSchema = {
       cwd: string2().optional(),
-      phase: string2()
+      phase: union([string2(), number2()]),
+      force: boolean2().optional()
     };
     roadmapPromoteBacklogInputSchema = {
       cwd: string2().optional(),

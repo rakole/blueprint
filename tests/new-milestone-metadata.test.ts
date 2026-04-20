@@ -16,11 +16,17 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-roadmapper\.md/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /carry-forward as the default/i);
+  assert.match(commandFile, /ask_user/);
+  assert.ok(
+    commandFile.indexOf("If the milestone summary report is missing") <
+      commandFile.indexOf("Build carry-forward context through `mcp_blueprint_blueprint_artifact_summary_digest`")
+  );
   assert.match(commandFile, /next integer after the highest base phase number/i);
   assert.match(commandFile, /Preserve historical phase directories/i);
   assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN-CONTEXT\.md>/);
@@ -34,8 +40,12 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
   );
 
   assert.match(skillFile, /\/blu-new-milestone/);
+  assert.match(skillFile, /report\.milestone-summary/);
+  assert.match(skillFile, /phase\.context/);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /carry-forward as the default/i);
   assert.match(skillFile, /Preserve historical phase directories/i);
   assert.match(skillFile, /next whole-number phase/i);
   assert.match(skillFile, /\/blu-discuss-phase <first phase>/);
+  assert.match(skillFile, /ask_user/);
 });

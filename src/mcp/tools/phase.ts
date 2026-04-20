@@ -14,7 +14,7 @@ import {
   validatePhaseArtifactContent,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
-  validateSummaryArtifactContent,
+  validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
   resolveBlueprintPath,
@@ -37,10 +37,33 @@ type RoadmapReadArgs = {
 
 type NumericInput = string | number;
 
+type AuditBackedGapCategory = "requirement" | "integration" | "flow" | "optional";
+
+type AuditBackedGapRow = {
+  gapId: string;
+  surface: string;
+  evidence: string;
+  repair: string;
+};
+
+type AuditBackedGapGroup = {
+  category: AuditBackedGapCategory;
+  rows: AuditBackedGapRow[];
+};
+
+type RoadmapAuditBackedDetails = {
+  sourceReportPath?: string;
+  goal?: string;
+  successCriteria?: string;
+  repairRequirementIds?: string[];
+  gapGroups?: AuditBackedGapGroup[];
+};
+
 type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
   expectedPhaseNumber?: string;
+  auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 
 type RoadmapInsertPhaseArgs = {
@@ -52,6 +75,7 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
   cwd?: string;
   phase: NumericInput;
+  force?: boolean;
 };
 
 type RoadmapPromoteBacklogArgs = {
@@ -376,6 +400,7 @@ type PhasePlanRecord = {
   path: string;
   title: string | null;
   wave: number | null;
+  gapClosure: boolean;
   status: string | null;
   objective: string | null;
   dependsOn: string[];
@@ -398,6 +423,7 @@ type PhasePlanIndexResult = {
   plans: PhasePlanRecord[];
   waves: Record<string, string[]>;
   missingPlans: string[];
+  gapClosurePlans: string[];
   warnings: string[];
 };
 
@@ -528,16 +554,40 @@ const roadmapReadInputSchema = {
 const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
   description: z.string(),
-  expectedPhaseNumber: z.string().optional()
+  expectedPhaseNumber: z.string().optional(),
+  auditBackedDetails: z
+    .object({
+      sourceReportPath: z.string().optional(),
+      goal: z.string().optional(),
+      successCriteria: z.string().optional(),
+      repairRequirementIds: z.array(z.string()).optional(),
+      gapGroups: z
+        .array(
+          z.object({
+            category: z.enum(["requirement", "integration", "flow", "optional"]),
+            rows: z.array(
+              z.object({
+                gapId: z.string(),
+                surface: z.string(),
+                evidence: z.string(),
+                repair: z.string()
+              })
+            )
+          })
+        )
+        .optional()
+    })
+    .optional()
 };
 const roadmapInsertPhaseInputSchema = {
   cwd: z.string().optional(),
-  after: z.string(),
+  after: z.union([z.string(), z.number()]),
   description: z.string()
 };
 const roadmapRemovePhaseInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string()
+  phase: z.union([z.string(), z.number()]),
+  force: z.boolean().optional()
 };
 const roadmapPromoteBacklogInputSchema = {
   cwd: z.string().optional(),
@@ -693,6 +743,20 @@ function formatPhasePrefix(value: NumericInput): string {
 function extractPhaseNumberToken(value: NumericInput): string | null {
   const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
   return match ? normalizePhaseNumber(match[1]) : null;
+}
+
+function extractExactPhaseNumberToken(value: NumericInput): string | null {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  return normalizePhaseNumber(trimmed);
 }
 
 function isIntegerPhaseNumber(value: NumericInput): boolean {
@@ -991,25 +1055,263 @@ function insertPhaseLineToRoadmap(
   return content;
 }
 
-function buildPhaseDetailBlock(
+type PhaseDetailBlockOptions = {
+  phaseNumber: string;
+  phaseName: string;
+  dependsOnPhaseNumber?: string | null;
+  insertedMarker?: string | null;
+  goal?: string;
+  requirements?: string[];
+  successCriteria?: string;
+  auditBackedDetails?: RoadmapAuditBackedDetails | null;
+};
+
+function titleCaseAuditBackedCategory(category: AuditBackedGapCategory): string {
+  return category
+    .split("-")
+    .map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`)
+    .join(" ");
+}
+
+function normalizeRoadmapDetailList(values: string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+
+function renderAuditBackedGapGroups(gapGroups: AuditBackedGapGroup[] | undefined): string {
+  const renderedGroups = (gapGroups ?? [])
+    .filter((group) => group.rows.length > 0)
+    .map((group) => {
+      const rows = group.rows
+        .map(
+          (row) =>
+            `| ${row.gapId.trim()} | ${row.surface.trim()} | ${row.evidence.trim()} | ${row.repair.trim()} |`
+        )
+        .join("\n");
+
+      return `### ${titleCaseAuditBackedCategory(group.category)} Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${rows}`;
+    });
+
+  return renderedGroups.join("\n\n");
+}
+
+function renderRequirementTraceabilityRepairSection(
+  requirementIds: string[] | undefined,
+  phaseNumber: string,
+  sourceReportPath: string | undefined
+): string {
+  const ids = normalizeRoadmapDetailList(requirementIds);
+
+  if (ids.length === 0) {
+    return "";
+  }
+
+  const reportReference = sourceReportPath?.trim() || "milestone audit";
+  const rows = ids
+    .map(
+      (requirementId) =>
+        `| ${requirementId} | pending | Phase ${phaseNumber} | Reassigned from ${reportReference}. |`
+    )
+    .join("\n");
+
+  return `## Requirement Traceability Repair
+
+| Requirement ID | Status | Assignment | Notes |
+|----------------|--------|------------|-------|
+${rows}`;
+}
+
+function buildPhaseDetailBlock(options: PhaseDetailBlockOptions): string {
+  const goal =
+    options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
+  const requirements = normalizeRoadmapDetailList(options.requirements);
+  const successCriteria =
+    options.successCriteria?.trim() ||
+    "Persist context, planning, execution, validation, and UAT evidence for this phase.";
+  const auditBackedDetails = options.auditBackedDetails ?? null;
+  const auditSections = auditBackedDetails
+    ? [
+        "## Audit-Backed Gap Details",
+        `**Source Audit**: ${auditBackedDetails.sourceReportPath?.trim() || "none"}`,
+        `**Traceability Repair**: ${
+          normalizeRoadmapDetailList(auditBackedDetails.repairRequirementIds).join(", ") || "none"
+        }`,
+        renderAuditBackedGapGroups(auditBackedDetails.gapGroups),
+        renderRequirementTraceabilityRepairSection(
+          auditBackedDetails.repairRequirementIds,
+          options.phaseNumber,
+          auditBackedDetails.sourceReportPath
+        )
+      ]
+        .filter((section) => section.trim().length > 0)
+        .join("\n\n")
+    : "";
+
+  return `### Phase ${options.phaseNumber}: ${options.phaseName}
+**Goal**: ${goal}
+**Requirements**: ${requirements.length > 0 ? requirements.join(", ") : "none yet"}
+**Depends on**: ${options.dependsOnPhaseNumber ? `Phase ${options.dependsOnPhaseNumber}` : "none"}
+${options.insertedMarker ? `**Inserted**: ${options.insertedMarker}\n` : ""}**Success Criteria**: ${successCriteria}
+**Status**: planned
+${auditSections ? `\n${auditSections}\n` : ""}`;
+}
+
+type RequirementTableRow = {
+  id: string;
+  requirement: string;
+  status: string;
+  notes: string;
+};
+
+function parseRequirementTableRow(line: string): RequirementTableRow | null {
+  if (!/^\|.*\|$/.test(line)) {
+    return null;
+  }
+
+  const cells = line
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+
+  if (cells.length !== 4) {
+    return null;
+  }
+
+  const [id, requirement, status, notes] = cells;
+
+  if (
+    /^id$/i.test(id) &&
+    /^requirement$/i.test(requirement) &&
+    /^status$/i.test(status) &&
+    /^notes$/i.test(notes)
+  ) {
+    return null;
+  }
+
+  if (cells.every((cell) => /^-+$/.test(cell.replace(/:/g, "")))) {
+    return null;
+  }
+
+  return {
+    id,
+    requirement,
+    status,
+    notes
+  };
+}
+
+function renderRequirementTableRow(row: RequirementTableRow): string {
+  return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
+}
+
+async function repairRequirementsTraceability(
+  projectRoot: string,
+  requirementIds: string[],
   phaseNumber: string,
   phaseName: string,
-  dependsOnPhaseNumber: string | null = null
-): string {
-  return `### Phase ${phaseNumber}: ${phaseName}
-**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
-**Requirements**: none yet
-**Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
-**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
-**Status**: planned
-`;
+  sourceReportPath?: string
+): Promise<{
+  content: string;
+  warnings: string[];
+}> {
+  const normalizedRequirementIds = [
+    ...new Set(requirementIds.map((value) => value.trim()).filter((value) => value.length > 0))
+  ];
+
+  if (normalizedRequirementIds.length === 0) {
+    return {
+      content: "",
+      warnings: []
+    };
+  }
+
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+
+  if (!(await pathExists(requirementsPath))) {
+    throw new Error(
+      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
+    );
+  }
+
+  const rawRequirements = await fs.readFile(requirementsPath, "utf8");
+  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!requirementsSectionPattern.test(rawRequirements)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+    );
+  }
+
+  const remainingRequirementIds = new Set(normalizedRequirementIds);
+  const noteSource = sourceReportPath?.trim() || "the milestone audit report";
+  let updated = false;
+  const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
+
+  const content = rawRequirements.replace(
+    requirementsSectionPattern,
+    (_full, header: string, body: string) => {
+      const nextBody = body
+        .split("\n")
+        .map((line) => {
+          const row = parseRequirementTableRow(line);
+
+          if (!row || !remainingRequirementIds.has(row.id)) {
+            return line;
+          }
+
+          remainingRequirementIds.delete(row.id);
+          const notes = row.notes.trim();
+          const nextNotes = notes.includes(reassignmentNote)
+            ? notes
+            : notes.length > 0
+              ? `${notes} ${reassignmentNote}`
+              : reassignmentNote;
+          const nextStatus = "pending";
+
+          if (row.status.trim() === nextStatus && nextNotes === row.notes) {
+            return line;
+          }
+
+          updated = true;
+
+          return renderRequirementTableRow({
+            ...row,
+            status: nextStatus,
+            notes: nextNotes
+          });
+        })
+        .join("\n");
+
+      return `${header}${nextBody}\n`;
+    }
+  );
+
+  if (remainingRequirementIds.size > 0) {
+    throw new Error(
+      `Requirement traceability repair could not find requirement IDs in ${BLUEPRINT_DIR}/REQUIREMENTS.md: ${[
+        ...remainingRequirementIds
+      ].join(", ")}`
+    );
+  }
+
+  return {
+    content,
+    warnings: updated
+      ? [
+          `Reset requirements ${normalizedRequirementIds.join(", ")} to pending and reassigned them to Phase ${phaseNumber}.`
+        ]
+      : [`Requirements ${normalizedRequirementIds.join(", ")} already reflected the requested repair.`]
+  };
 }
 
 function appendPhaseDetailsToRoadmap(
   raw: string,
   phaseNumber: string,
   phaseName: string,
-  dependsOnPhaseNumber: string | null = null
+  detailOptions: Omit<PhaseDetailBlockOptions, "phaseNumber" | "phaseName"> = {}
 ): string {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
 
@@ -1017,7 +1319,11 @@ function appendPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber);
+  const detailBlock = buildPhaseDetailBlock({
+    phaseNumber,
+    phaseName,
+    ...detailOptions
+  });
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (phaseDetailsSectionPattern.test(raw)) {
@@ -1044,7 +1350,8 @@ function insertPhaseDetailsToRoadmap(
   phaseGroupNumbers: string[],
   phaseNumber: string,
   phaseName: string,
-  dependsOnPhaseNumber: string
+  dependsOnPhaseNumber: string,
+  detailOptions: Omit<PhaseDetailBlockOptions, "phaseNumber" | "phaseName" | "dependsOnPhaseNumber" | "insertedMarker"> = {}
 ): string {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
 
@@ -1052,7 +1359,13 @@ function insertPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber).trimEnd();
+  const detailBlock = buildPhaseDetailBlock({
+    phaseNumber,
+    phaseName,
+    dependsOnPhaseNumber,
+    insertedMarker: "yes",
+    ...detailOptions
+  }).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (!phaseDetailsSectionPattern.test(raw)) {
@@ -1306,21 +1619,52 @@ async function syncRoadmapPhaseCompletion(
     resolveBlueprintPath(projectRoot, resolved.phaseDir),
     projectRoot
   );
-  const summaryPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
-  const hasSummaries = summaryPaths.length > 0;
-  const verificationAccepted = await isAcceptedValidationArtifact(
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
     projectRoot,
-    resolved,
-    "verification",
-    summaryPaths
+    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
   );
-  const uatAccepted = await isAcceptedValidationArtifact(
-    projectRoot,
-    resolved,
-    "uat",
-    summaryPaths
-  );
-  const completed = hasSummaries && verificationAccepted && uatAccepted;
+  const validationWarnings: string[] = [];
+  let hasValidVerification = false;
+  let hasValidUat = false;
+
+  for (const artifact of ["verification", "uat"] as const) {
+    const artifactPath = validationArtifactPathFor(resolved, artifact);
+
+    if (!phaseArtifacts.includes(artifactPath)) {
+      continue;
+    }
+
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const validation =
+      artifact === "verification"
+        ? validateVerificationArtifactContent(content, summaryPaths)
+        : validateUatArtifactContent(content, summaryPaths);
+
+    if (validation.valid) {
+      if (artifact === "verification") {
+        hasValidVerification = true;
+      } else {
+        hasValidUat = true;
+      }
+      continue;
+    }
+
+    validationWarnings.push(
+      `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
+    );
+    validationWarnings.push(...validation.issues.map((issue) => `${artifactPath}: ${issue}`));
+    validationWarnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+
+  const completed =
+    summaryIndex.pendingPlans.length === 0 &&
+    summaryPaths.length > 0 &&
+    hasValidVerification &&
+    hasValidUat;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -1337,13 +1681,7 @@ async function syncRoadmapPhaseCompletion(
   const detailStatus =
     completed
       ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "completed")
-      : phaseLineSync.changed
-        ? replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "in_progress")
-        : {
-            content: phaseLineSync.content,
-            found: false,
-            changed: false
-          };
+      : replacePhaseDetailStatus(phaseLineSync.content, resolved.phaseNumber, "in_progress");
 
   if (!phaseLineSync.changed && !detailStatus.changed) {
     return [];
@@ -1353,6 +1691,7 @@ async function syncRoadmapPhaseCompletion(
     label: `${BLUEPRINT_DIR}/ROADMAP.md`
   });
 
+  warnings.push(...summaryWarnings, ...validationWarnings);
   warnings.push(
     completed
       ? `Marked Phase ${resolved.phaseNumber} completed in ${BLUEPRINT_DIR}/ROADMAP.md.`
@@ -1360,28 +1699,6 @@ async function syncRoadmapPhaseCompletion(
   );
 
   return warnings;
-}
-
-async function isAcceptedValidationArtifact(
-  projectRoot: string,
-  resolved: ResolvedPhaseLocation,
-  artifact: PhaseValidationArtifactKind,
-  summaryPaths: string[]
-): Promise<boolean> {
-  const artifactPath = validationArtifactPathFor(resolved, artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
-
-  if (!(await pathExists(absolutePath))) {
-    return false;
-  }
-
-  const content = await fs.readFile(absolutePath, "utf8");
-  const validation =
-    artifact === "verification"
-      ? validateVerificationArtifactContent(content, summaryPaths)
-      : validateUatArtifactContent(content, summaryPaths);
-
-  return validation.valid && validation.warnings.length === 0;
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -1714,6 +2031,50 @@ function buildLocateRecovery(reason: string | null): string[] {
   ];
 }
 
+function formatRoadmapPhaseCandidate(phase: ParsedRoadmapPhase): string {
+  return `Phase ${phase.phaseNumber}: ${phase.phaseName}`;
+}
+
+function buildRemovePhaseRecovery(
+  targetPhaseNumber: string,
+  roadmap: {
+    milestone: string | null;
+    phases: ParsedRoadmapPhase[];
+  }
+): string[] {
+  const orderedPhases = [...roadmap.phases].sort((left, right) =>
+    comparePhaseNumbers(left.phaseNumber, right.phaseNumber)
+  );
+  const lowerCandidates = orderedPhases.filter(
+    (phase) => comparePhaseNumbers(phase.phaseNumber, targetPhaseNumber) < 0
+  );
+  const higherCandidates = orderedPhases.filter(
+    (phase) => comparePhaseNumbers(phase.phaseNumber, targetPhaseNumber) > 0
+  );
+  const nearestCandidates = [lowerCandidates.at(-1), higherCandidates[0]].filter(
+    (phase): phase is ParsedRoadmapPhase => phase !== undefined
+  );
+  const recovery: string[] = [];
+
+  if (nearestCandidates.length > 0) {
+    recovery.push(
+      `Nearest valid phase candidate${nearestCandidates.length > 1 ? "s" : ""}: ${nearestCandidates
+        .map((phase) => formatRoadmapPhaseCandidate(phase))
+        .join("; ")}`
+    );
+  }
+
+  if (roadmap.milestone) {
+    recovery.push(`Active milestone candidate: ${roadmap.milestone}`);
+  }
+
+  recovery.push(
+    "Use /blu-progress to confirm the safest currently implemented next action."
+  );
+
+  return recovery;
+}
+
 function fallbackPhaseName(phaseDir: string): string {
   return slugToTitle(path.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
 }
@@ -1813,6 +2174,7 @@ function toPhasePlanRecord(
     path: pathValue,
     title: validation.metadata.title,
     wave: validation.metadata.wave,
+    gapClosure: validation.metadata.gapClosure,
     status: validation.metadata.status,
     objective: validation.metadata.objective,
     dependsOn: validation.metadata.dependsOn,
@@ -1869,6 +2231,67 @@ function toPhaseSummaryRecord(
     title: metadata.title,
     summary: metadata.summary
   };
+}
+
+async function collectValidatedSummaryPaths(
+  projectRoot: string,
+  summaries: PhaseSummaryRecord[]
+): Promise<{
+  summaryPaths: string[];
+  warnings: string[];
+}> {
+  const summaryPaths: string[] = [];
+  const warnings: string[] = [];
+
+  for (const summary of summaries) {
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: summary.linkedPlanPath
+    });
+
+    if (validation.valid) {
+      summaryPaths.push(summary.path);
+      continue;
+    }
+
+    warnings.push(
+      `${summary.path}: summary artifact is invalid and does not count as completed execution evidence.`
+    );
+    warnings.push(...validation.issues.map((issue) => `${summary.path}: ${issue}`));
+    warnings.push(...validation.warnings.map((warning) => `${summary.path}: ${warning}`));
+  }
+
+  return { summaryPaths, warnings };
+}
+
+function collectReferencedValidatedSummaryPaths(
+  content: string,
+  summaries: PhaseSummaryRecord[],
+  completedPlans: ReadonlySet<string>
+): string[] {
+  const references = new Map<string, number>();
+
+  for (const summary of summaries) {
+    if (!completedPlans.has(summary.planId)) {
+      continue;
+    }
+
+    const fileName = summary.path.split("/").pop() ?? summary.path;
+    const firstMatch = [summary.path, fileName]
+      .map((candidate) => content.indexOf(candidate))
+      .filter((index) => index >= 0)
+      .sort((left, right) => left - right)[0];
+
+    if (firstMatch === undefined) {
+      continue;
+    }
+
+    references.set(summary.path, firstMatch);
+  }
+
+  return [...references.entries()]
+    .sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))
+    .map(([summaryPath]) => summaryPath);
 }
 
 function ensureCheckpointObject(
@@ -1966,6 +2389,7 @@ export async function blueprintRoadmapAddPhase(
 ): Promise<RoadmapAddPhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const normalizedDescription = normalizePhaseDescription(args.description);
+  const auditBackedDetails = args.auditBackedDetails ?? null;
 
   if (normalizedDescription.length === 0) {
     throw new Error(
@@ -1991,12 +2415,33 @@ export async function blueprintRoadmapAddPhase(
     const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
     const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+    const requirementRepair = auditBackedDetails?.repairRequirementIds?.length
+      ? await repairRequirementsTraceability(
+          projectRoot,
+          auditBackedDetails.repairRequirementIds,
+          phaseNumber,
+          normalizedDescription,
+          auditBackedDetails.sourceReportPath
+        )
+      : null;
     const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
     const updatedRoadmap = appendPhaseDetailsToRoadmap(
       appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
       phaseNumber,
       normalizedDescription,
-      dependsOnPhaseNumber
+      auditBackedDetails
+        ? {
+            dependsOnPhaseNumber,
+            goal:
+              auditBackedDetails.goal ??
+              "Close the audit-identified milestone gaps and restore requirement traceability.",
+            requirements: auditBackedDetails.repairRequirementIds,
+            successCriteria:
+              auditBackedDetails.successCriteria ??
+              "Persist audit-backed gap details and repair traceability for the affected requirements.",
+            auditBackedDetails
+          }
+        : { dependsOnPhaseNumber }
     );
     const warnings: string[] = [];
     const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
@@ -2006,6 +2451,19 @@ export async function blueprintRoadmapAddPhase(
         label: roadmap.path
       })
     );
+
+    if (requirementRepair) {
+      warnings.push(...requirementRepair.warnings);
+      warnings.push(
+        ...await writeTextFile(
+          resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
+          requirementRepair.content,
+          {
+            label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
+          }
+        )
+      );
+    }
 
     if (await pathExists(phaseDirPath)) {
       warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
@@ -2040,11 +2498,19 @@ export async function blueprintRoadmapInsertPhase(
     );
   }
 
-  const afterPhaseNumber = extractPhaseNumberToken(args.after ?? "");
+  const afterPhaseNumber = extractExactPhaseNumberToken(args.after ?? "");
 
   if (!afterPhaseNumber) {
+    const afterInput = normalizeBlueprintInput(args.after ?? "").trim();
+
+    if (afterInput.length === 0) {
+      throw new Error(
+        "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      );
+    }
+
     throw new Error(
-      "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      `Phase ${afterInput} is not a valid Blueprint integer phase number. Re-run /blu-insert-phase with an existing integer phase number such as 3.`
     );
   }
 
@@ -2249,8 +2715,13 @@ export async function blueprintRoadmapRemovePhase(
   const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
 
   if (!targetPhase) {
+    const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
+
     throw new Error(
-      `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      [`Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
+        "Recovery:",
+        ...recovery.map((entry) => `- ${entry}`)
+      ].join("\n")
     );
   }
 
@@ -2288,9 +2759,17 @@ export async function blueprintRoadmapRemovePhase(
       /-UAT\.md$/i.test(artifactPath)
   );
 
+  const warnings: string[] = [];
+
   if (executionArtifacts.length > 0) {
-    throw new Error(
-      `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Remove those artifacts explicitly before removing the phase.`
+    if (!args.force) {
+      throw new Error(
+        `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+      );
+    }
+
+    warnings.push(
+      `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
     );
   }
 
@@ -2315,7 +2794,6 @@ export async function blueprintRoadmapRemovePhase(
     removedPhaseLine.content,
     targetPhaseNumber
   );
-  const warnings: string[] = [];
 
   if (!removedPhaseDetails.removed) {
     warnings.push(
@@ -2614,7 +3092,7 @@ export async function blueprintRoadmapPromoteBacklog(
       appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
       phaseNumber,
       phaseName,
-      dependsOnPhaseNumber
+      { dependsOnPhaseNumber }
     );
     roadmapPhases.push({
       phaseNumber,
@@ -3060,9 +3538,6 @@ export async function blueprintPhaseValidationRead(
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate(args);
   const resolved = toResolvedPhaseLocation(located);
-  const summaryPaths = located.artifacts
-    .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
-    .sort((left, right) => left.localeCompare(right));
 
   if (!resolved) {
     return {
@@ -3075,7 +3550,7 @@ export async function blueprintPhaseValidationRead(
       artifact: args.artifact,
       path: null,
       content: null,
-      summaryPaths,
+      summaryPaths: [],
       reason: located.reason
     };
   }
@@ -3094,10 +3569,21 @@ export async function blueprintPhaseValidationRead(
       artifact: args.artifact,
       path: artifactPath,
       content: null,
-      summaryPaths,
+      summaryPaths: [],
       reason: `${artifactPath} does not exist yet.`
     };
   }
+
+  const content = await fs.readFile(absolutePath, "utf8");
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const summaryPaths = collectReferencedValidatedSummaryPaths(
+    content,
+    summaryIndex.summaries,
+    new Set(summaryIndex.completedPlans)
+  );
 
   return {
     phaseFound: true,
@@ -3108,7 +3594,7 @@ export async function blueprintPhaseValidationRead(
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    content: await fs.readFile(absolutePath, "utf8"),
+    content,
     summaryPaths,
     reason: null
   };
@@ -3129,9 +3615,16 @@ export async function blueprintPhaseValidationWrite(
     );
   }
 
-  if (summaryIndex.summaries.length === 0) {
+  const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
+    projectRoot,
+    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+  );
+  const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
+  const warnings: string[] = [...summaryWarnings];
+
+  if (summaryPaths.length === 0) {
     throw new Error(
-      `Phase ${resolved.phaseNumber} does not have execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} before writing ${args.artifact} artifacts.`
+      `Phase ${resolved.phaseNumber} does not have any valid execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} after fixing summary artifacts before writing ${artifactLabel} artifacts.`
     );
   }
 
@@ -3139,6 +3632,11 @@ export async function blueprintPhaseValidationWrite(
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const normalizedContent = normalizeTextContent(args.content);
   const exists = await pathExists(absolutePath);
+  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
+    normalizedContent,
+    summaryIndex.summaries,
+    new Set(summaryIndex.completedPlans)
+  );
   const validation =
     normalizedContent.trim().length === 0
       ? {
@@ -3147,22 +3645,33 @@ export async function blueprintPhaseValidationWrite(
           warnings: [] as string[]
         }
       : args.artifact === "verification"
-        ? validateVerificationArtifactContent(
-            normalizedContent,
-            summaryIndex.summaries.map((summary) => summary.path)
-          )
-        : validateUatArtifactContent(
-            normalizedContent,
-            summaryIndex.summaries.map((summary) => summary.path)
-          );
-  const warnings: string[] = [];
+        ? validateVerificationArtifactContent(normalizedContent, referencedSummaryPaths)
+        : validateUatArtifactContent(normalizedContent, referencedSummaryPaths);
 
   if (args.artifact === "uat") {
     const verificationPath = validationArtifactPathFor(resolved, "verification");
+    const verificationAbsolutePath = resolveBlueprintPath(projectRoot, verificationPath);
 
-    if (!(await pathExists(resolveBlueprintPath(projectRoot, verificationPath)))) {
+    if (!(await pathExists(verificationAbsolutePath))) {
       throw new Error(
         `Phase ${resolved.phaseNumber} must be validated before UAT. Run /blu-validate-phase ${resolved.phaseNumber} first.`
+      );
+    }
+
+    const verificationContent = await fs.readFile(verificationAbsolutePath, "utf8");
+    const verificationSummaryPaths = collectReferencedValidatedSummaryPaths(
+      verificationContent,
+      summaryIndex.summaries,
+      new Set(summaryIndex.completedPlans)
+    );
+    const verificationValidation = validateVerificationArtifactContent(
+      verificationContent,
+      verificationSummaryPaths
+    );
+
+    if (!verificationValidation.valid) {
+      throw new Error(
+        `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT. Repair the verification evidence before writing ${artifactLabel} artifacts.`
       );
     }
   }
@@ -3171,6 +3680,24 @@ export async function blueprintPhaseValidationWrite(
     const existingContent = await fs.readFile(absolutePath, "utf8");
 
     if (existingContent === normalizedContent) {
+      if (!validation.valid) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          summaryPaths: referencedSummaryPaths,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: validation.issues,
+          warnings: [...warnings, ...validation.warnings]
+        };
+      }
+
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
 
@@ -3181,7 +3708,7 @@ export async function blueprintPhaseValidationWrite(
         phaseDir: resolved.phaseDir,
         artifact: args.artifact,
         path: artifactPath,
-        summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+        summaryPaths: referencedSummaryPaths,
         written: false,
         created: false,
         overwritten: false,
@@ -3208,7 +3735,7 @@ export async function blueprintPhaseValidationWrite(
       phaseDir: resolved.phaseDir,
       artifact: args.artifact,
       path: artifactPath,
-      summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+      summaryPaths: referencedSummaryPaths,
       written: false,
       created: false,
       overwritten: false,
@@ -3237,7 +3764,7 @@ export async function blueprintPhaseValidationWrite(
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    summaryPaths: summaryIndex.summaries.map((summary) => summary.path),
+    summaryPaths: referencedSummaryPaths,
     written: true,
     created: !exists,
     overwritten: exists,
@@ -3264,6 +3791,7 @@ export async function blueprintPhasePlanIndex(
       plans: [],
       waves: {},
       missingPlans: [],
+      gapClosurePlans: [],
       warnings: located.reason ? [located.reason] : []
     };
   }
@@ -3275,6 +3803,7 @@ export async function blueprintPhasePlanIndex(
   const waves: Record<string, string[]> = {};
   const warnings: string[] = [];
   const knownPlanIds = new Set<string>();
+  const gapClosurePlans = new Set<string>();
 
   for (const planPath of planPaths) {
     const planId = parsePlanArtifactPath(planPath, resolved.phasePrefix);
@@ -3288,6 +3817,10 @@ export async function blueprintPhasePlanIndex(
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record = toPhasePlanRecord(planId, planPath, content, resolved.phaseNumber);
     plans.push(record);
+
+    if (record.valid && record.gapClosure) {
+      gapClosurePlans.add(planId);
+    }
 
     const waveKey = String(record.wave ?? "unassigned");
     waves[waveKey] ??= [];
@@ -3330,6 +3863,7 @@ export async function blueprintPhasePlanIndex(
     plans,
     waves,
     missingPlans: [...new Set(missingPlans)],
+    gapClosurePlans: [...gapClosurePlans].sort((left, right) => left.localeCompare(right)),
     warnings
   };
 }
@@ -3395,6 +3929,7 @@ export async function blueprintPhasePlanRead(
     metadata: {
       title: validation.metadata.title,
       wave: validation.metadata.wave,
+      gapClosure: validation.metadata.gapClosure,
       status: validation.metadata.status,
       objective: validation.metadata.objective,
       dependsOn: validation.metadata.dependsOn,
@@ -3592,10 +4127,23 @@ export async function blueprintPhaseSummaryIndex(
     }
 
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: knownPlanPaths.get(planId) ?? null
+    });
+
     summaries.push(
       toPhaseSummaryRecord(planId, summaryPath, content, knownPlanPaths.get(planId) ?? null)
     );
-    completedPlans.add(planId);
+
+    if (validation.valid) {
+      completedPlans.add(planId);
+    } else {
+      warnings.push(
+        `${summaryPath}: summary artifact is invalid and does not count as completed execution evidence.`
+      );
+      warnings.push(...validation.issues.map((issue) => `${summaryPath}: ${issue}`));
+      warnings.push(...validation.warnings.map((warning) => `${summaryPath}: ${warning}`));
+    }
 
     if (!knownPlanPaths.has(planId)) {
       warnings.push(`${summaryPath}: no matching plan artifact exists for this summary.`);
@@ -3705,15 +4253,34 @@ export async function blueprintPhaseSummaryWrite(
   const pathValue = summaryPathFor(resolved, planId);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = normalizeTextContent(args.content);
-  const exists = await pathExists(absolutePath);
+  const validation = validateStrictSummaryArtifactContent(normalizedContent, {
+    linkedPlanPath: plan.path,
+    requirePlanMarker: true
+  });
   const issues =
     normalizedContent.trim().length === 0
       ? ["Execution summary content must not be empty."]
-      : [];
-  const warnings =
-    normalizedContent.trim().length === 0
-      ? ([] as string[])
-      : validateSummaryArtifactContent(normalizedContent).warnings;
+      : validation.issues;
+  const warnings = [...validation.warnings];
+  const exists = await pathExists(absolutePath);
+
+  if (!validation.valid) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: pathValue,
+      linkedPlanPath: plan.path,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues,
+      warnings
+    };
+  }
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
@@ -3743,24 +4310,6 @@ export async function blueprintPhaseSummaryWrite(
         `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
       );
     }
-  }
-
-  if (issues.length > 0) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      linkedPlanPath: plan.path,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      issues,
-      warnings
-    };
   }
 
   warnings.push(

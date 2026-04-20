@@ -219,6 +219,7 @@ export type PlanArtifactMetadata = {
     planId: string | null;
     title: string | null;
     wave: number | null;
+    gapClosure: boolean;
     status: string | null;
     objective: string | null;
     dependsOn: string[];
@@ -248,6 +249,7 @@ export declare function readJsonIfPresent(filePath: string): Promise<Record<stri
 export declare function writeJsonFile(filePath: string, value: Record<string, unknown>): Promise<void>;
 export declare function writeTextFile(filePath: string, value: string, options?: TextWriteOptions): Promise<string[]>;
 export declare function withBlueprintRepoLock<T>(projectRoot: string, lockName: string, task: () => Promise<T>): Promise<T>;
+export declare function extractMarkdownTableRows(section: string): string[][];
 export declare function validateResearchArtifactContent(content: string): {
     valid: boolean;
     issues: string[];
@@ -278,7 +280,21 @@ export declare function validateReportArtifactContent(content: string, reportNam
     issues: string[];
     warnings: string[];
 };
+type SummaryValidationOptions = {
+    linkedPlanPath?: string | null;
+    requirePlanMarker?: boolean;
+};
 export declare function validateSummaryArtifactContent(content: string): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateSummaryPlanReference(content: string, options?: SummaryValidationOptions): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
+export declare function validateStrictSummaryArtifactContent(content: string, options?: SummaryValidationOptions): {
     valid: boolean;
     issues: string[];
     warnings: string[];

@@ -18,6 +18,7 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
+  blueprintArtifactReportWrite,
   blueprintArtifactValidate
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
@@ -509,8 +510,10 @@ async function createStaleRoadmapAdvancedStateRepo(): Promise<string> {
 async function createMilestoneCloseoutRepo(
   reportStage: "none" | "audit" | "complete" | "summary",
   options: {
+    malformedEarlierSummary?: boolean;
     missingEarlierVerification?: boolean;
     missingEarlierUat?: boolean;
+    missingEarlierSummary?: boolean;
   } = {}
 ): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-milestone-closeout-routing-"));
@@ -574,14 +577,84 @@ async function createMilestoneCloseoutRepo(
   );
   await writeFile(
     path.join(earlierPhaseRoot, "02-01-SUMMARY.md"),
-    `# Phase 02: Validation Hardening - Summary
+    options.malformedEarlierSummary
+      ? `# Phase 02: Validation Hardening - Summary 01
 
-## Result
+## Outcome
+
+- Earlier milestone execution evidence drifted out of shape.
+`
+      : `# Phase 02: Validation Hardening - Summary 01
+
+**Plan:** \`02-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Earlier milestone execution evidence is complete.
+
+## Changes Made
+
+- Captured the earlier milestone execution summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`
 `,
     "utf8"
   );
+  await writeFile(
+    path.join(earlierPhaseRoot, "02-01-PLAN.md"),
+    `---
+phase: 2
+plan_id: "01"
+title: "Validation Hardening Plan 01"
+wave: 1
+status: done
+objective: "Exercise milestone closeout routing."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 02: Validation Hardening - Plan 01
+`,
+    "utf8"
+  );
+  if (options.missingEarlierSummary) {
+    await writeFile(
+      path.join(earlierPhaseRoot, "02-02-PLAN.md"),
+      `---
+phase: 2
+plan_id: "02"
+title: "Validation Hardening Plan 02"
+wave: 1
+status: planned
+objective: "Exercise milestone closeout summary coverage."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 02: Validation Hardening - Plan 02
+`,
+      "utf8"
+    );
+  }
   if (!options.missingEarlierVerification) {
     await writeFile(
       path.join(earlierPhaseRoot, "02-VERIFICATION.md"),
@@ -850,11 +923,30 @@ Close the milestone.
   );
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Milestone Closeout - Summary
+    `# Phase 03: Milestone Closeout - Summary 01
 
-## Result
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution completed and the milestone is ready for closeout routing.
+
+## Changes Made
+
+- Captured the completed milestone closeout execution.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -965,9 +1057,46 @@ Close the milestone.
       path.join(reportsDir, "milestone-audit-v2.md"),
       `# Milestone Audit: v2
 
-## Result
+**Verdict:** READY_TO_CLOSE
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
 
-- Audit complete.
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE
+- Rationale: All milestone phases have saved verification and UAT evidence.
+- Decision basis: The roadmap and evidence chain are aligned for closeout.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/02-validation-hardening/02-VERIFICATION.md | PASS | Validation evidence exists for the earlier milestone phase. |
+| UAT evidence | .blueprint/phases/02-validation-hardening/02-UAT.md | PASS | UAT evidence exists for the earlier milestone phase. |
+| Carry-forward evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/02-validation-hardening/02-VERIFICATION.md
+- .blueprint/phases/02-validation-hardening/02-UAT.md
+- .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
 `,
       "utf8"
     );
@@ -1144,11 +1273,30 @@ test("project status recommends validate-phase once execution summaries exist wi
 
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary
+    `# Phase 03: Phase Discovery - Summary 01
 
-## Result
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -1160,6 +1308,144 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-validate-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
+test("project status ignores placeholder summaries when deciding validation readiness", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Concise delivery summary grounded in the completed work.
+
+## Changes Made
+
+- Explicit code, config, or artifact changes completed for this plan.
+
+## Verification
+
+- Command, test, or evidence that supports the reported outcome.
+
+## Follow-Ups
+
+- Remaining gap, handoff, or \`none\`.
+
+## Evidence
+
+- or other saved repo evidence if helpful.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-execute-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
+test("project status ignores placeholder verification and UAT evidence during milestone closeout routing", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/02-validation-hardening");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "02-VERIFICATION.md"),
+    `# Phase 02: Validation Hardening - Verification
+
+**Coverage:** Reviewed \`02-01-SUMMARY.md\` and any other saved phase summaries for validation evidence.
+
+## Validation Summary
+
+- Concise readiness result grounded in the saved summaries.
+
+## Evidence Reviewed
+
+- .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md
+
+## Gaps Found
+
+- Explicit blocker, follow-up, or \`none\`.
+
+## Suggested Repairs
+
+- Explicit next repair, follow-up, or \`none\`.
+
+## Next Safe Action
+
+- /blu-verify-work 2
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "02-UAT.md"),
+    `# Phase 02: Validation Hardening - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or \`none\`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence such as \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or \`none\`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or \`none\`.
+
+## Next Safe Action
+
+- /blu-progress
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+});
+
+test("project status stays blocked from milestone audit when an earlier checked-off phase is missing plan summaries", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    missingEarlierSummary: true
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
 });
 
 test("project status routes to ui-phase when research is disabled but UI discovery is still required", async (t) => {
@@ -1215,12 +1501,80 @@ test("project status routes milestone closeout through audit, completion, summar
 
   assert.match(noReportsStatus.nextAction, /\/blu-audit-milestone v2/);
   assert.match(noReportsState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.equal(noReportsState.derivedStatus.milestoneAudit.found, false);
+  assert.equal(noReportsState.derivedStatus.milestoneAudit.readyForCompletion, false);
   assert.match(auditStatus.nextAction, /\/blu-complete-milestone v2/);
   assert.match(auditState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
+  assert.equal(auditState.derivedStatus.milestoneAudit.found, true);
+  assert.equal(auditState.derivedStatus.milestoneAudit.verdict, "READY_TO_CLOSE");
+  assert.equal(auditState.derivedStatus.milestoneAudit.readyForCompletion, true);
+  assert.match(auditState.derivedStatus.milestoneAudit.nextSafeAction ?? "", /\/blu-complete-milestone v2/);
   assert.match(completeStatus.nextAction, /\/blu-milestone-summary v2/);
   assert.match(completeState.derivedStatus.nextAction, /\/blu-milestone-summary v2/);
+  assert.equal(completeState.derivedStatus.milestoneAudit.readyForCompletion, true);
   assert.match(summaryStatus.nextAction, /\/blu-new-milestone/);
   assert.match(summaryState.derivedStatus.nextAction, /\/blu-new-milestone/);
+  assert.equal(summaryState.derivedStatus.milestoneAudit.readyForCompletion, true);
+});
+
+test("project status keeps blocked milestone audits on gap planning instead of completion", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: `# Milestone Audit: v2
+
+**Verdict:** BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: BLOCKED
+- Rationale: Open archival follow-up work still blocks milestone closeout.
+- Decision basis: The saved roadmap and closeout evidence show unresolved gaps.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent remains intact. |
+| Validation evidence | .blueprint/phases/03-milestone-closeout/03-VERIFICATION.md | PASS | Validation evidence exists for the closeout phase. |
+| UAT evidence | .blueprint/phases/03-milestone-closeout/03-UAT.md | PASS | UAT evidence exists for the closeout phase. |
+| Carry-forward evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | BLOCKED | The summary still points to unresolved archival follow-up work. |
+
+## Original Intent Snapshot
+
+- Locked milestone intent and source evidence.
+
+## Roadmap And Phase Evidence
+
+- Completed phase evidence reviewed for this milestone.
+
+## Gaps Found
+
+- Phase 3 still has unresolved archival follow-up work.
+
+## Archival Blockers
+
+- Milestone closeout must stay blocked until the gap is closed.
+
+## Next Safe Action
+
+- /blu-plan-milestone-gaps
+`
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
 test("project status requires milestone-wide validation evidence before closeout routing", async (t) => {
@@ -1230,6 +1584,67 @@ test("project status requires milestone-wide validation evidence before closeout
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+});
+
+test("project status blocks milestone closeout when earlier summary evidence is malformed", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    malformedEarlierSummary: true
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+});
+
+test("project status blocks milestone closeout when verification evidence lacks a valid summary link", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-validation-hardening/02-VERIFICATION.md"),
+    `# Phase 02: Validation Hardening - Verification
+
+**Coverage:** Reviewed the completed milestone evidence.
+
+## Validation Summary
+
+- Validation evidence is complete.
+
+## Evidence Reviewed
+
+- unrelated-notes.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 2
+`,
+    "utf8"
+  );
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
   const state = await blueprintStateLoad({ cwd: repoPath });
@@ -1469,7 +1884,7 @@ test("help progress and health command files reference registered MCP tool names
       file: "commands/blu-remove-phase.toml",
       tools: [
         "blueprint_roadmap_read",
-        "blueprint_artifact_list",
+        "blueprint_phase_locate",
         "blueprint_roadmap_remove_phase",
         "blueprint_state_update"
       ]

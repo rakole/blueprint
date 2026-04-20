@@ -9,9 +9,11 @@ import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseContext,
+  blueprintPhasePlanIndex,
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead,
-  blueprintPhaseSummaryWrite
+  blueprintPhaseSummaryWrite,
+  blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
 
 async function createExecutionRepo(): Promise<string> {
@@ -193,6 +195,145 @@ Exercise summary indexing.
   return repoPath;
 }
 
+function validSummaryContent(planId = "01"): string {
+  return `# Phase 03: Phase Discovery - Summary ${planId}
+
+**Plan:** \`03-${planId}-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Added summary indexing coverage for execute-phase.
+
+## Verification
+
+- Ran the summary tooling test slice.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-${planId}-SUMMARY.md\`
+`;
+}
+
+function summaryWithUntouchedScaffoldSections(planId = "01"): string {
+  return `# Phase 03: Phase Discovery - Summary ${planId}
+
+**Plan:** \`03-${planId}-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Explicit code, config, or artifact changes completed for this plan.
+
+## Verification
+
+- Command, test, or evidence that supports the reported outcome.
+
+## Follow-Ups
+
+- Remaining gap, handoff, or \`none\`.
+
+## Evidence
+
+- \`or other saved repo evidence if helpful.\`
+`;
+}
+
+function validVerificationContent(summaryFile = "03-01-SUMMARY.md"): string {
+  return `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`${summaryFile}\` for the completed execution plan.
+
+## Validation Summary
+
+- The validated feature set is ready for UAT.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/${summaryFile}
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 3\`.
+`;
+}
+
+function executionPlanContent(planId: string, wave: number, gapClosure = false): string {
+  return `---
+phase: 3
+plan_id: "${planId}"
+title: "Execution Plan ${planId}"
+wave: ${wave}
+status: planned
+${gapClosure ? "gap_closure: true\n" : ""}objective: "Ship the plan-phase runtime."
+depends_on: []
+requirements:
+  - LIFE-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/phase-planning-tools.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan ${planId}
+
+## Goal
+
+Ship the plan-phase runtime.
+
+## Scope
+
+- Add plan indexing and wave-targeting coverage.
+
+## Tasks
+
+### Task 1: Validate the target set
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Add Blueprint plan indexing and writing support with overwrite protection.
+
+#### Acceptance Criteria
+
+- The plan remains execution-ready and indexed as a real gap-closure target when \`gap_closure: true\` is set.
+
+## Verification
+
+- Execute-phase targeting can derive the gap-only set from the plan index instead of pending summaries alone.
+
+## Must Haves
+
+- Preserve lower-wave debt until earlier waves are completed.
+`;
+}
+
 test("execute-phase summary tools are registered in the Blueprint server", () => {
   for (const toolName of [
     "blueprint_phase_summary_index",
@@ -214,12 +355,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
     cwd: repoPath,
     phase: "3",
     planId: "1",
-    content: `# Phase 03: Phase Discovery - Summary
-
-## Result
-
-- Execution finished and produced a summary artifact.
-`
+    content: validSummaryContent("01")
   });
   const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
   const read = await blueprintPhaseSummaryRead({
@@ -231,12 +367,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: `# Phase 03: Phase Discovery - Summary
-
-## Result
-
-- Execution finished and produced a summary artifact.
-`
+    content: validSummaryContent("01")
   });
   const invalid = await blueprintPhaseSummaryWrite({
     cwd: repoPath,
@@ -274,6 +405,307 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.match(summaryBody, /summary artifact/i);
 });
 
+test("phase summary writes reject untouched templates and repo validation reports malformed summaries as issues", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const untouchedSummary = `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED|PARTIAL|BLOCKED
+
+## Outcome
+
+- Concise delivery summary grounded in the completed work.
+
+## Changes Made
+
+- Explicit code, config, or artifact changes completed for this plan.
+
+## Verification
+
+- Command, test, or evidence that supports the reported outcome.
+
+## Follow-Ups
+
+- Remaining gap, handoff, or \`none\`.
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\` or other saved repo evidence if helpful.
+`;
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: untouchedSummary,
+    overwrite: true
+  });
+  const missingRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const summaryPath = path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md");
+
+  await writeFile(summaryPath, untouchedSummary, "utf8");
+
+  assert.equal(rejected.status, "invalid");
+  assert.equal(missingRead.found, false);
+  assert.match(rejected.issues.join("\n"), /locked marker|placeholder scaffold text|must start/i);
+});
+
+test("phase summary writes reject summaries whose H1 appears after body text", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const prefacedSummary = `Preamble text that should not precede the H1.
+
+# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Added summary indexing coverage for execute-phase.
+
+## Verification
+
+- Ran the summary tooling test slice.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`;
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: prefacedSummary,
+    overwrite: true
+  });
+
+  assert.equal(rejected.status, "invalid");
+  assert.match(rejected.issues.join("\n"), /must start with a '# \.\.\. - Summary' heading/i);
+});
+
+test("phase summary writes reject summaries whose Plan marker does not match the linked plan path", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const mismatchedPlanSummary = `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`.blueprint/phases/03-phase-discovery/03-02-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Added summary indexing coverage for execute-phase.
+
+## Verification
+
+- Ran the summary tooling test slice.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`;
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: mismatchedPlanSummary,
+    overwrite: true
+  });
+
+  assert.equal(rejected.status, "invalid");
+  assert.match(rejected.issues.join("\n"), /does not match linked plan path/i);
+});
+
+test("phase summary writes reject untouched scaffold prose in the summary sections", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: summaryWithUntouchedScaffoldSections("01"),
+    overwrite: true
+  });
+
+  assert.equal(rejected.status, "invalid");
+  assert.match(rejected.issues.join("\n"), /placeholder scaffold text/i);
+  assert.match(
+    rejected.issues.join("\n"),
+    /Explicit code, config, or artifact changes completed for this plan\./
+  );
+  assert.match(
+    rejected.issues.join("\n"),
+    /Command, test, or evidence that supports the reported outcome\./
+  );
+  assert.match(rejected.issues.join("\n"), /Remaining gap, handoff, or `none`\./);
+  assert.match(rejected.issues.join("\n"), /or other saved repo evidence if helpful\./);
+});
+
+test("phase summary indexing ignores malformed summaries when computing completion state", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidSummary = `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Concise delivery summary grounded in the completed work.
+
+## Changes Made
+
+- Only the outcome section was written in this malformed summary fixture.
+
+## Verification
+
+- Missing required verification details.
+
+## Follow-Ups
+
+- Missing follow-up details.
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`;
+  const summaryPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  );
+
+  await writeFile(summaryPath, invalidSummary, "utf8");
+
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.deepEqual(index.completedPlans, []);
+  assert.deepEqual(index.pendingPlans, ["01"]);
+  assert.equal(index.summaries.length, 1);
+  assert.match(index.warnings.join("\n"), /03-01-SUMMARY\.md/);
+  assert.match(
+    index.warnings.join("\n"),
+    /invalid and does not count as completed execution evidence|missing required section/i
+  );
+});
+
+test("execute-phase targeting keeps --gaps-only on explicit gap plans and preserves lower-wave debt", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-03-PLAN.md"),
+    executionPlanContent("03", 2, true),
+    "utf8"
+  );
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validSummaryContent("01")
+  });
+
+  const planIndex = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
+  const summaryIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+  const gapsOnlyTargets = summaryIndex.pendingPlans.filter((planId) =>
+    planIndex.gapClosurePlans.includes(planId)
+  );
+  const lowerWaveDebt = summaryIndex.pendingPlans.filter((planId) => {
+    const wave = planIndex.plans.find((plan) => plan.planId === planId)?.wave;
+    return typeof wave === "number" && wave < 2;
+  });
+
+  assert.deepEqual(summaryIndex.pendingPlans, ["02", "03"]);
+  assert.deepEqual(planIndex.gapClosurePlans, ["03"]);
+  assert.deepEqual(gapsOnlyTargets, ["03"]);
+  assert.deepEqual(lowerWaveDebt, ["02"]);
+});
+
+test("phase validation writes require a valid execution summary before verification", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidSummaryPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  );
+
+  await writeFile(
+    invalidSummaryPath,
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Concise delivery summary grounded in the completed work.
+
+## Changes Made
+
+- Only the outcome section was written in this malformed summary fixture.
+`,
+    "utf8"
+  );
+
+  await assert.rejects(
+    blueprintPhaseValidationWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "verification",
+      content: validVerificationContent(),
+      overwrite: true
+    }),
+    /valid execution summaries/i
+  );
+});
+
 test("phase summary tools accept numeric phase and plan identifiers from runtime callers", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -284,12 +716,7 @@ test("phase summary tools accept numeric phase and plan identifiers from runtime
     cwd: repoPath,
     phase: 3,
     planId: 1,
-    content: `# Phase 03: Phase Discovery - Summary
-
-## Result
-
-- Execution finished and produced a summary artifact.
-`
+    content: validSummaryContent("01")
   });
   const read = await blueprintPhaseSummaryRead({
     cwd: repoPath,

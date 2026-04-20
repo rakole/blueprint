@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`plan-milestone-gaps` is Blueprint's command for create phases to close all gaps identified by milestone audit. In Blueprint it stays host-native, keeps the flow audit-first, groups related gaps into a few coherent follow-up phases, and delegates roadmap/state persistence to documented MCP tools instead of direct file rewrites.
+`plan-milestone-gaps` is Blueprint's command for create phases to close all gaps identified by milestone audit. In Blueprint it stays host-native, keeps the flow audit-first, groups related gaps into a few coherent follow-up phases, and delegates roadmap/state persistence to documented MCP tools instead of direct file rewrites or code/git mutation.
 
 
 ## Command Path And Examples
@@ -25,13 +25,14 @@
 
 - A milestone audit report should already exist in `.blueprint/reports/`.
 - The command should use the current roadmap context plus the latest matching audit report to decide whether any new gap-closure phases are needed.
+- The audit report should already carry grouped requirement, integration, flow, and optional sections so traceability repair can happen before any roadmap append.
 
 
 ## Outputs
 
 
 - User-facing result: a concise “Gap Closure Plan” review plus a completion summary and the next safe implemented action when applicable.
-- Repo side effects: Appends approved gap-closure phases to the roadmap, creates the matching phase directories, updates `.blueprint/STATE.md`, and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Appends approved gap-closure phases to the roadmap, creates the matching phase directories, and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
@@ -59,10 +60,12 @@
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
-## Gap-Planning Contract
+## Structured Gap Contract
 
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
 - Let `blueprint_roadmap_add_phase` assign each new phase number. Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative instead of inventing numbering or slugs manually.
+- Present the digest and plan using grouped `## Requirement Gaps`, `## Integration Gaps`, `## Flow Gaps`, and `## Optional Gaps` sections so the plan stays reviewable.
+- Call out any requirements traceability repair needed for each proposed phase instead of folding it into a generic bucket.
 
 
 ## Skills And Subagents
@@ -100,7 +103,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the grouped gap-closure plan before writing any new phases.
+- Prefer Gemini CLI `ask_user` for the grouped gap-closure confirmation gate before writing any new phases.
 
 
 ## Edge Cases
@@ -126,6 +129,7 @@
 - Keeps roadmap, phase directories, and state synchronized.
 - Uses a real milestone audit report as the source of truth for gap planning.
 - Groups related gaps into a few coherent phases instead of blindly creating one phase per gap.
+- Preserves the structured gap sections and any requirements traceability repair notes needed for closure.
 - Requires one explicit confirmation before appending any gap-closure phases.
 - Updates `.blueprint/STATE.md` so the first new phase becomes current and `/blu-discuss-phase <phase>` is the next safe implemented action.
 - Creates or updates only the declared artifacts for this command.
@@ -140,4 +144,3 @@
 - No-actionable-gaps fixture.
 - Grouped gap-closure review fixture.
 - Direct `plan-milestone-gaps` happy-path fixture.
-

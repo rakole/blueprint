@@ -357,7 +357,7 @@ test("remove-phase is implemented once manifest, skill, and roadmap removal MCP 
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
-    "blueprint_artifact_list",
+    "blueprint_phase_locate",
     "blueprint_roadmap_read",
     "blueprint_roadmap_remove_phase",
     "blueprint_state_update"
@@ -850,10 +850,12 @@ test("complete-milestone is implemented once manifest, skill, and closeout repor
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
     "blueprint_roadmap_read",
+    "blueprint_state_load",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
@@ -872,6 +874,7 @@ test("milestone-summary is implemented once manifest, skill, and summary report 
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
@@ -894,6 +897,7 @@ test("new-milestone is implemented once manifest, skill, and carry-forward scaff
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_scaffold",
     "blueprint_artifact_summary_digest",
     "blueprint_roadmap_read",

@@ -54,12 +54,52 @@ async function createRepoFixture(options: {
   );
   await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
   await writeFile(
+    path.join(phaseDir, "04-01-PLAN.md"),
+    `---
+phase: 4
+plan_id: "01"
+title: "Validation Plan 01"
+wave: 1
+status: done
+objective: "Persist verification and UAT evidence."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 04: Validation - Plan 01
+`,
+    "utf8"
+  );
+  await writeFile(
     path.join(phaseDir, "04-01-SUMMARY.md"),
     `# Phase 04: Validation - Summary 01
 
-## Result
+**Plan:** \`04-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution completed and produced a summary artifact.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -241,7 +281,7 @@ test("invalid verification overwrite still resyncs roadmap completion", async ()
 
 test("invalid UAT overwrite still resyncs roadmap completion", async () => {
   const repoPath = await createRepoFixture({
-    verificationContent: invalidVerification,
+    verificationContent: validVerification,
     uatContent: validUat
   });
 
@@ -261,9 +301,9 @@ test("invalid UAT overwrite still resyncs roadmap completion", async () => {
       result.issues.join("\n"),
       /must cite at least one saved execution summary path or filename/
     );
-    assert.match(result.warnings.join("\n"), /Reopened Phase 4 in \.blueprint\/ROADMAP\.md/);
-    assert.match(roadmap, /- \[ \] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
-    assert.match(roadmap, /\*\*Status\*\*: in_progress/);
+    assert.match(result.warnings.join("\n"), /Marked Phase 4 completed in \.blueprint\/ROADMAP\.md/);
+    assert.match(roadmap, /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+    assert.match(roadmap, /\*\*Status\*\*: completed/);
   } finally {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   }
