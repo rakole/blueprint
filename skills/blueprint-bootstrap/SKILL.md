@@ -25,6 +25,11 @@ Orchestrate Blueprint project initialization around the current MCP bootstrap pr
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
+- Use `update_topic` to keep long bootstrap runs anchored on the active stage.
+- Use `write_todos` to maintain a compact visible bootstrap checklist whenever the session spans multiple stages.
+- Use Gemini CLI task-tracking tools such as `tracker_create_task`, `tracker_add_dependency`, and `tracker_update_task` when bootstrap work has real dependencies across repo classification, optional research, revision loops, and validation.
+- Treat Gemini-native todos, topic narration, and task tracking as session-local coordination only; they do not replace Blueprint MCP persistence or `.blueprint/STATE.md`.
+- If you are unsure how a Gemini-native tool or host behavior works, use `get_internal_docs` instead of guessing.
 
 ## Parity Goal
 
@@ -86,6 +91,10 @@ Current Blueprint delta:
 2. Inspect saved defaults before asking for changes, and treat `--auto` as a non-interactive bootstrap mode rather than a way to skip overwrite safety.
 3. Require explicit overwrite confirmation before replacing an existing `.blueprint/` tree.
 4. If repo evidence is fuzzy or brownfield risk is non-trivial, use `blueprint-project-researcher` for a bounded repo-and-product brief before proceeding.
+5. Start the session-local workflow structure early:
+   - set the current stage with `update_topic`
+   - create a concise `write_todos` list for preflight, discovery, shaping, writing, validation, and routing
+   - add tracker dependencies when the bootstrap will branch across optional research, revisions, or validation
 
 ### 2. Bootstrap Discovery
 
@@ -119,17 +128,20 @@ Current Blueprint delta:
    - keep requirement-to-phase traceability explicit
 3. Use `blueprint-roadmapper` when grouped phase proposals, requirement coverage, sequencing, or success-criteria shaping would benefit from a bounded synthesis pass.
 4. In interactive mode, run a revision loop for requirements and roadmap structure before the first persistent write instead of locking in the first draft immediately.
+5. If task-tracker state exists, keep it honest as the roadmap draft changes so internal dependency tracking matches the latest bootstrap plan.
 
 ### 5. Persistence And Routing
 
 1. Use `mcp_blueprint_blueprint_project_init` for the first persistent bootstrap write.
 2. Pass the strongest available bootstrap seed so `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` land as authored drafts rather than placeholder shells.
 3. Read the canonical bootstrap contracts before drafting or revising `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md`, then validate the written artifacts with `mcp_blueprint_blueprint_artifact_validate`.
-4. Keep follow-up config changes inside `mcp_blueprint_blueprint_config_set`.
-5. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
-6. Re-read project status after initialization and end with the next safe implemented command.
-6. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
-7. If Blueprint MCP tools are unavailable, stop and report the disconnected runtime instead of trying shell wrappers such as `mcp use`, `blueprint-mcp`, or ad-hoc SDK scripts.
+4. Use `get_internal_docs` whenever a Gemini-native tool detail needs verification before you lean on it in the workflow.
+5. Keep follow-up config changes inside `mcp_blueprint_blueprint_config_set`.
+6. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
+7. Re-read project status after initialization and end with the next safe implemented command.
+8. Before finishing, update `write_todos`, `update_topic`, and any tracker state so the session-local coordination view matches the final bootstrap outcome.
+9. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
+10. If Blueprint MCP tools are unavailable, stop and report the disconnected runtime instead of trying shell wrappers such as `mcp use`, `blueprint-mcp`, or ad-hoc SDK scripts.
 
 ## Output Style
 

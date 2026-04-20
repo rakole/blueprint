@@ -34,18 +34,20 @@
 - The questioning loop should capture enough clarity around vision, audience, constraints, milestone scope, and success outcomes that authored bootstrap artifacts do not force downstream commands to guess.
 - Short option lists are allowed when they sharpen a concrete tradeoff, but the command should stay conversational and host-native.
 - When structured choices help, interactive bootstrap should prefer Gemini CLI's built-in `ask_user` dialog, asked one focused question at a time with labeled options plus a typed custom-answer path.
+- When the bootstrap spans multiple stages, use Gemini CLI's internal `update_topic` and `write_todos` tools to keep the session legible instead of relying on repeated prose-only progress recaps.
 - In interactive mode, the command should summarize its understanding and secure explicit approval before the first persistent bootstrap write.
 - `--auto` may skip that approval loop only when the supplied brief is strong enough to synthesize a credible bootstrap seed.
 
 ## Behavior Stages
 
 1. Preflight: confirm repo root, inspect saved defaults, classify repo shape, and require explicit overwrite confirmation when `.blueprint/` already exists.
-2. Discovery: gather or synthesize a bootstrap brief with vision, audience, constraints, non-goals, milestone framing, and assumptions.
-3. Workflow preferences: offer saved defaults first, then gather repo-level workflow settings only when they materially shape bootstrap quality.
-4. Requirements shaping: draft specific, user-centered, traceable requirements and distinguish likely v1 scope from deferred or explicitly out-of-scope work.
-5. Roadmap shaping: synthesize grouped phases with requirement coverage and success criteria, then run a revision loop when the user requests roadmap adjustments.
-6. Persistence: use Blueprint MCP tools for the first write, then refine config or state through Blueprint MCP tools only.
-7. Routing: end with the next safe implemented command, routing brownfield repos to `map-codebase` when roadmap confidence is still provisional.
+2. Session coordination: initialize Gemini-native progress tracking with `update_topic`, `write_todos`, and, when the bootstrap truly branches, internal task-tracking tools.
+3. Discovery: gather or synthesize a bootstrap brief with vision, audience, constraints, non-goals, milestone framing, and assumptions.
+4. Workflow preferences: offer saved defaults first, then gather repo-level workflow settings only when they materially shape bootstrap quality.
+5. Requirements shaping: draft specific, user-centered, traceable requirements and distinguish likely v1 scope from deferred or explicitly out-of-scope work.
+6. Roadmap shaping: synthesize grouped phases with requirement coverage and success criteria, then run a revision loop when the user requests roadmap adjustments.
+7. Persistence: use Blueprint MCP tools for the first write, then refine config or state through Blueprint MCP tools only.
+8. Validation and routing: validate the authored bootstrap and end with the next safe implemented command, routing brownfield repos to `map-codebase` when roadmap confidence is still provisional.
 
 ## Blueprint And Global State Reads
 
@@ -70,6 +72,15 @@
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
+
+## Gemini-Native Internal Tool Guidance
+
+- Prefer `ask_user` for structured clarification, overwrite approval, and the final pre-write decision gate.
+- Use `write_todos` for the visible session-local bootstrap checklist when the run spans multiple stages.
+- Use `update_topic` to keep the current bootstrap stage and status visible during long discovery or shaping runs.
+- When the bootstrap flow develops real internal dependencies, use Gemini CLI task-tracking tools such as `tracker_create_task`, `tracker_add_dependency`, `tracker_update_task`, `tracker_get_task`, `tracker_list_tasks`, and `tracker_visualize` to coordinate that graph instead of recreating it in prose.
+- Treat Gemini-native todos, topic narration, and task tracking as session-local coordination aids only; Blueprint MCP tools remain the only durable state owner.
+- If the command needs to verify Gemini CLI capability details before relying on them, use `get_internal_docs` for self-correction instead of guessing.
 
 ## Bootstrap Contract
 
@@ -121,6 +132,10 @@
 - `--auto` must not bypass the overwrite confirmation gate.
 - In interactive mode, summarize your understanding and require explicit approval before the first persistent bootstrap write, preferably through `ask_user`.
 - In interactive mode, requirements and roadmap shape should support a revision loop before the first persistent write when the user wants adjustments.
+- Keep Gemini-native session coordination honest as the bootstrap progresses:
+- initialize `write_todos` and `update_topic` early for non-trivial runs
+- update task-tracker state when optional research, revision, or validation branches appear
+- close the loop before finishing so the visible topic and task state match the actual bootstrap outcome
 - For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
 - if the repo is unmapped, route to `map-codebase`
 - if bootstrap artifacts are generated before mapping, mark the roadmap as provisional until mapping is complete
@@ -149,6 +164,7 @@
 - Produces authored `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` bootstrap drafts instead of placeholder shells.
 - Interactive bootstrap discovery follows the user's idea thread deeply enough that project intent, milestone scope, and success outcomes are explicit before the first write.
 - Interactive bootstrap provides a revision loop for requirements and roadmap structure before first-write persistence when the user wants changes.
+- Uses Gemini-native session helpers such as `ask_user`, `write_todos`, `update_topic`, and the task tracker when helpful to keep long bootstrap runs structured without turning those helpers into durable state.
 - Keeps requirement IDs traceable from `REQUIREMENTS.md` into `ROADMAP.md`.
 - Makes repo-shape assumptions explicit instead of silently inventing them.
 - For brownfield repos, sets the next safe action to `map-codebase` whenever roadmap confidence is still provisional.
