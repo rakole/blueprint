@@ -17,17 +17,44 @@ const repoRoot = process.cwd();
 
 type MilestoneAuditReportArgs = {
   verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED";
-  gaps?: string[];
+  requirementGaps?: string[];
+  integrationGaps?: string[];
+  flowGaps?: string[];
+  optionalGaps?: string[];
   blockers?: string[];
   nextSafeAction: string;
 };
 
+function renderGapRows(gapIds: string[], surfacePrefix: string): string {
+  const rows = gapIds.length > 0 ? gapIds : ["none"];
+
+  return rows
+    .map((gapId) => {
+      const isNone = gapId === "none";
+      const surface = isNone ? "none" : `${surfacePrefix} surface`;
+      const evidence = isNone ? "none" : `${surfacePrefix} evidence`;
+      const repair = isNone ? "none" : `${surfacePrefix} repair`;
+
+      return `| ${gapId} | ${surface} | ${evidence} | ${repair} |`;
+    })
+    .join("\n");
+}
+
 function renderMilestoneAuditReport(args: MilestoneAuditReportArgs): string {
-  const gaps = args.gaps && args.gaps.length > 0 ? args.gaps.map((gap) => `- ${gap}`).join("\n") : "- none";
   const blockers =
     args.blockers && args.blockers.length > 0
       ? args.blockers.map((blocker) => `- ${blocker}`).join("\n")
       : "- none";
+  const requirementGapRows = renderGapRows(args.requirementGaps ?? [], "requirement");
+  const integrationGapRows = renderGapRows(args.integrationGaps ?? [], "integration");
+  const flowGapRows = renderGapRows(args.flowGaps ?? [], "flow");
+  const optionalGapRows = renderGapRows(args.optionalGaps ?? [], "optional");
+  const summarize = (label: string, rows: string[]): string =>
+    `${label}: ${rows.length > 0 ? rows.join(", ") : "none"}`;
+  const requirementSummary = summarize("Requirement gaps", args.requirementGaps ?? []);
+  const integrationSummary = summarize("Integration gaps", args.integrationGaps ?? []);
+  const flowSummary = summarize("Flow gaps", args.flowGaps ?? []);
+  const optionalSummary = summarize("Optional gaps", args.optionalGaps ?? []);
 
   return `# Milestone Audit: v2
 
@@ -65,9 +92,36 @@ function renderMilestoneAuditReport(args: MilestoneAuditReportArgs): string {
 - .blueprint/phases/04-release-readiness/04-VERIFICATION.md
 - .blueprint/phases/04-release-readiness/04-UAT.md
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${requirementGapRows}
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${integrationGapRows}
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${flowGapRows}
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${optionalGapRows}
+
 ## Gaps Found
 
-${gaps}
+- ${requirementSummary}
+- ${integrationSummary}
+- ${flowSummary}
+- ${optionalSummary}
 
 ## Archival Blockers
 
@@ -87,13 +141,19 @@ function milestoneAuditReportContent(additional = ""): string {
 }
 
 function milestoneAuditReportContentWithFindings(args: {
-  gaps: string[];
+  requirementGaps?: string[];
+  integrationGaps?: string[];
+  flowGaps?: string[];
+  optionalGaps?: string[];
   blockers: string[];
   nextSafeAction: string;
 }): string {
   return renderMilestoneAuditReport({
     verdict: "BLOCKED",
-    gaps: args.gaps,
+    requirementGaps: args.requirementGaps,
+    integrationGaps: args.integrationGaps,
+    flowGaps: args.flowGaps,
+    optionalGaps: args.optionalGaps,
     blockers: args.blockers,
     nextSafeAction: args.nextSafeAction
   });
@@ -888,7 +948,10 @@ test("project status keeps blocked milestone audit reports on gap planning inste
     cwd: repoPath,
     reportName: "milestone-audit-v2",
     content: milestoneAuditReportContentWithFindings({
-      gaps: ["Phase 4 completion evidence still needs follow-up work."],
+      requirementGaps: ["MILESTONE-01"],
+      integrationGaps: ["release checklist"],
+      flowGaps: ["closeout handoff"],
+      optionalGaps: ["post-close polish"],
       blockers: ["Milestone closeout must pause until the gap is closed."],
       nextSafeAction: "/blu-plan-milestone-gaps"
     })
@@ -939,6 +1002,30 @@ test("project status honors a FOLLOW_UP audit verdict even when the evidence sec
 ## Roadmap And Phase Evidence
 
 - .blueprint/ROADMAP.md
+
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
 
 ## Gaps Found
 

@@ -21,8 +21,10 @@ test("plan-milestone-gaps manifest references the audit-first gap-planning tools
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_add_phase/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /\/blu-audit-milestone/);
-  assert.match(commandFile, /explicit confirmation gate/i);
+  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /structured gap sections/i);
   assert.match(commandFile, /\/blu-discuss-phase <first new phase number>/);
+  assert.doesNotMatch(commandFile, /may also mutate code or git state/i);
 });
 
 test("roadmap-admin skill captures grouped audit-follow-up planning behavior", async () => {
@@ -35,5 +37,7 @@ test("roadmap-admin skill captures grouped audit-follow-up planning behavior", a
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /grouping reviewable/i);
   assert.match(skillFile, /one explicit confirmation/i);
+  assert.match(skillFile, /requirements traceability repair/i);
+  assert.match(skillFile, /ask_user/i);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
 });

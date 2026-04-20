@@ -24,9 +24,12 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /grouped requirement, integration, flow, and optional gap sections/i);
+  assert.match(commandFile, /traceability notes/i);
   assert.match(commandFile, /\.blueprint\/reports\//);
   assert.match(commandFile, /\/blu-plan-milestone-gaps/);
   assert.match(commandFile, /\/blu-progress/);
+  assert.doesNotMatch(commandFile, /may also mutate code or git state/i);
 });
 
 test("audit-milestone skill captures milestone-evidence digest rules and report persistence", async () => {
@@ -44,4 +47,5 @@ test("audit-milestone skill captures milestone-evidence digest rules and report 
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /explicit overwrite confirmation/i);
   assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /traceability repair/i);
 });

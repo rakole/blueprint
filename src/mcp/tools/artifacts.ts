@@ -1593,6 +1593,15 @@ function extractMarkdownSection(markdown: string, heading: string): string {
   return match?.[1]?.trim() ?? "";
 }
 
+export function extractMarkdownTableRows(section: string): string[][] {
+  return section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line))
+    .map((line) => parseMarkdownTableCells(line));
+}
+
 function stripPlanPlaceholderSignals(section: string): string {
   return [...PLAN_PLACEHOLDER_SIGNALS, ...PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS].reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -2042,7 +2051,8 @@ function isMarkdownTableHeaderRow(line: string): boolean {
     ["dimension", "evidence", "status", "notes"],
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
-    ["requirement", "task or check", "evidence", "coverage state"]
+    ["requirement", "task or check", "evidence", "coverage state"],
+    ["gap id", "surface", "evidence", "repair"]
   ];
 
   return headerPatterns.some(
@@ -2622,15 +2632,52 @@ export function validateReportArtifactContent(
     };
   }
 
+  const isMilestoneAudit = contractId === "report.milestone-audit";
+  const milestoneAuditGapHeadings = [
+    "Requirement Gaps",
+    "Integration Gaps",
+    "Flow Gaps",
+    "Optional Gaps"
+  ] as const;
+  const hasStructuredMilestoneAuditGapSections = isMilestoneAudit
+    ? milestoneAuditGapHeadings.some((heading) =>
+        new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(content)
+      )
+    : false;
+  const hasLegacyMilestoneAuditGapSummary = isMilestoneAudit
+    ? /(?:^|\n)## Gaps Found\s*$/m.test(content)
+    : false;
+  const legacyMilestoneAuditCompatibility =
+    isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
+
   const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
 
-  if (!validation.valid) {
+  if (!validation.valid && !legacyMilestoneAuditCompatibility) {
     return validation;
   }
 
-  if (contractId === "report.milestone-audit") {
+  if (isMilestoneAudit) {
     const issues: string[] = [];
     const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
+    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
+    const requirementGaps = extractMarkdownSection(content, "Requirement Gaps");
+    const integrationGaps = extractMarkdownSection(content, "Integration Gaps");
+    const flowGaps = extractMarkdownSection(content, "Flow Gaps");
+    const optionalGaps = extractMarkdownSection(content, "Optional Gaps");
+    const hasStructuredGapSections =
+      [requirementGaps, integrationGaps, flowGaps, optionalGaps].some((section) => section.length > 0) ||
+      hasStructuredMilestoneAuditGapSections;
+    const hasLegacyGapSummary = hasLegacyMilestoneAuditGapSummary;
+    const evidenceRows = evidenceDimensions
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+    const gapSections = [
+      ["Requirement Gaps", requirementGaps],
+      ["Integration Gaps", integrationGaps],
+      ["Flow Gaps", flowGaps],
+      ["Optional Gaps", optionalGaps]
+    ] as const;
 
     if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
       issues.push(
@@ -2650,6 +2697,42 @@ export function validateReportArtifactContent(
         { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
       ])
     );
+
+    if (hasStructuredGapSections) {
+      for (const [heading, section] of gapSections) {
+        const rows = extractMarkdownTableRows(section);
+
+        if (rows.length === 0) {
+          issues.push(`Report artifact section ${heading} must include at least one structured gap row.`);
+          continue;
+        }
+
+        for (const row of rows) {
+          if (row.length !== 4) {
+            issues.push(
+              `Report artifact section ${heading} must keep each gap row in the Gap ID, Surface, Evidence, and Repair columns.`
+            );
+            continue;
+          }
+        }
+      }
+    }
+
+    if (!hasStructuredGapSections && hasLegacyGapSummary) {
+      const filteredValidationIssues = validation.issues.filter(
+        (issue) =>
+          !milestoneAuditGapHeadings.some((heading) =>
+            issue.includes(`missing required section: ${heading}`) ||
+            issue.includes(`section ${heading} must not be empty.`)
+          )
+      );
+
+      return {
+        valid: issues.length === 0 && filteredValidationIssues.length === 0,
+        issues: [...filteredValidationIssues, ...issues],
+        warnings: []
+      };
+    }
 
     return {
       valid: issues.length === 0,

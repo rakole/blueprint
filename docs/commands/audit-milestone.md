@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`audit-milestone` is Blueprint's command for audit milestone completion against original intent before archiving. In Blueprint it stays host-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report before any archival step is attempted.
+`audit-milestone` is Blueprint's command for audit milestone completion against original intent before archiving. In Blueprint it stays host-native, compares roadmap intent against saved phase evidence, and writes a durable milestone audit report with grouped gap sections and traceability notes before any archival step is attempted.
 
 
 ## Command Path And Examples
@@ -49,6 +49,11 @@
 
 
 - `milestone audit report in .blueprint/reports/`
+
+## Audit Report Shape
+
+- Keep grouped `## Requirement Gaps`, `## Integration Gaps`, `## Flow Gaps`, and `## Optional Gaps` sections when actionable gaps exist.
+- Capture requirements traceability repair notes when the roadmap intent or completed evidence shows a broken mapping that downstream gap planning must close.
 
 
 ## Required MCP Tools
@@ -108,6 +113,7 @@
 
 - Require explicit confirmation before replacing an existing milestone audit report.
 - Prefer Gemini CLI `ask_user` for that overwrite confirmation gate.
+- Preserve grouped gap sections and traceability notes so `/blu-plan-milestone-gaps` can use the report without re-deriving the audit from scratch.
 
 
 ## Edge Cases

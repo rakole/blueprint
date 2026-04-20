@@ -3,9 +3,28 @@ type RoadmapReadArgs = {
     cwd?: string;
 };
 type NumericInput = string | number;
+type AuditBackedGapCategory = "requirement" | "integration" | "flow" | "optional";
+type AuditBackedGapRow = {
+    gapId: string;
+    surface: string;
+    evidence: string;
+    repair: string;
+};
+type AuditBackedGapGroup = {
+    category: AuditBackedGapCategory;
+    rows: AuditBackedGapRow[];
+};
+type RoadmapAuditBackedDetails = {
+    sourceReportPath?: string;
+    goal?: string;
+    successCriteria?: string;
+    repairRequirementIds?: string[];
+    gapGroups?: AuditBackedGapGroup[];
+};
 type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
+    auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 type RoadmapInsertPhaseArgs = {
     cwd?: string;
@@ -451,8 +470,37 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         description: z.ZodString;
+        auditBackedDetails: z.ZodOptional<z.ZodObject<{
+            sourceReportPath: z.ZodOptional<z.ZodString>;
+            goal: z.ZodOptional<z.ZodString>;
+            successCriteria: z.ZodOptional<z.ZodString>;
+            repairRequirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            gapGroups: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                category: z.ZodEnum<{
+                    optional: "optional";
+                    requirement: "requirement";
+                    integration: "integration";
+                    flow: "flow";
+                }>;
+                rows: z.ZodArray<z.ZodObject<{
+                    gapId: z.ZodString;
+                    surface: z.ZodString;
+                    evidence: z.ZodString;
+                    repair: z.ZodString;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapAddPhaseResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        after: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+        description: z.ZodString;
+    };
+    handler: (args: Record<string, unknown>) => Promise<RoadmapInsertPhaseResult>;
 } | {
     name: string;
     description: string;
