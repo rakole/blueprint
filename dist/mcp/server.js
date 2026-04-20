@@ -14888,6 +14888,24 @@ active_command: ${activeCommand(context)}
 function renderMilestoneAuditTemplate(context) {
   return `# Milestone ${milestone(context)} - Audit
 
+**Verdict:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Decision basis: <which evidence determined the verdict>
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
+
 ## Original Intent Snapshot
 
 - Locked milestone intent and source evidence.
@@ -15699,10 +15717,28 @@ var init_artifact_contracts = __esm({
         canonicalName: "Milestone Audit Report",
         canonicalFilePattern: `.blueprint/reports/${reportName(void 0, "milestone-audit-<milestone>")}.md`,
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Original Intent Snapshot", "Roadmap And Phase Evidence", "Gaps Found", "Archival Blockers", "Next Safe Action"],
-        lockedMarkers: [],
-        placeholderSignals: ["<milestone-version>"],
-        notes: ["Audit-milestone owns this report through blueprint_artifact_report_write."],
+        requiredHeadings: [
+          "Audit Verdict",
+          "Milestone Evidence Dimensions",
+          "Original Intent Snapshot",
+          "Roadmap And Phase Evidence",
+          "Gaps Found",
+          "Archival Blockers",
+          "Next Safe Action"
+        ],
+        lockedMarkers: ["**Verdict:**", "**Evidence Dimensions:**"],
+        placeholderSignals: [
+          "<milestone-version>",
+          "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+          "<roadmap evidence>",
+          "<validation evidence>",
+          "<uat evidence>",
+          "<carry-forward evidence>"
+        ],
+        notes: [
+          "Audit-milestone owns this report through blueprint_artifact_report_write.",
+          "The audit contract captures a concrete verdict and milestone-level evidence dimensions."
+        ],
         renderScaffoldTemplate: renderMilestoneAuditTemplate,
         renderAuthoringTemplate: renderMilestoneAuditTemplate
       },
@@ -17665,6 +17701,112 @@ function validateRequiredMarkdownSections(content, artifactLabel, headings) {
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
+function parseMarkdownTableCells(line) {
+  if (!/^\|.*\|$/.test(line)) {
+    return [];
+  }
+  return line.slice(1, -1).split("|").map((cell) => cell.trim());
+}
+function isMarkdownTableRow(line) {
+  const cells = parseMarkdownTableCells(line);
+  return cells.length > 0 && !cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+function isMarkdownTableHeaderRow(line) {
+  const cells = parseMarkdownTableCells(line).map((cell) => cell.toLowerCase());
+  if (cells.length === 0) {
+    return false;
+  }
+  const headerPatterns = [
+    ["dimension", "evidence", "status", "notes"],
+    ["requirement", "task or check", "evidence", "coverage state", "notes"],
+    ["id", "description", "research support"],
+    ["requirement", "task or check", "evidence", "coverage state"]
+  ];
+  return headerPatterns.some(
+    (pattern) => pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
+  );
+}
+function summarizeMarkdownTableRow(line) {
+  const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+  if (cells.length === 0) {
+    return "";
+  }
+  if (cells.length >= 4) {
+    const label = cells[0] ?? "";
+    const evidence = cells[1] ?? "";
+    const status = cells[2] ?? "";
+    const note = cells[3] ?? "";
+    const summary = [label, status].filter((value) => value.length > 0).join(": ");
+    const withEvidence = evidence.length > 0 ? `${summary}${summary.length > 0 ? ": " : ""}${evidence}` : summary;
+    return note.length > 0 ? `${withEvidence}${withEvidence.length > 0 ? " - " : ""}${note}` : withEvidence;
+  }
+  if (cells.length === 3) {
+    const summary = [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+    return cells[2]?.length > 0 ? `${summary}${summary.length > 0 ? " - " : ""}${cells[2]}` : summary;
+  }
+  if (cells.length === 2) {
+    return [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+  }
+  return cells[0] ?? "";
+}
+function summarizeMarkdownSectionBody(section) {
+  const lines = section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("## "));
+  if (lines.length === 0) {
+    return "";
+  }
+  const verdictLine = lines.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
+  if (verdictLine) {
+    return verdictLine.replace(/^[-*+]\s*/, "").trim();
+  }
+  const tableRows = lines.filter(
+    (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
+  );
+  if (tableRows.length > 0) {
+    return tableRows.slice(0, 2).map((line) => summarizeMarkdownTableRow(line)).filter((line) => line.length > 0).join("; ");
+  }
+  const bullets = lines.filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0);
+  if (bullets.length > 0) {
+    return bullets.slice(0, 2).join("; ");
+  }
+  return lines[0] ?? "";
+}
+function splitMarkdownSections(lines) {
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    if (/^##\s+/.test(line)) {
+      if (current) {
+        sections.push(current);
+      }
+      current = {
+        heading: line.replace(/^##\s+/, "").trim(),
+        body: []
+      };
+      continue;
+    }
+    if (!current) {
+      continue;
+    }
+    current.body.push(line);
+  }
+  if (current) {
+    sections.push(current);
+  }
+  return sections;
+}
+function summarizePreambleLines(lines) {
+  const synopsis = [];
+  for (const line of lines) {
+    if (line.startsWith("**") && /:\s*/.test(line)) {
+      synopsis.push(line.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
+      continue;
+    }
+    if (/^[-*+]\s+/.test(line)) {
+      synopsis.push(line.replace(/^[-*+]\s+/, "").trim());
+    }
+  }
+  return synopsis;
+}
 function validateValidationScaffoldPlaceholders(content, artifactLabel) {
   return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
     ({ pattern, signal }) => {
@@ -17887,7 +18029,72 @@ function validateReportArtifactContent(content, reportName2) {
       warnings: []
     };
   }
-  return validateContractBackedMarkdown(content, contractId, "Report artifact");
+  const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
+  if (!validation.valid) {
+    return validation;
+  }
+  if (contractId === "report.milestone-audit") {
+    const issues = [];
+    const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
+    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
+    const evidenceRows = evidenceDimensions.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+    if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
+      issues.push(
+        "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
+      );
+    }
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
+      issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
+    }
+    if (evidenceRows.length < 4) {
+      issues.push(
+        "Report artifact section Milestone Evidence Dimensions must include roadmap, validation, UAT, and carry-forward evidence rows."
+      );
+    }
+    const rowLabels = [];
+    for (const row of evidenceRows) {
+      const cells = parseMarkdownTableCells(row);
+      if (cells.length !== 4) {
+        issues.push(
+          "Report artifact section Milestone Evidence Dimensions must keep each evidence row in the Dimension, Evidence, Status, and Notes columns."
+        );
+        continue;
+      }
+      const [dimension, evidence, status, notes] = cells;
+      rowLabels.push(dimension);
+      if (!/^(PASS|GAP|BLOCKED)$/i.test(status)) {
+        issues.push(
+          `Report artifact section Milestone Evidence Dimensions must use PASS, GAP, or BLOCKED for ${dimension}.`
+        );
+      }
+      if (!evidence || !notes) {
+        issues.push(
+          `Report artifact section Milestone Evidence Dimensions must keep evidence and notes populated for ${dimension}.`
+        );
+      }
+    }
+    const rowLabelText = rowLabels.join(" ");
+    if (!/Roadmap intent/i.test(rowLabelText)) {
+      issues.push("Report artifact section Milestone Evidence Dimensions is missing a Roadmap intent row.");
+    }
+    if (!/Validation evidence/i.test(rowLabelText)) {
+      issues.push("Report artifact section Milestone Evidence Dimensions is missing a Validation evidence row.");
+    }
+    if (!/UAT evidence/i.test(rowLabelText)) {
+      issues.push("Report artifact section Milestone Evidence Dimensions is missing a UAT evidence row.");
+    }
+    if (!/Carry-forward evidence/i.test(rowLabelText)) {
+      issues.push(
+        "Report artifact section Milestone Evidence Dimensions is missing a Carry-forward evidence row."
+      );
+    }
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+  return validation;
 }
 function validateSummaryArtifactContent(content) {
   const contract = readArtifactContract("phase.summary");
@@ -19018,10 +19225,22 @@ function summarizeArtifactContent(content) {
     (line) => line.length > 0 && !line.startsWith("*Generated by")
   );
   const heading = meaningfulLines.find((line) => line.startsWith("#"));
-  const bodyLine = meaningfulLines.find((line) => !line.startsWith("#"));
+  const h1Index = meaningfulLines.findIndex((line) => /^#\s+/.test(line));
+  const firstSectionIndex = meaningfulLines.findIndex(
+    (line, index) => index > h1Index && /^##\s+/.test(line)
+  );
+  const preambleLines = h1Index >= 0 ? meaningfulLines.slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length).filter((line) => !line.startsWith("#")) : [];
+  const sections = splitMarkdownSections(meaningfulLines);
+  const summaryParts = [
+    ...summarizePreambleLines(preambleLines),
+    ...sections.slice(0, 2).map((section) => {
+      const synopsis = summarizeMarkdownSectionBody(section.body.join("\n"));
+      return synopsis.length > 0 ? `${section.heading}: ${synopsis}` : section.heading;
+    })
+  ].filter((part) => part.length > 0);
   return {
     title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
-    summary: bodyLine ?? "Artifact content is present and available for review.",
+    summary: summaryParts.length > 0 ? summaryParts.join(" | ") : "Artifact content is present and available for review.",
     evidence: []
   };
 }
@@ -21829,6 +22048,90 @@ function inspectMilestoneEvidence(phaseArtifacts, phases) {
     allCompletedPhasesReady: missingVerificationPhases.length === 0 && missingUatPhases.length === 0
   };
 }
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function extractMarkdownSectionLines(content, heading) {
+  const lines = content.split(/\r?\n/);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
+  const startIndex = lines.findIndex((line) => headingPattern.test(line.trim()));
+  if (startIndex === -1) {
+    return [];
+  }
+  const sectionLines = [];
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (/^##\s+/.test(line)) {
+      break;
+    }
+    if (line.length === 0) {
+      continue;
+    }
+    sectionLines.push(line);
+  }
+  return sectionLines;
+}
+function normalizeReportSignalLine(line) {
+  return line.replace(/^[*-]\s+/, "").replace(/`/g, "").trim().replace(/[.]+$/, "").toLowerCase();
+}
+function isNoneLikeReportSignal(line) {
+  const normalized = normalizeReportSignalLine(line);
+  return normalized === "none" || normalized === "n/a" || normalized === "na" || normalized.startsWith("no gaps") || normalized.startsWith("no actionable gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no archival blockers");
+}
+function extractBlueprintCommand(line) {
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
+  return match?.[0]?.trim() ?? null;
+}
+async function inspectMilestoneAuditReportStatus(args) {
+  if (args.currentMilestone === null) {
+    return {
+      found: false,
+      verdict: null,
+      hasActionableGaps: false,
+      hasArchivalBlockers: false,
+      nextSafeAction: null,
+      readyForCompletion: false
+    };
+  }
+  const reportPath = buildBlueprintReportPath(`milestone-audit-${args.currentMilestone}`);
+  if (!args.reports.includes(reportPath)) {
+    return {
+      found: false,
+      verdict: null,
+      hasActionableGaps: false,
+      hasArchivalBlockers: false,
+      nextSafeAction: null,
+      readyForCompletion: false
+    };
+  }
+  try {
+    const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
+    const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
+    const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
+    const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
+    const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
+    const verdict = auditVerdictLines.map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
+    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
+    const nextSafeAction = nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    return {
+      found: true,
+      verdict,
+      hasActionableGaps: gapsFound.some((line) => !isNoneLikeReportSignal(line)),
+      hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
+      nextSafeAction,
+      readyForCompletion: !verdictBlocksCompletion && gapsFound.every(isNoneLikeReportSignal) && archivalBlockers.every(isNoneLikeReportSignal)
+    };
+  } catch {
+    return {
+      found: true,
+      verdict: null,
+      hasActionableGaps: false,
+      hasArchivalBlockers: false,
+      nextSafeAction: null,
+      readyForCompletion: false
+    };
+  }
+}
 async function deriveNextAction(args) {
   if (args.projectStatus === "uninitialized") {
     return blueprintRunDirectCommand("new-project");
@@ -21851,6 +22154,7 @@ async function deriveNextAction(args) {
   const validatePhaseCommand = blueprintDirectCommand("validate-phase");
   const verifyWorkCommand = blueprintDirectCommand("verify-work");
   const auditMilestoneCommand = blueprintDirectCommand("audit-milestone");
+  const planMilestoneGapsCommand = blueprintDirectCommand("plan-milestone-gaps");
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
@@ -21892,19 +22196,27 @@ async function deriveNextAction(args) {
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && !args.hasMilestoneAudit && implementedCommands.has(auditMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && !args.milestoneAuditReport.found && implementedCommands.has(auditMilestoneCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${auditMilestoneCommand}${milestoneSuffix} to audit milestone completion before archiving`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && !args.hasMilestoneCompletion && implementedCommands.has(completeMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.milestoneAuditReport.verdict !== null && args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" && args.milestoneAuditReport.nextSafeAction && implementedCommands.has(
+    args.milestoneAuditReport.nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? ""
+  )) {
+    return args.milestoneAuditReport.nextSafeAction;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && (args.milestoneAuditReport.hasActionableGaps || args.milestoneAuditReport.hasArchivalBlockers) && implementedCommands.has(planMilestoneGapsCommand)) {
+    return `Run ${planMilestoneGapsCommand} to close milestone gaps before archival`;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.milestoneAuditReport.readyForCompletion && !args.hasMilestoneCompletion && implementedCommands.has(completeMilestoneCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${completeMilestoneCommand}${milestoneSuffix} to record milestone closeout after the audit`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && args.hasMilestoneCompletion && !args.hasMilestoneSummary && implementedCommands.has(milestoneSummaryCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.hasMilestoneCompletion && !args.hasMilestoneSummary && implementedCommands.has(milestoneSummaryCommand)) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${milestoneSummaryCommand}${milestoneSuffix} to generate the final milestone summary`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.hasMilestoneAudit && args.hasMilestoneCompletion && args.hasMilestoneSummary && implementedCommands.has(newMilestoneCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.hasMilestoneCompletion && args.hasMilestoneSummary && implementedCommands.has(newMilestoneCommand)) {
     return `Run ${newMilestoneCommand} to start the next milestone from the saved carry-forward summary`;
   }
   return args.currentPhase ? `${blueprintRunDirectCommand("progress")} to review Phase ${args.currentPhase} and the next safe action` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
@@ -21936,9 +22248,13 @@ async function buildSyncedState(projectRoot) {
       `STATE.md is ahead of ROADMAP.md: current phase ${existingState.currentPhase} will be used instead of the stale roadmap phase ${roadmapSignals.currentPhase}.`
     );
   }
-  const milestoneAuditReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
   const milestoneCompletionReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-complete-${currentMilestone}`);
   const milestoneSummaryReportPath = currentMilestone === null ? null : buildBlueprintReportPath(`milestone-summary-${currentMilestone}`);
+  const milestoneAuditReport = await inspectMilestoneAuditReportStatus({
+    projectRoot,
+    currentMilestone,
+    reports: inspection.reports
+  });
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
@@ -21998,7 +22314,7 @@ async function buildSyncedState(projectRoot) {
         currentPhase: currentPhase2,
         currentMilestone,
         allPhasesComplete: roadmapSignals.allPhasesComplete,
-        hasMilestoneAudit: milestoneAuditReportPath !== null && inspection.reports.includes(milestoneAuditReportPath),
+        milestoneAuditReport,
         hasMilestoneCompletion: milestoneCompletionReportPath !== null && inspection.reports.includes(milestoneCompletionReportPath),
         hasMilestoneSummary: milestoneSummaryReportPath !== null && inspection.reports.includes(milestoneSummaryReportPath),
         phaseArtifacts: currentPhaseArtifacts,

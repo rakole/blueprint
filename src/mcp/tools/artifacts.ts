@@ -1923,6 +1923,167 @@ function validateLockedMarkers(
     .map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
 
+function parseMarkdownTableCells(line: string): string[] {
+  if (!/^\|.*\|$/.test(line)) {
+    return [];
+  }
+
+  return line
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isMarkdownTableRow(line: string): boolean {
+  const cells = parseMarkdownTableCells(line);
+
+  return cells.length > 0 && !cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function isMarkdownTableHeaderRow(line: string): boolean {
+  const cells = parseMarkdownTableCells(line).map((cell) => cell.toLowerCase());
+
+  if (cells.length === 0) {
+    return false;
+  }
+
+  const headerPatterns: Array<string[]> = [
+    ["dimension", "evidence", "status", "notes"],
+    ["requirement", "task or check", "evidence", "coverage state", "notes"],
+    ["id", "description", "research support"],
+    ["requirement", "task or check", "evidence", "coverage state"]
+  ];
+
+  return headerPatterns.some(
+    (pattern) =>
+      pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
+  );
+}
+
+function summarizeMarkdownTableRow(line: string): string {
+  const cells = line
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+
+  if (cells.length === 0) {
+    return "";
+  }
+
+  if (cells.length >= 4) {
+    const label = cells[0] ?? "";
+    const evidence = cells[1] ?? "";
+    const status = cells[2] ?? "";
+    const note = cells[3] ?? "";
+    const summary = [label, status].filter((value) => value.length > 0).join(": ");
+    const withEvidence = evidence.length > 0 ? `${summary}${summary.length > 0 ? ": " : ""}${evidence}` : summary;
+
+    return note.length > 0
+      ? `${withEvidence}${withEvidence.length > 0 ? " - " : ""}${note}`
+      : withEvidence;
+  }
+
+  if (cells.length === 3) {
+    const summary = [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+    return cells[2]?.length > 0 ? `${summary}${summary.length > 0 ? " - " : ""}${cells[2]}` : summary;
+  }
+
+  if (cells.length === 2) {
+    return [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+  }
+
+  return cells[0] ?? "";
+}
+
+function summarizeMarkdownSectionBody(section: string): string {
+  const lines = section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("## "));
+
+  if (lines.length === 0) {
+    return "";
+  }
+
+  const verdictLine = lines.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
+
+  if (verdictLine) {
+    return verdictLine.replace(/^[-*+]\s*/, "").trim();
+  }
+
+  const tableRows = lines.filter(
+    (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
+  );
+
+  if (tableRows.length > 0) {
+    return tableRows
+      .slice(0, 2)
+      .map((line) => summarizeMarkdownTableRow(line))
+      .filter((line) => line.length > 0)
+      .join("; ");
+  }
+
+  const bullets = lines
+    .filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line))
+    .map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
+    .filter((line) => line.length > 0);
+
+  if (bullets.length > 0) {
+    return bullets.slice(0, 2).join("; ");
+  }
+
+  return lines[0] ?? "";
+}
+
+function splitMarkdownSections(lines: string[]): Array<{ heading: string; body: string[] }> {
+  const sections: Array<{ heading: string; body: string[] }> = [];
+  let current: { heading: string; body: string[] } | null = null;
+
+  for (const line of lines) {
+    if (/^##\s+/.test(line)) {
+      if (current) {
+        sections.push(current);
+      }
+
+      current = {
+        heading: line.replace(/^##\s+/, "").trim(),
+        body: []
+      };
+      continue;
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    current.body.push(line);
+  }
+
+  if (current) {
+    sections.push(current);
+  }
+
+  return sections;
+}
+
+function summarizePreambleLines(lines: string[]): string[] {
+  const synopsis: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("**") && /:\s*/.test(line)) {
+      synopsis.push(line.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
+      continue;
+    }
+
+    if (/^[-*+]\s+/.test(line)) {
+      synopsis.push(line.replace(/^[-*+]\s+/, "").trim());
+    }
+  }
+
+  return synopsis;
+}
+
 const VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS: Array<{
   pattern: RegExp;
   signal: string;
@@ -2326,7 +2487,93 @@ export function validateReportArtifactContent(
     };
   }
 
-  return validateContractBackedMarkdown(content, contractId, "Report artifact");
+  const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
+
+  if (!validation.valid) {
+    return validation;
+  }
+
+  if (contractId === "report.milestone-audit") {
+    const issues: string[] = [];
+    const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
+    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
+    const evidenceRows = evidenceDimensions
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+
+    if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
+      issues.push(
+        "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
+      );
+    }
+
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
+      issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
+    }
+
+    if (evidenceRows.length < 4) {
+      issues.push(
+        "Report artifact section Milestone Evidence Dimensions must include roadmap, validation, UAT, and carry-forward evidence rows."
+      );
+    }
+
+    const rowLabels: string[] = [];
+
+    for (const row of evidenceRows) {
+      const cells = parseMarkdownTableCells(row);
+
+      if (cells.length !== 4) {
+        issues.push(
+          "Report artifact section Milestone Evidence Dimensions must keep each evidence row in the Dimension, Evidence, Status, and Notes columns."
+        );
+        continue;
+      }
+
+      const [dimension, evidence, status, notes] = cells;
+      rowLabels.push(dimension);
+
+      if (!/^(PASS|GAP|BLOCKED)$/i.test(status)) {
+        issues.push(
+          `Report artifact section Milestone Evidence Dimensions must use PASS, GAP, or BLOCKED for ${dimension}.`
+        );
+      }
+
+      if (!evidence || !notes) {
+        issues.push(
+          `Report artifact section Milestone Evidence Dimensions must keep evidence and notes populated for ${dimension}.`
+        );
+      }
+    }
+
+    const rowLabelText = rowLabels.join(" ");
+
+    if (!/Roadmap intent/i.test(rowLabelText)) {
+      issues.push("Report artifact section Milestone Evidence Dimensions is missing a Roadmap intent row.");
+    }
+
+    if (!/Validation evidence/i.test(rowLabelText)) {
+      issues.push("Report artifact section Milestone Evidence Dimensions is missing a Validation evidence row.");
+    }
+
+    if (!/UAT evidence/i.test(rowLabelText)) {
+      issues.push("Report artifact section Milestone Evidence Dimensions is missing a UAT evidence row.");
+    }
+
+    if (!/Carry-forward evidence/i.test(rowLabelText)) {
+      issues.push(
+        "Report artifact section Milestone Evidence Dimensions is missing a Carry-forward evidence row."
+      );
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+
+  return validation;
 }
 
 export function validateSummaryArtifactContent(content: string): {
@@ -3836,11 +4083,31 @@ function summarizeArtifactContent(content: string): {
     (line) => line.length > 0 && !line.startsWith("*Generated by")
   );
   const heading = meaningfulLines.find((line) => line.startsWith("#"));
-  const bodyLine = meaningfulLines.find((line) => !line.startsWith("#"));
+  const h1Index = meaningfulLines.findIndex((line) => /^#\s+/.test(line));
+  const firstSectionIndex = meaningfulLines.findIndex(
+    (line, index) => index > h1Index && /^##\s+/.test(line)
+  );
+  const preambleLines =
+    h1Index >= 0
+      ? meaningfulLines
+          .slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length)
+          .filter((line) => !line.startsWith("#"))
+      : [];
+  const sections = splitMarkdownSections(meaningfulLines);
+  const summaryParts = [
+    ...summarizePreambleLines(preambleLines),
+    ...sections.slice(0, 2).map((section) => {
+      const synopsis = summarizeMarkdownSectionBody(section.body.join("\n"));
+      return synopsis.length > 0 ? `${section.heading}: ${synopsis}` : section.heading;
+    })
+  ].filter((part) => part.length > 0);
 
   return {
     title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
-    summary: bodyLine ?? "Artifact content is present and available for review.",
+    summary:
+      summaryParts.length > 0
+        ? summaryParts.join(" | ")
+        : "Artifact content is present and available for review.",
     evidence: []
   };
 }

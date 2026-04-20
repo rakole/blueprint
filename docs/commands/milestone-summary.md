@@ -25,6 +25,7 @@
 
 - Matching `milestone-audit-<version>.md` and `milestone-complete-<version>.md` reports should already exist in `.blueprint/reports/`.
 - Replacing an existing milestone summary report requires explicit overwrite confirmation.
+- Read the canonical `report.milestone-summary` contract before drafting or revising the report.
 
 
 ## Outputs
@@ -39,6 +40,7 @@
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
@@ -54,12 +56,14 @@
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Digest And Report Contract
 
+- Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final summary body to the returned `authoringTemplate` when the contract provides one.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
 - Pass only the bare report name `milestone-summary-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
@@ -99,6 +103,7 @@
 
 
 - Require explicit confirmation before replacing an existing milestone summary report.
+- Prefer Gemini CLI `ask_user` for that overwrite confirmation gate.
 
 
 ## Edge Cases
@@ -136,4 +141,3 @@
 - Missing-completion rejection fixture.
 - Existing summary report overwrite fixture.
 - Direct `milestone-summary` happy-path fixture.
-

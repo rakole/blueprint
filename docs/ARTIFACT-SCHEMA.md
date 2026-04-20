@@ -416,6 +416,18 @@ UAT expectations:
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
 - should be validated after write so schema drift or heading drift is caught before the next state update
 
+### Milestone Report Contracts
+
+The milestone command family now uses canonical report contracts before authoring or revising report artifacts:
+
+- `report.milestone-audit` for `.blueprint/reports/milestone-audit-<milestone>.md`
+- `report.milestone-complete` for `.blueprint/reports/milestone-complete-<milestone>.md`
+- `report.milestone-summary` for `.blueprint/reports/milestone-summary-<milestone>.md`
+
+Contract notes:
+- Read the matching report contract before drafting or replacing the report so the persisted text stays aligned with the runtime template.
+- `new-milestone` additionally reads `phase.context` before seeding the first context artifact for the next milestone.
+
 Exact persistence template:
 
 ```md

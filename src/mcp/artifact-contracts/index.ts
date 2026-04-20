@@ -697,6 +697,24 @@ active_command: ${activeCommand(context)}
 function renderMilestoneAuditTemplate(context?: ArtifactTemplateContext): string {
   return `# Milestone ${milestone(context)} - Audit
 
+**Verdict:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Decision basis: <which evidence determined the verdict>
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
+
 ## Original Intent Snapshot
 
 - Locked milestone intent and source evidence.
@@ -1420,10 +1438,28 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Milestone Audit Report",
     canonicalFilePattern: `.blueprint/reports/${reportName(undefined, "milestone-audit-<milestone>")}.md`,
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Original Intent Snapshot", "Roadmap And Phase Evidence", "Gaps Found", "Archival Blockers", "Next Safe Action"],
-    lockedMarkers: [],
-    placeholderSignals: ["<milestone-version>"],
-    notes: ["Audit-milestone owns this report through blueprint_artifact_report_write."],
+    requiredHeadings: [
+      "Audit Verdict",
+      "Milestone Evidence Dimensions",
+      "Original Intent Snapshot",
+      "Roadmap And Phase Evidence",
+      "Gaps Found",
+      "Archival Blockers",
+      "Next Safe Action"
+    ],
+    lockedMarkers: ["**Verdict:**", "**Evidence Dimensions:**"],
+    placeholderSignals: [
+      "<milestone-version>",
+      "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+      "<roadmap evidence>",
+      "<validation evidence>",
+      "<uat evidence>",
+      "<carry-forward evidence>"
+    ],
+    notes: [
+      "Audit-milestone owns this report through blueprint_artifact_report_write.",
+      "The audit contract captures a concrete verdict and milestone-level evidence dimensions."
+    ],
     renderScaffoldTemplate: renderMilestoneAuditTemplate,
     renderAuthoringTemplate: renderMilestoneAuditTemplate
   },

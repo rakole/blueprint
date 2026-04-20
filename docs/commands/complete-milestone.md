@@ -26,6 +26,7 @@
 - A matching `milestone-audit-<version>.md` report should already exist in `.blueprint/reports/`.
 - All roadmap phases for the milestone should already be complete, with saved verification and UAT evidence.
 - Replacing an existing milestone completion report requires explicit overwrite confirmation.
+- Read the canonical `report.milestone-complete` contract before drafting or revising the report.
 
 
 ## Outputs
@@ -40,6 +41,7 @@
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
@@ -55,12 +57,14 @@
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Digest And Report Contract
 
+- Read `report.milestone-complete` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final completion body to the returned `authoringTemplate` when the contract provides one.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
 - Pass only the bare report name `milestone-complete-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
@@ -101,6 +105,7 @@
 
 - Require explicit confirmation before replacing an existing milestone completion report.
 - Confirm the resolved milestone before writing the completion report when the user passed an ambiguous version or name.
+- Prefer Gemini CLI `ask_user` for that overwrite or ambiguity confirmation gate.
 
 
 ## Edge Cases
@@ -137,4 +142,3 @@
 - Missing-audit rejection fixture.
 - Existing completion report overwrite fixture.
 - Direct `complete-milestone` happy-path fixture.
-

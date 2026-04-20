@@ -15,8 +15,43 @@ import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 
-function milestoneAuditReportContent(additional = ""): string {
+type MilestoneAuditReportArgs = {
+  verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED";
+  gaps?: string[];
+  blockers?: string[];
+  nextSafeAction: string;
+};
+
+function renderMilestoneAuditReport(args: MilestoneAuditReportArgs): string {
+  const gaps = args.gaps && args.gaps.length > 0 ? args.gaps.map((gap) => `- ${gap}`).join("\n") : "- none";
+  const blockers =
+    args.blockers && args.blockers.length > 0
+      ? args.blockers.map((blocker) => `- ${blocker}`).join("\n")
+      : "- none";
+
   return `# Milestone Audit: v2
+
+**Verdict:** ${args.verdict}
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: ${args.verdict}
+- Rationale: ${
+    args.verdict === "READY_TO_CLOSE"
+      ? "All milestone phases have validation and UAT evidence, so the milestone can close."
+      : "Open gaps or blockers keep milestone closeout from moving forward yet."
+  }
+- Decision basis: ROADMAP, verification, UAT, and summary evidence remain aligned.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | The release-readiness phase has durable validation evidence. |
+| UAT evidence | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | The UAT closeout evidence is saved. |
+| Carry-forward evidence | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
 
 ## Original Intent Snapshot
 
@@ -32,16 +67,36 @@ function milestoneAuditReportContent(additional = ""): string {
 
 ## Gaps Found
 
-- none
+${gaps}
 
 ## Archival Blockers
 
-- none
+${blockers}
 
 ## Next Safe Action
 
-- /blu-complete-milestone v2
-${additional}`;
+- ${args.nextSafeAction}
+`;
+}
+
+function milestoneAuditReportContent(additional = ""): string {
+  return `${renderMilestoneAuditReport({
+    verdict: "READY_TO_CLOSE",
+    nextSafeAction: "/blu-complete-milestone v2"
+  })}${additional}`;
+}
+
+function milestoneAuditReportContentWithFindings(args: {
+  gaps: string[];
+  blockers: string[];
+  nextSafeAction: string;
+}): string {
+  return renderMilestoneAuditReport({
+    verdict: "BLOCKED",
+    gaps: args.gaps,
+    blockers: args.blockers,
+    nextSafeAction: args.nextSafeAction
+  });
 }
 
 async function createMilestoneAuditRepo(): Promise<string> {
@@ -537,28 +592,34 @@ test("artifact summary digest can summarize explicit milestone artifact paths", 
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: milestoneAuditReportContent()
+  });
+
   const digest = await blueprintArtifactSummaryDigest({
     cwd: repoPath,
     artifactPaths: [
       ".blueprint/ROADMAP.md",
       ".blueprint/phases/04-release-readiness/04-VERIFICATION.md",
-      ".blueprint/phases/04-release-readiness/04-UAT.md"
+      ".blueprint/phases/04-release-readiness/04-UAT.md",
+      ".blueprint/reports/milestone-audit-v2.md"
     ]
   });
 
-  assert.deepEqual(digest.inputsUsed, [
-    ".blueprint/phases/04-release-readiness/04-UAT.md",
-    ".blueprint/phases/04-release-readiness/04-VERIFICATION.md",
-    ".blueprint/ROADMAP.md"
-  ]);
-  assert.equal(digest.digest.length, 3);
+  assert.equal(digest.digest.length, 4);
+  assert.ok(digest.inputsUsed.includes(".blueprint/ROADMAP.md"));
+  assert.ok(digest.inputsUsed.includes(".blueprint/phases/04-release-readiness/04-VERIFICATION.md"));
+  assert.ok(digest.inputsUsed.includes(".blueprint/phases/04-release-readiness/04-UAT.md"));
+  assert.ok(digest.inputsUsed.includes(".blueprint/reports/milestone-audit-v2.md"));
   assert.match(
     digest.digest.map((section) => section.summary).join("\n"),
-    /Active milestone: v2|Audit Fixture/
+    /Verdict: READY_TO_CLOSE|Roadmap intent: PASS|Validation evidence: PASS|UAT evidence: PASS/
   );
   assert.match(
     digest.digest.map((section) => section.title).join("\n"),
-    /Verification|UAT|Audit Fixture/
+    /Verification|UAT|Audit Fixture|Milestone Audit/
   );
 });
 
@@ -587,4 +648,89 @@ test("project status routes fully verified milestones to audit-milestone until t
   assert.doesNotMatch(afterState.derivedStatus.nextAction, /\/blu-audit-milestone/);
   assert.match(afterStatus.nextAction, /\/blu-complete-milestone v2/);
   assert.match(afterState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
+});
+
+test("project status keeps blocked milestone audit reports on gap planning instead of completion", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: milestoneAuditReportContentWithFindings({
+      gaps: ["Phase 4 completion evidence still needs follow-up work."],
+      blockers: ["Milestone closeout must pause until the gap is closed."],
+      nextSafeAction: "/blu-plan-milestone-gaps"
+    })
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
+});
+
+test("project status honors a FOLLOW_UP audit verdict even when the evidence sections are empty", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: `# Milestone Audit: v2
+
+**Verdict:** FOLLOW_UP
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: FOLLOW_UP
+- Rationale: The audit needs a follow-up pass before milestone closeout.
+- Decision basis: The explicit verdict keeps the milestone open even though the evidence rows are all marked complete.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent is locked. |
+| Validation evidence | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | Validation evidence is present. |
+| UAT evidence | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | UAT evidence is present. |
+| Carry-forward evidence | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | The summary exists, but the audit still requires follow-up. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-plan-milestone-gaps
+`
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });

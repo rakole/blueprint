@@ -18,6 +18,7 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
+  blueprintArtifactReportWrite,
   blueprintArtifactValidate
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
@@ -1221,6 +1222,66 @@ test("project status routes milestone closeout through audit, completion, summar
   assert.match(completeState.derivedStatus.nextAction, /\/blu-milestone-summary v2/);
   assert.match(summaryStatus.nextAction, /\/blu-new-milestone/);
   assert.match(summaryState.derivedStatus.nextAction, /\/blu-new-milestone/);
+});
+
+test("project status keeps blocked milestone audits on gap planning instead of completion", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: `# Milestone Audit: v2
+
+**Verdict:** BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: BLOCKED
+- Rationale: Open archival follow-up work still blocks milestone closeout.
+- Decision basis: The saved roadmap and closeout evidence show unresolved gaps.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent remains intact. |
+| Validation evidence | .blueprint/phases/03-milestone-closeout/03-VERIFICATION.md | PASS | Validation evidence exists for the closeout phase. |
+| UAT evidence | .blueprint/phases/03-milestone-closeout/03-UAT.md | PASS | UAT evidence exists for the closeout phase. |
+| Carry-forward evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | BLOCKED | The summary still points to unresolved archival follow-up work. |
+
+## Original Intent Snapshot
+
+- Locked milestone intent and source evidence.
+
+## Roadmap And Phase Evidence
+
+- Completed phase evidence reviewed for this milestone.
+
+## Gaps Found
+
+- Phase 3 still has unresolved archival follow-up work.
+
+## Archival Blockers
+
+- Milestone closeout must stay blocked until the gap is closed.
+
+## Next Safe Action
+
+- /blu-plan-milestone-gaps
+`
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
 test("project status requires milestone-wide validation evidence before closeout routing", async (t) => {
