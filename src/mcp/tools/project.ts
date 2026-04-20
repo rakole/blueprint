@@ -162,6 +162,7 @@ const projectInitInputSchema = {
             status: z.enum(["planned", "in_progress", "done"]).optional(),
             objective: z.string(),
             requirementIds: z.array(z.string()).optional(),
+            successCriteria: z.array(z.string()).optional(),
             notes: z.array(z.string()).optional()
           })
         )
@@ -396,6 +397,10 @@ function buildBootstrapSeed(
             objective:
               "Capture the current repo structure and risks before later phases are treated as durable.",
             requirementIds: ["RQ-01", "RQ-03"],
+            successCriteria: [
+              "The existing repo structure, risks, and constraints are documented clearly enough to support later planning.",
+              `The bootstrap handoff points directly to \`${blueprintRunDirectCommand("map-codebase")}\` before later phases are treated as durable.`
+            ],
             notes: [`${blueprintRunDirectCommand("map-codebase")} immediately after bootstrap.`]
           },
           {
@@ -403,7 +408,11 @@ function buildBootstrapSeed(
             title: "Align Requirements And Scope",
             objective:
               "Refine milestone scope once codebase evidence is available.",
-            requirementIds: ["RQ-02", "RQ-03"]
+            requirementIds: ["RQ-02", "RQ-03"],
+            successCriteria: [
+              "Requirement coverage and roadmap scope are aligned with mapped codebase evidence.",
+              "Later execution planning can continue without losing requirement traceability."
+            ]
           }
         ]
       : [
@@ -412,14 +421,22 @@ function buildBootstrapSeed(
             title: "Discovery And Definition",
             objective:
               "Confirm project intent, users, and milestone scope from the bootstrap draft.",
-            requirementIds: ["RQ-01", "RQ-02"]
+            requirementIds: ["RQ-01", "RQ-02"],
+            successCriteria: [
+              "The product direction and first milestone are explicit enough to guide downstream planning.",
+              "Requirements remain traceable into the roadmap without renumbering."
+            ]
           },
           {
             phase: "2",
             title: "Foundation Bootstrap",
             objective:
               "Prepare durable planning inputs for the next implemented Blueprint commands.",
-            requirementIds: ["RQ-02", "RQ-03"]
+            requirementIds: ["RQ-02", "RQ-03"],
+            successCriteria: [
+              "The bootstrap draft is ready to support later discovery and execution planning.",
+              "Requirement traceability stays intact as the roadmap moves toward implementation."
+            ]
           }
         ];
 
