@@ -35,6 +35,7 @@ export type BlueprintState = {
   activeCommand: string;
   nextAction: string;
   blockers: string[];
+  roadmapEvolutionNotes: string[];
   lastUpdated: string;
 };
 
@@ -212,6 +213,7 @@ const DEFAULT_STATE: BlueprintState = {
   activeCommand: blueprintDirectCommand("new-project"),
   nextAction: blueprintRunDirectCommand("new-project"),
   blockers: [],
+  roadmapEvolutionNotes: [],
   lastUpdated: new Date(0).toISOString()
 };
 
@@ -231,6 +233,7 @@ const stateUpdateInputSchema = {
       activeCommand: z.string().optional(),
       nextAction: z.string().optional(),
       blockers: z.array(z.string()).optional(),
+      roadmapEvolutionNotes: z.array(z.string()).optional(),
       lastUpdated: z.string().optional()
     })
     .optional()
@@ -497,6 +500,12 @@ function buildPauseHandoffNextAction(
 function renderStateDocument(state: BlueprintState): string {
   const blockers =
     state.blockers.length === 0 ? "- none" : state.blockers.map((item) => `- ${item}`).join("\n");
+  const roadmapEvolutionNotes =
+    state.roadmapEvolutionNotes.length === 0
+      ? ""
+      : `\n## Roadmap Evolution Notes\n\n${state.roadmapEvolutionNotes
+          .map((item) => `- ${item}`)
+          .join("\n")}\n`;
 
   return `# Blueprint State
 
@@ -510,6 +519,7 @@ function renderStateDocument(state: BlueprintState): string {
 ## Blockers
 
 ${blockers}
+${roadmapEvolutionNotes}
 `;
 }
 
@@ -519,13 +529,20 @@ function parseStateDocument(raw: string): BlueprintState {
     return match ? match[1].trim() : null;
   };
 
-  const blockersSection = raw.match(/## Blockers\s+([\s\S]*)$/m)?.[1] ?? "";
+  const blockersSection = extractMarkdownSection(raw, "Blockers");
+  const roadmapEvolutionNotesSection = extractMarkdownSection(raw, "Roadmap Evolution Notes");
   const blockers = blockersSection
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2).trim())
     .filter((line) => line && line !== "none");
+  const roadmapEvolutionNotes = roadmapEvolutionNotesSection
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter((line) => line.length > 0 && line !== "none");
 
   return {
     projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
@@ -535,7 +552,8 @@ function parseStateDocument(raw: string): BlueprintState {
     activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
     nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
     lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
-    blockers
+    blockers,
+    roadmapEvolutionNotes
   };
 }
 
@@ -1274,6 +1292,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
               workflow: workflowRouting
             }),
       blockers,
+      roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
       lastUpdated: new Date().toISOString()
     },
     warnings
@@ -1437,6 +1456,7 @@ export async function blueprintStateUpdate(
     ...currentState,
     ...patch,
     blockers: patch.blockers ?? currentState.blockers,
+    roadmapEvolutionNotes: patch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
     lastUpdated: patch.lastUpdated ?? new Date().toISOString()
   };
   const updatedFields = [

@@ -99,12 +99,12 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 
 1. Require an explicit integer phase number and a non-empty phase description before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
-3. Require explicit confirmation before inserting the decimal phase, and preview the computed decimal number plus the fact that later phases will not be renumbered automatically.
+3. Require explicit confirmation before inserting the decimal phase, and prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation. Preview the computed decimal number plus the fact that later phases will not be renumbered automatically.
 4. Persist the roadmap mutation through `blueprint_roadmap_insert_phase`; do not rewrite `.blueprint/ROADMAP.md` or hand-create phase directories directly from the command prompt.
 5. Treat integer-only targets as mandatory and reject decimal targets.
 6. Keep numbering roadmap-driven: derive the next decimal from the existing roadmap entries under that integer base and fail fast when a conflicting decimal directory already exists on disk.
-7. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
-8. Update `STATE.md` through `blueprint_state_update` so the inserted decimal phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
+7. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file at `${phaseDir}/${phasePrefix}-CONTEXT.md`.
+8. Update `STATE.md` through `blueprint_state_update` so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
 9. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `remove-phase`

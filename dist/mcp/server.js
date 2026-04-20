@@ -21484,6 +21484,11 @@ function buildPauseHandoffNextAction(currentPhase2, handoff) {
 }
 function renderStateDocument(state) {
   const blockers = state.blockers.length === 0 ? "- none" : state.blockers.map((item) => `- ${item}`).join("\n");
+  const roadmapEvolutionNotes = state.roadmapEvolutionNotes.length === 0 ? "" : `
+## Roadmap Evolution Notes
+
+${state.roadmapEvolutionNotes.map((item) => `- ${item}`).join("\n")}
+`;
   return `# Blueprint State
 
 - Project status: ${state.projectStatus}
@@ -21496,6 +21501,7 @@ function renderStateDocument(state) {
 ## Blockers
 
 ${blockers}
+${roadmapEvolutionNotes}
 `;
 }
 function parseStateDocument(raw) {
@@ -21503,8 +21509,10 @@ function parseStateDocument(raw) {
     const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
     return match ? match[1].trim() : null;
   };
-  const blockersSection = raw.match(/## Blockers\s+([\s\S]*)$/m)?.[1] ?? "";
+  const blockersSection = extractMarkdownSection3(raw, "Blockers");
+  const roadmapEvolutionNotesSection = extractMarkdownSection3(raw, "Roadmap Evolution Notes");
   const blockers = blockersSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line && line !== "none");
+  const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line !== "none");
   return {
     projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
     currentMilestone: getLineValue("Current milestone") ?? DEFAULT_STATE.currentMilestone,
@@ -21512,7 +21520,8 @@ function parseStateDocument(raw) {
     activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
     nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
     lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
-    blockers
+    blockers,
+    roadmapEvolutionNotes
   };
 }
 function normalizePhaseNumber2(value) {
@@ -21998,6 +22007,7 @@ async function buildSyncedState(projectRoot) {
         workflow: workflowRouting
       }),
       blockers,
+      roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
       lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
     },
     warnings
@@ -22128,6 +22138,7 @@ async function blueprintStateUpdate(args = {}) {
     ...currentState,
     ...patch,
     blockers: patch.blockers ?? currentState.blockers,
+    roadmapEvolutionNotes: patch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
     lastUpdated: patch.lastUpdated ?? (/* @__PURE__ */ new Date()).toISOString()
   };
   const updatedFields = [
@@ -22199,6 +22210,7 @@ var init_state = __esm({
       activeCommand: blueprintDirectCommand("new-project"),
       nextAction: blueprintRunDirectCommand("new-project"),
       blockers: [],
+      roadmapEvolutionNotes: [],
       lastUpdated: (/* @__PURE__ */ new Date(0)).toISOString()
     };
     PAUSE_HANDOFF_REPORT_PATH = `${BLUEPRINT_REPORTS_PATH}/pause-work-latest.md`;
@@ -22215,6 +22227,7 @@ var init_state = __esm({
         activeCommand: string2().optional(),
         nextAction: string2().optional(),
         blockers: array(string2()).optional(),
+        roadmapEvolutionNotes: array(string2()).optional(),
         lastUpdated: string2().optional()
       }).optional()
     };
@@ -22307,6 +22320,16 @@ function formatPhasePrefix3(value) {
 function extractPhaseNumberToken(value) {
   const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
   return match ? normalizePhaseNumber3(match[1]) : null;
+}
+function extractExactPhaseNumberToken(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : null;
+  }
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  return normalizePhaseNumber3(trimmed);
 }
 function isIntegerPhaseNumber(value) {
   return !normalizePhaseNumber3(value).includes(".");
@@ -22477,12 +22500,13 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
   }
   return content;
 }
-function buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber = null) {
+function buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber = null, insertedMarker = null) {
   return `### Phase ${phaseNumber}: ${phaseName}
 **Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
 **Requirements**: none yet
 **Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
-**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
+${insertedMarker ? `**Inserted**: ${insertedMarker}
+` : ""}**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
 **Status**: planned
 `;
 }
@@ -22517,7 +22541,12 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber).trimEnd();
+  const detailBlock = buildPhaseDetailBlock(
+    phaseNumber,
+    phaseName,
+    dependsOnPhaseNumber,
+    "yes"
+  ).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phaseDetailsSectionPattern.test(raw)) {
     throw new Error(
@@ -23205,10 +23234,16 @@ async function blueprintRoadmapInsertPhase(args) {
       "Phase description required. Re-run /blu-insert-phase with an integer phase number such as 3 and a concise description."
     );
   }
-  const afterPhaseNumber = extractPhaseNumberToken(args.after ?? "");
+  const afterPhaseNumber = extractExactPhaseNumberToken(args.after ?? "");
   if (!afterPhaseNumber) {
+    const afterInput = normalizeBlueprintInput(args.after ?? "").trim();
+    if (afterInput.length === 0) {
+      throw new Error(
+        "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      );
+    }
     throw new Error(
-      "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      `Phase ${afterInput} is not a valid Blueprint integer phase number. Re-run /blu-insert-phase with an existing integer phase number such as 3.`
     );
   }
   if (!isIntegerPhaseNumber(afterPhaseNumber)) {
@@ -24782,7 +24817,7 @@ var init_phase = __esm({
     };
     roadmapInsertPhaseInputSchema = {
       cwd: string2().optional(),
-      after: string2(),
+      after: union([string2(), number2()]),
       description: string2()
     };
     roadmapRemovePhaseInputSchema = {

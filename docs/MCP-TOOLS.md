@@ -49,7 +49,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_roadmap_read` | Load roadmap, milestone, and phase list | `{roadmap, milestone, phases}` |
 | `blueprint_roadmap_add_phase` | Append the next whole-number phase and derive the matching `.blueprint/phases/<phase-slug>/` directory | `{phaseNumber, phaseDir, roadmapPath}` |
-| `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phaseDir, roadmapPath}` |
+| `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase via numeric `after` without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phasePrefix, phaseDir, roadmapPath}` |
 | `blueprint_roadmap_remove_phase` | Remove and renumber phase entries | `{removedPhase, renumberedPhases, roadmapPath}` |
 | `blueprint_roadmap_promote_backlog` | Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999.x` phase stubs when present | `{status, backlogItems, selectedBacklogIds, promotedItems, createdPhaseDirs, warnings}` |
 | `blueprint_phase_locate` | Resolve a phase reference to disk state | `{found, phaseNumber, phaseName, phaseDir, artifacts}` |
@@ -129,7 +129,7 @@ These tool names are part of the documented future contract, but they are not re
 - `pause-work` and `resume-work` use state load and update tools together with pause handoff read and write support.
 - `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status`.
 - `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update`.
-- `insert-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_insert_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to insert the next decimal phase after an existing integer anchor and route the repo back into `/blu-discuss-phase`.
+- `insert-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_insert_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to insert the next decimal phase after an existing integer anchor, record a durable `roadmapEvolutionNotes` entry in `STATE.md`, and route the repo back into `/blu-discuss-phase`.
 - `remove-phase` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_roadmap_remove_phase`, and `blueprint_state_update`.
 - `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update`.
 - `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write`.
@@ -190,7 +190,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_roadmap_add_phase` accepts only `description` plus optional `cwd`.
 - `blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`.
 - Do not precompute phase numbers, decimal suffixes, slugs, or phase directories in prompt logic. The tool owns numbering and conflict checks.
-- After the tool returns, use the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative when follow-on scaffolding or routing needs a concrete phase target.
+- After the tool returns, use the returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative when follow-on scaffolding or routing needs a concrete phase target.
 
 ### Phase Artifact Writes And Checkpoints
 

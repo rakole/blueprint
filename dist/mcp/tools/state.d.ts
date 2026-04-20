@@ -6,6 +6,7 @@ export type BlueprintState = {
     activeCommand: string;
     nextAction: string;
     blockers: string[];
+    roadmapEvolutionNotes: string[];
     lastUpdated: string;
 };
 type StateUpdateArgs = {
@@ -125,6 +126,7 @@ export declare const stateToolDefinitions: ({
             activeCommand: z.ZodOptional<z.ZodString>;
             nextAction: z.ZodOptional<z.ZodString>;
             blockers: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            roadmapEvolutionNotes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             lastUpdated: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>>;
     };
