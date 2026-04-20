@@ -58,6 +58,8 @@ Current Blueprint delta:
 - `mcp_blueprint_blueprint_config_get`
 - `mcp_blueprint_blueprint_config_set`
 - `mcp_blueprint_blueprint_state_update`
+- `mcp_blueprint_blueprint_artifact_contract_read`
+- `mcp_blueprint_blueprint_artifact_validate`
 - `mcp_blueprint_blueprint_artifact_scaffold`
 
 ## Optional Agents
@@ -122,9 +124,10 @@ Current Blueprint delta:
 
 1. Use `mcp_blueprint_blueprint_project_init` for the first persistent bootstrap write.
 2. Pass the strongest available bootstrap seed so `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` land as authored drafts rather than placeholder shells.
-3. Keep follow-up config changes inside `mcp_blueprint_blueprint_config_set`.
-4. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
-5. Re-read project status after initialization and end with the next safe implemented command.
+3. Read the canonical bootstrap contracts before drafting or revising `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md`, then validate the written artifacts with `mcp_blueprint_blueprint_artifact_validate`.
+4. Keep follow-up config changes inside `mcp_blueprint_blueprint_config_set`.
+5. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
+6. Re-read project status after initialization and end with the next safe implemented command.
 6. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
 7. If Blueprint MCP tools are unavailable, stop and report the disconnected runtime instead of trying shell wrappers such as `mcp use`, `blueprint-mcp`, or ad-hoc SDK scripts.
 

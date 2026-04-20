@@ -117,6 +117,8 @@ export type BootstrapArtifactDiagnostics = {
   brownfield: BootstrapAssessment;
 };
 
+export const DURABLE_REQUIREMENT_ID_PATTERN = /^[A-Z][A-Z0-9-]*-\d+$/;
+
 type NormalizedBootstrapRequirementRow = Required<BootstrapRequirementRow>;
 type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirements"> & {
   requirements: NormalizedBootstrapRequirementRow[];
@@ -432,6 +434,38 @@ function normalizeList(values: string[] | undefined, fallback: string[]): string
 
 function normalizeSuccessCriteria(values: string[] | undefined, fallback: string[]): string[] {
   return normalizeList(values, fallback);
+}
+
+function normalizeBootstrapRoadmapPhaseRequirementIds(
+  phase: BootstrapRoadmapPhase,
+  requirements: NormalizedBootstrapRequirementRow[],
+  phaseIndex: number
+): string[] {
+  const explicitRequirementIds = [...new Set((phase.requirementIds ?? []).map((value) => value.trim()))]
+    .filter((value) => value.length > 0);
+
+  if (explicitRequirementIds.length > 0) {
+    return explicitRequirementIds;
+  }
+
+  const preferredScopes: BootstrapRequirementScope[] =
+    phaseIndex === 0
+      ? ["committed", "deferred", "out_of_scope"]
+      : phaseIndex === 1
+        ? ["deferred", "committed", "out_of_scope"]
+        : ["out_of_scope", "deferred", "committed"];
+
+  for (const scope of preferredScopes) {
+    const requirementIds = requirements
+      .filter((requirement) => requirement.scope === scope)
+      .map((requirement) => requirement.id);
+
+    if (requirementIds.length > 0) {
+      return requirementIds;
+    }
+  }
+
+  return requirements.map((requirement) => requirement.id);
 }
 
 const BOOTSTRAP_REQUIREMENT_SCOPE_ORDER: BootstrapRequirementScope[] = [
@@ -1206,6 +1240,11 @@ function buildDefaultBootstrapSeed(
           "The first milestone should stay small enough to validate Blueprint's workflow on this repo.",
           "Bootstrap artifacts can start as draft planning inputs as long as they are no longer placeholder-only shells."
         ];
+  const normalizedRequirements = normalizeBootstrapRequirements(seed?.requirements, defaultRequirements);
+  const sourceRoadmapPhases =
+    seed?.roadmapPhases?.filter(
+      (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
+    ) ?? defaultRoadmapPhases;
 
   return {
     vision: seed?.vision?.trim() || defaultVision,
@@ -1216,12 +1255,10 @@ function buildDefaultBootstrapSeed(
     constraints: normalizeList(seed?.constraints, defaultConstraints),
     currentMilestone: defaultMilestone,
     nonGoals: normalizeList(seed?.nonGoals, defaultNonGoals),
-    requirements: normalizeBootstrapRequirements(seed?.requirements, defaultRequirements),
-    roadmapPhases:
-      (seed?.roadmapPhases?.filter(
-        (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
-      ) ?? defaultRoadmapPhases).map((phase) => ({
+    requirements: normalizedRequirements,
+    roadmapPhases: sourceRoadmapPhases.map((phase, index) => ({
         ...phase,
+        requirementIds: normalizeBootstrapRoadmapPhaseRequirementIds(phase, normalizedRequirements, index),
         successCriteria: normalizeSuccessCriteria(phase.successCriteria, [
           `Complete ${phase.title} with traceable handoff evidence.`,
           "Keep requirement IDs traceable into later roadmap artifacts."
@@ -1298,6 +1335,7 @@ const RESEARCH_CONFIDENCE_VALUES = ["LOW", "MEDIUM", "HIGH"] as const;
 const RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = readArtifactContract(
   "phase.research"
 ).placeholderSignals;
+const BOOTSTRAP_PROJECT_CONTRACT = readArtifactContract("bootstrap.project");
 const PLAN_CONTRACT = readArtifactContract("phase.plan");
 const REQUIRED_PLAN_SECTIONS = PLAN_CONTRACT.requiredHeadings;
 const PLAN_PLACEHOLDER_SIGNALS = [
@@ -2668,6 +2706,452 @@ function validateContractBackedMarkdown(
   };
 }
 
+function hasNonEmptyBulletedList(section: string): boolean {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .some((line) => /^[-*]\s+\S/.test(line));
+}
+
+function countMeaningfulWords(value: string): number {
+  return value.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
+}
+
+function hasBootstrapText(section: string, minimumWords = 3): boolean {
+  return countMeaningfulWords(
+    section
+      .replace(/\r\n/g, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/^(?:[-*]\s*)+/gm, "")
+  ) >= minimumWords;
+}
+
+type BootstrapValidationOptions = {
+  allowLegacyShell?: boolean;
+};
+
+function isBootstrapProjectArtifact(content: string): boolean {
+  return (
+    extractMarkdownSection(content, "Bootstrap Shape").trim().length > 0 ||
+    extractMarkdownSection(content, "Scope Posture").trim().length > 0
+  );
+}
+
+function isBootstrapRequirementsArtifact(content: string): boolean {
+  return (
+    extractMarkdownSection(content, "Scope Summary").trim().length > 0 ||
+    extractMarkdownSection(content, "Traceability Notes").trim().length > 0 ||
+    extractMarkdownSection(content, "Committed V1 Scope").trim().length > 0 ||
+    extractMarkdownSection(content, "Deferred Scope").trim().length > 0 ||
+    extractMarkdownSection(content, "Out-of-Scope Cuts").trim().length > 0
+  );
+}
+
+function isBootstrapRoadmapArtifact(content: string): boolean {
+  return (
+    extractMarkdownSection(content, "Bootstrap Status").trim().length > 0 ||
+    extractMarkdownSection(content, "Requirement Coverage").trim().length > 0
+  );
+}
+
+function validateBootstrapProjectArtifact(
+  content: string,
+  options: BootstrapValidationOptions = {}
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!/^# .+\S\s*$/m.test(content)) {
+    issues.push("Project artifact must start with a markdown H1 title.");
+  }
+
+  const vision = extractMarkdownSection(content, "Vision");
+  const audience = extractMarkdownSection(content, "Audience");
+  const constraints = extractMarkdownSection(content, "Constraints");
+  const currentMilestone = extractMarkdownSection(content, "Current Milestone");
+  const bootstrapShape = extractMarkdownSection(content, "Bootstrap Shape");
+  const scopePosture = extractMarkdownSection(content, "Scope Posture");
+  const nonGoals = extractMarkdownSection(content, "Non-Goals");
+  const assumptions = extractMarkdownSection(content, "Assumptions");
+
+  if (isBootstrapProjectArtifact(content)) {
+    issues.push(
+      ...validateRequiredMarkdownSections(
+        content,
+        "Project artifact",
+        BOOTSTRAP_PROJECT_CONTRACT.requiredHeadings
+      )
+    );
+
+    if (!hasBootstrapText(vision)) {
+      issues.push("Project artifact section Vision must contain substantive project direction.");
+    }
+
+    if (!/- Primary:\s*\S+/m.test(audience) || !/- Secondary:\s*\S+/m.test(audience)) {
+      issues.push(
+        "Project artifact section Audience must include primary and secondary audience bullets."
+      );
+    }
+
+    if (!hasNonEmptyBulletedList(constraints)) {
+      issues.push("Project artifact section Constraints must include at least one constraint bullet.");
+    }
+
+    if (!hasBootstrapText(currentMilestone, 1)) {
+      issues.push("Project artifact section Current Milestone must name the active bootstrap milestone.");
+    }
+
+    if (
+      !/Repository shape:\s*(?:greenfield|scaffold-only|brownfield)/i.test(bootstrapShape) ||
+      !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapShape) ||
+      !/Bootstrap posture:\s*\S+/i.test(bootstrapShape)
+    ) {
+      issues.push(
+        "Project artifact section Bootstrap Shape must summarize repository shape, mapping state, and bootstrap posture."
+      );
+    }
+
+    if (
+      !/Committed v1:\s*\S+/i.test(scopePosture) ||
+      !/Deferred:\s*\S+/i.test(scopePosture) ||
+      !/Out-of-scope:\s*\S+/i.test(scopePosture)
+    ) {
+      issues.push(
+        "Project artifact section Scope Posture must describe committed v1, deferred, and out-of-scope scope."
+      );
+    }
+
+    if (!hasNonEmptyBulletedList(nonGoals)) {
+      issues.push("Project artifact section Non-Goals must include at least one non-goal bullet.");
+    }
+
+    if (!hasNonEmptyBulletedList(assumptions)) {
+      issues.push("Project artifact section Assumptions must include at least one assumption bullet.");
+    }
+  } else if (options.allowLegacyShell) {
+    if (!/^# .+\S\s*$/m.test(content)) {
+      issues.push("Project artifact must start with a markdown H1 title.");
+    }
+  } else {
+    if (!hasBootstrapText(vision, 1)) {
+      issues.push("Project artifact section Vision must contain substantive project direction.");
+    }
+
+    if (!hasBootstrapText(content, 3)) {
+      issues.push("Project artifact must include substantive bootstrap guidance.");
+    }
+  }
+
+  if (isBootstrapProjectArtifact(content) && extractRequirementIdsFromMarkdown(content).length === 0) {
+    issues.push("Project artifact must surface at least one bootstrap requirement identifier.");
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
+function validateBootstrapRequirementsArtifact(
+  content: string,
+  options: BootstrapValidationOptions = {}
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const requirementsTable = extractMarkdownSection(content, "Requirements Table");
+  const scopeSummary = extractMarkdownSection(content, "Scope Summary");
+  const committedScope = extractMarkdownSection(content, "Committed V1 Scope");
+  const deferredScope = extractMarkdownSection(content, "Deferred Scope");
+  const outOfScope = extractMarkdownSection(content, "Out-of-Scope Cuts");
+  const traceabilityNotes = extractMarkdownSection(content, "Traceability Notes");
+  const openQuestions = extractMarkdownSection(content, "Open Questions");
+  const requirementIds = extractRequirementIds(requirementsTable);
+  const scopeSummaryIds = new Map<string, string[]>();
+  const groupedScopeIds = new Map<string, string[]>();
+  const isBootstrapShape = isBootstrapRequirementsArtifact(content);
+
+  if (isBootstrapShape) {
+    if (!/^# Requirements:\s*.+\S\s*$/m.test(content)) {
+      issues.push("Requirements artifact must start with a '# Requirements: ...' heading.");
+    }
+
+    const requiredHeadings = [
+      "Requirements Table",
+      "Scope Summary",
+      "Committed V1 Scope",
+      "Traceability Notes",
+      "Open Questions"
+    ] as const;
+
+    for (const heading of requiredHeadings) {
+      if (extractMarkdownSection(content, heading).trim().length === 0) {
+        issues.push(`Requirements artifact is missing required section: ${heading}.`);
+      }
+    }
+
+    if (!hasRequirementTableRows(requirementsTable)) {
+      issues.push(
+        "Requirements artifact section Requirements Table must include at least one populated requirement row."
+      );
+    }
+
+    if (requirementIds.length === 0) {
+      issues.push("Requirements artifact must surface at least one durable requirement identifier.");
+    }
+  } else if (options.allowLegacyShell) {
+    if (!/^# Requirements(?:\s*:\s*.+\S)?\s*$/m.test(content)) {
+      issues.push("Requirements artifact must start with a '# Requirements' heading.");
+    }
+  } else {
+    if (!/^# Requirements(?:\s*:\s*.+\S)?\s*$/m.test(content)) {
+      issues.push("Requirements artifact must start with a '# Requirements' heading.");
+    }
+
+    if (!hasRequirementTableRows(requirementsTable)) {
+      issues.push(
+        "Requirements artifact section Requirements Table must include at least one populated requirement row."
+      );
+    }
+
+    if (requirementIds.length === 0) {
+      issues.push("Requirements artifact must surface at least one durable requirement identifier.");
+    }
+  }
+
+  const scopeSummaryEntries = [
+    {
+      summaryLabel: "Committed v1",
+      heading: "Committed V1 Scope",
+      section: committedScope,
+      required: true
+    },
+    {
+      summaryLabel: "Deferred",
+      heading: "Deferred Scope",
+      section: deferredScope,
+      required: false
+    },
+    {
+      summaryLabel: "Out-of-scope",
+      heading: "Out-of-Scope Cuts",
+      section: outOfScope,
+      required: false
+    }
+  ] as const;
+
+  for (const { summaryLabel, heading, section, required } of scopeSummaryEntries) {
+    const scopeMatch = scopeSummary.match(
+      new RegExp(`^-\\s*${summaryLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:\\s*(.+)$`, "im")
+    );
+    const summaryValue = scopeMatch?.[1]?.trim() ?? "";
+    const hasScopeEntries = summaryValue.length > 0 && !/^none$/i.test(summaryValue);
+    const summaryRequirementIds = hasScopeEntries ? extractRequirementIdsFromMarkdown(summaryValue) : [];
+    const groupedRequirementIds = extractBootstrapRequirementListIds(section);
+
+    scopeSummaryIds.set(heading, summaryRequirementIds);
+    groupedScopeIds.set(heading, groupedRequirementIds);
+
+    if (required && !hasScopeEntries && isBootstrapShape) {
+      issues.push(
+        "Requirements artifact section Scope Summary must list committed v1 requirement IDs."
+      );
+    }
+
+    if (!isBootstrapShape || !hasScopeEntries) {
+      continue;
+    }
+
+    if (section.trim().length === 0) {
+      issues.push(
+        `Requirements artifact section ${heading} must include grouped requirement entries with durable IDs.`
+      );
+      continue;
+    }
+
+    if (!/###\s+\S+/m.test(section) || !/^- `[^`]+`:\s*\S+/m.test(section)) {
+      issues.push(
+        `Requirements artifact section ${heading} must include grouped requirement entries with durable IDs.`
+      );
+    }
+  }
+
+  if (isBootstrapShape && requirementIds.length > 0) {
+    const summaryRequirementIds = [...scopeSummaryIds.values()].flat();
+
+    if (requirementIds.length !== summaryRequirementIds.length) {
+      issues.push(
+        "Requirements artifact section Scope Summary must list the same requirement IDs as Requirements Table."
+      );
+    } else {
+      const tableRequirementIdSet = new Set(requirementIds);
+      const summaryRequirementIdSet = new Set(summaryRequirementIds);
+
+      if (
+        requirementIds.some((requirementId) => !summaryRequirementIdSet.has(requirementId)) ||
+        summaryRequirementIds.some((requirementId) => !tableRequirementIdSet.has(requirementId))
+      ) {
+        issues.push(
+          "Requirements artifact section Scope Summary must list the same requirement IDs as Requirements Table."
+        );
+      }
+    }
+
+    for (const { heading } of scopeSummaryEntries) {
+      const summaryRequirementIds = scopeSummaryIds.get(heading) ?? [];
+      const groupedRequirementIds = groupedScopeIds.get(heading) ?? [];
+
+      if (summaryRequirementIds.length !== groupedRequirementIds.length) {
+        issues.push(
+          `Requirements artifact section ${heading} must list the same requirement IDs as Scope Summary.`
+        );
+        continue;
+      }
+
+      const summaryRequirementIdSet = new Set(summaryRequirementIds);
+      const groupedRequirementIdSet = new Set(groupedRequirementIds);
+
+      if (
+        summaryRequirementIds.some((requirementId) => !groupedRequirementIdSet.has(requirementId)) ||
+        groupedRequirementIds.some((requirementId) => !summaryRequirementIdSet.has(requirementId))
+      ) {
+        issues.push(
+          `Requirements artifact section ${heading} must list the same requirement IDs as Scope Summary.`
+        );
+      }
+    }
+  }
+
+  if (isBootstrapShape && !/\.blueprint\/ROADMAP\.md/i.test(traceabilityNotes)) {
+    issues.push("Requirements artifact section Traceability Notes must reference .blueprint/ROADMAP.md.");
+  }
+
+  if (isBootstrapShape && !hasNonEmptyBulletedList(openQuestions)) {
+    issues.push("Requirements artifact section Open Questions must include at least one open question bullet.");
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
+function extractBootstrapRoadmapPhaseBlocks(content: string): string[] {
+  const phasesSection = extractMarkdownSection(content, "Phases");
+
+  return phasesSection
+    .split(/\n(?=- \[(?: |x)\] Phase )/g)
+    .map((block) => block.trim())
+    .filter((block) => block.startsWith("- ["));
+}
+
+function validateBootstrapRoadmapArtifact(
+  content: string,
+  options: BootstrapValidationOptions = {}
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (isBootstrapRoadmapArtifact(content)) {
+    if (!/^# Roadmap:\s*.+\S\s*$/m.test(content)) {
+      issues.push("Roadmap artifact must start with a '# Roadmap: ...' heading.");
+    }
+  } else if (!/^# Roadmap(?:\s*:\s*.+\S)?\s*$/m.test(content)) {
+    issues.push("Roadmap artifact must start with a '# Roadmap' heading.");
+  }
+
+  const milestone = extractMarkdownSection(content, "Milestone");
+  const bootstrapStatus = extractMarkdownSection(content, "Bootstrap Status");
+  const requirementCoverage = extractMarkdownSection(content, "Requirement Coverage");
+  const notes = extractMarkdownSection(content, "Notes");
+  const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
+  const coverageIds = extractBootstrapScopedRequirementIds(requirementCoverage);
+
+  if (isBootstrapRoadmapArtifact(content)) {
+    if (!hasBootstrapText(milestone)) {
+      issues.push("Roadmap artifact section Milestone must name the active bootstrap milestone.");
+    }
+
+    if (
+      !/Repository shape:\s*(?:greenfield|scaffold-only|brownfield)/i.test(bootstrapStatus) ||
+      !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapStatus) ||
+      !/Roadmap confidence:\s*\S+/i.test(bootstrapStatus)
+    ) {
+      issues.push(
+        "Roadmap artifact section Bootstrap Status must capture repository shape, mapping state, and roadmap confidence."
+      );
+    }
+
+    if (!hasNonEmptyBulletedList(requirementCoverage) || coverageIds.length === 0) {
+      issues.push(
+        "Roadmap artifact section Requirement Coverage must include at least one requirement identifier."
+      );
+    }
+
+    if (phaseBlocks.length === 0) {
+      issues.push("Roadmap artifact section Phases must include at least one concrete phase entry.");
+    }
+
+    for (const phaseBlock of phaseBlocks) {
+      if (!/^- \[(?: |x)\] Phase \d+(?:\.\d+)?:\s+\S+/m.test(phaseBlock)) {
+        issues.push("Roadmap artifact phase entries must include a numbered phase title.");
+      }
+
+      if (!/Objective:\s*\S+/m.test(phaseBlock)) {
+        issues.push("Roadmap artifact phase entries must include an objective.");
+      }
+
+      const phaseRequirementIds = extractBootstrapRoadmapPhaseRequirementIds(phaseBlock);
+      const successCriteria = extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock);
+
+      if (phaseRequirementIds.length === 0) {
+        issues.push(
+          "Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause."
+        );
+      } else if (phaseRequirementIds.some((requirementId) => !coverageIds.includes(requirementId))) {
+        issues.push(
+          "Roadmap artifact phase entries may only reference requirement IDs listed in Requirement Coverage."
+        );
+      }
+
+      if (successCriteria.length === 0) {
+        issues.push("Roadmap artifact phase entries must include at least one success criteria bullet.");
+      }
+    }
+
+    if (!hasNonEmptyBulletedList(notes)) {
+      issues.push("Roadmap artifact section Notes must include at least one bootstrap note.");
+    }
+  } else if (options.allowLegacyShell) {
+    if (!/^# Roadmap(?:\s*:\s*.+\S)?\s*$/m.test(content)) {
+      issues.push("Roadmap artifact must start with a '# Roadmap' heading.");
+    }
+  } else {
+    if (!hasNonEmptyBulletedList(extractMarkdownSection(content, "Phases"))) {
+      issues.push("Roadmap artifact section Phases must include at least one concrete phase entry.");
+    }
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
 function countNonEmptyContractSections(
   content: string,
   headings: readonly string[]
@@ -2679,31 +3163,31 @@ function countNonEmptyContractSections(
 }
 
 function hasRequirementTableRows(section: string): boolean {
-  return section
+  const lines = section
     .split("\n")
     .map((line) => line.trim())
-    .some((line) => {
-      if (!/^\|.*\|$/.test(line)) {
-        return false;
-      }
+    .filter((line) => /^\|.*\|$/.test(line));
 
-      const cells = line
-        .slice(1, -1)
-        .split("|")
-        .map((cell) => cell.trim());
+  return lines.some((line, index) => {
+    const cells = line
+      .slice(1, -1)
+      .split("|")
+      .map((cell) => cell.trim());
 
-      if (cells.length < 3) {
-        return false;
-      }
+    if (cells.length < 3) {
+      return false;
+    }
 
-      const isHeader =
-        /^id$/i.test(cells[0] ?? "") &&
-        /^description$/i.test(cells[1] ?? "") &&
-        /^research support$/i.test(cells[2] ?? "");
-      const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+    const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+    const nextLine = lines[index + 1] ?? "";
+    const nextCells = nextLine
+      .slice(1, -1)
+      .split("|")
+      .map((cell) => cell.trim());
+    const isHeader = nextCells.length >= 3 && nextCells.every((cell) => /^:?-{3,}:?$/.test(cell));
 
-      return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
-    });
+    return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
+  });
 }
 
 function hasCoverageTableRows(section: string): boolean {
@@ -3588,10 +4072,144 @@ function extractRequirementIds(content: string): string[] {
   return [...content.matchAll(/\|\s*([A-Z][A-Z0-9-]*-\d+)\s*\|/g)].map((match) => match[1]);
 }
 
+function extractRequirementIdsFromMarkdown(content: string): string[] {
+  return [...new Set([...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]))];
+}
+
+function extractBootstrapRequirementListIds(section: string): string[] {
+  return [...new Set([...section.matchAll(/^\s*-\s+`([A-Z][A-Z0-9-]*-\d+)`:/gm)].map((match) => match[1]))];
+}
+
+function extractBootstrapScopedRequirementIds(section: string): string[] {
+  const ids: string[] = [];
+
+  for (const line of section.split("\n")) {
+    const match = line.match(/^\s*-\s*[^:]+:\s*(.+)$/);
+
+    if (!match) {
+      continue;
+    }
+
+    const value = match[1].trim();
+
+    if (value.length === 0 || /^none$/i.test(value)) {
+      continue;
+    }
+
+    ids.push(...extractRequirementIdsFromMarkdown(value));
+  }
+
+  return [...new Set(ids)];
+}
+
+function extractBootstrapRoadmapPhaseRequirementIds(phaseBlock: string): string[] {
+  const requirementClause =
+    phaseBlock.match(/\(\s*Requirements:\s*([^)]+)\)/i)?.[1] ??
+    phaseBlock.match(/\bRequirements:\s*([^\n)]+)\s*$/im)?.[1] ??
+    "";
+
+  if (requirementClause.trim().length === 0) {
+    return [];
+  }
+
+  return extractRequirementIdsFromMarkdown(requirementClause);
+}
+
+function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock: string): string[] {
+  const lines = phaseBlock.replace(/\r\n/g, "\n").split("\n");
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(\s*)-\s*Success Criteria:\s*$/i);
+
+    if (!match) {
+      continue;
+    }
+
+    const labelIndent = match[1].length;
+    const items: string[] = [];
+
+    for (let lineIndex = index + 1; lineIndex < lines.length; lineIndex += 1) {
+      const line = lines[lineIndex];
+
+      if (line.trim().length === 0) {
+        continue;
+      }
+
+      const lineIndent = line.match(/^(\s*)/)?.[1].length ?? 0;
+
+      if (lineIndent <= labelIndent && /^\s*-\s+/.test(line)) {
+        break;
+      }
+
+      if (lineIndent > labelIndent && /^\s*-\s+\S/.test(line)) {
+        items.push(line.trim().replace(/^\s*-\s+/, ""));
+      }
+    }
+
+    return items;
+  }
+
+  return [];
+}
+
 function extractRoadmapRequirementRefs(content: string): string[] {
+  const requirementCoverage = extractMarkdownSection(content, "Requirement Coverage");
+  const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
+
   return [
-    ...new Set([...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]))
+    ...new Set([
+      ...extractBootstrapScopedRequirementIds(requirementCoverage),
+      ...phaseBlocks.flatMap((phaseBlock) => extractBootstrapRoadmapPhaseRequirementIds(phaseBlock))
+    ])
   ];
+}
+
+function validateBootstrapRequirementTraceability(
+  requirementsContent: string,
+  roadmapContent: string
+): {
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  if (!isBootstrapRequirementsArtifact(requirementsContent) || !isBootstrapRoadmapArtifact(roadmapContent)) {
+    return {
+      issues,
+      warnings
+    };
+  }
+
+  const requirementIds = extractRequirementIds(requirementsContent);
+  const roadmapRequirementRefs = extractRoadmapRequirementRefs(roadmapContent);
+
+  if (requirementsContent.length > 0 && requirementIds.length === 0) {
+    issues.push("REQUIREMENTS.md does not yet contain durable requirement IDs.");
+  }
+
+  if (requirementIds.length > 0 && roadmapRequirementRefs.length === 0) {
+    issues.push("ROADMAP.md does not reference any requirement IDs from REQUIREMENTS.md.");
+  }
+
+  for (const requirementId of requirementIds) {
+    if (!roadmapRequirementRefs.includes(requirementId)) {
+      issues.push(`ROADMAP.md is missing traceability for requirement ${requirementId}.`);
+    }
+  }
+
+  for (const roadmapRequirementRef of roadmapRequirementRefs) {
+    if (!requirementIds.includes(roadmapRequirementRef)) {
+      issues.push(
+        `ROADMAP.md references requirement ${roadmapRequirementRef} which is not declared in REQUIREMENTS.md.`
+      );
+    }
+  }
+
+  return {
+    issues,
+    warnings
+  };
 }
 
 export async function inspectBootstrapArtifacts(
@@ -3627,28 +4245,9 @@ export async function inspectBootstrapArtifacts(
 
   const requirementsContent = contents.get(`${BLUEPRINT_DIR}/REQUIREMENTS.md`) ?? "";
   const roadmapContent = contents.get(`${BLUEPRINT_DIR}/ROADMAP.md`) ?? "";
-  const requirementIds = extractRequirementIds(requirementsContent);
-  const roadmapRequirementRefs = extractRoadmapRequirementRefs(roadmapContent);
+  const traceability = validateBootstrapRequirementTraceability(requirementsContent, roadmapContent);
 
-  if (requirementIds.length === 0 && requirementsContent.length > 0) {
-    traceabilityWarnings.push(
-      "REQUIREMENTS.md does not yet contain durable requirement IDs."
-    );
-  }
-
-  if (requirementIds.length > 0 && roadmapRequirementRefs.length === 0) {
-    traceabilityWarnings.push(
-      "ROADMAP.md does not reference any requirement IDs from REQUIREMENTS.md."
-    );
-  }
-
-  for (const requirementId of requirementIds) {
-    if (!roadmapRequirementRefs.includes(requirementId)) {
-      traceabilityWarnings.push(
-        `ROADMAP.md is missing traceability for requirement ${requirementId}.`
-      );
-    }
-  }
+  traceabilityWarnings.push(...traceability.warnings, ...traceability.issues);
 
   if (brownfield.provisionalRoadmap) {
     traceabilityWarnings.push(
@@ -4388,6 +4987,10 @@ export async function blueprintArtifactValidate(
   const issues: string[] = [];
   const suggestedRepairs = new Set<string>();
   const warnings: string[] = [];
+  const bootstrapContents = new Map<string, string>();
+  const allowLegacyBootstrapShell = inspection.phases.some((artifact) =>
+    /phase-discovery/i.test(artifact)
+  );
 
   if (!inspection.blueprintRootExists) {
     issues.push(`Missing ${BLUEPRINT_DIR}/ directory.`);
@@ -4470,6 +5073,57 @@ export async function blueprintArtifactValidate(
       suggestedRepairs.add(
         "Regenerate or update malformed phase research through /blu-research-phase before planning."
       );
+    }
+  }
+
+  for (const artifact of [
+    `${BLUEPRINT_DIR}/PROJECT.md`,
+    `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
+    `${BLUEPRINT_DIR}/ROADMAP.md`
+  ] as const) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+
+    if (!(await pathExists(absolutePath))) {
+      continue;
+    }
+
+    const raw = await fs.readFile(absolutePath, "utf8");
+    bootstrapContents.set(artifact, raw);
+    const validation =
+      artifact.endsWith("PROJECT.md")
+        ? validateBootstrapProjectArtifact(raw, { allowLegacyShell: allowLegacyBootstrapShell })
+        : artifact.endsWith("REQUIREMENTS.md")
+          ? validateBootstrapRequirementsArtifact(raw, {
+              allowLegacyShell: allowLegacyBootstrapShell
+            })
+          : validateBootstrapRoadmapArtifact(raw, { allowLegacyShell: allowLegacyBootstrapShell });
+
+    for (const issue of validation.issues) {
+      issues.push(`${artifact}: ${issue}`);
+    }
+
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract."
+      );
+    }
+  }
+
+  const requirementsContent = bootstrapContents.get(`${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+  const roadmapContent = bootstrapContents.get(`${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  if (requirementsContent && roadmapContent) {
+    const traceability = validateBootstrapRequirementTraceability(
+      requirementsContent,
+      roadmapContent
+    );
+
+    for (const issue of traceability.issues) {
+      issues.push(issue);
     }
   }
 

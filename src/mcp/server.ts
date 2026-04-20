@@ -154,6 +154,10 @@ function getString(result: ToolResult, key: string): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function getNextAction(result: ToolResult): string | null {
+  return getString(result, "nextAction");
+}
+
 function getBoolean(result: ToolResult, key: string): boolean | null {
   const value = result[key];
   return typeof value === "boolean" ? value : null;
@@ -342,6 +346,7 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
   const path = findSummaryPath(result);
+  const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
   const content = getString(result, "content");
@@ -385,8 +390,12 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
   }
 
   const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
+  const guidanceSuffix =
+    nextAction && (toolName === "blueprint_project_init" || toolName === "blueprint_project_status")
+      ? ` Next action: ${cleanSentenceFragment(nextAction)}.`
+      : "";
 
-  return `${operationVerb} ${subject}${detailSuffix}.`;
+  return `${operationVerb} ${subject}${detailSuffix}.${guidanceSuffix}`;
 }
 
 export function createToolResponseContent(

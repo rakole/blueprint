@@ -6,6 +6,7 @@ import path from "node:path";
 
 import {
   blueprintArtifactValidate,
+  inspectBootstrapArtifacts,
   validateUatArtifactContent,
   validateVerificationArtifactContent
 } from "../src/mcp/tools/artifacts.js";
@@ -45,6 +46,324 @@ async function createVerifyWorkFixtureRepo(): Promise<string> {
   );
 
   return repoPath;
+}
+
+async function createThinBootstrapFixtureRepo(
+  includePhaseArtifact = false
+): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-bootstrap-validate-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "# Roadmap\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/STATE.md"), "# Blueprint State\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
+
+  if (includePhaseArtifact) {
+    await mkdir(path.join(repoPath, ".blueprint/phases/01-phase-bootstrap"), {
+      recursive: true
+    });
+    await writeFile(
+      path.join(repoPath, ".blueprint/phases/01-phase-bootstrap/01-CONTEXT.md"),
+      `# Phase 01: Bootstrap - Context
+
+## Decisions
+
+- Preserve the bootstrap compatibility path for in-progress repos.
+`,
+      "utf8"
+    );
+  }
+
+  return repoPath;
+}
+
+async function createLegacyCompatibilityFixtureRepo(
+  includeDiscoveryPhase = false
+): Promise<string> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-compat-validate-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  await mkdir(repoPath, { recursive: true });
+  await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/PROJECT.md"),
+    "# Project\n\n## Vision\n\nKeep runtime and tests aligned.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| LEG-01 | Keep runtime validation compatible with initialized repos. | Done | Legacy fixture |
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap
+
+## Phases
+
+- [ ] Phase 2: Keep validation stable
+`,
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, ".blueprint/STATE.md"), "# Blueprint State\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
+
+  const phaseRoot = includeDiscoveryPhase
+    ? path.join(repoPath, ".blueprint/phases/03-phase-discovery")
+    : path.join(repoPath, ".blueprint/phases/02-router-health-and-mapping");
+
+  await mkdir(phaseRoot, { recursive: true });
+  await writeFile(
+    path.join(
+      phaseRoot,
+      includeDiscoveryPhase ? "03-CONTEXT.md" : "02-CONTEXT.md"
+    ),
+    includeDiscoveryPhase
+      ? `# Phase 03: Phase Discovery - Context
+
+## Decisions
+
+- Discovery remains in progress.
+`
+      : `# Phase 02: Router Health And Mapping - Context
+
+## Decisions
+
+- The repository already has durable phase evidence.
+`,
+    "utf8"
+  );
+
+  if (includeDiscoveryPhase) {
+    await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
+      recursive: true
+    });
+    await writeFile(
+      path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+      `# Phase 03: Phase Discovery - Context
+
+## Decisions
+
+- Discovery remains in progress.
+`,
+      "utf8"
+    );
+  }
+
+  return repoPath;
+}
+
+function createBootstrapProjectContent(): string {
+  return `# Project: Bootstrap Seed
+
+## Vision
+
+Build a bootstrap workflow that keeps requirements, roadmap, and validation traceable.
+
+## Audience
+
+- Primary: Repository maintainers
+- Secondary: Contributors
+
+## Constraints
+
+- Keep bootstrap edits small and deterministic.
+- Preserve requirement identifiers across artifacts.
+
+## Current Milestone
+
+- v1 bootstrap seed
+
+## Bootstrap Shape
+
+- Repository shape: greenfield
+- Codebase mapping: pending
+- Bootstrap posture: deterministic and traceable
+
+## Scope Posture
+
+- Committed v1: RQ-01, RQ-02
+- Deferred: RQ-03
+- Out-of-scope: RQ-04
+
+## Non-Goals
+
+- Full implementation planning
+- Execution backlog generation
+
+## Assumptions
+
+- The repo still needs a canonical bootstrap baseline.
+`;
+}
+
+function createBootstrapRequirementsContent(options: {
+  scopeSummary?: string;
+  committedScope?: string;
+  deferredScope?: string;
+  outOfScope?: string;
+} = {}): string {
+  const scopeSummary =
+    options.scopeSummary ??
+    `- Committed v1: RQ-01, RQ-02
+- Deferred: RQ-03
+- Out-of-scope: RQ-04`;
+  const committedScope =
+    options.committedScope ??
+    `### Product direction
+
+- \`RQ-01\`: Define the product outcome and first milestone goals.
+  - Status: Pending
+  - Notes: Bootstrap draft requirement.
+
+### Delivery boundaries
+
+- \`RQ-02\`: Record durable constraints, non-goals, and acceptance boundaries.
+  - Status: Pending
+  - Notes: Keeps later discovery grounded.`;
+  const deferredScope =
+    options.deferredScope ??
+    `### Follow-through planning
+
+- \`RQ-03\`: Prepare the repo for lifecycle commands with stable traceability.
+  - Status: Pending
+  - Notes: Foundation requirement for later phases.`;
+  const outOfScope =
+    options.outOfScope ??
+    `### Explicit bootstrap cuts
+
+- \`RQ-04\`: Do not turn the bootstrap draft into a full implementation backlog.
+  - Status: Pending
+  - Notes: Keeps v1 bootstrap narrower than later work streams.`;
+
+  return `# Requirements: Bootstrap Seed
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Define the product outcome and first milestone goals. | Pending | Bootstrap draft requirement. |
+| RQ-02 | Record durable constraints, non-goals, and acceptance boundaries. | Pending | Keeps later discovery grounded. |
+| RQ-03 | Prepare the repo for lifecycle commands with stable traceability. | Pending | Foundation requirement for later phases. |
+| RQ-04 | Do not turn the bootstrap draft into a full implementation backlog. | Pending | Keeps v1 bootstrap narrower than later work streams. |
+
+## Scope Summary
+
+${scopeSummary}
+
+## Committed V1 Scope
+
+${committedScope}
+
+## Deferred Scope
+
+${deferredScope}
+
+## Out-of-Scope Cuts
+
+${outOfScope}
+
+## Traceability Notes
+
+- Keep every requirement ID referenced from .blueprint/ROADMAP.md before execution planning begins.
+- Preserve requirement IDs across later phase artifacts instead of silently renumbering them.
+- Use these requirements as the durable baseline for later discovery and planning.
+
+## Open Questions
+
+- Should the bootstrap seed remain minimal if the repo grows additional lifecycle commands?
+`;
+}
+
+function createBootstrapRoadmapContent(options: {
+  requirementCoverage?: string;
+  phases?: string;
+  notes?: string;
+} = {}): string {
+  const requirementCoverage =
+    options.requirementCoverage ??
+    `- Committed v1: RQ-01, RQ-02
+- Deferred: RQ-03
+- Out-of-scope: RQ-04`;
+  const phases =
+    options.phases ??
+    `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-02)
+  - Objective: Seed the first milestone.
+  - Success Criteria:
+    - Bootstrap requirements are traceable.
+    - The bootstrap contract stays coherent.
+  - Notes:
+    - Keep traceability consistent.
+
+- [ ] Phase 2: Traceable Follow-Through (Requirements: RQ-02, RQ-03)
+  - Objective: Turn the bootstrap draft into durable planning inputs.
+  - Success Criteria:
+    - Requirement coverage stays aligned with the canonical requirements table.
+    - Later planning can proceed without renumbering.
+  - Notes:
+    - Keep the roadmap ready for later execution-oriented phases.`;
+  const notes =
+    options.notes ??
+    `- Keep traceability consistent.
+- Treat later planning as provisional until the bootstrap seed is stable.`;
+
+  return `# Roadmap: Bootstrap Seed
+
+## Milestone
+
+- Active milestone: v1
+
+## Bootstrap Status
+
+- Repository shape: greenfield
+- Codebase mapping: pending
+- Roadmap confidence: provisional
+
+## Requirement Coverage
+
+${requirementCoverage}
+
+## Phases
+
+${phases}
+
+## Notes
+
+${notes}
+`;
+}
+
+async function writeBootstrapArtifacts(
+  repoPath: string,
+  options: {
+    projectContent?: string;
+    requirementsContent?: string;
+    roadmapContent?: string;
+  } = {}
+): Promise<void> {
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), options.projectContent ?? createBootstrapProjectContent(), "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    options.requirementsContent ?? createBootstrapRequirementsContent(),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    options.roadmapContent ?? createBootstrapRoadmapContent(),
+    "utf8"
+  );
 }
 
 test("blueprint artifact validation inspects UAT and verification content and proposes repairs", async (t) => {
@@ -187,4 +506,219 @@ test("blueprint artifact validation inspects UAT and verification content and pr
   );
   assert.match(runtimeValidation.suggestedRepairs.join("\n"), /\/blu-validate-phase/);
   assert.match(runtimeValidation.suggestedRepairs.join("\n"), /\/blu-verify-work/);
+});
+
+test("blueprint artifact validation rejects thin bootstrap PROJECT, REQUIREMENTS, and ROADMAP docs", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const runtimeValidation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(runtimeValidation.valid, false);
+  assert.match(
+    runtimeValidation.issues.join("\n"),
+    /PROJECT\.md: Project artifact section Vision must contain substantive project direction\./
+  );
+  assert.match(
+    runtimeValidation.issues.join("\n"),
+    /REQUIREMENTS\.md: Requirements artifact section Requirements Table must include at least one populated requirement row\./
+  );
+  assert.match(
+    runtimeValidation.issues.join("\n"),
+    /ROADMAP\.md: Roadmap artifact section Phases must include at least one concrete phase entry\./
+  );
+  assert.match(
+    runtimeValidation.suggestedRepairs.join("\n"),
+    /Re-run \/blu-new-project or \/blu-health --repair to regenerate the bootstrap artifacts from the canonical contract\./
+  );
+});
+
+test("blueprint artifact validation still inspects bootstrap docs when phase artifacts already exist", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo(true);
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const runtimeValidation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(runtimeValidation.valid, false);
+  assert.match(
+    runtimeValidation.issues.join("\n"),
+    /REQUIREMENTS\.md: Requirements artifact section Requirements Table must include at least one populated requirement row\./
+  );
+  assert.match(
+    runtimeValidation.issues.join("\n"),
+    /ROADMAP\.md: Roadmap artifact section Phases must include at least one concrete phase entry\./
+  );
+});
+
+test("bootstrap traceability warnings reject roadmap requirement refs that are not declared in REQUIREMENTS.md", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Bootstrap Seed
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the bootstrap contract traceable. | Done | Valid requirement identifier |
+
+## Scope Summary
+
+- Committed v1: RQ-01
+- Deferred: none
+- Out-of-scope: none
+
+## Committed V1 Scope
+
+### Traceability
+
+- \`RQ-01\`: Keep the bootstrap contract traceable.
+
+## Traceability Notes
+
+- Traceability is recorded in .blueprint/ROADMAP.md.
+
+## Open Questions
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Bootstrap Seed
+
+## Milestone
+
+- v1
+
+## Bootstrap Status
+
+- Repository shape: greenfield
+- Codebase mapping: pending
+- Roadmap confidence: provisional
+
+## Requirement Coverage
+
+- Committed v1: BP-99
+- Deferred: none
+- Out-of-scope: none
+
+## Phases
+
+- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01)
+  - Objective: Seed the first milestone.
+
+## Notes
+
+- Keep traceability consistent.
+`,
+    "utf8"
+  );
+
+  const diagnostics = await inspectBootstrapArtifacts(repoPath);
+
+  assert.match(
+    diagnostics.traceabilityWarnings.join("\n"),
+    /ROADMAP\.md references requirement BP-99 which is not declared in REQUIREMENTS\.md\./
+  );
+});
+
+test("bootstrap traceability ignores unrelated ticket IDs outside requirement coverage and phase mappings", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeBootstrapArtifacts(repoPath, {
+    roadmapContent: createBootstrapRoadmapContent({
+      notes: `- Keep traceability consistent.
+- Ticket ABC-123 is discussed here but should not be treated as a requirement reference.`
+    })
+  });
+
+  const diagnostics = await inspectBootstrapArtifacts(repoPath);
+  const runtimeValidation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(diagnostics.traceabilityWarnings.length, 0);
+  assert.equal(runtimeValidation.valid, true);
+});
+
+test("bootstrap roadmap validation requires per-phase requirement mapping and success criteria", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeBootstrapArtifacts(repoPath, {
+    roadmapContent: createBootstrapRoadmapContent({
+      phases: `- [ ] Phase 1: Bootstrap Seed
+  - Objective: Seed the first milestone.
+  - Notes:
+    - Keep traceability consistent.`
+    })
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    validation.issues.join("\n"),
+    /ROADMAP\.md: Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause\./
+  );
+  assert.match(
+    validation.issues.join("\n"),
+    /ROADMAP\.md: Roadmap artifact phase entries must include at least one success criteria bullet\./
+  );
+});
+
+test("bootstrap requirements validation reconciles requirement IDs across summary and grouped scope sections", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeBootstrapArtifacts(repoPath, {
+    requirementsContent: createBootstrapRequirementsContent({
+      deferredScope: `### Follow-through planning
+
+- \`RQ-02\`: Prepare the repo for lifecycle commands with stable traceability.
+  - Status: Pending
+  - Notes: Foundation requirement for later phases.`
+    })
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    validation.issues.join("\n"),
+    /REQUIREMENTS\.md: Requirements artifact section Deferred Scope must list the same requirement IDs as Scope Summary\./
+  );
+});
+
+test("blueprint artifact validation stays compatible with legacy initialized and in-progress discovery repos", async (t) => {
+  const legacyRepoPath = await createLegacyCompatibilityFixtureRepo();
+  const discoveryRepoPath = await createLegacyCompatibilityFixtureRepo(true);
+
+  t.after(async () => {
+    await rm(path.dirname(legacyRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(discoveryRepoPath), { recursive: true, force: true });
+  });
+
+  const legacyValidation = await blueprintArtifactValidate({ cwd: legacyRepoPath });
+  const discoveryValidation = await blueprintArtifactValidate({ cwd: discoveryRepoPath });
+
+  assert.equal(legacyValidation.valid, true);
+  assert.deepEqual(legacyValidation.issues, []);
+  assert.equal(discoveryValidation.valid, true);
+  assert.deepEqual(discoveryValidation.issues, []);
 });

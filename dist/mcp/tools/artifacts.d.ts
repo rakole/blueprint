@@ -63,6 +63,7 @@ export type BootstrapArtifactDiagnostics = {
     traceabilityWarnings: string[];
     brownfield: BootstrapAssessment;
 };
+export declare const DURABLE_REQUIREMENT_ID_PATTERN: RegExp;
 type ArtifactScaffoldArgs = {
     cwd?: string;
     artifacts?: string[];
@@ -338,6 +339,9 @@ export declare const artifactToolDefinitions: ({
     description: string;
     inputSchema: {
         artifactId: z.ZodOptional<z.ZodEnum<{
+            "bootstrap.project": "bootstrap.project";
+            "bootstrap.requirements": "bootstrap.requirements";
+            "bootstrap.roadmap": "bootstrap.roadmap";
             "phase.context": "phase.context";
             "phase.discussion-log": "phase.discussion-log";
             "phase.research": "phase.research";

@@ -5,8 +5,17 @@ import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
+import {
+  blueprintToolNames,
+  createToolResponseContent,
+  summarizeToolResult
+} from "../src/mcp/server.js";
+import {
+  blueprintProjectInit,
+  blueprintProjectStatus,
+  projectToolDefinitions
+} from "../src/mcp/tools/project.js";
+import { blueprintArtifactValidate } from "../src/mcp/tools/artifacts.js";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/new-project");
@@ -80,6 +89,7 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
     "utf8"
   );
   const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
 
   for (const relativePath of [
     ".blueprint/PROJECT.md",
@@ -144,6 +154,8 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   assert.match(roadmapDoc, /Phase 1: Discovery And Definition/);
   assert.match(roadmapDoc, /Phase 2: Foundation Bootstrap/);
   assert.doesNotMatch(roadmapDoc, /Phase 1\.0:|Phase 2\.0:/);
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.issues, []);
 });
 
 test("new-project fails from a nested directory with a precise repo-root error", async (t) => {
@@ -316,6 +328,79 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
   assert.equal(status.currentPhase, "1");
 });
 
+test("new-project accepts committed-only bootstrap seeds and keeps post-init validation green", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision: "Bootstrap a lightweight planning workflow for a small maintenance repo.",
+      requirements: [
+        {
+          id: "BP-11",
+          scope: "committed",
+          group: "Core workflow",
+          requirement: "Keep the first milestone focused on durable planning artifacts.",
+          status: "Pending",
+          notes: "Committed-only seed requirement."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Bootstrap Core Workflow",
+          objective: "Capture the initial repo direction with one committed requirement."
+        }
+      ],
+      assumptions: ["The first milestone should stay intentionally narrow."]
+    }
+  });
+
+  const requirementsDoc = await readFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    "utf8"
+  );
+  const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(requirementsDoc, /## Scope Summary/);
+  assert.match(requirementsDoc, /Committed v1: BP-11/);
+  assert.match(requirementsDoc, /## Committed V1 Scope/);
+  assert.doesNotMatch(requirementsDoc, /## Deferred Scope/);
+  assert.doesNotMatch(requirementsDoc, /## Out-of-Scope Cuts/);
+  assert.match(roadmapDoc, /Phase 1: Bootstrap Core Workflow \(Requirements: BP-11\)/);
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.issues, []);
+  assert.equal(status.initialized, true);
+  assert.match(status.nextAction, /\/blu-progress/);
+});
+
+test("new-project bootstrap seed validation rejects non-durable requirement identifiers", () => {
+  const projectInitDefinition = projectToolDefinitions.find(
+    (definition) => definition.name === "blueprint_project_init"
+  );
+
+  assert.ok(projectInitDefinition);
+
+  const validation = projectInitDefinition!.inputSchema.bootstrapSeed.safeParse({
+    requirements: [
+      {
+        id: "legacy requirement",
+        requirement: "Keep the first milestone focused on durable planning artifacts.",
+        status: "Pending",
+        notes: "Invalid seed requirement."
+      }
+    ]
+  });
+
+  assert.equal(validation.success, false);
+  assert.match(validation.error.issues[0]?.message ?? "", /durable format like RQ-01 or BP-03/);
+});
+
 test("new-project normalizes whole-number decimal roadmap phases from bootstrap seeds", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -369,6 +454,42 @@ test("brownfield repos route to map-codebase after bootstrap until the repo is m
   assert.equal(status.bootstrap.brownfieldDetected, true);
   assert.equal(status.bootstrap.codebaseMapped, false);
   assert.match(roadmapDoc, /Roadmap confidence: provisional until \/blu-map-codebase/);
+});
+
+test("new-project runtime summaries surface the live next action for fresh and brownfield repos", async (t) => {
+  const freshRepoPath = await createRepoFromFixture("fresh-repo");
+  const brownfieldRepoPath = await createRepoFromFixture("brownfield-repo");
+
+  t.after(async () => {
+    await rm(path.dirname(freshRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(brownfieldRepoPath), { recursive: true, force: true });
+  });
+
+  const freshInit = await blueprintProjectInit({ cwd: freshRepoPath });
+  const freshStatus = await blueprintProjectStatus({ cwd: freshRepoPath });
+  const brownfieldInit = await blueprintProjectInit({ cwd: brownfieldRepoPath });
+  const brownfieldStatus = await blueprintProjectStatus({ cwd: brownfieldRepoPath });
+
+  assert.match(
+    createToolResponseContent("blueprint_project_init", freshInit)[0].text,
+    /\/blu-progress/
+  );
+  assert.match(
+    createToolResponseContent("blueprint_project_status", freshStatus)[0].text,
+    /\/blu-progress/
+  );
+  assert.match(
+    createToolResponseContent("blueprint_project_init", brownfieldInit)[0].text,
+    /\/blu-map-codebase/
+  );
+  assert.match(
+    createToolResponseContent("blueprint_project_status", brownfieldStatus)[0].text,
+    /\/blu-map-codebase/
+  );
+  assert.doesNotMatch(
+    createToolResponseContent("blueprint_project_status", freshStatus)[0].text,
+    /"nextAction"/
+  );
 });
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {

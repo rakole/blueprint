@@ -19,6 +19,7 @@ test("new-project manifest encodes the richer bootstrap flow without reviving GS
   assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /one focused question per `ask_user` call/i);
   assert.match(commandFile, /workflow preferences/i);
+  assert.match(commandFile, /bootstrap artifact contracts/i);
   assert.match(commandFile, /revision loop/i);
   assert.match(commandFile, /`blueprint-project-researcher`/);
   assert.match(commandFile, /`blueprint-roadmapper`/);
@@ -31,6 +32,8 @@ test("new-project manifest encodes the richer bootstrap flow without reviving GS
     "blueprint_config_get",
     "blueprint_config_set",
     "blueprint_state_update",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_validate",
     "blueprint_artifact_scaffold"
   ] as const) {
     assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
@@ -54,7 +57,10 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /`ask_user`/);
   assert.match(skillFile, /mode/i);
   assert.match(skillFile, /granularity/i);
+  assert.match(skillFile, /bootstrap contracts/i);
   assert.match(skillFile, /revision loop/i);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
+  assert.match(skillFile, /blueprint_artifact_validate/);
   assert.match(skillFile, /blueprint_config_set/);
   assert.match(skillFile, /blueprint-project-researcher/);
   assert.match(skillFile, /blueprint-roadmapper/);
