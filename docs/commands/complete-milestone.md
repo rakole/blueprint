@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`complete-milestone` is Blueprint's command for archive completed milestone and prepare for next version. In Blueprint it stays host-native, uses a report-driven closeout flow gated by the saved milestone audit, writes a durable completion report, and re-anchors state on the next safe implemented archival follow-up instead of introducing a new milestone-state engine.
+`complete-milestone` is Blueprint's command for archive a completed milestone and prepare for the next version. In Blueprint it stays host-native, uses a report-driven closeout flow gated by a saved milestone audit that is already `READY_TO_CLOSE` with no actionable gaps or blockers, writes a durable completion report, and re-anchors state on the saved audit's next safe follow-up instead of introducing a new milestone-state engine.
 
 
 ## Command Path And Examples
@@ -23,8 +23,8 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A matching `milestone-audit-<version>.md` report should already exist in `.blueprint/reports/`.
-- All roadmap phases for the milestone should already be complete, with saved verification and UAT evidence.
+- A matching `milestone-audit-<version>.md` report should already exist in `.blueprint/reports/`, and its saved verdict should already be `READY_TO_CLOSE`.
+- The audit report should have no actionable gaps or archival blockers left open, and the milestone should already have saved verification and UAT evidence for every completed phase.
 - Replacing an existing milestone completion report requires explicit overwrite confirmation.
 - Read the canonical `report.milestone-complete` contract before drafting or revising the report.
 
@@ -32,7 +32,7 @@
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next safe implemented action when applicable.
+- User-facing result: a concise completion summary that surfaces the audit readiness, evidence used, report status, and the next safe implemented action when applicable.
 - Repo side effects: Writes a durable milestone completion report in `.blueprint/reports/` and updates `.blueprint/STATE.md`.
 
 
@@ -41,7 +41,8 @@
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}` where `derivedStatus.milestoneAudit` carries the saved audit verdict, gap/blocker signals, next safe action, and `readyForCompletion`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
@@ -57,14 +58,15 @@
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}` where `derivedStatus.milestoneAudit` carries the saved audit verdict, gap/blocker signals, next safe action, and `readyForCompletion`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Digest And Report Contract
 
-- Read `report.milestone-complete` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final completion body to the returned `authoringTemplate` when the contract provides one.
+- Read `report.milestone-complete` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final completion body to the returned `contract.authoringTemplate` when the contract provides one.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
 - Pass only the bare report name `milestone-complete-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
@@ -120,6 +122,7 @@
 
 - Show roadmap and report drift before mutation.
 - If the milestone audit report is missing, stop with concise guidance to run `/blu-audit-milestone` first.
+- If the saved milestone audit is not `READY_TO_CLOSE`, route to the saved audit's `nextSafeAction` when present, otherwise to `/blu-plan-milestone-gaps` when actionable gaps or blockers remain, and only fall back to `/blu-progress` when the report is malformed or undecidable.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
 
@@ -129,8 +132,10 @@
 - Keeps milestone closeout grounded in the saved roadmap and audit report rather than chat memory.
 - Produces a durable report for milestone-level operations.
 - Requires explicit confirmation before overwriting an existing completion report.
+- Fails fast until `derivedStatus.milestoneAudit.readyForCompletion` is true.
 - Does not rewrite `.blueprint/ROADMAP.md` or phase directories directly.
 - Returns `/blu-milestone-summary <milestone>` as the next safe implemented follow-up.
+- Prefers the saved audit's next safe action or `/blu-plan-milestone-gaps` instead of looping back into `/blu-audit-milestone` when the audit already exists but is not ready.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

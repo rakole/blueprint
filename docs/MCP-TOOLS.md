@@ -37,7 +37,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_state_load` | Load stored state together with derived routing signals | `{state, blockers, derivedStatus}` |
+| `blueprint_state_load` | Load stored state together with derived routing signals, including `derivedStatus.milestoneAudit` | `{state, blockers, derivedStatus}` |
 | `blueprint_state_update` | Patch `STATE.md` deterministically | `{updatedFields, statePath, warnings}` |
 | `blueprint_pause_handoff_get` | Read the latest `pause-work` handoff report | `{found, path, handoff, reason, warnings}` |
 | `blueprint_pause_handoff_write` | Persist the latest `pause-work` handoff report with overwrite protection | `{path, written, created, overwritten, status, handoff, warnings}` |
@@ -133,7 +133,7 @@ These tool names are part of the documented future contract, but they are not re
 - `remove-phase` uses `blueprint_roadmap_read`, `blueprint_phase_locate`, `blueprint_roadmap_remove_phase`, and `blueprint_state_update`, with `force: true` reserved for a separately confirmed execution-evidence removal path.
 - `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update`.
 - `audit-milestone` uses `blueprint_roadmap_read`, `blueprint_phase_summary_index`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to compare roadmap intent against completed evidence and author `report.milestone-audit` before routing gaps into implemented follow-up commands.
-- `complete-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit into `report.milestone-complete` and route to `/blu-milestone-summary <milestone>`.
+- `complete-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_state_load`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit into `report.milestone-complete`, fail fast until `derivedStatus.milestoneAudit.readyForCompletion` is true, and route to `/blu-milestone-summary <milestone>`.
 - `milestone-summary` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to turn the saved audit plus completion evidence into `report.milestone-summary` and route to `/blu-new-milestone`.
 - `new-milestone` uses `blueprint_roadmap_read`, `blueprint_artifact_contract_read`, `blueprint_artifact_summary_digest`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to carry forward from the saved milestone summary, preserve historical phase artifacts, and scaffold the next whole-number phase context.
 - `code-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_review_scope`, and `blueprint_review_record` to derive a deterministic repo-file scope from executed plans or explicit file paths and persist `XX-REVIEW.md` against the canonical review contract.

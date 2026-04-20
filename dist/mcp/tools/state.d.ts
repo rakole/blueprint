@@ -30,6 +30,7 @@ type StateLoadResult = {
         currentPhase: string | null;
         nextAction: string;
         hasBlockers: boolean;
+        milestoneAudit: MilestoneAuditReportStatus;
     };
 };
 type PauseHandoffRecord = {
@@ -96,6 +97,14 @@ type StateSyncResult = {
     syncedFields: string[];
     warnings: string[];
     statePath: string;
+};
+type MilestoneAuditReportStatus = {
+    found: boolean;
+    verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+    hasActionableGaps: boolean;
+    hasArchivalBlockers: boolean;
+    nextSafeAction: string | null;
+    readyForCompletion: boolean;
 };
 export declare function blueprintPauseHandoffGet(args?: PauseHandoffGetArgs): Promise<PauseHandoffGetResult>;
 export declare function blueprintPauseHandoffWrite(args: PauseHandoffWriteArgs): Promise<PauseHandoffWriteResult>;

@@ -63,6 +63,7 @@ type StateLoadResult = {
     currentPhase: string | null;
     nextAction: string;
     hasBlockers: boolean;
+    milestoneAudit: MilestoneAuditReportStatus;
   };
 };
 
@@ -204,6 +205,17 @@ type MilestoneAuditReportStatus = {
   nextSafeAction: string | null;
   readyForCompletion: boolean;
 };
+
+function emptyMilestoneAuditReportStatus(): MilestoneAuditReportStatus {
+  return {
+    found: false,
+    verdict: null,
+    hasActionableGaps: false,
+    hasArchivalBlockers: false,
+    nextSafeAction: null,
+    readyForCompletion: false
+  };
+}
 
 type BootstrapRoutingSignals = {
   brownfieldDetected: boolean;
@@ -1022,27 +1034,13 @@ async function inspectMilestoneAuditReportStatus(args: {
   reports: string[];
 }): Promise<MilestoneAuditReportStatus> {
   if (args.currentMilestone === null) {
-    return {
-      found: false,
-      verdict: null,
-      hasActionableGaps: false,
-      hasArchivalBlockers: false,
-      nextSafeAction: null,
-      readyForCompletion: false
-    };
+    return emptyMilestoneAuditReportStatus();
   }
 
   const reportPath = buildBlueprintReportPath(`milestone-audit-${args.currentMilestone}`);
 
   if (!args.reports.includes(reportPath)) {
-    return {
-      found: false,
-      verdict: null,
-      hasActionableGaps: false,
-      hasArchivalBlockers: false,
-      nextSafeAction: null,
-      readyForCompletion: false
-    };
+    return emptyMilestoneAuditReportStatus();
   }
 
   try {
@@ -1056,7 +1054,6 @@ async function inspectMilestoneAuditReportStatus(args: {
         .map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null)
         .find((value): value is "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" => value !== null) ??
       null;
-    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
     const nextSafeAction =
       nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
 
@@ -1067,18 +1064,14 @@ async function inspectMilestoneAuditReportStatus(args: {
       hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
       nextSafeAction,
       readyForCompletion:
-        !verdictBlocksCompletion &&
+        verdict === "READY_TO_CLOSE" &&
         gapsFound.every(isNoneLikeReportSignal) &&
         archivalBlockers.every(isNoneLikeReportSignal)
     };
   } catch {
     return {
-      found: true,
-      verdict: null,
-      hasActionableGaps: false,
-      hasArchivalBlockers: false,
-      nextSafeAction: null,
-      readyForCompletion: false
+      ...emptyMilestoneAuditReportStatus(),
+      found: true
     };
   }
 }
@@ -1245,7 +1238,6 @@ async function deriveNextAction(args: {
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
     args.milestoneAuditReport.found &&
-    args.milestoneAuditReport.verdict !== null &&
     args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" &&
     args.milestoneAuditReport.nextSafeAction &&
     implementedCommands.has(
@@ -1310,6 +1302,7 @@ async function deriveNextAction(args: {
 async function buildSyncedState(projectRoot: string): Promise<{
   state: BlueprintState;
   warnings: string[];
+  milestoneAuditReport: MilestoneAuditReportStatus;
 }> {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
@@ -1457,7 +1450,8 @@ async function buildSyncedState(projectRoot: string): Promise<{
       roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
       lastUpdated: new Date().toISOString()
     },
-    warnings
+    warnings,
+    milestoneAuditReport
   };
 }
 
@@ -1585,13 +1579,21 @@ export async function blueprintStateLoad(
 ): Promise<StateLoadResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const syncedState =
+    inspection.readiness === "uninitialized"
+      ? null
+      : await buildSyncedState(projectRoot);
   const state =
     inspection.readiness === "uninitialized"
       ? await loadBlueprintState(projectRoot)
-      : (await buildSyncedState(projectRoot)).state;
+      : syncedState!.state;
   const currentPhase = inspection.readiness === "uninitialized" ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
+  const milestoneAuditReport =
+    inspection.readiness === "uninitialized"
+      ? emptyMilestoneAuditReportStatus()
+      : syncedState!.milestoneAuditReport;
 
   return {
     state,
@@ -1600,7 +1602,8 @@ export async function blueprintStateLoad(
       projectStatus: inspection.readiness,
       currentPhase,
       nextAction,
-      hasBlockers: blockers.length > 0
+      hasBlockers: blockers.length > 0,
+      milestoneAudit: milestoneAuditReport
     }
   };
 }
