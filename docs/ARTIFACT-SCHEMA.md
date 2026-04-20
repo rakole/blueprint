@@ -68,6 +68,7 @@ Minimum locked fields per phase:
 - mapped requirements
 - success criteria
 - status
+- optional inserted marker for urgent decimal phase detail blocks, written as `Inserted: yes`
 
 Contract notes:
 - `new-milestone` may rewrite `ROADMAP.md` for the next milestone, but it should preserve historical phase artifacts and continue numbering at the next whole-number phase instead of renumbering prior milestones.
@@ -80,6 +81,7 @@ Purpose:
 - active phase / plan
 - blockers
 - next suggested action
+- durable roadmap evolution notes when an urgent decimal phase is inserted after an integer anchor
 
 Minimum locked fields:
 - project status
@@ -88,6 +90,9 @@ Minimum locked fields:
 - active command
 - blockers
 - last updated
+
+Optional durable section:
+- roadmap evolution notes, recorded as bullets under `## Roadmap Evolution Notes` and preserved across `STATE.md` sync/update cycles
 
 ### `config.json`
 
@@ -408,7 +413,10 @@ Validation expectations:
 
 Minimum expected structure:
 - `**Status:** PASS|FAIL|PARTIAL`
+- `**Resume State:** RESUMED|NEW|CONTINUED`
+- `**Checkpoint:** <saved checkpoint path or none>`
 - `## UAT Summary`
+- `## Session State`
 - `## Questions Asked`
 - `## Observed Behavior`
 - `## Unresolved Gaps`
@@ -418,7 +426,21 @@ Minimum expected structure:
 UAT expectations:
 - must be grounded in the saved execution summaries for the phase
 - should preserve resumable conversational state rather than acting like a one-shot transcript
+- should be normalized to the canonical `phase.uat` authoring template before persistence
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
+- should be validated after write so schema drift or heading drift is caught before the next state update
+
+### Milestone Report Contracts
+
+The milestone command family now uses canonical report contracts before authoring or revising report artifacts:
+
+- `report.milestone-audit` for `.blueprint/reports/milestone-audit-<milestone>.md`
+- `report.milestone-complete` for `.blueprint/reports/milestone-complete-<milestone>.md`
+- `report.milestone-summary` for `.blueprint/reports/milestone-summary-<milestone>.md`
+
+Contract notes:
+- Read the matching report contract before drafting or replacing the report so the persisted text stays aligned with the runtime template.
+- `new-milestone` additionally reads `phase.context` before seeding the first context artifact for the next milestone.
 
 Exact persistence template:
 
@@ -426,10 +448,18 @@ Exact persistence template:
 # Phase XX: <Phase Name> - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -453,9 +483,10 @@ Exact persistence template:
 ```
 
 Contract notes:
-- Keep the `**Status:**` marker exactly as written.
+- Keep the `**Status:**`, `**Resume State:**`, and `**Checkpoint:**` markers exactly as written.
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
-- Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
+- Reference at least one saved summary path or filename inside `## UAT Summary`, `## Session State`, or `## Observed Behavior`.
+- Keep follow-up-fix captures explicit enough that the parent command can ask for confirmation before persistence.
 
 ### `XX-REVIEW-FIX.md`
 
@@ -580,13 +611,16 @@ Purpose:
 Minimum locked sections:
 - milestone identifier and original intent snapshot
 - roadmap and phase evidence digest
-- gaps found and archival blockers
+- requirements traceability notes and repair candidates
+- grouped gaps found under requirement, integration, flow, and optional sections
+- archival blockers
 - next safe action
 
 Contract notes:
 - `audit-milestone` owns this report and writes it through the documented Blueprint persistence flow, including `blueprint_artifact_report_write`.
 - Replacing an existing audit report requires explicit confirmation.
 - The report should stay project-local in `.blueprint/reports/` and not spill into unrelated repo files.
+- The report should keep enough traceability detail for `/blu-plan-milestone-gaps` to convert grouped gaps into roadmap phases without re-running the audit.
 
 ### `reports/milestone-complete-<version>.md`
 

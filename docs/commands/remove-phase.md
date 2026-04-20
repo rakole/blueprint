@@ -25,7 +25,7 @@
 
 - The target phase must already exist in `.blueprint/ROADMAP.md`.
 - The target phase must be a future phase relative to `.blueprint/STATE.md`.
-- The target phase may not already have execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT` artifacts.
+- The target phase may already have execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT` artifacts, but removal must stop on the default safe path unless the user gives an explicit destructive confirmation for the force-removal path.
 
 
 ## Outputs
@@ -39,7 +39,7 @@
 
 
 - The current roadmap and milestone inventory through `blueprint_roadmap_read`
-- Existing target-phase artifacts through `blueprint_artifact_list`
+- Existing target-phase artifacts and drift through `blueprint_phase_locate`
 
 
 ## Blueprint And Global State Writes
@@ -54,8 +54,8 @@
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
+- `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_roadmap_remove_phase` -> `{removedPhase, renumberedPhases, roadmapPath}`
-- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 
@@ -95,6 +95,8 @@
 
 - Always require a preview and confirmation before renumbering.
 - Treat the confirmation gate as mandatory because the command deletes a phase directory and shifts later phase numbering.
+- Prefer Gemini CLI `ask_user` for the destructive confirmation gate instead of a plain-text prompt.
+- When execution evidence exists, require a second explicit destructive confirmation before calling the force-removal path.
 
 
 ## Edge Cases
@@ -102,7 +104,7 @@
 
 - Decimal phase targets are allowed and should shift later phases left to fill the removed slot.
 - Reject current or past phases even if they still appear in the roadmap.
-- Reject target phases that already contain execution evidence until the user resolves or removes that evidence intentionally.
+- Default to refusal when the target phase already contains execution evidence until the user explicitly confirms force removal.
 
 
 ## Failure Modes And Recovery
@@ -112,6 +114,7 @@
 - Refuse mutation when the target phase directory is missing or ambiguous.
 - Refuse mutation when `.blueprint/STATE.md` does not provide a usable current phase for the future-phase guard.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
+- When execution evidence exists, present the evidence first and require a second explicit destructive confirmation before continuing with force removal.
 
 
 ## Acceptance Criteria
@@ -119,7 +122,7 @@
 
 - Keeps roadmap, phase directories, and state synchronized.
 - Deletes the target phase directory and renumbers later directories plus phase-scoped artifact filenames.
-- Rejects current or past phases and phases that already have execution evidence.
+- Rejects current or past phases and defaults to rejecting phases that already have execution evidence unless the user explicitly confirms force removal.
 - Returns `/blu-progress` as the next safe implemented follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
@@ -134,5 +137,3 @@
 - Current-phase rejection fixture.
 - Execution-evidence rejection fixture.
 - Direct `remove-phase` happy-path fixture.
-
-

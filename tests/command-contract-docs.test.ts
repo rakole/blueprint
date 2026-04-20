@@ -752,7 +752,38 @@ test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure 
   assert.match(planMilestoneGapsDoc, /blueprint_state_update/);
   assert.match(planMilestoneGapsDoc, /milestone audit report should already exist/i);
   assert.match(planMilestoneGapsDoc, /groups related gaps into a few coherent phases/i);
+  assert.match(planMilestoneGapsDoc, /ask_user/i);
+  assert.match(planMilestoneGapsDoc, /Requirement Gaps/i);
+  assert.match(planMilestoneGapsDoc, /Integration Gaps/i);
+  assert.match(planMilestoneGapsDoc, /Flow Gaps/i);
+  assert.match(planMilestoneGapsDoc, /Optional Gaps/i);
+  assert.match(planMilestoneGapsDoc, /requirements traceability repair/i);
   assert.match(planMilestoneGapsDoc, /\/blu-discuss-phase <phase>/);
+  assert.doesNotMatch(planMilestoneGapsDoc, /code or git mutation/i);
+});
+
+test("audit-milestone command docs keep the grouped-gap audit and traceability contract explicit", async () => {
+  const auditMilestoneDoc = await readRepoFile("docs/commands/audit-milestone.md");
+
+  assert.match(auditMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(auditMilestoneDoc, /blueprint_roadmap_read/);
+  assert.match(auditMilestoneDoc, /blueprint_phase_summary_index/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_list/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_contract_read/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_summary_digest/);
+  assert.match(auditMilestoneDoc, /artifactPaths/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_report_write/);
+  assert.match(auditMilestoneDoc, /explicit confirmation before replacing/i);
+  assert.match(auditMilestoneDoc, /ask_user/);
+  assert.match(auditMilestoneDoc, /Requirement Gaps/i);
+  assert.match(auditMilestoneDoc, /Integration Gaps/i);
+  assert.match(auditMilestoneDoc, /Flow Gaps/i);
+  assert.match(auditMilestoneDoc, /Optional Gaps/i);
+  assert.match(auditMilestoneDoc, /traceability notes/i);
+  assert.match(auditMilestoneDoc, /\.blueprint\/reports\//);
+  assert.match(auditMilestoneDoc, /\/blu-plan-milestone-gaps/);
+  assert.match(auditMilestoneDoc, /\/blu-progress/);
+  assert.doesNotMatch(auditMilestoneDoc, /code or git history/i);
 });
 
 test("remove-phase command docs keep the roadmap removal contract explicit", async () => {
@@ -760,9 +791,11 @@ test("remove-phase command docs keep the roadmap removal contract explicit", asy
 
   assert.match(removePhaseDoc, /Primary skill: `blueprint-roadmap-admin`/);
   assert.match(removePhaseDoc, /blueprint_roadmap_read/);
+  assert.match(removePhaseDoc, /blueprint_phase_locate/);
   assert.match(removePhaseDoc, /blueprint_roadmap_remove_phase/);
-  assert.match(removePhaseDoc, /blueprint_artifact_list/);
   assert.match(removePhaseDoc, /blueprint_state_update/);
+  assert.match(removePhaseDoc, /ask_user/);
+  assert.match(removePhaseDoc, /force removal/i);
   assert.match(removePhaseDoc, /future phase/i);
   assert.match(removePhaseDoc, /execution evidence/i);
   assert.match(removePhaseDoc, /\/blu-progress/);
@@ -774,11 +807,16 @@ test("complete-milestone command docs keep the report-driven closeout contract e
   assert.match(completeMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
   assert.match(completeMilestoneDoc, /blueprint_roadmap_read/);
   assert.match(completeMilestoneDoc, /blueprint_artifact_list/);
+  assert.match(completeMilestoneDoc, /blueprint_state_load/);
   assert.match(completeMilestoneDoc, /blueprint_artifact_summary_digest/);
   assert.match(completeMilestoneDoc, /blueprint_artifact_report_write/);
   assert.match(completeMilestoneDoc, /blueprint_state_update/);
   assert.match(completeMilestoneDoc, /milestone-audit-<version>\.md/);
-  assert.match(completeMilestoneDoc, /report-driven/i);
+  assert.match(completeMilestoneDoc, /derivedStatus\.milestoneAudit/);
+  assert.match(completeMilestoneDoc, /READY_TO_CLOSE/);
+  assert.match(completeMilestoneDoc, /audit readiness/i);
+  assert.match(completeMilestoneDoc, /contract\.authoringTemplate/);
+  assert.match(completeMilestoneDoc, /\/blu-plan-milestone-gaps/);
   assert.match(completeMilestoneDoc, /\/blu-milestone-summary <milestone>/);
   assert.doesNotMatch(completeMilestoneDoc, /blueprint_phase_mark_complete/);
 });
@@ -793,6 +831,7 @@ test("milestone-summary command docs keep the Wave 2 local summary contract expl
   assert.match(milestoneSummaryDoc, /blueprint_artifact_report_write/);
   assert.match(milestoneSummaryDoc, /blueprint_state_update/);
   assert.match(milestoneSummaryDoc, /milestone-complete-<version>\.md/);
+  assert.match(milestoneSummaryDoc, /contract\.authoringTemplate/);
   assert.match(milestoneSummaryDoc, /\/blu-new-milestone/);
   assert.doesNotMatch(milestoneSummaryDoc, /blueprint-doc-writer/);
 });

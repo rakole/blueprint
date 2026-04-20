@@ -6,6 +6,12 @@ The workflow is inspired by GSD, but Blueprint's skills, workflows, commands, an
 
 This README documents the shipped user-facing surface and the active implementation only. If a command is not listed here, you should treat it as not public yet.
 
+Wave 0 shipped commands cover the stable routing, bootstrap, lifecycle, and maintenance surface that Blueprint exposes today.
+
+Phase 3 discovery commands are shipped. Phase 3 discovery shipped the same day and remains in parity closeout while later waves land.
+
+The shipped lifecycle slice also includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, and the read-only next-step router `/blu-next`.
+
 ## Current Runtime Layout
 
 The active implementation lives in the repo runtime surfaces below:
@@ -209,6 +215,8 @@ Use these when you need lower-ceremony project management or small delivery work
 ### Quality, review, docs, and shipping
 
 Use these after implementation when you want stronger evidence and release hygiene:
+
+The review-branch command `/blu-pr-branch` is now shipped.
 
 - `/blu-code-review`: review the files changed by a completed phase
 - `/blu-code-review-fix`: apply bounded fixes from a saved review

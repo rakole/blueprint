@@ -125,15 +125,48 @@ autonomous: true
     path.join(completedPhaseDir, "03-VERIFICATION.md"),
     `# Phase 03: Execution - Verification
 
-**Coverage:** Reviewed prior execution evidence for the completed phase.
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Phase 3 already has completed validation evidence.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-00 | Preserve earlier validation evidence | .blueprint/phases/03-execution/03-01-SUMMARY.md | PASS | Earlier execution evidence remains durable. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-execution/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-execution/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -145,7 +178,7 @@ autonomous: true
 
 ## Next Safe Action
 
-- Continue with \`/blu-verify-work 3\`.
+- /blu-verify-work 3
 `,
     "utf8"
   );
@@ -154,18 +187,26 @@ autonomous: true
     `# Phase 03: Execution - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- Phase 3 already has completed UAT evidence.
+- Phase 3 already has completed UAT evidence from \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`
+- Current session step: none
+- Continuity notes: none
 
 ## Questions Asked
 
-- Did the completed execution summary match the expected behavior for Phase 3?
+- none
 
 ## Observed Behavior
 
-- The recorded execution evidence in \`.blueprint/phases/03-execution/03-01-SUMMARY.md\` remained consistent with the Phase 3 outcome.
+- The accepted behavior matched \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -177,7 +218,7 @@ autonomous: true
 
 ## Next Safe Action
 
-- Return to \`/blu-progress\` for the next safe implemented action.
+- /blu-progress
 `,
     "utf8"
   );
@@ -444,14 +485,47 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - Verification
 
 **Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - The validated feature set is ready for UAT.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -479,14 +553,47 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - Verification
 
 **Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - The validated feature set is ready for UAT.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -508,14 +615,47 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - Verification
 
 **Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PARTIAL
+**Sign-off:** pending
 
 ## Validation Summary
 
 - The validated feature set has a follow-up note.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Reconfirm validation evidence and follow-up note | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | DEFERRED | Follow-up note still needs confirmation. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| Follow-up note confirmation | Requires manual confirmation during UAT | Reconfirm during /blu-verify-work 4 | DEFERRED |
+
+## Gate State
+
+- Gate: PARTIAL
+- Sign-off: pending
+- Readiness: not ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| deferred | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Reconfirm during /blu-verify-work 4 |
 
 ## Gaps Found
 
@@ -552,10 +692,18 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- The user acceptance run passed.
+- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`
+- Current session step: Close the initial UAT pass.
+- Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
 ## Questions Asked
 
@@ -601,12 +749,17 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.deepEqual(verificationRead.summaryPaths, [
     ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"
   ]);
+  assert.match(verificationRead.content ?? "", /Requirement \/ Task Coverage/);
+  assert.match(verificationRead.content ?? "", /Gate State/);
   assert.equal(verificationReused.status, "reused");
   assert.equal(verificationUpdated.status, "updated");
   assert.match(beforeUatStatus.nextAction, /\/blu-verify-work 4/);
   assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-verify-work 4/);
   assert.equal(invalidUat.status, "invalid");
   assert.match(invalidUat.issues.join("\n"), /\*\*Status:\*\*/);
+  assert.match(invalidUat.issues.join("\n"), /Resume State/);
+  assert.match(invalidUat.issues.join("\n"), /Checkpoint/);
+  assert.match(invalidUat.issues.join("\n"), /Session State/);
   assert.match(invalidUat.issues.join("\n"), /Questions Asked/);
   assert.match(invalidUat.issues.join("\n"), /Observed Behavior/);
   assert.equal(uatCreated.status, "created");

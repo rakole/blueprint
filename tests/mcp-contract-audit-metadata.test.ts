@@ -27,6 +27,10 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   assert.match(mcpToolsDoc, /`blueprint_artifact_report_write` accepts a bare `reportName`/i);
   assert.match(
     mcpToolsDoc,
+    /`validate-phase` and `verify-work` use summary index\/read, validation read\/write, `blueprint_artifact_contract_read`, config, artifact validation, and state update tools/i
+  );
+  assert.match(
+    mcpToolsDoc,
     /`secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_artifact_contract_read`, and `blueprint_review_record`/i
   );
 });
@@ -127,12 +131,16 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(validateCommand, /returned `path` plus `summaryPaths` are authoritative/i);
   assert.match(validateCommand, /artifactId: "phase\.verification"/);
   assert.match(validateDoc, /## Validation Persistence Contract/);
+  assert.match(validateDoc, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(validateDoc, /`uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION\.md` artifact/i);
 
   assert.match(verifyCommand, /existing verification artifact are required/i);
   assert.match(verifyCommand, /artifactId: "phase\.uat"/);
   assert.match(verifyDoc, /## UAT Persistence Contract/);
+  assert.match(verifyDoc, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(verifyDoc, /returned `path` plus `summaryPaths` as authoritative/i);
+  assert.match(verifyDoc, /focused structured decision[\s\S]*`view`[\s\S]*`resume`[\s\S]*`update`/i);
+  assert.match(verifyDoc, /separate `ask_user` confirmation path/i);
 
   assert.match(addTestsCommand, /bare report name `add-tests-<phase>`/i);
   assert.match(addTestsCommand, /returned `path` plus `summaryPaths` as authoritative/i);

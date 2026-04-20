@@ -22,7 +22,7 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
-import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
+import { blueprintStateLoad, blueprintStateUpdate, loadBlueprintState } from "../src/mcp/tools/state.js";
 import {
   shippedExtensionHosts,
   type ExtensionHost
@@ -175,6 +175,68 @@ test("state_update patches STATE.md deterministically and reports updated fields
   assert.match(stateDocument, /- Next action: Run \/blu-health/);
   assert.match(stateDocument, /## Blockers/);
   assert.match(stateDocument, /- Need roadmap review/);
+});
+
+test("state_update preserves roadmap evolution notes for urgent decimal insertions", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({ cwd: repoPath });
+  const result = await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      roadmapEvolutionNotes: [
+        "Urgent insertion: Phase 2.1 added after Phase 2 to preserve delivery order"
+      ]
+    }
+  });
+  const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+  const loaded = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(result.statePath, ".blueprint/STATE.md");
+  assert.ok(result.updatedFields.includes("roadmapEvolutionNotes"));
+  assert.match(stateDocument, /## Roadmap Evolution Notes/);
+  assert.match(
+    stateDocument,
+    /- Urgent insertion: Phase 2\.1 added after Phase 2 to preserve delivery order/
+  );
+  assert.deepEqual(loaded.state.roadmapEvolutionNotes, [
+    "Urgent insertion: Phase 2.1 added after Phase 2 to preserve delivery order"
+  ]);
+});
+
+test("legacy STATE.md files without roadmap evolution notes still parse cleanly", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({ cwd: repoPath });
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 1
+- Active command: /blu-new-project
+- Next action: Run /blu-progress
+- Last updated: 2026-04-20T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  const parsed = await loadBlueprintState(repoPath);
+
+  assert.deepEqual(parsed.roadmapEvolutionNotes, []);
+  assert.deepEqual(parsed.blockers, []);
+  assert.equal(parsed.currentPhase, "1");
 });
 
 test("artifact scaffolding creates requested files, reuses them safely, and blocks path escapes", async (t) => {

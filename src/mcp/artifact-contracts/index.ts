@@ -384,14 +384,47 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Verification
 
 **Coverage:** Reviewed \`${summaryFile(context)}\` and any other saved phase summaries for validation evidence.
+**Gate State:** PASS|PARTIAL|BLOCKED
+**Sign-off:** verified|pending|blocked
 
 ## Validation Summary
 
 - Concise readiness result grounded in the saved summaries.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| <requirement-id> | <task or check> | <summary path, command, or saved evidence> | PASS|MANUAL|DEFERRED|BLOCKED | <coverage note> |
+
 ## Evidence Reviewed
 
 - \`${summaryPath(context)}\`
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness:
+- Commands:
+- Evidence type:
+- Test infrastructure status:
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+
+## Gate State
+
+- Gate: PASS|PARTIAL|BLOCKED
+- Sign-off: <name or pending>
+- Readiness: <ready for UAT or not ready>
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| <coverage gap class> | <scope> | <evidence> | <repair> |
 
 ## Gaps Found
 
@@ -410,10 +443,18 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -657,6 +698,24 @@ active_command: ${activeCommand(context)}
 function renderMilestoneAuditTemplate(context?: ArtifactTemplateContext): string {
   return `# Milestone ${milestone(context)} - Audit
 
+**Verdict:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Decision basis: <which evidence determined the verdict>
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
+
 ## Original Intent Snapshot
 
 - Locked milestone intent and source evidence.
@@ -665,9 +724,36 @@ function renderMilestoneAuditTemplate(context?: ArtifactTemplateContext): string
 
 - Completed phase evidence reviewed for this milestone.
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
 ## Gaps Found
 
-- Archival gap, stale assumption, or \`none\`.
+- Requirement gaps: none
+- Integration gaps: none
+- Flow gaps: none
+- Optional gaps: none
 
 ## Archival Blockers
 
@@ -681,49 +767,78 @@ function renderMilestoneAuditTemplate(context?: ArtifactTemplateContext): string
 function renderMilestoneCompleteTemplate(context?: ArtifactTemplateContext): string {
   return `# Milestone ${milestone(context)} - Completion
 
+**Decision:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Audit Report Used:** <saved milestone audit report path>
+**Evidence Ledger:** <roadmap, validation, UAT, carry-forward evidence ledger>
+
 ## Completion Decision
 
-- Whether the milestone is ready to close and why.
+- Decision: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Closeout basis: <which saved evidence determined the decision>
 
 ## Audit Report Used
 
-- Saved milestone audit report path or \`none\`.
+- <saved milestone audit report path>
 
-## Completion Rationale
+## Milestone Evidence Ledger
 
-- Concise closeout rationale grounded in saved evidence.
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
 
 ## Residual Watch Items
 
-- Remaining watch item or \`none\`.
+- <remaining watch item or none>
 
 ## Next Safe Action
 
-- /blu-progress`;
+- /blu-milestone-summary`;
 }
 
 function renderMilestoneSummaryTemplate(context?: ArtifactTemplateContext): string {
   return `# Milestone ${milestone(context)} - Summary
 
+**Sources Reviewed:** <saved audit report, completion report, and roadmap evidence>
+**Evidence Ledger:** <audit, completion, roadmap, carry-forward evidence ledger>
+**Carry-Forward Context:** <seed context for /blu-new-milestone>
+
 ## Scope Summary
 
-- Concise milestone scope and outcome summary.
+- Concise milestone scope and outcome summary grounded in saved reports.
 
 ## Source Reports Used
 
-- Saved milestone reports and supporting artifacts reviewed.
+- <saved milestone audit report path>
+- <saved milestone completion report path>
+
+## Milestone Evidence Ledger
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Audit report | <audit report evidence> | PASS|GAP|BLOCKED | <what the audit report proves> |
+| Completion report | <completion report evidence> | PASS|GAP|BLOCKED | <what the completion report proves> |
+| Roadmap context | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Carry-forward context | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the carry-forward evidence proves> |
 
 ## Shipped Outcomes
 
-- Major delivered outcomes.
+- <major delivered outcome>
 
 ## Deferred Follow-Ups
 
-- Deferred item or \`none\`.
+- <deferred item or none>
 
 ## Recommended Carry-Forward Context
 
-- Context that should seed the next milestone.`;
+- <context that should seed the next milestone>
+
+## Next Safe Action
+
+- /blu-new-milestone`;
 }
 
 function renderDebugTemplate(): string {
@@ -1176,18 +1291,27 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: [
       "Validation Summary",
+      "Requirement / Task Coverage",
       "Evidence Reviewed",
+      "Test Infrastructure / Evidence Metadata",
+      "Manual-Only or Deferred Coverage",
+      "Gate State",
+      "Gap Classification",
       "Gaps Found",
       "Suggested Repairs",
       "Next Safe Action"
     ],
-    lockedMarkers: ["**Coverage:**"],
+    lockedMarkers: ["**Coverage:**", "**Gate State:**", "**Sign-off:**"],
     placeholderSignals: [
-      "Reviewed",
+      "PASS|PARTIAL|BLOCKED",
+      "verified|pending|blocked",
+      "PASS|MANUAL|DEFERRED|BLOCKED",
+      "MANUAL|DEFERRED|NONE",
       "Concise readiness result grounded in the saved summaries."
     ],
     notes: [
-      "Verification artifacts must stay grounded in saved execution summaries.",
+      "Verification artifacts must stay grounded in saved execution summaries and preserve durable coverage state.",
+      "Requirement-to-task mapping, evidence metadata, manual or deferred coverage, and gap classification should remain visible in the saved artifact.",
       "Additional top-level headings are allowed, but evidence reviewed should still cite saved summaries."
     ],
     renderScaffoldTemplate: renderVerificationTemplate,
@@ -1203,16 +1327,25 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: [
       "UAT Summary",
+      "Session State",
       "Questions Asked",
       "Observed Behavior",
       "Unresolved Gaps",
       "Follow-Up Fixes",
       "Next Safe Action"
     ],
-    lockedMarkers: ["**Status:**"],
-    placeholderSignals: ["PASS|FAIL|PARTIAL"],
+    lockedMarkers: ["**Status:**", "**Resume State:**", "**Checkpoint:**"],
+    placeholderSignals: [
+      "PASS|FAIL|PARTIAL",
+      "RESUMED|NEW|CONTINUED",
+      "<saved checkpoint path or none>",
+      "<saved summary path, checkpoint, or none>",
+      "<what is being resumed now>",
+      "<what must remain stable between sessions>"
+    ],
     notes: [
-      "UAT artifacts stay resumable and must reference saved summaries inside UAT Summary or Observed Behavior."
+      "UAT artifacts stay resumable across sessions and must reference saved summaries inside UAT Summary, Session State, or Observed Behavior.",
+      "Write validation keeps the resume checkpoint and current session state explicit so the artifact can be safely continued after a pause."
     ],
     renderScaffoldTemplate: renderUatTemplate,
     renderAuthoringTemplate: renderUatTemplate
@@ -1369,10 +1502,32 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Milestone Audit Report",
     canonicalFilePattern: `.blueprint/reports/${reportName(undefined, "milestone-audit-<milestone>")}.md`,
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Original Intent Snapshot", "Roadmap And Phase Evidence", "Gaps Found", "Archival Blockers", "Next Safe Action"],
-    lockedMarkers: [],
-    placeholderSignals: ["<milestone-version>"],
-    notes: ["Audit-milestone owns this report through blueprint_artifact_report_write."],
+    requiredHeadings: [
+      "Audit Verdict",
+      "Milestone Evidence Dimensions",
+      "Original Intent Snapshot",
+      "Roadmap And Phase Evidence",
+      "Requirement Gaps",
+      "Integration Gaps",
+      "Flow Gaps",
+      "Optional Gaps",
+      "Gaps Found",
+      "Archival Blockers",
+      "Next Safe Action"
+    ],
+    lockedMarkers: ["**Verdict:**", "**Evidence Dimensions:**"],
+    placeholderSignals: [
+      "<milestone-version>",
+      "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+      "<roadmap evidence>",
+      "<validation evidence>",
+      "<uat evidence>",
+      "<carry-forward evidence>"
+    ],
+    notes: [
+      "Audit-milestone owns this report through blueprint_artifact_report_write.",
+      "The audit contract captures a concrete verdict and milestone-level evidence dimensions."
+    ],
     renderScaffoldTemplate: renderMilestoneAuditTemplate,
     renderAuthoringTemplate: renderMilestoneAuditTemplate
   },
@@ -1384,10 +1539,28 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Milestone Completion Report",
     canonicalFilePattern: ".blueprint/reports/milestone-complete-<milestone>.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Completion Decision", "Audit Report Used", "Completion Rationale", "Residual Watch Items", "Next Safe Action"],
-    lockedMarkers: [],
-    placeholderSignals: ["<milestone-version>"],
-    notes: ["Complete-milestone owns this report through blueprint_artifact_report_write."],
+    requiredHeadings: [
+      "Completion Decision",
+      "Audit Report Used",
+      "Milestone Evidence Ledger",
+      "Residual Watch Items",
+      "Next Safe Action"
+    ],
+    lockedMarkers: ["**Decision:**", "**Audit Report Used:**", "**Evidence Ledger:**"],
+    placeholderSignals: [
+      "<milestone-version>",
+      "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+      "<saved milestone audit report path>",
+      "<roadmap, validation, UAT, carry-forward evidence ledger>",
+      "<roadmap evidence>",
+      "<validation evidence>",
+      "<uat evidence>",
+      "<carry-forward evidence>"
+    ],
+    notes: [
+      "Complete-milestone owns this report through blueprint_artifact_report_write.",
+      "The completion contract captures a closeout decision and an evidence ledger backed by saved reports."
+    ],
     renderScaffoldTemplate: renderMilestoneCompleteTemplate,
     renderAuthoringTemplate: renderMilestoneCompleteTemplate
   },
@@ -1399,10 +1572,32 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Milestone Summary Report",
     canonicalFilePattern: ".blueprint/reports/milestone-summary-<milestone>.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Scope Summary", "Source Reports Used", "Shipped Outcomes", "Deferred Follow-Ups", "Recommended Carry-Forward Context"],
-    lockedMarkers: [],
-    placeholderSignals: ["<milestone-version>"],
-    notes: ["New-milestone uses this report as the default carry-forward seed."],
+    requiredHeadings: [
+      "Scope Summary",
+      "Source Reports Used",
+      "Milestone Evidence Ledger",
+      "Shipped Outcomes",
+      "Deferred Follow-Ups",
+      "Recommended Carry-Forward Context",
+      "Next Safe Action"
+    ],
+    lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
+    placeholderSignals: [
+      "<milestone-version>",
+      "<saved audit report, completion report, and roadmap evidence>",
+      "<audit, completion, roadmap, carry-forward evidence ledger>",
+      "<seed context for /blu-new-milestone>",
+      "<saved milestone audit report path>",
+      "<saved milestone completion report path>",
+      "<audit report evidence>",
+      "<completion report evidence>",
+      "<roadmap evidence>",
+      "<carry-forward evidence>"
+    ],
+    notes: [
+      "New-milestone uses this report as the default carry-forward seed.",
+      "The summary contract captures the saved milestone sources, evidence ledger, and next milestone handoff context."
+    ],
     renderScaffoldTemplate: renderMilestoneSummaryTemplate,
     renderAuthoringTemplate: renderMilestoneSummaryTemplate
   },

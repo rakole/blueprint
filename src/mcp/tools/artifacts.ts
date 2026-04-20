@@ -1594,6 +1594,15 @@ function extractMarkdownSection(markdown: string, heading: string): string {
   return match?.[1]?.trim() ?? "";
 }
 
+export function extractMarkdownTableRows(section: string): string[][] {
+  return section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line))
+    .map((line) => parseMarkdownTableCells(line));
+}
+
 function stripPlanPlaceholderSignals(section: string): string {
   return [...PLAN_PLACEHOLDER_SIGNALS, ...PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS].reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -1927,6 +1936,356 @@ function validateLockedMarkers(
     .map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
 
+type MilestoneEvidenceRowSpec = {
+  label: string;
+  pattern: RegExp;
+};
+
+function validateMilestoneEvidenceLedger(
+  content: string,
+  artifactLabel: string,
+  sectionHeading: string,
+  requiredRows: readonly MilestoneEvidenceRowSpec[]
+): string[] {
+  const issues: string[] = [];
+  const section = extractMarkdownSection(content, sectionHeading);
+  const evidenceRows = section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+
+  if (evidenceRows.length < requiredRows.length) {
+    issues.push(
+      `${artifactLabel} section ${sectionHeading} must include evidence rows for ${requiredRows
+        .map((row) => row.label)
+        .join(", ")}.`
+    );
+  }
+
+  const rowLabels: string[] = [];
+
+  for (const row of evidenceRows) {
+    const cells = parseMarkdownTableCells(row);
+
+    if (cells.length !== 4) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must keep each evidence row in the Dimension, Evidence, Status, and Notes columns.`
+      );
+      continue;
+    }
+
+    const [dimension, evidence, status, notes] = cells;
+    rowLabels.push(dimension);
+
+    if (!/^(PASS|GAP|BLOCKED)$/i.test(status)) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must use PASS, GAP, or BLOCKED for ${dimension}.`
+      );
+    }
+
+    if (!evidence || !notes) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must keep evidence and notes populated for ${dimension}.`
+      );
+    }
+  }
+
+  for (const requiredRow of requiredRows) {
+    if (!rowLabels.some((label) => requiredRow.pattern.test(label))) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} is missing a ${requiredRow.label} row.`
+      );
+    }
+  }
+
+  return issues;
+}
+
+function validateMilestoneReportReferences(
+  content: string,
+  artifactLabel: string,
+  sectionHeading: string,
+  requiredMentions: readonly string[]
+): string[] {
+  const issues: string[] = [];
+  const section = extractMarkdownSection(content, sectionHeading);
+
+  if (!/^- /m.test(section)) {
+    issues.push(
+      `${artifactLabel} section ${sectionHeading} must include at least one bullet with saved report references.`
+    );
+  }
+
+  for (const mention of requiredMentions) {
+    if (!new RegExp(escapeRegex(mention), "i").test(section)) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must reference ${mention}.`
+      );
+    }
+  }
+
+  return issues;
+}
+
+function parseMarkdownTableCells(line: string): string[] {
+  if (!/^\|.*\|$/.test(line)) {
+    return [];
+  }
+
+  return line
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isMarkdownTableRow(line: string): boolean {
+  const cells = parseMarkdownTableCells(line);
+
+  return cells.length > 0 && !cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function isMarkdownTableHeaderRow(line: string): boolean {
+  const cells = parseMarkdownTableCells(line).map((cell) => cell.toLowerCase());
+
+  if (cells.length === 0) {
+    return false;
+  }
+
+  const headerPatterns: Array<string[]> = [
+    ["dimension", "evidence", "status", "notes"],
+    ["requirement", "task or check", "evidence", "coverage state", "notes"],
+    ["id", "description", "research support"],
+    ["requirement", "task or check", "evidence", "coverage state"],
+    ["gap id", "surface", "evidence", "repair"]
+  ];
+
+  return headerPatterns.some(
+    (pattern) =>
+      pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
+  );
+}
+
+function summarizeMarkdownTableRow(line: string): string {
+  const cells = line
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+
+  if (cells.length === 0) {
+    return "";
+  }
+
+  if (cells.length >= 4) {
+    const label = cells[0] ?? "";
+    const evidence = cells[1] ?? "";
+    const status = cells[2] ?? "";
+    const note = cells[3] ?? "";
+    const summary = [label, status].filter((value) => value.length > 0).join(": ");
+    const withEvidence = evidence.length > 0 ? `${summary}${summary.length > 0 ? ": " : ""}${evidence}` : summary;
+
+    return note.length > 0
+      ? `${withEvidence}${withEvidence.length > 0 ? " - " : ""}${note}`
+      : withEvidence;
+  }
+
+  if (cells.length === 3) {
+    const summary = [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+    return cells[2]?.length > 0 ? `${summary}${summary.length > 0 ? " - " : ""}${cells[2]}` : summary;
+  }
+
+  if (cells.length === 2) {
+    return [cells[0] ?? "", cells[1] ?? ""].filter((value) => value.length > 0).join(": ");
+  }
+
+  return cells[0] ?? "";
+}
+
+function scoreDigestSectionHeading(heading: string): number {
+  const normalized = heading.trim().toLowerCase();
+  const highPriorityPatterns = [
+    /(?:^|\b)verdict(?:\b|$)/i,
+    /(?:^|\b)decision(?:\b|$)/i,
+    /(?:^|\b)evidence(?:\b|$)/i,
+    /next safe action/i,
+    /source reports used/i,
+    /recommended carry-forward context/i,
+    /milestone evidence dimensions/i,
+    /roadmap and phase evidence/i,
+    /audit report used/i
+  ];
+  const mediumPriorityPatterns = [
+    /(?:^|\b)rationale(?:\b|$)/i,
+    /(?:^|\b)summary(?:\b|$)/i,
+    /(?:^|\b)carry-forward(?:\b|$)/i,
+    /(?:^|\b)follow[- ]ups?(?:\b|$)/i,
+    /(?:^|\b)blockers?(?:\b|$)/i,
+    /(?:^|\b)gaps?(?:\b|$)/i,
+    /(?:^|\b)outcomes?(?:\b|$)/i,
+    /(?:^|\b)watch items?(?:\b|$)/i,
+    /(?:^|\b)completion(?:\b|$)/i,
+    /(?:^|\b)intent(?:\b|$)/i
+  ];
+
+  if (highPriorityPatterns.some((pattern) => pattern.test(normalized))) {
+    return 2;
+  }
+
+  if (mediumPriorityPatterns.some((pattern) => pattern.test(normalized))) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function summarizeMarkdownSectionBody(section: string): string {
+  const lines = section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("## "));
+
+  if (lines.length === 0) {
+    return "";
+  }
+
+  const verdictLine = lines.find((line) => /^[-*+]\s+Verdict:/i.test(line) || /^Verdict:/i.test(line));
+
+  if (verdictLine) {
+    return verdictLine.replace(/^[-*+]\s*/, "").trim();
+  }
+
+  const tableRows = lines.filter(
+    (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
+  );
+
+  if (tableRows.length > 0) {
+    return tableRows
+      .slice(0, 4)
+      .map((line) => summarizeMarkdownTableRow(line))
+      .filter((line) => line.length > 0)
+      .join("; ");
+  }
+
+  const bullets = lines
+    .filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line))
+    .map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
+    .filter((line) => line.length > 0);
+
+  if (bullets.length > 0) {
+    return bullets.slice(0, 2).join("; ");
+  }
+
+  return lines[0] ?? "";
+}
+
+function splitMarkdownSections(lines: string[]): Array<{ heading: string; body: string[] }> {
+  const sections: Array<{ heading: string; body: string[] }> = [];
+  let current: { heading: string; body: string[] } | null = null;
+
+  for (const line of lines) {
+    if (/^##\s+/.test(line)) {
+      if (current) {
+        sections.push(current);
+      }
+
+      current = {
+        heading: line.replace(/^##\s+/, "").trim(),
+        body: []
+      };
+      continue;
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    current.body.push(line);
+  }
+
+  if (current) {
+    sections.push(current);
+  }
+
+  return sections;
+}
+
+function summarizePreambleLines(lines: string[]): string[] {
+  const synopsis: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("**") && /:\s*/.test(line)) {
+      synopsis.push(line.replace(/^\*\*(.+?)\*\*:\s*/, "$1: ").trim());
+      continue;
+    }
+
+    if (/^[-*+]\s+/.test(line)) {
+      synopsis.push(line.replace(/^[-*+]\s+/, "").trim());
+    }
+  }
+
+  if (synopsis.length > 0) {
+    return synopsis;
+  }
+
+  return lines
+    .map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
+    .filter((line) => line.length > 0)
+    .slice(0, 2);
+}
+
+const VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS: Array<{
+  pattern: RegExp;
+  signal: string;
+}> = [
+  { pattern: /\bPhase XX\b/i, signal: "Phase XX" },
+  { pattern: /<Phase Name>/i, signal: "<Phase Name>" },
+  { pattern: /<phase-dir>/i, signal: "<phase-dir>" },
+  {
+    pattern: /\b(?:XX|\d{2}(?:\.\d+)?)\-YY-SUMMARY\.md\b/i,
+    signal: "XX-YY-SUMMARY.md"
+  },
+  { pattern: /\bXX-VERIFICATION\.md\b/i, signal: "XX-VERIFICATION.md" },
+  { pattern: /\bXX-UAT\.md\b/i, signal: "XX-UAT.md" },
+  { pattern: /<requirement-id>/i, signal: "<requirement-id>" },
+  { pattern: /<task or check>/i, signal: "<task or check>" },
+  {
+    pattern: /<summary path, command, or saved evidence>/i,
+    signal: "<summary path, command, or saved evidence>"
+  },
+  { pattern: /<coverage note>/i, signal: "<coverage note>" },
+  { pattern: /<manual-only item>/i, signal: "<manual-only item>" },
+  { pattern: /<coverage gap class>/i, signal: "<coverage gap class>" },
+  { pattern: /<scope>/i, signal: "<scope>" },
+  { pattern: /<evidence>/i, signal: "<evidence>" },
+  { pattern: /<repair>/i, signal: "<repair>" },
+  { pattern: /<name or pending>/i, signal: "<name or pending>" },
+  { pattern: /<ready for UAT or not ready>/i, signal: "<ready for UAT or not ready>" },
+  { pattern: /\bPASS\|PARTIAL\|BLOCKED\b/i, signal: "PASS|PARTIAL|BLOCKED" },
+  { pattern: /\bPASS\|MANUAL\|DEFERRED\|BLOCKED\b/i, signal: "PASS|MANUAL|DEFERRED|BLOCKED" },
+  { pattern: /\bMANUAL\|DEFERRED\|NONE\b/i, signal: "MANUAL|DEFERRED|NONE" },
+  {
+    pattern: /Concise readiness result grounded in the saved summaries\./i,
+    signal: "Concise readiness result grounded in the saved summaries."
+  },
+  {
+    pattern: /Concise user-facing result grounded in the saved summaries and verification artifact\./i,
+    signal: "Concise user-facing result grounded in the saved summaries and verification artifact."
+  },
+  { pattern: /\bPASS\|FAIL\|PARTIAL\b/i, signal: "PASS|FAIL|PARTIAL" }
+];
+
+function validateValidationScaffoldPlaceholders(
+  content: string,
+  artifactLabel: string
+): string[] {
+  return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
+    ({ pattern, signal }) => {
+      const matchedPlaceholder = content.match(pattern)?.[0] ?? signal;
+      return `${artifactLabel} still contains placeholder scaffold text: ${matchedPlaceholder}.`;
+    }
+  );
+}
+
 function validateContractBackedMarkdown(
   content: string,
   contractId: ArtifactContractId,
@@ -1993,6 +2352,35 @@ function hasRequirementTableRows(section: string): boolean {
         /^id$/i.test(cells[0] ?? "") &&
         /^description$/i.test(cells[1] ?? "") &&
         /^research support$/i.test(cells[2] ?? "");
+      const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+      return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
+    });
+}
+
+function hasCoverageTableRows(section: string): boolean {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .some((line) => {
+      if (!/^\|.*\|$/.test(line)) {
+        return false;
+      }
+
+      const cells = line
+        .slice(1, -1)
+        .split("|")
+        .map((cell) => cell.trim());
+
+      if (cells.length < 4) {
+        return false;
+      }
+
+      const isHeader =
+        /^requirement$/i.test(cells[0] ?? "") &&
+        /^task or check$/i.test(cells[1] ?? "") &&
+        /^evidence$/i.test(cells[2] ?? "") &&
+        /^coverage state$/i.test(cells[3] ?? "");
       const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 
       return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
@@ -2112,6 +2500,21 @@ export function validateVerificationArtifactContent(
     );
   }
 
+  issues.push(...validateValidationScaffoldPlaceholders(content, "Verification artifact"));
+  if (!/^\*\*Gate State:\*\*\s*.+$/m.test(content)) {
+    issues.push("Verification artifact must declare **Gate State:** with the readiness gate state.");
+  }
+
+  if (/^\*\*Sign-off:\*\*\s*verified\|pending\|blocked\s*$/m.test(content)) {
+    issues.push(
+      "Verification artifact must replace the raw **Sign-off:** verified|pending|blocked placeholder with the verification owner or pending state."
+    );
+  }
+
+  if (!/^\*\*Sign-off:\*\*\s*.+$/m.test(content)) {
+    issues.push("Verification artifact must declare **Sign-off:** with the verification owner or pending state.");
+  }
+
   issues.push(
     ...validateRequiredMarkdownSections(
       content,
@@ -2126,6 +2529,13 @@ export function validateVerificationArtifactContent(
         `Verification artifact still contains placeholder scaffold text: ${placeholderBody}`
       );
     }
+  }
+
+  const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
+  if (!hasCoverageTableRows(requirementCoverage)) {
+    issues.push(
+      "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
+    );
   }
 
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
@@ -2170,6 +2580,21 @@ export function validateUatArtifactContent(
     issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
   }
 
+  if (!/^\*\*Resume State:\*\*\s*(RESUMED|NEW|CONTINUED)\s*$/m.test(content)) {
+    issues.push("UAT artifact must declare **Resume State:** RESUMED, NEW, or CONTINUED.");
+  }
+
+  if (
+    !/^\*\*Checkpoint:\*\*\s*(?:none|(?:\.blueprint\/phases\/[^\s/]+\/)?[^\s]+-DISCUSS-CHECKPOINT\.json)\s*$/m.test(
+      content
+    )
+  ) {
+    issues.push(
+      "UAT artifact must declare **Checkpoint:** with `none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT.json`."
+    );
+  }
+
+  issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
 
   for (const placeholderBody of UAT_PLACEHOLDER_BODIES) {
@@ -2179,10 +2604,13 @@ export function validateUatArtifactContent(
   }
 
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
+  const sessionState = extractMarkdownSection(content, "Session State");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
-  if (!containsReferencedSummaryPath(`${uatSummary}\n${observedBehavior}`, summaryPaths)) {
+  if (
+    !containsReferencedSummaryPath(`${uatSummary}\n${sessionState}\n${observedBehavior}`, summaryPaths)
+  ) {
     issues.push(
-      "UAT artifact must reference at least one saved execution summary path or filename in ## UAT Summary or ## Observed Behavior."
+      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
     );
   }
 
@@ -2231,7 +2659,178 @@ export function validateReportArtifactContent(
     };
   }
 
-  return validateContractBackedMarkdown(content, contractId, "Report artifact");
+  const isMilestoneAudit = contractId === "report.milestone-audit";
+  const milestoneAuditGapHeadings = [
+    "Requirement Gaps",
+    "Integration Gaps",
+    "Flow Gaps",
+    "Optional Gaps"
+  ] as const;
+  const hasStructuredMilestoneAuditGapSections = isMilestoneAudit
+    ? milestoneAuditGapHeadings.some((heading) =>
+        new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(content)
+      )
+    : false;
+  const hasLegacyMilestoneAuditGapSummary = isMilestoneAudit
+    ? /(?:^|\n)## Gaps Found\s*$/m.test(content)
+    : false;
+  const legacyMilestoneAuditCompatibility =
+    isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
+
+  const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
+
+  if (!validation.valid && !legacyMilestoneAuditCompatibility) {
+    return validation;
+  }
+
+  if (isMilestoneAudit) {
+    const issues: string[] = [];
+    const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
+    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
+    const requirementGaps = extractMarkdownSection(content, "Requirement Gaps");
+    const integrationGaps = extractMarkdownSection(content, "Integration Gaps");
+    const flowGaps = extractMarkdownSection(content, "Flow Gaps");
+    const optionalGaps = extractMarkdownSection(content, "Optional Gaps");
+    const hasStructuredGapSections =
+      [requirementGaps, integrationGaps, flowGaps, optionalGaps].some((section) => section.length > 0) ||
+      hasStructuredMilestoneAuditGapSections;
+    const hasLegacyGapSummary = hasLegacyMilestoneAuditGapSummary;
+    const evidenceRows = evidenceDimensions
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+    const gapSections = [
+      ["Requirement Gaps", requirementGaps],
+      ["Integration Gaps", integrationGaps],
+      ["Flow Gaps", flowGaps],
+      ["Optional Gaps", optionalGaps]
+    ] as const;
+
+    if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
+      issues.push(
+        "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
+      );
+    }
+
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
+      issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
+    }
+
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Dimensions", [
+        { label: "Roadmap intent", pattern: /Roadmap intent/i },
+        { label: "Validation evidence", pattern: /Validation evidence/i },
+        { label: "UAT evidence", pattern: /UAT evidence/i },
+        { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
+      ])
+    );
+
+    if (hasStructuredGapSections) {
+      for (const [heading, section] of gapSections) {
+        const rows = extractMarkdownTableRows(section);
+
+        if (rows.length === 0) {
+          issues.push(`Report artifact section ${heading} must include at least one structured gap row.`);
+          continue;
+        }
+
+        for (const row of rows) {
+          if (row.length !== 4) {
+            issues.push(
+              `Report artifact section ${heading} must keep each gap row in the Gap ID, Surface, Evidence, and Repair columns.`
+            );
+            continue;
+          }
+        }
+      }
+    }
+
+    if (!hasStructuredGapSections && hasLegacyGapSummary) {
+      const filteredValidationIssues = validation.issues.filter(
+        (issue) =>
+          !milestoneAuditGapHeadings.some((heading) =>
+            issue.includes(`missing required section: ${heading}`) ||
+            issue.includes(`section ${heading} must not be empty.`)
+          )
+      );
+
+      return {
+        valid: issues.length === 0 && filteredValidationIssues.length === 0,
+        issues: [...filteredValidationIssues, ...issues],
+        warnings: []
+      };
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+
+  if (contractId === "report.milestone-complete") {
+    const issues: string[] = [];
+    const completionDecision = extractMarkdownSection(content, "Completion Decision");
+
+    if (!/^- Decision:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(completionDecision)) {
+      issues.push(
+        "Report artifact section Completion Decision must include a concrete Decision line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
+      );
+    }
+
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(completionDecision)) {
+      issues.push(
+        "Report artifact section Completion Decision still contains scaffold decision placeholder text."
+      );
+    }
+
+    issues.push(
+      ...validateMilestoneReportReferences(content, "Report artifact", "Audit Report Used", [
+        "milestone-audit"
+      ])
+    );
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Ledger", [
+        { label: "Roadmap intent", pattern: /Roadmap intent/i },
+        { label: "Validation evidence", pattern: /Validation evidence/i },
+        { label: "UAT evidence", pattern: /UAT evidence/i },
+        { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
+      ])
+    );
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+
+  if (contractId === "report.milestone-summary") {
+    const issues: string[] = [];
+
+    issues.push(
+      ...validateMilestoneReportReferences(content, "Report artifact", "Source Reports Used", [
+        "milestone-audit",
+        "milestone-complete"
+      ])
+    );
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Ledger", [
+        { label: "Audit report", pattern: /Audit report/i },
+        { label: "Completion report", pattern: /Completion report/i },
+        { label: "Roadmap context", pattern: /Roadmap context/i },
+        { label: "Carry-forward context", pattern: /Carry-forward context/i }
+      ])
+    );
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+
+  return validation;
 }
 
 type SummaryValidationOptions = {
@@ -3429,6 +4028,17 @@ function collectPhaseBundleIssues(
   return issues;
 }
 
+function collectPhaseSummaryPathsForArtifact(
+  phaseArtifacts: string[],
+  artifactPath: string
+): string[] {
+  const phaseRoot = artifactPath.slice(0, artifactPath.lastIndexOf("/") + 1);
+
+  return phaseArtifacts.filter(
+    (value) => value.startsWith(phaseRoot) && value.endsWith("-SUMMARY.md")
+  );
+}
+
 export async function blueprintArtifactValidate(
   args: ArtifactValidateArgs = {}
 ): Promise<ArtifactValidateResult> {
@@ -3518,6 +4128,48 @@ export async function blueprintArtifactValidate(
     if (!validation.valid) {
       suggestedRepairs.add(
         "Regenerate or update malformed phase research through /blu-research-phase before planning."
+      );
+    }
+  }
+
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
+    const validation = validateVerificationArtifactContent(raw, summaryPaths);
+
+    for (const issue of validation.issues) {
+      issues.push(`${artifact}: ${issue}`);
+    }
+
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed phase verification through /blu-validate-phase before UAT."
+      );
+    }
+  }
+
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-UAT.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
+    const validation = validateUatArtifactContent(raw, summaryPaths);
+
+    for (const issue of validation.issues) {
+      issues.push(`${artifact}: ${issue}`);
+    }
+
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed UAT through /blu-verify-work after the saved summaries and verification artifact are corrected."
       );
     }
   }
@@ -3806,11 +4458,58 @@ function summarizeArtifactContent(content: string): {
     (line) => line.length > 0 && !line.startsWith("*Generated by")
   );
   const heading = meaningfulLines.find((line) => line.startsWith("#"));
-  const bodyLine = meaningfulLines.find((line) => !line.startsWith("#"));
+  const h1Index = meaningfulLines.findIndex((line) => /^#\s+/.test(line));
+  const firstSectionIndex = meaningfulLines.findIndex(
+    (line, index) => index > h1Index && /^##\s+/.test(line)
+  );
+  const preambleLines =
+    h1Index >= 0
+      ? meaningfulLines
+          .slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length)
+          .filter((line) => !line.startsWith("#"))
+      : [];
+  const sections = splitMarkdownSections(meaningfulLines).map((section, index) => {
+    const summary = summarizeMarkdownSectionBody(section.body.join("\n"));
+
+    return {
+      ...section,
+      index,
+      summary,
+      score: scoreDigestSectionHeading(section.heading)
+    };
+  });
+  const prioritizedSections = sections
+    .filter((section) => section.score > 0)
+    .sort((left, right) => right.score - left.score || left.index - right.index);
+  const selectedSectionIndexes = new Set<number>();
+  const preferredSections =
+    prioritizedSections.length > 0 ? prioritizedSections.slice(0, 6) : sections.slice(0, 2);
+
+  for (const section of preferredSections) {
+    selectedSectionIndexes.add(section.index);
+  }
+
+  if (selectedSectionIndexes.size < 2) {
+    for (const section of sections.slice(0, 2)) {
+      selectedSectionIndexes.add(section.index);
+    }
+  }
+
+  const summaryParts = [
+    ...summarizePreambleLines(preambleLines),
+    ...sections
+      .filter((section) => selectedSectionIndexes.has(section.index))
+      .map((section) => {
+        return section.summary.length > 0 ? `${section.heading}: ${section.summary}` : section.heading;
+      })
+  ].filter((part) => part.length > 0);
 
   return {
     title: heading?.replace(/^#+\s*/, "").trim() ?? "Artifact Summary",
-    summary: bodyLine ?? "Artifact content is present and available for review.",
+    summary:
+      summaryParts.length > 0
+        ? summaryParts.join(" | ")
+        : "Artifact content is present and available for review.",
     evidence: []
   };
 }

@@ -9,14 +9,14 @@
 ## Purpose
 
 
-`insert-phase` is Blueprint's command for insert urgent work as decimal phase (e.g., 72.1) between existing phases. In Blueprint it is implemented as a host-native roadmap insertion flow that reads the current roadmap first, derives the next decimal from the requested integer phase group, inserts the new roadmap line and Phase Details block without renumbering later phases, scaffolds the matching `.blueprint/phases/<phase-slug>/` directory, and then routes the repo back into discovery.
+`insert-phase` is Blueprint's command for insert urgent work as decimal phase (e.g., 72.1) between existing phases. In Blueprint it is implemented as a host-native roadmap insertion flow that reads the current roadmap first, derives the next decimal from the requested integer phase group, inserts the new roadmap line and Phase Details block without renumbering later phases, scaffolds the matching `.blueprint/phases/<phasePrefix>-<phaseSlug>/` directory, and then routes the repo back into discovery.
 
 
 ## Command Path And Examples
 
 - CLI command path: `/blu-insert-phase`
 - Root router form: `/blu insert-phase`
-- Argument hint: `<after> <description>`
+- Argument hint: `<afterPhaseNumber> <description>`
 - `/blu-insert-phase 3 Migration-cleanup`
 - `/blu insert-phase`
 
@@ -24,8 +24,8 @@
 
 
 - A Blueprint project and roadmap must already exist.
-- An existing integer phase is required as the insertion anchor. Decimal insertion targets are rejected.
-- A non-empty phase description is required. The description becomes the inserted phase title and drives the scaffolded phase slug.
+- An existing integer phase number is required as the insertion anchor (`after`). Decimal insertion targets are rejected.
+- A non-empty phase description is required. The description becomes the inserted phase title and drives the scaffolded phase slug, while the returned `phasePrefix` determines the scaffolded context filename.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
 
@@ -34,7 +34,7 @@
 
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
-- Repo side effects: Inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phase-slug>/`, updates `.blueprint/STATE.md`, and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phasePrefix>-<phaseSlug>/`, updates `.blueprint/STATE.md`, and does not mutate code or git state.
 
 
 ## Blueprint And Global State Reads
@@ -47,7 +47,7 @@
 
 
 - `.blueprint/ROADMAP.md`
-- `.blueprint/phases/<phase-slug>/`
+- `.blueprint/phases/<phasePrefix>-<phaseSlug>/`
 - `.blueprint/STATE.md`
 
 
@@ -55,14 +55,15 @@
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
-- `blueprint_roadmap_insert_phase` -> `{afterPhaseNumber, phaseNumber, phaseDir, roadmapPath}`
+- `blueprint_roadmap_insert_phase` -> `{afterPhaseNumber, phaseNumber, phasePrefix, phaseDir, roadmapPath}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Phase Insertion Contract
 
 - Call `blueprint_roadmap_insert_phase` with only the confirmed integer anchor in `after` plus the phase description.
-- Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering or phase slugs manually.
+- Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
+- Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
 
 
@@ -100,7 +101,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the integer insertion target, the computed next decimal number, and the fact that later phases will not be renumbered automatically before mutation.
+- Confirm the integer insertion target, the computed next decimal number, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
 
 
 ## Edge Cases
@@ -126,8 +127,9 @@
 
 - Keeps roadmap, phase directories, and state synchronized.
 - Inserts the next decimal after the requested integer phase group and does not renumber later phases.
-- Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
-- Writes `Depends on: Phase <integer>` and `Status: planned` for the inserted Phase Details block.
+- Creates the matching `.blueprint/phases/<phasePrefix>-<phaseSlug>/` scaffold.
+- Writes `Depends on: Phase <integer>`, `Status: planned`, and the optional `Inserted: yes` marker for the inserted Phase Details block.
+- Records the inserted decimal phase in `STATE.md` without renumbering later phases.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
@@ -144,4 +146,3 @@
 - Conflicting-directory drift rejection fixture.
 - Later-phase non-renumbering regression fixture.
 - Direct `insert-phase` happy-path fixture.
-

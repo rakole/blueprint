@@ -18,6 +18,7 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
+  blueprintArtifactReportWrite,
   blueprintArtifactValidate
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
@@ -660,14 +661,47 @@ autonomous: true
       `# Phase 02: Validation Hardening - Verification
 
 **Coverage:** Reviewed \`02-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Validation evidence is complete.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| CLOSE-01 | Preserve earlier milestone validation evidence | .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md | PASS | Earlier milestone evidence stays durable. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -690,18 +724,26 @@ autonomous: true
       `# Phase 02: Validation Hardening - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- UAT evidence is complete.
+- UAT evidence is complete for \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`
+- Current session step: none
+- Continuity notes: none
 
 ## Questions Asked
 
-- Did the earlier milestone close out cleanly?
+- none
 
 ## Observed Behavior
 
-- The observed behavior matched \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+- The accepted behavior matched \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -913,14 +955,47 @@ Close the milestone.
     `# Phase 03: Milestone Closeout - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Validation evidence is complete.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| CLOSE-02 | Preserve closeout validation evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | PASS | Closeout evidence stays durable. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -941,18 +1016,26 @@ Close the milestone.
     `# Phase 03: Milestone Closeout - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- UAT evidence is complete.
+- UAT evidence is complete for \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`
+- Current session step: none
+- Continuity notes: none
 
 ## Questions Asked
 
-- Did the milestone closeout match the saved execution summary?
+- none
 
 ## Observed Behavior
 
-- The observed behavior matched \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+- The accepted behavior matched \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -974,9 +1057,46 @@ Close the milestone.
       path.join(reportsDir, "milestone-audit-v2.md"),
       `# Milestone Audit: v2
 
-## Result
+**Verdict:** READY_TO_CLOSE
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
 
-- Audit complete.
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE
+- Rationale: All milestone phases have saved verification and UAT evidence.
+- Decision basis: The roadmap and evidence chain are aligned for closeout.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/02-validation-hardening/02-VERIFICATION.md | PASS | Validation evidence exists for the earlier milestone phase. |
+| UAT evidence | .blueprint/phases/02-validation-hardening/02-UAT.md | PASS | UAT evidence exists for the earlier milestone phase. |
+| Carry-forward evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/02-validation-hardening/02-VERIFICATION.md
+- .blueprint/phases/02-validation-hardening/02-UAT.md
+- .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
 `,
       "utf8"
     );
@@ -1381,12 +1501,80 @@ test("project status routes milestone closeout through audit, completion, summar
 
   assert.match(noReportsStatus.nextAction, /\/blu-audit-milestone v2/);
   assert.match(noReportsState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.equal(noReportsState.derivedStatus.milestoneAudit.found, false);
+  assert.equal(noReportsState.derivedStatus.milestoneAudit.readyForCompletion, false);
   assert.match(auditStatus.nextAction, /\/blu-complete-milestone v2/);
   assert.match(auditState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
+  assert.equal(auditState.derivedStatus.milestoneAudit.found, true);
+  assert.equal(auditState.derivedStatus.milestoneAudit.verdict, "READY_TO_CLOSE");
+  assert.equal(auditState.derivedStatus.milestoneAudit.readyForCompletion, true);
+  assert.match(auditState.derivedStatus.milestoneAudit.nextSafeAction ?? "", /\/blu-complete-milestone v2/);
   assert.match(completeStatus.nextAction, /\/blu-milestone-summary v2/);
   assert.match(completeState.derivedStatus.nextAction, /\/blu-milestone-summary v2/);
+  assert.equal(completeState.derivedStatus.milestoneAudit.readyForCompletion, true);
   assert.match(summaryStatus.nextAction, /\/blu-new-milestone/);
   assert.match(summaryState.derivedStatus.nextAction, /\/blu-new-milestone/);
+  assert.equal(summaryState.derivedStatus.milestoneAudit.readyForCompletion, true);
+});
+
+test("project status keeps blocked milestone audits on gap planning instead of completion", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: `# Milestone Audit: v2
+
+**Verdict:** BLOCKED
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: BLOCKED
+- Rationale: Open archival follow-up work still blocks milestone closeout.
+- Decision basis: The saved roadmap and closeout evidence show unresolved gaps.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent remains intact. |
+| Validation evidence | .blueprint/phases/03-milestone-closeout/03-VERIFICATION.md | PASS | Validation evidence exists for the closeout phase. |
+| UAT evidence | .blueprint/phases/03-milestone-closeout/03-UAT.md | PASS | UAT evidence exists for the closeout phase. |
+| Carry-forward evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | BLOCKED | The summary still points to unresolved archival follow-up work. |
+
+## Original Intent Snapshot
+
+- Locked milestone intent and source evidence.
+
+## Roadmap And Phase Evidence
+
+- Completed phase evidence reviewed for this milestone.
+
+## Gaps Found
+
+- Phase 3 still has unresolved archival follow-up work.
+
+## Archival Blockers
+
+- Milestone closeout must stay blocked until the gap is closed.
+
+## Next Safe Action
+
+- /blu-plan-milestone-gaps
+`
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-milestone-gaps/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
 test("project status requires milestone-wide validation evidence before closeout routing", async (t) => {
@@ -1696,7 +1884,7 @@ test("help progress and health command files reference registered MCP tool names
       file: "commands/blu-remove-phase.toml",
       tools: [
         "blueprint_roadmap_read",
-        "blueprint_artifact_list",
+        "blueprint_phase_locate",
         "blueprint_roadmap_remove_phase",
         "blueprint_state_update"
       ]

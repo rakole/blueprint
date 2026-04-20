@@ -6,6 +6,7 @@ export type BlueprintState = {
     activeCommand: string;
     nextAction: string;
     blockers: string[];
+    roadmapEvolutionNotes: string[];
     lastUpdated: string;
 };
 type StateUpdateArgs = {
@@ -29,6 +30,7 @@ type StateLoadResult = {
         currentPhase: string | null;
         nextAction: string;
         hasBlockers: boolean;
+        milestoneAudit: MilestoneAuditReportStatus;
     };
 };
 type PauseHandoffRecord = {
@@ -96,6 +98,26 @@ type StateSyncResult = {
     warnings: string[];
     statePath: string;
 };
+type MilestoneAuditReportStatus = {
+    found: boolean;
+    verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+    gapSections: {
+        requirement: MilestoneAuditGapRow[];
+        integration: MilestoneAuditGapRow[];
+        flow: MilestoneAuditGapRow[];
+        optional: MilestoneAuditGapRow[];
+    };
+    hasActionableGaps: boolean;
+    hasArchivalBlockers: boolean;
+    nextSafeAction: string | null;
+    readyForCompletion: boolean;
+};
+type MilestoneAuditGapRow = {
+    gapId: string;
+    surface: string;
+    evidence: string;
+    repair: string;
+};
 export declare function blueprintPauseHandoffGet(args?: PauseHandoffGetArgs): Promise<PauseHandoffGetResult>;
 export declare function blueprintPauseHandoffWrite(args: PauseHandoffWriteArgs): Promise<PauseHandoffWriteResult>;
 export declare function loadBlueprintState(cwd?: string): Promise<BlueprintState>;
@@ -125,6 +147,7 @@ export declare const stateToolDefinitions: ({
             activeCommand: z.ZodOptional<z.ZodString>;
             nextAction: z.ZodOptional<z.ZodString>;
             blockers: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            roadmapEvolutionNotes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             lastUpdated: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>>;
     };

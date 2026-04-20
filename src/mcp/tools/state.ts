@@ -12,6 +12,7 @@ import {
   ensureRepoRoot,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
+  extractMarkdownTableRows,
   resolveBlueprintPath,
   toRepoRelativePath,
   validatePlanArtifactContent,
@@ -38,6 +39,7 @@ export type BlueprintState = {
   activeCommand: string;
   nextAction: string;
   blockers: string[];
+  roadmapEvolutionNotes: string[];
   lastUpdated: string;
 };
 
@@ -65,6 +67,7 @@ type StateLoadResult = {
     currentPhase: string | null;
     nextAction: string;
     hasBlockers: boolean;
+    milestoneAudit: MilestoneAuditReportStatus;
   };
 };
 
@@ -200,6 +203,45 @@ type MilestoneEvidenceStatus = {
   warnings: string[];
 };
 
+type MilestoneAuditReportStatus = {
+  found: boolean;
+  verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+  gapSections: {
+    requirement: MilestoneAuditGapRow[];
+    integration: MilestoneAuditGapRow[];
+    flow: MilestoneAuditGapRow[];
+    optional: MilestoneAuditGapRow[];
+  };
+  hasActionableGaps: boolean;
+  hasArchivalBlockers: boolean;
+  nextSafeAction: string | null;
+  readyForCompletion: boolean;
+};
+
+type MilestoneAuditGapRow = {
+  gapId: string;
+  surface: string;
+  evidence: string;
+  repair: string;
+};
+
+function emptyMilestoneAuditReportStatus(): MilestoneAuditReportStatus {
+  return {
+    found: false,
+    verdict: null,
+    gapSections: {
+      requirement: [],
+      integration: [],
+      flow: [],
+      optional: []
+    },
+    hasActionableGaps: false,
+    hasArchivalBlockers: false,
+    nextSafeAction: null,
+    readyForCompletion: false
+  };
+}
+
 type BootstrapRoutingSignals = {
   brownfieldDetected: boolean;
   codebaseMapped: boolean;
@@ -217,6 +259,7 @@ const DEFAULT_STATE: BlueprintState = {
   activeCommand: blueprintDirectCommand("new-project"),
   nextAction: blueprintRunDirectCommand("new-project"),
   blockers: [],
+  roadmapEvolutionNotes: [],
   lastUpdated: new Date(0).toISOString()
 };
 
@@ -236,6 +279,7 @@ const stateUpdateInputSchema = {
       activeCommand: z.string().optional(),
       nextAction: z.string().optional(),
       blockers: z.array(z.string()).optional(),
+      roadmapEvolutionNotes: z.array(z.string()).optional(),
       lastUpdated: z.string().optional()
     })
     .optional()
@@ -502,6 +546,12 @@ function buildPauseHandoffNextAction(
 function renderStateDocument(state: BlueprintState): string {
   const blockers =
     state.blockers.length === 0 ? "- none" : state.blockers.map((item) => `- ${item}`).join("\n");
+  const roadmapEvolutionNotes =
+    state.roadmapEvolutionNotes.length === 0
+      ? ""
+      : `\n## Roadmap Evolution Notes\n\n${state.roadmapEvolutionNotes
+          .map((item) => `- ${item}`)
+          .join("\n")}\n`;
 
   return `# Blueprint State
 
@@ -515,6 +565,7 @@ function renderStateDocument(state: BlueprintState): string {
 ## Blockers
 
 ${blockers}
+${roadmapEvolutionNotes}
 `;
 }
 
@@ -524,13 +575,20 @@ function parseStateDocument(raw: string): BlueprintState {
     return match ? match[1].trim() : null;
   };
 
-  const blockersSection = raw.match(/## Blockers\s+([\s\S]*)$/m)?.[1] ?? "";
+  const blockersSection = extractMarkdownSection(raw, "Blockers");
+  const roadmapEvolutionNotesSection = extractMarkdownSection(raw, "Roadmap Evolution Notes");
   const blockers = blockersSection
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2).trim())
     .filter((line) => line && line !== "none");
+  const roadmapEvolutionNotes = roadmapEvolutionNotesSection
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter((line) => line.length > 0 && line !== "none");
 
   return {
     projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
@@ -540,7 +598,8 @@ function parseStateDocument(raw: string): BlueprintState {
     activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
     nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
     lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
-    blockers
+    blockers,
+    roadmapEvolutionNotes
   };
 }
 
@@ -1123,13 +1182,175 @@ async function inspectMilestoneEvidence(
   };
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractMarkdownSectionLines(content: string, heading: string): string[] {
+  const lines = content.split(/\r?\n/);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
+  const startIndex = lines.findIndex((line) => headingPattern.test(line.trim()));
+
+  if (startIndex === -1) {
+    return [];
+  }
+
+  const sectionLines: string[] = [];
+
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+
+    if (/^##\s+/.test(line)) {
+      break;
+    }
+
+    if (line.length === 0) {
+      continue;
+    }
+
+    sectionLines.push(line);
+  }
+
+  return sectionLines;
+}
+
+function normalizeReportSignalLine(line: string): string {
+  return line
+    .replace(/^[*-]\s+/, "")
+    .replace(/`/g, "")
+    .trim()
+    .replace(/[.]+$/, "")
+    .toLowerCase();
+}
+
+function isNoneLikeReportSignal(line: string): boolean {
+  const normalized = normalizeReportSignalLine(line);
+
+  return (
+    normalized === "none" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized.startsWith("no gaps") ||
+    normalized.startsWith("no actionable gaps") ||
+    normalized.startsWith("no blockers") ||
+    normalized.startsWith("no archival blockers")
+  );
+}
+
+function extractBlueprintCommand(line: string): string | null {
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
+
+  return match?.[0]?.trim() ?? null;
+}
+
+function parseMilestoneAuditGapSection(section: string): MilestoneAuditGapRow[] {
+  return extractMarkdownTableRows(section).flatMap((row) => {
+    if (row.length !== 4) {
+      return [];
+    }
+
+    const [gapId, surface, evidence, repair] = row.map((cell) => cell.trim());
+
+    return [
+      {
+        gapId,
+        surface,
+        evidence,
+        repair
+      }
+    ];
+  });
+}
+
+function hasActionableMilestoneAuditGap(rows: MilestoneAuditGapRow[]): boolean {
+  return rows.some((row) => {
+    return [row.gapId, row.surface, row.evidence, row.repair].some(
+      (value) => !isNoneLikeReportSignal(value)
+    );
+  });
+}
+
+async function inspectMilestoneAuditReportStatus(args: {
+  projectRoot: string;
+  currentMilestone: string | null;
+  reports: string[];
+}): Promise<MilestoneAuditReportStatus> {
+  if (args.currentMilestone === null) {
+    return emptyMilestoneAuditReportStatus();
+  }
+
+  const reportPath = buildBlueprintReportPath(`milestone-audit-${args.currentMilestone}`);
+
+  if (!args.reports.includes(reportPath)) {
+    return emptyMilestoneAuditReportStatus();
+  }
+
+  try {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
+    const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
+    const requirementGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection(raw, "Requirement Gaps")
+    );
+    const integrationGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection(raw, "Integration Gaps")
+    );
+    const flowGapRows = parseMilestoneAuditGapSection(extractMarkdownSection(raw, "Flow Gaps"));
+    const optionalGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection(raw, "Optional Gaps")
+    );
+    const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
+    const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
+    const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
+    const verdict =
+      auditVerdictLines
+        .map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null)
+      .find((value): value is "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" => value !== null) ??
+      null;
+    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
+    const nextSafeAction =
+      nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    const gapSections = {
+      requirement: requirementGapRows,
+      integration: integrationGapRows,
+      flow: flowGapRows,
+      optional: optionalGapRows
+    };
+    const hasStructuredGapSections = Object.values(gapSections).some((rows) => rows.length > 0);
+    const actionableGaps =
+      hasActionableMilestoneAuditGap(requirementGapRows) ||
+      hasActionableMilestoneAuditGap(integrationGapRows) ||
+      hasActionableMilestoneAuditGap(flowGapRows) ||
+      hasActionableMilestoneAuditGap(optionalGapRows) ||
+      (!hasStructuredGapSections && gapsFound.some((line) => !isNoneLikeReportSignal(line)));
+
+    return {
+      found: true,
+      verdict,
+      gapSections,
+      hasActionableGaps: actionableGaps,
+      hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
+      nextSafeAction,
+      readyForCompletion:
+        verdict === "READY_TO_CLOSE" &&
+        !verdictBlocksCompletion &&
+        !actionableGaps &&
+        archivalBlockers.every(isNoneLikeReportSignal)
+    };
+  } catch {
+    return {
+      ...emptyMilestoneAuditReportStatus(),
+      found: true
+    };
+  }
+}
+
 async function deriveNextAction(args: {
   projectStatus: string;
   blockers: string[];
   currentPhase: string | null;
   currentMilestone: string | null;
   allPhasesComplete: boolean;
-  hasMilestoneAudit: boolean;
+  milestoneAuditReport: MilestoneAuditReportStatus;
   hasMilestoneCompletion: boolean;
   hasMilestoneSummary: boolean;
   phaseArtifacts: CurrentPhaseArtifactStatus;
@@ -1162,6 +1383,7 @@ async function deriveNextAction(args: {
   const validatePhaseCommand = blueprintDirectCommand("validate-phase");
   const verifyWorkCommand = blueprintDirectCommand("verify-work");
   const auditMilestoneCommand = blueprintDirectCommand("audit-milestone");
+  const planMilestoneGapsCommand = blueprintDirectCommand("plan-milestone-gaps");
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
@@ -1272,7 +1494,7 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    !args.hasMilestoneAudit &&
+    !args.milestoneAuditReport.found &&
     implementedCommands.has(auditMilestoneCommand)
   ) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
@@ -1283,7 +1505,31 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    args.hasMilestoneAudit &&
+    args.milestoneAuditReport.found &&
+    args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" &&
+    args.milestoneAuditReport.nextSafeAction &&
+    implementedCommands.has(
+      args.milestoneAuditReport.nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? ""
+    )
+  ) {
+    return args.milestoneAuditReport.nextSafeAction;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
+    args.milestoneAuditReport.found &&
+    (args.milestoneAuditReport.hasActionableGaps || args.milestoneAuditReport.hasArchivalBlockers) &&
+    implementedCommands.has(planMilestoneGapsCommand)
+  ) {
+    return `Run ${planMilestoneGapsCommand} to close milestone gaps before archival`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
+    args.milestoneAuditReport.found &&
+    args.milestoneAuditReport.readyForCompletion &&
     !args.hasMilestoneCompletion &&
     implementedCommands.has(completeMilestoneCommand)
   ) {
@@ -1295,7 +1541,7 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    args.hasMilestoneAudit &&
+    args.milestoneAuditReport.found &&
     args.hasMilestoneCompletion &&
     !args.hasMilestoneSummary &&
     implementedCommands.has(milestoneSummaryCommand)
@@ -1308,7 +1554,7 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    args.hasMilestoneAudit &&
+    args.milestoneAuditReport.found &&
     args.hasMilestoneCompletion &&
     args.hasMilestoneSummary &&
     implementedCommands.has(newMilestoneCommand)
@@ -1324,6 +1570,7 @@ async function deriveNextAction(args: {
 async function buildSyncedState(projectRoot: string): Promise<{
   state: BlueprintState;
   warnings: string[];
+  milestoneAuditReport: MilestoneAuditReportStatus;
 }> {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
@@ -1363,10 +1610,6 @@ async function buildSyncedState(projectRoot: string): Promise<{
     );
   }
 
-  const milestoneAuditReportPath =
-    currentMilestone === null
-      ? null
-      : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
   const milestoneCompletionReportPath =
     currentMilestone === null
       ? null
@@ -1375,6 +1618,11 @@ async function buildSyncedState(projectRoot: string): Promise<{
     currentMilestone === null
       ? null
       : buildBlueprintReportPath(`milestone-summary-${currentMilestone}`);
+  const milestoneAuditReport = await inspectMilestoneAuditReportStatus({
+    projectRoot,
+    currentMilestone,
+    reports: inspection.reports
+  });
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
@@ -1456,9 +1704,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
               currentPhase,
               currentMilestone,
               allPhasesComplete: roadmapSignals.allPhasesComplete,
-              hasMilestoneAudit:
-                milestoneAuditReportPath !== null &&
-                inspection.reports.includes(milestoneAuditReportPath),
+              milestoneAuditReport,
               hasMilestoneCompletion:
                 milestoneCompletionReportPath !== null &&
                 inspection.reports.includes(milestoneCompletionReportPath),
@@ -1471,9 +1717,11 @@ async function buildSyncedState(projectRoot: string): Promise<{
               workflow: workflowRouting
             }),
       blockers,
+      roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
       lastUpdated: new Date().toISOString()
     },
-    warnings
+    warnings,
+    milestoneAuditReport
   };
 }
 
@@ -1601,13 +1849,21 @@ export async function blueprintStateLoad(
 ): Promise<StateLoadResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const syncedState =
+    inspection.readiness === "uninitialized"
+      ? null
+      : await buildSyncedState(projectRoot);
   const state =
     inspection.readiness === "uninitialized"
       ? await loadBlueprintState(projectRoot)
-      : (await buildSyncedState(projectRoot)).state;
+      : syncedState!.state;
   const currentPhase = inspection.readiness === "uninitialized" ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
+  const milestoneAuditReport =
+    inspection.readiness === "uninitialized"
+      ? emptyMilestoneAuditReportStatus()
+      : syncedState!.milestoneAuditReport;
 
   return {
     state,
@@ -1616,7 +1872,8 @@ export async function blueprintStateLoad(
       projectStatus: inspection.readiness,
       currentPhase,
       nextAction,
-      hasBlockers: blockers.length > 0
+      hasBlockers: blockers.length > 0,
+      milestoneAudit: milestoneAuditReport
     }
   };
 }
@@ -1634,6 +1891,7 @@ export async function blueprintStateUpdate(
     ...currentState,
     ...patch,
     blockers: patch.blockers ?? currentState.blockers,
+    roadmapEvolutionNotes: patch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
     lastUpdated: patch.lastUpdated ?? new Date().toISOString()
   };
   const updatedFields = [

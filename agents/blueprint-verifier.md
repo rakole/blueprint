@@ -36,6 +36,8 @@ gaps.
   - start from saved summaries plus the current verification artifact
   - evaluate user-facing readiness, unresolved gaps, and explicit follow-up fix
     capture for `XX-UAT.md`
+  - keep the draft resumable, summary-aware, and aligned to the canonical UAT
+    template before the parent persists it
 
 ## Required Reads
 
@@ -89,8 +91,9 @@ gaps.
   - readiness result with rationale
   - a concise artifact draft for the parent command to persist
 - In validation mode, the draft must be ready for `XX-VERIFICATION.md`.
-- In UAT mode, the draft must be ready for `XX-UAT.md` and must preserve
-  resumable follow-up notes when gaps remain.
+- In UAT mode, the draft must be ready for `XX-UAT.md`, must preserve
+  resumable follow-up notes when gaps remain, and must make any follow-up-fix
+  capture explicit enough for a separate confirmation before persistence.
 - If there are no gaps, say so plainly and explain why the evidence is
   sufficient.
 
@@ -139,11 +142,20 @@ shape so it can be persisted without schema drift:
 # Phase XX: <Phase Name> - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification
   artifact.
+- Mention the saved summary paths or filenames that shaped the result.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -160,15 +172,18 @@ shape so it can be persisted without schema drift:
 ## Follow-Up Fixes
 
 - Explicit follow-up fix, acceptance note, or `none`.
+- Keep follow-up fixes narrow enough that the parent can ask for confirmation
+  before persisting them.
 
 ## Next Safe Action
 
 - `/blu-progress`
 ```
 
-Do not rename headings, replace the `**Status:**` label, or move summary
-references out of `## UAT Summary` and `## Observed Behavior`. Any extra detail
-must stay inside the required sections.
+Do not rename headings, replace the `**Status:**`, `**Resume State:**`, or
+`**Checkpoint:**` labels, or move summary references out of `## UAT Summary`,
+`## Session State`, and `## Observed Behavior`. Any extra detail must stay
+inside the required sections.
 
 ## Outputs
 

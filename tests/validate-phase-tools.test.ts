@@ -5,7 +5,12 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintArtifactList, blueprintArtifactValidate } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactList,
+  blueprintArtifactValidate,
+  validateUatArtifactContent,
+  validateVerificationArtifactContent
+} from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseContext,
@@ -302,14 +307,47 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
     content: `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -336,14 +374,47 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
     content: `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -394,6 +465,9 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   ]);
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.issues.join("\n"), /\*\*Coverage:\*\*/);
+  assert.match(invalid.issues.join("\n"), /Gate State/);
+  assert.match(invalid.issues.join("\n"), /Sign-off/);
+  assert.match(invalid.issues.join("\n"), /Requirement \/ Task Coverage/);
   assert.match(invalid.issues.join("\n"), /Evidence Reviewed/);
   assert.match(invalid.issues.join("\n"), /Gaps Found/);
   assert.match(invalid.issues.join("\n"), /Suggested Repairs/);
@@ -406,6 +480,219 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
   assert.match(afterStatus.nextAction, /\/blu-verify-work 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-verify-work 3/);
   assert.match(verificationBody, /\*\*Coverage:\*\*/);
+  assert.match(verificationBody, /Gate State/);
+});
+
+test("validation tools reject scaffold placeholder evidence for verification and UAT writes", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const verificationPlaceholderContent = `# Phase XX: <Phase Name> - Verification
+
+**Coverage:** Reviewed \`03.1-YY-SUMMARY.md\` and any other saved phase summaries for validation evidence.
+**Gate State:** PASS|PARTIAL|BLOCKED
+**Sign-off:** verified|pending|blocked
+
+## Validation Summary
+
+- Concise readiness result grounded in the saved summaries.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| <requirement-id> | <task or check> | <summary path, command, or saved evidence> | PASS|MANUAL|DEFERRED|BLOCKED | <coverage note> |
+
+## Evidence Reviewed
+
+  - .blueprint/phases/<phase-dir>/03.1-YY-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness:
+- Commands:
+- Evidence type:
+- Test infrastructure status:
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+
+## Gate State
+
+- Gate: PASS|PARTIAL|BLOCKED
+- Sign-off: <name or pending>
+- Readiness: <ready for UAT or not ready>
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| <coverage gap class> | <scope> | <evidence> | <repair> |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work XX
+`;
+
+  const verificationValidation = validateVerificationArtifactContent(
+    verificationPlaceholderContent,
+    [summaryPath]
+  );
+  const verificationWrite = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: verificationPlaceholderContent,
+    overwrite: true
+  });
+
+  assert.equal(verificationValidation.valid, false);
+  assert.match(verificationValidation.issues.join("\n"), /Phase XX/);
+  assert.match(verificationValidation.issues.join("\n"), /<Phase Name>/);
+  assert.match(verificationValidation.issues.join("\n"), /03\.1-YY-SUMMARY\.md/);
+  assert.match(verificationValidation.issues.join("\n"), /PASS\|MANUAL\|DEFERRED\|BLOCKED/);
+  assert.match(verificationValidation.issues.join("\n"), /verified\|pending\|blocked/);
+  assert.equal(verificationWrite.status, "invalid");
+  assert.equal(verificationWrite.written, false);
+  await assert.rejects(
+    readFile(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"), "utf8"),
+    { code: "ENOENT" }
+  );
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`${summaryPath}\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | \`${summaryPath}\` | PASS | Saved summaries back the verification pass. |
+
+## Evidence Reviewed
+
+- \`${summaryPath}\`
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | \`${summaryPath}\` | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 3
+`
+  });
+
+  const uatPlaceholderContent = `# Phase XX: <Phase Name> - UAT
+
+**Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
+
+## Questions Asked
+
+- Did the delivered behavior match \`03.1-YY-SUMMARY.md\`?
+
+## Observed Behavior
+
+- The observed behavior matched .blueprint/phases/<phase-dir>/03.1-YY-SUMMARY.md.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
+`;
+
+  const uatValidation = validateUatArtifactContent(uatPlaceholderContent, [summaryPath]);
+  const uatWrite = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: uatPlaceholderContent,
+    overwrite: true
+  });
+
+  assert.equal(uatValidation.valid, false);
+  assert.match(uatValidation.issues.join("\n"), /Phase XX/);
+  assert.match(uatValidation.issues.join("\n"), /PASS\|FAIL\|PARTIAL/);
+  assert.match(uatValidation.issues.join("\n"), /Resume State/);
+  assert.match(uatValidation.issues.join("\n"), /03\.1-YY-SUMMARY\.md/);
+  assert.equal(uatWrite.status, "invalid");
+  assert.equal(uatWrite.written, false);
+  await assert.rejects(
+    readFile(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UAT.md"), "utf8"),
+    { code: "ENOENT" }
+  );
 });
 
 test("validation tools do not re-check roadmap completion when a plan summary is still missing", async (t) => {
@@ -423,14 +710,47 @@ test("validation tools do not re-check roadmap completion when a plan summary is
     content: `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -452,10 +772,18 @@ test("validation tools do not re-check roadmap completion when a plan summary is
     content: `# Phase 03: Phase Discovery - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- UAT closed without blocking issues.
+- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+- Current session step: Close the initial UAT pass.
+- Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
 ## Questions Asked
 
@@ -535,14 +863,47 @@ test("validation tools reject template-grade verification and UAT placeholder bo
   const verificationPlaceholder = `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` and any other saved phase summaries for validation evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Concise readiness result grounded in the saved summaries.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -574,14 +935,47 @@ test("validation tools reject template-grade verification and UAT placeholder bo
     content: `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -600,10 +994,18 @@ test("validation tools reject template-grade verification and UAT placeholder bo
   const uatPlaceholder = `# Phase 03: Phase Discovery - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+- Current session step: Question asked during the UAT pass, or \`none\`.
+- Continuity notes: Observed behavior tied to saved summary evidence such as \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
 
 ## Questions Asked
 
@@ -724,14 +1126,47 @@ test("validation tools mark ROADMAP phase completion after UAT closes", async (t
     content: `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -753,10 +1188,18 @@ test("validation tools mark ROADMAP phase completion after UAT closes", async (t
     content: `# Phase 03: Phase Discovery - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- UAT closed without blocking issues.
+- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+- Current session step: Close the initial UAT pass.
+- Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
 ## Questions Asked
 
@@ -825,14 +1268,47 @@ test("validation tools reopen stale completed roadmap details even when the chec
     content: `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -896,14 +1372,47 @@ test("validation tools do not complete the roadmap when UAT evidence is invalid"
   const verificationContent = `# Phase 03: Phase Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence matches the expected phase outcome.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VAL-01 | Confirm execution evidence exists | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 

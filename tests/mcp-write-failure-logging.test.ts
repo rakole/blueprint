@@ -81,7 +81,7 @@ function validResearchContent(summary: string): string {
 
 ## Standard Stack
 
-- TypeScript
+- TypeScript on Node.js
 
 ## Installation And Setup
 
