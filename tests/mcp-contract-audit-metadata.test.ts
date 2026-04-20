@@ -139,8 +139,8 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(verifyDoc, /## UAT Persistence Contract/);
   assert.match(verifyDoc, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(verifyDoc, /returned `path` plus `summaryPaths` as authoritative/i);
-  assert.match(verifyDoc, /structured `view`, `resume`, or `update` decision/i);
-  assert.match(verifyDoc, /use `ask_user` for that confirmation path/i);
+  assert.match(verifyDoc, /focused structured decision[\s\S]*`view`[\s\S]*`resume`[\s\S]*`update`/i);
+  assert.match(verifyDoc, /separate `ask_user` confirmation path/i);
 
   assert.match(addTestsCommand, /bare report name `add-tests-<phase>`/i);
   assert.match(addTestsCommand, /returned `path` plus `summaryPaths` as authoritative/i);

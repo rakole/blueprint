@@ -587,9 +587,60 @@ async function createMilestoneCloseoutRepo(
       path.join(earlierPhaseRoot, "02-VERIFICATION.md"),
       `# Phase 02: Validation Hardening - Verification
 
-## Result
+**Coverage:** Reviewed \`02-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
 
 - Validation evidence is complete.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| CLOSE-01 | Preserve earlier milestone validation evidence | .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md | PASS | Earlier milestone evidence stays durable. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 2
 `,
       "utf8"
     );
@@ -599,9 +650,39 @@ async function createMilestoneCloseoutRepo(
       path.join(earlierPhaseRoot, "02-UAT.md"),
       `# Phase 02: Validation Hardening - UAT
 
-## Result
+**Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
-- UAT evidence is complete.
+## UAT Summary
+
+- UAT evidence is complete for \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`
+- Current session step: none
+- Continuity notes: none
+
+## Questions Asked
+
+- none
+
+## Observed Behavior
+
+- The accepted behavior matched \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
 `,
       "utf8"
     );
@@ -781,9 +862,60 @@ Close the milestone.
     path.join(phaseRoot, "03-VERIFICATION.md"),
     `# Phase 03: Milestone Closeout - Verification
 
-## Result
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
 
 - Validation evidence is complete.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| CLOSE-02 | Preserve closeout validation evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | PASS | Closeout evidence stays durable. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 3
 `,
     "utf8"
   );
@@ -791,9 +923,39 @@ Close the milestone.
     path.join(phaseRoot, "03-UAT.md"),
     `# Phase 03: Milestone Closeout - UAT
 
-## Result
+**Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
-- UAT evidence is complete.
+## UAT Summary
+
+- UAT evidence is complete for \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`
+- Current session step: none
+- Continuity notes: none
+
+## Questions Asked
+
+- none
+
+## Observed Behavior
+
+- The accepted behavior matched \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
 `,
     "utf8"
   );

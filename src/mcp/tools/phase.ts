@@ -1290,12 +1290,21 @@ async function syncRoadmapPhaseCompletion(
     resolveBlueprintPath(projectRoot, resolved.phaseDir),
     projectRoot
   );
-  const hasSummaries = phaseArtifacts.some((artifact) => artifact.endsWith("-SUMMARY.md"));
-  const hasVerification = phaseArtifacts.includes(
-    validationArtifactPathFor(resolved, "verification")
+  const summaryPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
+  const hasSummaries = summaryPaths.length > 0;
+  const verificationAccepted = await isAcceptedValidationArtifact(
+    projectRoot,
+    resolved,
+    "verification",
+    summaryPaths
   );
-  const hasUat = phaseArtifacts.includes(validationArtifactPathFor(resolved, "uat"));
-  const completed = hasSummaries && hasVerification && hasUat;
+  const uatAccepted = await isAcceptedValidationArtifact(
+    projectRoot,
+    resolved,
+    "uat",
+    summaryPaths
+  );
+  const completed = hasSummaries && verificationAccepted && uatAccepted;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -1335,6 +1344,28 @@ async function syncRoadmapPhaseCompletion(
   );
 
   return warnings;
+}
+
+async function isAcceptedValidationArtifact(
+  projectRoot: string,
+  resolved: ResolvedPhaseLocation,
+  artifact: PhaseValidationArtifactKind,
+  summaryPaths: string[]
+): Promise<boolean> {
+  const artifactPath = validationArtifactPathFor(resolved, artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+
+  if (!(await pathExists(absolutePath))) {
+    return false;
+  }
+
+  const content = await fs.readFile(absolutePath, "utf8");
+  const validation =
+    artifact === "verification"
+      ? validateVerificationArtifactContent(content, summaryPaths)
+      : validateUatArtifactContent(content, summaryPaths);
+
+  return validation.valid && validation.warnings.length === 0;
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -3136,6 +3167,8 @@ export async function blueprintPhaseValidationWrite(
   }
 
   if (!validation.valid) {
+    warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
+
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -3149,7 +3182,7 @@ export async function blueprintPhaseValidationWrite(
       overwritten: false,
       status: "invalid",
       issues: validation.issues,
-      warnings: validation.warnings
+      warnings: [...warnings, ...validation.warnings]
     };
   }
 

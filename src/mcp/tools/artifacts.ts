@@ -2249,17 +2249,35 @@ export function validateUatArtifactContent(
     issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
   }
 
+  if (!/^\*\*Resume State:\*\*\s*(RESUMED|NEW|CONTINUED)\s*$/m.test(content)) {
+    issues.push("UAT artifact must declare **Resume State:** RESUMED, NEW, or CONTINUED.");
+  }
+
+  if (
+    !/^\*\*Checkpoint:\*\*\s*(?:none|(?:\.blueprint\/phases\/[^\s/]+\/)?[^\s]+-DISCUSS-CHECKPOINT\.json)\s*$/m.test(
+      content
+    )
+  ) {
+    issues.push(
+      "UAT artifact must declare **Checkpoint:** with `none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT.json`."
+    );
+  }
+
   issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
 
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
+  const sessionState = extractMarkdownSection(content, "Session State");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
   if (
     summaryPaths.length > 0 &&
-    !containsReferencedSummaryPath(`${uatSummary}\n${observedBehavior}`, summaryPaths)
+    !containsReferencedSummaryPath(
+      `${uatSummary}\n${sessionState}\n${observedBehavior}`,
+      summaryPaths
+    )
   ) {
-    warnings.push(
-      "UAT artifact should reference at least one saved execution summary path or filename in ## UAT Summary or ## Observed Behavior."
+    issues.push(
+      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
     );
   }
 
@@ -3416,6 +3434,17 @@ function collectPhaseBundleIssues(
   return issues;
 }
 
+function collectPhaseSummaryPathsForArtifact(
+  phaseArtifacts: string[],
+  artifactPath: string
+): string[] {
+  const phaseRoot = artifactPath.slice(0, artifactPath.lastIndexOf("/") + 1);
+
+  return phaseArtifacts.filter(
+    (value) => value.startsWith(phaseRoot) && value.endsWith("-SUMMARY.md")
+  );
+}
+
 export async function blueprintArtifactValidate(
   args: ArtifactValidateArgs = {}
 ): Promise<ArtifactValidateResult> {
@@ -3505,6 +3534,48 @@ export async function blueprintArtifactValidate(
     if (!validation.valid) {
       suggestedRepairs.add(
         "Regenerate or update malformed phase research through /blu-research-phase before planning."
+      );
+    }
+  }
+
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
+    const validation = validateVerificationArtifactContent(raw, summaryPaths);
+
+    for (const issue of validation.issues) {
+      issues.push(`${artifact}: ${issue}`);
+    }
+
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed phase verification through /blu-validate-phase before UAT."
+      );
+    }
+  }
+
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-UAT.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
+    const validation = validateUatArtifactContent(raw, summaryPaths);
+
+    for (const issue of validation.issues) {
+      issues.push(`${artifact}: ${issue}`);
+    }
+
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed UAT through /blu-verify-work after the saved summaries and verification artifact are corrected."
       );
     }
   }
