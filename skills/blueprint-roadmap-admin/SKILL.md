@@ -111,10 +111,10 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 
 1. Require an explicit phase number before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
-3. Read the target phase artifacts before mutation so drift or execution evidence is visible in the preview.
-4. Require explicit confirmation before deleting the target phase and renumbering subsequent phases.
+3. Read the target phase through `blueprint_phase_locate` before mutation so drift or execution evidence is visible in the preview.
+4. Require explicit confirmation before deleting the target phase and renumbering subsequent phases. Prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation.
 5. Persist the roadmap mutation through `blueprint_roadmap_remove_phase`; do not rewrite `.blueprint/ROADMAP.md` or rename phase directories directly from the command prompt.
-6. Treat the future-phase guard as mandatory and reject targets that already have execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT` artifacts.
+6. Treat the future-phase guard as mandatory. When the preview shows execution evidence such as `SUMMARY`, `VERIFICATION`, or `UAT`, stop on the default safe path and require a second explicit destructive confirmation before continuing with `force: true`; otherwise reject the mutation.
 7. Update `STATE.md` through `blueprint_state_update` so `/blu-remove-phase` is the active command and the next safe implemented follow-up is `/blu-progress`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
 

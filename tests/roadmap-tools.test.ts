@@ -5,7 +5,7 @@ import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { blueprintToolNames } from "../src/mcp/server.js";
+import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
 import {
   blueprintRoadmapAddPhase,
   blueprintRoadmapInsertPhase,
@@ -178,6 +178,26 @@ test("roadmap tools register blueprint_roadmap_remove_phase", () => {
   assert.ok(
     blueprintToolNames.includes("blueprint_roadmap_remove_phase"),
     "blueprint_roadmap_remove_phase should be registered"
+  );
+});
+
+test("blueprint_roadmap_remove_phase input schema accepts numeric phase ids and force overrides", () => {
+  const definition = blueprintToolRegistry.blueprint_roadmap_remove_phase;
+
+  assert.equal(
+    definition.inputSchema.phase.safeParse(2).success,
+    true,
+    "blueprint_roadmap_remove_phase should accept integer numeric phase ids"
+  );
+  assert.equal(
+    definition.inputSchema.phase.safeParse(2.1).success,
+    true,
+    "blueprint_roadmap_remove_phase should accept decimal numeric phase ids"
+  );
+  assert.equal(
+    definition.inputSchema.force.safeParse(true).success,
+    true,
+    "blueprint_roadmap_remove_phase should accept an explicit force override"
   );
 });
 
@@ -542,13 +562,38 @@ test("blueprint_roadmap_remove_phase rejects current or past phases", async (t) 
     () =>
       blueprintRoadmapRemovePhase({
         cwd: repoPath,
-        phase: "2.1"
+        phase: 2.1
       }),
     /Only future phases can be removed/
   );
 });
 
-test("blueprint_roadmap_remove_phase rejects phases with execution evidence", async (t) => {
+test("blueprint_roadmap_remove_phase reports recovery candidates when the target phase is missing", async (t) => {
+  const repoPath = await createRoadmapRepo("1");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapRemovePhase({
+        cwd: repoPath,
+        phase: 9
+      }),
+    (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+
+      assert.match(message, /Phase 9 does not exist in \.blueprint\/ROADMAP\.md\./);
+      assert.match(message, /Nearest valid phase candidate/);
+      assert.match(message, /Active milestone candidate: v1/);
+      assert.match(message, /\/blu-progress/);
+
+      return true;
+    }
+  );
+});
+
+test("blueprint_roadmap_remove_phase requires force before removing phases with execution evidence", async (t) => {
   const repoPath = await createRoadmapRepo("1");
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -567,8 +612,30 @@ test("blueprint_roadmap_remove_phase rejects phases with execution evidence", as
     () =>
       blueprintRoadmapRemovePhase({
         cwd: repoPath,
-        phase: "2.1"
+        phase: 2.1
       }),
     /already has execution evidence/
+  );
+
+  const result = await blueprintRoadmapRemovePhase({
+    cwd: repoPath,
+    phase: 2.1,
+    force: true
+  });
+  const after = await blueprintRoadmapRead({ cwd: repoPath });
+
+  assert.equal(result.removedPhase.phaseNumber, "2.1");
+  assert.ok(
+    result.warnings.some((warning) => warning.includes("explicit force confirmation")),
+    "force removal should report that execution evidence was bypassed explicitly"
+  );
+  assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1"]);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-planning-drift-recovery")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-validation-parity")),
+    true
   );
 });

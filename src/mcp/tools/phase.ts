@@ -50,6 +50,7 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
   cwd?: string;
   phase: NumericInput;
+  force?: boolean;
 };
 
 type RoadmapPromoteBacklogArgs = {
@@ -534,7 +535,8 @@ const roadmapInsertPhaseInputSchema = {
 };
 const roadmapRemovePhaseInputSchema = {
   cwd: z.string().optional(),
-  phase: z.string()
+  phase: z.union([z.string(), z.number()]),
+  force: z.boolean().optional()
 };
 const roadmapPromoteBacklogInputSchema = {
   cwd: z.string().optional(),
@@ -1718,6 +1720,50 @@ function buildLocateRecovery(reason: string | null): string[] {
   ];
 }
 
+function formatRoadmapPhaseCandidate(phase: ParsedRoadmapPhase): string {
+  return `Phase ${phase.phaseNumber}: ${phase.phaseName}`;
+}
+
+function buildRemovePhaseRecovery(
+  targetPhaseNumber: string,
+  roadmap: {
+    milestone: string | null;
+    phases: ParsedRoadmapPhase[];
+  }
+): string[] {
+  const orderedPhases = [...roadmap.phases].sort((left, right) =>
+    comparePhaseNumbers(left.phaseNumber, right.phaseNumber)
+  );
+  const lowerCandidates = orderedPhases.filter(
+    (phase) => comparePhaseNumbers(phase.phaseNumber, targetPhaseNumber) < 0
+  );
+  const higherCandidates = orderedPhases.filter(
+    (phase) => comparePhaseNumbers(phase.phaseNumber, targetPhaseNumber) > 0
+  );
+  const nearestCandidates = [lowerCandidates.at(-1), higherCandidates[0]].filter(
+    (phase): phase is ParsedRoadmapPhase => phase !== undefined
+  );
+  const recovery: string[] = [];
+
+  if (nearestCandidates.length > 0) {
+    recovery.push(
+      `Nearest valid phase candidate${nearestCandidates.length > 1 ? "s" : ""}: ${nearestCandidates
+        .map((phase) => formatRoadmapPhaseCandidate(phase))
+        .join("; ")}`
+    );
+  }
+
+  if (roadmap.milestone) {
+    recovery.push(`Active milestone candidate: ${roadmap.milestone}`);
+  }
+
+  recovery.push(
+    "Use /blu-progress to confirm the safest currently implemented next action."
+  );
+
+  return recovery;
+}
+
 function fallbackPhaseName(phaseDir: string): string {
   return slugToTitle(path.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
 }
@@ -2247,8 +2293,13 @@ export async function blueprintRoadmapRemovePhase(
   const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === targetPhaseNumber);
 
   if (!targetPhase) {
+    const recovery = buildRemovePhaseRecovery(targetPhaseNumber, roadmap);
+
     throw new Error(
-      `Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      [`Phase ${targetPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`,
+        "Recovery:",
+        ...recovery.map((entry) => `- ${entry}`)
+      ].join("\n")
     );
   }
 
@@ -2286,9 +2337,17 @@ export async function blueprintRoadmapRemovePhase(
       /-UAT\.md$/i.test(artifactPath)
   );
 
+  const warnings: string[] = [];
+
   if (executionArtifacts.length > 0) {
-    throw new Error(
-      `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Remove those artifacts explicitly before removing the phase.`
+    if (!args.force) {
+      throw new Error(
+        `Phase ${targetPhaseNumber} already has execution evidence (${executionArtifacts.join(", ")}). Re-run /blu-remove-phase with explicit force confirmation if you intend to remove it anyway.`
+      );
+    }
+
+    warnings.push(
+      `Phase ${targetPhaseNumber} was removed with execution evidence (${executionArtifacts.join(", ")}) because explicit force confirmation was provided.`
     );
   }
 
@@ -2313,7 +2372,6 @@ export async function blueprintRoadmapRemovePhase(
     removedPhaseLine.content,
     targetPhaseNumber
   );
-  const warnings: string[] = [];
 
   if (!removedPhaseDetails.removed) {
     warnings.push(
