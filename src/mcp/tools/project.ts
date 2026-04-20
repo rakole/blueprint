@@ -5,6 +5,7 @@ import * as z from "zod/v4";
 
 import {
   BLUEPRINT_DIR,
+  DURABLE_REQUIREMENT_ID_PATTERN,
   artifactToolDefinitions,
   blueprintArtifactScaffold,
   ensureRepoRoot,
@@ -148,7 +149,14 @@ const projectInitInputSchema = {
       requirements: z
         .array(
           z.object({
-            id: z.string(),
+            id: z
+              .string()
+              .trim()
+              .min(1)
+              .refine((value) => DURABLE_REQUIREMENT_ID_PATTERN.test(value), {
+                message:
+                  "Requirement IDs must use a durable format like RQ-01 or BP-03."
+              }),
             scope: z.enum(["committed", "deferred", "out_of_scope"]).optional(),
             group: z.string().optional(),
             requirement: z.string(),
@@ -216,6 +224,8 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
         "blueprint_config_get",
         "blueprint_config_set",
         "blueprint_state_update",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_validate",
         "blueprint_artifact_scaffold"
       ],
       requiredToolsSatisfied: true,

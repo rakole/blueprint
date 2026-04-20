@@ -51,18 +51,20 @@ Follow this flow exactly:
    - first-milestone framing
    - explicit assumptions
    - grouped requirement candidates, including deferred and out-of-scope cuts
-9. Before the first persistent write in interactive mode, summarize your understanding and get an explicit "ready to create the bootstrap" confirmation. Prefer `ask_user` for that approval gate. `--auto` skips this gate but must still surface assumptions afterward.
-10. Draft requirements and roadmap structure before writing:
+9. Read the canonical bootstrap artifact contracts with `mcp_blueprint_blueprint_artifact_contract_read` for `bootstrap.project`, `bootstrap.requirements`, and `bootstrap.roadmap` before shaping the first authored drafts.
+10. Before the first persistent write in interactive mode, summarize your understanding and get an explicit "ready to create the bootstrap" confirmation. Prefer `ask_user` for that approval gate. `--auto` skips this gate but must still surface assumptions afterward.
+11. Draft requirements and roadmap structure before writing:
    - Requirements should be specific, user-centered, and traceable.
    - Distinguish committed v1 scope from deferred or explicitly out-of-scope work.
    - Use `blueprint-roadmapper` when grouped phase proposals, requirement coverage, or success-criteria shaping would benefit from a bounded synthesis pass.
    - In interactive mode, show the proposed requirements and roadmap shape, then run a revision loop if the user wants adjustments before the first write.
-11. Call `mcp_blueprint_blueprint_project_init` for the first persistent bootstrap write so `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/config.json`, and `.blueprint/phases/` are created through MCP. Pass the strongest available bootstrap seed so the artifacts are substantive on first write. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
-12. Call `mcp_blueprint_blueprint_artifact_scaffold` only when you need to create or reuse additional bootstrap artifacts deliberately. Pass only supported repo-relative Blueprint artifact paths; do not pass bare names or absolute paths, and do not treat scaffold text as final persistence.
-13. Call `mcp_blueprint_blueprint_config_set` after initialization when the user selected repo-level workflow preferences that differ from the seeded config or explicitly asked to save/update defaults. Pass a JSON-object `patch` only, keep repo writes at `scope: "project"` by default, and use `scope: "defaults"` only when the user explicitly approved a saved-defaults update.
-14. Call `mcp_blueprint_blueprint_state_update` if the command needs to refine status, active command, or next-step guidance after initialization.
-15. Call `mcp_blueprint_blueprint_project_status` after initialization so the user gets the repo's next safe action.
-16. For brownfield repos, make the next step explicit: if the codebase is not mapped yet, route to `/blu-map-codebase` and treat the roadmap as provisional until mapping is complete.
+12. Call `mcp_blueprint_blueprint_project_init` for the first persistent bootstrap write so `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/config.json`, and `.blueprint/phases/` are created through MCP. Pass the strongest available bootstrap seed so the artifacts are substantive on first write. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
+13. Call `mcp_blueprint_blueprint_artifact_validate` after initialization to confirm the authored bootstrap artifacts satisfy the runtime contract instead of silently accepting a thin scaffold.
+14. Call `mcp_blueprint_blueprint_artifact_scaffold` only when you need to create or reuse additional bootstrap artifacts deliberately. Pass only supported repo-relative Blueprint artifact paths; do not pass bare names or absolute paths, and do not treat scaffold text as final persistence.
+15. Call `mcp_blueprint_blueprint_config_set` after initialization when the user selected repo-level workflow preferences that differ from the seeded config or explicitly asked to save/update defaults. Pass a JSON-object `patch` only, keep repo writes at `scope: "project"` by default, and use `scope: "defaults"` only when the user explicitly approved a saved-defaults update.
+16. Call `mcp_blueprint_blueprint_state_update` if the command needs to refine status, active command, or next-step guidance after initialization.
+17. Call `mcp_blueprint_blueprint_project_status` after initialization so the user gets the repo's next safe action.
+18. For brownfield repos, make the next step explicit: if the codebase is not mapped yet, route to `/blu-map-codebase` and treat the roadmap as provisional until mapping is complete.
 
 `--auto` behavior:
 - If `--auto` is present, treat the command as non-interactive after the normal overwrite gate.

@@ -112,7 +112,7 @@ These tool names are part of the documented future contract, but they are not re
 ## Implemented Command Ownership Notes
 
 - `/blu`, `help`, `progress`, and `next` rely on `blueprint_command_catalog`, project status, and other read-oriented tools. They must only surface commands whose catalog entry is `implemented`.
-- `new-project`, `settings`, and `set-profile` lean on project, config, and state tools.
+- `new-project` leans on project, config, state, `blueprint_artifact_contract_read`, `blueprint_artifact_validate`, and `blueprint_artifact_scaffold`.
 - `map-codebase` uses `blueprint_project_status`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, and `blueprint_artifact_summary_digest`.
 - `add-backlog` uses `blueprint_artifact_mutate_index` and, when the user explicitly reserves a parking-lot phase, `blueprint_artifact_scaffold`.
 - `review-backlog` uses `blueprint_roadmap_promote_backlog`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to preview backlog candidates, append promoted roadmap phases, preserve backlog history through status transitions, and route the repo into `/blu-discuss-phase`.

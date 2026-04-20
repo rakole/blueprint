@@ -67,14 +67,18 @@
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_config_set` -> `{scope, updatedKeys, config, provenance, configPath, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
+- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 
 ## Bootstrap Contract
 
+- Read the canonical bootstrap artifact contracts for `bootstrap.project`, `bootstrap.requirements`, and `bootstrap.roadmap` before shaping the first authored drafts.
 - `blueprint_project_init` is the first persistent bootstrap write. Require explicit overwrite confirmation before calling it with `overwrite: true`.
 - Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
 - Use `blueprint_artifact_scaffold` only for deliberate extra Blueprint artifacts, with supported repo-relative Blueprint artifact paths only. Bare names and absolute paths are invalid.
 - Treat scaffold output as seeding, not final authored persistence.
+- Validate the written bootstrap artifacts with `blueprint_artifact_validate` before treating bootstrap as complete.
 - `blueprint_config_set` expects a JSON-object `patch`. Keep repo writes at `scope: "project"` by default, and use `scope: "defaults"` only when the user explicitly approved changing saved defaults.
 
 ## Skills And Subagents
