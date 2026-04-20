@@ -6,6 +6,7 @@ type NumericInput = string | number;
 type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
+    expectedPhaseNumber?: string;
 };
 type RoadmapInsertPhaseArgs = {
     cwd?: string;
@@ -450,8 +451,18 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         description: z.ZodString;
+        expectedPhaseNumber: z.ZodOptional<z.ZodString>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapAddPhaseResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        after: z.ZodString;
+        description: z.ZodString;
+    };
+    handler: (args: Record<string, unknown>) => Promise<RoadmapInsertPhaseResult>;
 } | {
     name: string;
     description: string;

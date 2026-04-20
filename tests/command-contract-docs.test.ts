@@ -724,6 +724,17 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
   assert.match(addPhaseDoc, /blueprint_state_update/);
   assert.match(addPhaseDoc, /non-empty phase description is required/i);
   assert.match(addPhaseDoc, /next integer after the highest base phase number/i);
+  assert.match(addPhaseDoc, /Preview the exact computed next integer phase number from the roadmap read result before append\./);
+  assert.match(
+    addPhaseDoc,
+    /Use Gemini CLI's built-in `ask_user` dialog for the structured confirmation gate instead of prose-only confirmation when the user must approve that exact phase number\./
+  );
+  assert.match(addPhaseDoc, /expectedPhaseNumber/);
+  assert.match(addPhaseDoc, /Refuses to append when the confirmed next phase number is stale\./);
+  assert.match(
+    addPhaseDoc,
+    /Returns `\/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up\./
+  );
   assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
 });
 

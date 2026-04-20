@@ -204,7 +204,8 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   const before = await blueprintRoadmapRead({ cwd: repoPath });
   const result = await blueprintRoadmapAddPhase({
     cwd: repoPath,
-    description: "Notifications Flow"
+    description: "Notifications Flow",
+    expectedPhaseNumber: "3"
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
@@ -227,6 +228,82 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   assert.equal(after.phases.at(-1)?.phaseDir, ".blueprint/phases/03-notifications-flow");
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Notifications Flow\*\*/);
   assert.match(roadmapBody, /### Phase 3: Notifications Flow/);
+});
+
+test("blueprint_roadmap_add_phase rejects when the confirmed next phase is stale", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintRoadmapAddPhase({
+      cwd: repoPath,
+      description: "Notifications Flow",
+      expectedPhaseNumber: "4"
+    }),
+    /Confirmed next phase 4 no longer matches the live next phase 3/
+  );
+  const after = await blueprintRoadmapRead({ cwd: repoPath });
+
+  assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1", "2.2"]);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
+    false
+  );
+});
+
+test("blueprint_roadmap_add_phase preserves the sequential dependency chain in roadmap details", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 1: Foundation** - Baseline initialization
+- [ ] **Phase 2.1: Planning Drift Recovery** - Repair roadmap drift
+- [ ] **Phase 2.2: Validation Parity** - Close validation gaps
+
+## Phase Details
+
+### Phase 1: Foundation
+**Goal**: Baseline initialization.
+**Requirements**: RQ-01
+**Depends on**: none
+
+### Phase 2.1: Planning Drift Recovery
+**Goal**: Repair roadmap drift.
+**Requirements**: RQ-02
+**Depends on**: Phase 1
+
+### Phase 2.2: Validation Parity
+**Goal**: Close validation gaps.
+**Requirements**: RQ-03
+**Depends on**: Phase 2.1
+`,
+    "utf8"
+  );
+
+  await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Notifications Flow"
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const phaseThreeBlock = roadmapBody.match(
+    /### Phase 3: Notifications Flow\n([\s\S]*?)(?=\n### Phase |\s*$)/
+  )?.[1];
+
+  assert.ok(phaseThreeBlock);
+  assert.match(phaseThreeBlock, /^\*\*Depends on\*\*: Phase 2$/m);
 });
 
 test("blueprint_roadmap_insert_phase inserts the first decimal phase after an integer target without renumbering later phases", async (t) => {

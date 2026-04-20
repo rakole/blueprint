@@ -20,6 +20,7 @@ import {
   resolveBlueprintPath,
   toRepoRelativePath,
   writeJsonFile,
+  withBlueprintRepoLock,
   writeTextFile
 } from "./artifacts.js";
 import { loadBlueprintState } from "./state.js";
@@ -39,6 +40,7 @@ type NumericInput = string | number;
 type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
+  expectedPhaseNumber?: string;
 };
 
 type RoadmapInsertPhaseArgs = {
@@ -525,7 +527,8 @@ const roadmapReadInputSchema = {
 
 const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
-  description: z.string()
+  description: z.string(),
+  expectedPhaseNumber: z.string().optional()
 };
 const roadmapInsertPhaseInputSchema = {
   cwd: z.string().optional(),
@@ -805,6 +808,18 @@ function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
   return String(maxIntegerPhase + 1);
 }
 
+function previousIntegerPhaseNumber(value: NumericInput): string | null {
+  const normalizedPhaseNumber = normalizePhaseNumber(value);
+
+  if (!isIntegerPhaseNumber(normalizedPhaseNumber)) {
+    return null;
+  }
+
+  const previousPhaseNumber = Number.parseInt(normalizedPhaseNumber, 10) - 1;
+
+  return previousPhaseNumber > 0 ? String(previousPhaseNumber) : null;
+}
+
 function nextDecimalPhaseNumber(
   phases: ParsedRoadmapPhase[],
   afterPhaseNumber: string
@@ -993,7 +1008,8 @@ function buildPhaseDetailBlock(
 function appendPhaseDetailsToRoadmap(
   raw: string,
   phaseNumber: string,
-  phaseName: string
+  phaseName: string,
+  dependsOnPhaseNumber: string | null = null
 ): string {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
 
@@ -1001,7 +1017,7 @@ function appendPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName);
+  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber);
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (phaseDetailsSectionPattern.test(raw)) {
@@ -1949,7 +1965,6 @@ export async function blueprintRoadmapAddPhase(
   args: RoadmapAddPhaseArgs
 ): Promise<RoadmapAddPhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
   const normalizedDescription = normalizePhaseDescription(args.description);
 
   if (normalizedDescription.length === 0) {
@@ -1958,43 +1973,58 @@ export async function blueprintRoadmapAddPhase(
     );
   }
 
-  const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
-  const phasePrefix = formatPhasePrefix(phaseNumber);
-  const slug = slugifyPhaseName(normalizedDescription);
-  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
-  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
-  const updatedRoadmap = appendPhaseDetailsToRoadmap(
-    appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
-    phaseNumber,
-    normalizedDescription
-  );
-  const warnings: string[] = [];
-  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+  return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
 
-  warnings.push(
-    ...await writeTextFile(roadmapPath, updatedRoadmap, {
-      label: roadmap.path
-    })
-  );
+    if (
+      args.expectedPhaseNumber &&
+      normalizePhaseNumber(args.expectedPhaseNumber) !== phaseNumber
+    ) {
+      throw new Error(
+        `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
+      );
+    }
 
-  if (await pathExists(phaseDirPath)) {
-    warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
-  } else {
-    await fs.mkdir(phaseDirPath, { recursive: true });
-  }
+    const phasePrefix = formatPhasePrefix(phaseNumber);
+    const slug = slugifyPhaseName(normalizedDescription);
+    const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
+    const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+    const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+    const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
+    const updatedRoadmap = appendPhaseDetailsToRoadmap(
+      appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
+      phaseNumber,
+      normalizedDescription,
+      dependsOnPhaseNumber
+    );
+    const warnings: string[] = [];
+    const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
 
-  return {
-    phaseNumber,
-    phasePrefix,
-    phaseName: normalizedDescription,
-    slug,
-    phaseDir,
-    roadmapPath: roadmap.path,
-    milestone: roadmap.milestone,
-    written: true,
-    warnings
-  };
+    warnings.push(
+      ...await writeTextFile(roadmapPath, updatedRoadmap, {
+        label: roadmap.path
+      })
+    );
+
+    if (await pathExists(phaseDirPath)) {
+      warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
+    } else {
+      await fs.mkdir(phaseDirPath, { recursive: true });
+    }
+
+    return {
+      phaseNumber,
+      phasePrefix,
+      phaseName: normalizedDescription,
+      slug,
+      phaseDir,
+      roadmapPath: roadmap.path,
+      milestone: roadmap.milestone,
+      written: true,
+      warnings
+    };
+  });
 }
 
 export async function blueprintRoadmapInsertPhase(
@@ -2572,6 +2602,7 @@ export async function blueprintRoadmapPromoteBacklog(
     const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
     const phasePrefix = formatPhasePrefix(phaseNumber);
     const phaseName = normalizePhaseDescription(item.description);
+    const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
     const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
       projectRoot,
       item,
@@ -2582,7 +2613,8 @@ export async function blueprintRoadmapPromoteBacklog(
     roadmapBody = appendPhaseDetailsToRoadmap(
       appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
       phaseNumber,
-      phaseName
+      phaseName,
+      dependsOnPhaseNumber
     );
     roadmapPhases.push({
       phaseNumber,
