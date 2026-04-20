@@ -1098,6 +1098,148 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.equal(customReportValidation.valid, true, customReportValidation.issues.join("\n"));
 });
 
+test("verification and UAT contracts reject evidence that does not link to a valid summary", () => {
+  const verification = `# Phase 03: Discovery - Verification
+
+**Coverage:** Reviewed the saved execution evidence for the completed phase.
+
+## Validation Summary
+
+- Validation coverage is sufficient for UAT.
+
+## Evidence Reviewed
+
+- unrelated-note.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 3
+`;
+  const uat = `# Phase 03: Discovery - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- The saved behavior matched the expected outcome.
+
+## Questions Asked
+
+- Did the observed behavior align with the completed execution evidence?
+
+## Observed Behavior
+
+- The observed behavior remained consistent with the reported outcome.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
+`;
+  const verificationValidation = validateVerificationArtifactContent(verification, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+  const uatValidation = validateUatArtifactContent(uat, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+
+  assert.equal(verificationValidation.valid, false, verificationValidation.issues.join("\n"));
+  assert.equal(uatValidation.valid, false, uatValidation.issues.join("\n"));
+  assert.match(
+    verificationValidation.issues.join("\n"),
+    /must cite at least one saved execution summary path or filename/i
+  );
+  assert.match(
+    uatValidation.issues.join("\n"),
+    /must (?:cite|reference) at least one saved execution summary path or filename/i
+  );
+});
+
+test("verification and UAT contracts reject headings that are not the first bytes in the file", () => {
+  const prefacedVerification = `Preamble text that should fail.
+
+# Phase 03: Discovery - Verification
+
+**Coverage:** Reviewed the saved execution evidence for the completed phase.
+
+## Validation Summary
+
+- Validation coverage is sufficient for UAT.
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 3
+`;
+  const prefacedUat = `Preamble text that should fail.
+
+# Phase 03: Discovery - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- The saved behavior matched the expected outcome.
+
+## Questions Asked
+
+- Did the observed behavior align with the completed execution evidence?
+
+## Observed Behavior
+
+- The observed behavior matched .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
+`;
+  const verificationValidation = validateVerificationArtifactContent(prefacedVerification, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+  const uatValidation = validateUatArtifactContent(prefacedUat, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+
+  assert.equal(verificationValidation.valid, false, verificationValidation.issues.join("\n"));
+  assert.equal(uatValidation.valid, false, uatValidation.issues.join("\n"));
+  assert.match(verificationValidation.issues.join("\n"), /must start with a '# \.\.\. - Verification' heading/i);
+  assert.match(uatValidation.issues.join("\n"), /must start with a '# \.\.\. - UAT' heading/i);
+});
+
 test("contract registry remains listable through the direct helper", () => {
   const contracts = listArtifactContracts();
 

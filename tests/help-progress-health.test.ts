@@ -510,8 +510,10 @@ async function createStaleRoadmapAdvancedStateRepo(): Promise<string> {
 async function createMilestoneCloseoutRepo(
   reportStage: "none" | "audit" | "complete" | "summary",
   options: {
+    malformedEarlierSummary?: boolean;
     missingEarlierVerification?: boolean;
     missingEarlierUat?: boolean;
+    missingEarlierSummary?: boolean;
   } = {}
 ): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-milestone-closeout-routing-"));
@@ -575,14 +577,84 @@ async function createMilestoneCloseoutRepo(
   );
   await writeFile(
     path.join(earlierPhaseRoot, "02-01-SUMMARY.md"),
-    `# Phase 02: Validation Hardening - Summary
+    options.malformedEarlierSummary
+      ? `# Phase 02: Validation Hardening - Summary 01
 
-## Result
+## Outcome
+
+- Earlier milestone execution evidence drifted out of shape.
+`
+      : `# Phase 02: Validation Hardening - Summary 01
+
+**Plan:** \`02-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Earlier milestone execution evidence is complete.
+
+## Changes Made
+
+- Captured the earlier milestone execution summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`
 `,
     "utf8"
   );
+  await writeFile(
+    path.join(earlierPhaseRoot, "02-01-PLAN.md"),
+    `---
+phase: 2
+plan_id: "01"
+title: "Validation Hardening Plan 01"
+wave: 1
+status: done
+objective: "Exercise milestone closeout routing."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 02: Validation Hardening - Plan 01
+`,
+    "utf8"
+  );
+  if (options.missingEarlierSummary) {
+    await writeFile(
+      path.join(earlierPhaseRoot, "02-02-PLAN.md"),
+      `---
+phase: 2
+plan_id: "02"
+title: "Validation Hardening Plan 02"
+wave: 1
+status: planned
+objective: "Exercise milestone closeout summary coverage."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 02: Validation Hardening - Plan 02
+`,
+      "utf8"
+    );
+  }
   if (!options.missingEarlierVerification) {
     await writeFile(
       path.join(earlierPhaseRoot, "02-VERIFICATION.md"),
@@ -851,11 +923,30 @@ Close the milestone.
   );
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Milestone Closeout - Summary
+    `# Phase 03: Milestone Closeout - Summary 01
 
-## Result
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution completed and the milestone is ready for closeout routing.
+
+## Changes Made
+
+- Captured the completed milestone closeout execution.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -1182,11 +1273,30 @@ test("project status recommends validate-phase once execution summaries exist wi
 
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary
+    `# Phase 03: Phase Discovery - Summary 01
 
-## Result
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
 `,
     "utf8"
   );
@@ -1198,6 +1308,144 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-validate-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
+test("project status ignores placeholder summaries when deciding validation readiness", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Concise delivery summary grounded in the completed work.
+
+## Changes Made
+
+- Explicit code, config, or artifact changes completed for this plan.
+
+## Verification
+
+- Command, test, or evidence that supports the reported outcome.
+
+## Follow-Ups
+
+- Remaining gap, handoff, or \`none\`.
+
+## Evidence
+
+- or other saved repo evidence if helpful.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-execute-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
+test("project status ignores placeholder verification and UAT evidence during milestone closeout routing", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/02-validation-hardening");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "02-VERIFICATION.md"),
+    `# Phase 02: Validation Hardening - Verification
+
+**Coverage:** Reviewed \`02-01-SUMMARY.md\` and any other saved phase summaries for validation evidence.
+
+## Validation Summary
+
+- Concise readiness result grounded in the saved summaries.
+
+## Evidence Reviewed
+
+- .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md
+
+## Gaps Found
+
+- Explicit blocker, follow-up, or \`none\`.
+
+## Suggested Repairs
+
+- Explicit next repair, follow-up, or \`none\`.
+
+## Next Safe Action
+
+- /blu-verify-work 2
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "02-UAT.md"),
+    `# Phase 02: Validation Hardening - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Questions Asked
+
+- Question asked during the UAT pass, or \`none\`.
+
+## Observed Behavior
+
+- Observed behavior tied to saved summary evidence such as \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- Explicit blocker, follow-up, or \`none\`.
+
+## Follow-Up Fixes
+
+- Explicit follow-up fix, acceptance note, or \`none\`.
+
+## Next Safe Action
+
+- /blu-progress
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+});
+
+test("project status stays blocked from milestone audit when an earlier checked-off phase is missing plan summaries", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    missingEarlierSummary: true
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
 });
 
 test("project status routes to ui-phase when research is disabled but UI discovery is still required", async (t) => {
@@ -1336,6 +1584,67 @@ test("project status requires milestone-wide validation evidence before closeout
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+});
+
+test("project status blocks milestone closeout when earlier summary evidence is malformed", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none", {
+    malformedEarlierSummary: true
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.match(status.nextAction, /\/blu-validate-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+});
+
+test("project status blocks milestone closeout when verification evidence lacks a valid summary link", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("none");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-validation-hardening/02-VERIFICATION.md"),
+    `# Phase 02: Validation Hardening - Verification
+
+**Coverage:** Reviewed the completed milestone evidence.
+
+## Validation Summary
+
+- Validation evidence is complete.
+
+## Evidence Reviewed
+
+- unrelated-notes.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 2
+`,
+    "utf8"
+  );
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
   const state = await blueprintStateLoad({ cwd: repoPath });

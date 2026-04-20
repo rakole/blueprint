@@ -206,6 +206,9 @@ Core phase artifacts:
 - `XX-VERIFICATION.md`
 - `XX-UAT.md`
 
+Plan note:
+- Phase plans may include optional `gap_closure: true` frontmatter to mark explicit gap-closure targets for `/blu-execute-phase --gaps-only`; the runtime surfaces that signal in plan read/index metadata instead of inferring it from missing summaries.
+
 Auxiliary phase artifacts:
 - `XX-DISCUSSION-LOG.md`
 - `XX-DISCUSS-CHECKPOINT.json` (temporary resumability state for `discuss-phase`; should be deleted after successful context capture)
@@ -246,6 +249,17 @@ Validation expectations:
 - UI contract mode may use the full canonical section set from the runtime contract registry
 - explicit skip mode must include a populated `## Rationale`
 - scaffold placeholders such as `Goal 1:` or `Component 1:` are rejected on write
+
+### `XX-YY-SUMMARY.md`
+
+`XX-YY-SUMMARY.md` is the execution summary contract for a single plan.
+
+Validation expectations:
+- must start with an H1 title at the very top of the normalized artifact body
+- must include populated `## Outcome`, `## Changes Made`, `## Verification`, `## Follow-Ups`, and `## Evidence`
+- the locked `**Plan:**` and `**Status:**` markers remain required, but the scaffold placeholder values they carry are rejected by `blueprint_phase_summary_write`
+- the `**Plan:**` marker must match the linked `XX-YY-PLAN.md` path for the summary to count as valid execution evidence
+- scaffold-only placeholder text in `Changes Made`, `Verification`, `Follow-Ups`, and `Evidence` is rejected by `blueprint_phase_summary_write`
 
 ### `XX-DISCUSS-CHECKPOINT.json`
 

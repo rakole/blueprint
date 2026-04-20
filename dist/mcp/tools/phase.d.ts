@@ -312,6 +312,7 @@ type PhasePlanRecord = {
     path: string;
     title: string | null;
     wave: number | null;
+    gapClosure: boolean;
     status: string | null;
     objective: string | null;
     dependsOn: string[];
@@ -333,6 +334,7 @@ type PhasePlanIndexResult = {
     plans: PhasePlanRecord[];
     waves: Record<string, string[]>;
     missingPlans: string[];
+    gapClosurePlans: string[];
     warnings: string[];
 };
 type PhasePlanReadResult = {

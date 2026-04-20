@@ -346,10 +346,60 @@ async function createMilestoneAuditRepo(): Promise<string> {
     "utf8"
   );
   await writeFile(
+    path.join(priorPhaseDir, "03-01-PLAN.md"),
+    `---
+phase: 3
+plan_id: "01"
+title: "Execution Plan 01"
+wave: 1
+status: done
+objective: "Preserve earlier milestone execution evidence."
+depends_on: []
+requirements: []
+files_modified: []
+read_first: []
+acceptance_criteria: []
+autonomous: true
+---
+
+# Phase 03: Execution - Plan 01
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(priorPhaseDir, "03-01-SUMMARY.md"),
+    `# Phase 03: Execution - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution completed and left durable evidence for the earlier milestone phase.
+
+## Changes Made
+
+- Captured the completed earlier-phase execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
     path.join(priorPhaseDir, "03-VERIFICATION.md"),
     `# Phase 03: Execution - Verification
 
-**Coverage:** Reviewed any saved execution evidence for validation completeness.
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
 **Gate State:** PASS
 **Sign-off:** validation lead
 
@@ -361,11 +411,11 @@ async function createMilestoneAuditRepo(): Promise<string> {
 
 | Requirement | Task or Check | Evidence | Coverage State | Notes |
 |-------------|---------------|----------|----------------|-------|
-| MILESTONE-00 | Preserve earlier validation evidence | saved phase evidence | PASS | Earlier milestone evidence remains durable. |
+| MILESTONE-00 | Preserve earlier validation evidence | .blueprint/phases/03-execution/03-01-SUMMARY.md | PASS | Earlier milestone evidence remains durable. |
 
 ## Evidence Reviewed
 
-- saved phase evidence
+- .blueprint/phases/03-execution/03-01-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -390,7 +440,7 @@ async function createMilestoneAuditRepo(): Promise<string> {
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | saved phase evidence | none |
+| none | none | .blueprint/phases/03-execution/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -416,11 +466,11 @@ async function createMilestoneAuditRepo(): Promise<string> {
 
 ## UAT Summary
 
-- Earlier milestone UAT closed without blocking issues.
+- Earlier milestone UAT closed without blocking issues against \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
 
 ## Session State
 
-- Resume source: saved phase evidence
+- Resume source: \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`
 - Current session step: none
 - Continuity notes: none
 
@@ -430,7 +480,7 @@ async function createMilestoneAuditRepo(): Promise<string> {
 
 ## Observed Behavior
 
-- The accepted behavior matched the saved phase evidence.
+- The accepted behavior matched \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -475,9 +525,28 @@ Prepare the milestone for the final audit.
     path.join(phaseDir, "04-01-SUMMARY.md"),
     `# Phase 04: Release Readiness - Summary 01
 
-## Result
+**Plan:** \`04-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
 
 - Execution finished and left durable implementation evidence.
+
+## Changes Made
+
+- Captured the completed release-readiness execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`
 `,
     "utf8"
   );

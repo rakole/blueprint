@@ -17,6 +17,9 @@ import {
   toRepoRelativePath,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
+  validateStrictSummaryArtifactContent,
+  validateUatArtifactContent,
+  validateVerificationArtifactContent,
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
@@ -194,8 +197,10 @@ type RoadmapPhaseSignal = {
 type MilestoneEvidenceStatus = {
   missingVerificationPhases: string[];
   missingUatPhases: string[];
+  pendingSummaryCoveragePhases: string[];
   blockingPhase: string | null;
   allCompletedPhasesReady: boolean;
+  warnings: string[];
 };
 
 type MilestoneAuditReportStatus = {
@@ -638,6 +643,154 @@ function extractPhasePlanIds(artifacts: Iterable<string>, phasePrefix: string, k
   )].sort();
 }
 
+function extractPhaseArtifactDirectory(
+  artifacts: Iterable<string>,
+  phasePrefix: string
+): string | null {
+  const matcher = new RegExp(
+    `^${BLUEPRINT_DIR.replace(".", "\\.")}/phases/([^/]+)/${phasePrefix.replace(".", "\\.")}-`
+  );
+
+  for (const artifact of artifacts) {
+    const match = artifact.match(matcher);
+
+    if (match) {
+      return match[1] ?? null;
+    }
+  }
+
+  return null;
+}
+
+function phaseArtifactPathsForDirectory(artifacts: string[], phaseDir: string | null): string[] {
+  if (!phaseDir) {
+    return [];
+  }
+
+  const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir}/`;
+
+  return artifacts.filter((artifact) => artifact.startsWith(prefix));
+}
+
+async function collectValidatedSummaryPathsForPhase(
+  projectRoot: string,
+  phaseArtifacts: string[],
+  phasePrefix: string
+): Promise<{
+  summaryIds: string[];
+  summaryPaths: string[];
+  pendingPlanIds: string[];
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
+  const summaryPaths: string[] = [];
+  const summaryIds: string[] = [];
+  const phaseSummaryPaths = phaseArtifacts
+    .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
+    .sort((left, right) => left.localeCompare(right));
+  const knownPlanPaths = new Map(
+    phaseArtifacts
+      .filter((artifact) => artifact.endsWith("-PLAN.md"))
+      .map((artifact) => [extractPhasePlanIds([artifact], phasePrefix, "PLAN")[0] ?? null, artifact] as const)
+      .filter((entry): entry is readonly [string, string] => entry[0] !== null)
+  );
+
+  for (const summaryPath of phaseSummaryPaths) {
+    const summaryId = extractPhasePlanIds([summaryPath], phasePrefix, "SUMMARY")[0] ?? null;
+
+    if (!summaryId) {
+      warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath}`);
+      continue;
+    }
+
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: knownPlanPaths.get(summaryId) ?? null
+    });
+
+    if (validation.valid) {
+      summaryPaths.push(summaryPath);
+      summaryIds.push(summaryId);
+      continue;
+    }
+
+    warnings.push(
+      `${summaryPath}: summary artifact is invalid and does not count as completed execution evidence.`
+    );
+    warnings.push(...validation.issues.map((issue) => `${summaryPath}: ${issue}`));
+    warnings.push(...validation.warnings.map((warning) => `${summaryPath}: ${warning}`));
+
+    if (!knownPlanPaths.has(summaryId)) {
+      warnings.push(`${summaryPath}: no matching plan artifact exists for this summary.`);
+    }
+  }
+
+  const pendingPlanIds = phaseArtifacts
+    .filter((artifact) => artifact.endsWith("-PLAN.md"))
+    .map((artifact) => extractPhasePlanIds([artifact], phasePrefix, "PLAN")[0] ?? null)
+    .filter((planId): planId is string => planId !== null && !summaryIds.includes(planId));
+
+  return { summaryIds, summaryPaths, pendingPlanIds, warnings };
+}
+
+async function inspectValidatedPhaseValidationArtifacts(
+  projectRoot: string,
+  phaseArtifacts: string[],
+  phasePrefix: string,
+  summaryPaths: string[]
+): Promise<{
+  hasVerification: boolean;
+  hasUat: boolean;
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
+  let hasVerification = false;
+  let hasUat = false;
+
+  if (summaryPaths.length === 0) {
+    warnings.push(
+      `${phasePrefix}: no valid execution summaries were found, so VERIFICATION and UAT evidence cannot count toward milestone closeout.`
+    );
+
+    return { hasVerification: false, hasUat: false, warnings };
+  }
+
+  for (const artifact of ["verification", "uat"] as const) {
+    const artifactPath = phaseArtifacts.find((candidate) =>
+      candidate.endsWith(
+        artifact === "verification" ? `${phasePrefix}-VERIFICATION.md` : `${phasePrefix}-UAT.md`
+      )
+    );
+
+    if (!artifactPath) {
+      continue;
+    }
+
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
+    const validation =
+      artifact === "verification"
+        ? validateVerificationArtifactContent(content, summaryPaths)
+        : validateUatArtifactContent(content, summaryPaths);
+
+    if (validation.valid) {
+      if (artifact === "verification") {
+        hasVerification = true;
+      } else {
+        hasUat = true;
+      }
+      continue;
+    }
+
+    warnings.push(
+      `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
+    );
+    warnings.push(...validation.issues.map((issue) => `${artifactPath}: ${issue}`));
+    warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+
+  return { hasVerification, hasUat, warnings };
+}
+
 async function listImmediateDirectories(rootPath: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(rootPath, { withFileTypes: true });
@@ -801,23 +954,32 @@ async function inspectCurrentPhaseArtifacts(
   const phaseDir = matchingPhaseDirs[0];
   const phasePrefix = formatPhasePrefix(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
-  const phaseArtifacts = new Set(
-    inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`))
-  );
+  const phaseArtifacts = inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`));
   const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix}-UAT.md`;
-  const hasContext = phaseArtifacts.has(contextPath);
-  const hasResearch = phaseArtifacts.has(researchPath);
-  const hasUiSpec = phaseArtifacts.has(uiSpecPath);
-  const hasVerification = phaseArtifacts.has(verificationPath);
-  const hasUat = phaseArtifacts.has(uatPath);
-  const planPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-PLAN.md"));
-  const summaryPaths = [...phaseArtifacts].filter((artifact) => artifact.endsWith("-SUMMARY.md"));
+  const hasContext = phaseArtifacts.includes(contextPath);
+  const hasResearch = phaseArtifacts.includes(researchPath);
+  const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
+  const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
-  const summaryIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "SUMMARY");
+  const {
+    summaryIds,
+    summaryPaths,
+    warnings: summaryWarnings
+  } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix);
+  const {
+    hasVerification,
+    hasUat,
+    warnings: validationWarnings
+  } = await inspectValidatedPhaseValidationArtifacts(
+    projectRoot,
+    phaseArtifacts,
+    phasePrefix,
+    summaryPaths
+  );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
   const hasPendingExecution = planIds.some((planId) => !summaryIds.includes(planId));
@@ -877,12 +1039,13 @@ async function inspectCurrentPhaseArtifacts(
       `Current phase ${currentPhase} has a VERIFICATION artifact without execution summaries; validate the summary trail before trusting completion state.`
     );
   }
-
   if (hasUat && !hasVerification) {
     warnings.push(
       `Current phase ${currentPhase} has a UAT artifact without a VERIFICATION artifact; confirm validation evidence is not missing.`
     );
   }
+
+  warnings.push(...summaryWarnings, ...validationWarnings);
 
   return {
     currentPhase,
@@ -949,12 +1112,15 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
   }
 }
 
-function inspectMilestoneEvidence(
+async function inspectMilestoneEvidence(
+  projectRoot: string,
   phaseArtifacts: string[],
   phases: RoadmapPhaseSignal[]
-): MilestoneEvidenceStatus {
+): Promise<MilestoneEvidenceStatus> {
   const missingVerificationPhases: string[] = [];
   const missingUatPhases: string[] = [];
+  const pendingSummaryCoveragePhases: string[] = [];
+  const warnings: string[] = [];
 
   for (const phase of phases) {
     if (!phase.completed) {
@@ -962,12 +1128,33 @@ function inspectMilestoneEvidence(
     }
 
     const phasePrefix = formatBlueprintPhasePrefix(phase.phaseNumber);
-    const hasVerification = phaseArtifacts.some((artifact) =>
-      artifact.endsWith(`/${phasePrefix}-VERIFICATION.md`)
+    const phaseDir = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix);
+    const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir);
+    const {
+      summaryPaths,
+      pendingPlanIds,
+      warnings: summaryWarnings
+    } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseScopedArtifacts, phasePrefix);
+
+    if (pendingPlanIds.length > 0) {
+      pendingSummaryCoveragePhases.push(phase.phaseNumber);
+      warnings.push(
+        `Phase ${phase.phaseNumber} has pending execution plans without valid summaries; milestone closeout remains blocked until the summary trail is complete.`
+      );
+    }
+
+    const {
+      hasVerification,
+      hasUat,
+      warnings: validationWarnings
+    } = await inspectValidatedPhaseValidationArtifacts(
+      projectRoot,
+      phaseScopedArtifacts,
+      phasePrefix,
+      summaryPaths
     );
-    const hasUat = phaseArtifacts.some((artifact) =>
-      artifact.endsWith(`/${phasePrefix}-UAT.md`)
-    );
+
+    warnings.push(...summaryWarnings, ...validationWarnings);
 
     if (!hasVerification) {
       missingVerificationPhases.push(phase.phaseNumber);
@@ -981,9 +1168,17 @@ function inspectMilestoneEvidence(
   return {
     missingVerificationPhases,
     missingUatPhases,
-    blockingPhase: missingVerificationPhases[0] ?? missingUatPhases[0] ?? null,
+    pendingSummaryCoveragePhases,
+    blockingPhase:
+      missingVerificationPhases[0] ??
+      missingUatPhases[0] ??
+      pendingSummaryCoveragePhases[0] ??
+      null,
     allCompletedPhasesReady:
-      missingVerificationPhases.length === 0 && missingUatPhases.length === 0
+      missingVerificationPhases.length === 0 &&
+      missingUatPhases.length === 0 &&
+      pendingSummaryCoveragePhases.length === 0,
+    warnings
   };
 }
 
@@ -1441,7 +1636,8 @@ async function buildSyncedState(projectRoot: string): Promise<{
     inspection.phases,
     currentPhase
   );
-  const milestoneEvidence = inspectMilestoneEvidence(
+  const milestoneEvidence = await inspectMilestoneEvidence(
+    projectRoot,
     inspection.phases,
     roadmapSignals.phases
   );
@@ -1485,6 +1681,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
   }
 
   warnings.push(...currentPhaseArtifacts.warnings);
+  warnings.push(...milestoneEvidence.warnings);
   warnings.push(...pauseHandoff.warnings);
 
   return {

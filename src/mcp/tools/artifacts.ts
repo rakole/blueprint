@@ -307,6 +307,7 @@ export type PlanArtifactMetadata = {
   planId: string | null;
   title: string | null;
   wave: number | null;
+  gapClosure: boolean;
   status: string | null;
   objective: string | null;
   dependsOn: string[];
@@ -1680,6 +1681,7 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
       planId: null,
       title: null,
       wave: null,
+      gapClosure: false,
       status: null,
       objective: null,
       dependsOn: [],
@@ -1743,6 +1745,7 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
 
   const waveValue = scalars.get("wave");
   const autonomousValue = scalars.get("autonomous");
+  const gapClosureValue = scalars.get("gap_closure");
 
   return {
     phase: scalars.get("phase") ?? null,
@@ -1750,6 +1753,7 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
     title: scalars.get("title") ?? null,
     wave:
       waveValue && /^\d+$/.test(waveValue) ? Number.parseInt(waveValue, 10) : null,
+    gapClosure: gapClosureValue === "true",
     status: scalars.get("status") ?? null,
     objective: scalars.get("objective") ?? null,
     dependsOn: arrays.get("depends_on") ?? [],
@@ -2468,6 +2472,12 @@ export function validatePhaseArtifactContent(
 const REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
   "phase.verification"
 ).requiredHeadings;
+const VERIFICATION_PLACEHOLDER_BODIES = [
+  "and any other saved phase summaries for validation evidence.",
+  "Concise readiness result grounded in the saved summaries.",
+  "Explicit blocker, follow-up, or `none`.",
+  "Explicit next repair, follow-up, or `none`."
+] as const;
 
 export function validateVerificationArtifactContent(
   content: string,
@@ -2480,7 +2490,7 @@ export function validateVerificationArtifactContent(
   const issues: string[] = [];
   const warnings: string[] = [];
 
-  if (!/^# .+ - Verification\s*$/m.test(content)) {
+  if (!/^# .+ - Verification(?:\r?\n|$)/.test(content)) {
     issues.push("Verification artifact must start with a '# ... - Verification' heading.");
   }
 
@@ -2513,6 +2523,14 @@ export function validateVerificationArtifactContent(
     )
   );
 
+  for (const placeholderBody of VERIFICATION_PLACEHOLDER_BODIES) {
+    if (content.includes(placeholderBody)) {
+      issues.push(
+        `Verification artifact still contains placeholder scaffold text: ${placeholderBody}`
+      );
+    }
+  }
+
   const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
   if (!hasCoverageTableRows(requirementCoverage)) {
     issues.push(
@@ -2521,7 +2539,7 @@ export function validateVerificationArtifactContent(
   }
 
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
-  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+  if (!containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
     issues.push(
       "Verification artifact must cite at least one saved execution summary path or filename under ## Evidence Reviewed."
     );
@@ -2535,6 +2553,13 @@ export function validateVerificationArtifactContent(
 }
 
 const REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings;
+const UAT_PLACEHOLDER_BODIES = [
+  "Concise user-facing result grounded in the saved summaries and verification artifact.",
+  "Question asked during the UAT pass, or `none`.",
+  "Observed behavior tied to saved summary evidence such as",
+  "Explicit blocker, follow-up, or `none`.",
+  "Explicit follow-up fix, acceptance note, or `none`."
+] as const;
 
 export function validateUatArtifactContent(
   content: string,
@@ -2547,7 +2572,7 @@ export function validateUatArtifactContent(
   const issues: string[] = [];
   const warnings: string[] = [];
 
-  if (!/^# .+ - UAT\s*$/m.test(content)) {
+  if (!/^# .+ - UAT(?:\r?\n|$)/.test(content)) {
     issues.push("UAT artifact must start with a '# ... - UAT' heading.");
   }
 
@@ -2572,15 +2597,17 @@ export function validateUatArtifactContent(
   issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
 
+  for (const placeholderBody of UAT_PLACEHOLDER_BODIES) {
+    if (content.includes(placeholderBody)) {
+      issues.push(`UAT artifact still contains placeholder scaffold text: ${placeholderBody}`);
+    }
+  }
+
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
   const sessionState = extractMarkdownSection(content, "Session State");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
   if (
-    summaryPaths.length > 0 &&
-    !containsReferencedSummaryPath(
-      `${uatSummary}\n${sessionState}\n${observedBehavior}`,
-      summaryPaths
-    )
+    !containsReferencedSummaryPath(`${uatSummary}\n${sessionState}\n${observedBehavior}`, summaryPaths)
   ) {
     issues.push(
       "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
@@ -2806,7 +2833,34 @@ export function validateReportArtifactContent(
   return validation;
 }
 
-export function validateSummaryArtifactContent(content: string): {
+type SummaryValidationOptions = {
+  linkedPlanPath?: string | null;
+  requirePlanMarker?: boolean;
+};
+
+function normalizeSummaryPlanReference(value: string): string {
+  const trimmed = value.trim();
+
+  if (
+    (trimmed.startsWith("`") && trimmed.endsWith("`")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
+}
+
+function extractSummaryPlanReference(content: string): string | null {
+  const match = content.match(/^\*\*Plan:\*\*\s*(.+)$/m);
+
+  return match ? normalizeSummaryPlanReference(match[1]) : null;
+}
+
+export function validateSummaryArtifactContent(
+  content: string,
+): {
   valid: boolean;
   issues: string[];
   warnings: string[];
@@ -2814,28 +2868,91 @@ export function validateSummaryArtifactContent(content: string): {
   const contract = readArtifactContract("phase.summary");
   const issues: string[] = [];
   const warnings: string[] = [];
+  const normalizedContent = content.replace(/\r\n/g, "\n");
 
-  if (!/^# .+ - Summary(?:\s+\d+)?\s*$/m.test(content)) {
-    warnings.push("Summary artifact should start with a '# ... - Summary' heading.");
+  if (!/^# .+ - Summary(?:\s+\d+)?(?:\n|$)/.test(normalizedContent)) {
+    issues.push("Summary artifact must start with a '# ... - Summary' heading.");
   }
 
-  const missingMarkers = validateLockedMarkers(
-    content,
-    "Summary artifact",
-    contract.lockedMarkers
-  );
-  const missingSections = validateRequiredMarkdownSections(
-    content,
-    "Summary artifact",
-    contract.requiredHeadings
+  issues.push(
+    ...validateLockedMarkers(normalizedContent, "Summary artifact", contract.lockedMarkers),
+    ...validateRequiredMarkdownSections(
+      normalizedContent,
+      "Summary artifact",
+      contract.requiredHeadings
+    )
   );
 
-  warnings.push(...missingMarkers, ...missingSections);
+  issues.push(
+    ...contract.placeholderSignals
+      .filter((signal) => signal.length > 0 && normalizedContent.includes(signal))
+      .map((signal) => `Summary artifact still contains placeholder scaffold text: ${signal}.`)
+  );
 
   return {
-    valid: issues.length === 0 && warnings.length === 0,
+    valid: issues.length === 0,
     issues,
     warnings
+  };
+}
+
+export function validateSummaryPlanReference(
+  content: string,
+  options: SummaryValidationOptions = {}
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const normalizedContent = content.replace(/\r\n/g, "\n");
+  const summaryPlanReference = extractSummaryPlanReference(normalizedContent);
+
+  if (summaryPlanReference) {
+    if (options.linkedPlanPath === undefined || options.linkedPlanPath === null) {
+      issues.push("Summary artifact must reference a matching plan artifact.");
+    } else {
+      const expectedPlanPath = options.linkedPlanPath;
+      const expectedPlanFile = path.basename(expectedPlanPath);
+
+      if (
+        summaryPlanReference !== expectedPlanPath &&
+        summaryPlanReference !== expectedPlanFile
+      ) {
+        issues.push(
+          `Summary artifact **Plan:** marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}.`
+        );
+      }
+    }
+  } else if (options.requirePlanMarker) {
+    issues.push(
+      "Summary artifact must include a **Plan:** marker that references the matching plan artifact."
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
+export function validateStrictSummaryArtifactContent(
+  content: string,
+  options: SummaryValidationOptions = {}
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const summaryValidation = validateSummaryArtifactContent(content);
+  const planValidation = validateSummaryPlanReference(content, options);
+
+  return {
+    valid: summaryValidation.valid && planValidation.valid,
+    issues: [...summaryValidation.issues, ...planValidation.issues],
+    warnings: [...summaryValidation.warnings, ...planValidation.warnings]
   };
 }
 
@@ -4076,6 +4193,34 @@ export async function blueprintArtifactValidate(
       suggestedRepairs.add(
         "Regenerate or update malformed phase plans through /blu-plan-phase before execution."
       );
+    }
+  }
+
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-SUMMARY.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const linkedPlanPath = artifact.replace(/-SUMMARY\.md$/, "-PLAN.md");
+    const linkedPlanExists = await pathExists(resolveBlueprintPath(projectRoot, linkedPlanPath));
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const validation = validateStrictSummaryArtifactContent(raw, {
+      linkedPlanPath: linkedPlanExists ? linkedPlanPath : null
+    });
+
+    for (const issue of validation.issues) {
+      issues.push(`${artifact}: ${issue}`);
+    }
+
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed phase summaries through /blu-execute-phase before validation-dependent commands."
+      );
+    }
+
+    if (!linkedPlanExists) {
+      issues.push(`${artifact}: no matching plan artifact exists for this summary.`);
     }
   }
 

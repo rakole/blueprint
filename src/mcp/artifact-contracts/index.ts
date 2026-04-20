@@ -303,6 +303,7 @@ phase: ${phasePrefix(context)}
 plan_id: "${planId(context)}"
 title: "${phaseLabel(context)} plan ${planId(context)}"
 wave: 1
+# Optional: gap_closure: true
 status: planned
 objective: "Replace with a concrete, execution-ready goal."
 depends_on: []
@@ -1248,6 +1249,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Plan frontmatter keys and task subsections are locked for MCP parsing.",
+      "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
       "Additional top-level headings are allowed, but required plan sections must remain unchanged."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderPlanTemplate(context)),
@@ -1265,10 +1267,16 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     lockedMarkers: ["**Plan:**", "**Status:**"],
     placeholderSignals: [
       "COMPLETED|PARTIAL|BLOCKED",
-      "Concise delivery summary grounded in the completed work."
+      "Concise delivery summary grounded in the completed work.",
+      "Explicit code, config, or artifact changes completed for this plan.",
+      "Command, test, or evidence that supports the reported outcome.",
+      "Remaining gap, handoff, or `none`.",
+      "or other saved repo evidence if helpful."
     ],
     notes: [
-      "Summary artifacts stay linked to a saved plan and should remain grounded in completed work."
+      "Summary artifacts stay linked to a saved plan and should remain grounded in completed work.",
+      "The locked `Plan` and `Status` markers remain required, but scaffold placeholder values are rejected by write validation.",
+      "Untouched scaffold prose in Changes Made, Verification, Follow-Ups, and Evidence is also rejected."
     ],
     renderScaffoldTemplate: renderSummaryTemplate,
     renderAuthoringTemplate: renderSummaryTemplate
