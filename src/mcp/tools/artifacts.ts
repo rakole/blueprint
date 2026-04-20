@@ -72,8 +72,11 @@ export type SupportedScaffoldArtifact =
   (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
 export type BlueprintReadiness = "uninitialized" | "partial" | "initialized";
 export type BootstrapRepoShape = "greenfield" | "scaffold-only" | "brownfield";
+export type BootstrapRequirementScope = "committed" | "deferred" | "out_of_scope";
 export type BootstrapRequirementRow = {
   id: string;
+  scope?: BootstrapRequirementScope;
+  group?: string;
   requirement: string;
   status: string;
   notes: string;
@@ -112,6 +115,11 @@ export type BootstrapArtifactDiagnostics = {
   placeholderArtifacts: string[];
   traceabilityWarnings: string[];
   brownfield: BootstrapAssessment;
+};
+
+type NormalizedBootstrapRequirementRow = Required<BootstrapRequirementRow>;
+type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirements"> & {
+  requirements: NormalizedBootstrapRequirementRow[];
 };
 
 type ArtifactScaffoldArgs = {
@@ -424,6 +432,156 @@ function normalizeList(values: string[] | undefined, fallback: string[]): string
 
 function normalizeSuccessCriteria(values: string[] | undefined, fallback: string[]): string[] {
   return normalizeList(values, fallback);
+}
+
+const BOOTSTRAP_REQUIREMENT_SCOPE_ORDER: BootstrapRequirementScope[] = [
+  "committed",
+  "deferred",
+  "out_of_scope"
+];
+
+function normalizeRequirementScope(
+  value: string | undefined,
+  fallback: BootstrapRequirementScope
+): BootstrapRequirementScope {
+  const normalized = normalizeCaptureStatus(value ?? "").replace(/[\s-]+/g, "_");
+
+  if (normalized.length === 0) {
+    return fallback;
+  }
+
+  if (["committed", "v1", "current", "core"].includes(normalized)) {
+    return "committed";
+  }
+
+  if (["deferred", "later", "future", "post_v1", "postv1"].includes(normalized)) {
+    return "deferred";
+  }
+
+  if (["out_of_scope", "outofscope", "cut", "cuts", "excluded"].includes(normalized)) {
+    return "out_of_scope";
+  }
+
+  throw new Error(
+    `Requirement scope must be one of: committed, deferred, out_of_scope. Received: ${value ?? ""}`
+  );
+}
+
+function fallbackRequirementGroup(scope: BootstrapRequirementScope): string {
+  if (scope === "committed") {
+    return "Committed v1";
+  }
+
+  if (scope === "deferred") {
+    return "Deferred follow-through";
+  }
+
+  return "Out-of-scope cuts";
+}
+
+function normalizeRequirementGroup(value: string | undefined, fallback: string): string {
+  const normalized = normalizeCaptureText(value ?? "");
+
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizeBootstrapRequirements(
+  requirements: BootstrapRequirementRow[] | undefined,
+  defaults: BootstrapRequirementRow[]
+): NormalizedBootstrapRequirementRow[] {
+  const source = requirements ?? defaults;
+
+  return source
+    .filter(
+      (requirement) =>
+        requirement.id.trim().length > 0 && requirement.requirement.trim().length > 0
+    )
+    .map((requirement, index) => {
+      const defaultRequirement = defaults[index];
+      const scope = normalizeRequirementScope(
+        requirement.scope,
+        defaultRequirement?.scope ?? "committed"
+      );
+
+      return {
+        id: requirement.id.trim(),
+        scope,
+        group: normalizeRequirementGroup(
+          requirement.group,
+          defaultRequirement?.group ?? fallbackRequirementGroup(scope)
+        ),
+        requirement: requirement.requirement.trim(),
+        status: requirement.status.trim(),
+        notes: requirement.notes.trim()
+      };
+    });
+}
+
+function requirementScopeOrder(scope: BootstrapRequirementScope): number {
+  return BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.indexOf(scope);
+}
+
+function requirementScopeLabel(scope: BootstrapRequirementScope): string {
+  if (scope === "committed") {
+    return "Committed V1 Scope";
+  }
+
+  if (scope === "deferred") {
+    return "Deferred Scope";
+  }
+
+  return "Out-of-Scope Cuts";
+}
+
+function requirementScopeSummaryLabel(scope: BootstrapRequirementScope): string {
+  if (scope === "committed") {
+    return "Committed v1";
+  }
+
+  if (scope === "deferred") {
+    return "Deferred";
+  }
+
+  return "Out-of-scope";
+}
+
+function bootstrapRequirementSort(
+  left: NormalizedBootstrapRequirementRow,
+  right: NormalizedBootstrapRequirementRow
+): number {
+  const scopeDelta = requirementScopeOrder(left.scope) - requirementScopeOrder(right.scope);
+
+  if (scopeDelta !== 0) {
+    return scopeDelta;
+  }
+
+  const groupDelta = left.group.localeCompare(right.group, undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+
+  if (groupDelta !== 0) {
+    return groupDelta;
+  }
+
+  return left.id.localeCompare(right.id, undefined, {
+    numeric: true,
+    sensitivity: "base"
+  });
+}
+
+function groupBootstrapRequirements(
+  requirements: NormalizedBootstrapRequirementRow[]
+): Map<BootstrapRequirementScope, NormalizedBootstrapRequirementRow[]> {
+  const grouped = new Map<BootstrapRequirementScope, NormalizedBootstrapRequirementRow[]>();
+
+  for (const requirement of requirements.slice().sort(bootstrapRequirementSort)) {
+    const scopeRequirements = grouped.get(requirement.scope) ?? [];
+    scopeRequirements.push(requirement);
+    grouped.set(requirement.scope, scopeRequirements);
+  }
+
+  return grouped;
 }
 
 function escapeTableCell(value: string): string {
@@ -877,7 +1035,7 @@ function buildDefaultBootstrapSeed(
   projectName: string,
   assessment: BootstrapAssessment,
   seed?: BootstrapSeed
-): Required<BootstrapSeed> {
+): NormalizedBootstrapSeed {
   const defaultVision =
     assessment.repoShape === "brownfield"
       ? `Bring ${projectName} under Blueprint with a trustworthy understanding of the existing repo, durable requirements, and a roadmap that stays provisional until the codebase is mapped.`
@@ -911,6 +1069,8 @@ function buildDefaultBootstrapSeed(
       ? [
           {
             id: "RQ-01",
+            scope: "committed",
+            group: "Repo alignment",
             requirement:
               "Document the repo's current product direction, technical boundaries, and maintenance constraints before downstream planning.",
             status: "Pending",
@@ -918,6 +1078,8 @@ function buildDefaultBootstrapSeed(
           },
           {
             id: "RQ-02",
+            scope: "committed",
+            group: "Traceability",
             requirement:
               "Create a requirement set whose IDs remain traceable from the roadmap and later phase artifacts.",
             status: "Pending",
@@ -925,15 +1087,28 @@ function buildDefaultBootstrapSeed(
           },
           {
             id: "RQ-03",
+            scope: "deferred",
+            group: "Codebase mapping follow-through",
             requirement:
               "Map the existing codebase before treating later roadmap phases as durable execution commitments.",
             status: "Pending",
             notes: "Unmapped brownfield repos should route to `/blu-map-codebase`."
+          },
+          {
+            id: "RQ-04",
+            scope: "out_of_scope",
+            group: "Future expansion cuts",
+            requirement:
+              "Do not promote implementation work or long-horizon automation until the mapped baseline is understood.",
+            status: "Pending",
+            notes: "Keep bootstrap scope narrower than execution planning."
           }
         ]
       : [
           {
             id: "RQ-01",
+            scope: "committed",
+            group: "Product direction",
             requirement:
               `Define the product outcome and first-milestone goals for ${projectName}.`,
             status: "Pending",
@@ -941,6 +1116,8 @@ function buildDefaultBootstrapSeed(
           },
           {
             id: "RQ-02",
+            scope: "committed",
+            group: "Delivery boundaries",
             requirement:
               "Record durable constraints, non-goals, and acceptance boundaries before detailed planning starts.",
             status: "Pending",
@@ -948,10 +1125,21 @@ function buildDefaultBootstrapSeed(
           },
           {
             id: "RQ-03",
+            scope: "deferred",
+            group: "Follow-through planning",
             requirement:
               "Prepare the repo for Blueprint lifecycle commands with stable requirement and roadmap traceability.",
             status: "Pending",
             notes: "Foundation requirement for later phases."
+          },
+          {
+            id: "RQ-04",
+            scope: "out_of_scope",
+            group: "Explicit bootstrap cuts",
+            requirement:
+              "Do not turn the bootstrap draft into a full implementation backlog or execution plan.",
+            status: "Pending",
+            notes: "Keeps v1 bootstrap narrower than later work streams."
           }
         ];
   const defaultRoadmapPhases: BootstrapRoadmapPhase[] =
@@ -1028,11 +1216,7 @@ function buildDefaultBootstrapSeed(
     constraints: normalizeList(seed?.constraints, defaultConstraints),
     currentMilestone: defaultMilestone,
     nonGoals: normalizeList(seed?.nonGoals, defaultNonGoals),
-    requirements:
-      seed?.requirements?.filter(
-        (requirement) =>
-          requirement.id.trim().length > 0 && requirement.requirement.trim().length > 0
-      ) ?? defaultRequirements,
+    requirements: normalizeBootstrapRequirements(seed?.requirements, defaultRequirements),
     roadmapPhases:
       (seed?.roadmapPhases?.filter(
         (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
@@ -1054,8 +1238,19 @@ function renderProjectArtifact(context: BootstrapRenderContext): string {
     context.bootstrapAssessment,
     context.bootstrapSeed
   );
+  const requirements = normalizeBootstrapRequirements(seed.requirements, seed.requirements);
   const primaryAudience = normalizeList(seed.audience.primary, []);
   const secondaryAudience = normalizeList(seed.audience.secondary, []);
+  const groupedRequirements = groupBootstrapRequirements(requirements);
+  const requirementSummary = BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.map((scope) => {
+    const ids = (groupedRequirements.get(scope) ?? []).map((requirement) => requirement.id);
+
+    return `- ${requirementScopeSummaryLabel(scope)}: ${ids.length > 0 ? ids.join(", ") : "none"}`;
+  }).join("\n");
+  const bootstrapShapeLine =
+    context.bootstrapAssessment.repoShape === "brownfield"
+      ? "Brownfield bootstrap should stay provisional until `/blu-map-codebase` captures the current repo."
+      : "Greenfield bootstrap can shape v1 directly, but deferred cuts still remain visible.";
 
   return `# ${context.projectName}
 
@@ -1075,6 +1270,16 @@ ${seed.constraints.map((value) => `- ${value}`).join("\n")}
 ## Current Milestone
 
 ${seed.currentMilestone}
+
+## Bootstrap Shape
+
+- Repository shape: ${titleCaseBootstrapShape(context.bootstrapAssessment.repoShape)}
+- Codebase mapping: ${context.bootstrapAssessment.codebaseMapped ? "ready" : "pending"}
+- Bootstrap posture: ${bootstrapShapeLine}
+
+## Scope Posture
+
+${requirementSummary}
 
 ## Non-Goals
 
@@ -1109,12 +1314,54 @@ function renderRequirementsArtifact(context: BootstrapRenderContext): string {
     context.bootstrapAssessment,
     context.bootstrapSeed
   );
-  const rows = seed.requirements
+  const requirements = normalizeBootstrapRequirements(seed.requirements, seed.requirements);
+  const groupedRequirements = groupBootstrapRequirements(requirements);
+  const rows = requirements
+    .slice()
+    .sort(bootstrapRequirementSort)
     .map(
       (requirement) =>
         `| ${escapeTableCell(requirement.id)} | ${escapeTableCell(requirement.requirement)} | ${escapeTableCell(requirement.status)} | ${escapeTableCell(requirement.notes)} |`
     )
     .join("\n");
+  const scopeSummary = BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.map((scope) => {
+    const scopeRequirements = groupedRequirements.get(scope) ?? [];
+    const ids = scopeRequirements.map((requirement) => requirement.id).join(", ");
+    return `- ${requirementScopeSummaryLabel(scope)}: ${ids.length > 0 ? ids : "none"}`;
+  }).join("\n");
+  const scopeSections = BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.map((scope) => {
+    const scopeRequirements = groupedRequirements.get(scope) ?? [];
+
+    if (scopeRequirements.length === 0) {
+      return "";
+    }
+
+    const groupedByTheme = new Map<string, Required<BootstrapRequirementRow>[]>();
+
+    for (const requirement of scopeRequirements) {
+      const themeRequirements = groupedByTheme.get(requirement.group) ?? [];
+      themeRequirements.push(requirement);
+      groupedByTheme.set(requirement.group, themeRequirements);
+    }
+
+    const themeBlocks = [...groupedByTheme.entries()]
+      .sort(([left], [right]) => left.localeCompare(right, undefined, { sensitivity: "base" }))
+      .map(([group, requirements]) => {
+        const entries = requirements
+          .map(
+            (requirement) =>
+              `- \`${requirement.id}\`: ${requirement.requirement}\n  - Status: ${requirement.status}\n  - Notes: ${requirement.notes}`
+          )
+          .join("\n");
+
+        return `### ${group}\n\n${entries}`;
+      })
+      .join("\n\n");
+
+    return `## ${requirementScopeLabel(scope)}\n\n${themeBlocks}`;
+  })
+    .filter((value) => value.length > 0)
+    .join("\n\n");
 
   return `# Requirements: ${context.projectName}
 
@@ -1123,6 +1370,12 @@ function renderRequirementsArtifact(context: BootstrapRenderContext): string {
 | ID | Requirement | Status | Notes |
 |----|-------------|--------|-------|
 ${rows}
+
+## Scope Summary
+
+${scopeSummary}
+
+${scopeSections}
 
 ## Traceability Notes
 
@@ -1144,6 +1397,8 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
     context.bootstrapAssessment,
     context.bootstrapSeed
   );
+  const requirements = normalizeBootstrapRequirements(seed.requirements, seed.requirements);
+  const groupedRequirements = groupBootstrapRequirements(requirements);
   const phases = seed.roadmapPhases
     .map((phase) => {
       const normalizedPhaseNumber = normalizePhaseNumber(phase.phase);
@@ -1175,6 +1430,15 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
 - Repository shape: ${titleCaseBootstrapShape(context.bootstrapAssessment.repoShape)}
 - Codebase mapping: ${context.bootstrapAssessment.codebaseMapped ? "ready" : "pending"}
 - Roadmap confidence: ${context.bootstrapAssessment.provisionalRoadmap ? "provisional until /blu-map-codebase" : "ready for progress review"}
+
+## Requirement Coverage
+
+${BOOTSTRAP_REQUIREMENT_SCOPE_ORDER.map((scope) => {
+    const scopeRequirements = groupedRequirements.get(scope) ?? [];
+    const ids = scopeRequirements.map((requirement) => requirement.id).join(", ");
+
+    return `- ${requirementScopeSummaryLabel(scope)}: ${ids.length > 0 ? ids : "none"}`;
+  }).join("\n")}
 
 ## Phases
 
@@ -1278,6 +1542,8 @@ const artifactScaffoldInputSchema = {
         .array(
           z.object({
             id: z.string(),
+            scope: z.enum(["committed", "deferred", "out_of_scope"]).optional(),
+            group: z.string().optional(),
             requirement: z.string(),
             status: z.string(),
             notes: z.string()
@@ -3323,16 +3589,9 @@ function extractRequirementIds(content: string): string[] {
 }
 
 function extractRoadmapRequirementRefs(content: string): string[] {
-  const references = [
-    ...content.matchAll(/Requirements?:\s*([A-Z0-9,\- ]+)/g)
-  ].flatMap((match) =>
-    match[1]
-      .split(",")
-      .map((value) => value.trim())
-      .filter((value) => /^[A-Z][A-Z0-9-]*-\d+$/.test(value))
-  );
-
-  return [...new Set(references)];
+  return [
+    ...new Set([...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]))
+  ];
 }
 
 export async function inspectBootstrapArtifacts(

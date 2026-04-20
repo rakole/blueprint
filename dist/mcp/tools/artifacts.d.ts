@@ -19,8 +19,11 @@ export declare const SUPPORTED_SCAFFOLD_ARTIFACTS: readonly [".blueprint/PROJECT
 export type SupportedScaffoldArtifact = (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
 export type BlueprintReadiness = "uninitialized" | "partial" | "initialized";
 export type BootstrapRepoShape = "greenfield" | "scaffold-only" | "brownfield";
+export type BootstrapRequirementScope = "committed" | "deferred" | "out_of_scope";
 export type BootstrapRequirementRow = {
     id: string;
+    scope?: BootstrapRequirementScope;
+    group?: string;
     requirement: string;
     status: string;
     notes: string;
@@ -395,6 +398,12 @@ export declare const artifactToolDefinitions: ({
             nonGoals: z.ZodOptional<z.ZodArray<z.ZodString>>;
             requirements: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
+                scope: z.ZodOptional<z.ZodEnum<{
+                    committed: "committed";
+                    deferred: "deferred";
+                    out_of_scope: "out_of_scope";
+                }>>;
+                group: z.ZodOptional<z.ZodString>;
                 requirement: z.ZodString;
                 status: z.ZodString;
                 notes: z.ZodString;
