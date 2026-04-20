@@ -14445,6 +14445,276 @@ function renderBootstrapRoadmapTemplate() {
 
 - <bootstrap assumption>`;
 }
+function renderCodebaseTemplate(title, sections, options = {}) {
+  const body = [
+    `# ${title}`,
+    "",
+    "## Purpose",
+    "",
+    "- Capture the mapped repo evidence for this codebase area.",
+    "",
+    ...sections.flatMap((section) => [
+      `## ${section.heading}`,
+      "",
+      ...section.bullets.map((bullet) => `- ${bullet}`),
+      ""
+    ])
+  ];
+  const content = body.join("\n").trimEnd();
+  if (!options.footer) {
+    return `${content}
+`;
+  }
+  return `${withScaffoldFooter(content)}`;
+}
+function renderCodebaseStackTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Stack",
+    [
+      {
+        heading: "Runtime",
+        bullets: [
+          "Primary language or runtime: <runtime>",
+          "Module system or platform: <module system>",
+          "Package manager or build entrypoint: <package manager>"
+        ]
+      },
+      {
+        heading: "Tooling",
+        bullets: [
+          "Build command: <build command>",
+          "Test command: <test command>",
+          "Lint or format command: <lint or format command>"
+        ]
+      },
+      {
+        heading: "Dependencies",
+        bullets: [
+          "Core dependencies: <core dependencies>",
+          "Notable dev dependencies: <dev dependencies>",
+          "Generated or vendored tooling: <tooling notes>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<stack note>"]
+      }
+    ],
+    options
+  );
+}
+function renderCodebaseArchitectureTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Architecture",
+    [
+      {
+        heading: "Overview",
+        bullets: [
+          "Map the primary execution model and top-level application shape: <overview>",
+          "Describe the main repo boundary or runtime surface: <boundary note>"
+        ]
+      },
+      {
+        heading: "Boundaries",
+        bullets: [
+          "Primary subsystems or layers: <boundary>",
+          "Cross-cutting concerns or shared services: <boundary>"
+        ]
+      },
+      {
+        heading: "Flow",
+        bullets: [
+          "Entry points and request path: <entry points>",
+          "Data flow or orchestration path: <flow summary>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<architecture note>"]
+      }
+    ],
+    options
+  );
+}
+function renderCodebaseStructureTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Structure",
+    [
+      {
+        heading: "Directory Map",
+        bullets: [
+          "`<directory>`: <purpose>",
+          "`<directory>`: <purpose>"
+        ]
+      },
+      {
+        heading: "Key Files",
+        bullets: [
+          "`<file path>`: <purpose>",
+          "`<file path>`: <purpose>"
+        ]
+      },
+      {
+        heading: "Seams",
+        bullets: [
+          "Important refactor or ownership seam: <seam>",
+          "Additional seam or boundary: <seam>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<structure note>"]
+      }
+    ],
+    options
+  );
+}
+function renderCodebaseConventionsTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Conventions",
+    [
+      {
+        heading: "Naming",
+        bullets: [
+          "File, type, and module naming conventions: <naming convention>",
+          "Repo-specific vocabulary or prefixes: <naming detail>"
+        ]
+      },
+      {
+        heading: "Module Boundaries",
+        bullets: [
+          "Import/export or package boundary rules: <boundary rule>",
+          "Directory ownership or layering rule: <boundary rule>"
+        ]
+      },
+      {
+        heading: "Error Handling",
+        bullets: [
+          "Error and logging pattern: <error handling pattern>",
+          "Retry, guard, or failure conventions: <error handling detail>"
+        ]
+      },
+      {
+        heading: "Documentation",
+        bullets: [
+          "Commenting or README style: <documentation convention>",
+          "Where durable notes should live: <documentation location>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<convention note>"]
+      }
+    ],
+    options
+  );
+}
+function renderCodebaseTestingTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Testing",
+    [
+      {
+        heading: "Framework",
+        bullets: [
+          "Primary test runner: <runner>",
+          "Assertion or mocking stack: <assertion stack>"
+        ]
+      },
+      {
+        heading: "Commands",
+        bullets: [
+          "Full test command: <test command>",
+          "Focused or watch command: <focused command>"
+        ]
+      },
+      {
+        heading: "Coverage",
+        bullets: [
+          "Key coverage signal: <coverage signal>",
+          "Gap or limitation that still needs attention: <coverage gap>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<testing note>"]
+      }
+    ],
+    options
+  );
+}
+function renderCodebaseIntegrationsTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Integrations",
+    [
+      {
+        heading: "External Systems",
+        bullets: [
+          "Service, provider, or backend dependency: <system>",
+          "Additional external surface: <system>"
+        ]
+      },
+      {
+        heading: "SDKs And APIs",
+        bullets: [
+          "SDK or API surface: <sdk or api>",
+          "Integration entrypoint or client wrapper: <integration detail>"
+        ]
+      },
+      {
+        heading: "Authentication And Secrets",
+        bullets: [
+          "Auth flow, credentials, or secrets handling: <auth detail>",
+          "Operational boundary or environment note: <auth detail>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<integration note>"]
+      }
+    ],
+    options
+  );
+}
+function renderCodebaseConcernsTemplate(_context, options = {}) {
+  return renderCodebaseTemplate(
+    "Concerns",
+    [
+      {
+        heading: "Risks",
+        bullets: [
+          "Current risk that could slow mapping or delivery: <risk>",
+          "Additional risk or unknown: <risk>"
+        ]
+      },
+      {
+        heading: "Gaps",
+        bullets: [
+          "Thin area, missing evidence, or unknown: <gap>",
+          "Follow-up evidence still needed: <gap>"
+        ]
+      },
+      {
+        heading: "Follow-Ups",
+        bullets: [
+          "Next concrete follow-up: <follow-up>",
+          "Later revisit item: <follow-up>"
+        ]
+      },
+      {
+        heading: "Questions",
+        bullets: [
+          "Open question that still needs an answer: <question>",
+          "Additional question or assumption to verify: <question>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<concern note>"]
+      }
+    ],
+    options
+  );
+}
 function renderContextTemplate(context) {
   return `# ${phaseLabel(context)} - Context
 
@@ -15407,6 +15677,24 @@ function resolveReviewArtifactContractId(artifact) {
       return "review.ui-review";
   }
 }
+function resolveCodebaseArtifactContractId(artifact) {
+  switch (artifact) {
+    case "stack":
+      return "codebase.stack";
+    case "architecture":
+      return "codebase.architecture";
+    case "structure":
+      return "codebase.structure";
+    case "conventions":
+      return "codebase.conventions";
+    case "testing":
+      return "codebase.testing";
+    case "integrations":
+      return "codebase.integrations";
+    case "concerns":
+      return "codebase.concerns";
+  }
+}
 function resolveReportContractId(name) {
   const normalized = name.trim().toLowerCase();
   if (normalized === "pause-work-latest" || normalized === "pause-work") {
@@ -15556,6 +15844,199 @@ var init_artifact_contracts = __esm({
         ],
         renderScaffoldTemplate: renderBootstrapRoadmapTemplate,
         renderAuthoringTemplate: renderBootstrapRoadmapTemplate
+      },
+      "codebase.stack": {
+        id: "codebase.stack",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Stack",
+        canonicalFilePattern: ".blueprint/codebase/STACK.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "Runtime", "Tooling", "Dependencies", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<runtime>",
+          "<module system>",
+          "<package manager>",
+          "<build command>",
+          "<test command>",
+          "<lint or format command>",
+          "<core dependencies>",
+          "<dev dependencies>",
+          "<tooling notes>",
+          "<stack note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Stack mapping should record the runtime, package manager, build/test commands, and dependency profile confirmed by repo evidence.",
+          "The scaffold template is intentionally placeholder-heavy so scaffold-only output never counts as a completed mapping."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseStackTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseStackTemplate
+      },
+      "codebase.architecture": {
+        id: "codebase.architecture",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Architecture",
+        canonicalFilePattern: ".blueprint/codebase/ARCHITECTURE.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "Overview", "Boundaries", "Flow", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<overview>",
+          "<boundary note>",
+          "<boundary>",
+          "<entry points>",
+          "<flow summary>",
+          "<architecture note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Architecture mapping should capture the execution model, subsystem boundaries, and high-level data flow.",
+          "The scaffold template should remain obviously incomplete until the content is replaced with real repo evidence."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseArchitectureTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseArchitectureTemplate
+      },
+      "codebase.structure": {
+        id: "codebase.structure",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Structure",
+        canonicalFilePattern: ".blueprint/codebase/STRUCTURE.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "Directory Map", "Key Files", "Seams", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<directory>",
+          "<purpose>",
+          "<file path>",
+          "<seam>",
+          "<structure note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Structure mapping should make the repo layout and important file seams easy to navigate.",
+          "Populate the directory map and key files with repo-specific evidence instead of generic placeholders."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseStructureTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseStructureTemplate
+      },
+      "codebase.conventions": {
+        id: "codebase.conventions",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Conventions",
+        canonicalFilePattern: ".blueprint/codebase/CONVENTIONS.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "Naming", "Module Boundaries", "Error Handling", "Documentation", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<naming convention>",
+          "<naming detail>",
+          "<boundary rule>",
+          "<error handling pattern>",
+          "<error handling detail>",
+          "<documentation convention>",
+          "<documentation location>",
+          "<convention note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Conventions mapping should describe durable naming, module boundary, error handling, and documentation practices.",
+          "The contract favors repo-specific conventions over generic style guidance."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseConventionsTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseConventionsTemplate
+      },
+      "codebase.testing": {
+        id: "codebase.testing",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Testing",
+        canonicalFilePattern: ".blueprint/codebase/TESTING.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "Framework", "Commands", "Coverage", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<runner>",
+          "<assertion stack>",
+          "<test command>",
+          "<focused command>",
+          "<coverage signal>",
+          "<coverage gap>",
+          "<testing note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Testing mapping should capture the runnable test surface and any coverage gaps that still need attention.",
+          "Preserve the actual commands and framework signals that were confirmed in the repo."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseTestingTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseTestingTemplate
+      },
+      "codebase.integrations": {
+        id: "codebase.integrations",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Integrations",
+        canonicalFilePattern: ".blueprint/codebase/INTEGRATIONS.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "External Systems", "SDKs And APIs", "Authentication And Secrets", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<system>",
+          "<sdk or api>",
+          "<integration detail>",
+          "<auth detail>",
+          "<integration note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Integrations mapping should call out third-party systems, SDKs, APIs, and secret-handling assumptions.",
+          "The file should stay grounded in observed repo evidence, not guessed integrations."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseIntegrationsTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseIntegrationsTemplate
+      },
+      "codebase.concerns": {
+        id: "codebase.concerns",
+        scope: "codebase",
+        ownerTool: "blueprint_codebase_artifact_write",
+        pathOwner: "blueprint_codebase_artifact_write",
+        canonicalName: "Codebase Concerns",
+        canonicalFilePattern: ".blueprint/codebase/CONCERNS.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: ["Purpose", "Risks", "Gaps", "Follow-Ups", "Questions", "Notes"],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "<risk>",
+          "<gap>",
+          "<follow-up>",
+          "<question>",
+          "<concern note>",
+          "Generated by `blueprint_artifact_scaffold`",
+          "Generated by `/blu-map-codebase`"
+        ],
+        notes: [
+          "Concerns mapping should preserve unresolved risks, thin areas, and the follow-up questions that matter for future work.",
+          "Do not treat a placeholder-only concerns file as a completed brownfield mapping artifact."
+        ],
+        renderScaffoldTemplate: () => renderCodebaseConcernsTemplate(void 0, { footer: true }),
+        renderAuthoringTemplate: renderCodebaseConcernsTemplate
       },
       "phase.context": {
         id: "phase.context",
@@ -18535,6 +19016,98 @@ function validateContractBackedMarkdown(content, contractId, artifactLabel) {
     warnings: []
   };
 }
+function resolveCodebaseArtifactPathContractId(artifact) {
+  switch (artifact) {
+    case ".blueprint/codebase/STACK.md":
+      return resolveCodebaseArtifactContractId("stack");
+    case ".blueprint/codebase/ARCHITECTURE.md":
+      return resolveCodebaseArtifactContractId("architecture");
+    case ".blueprint/codebase/STRUCTURE.md":
+      return resolveCodebaseArtifactContractId("structure");
+    case ".blueprint/codebase/CONVENTIONS.md":
+      return resolveCodebaseArtifactContractId("conventions");
+    case ".blueprint/codebase/TESTING.md":
+      return resolveCodebaseArtifactContractId("testing");
+    case ".blueprint/codebase/INTEGRATIONS.md":
+      return resolveCodebaseArtifactContractId("integrations");
+    case ".blueprint/codebase/CONCERNS.md":
+      return resolveCodebaseArtifactContractId("concerns");
+  }
+}
+function resolveCodebaseArtifactPath(artifactId) {
+  switch (artifactId) {
+    case "codebase.stack":
+      return ".blueprint/codebase/STACK.md";
+    case "codebase.architecture":
+      return ".blueprint/codebase/ARCHITECTURE.md";
+    case "codebase.structure":
+      return ".blueprint/codebase/STRUCTURE.md";
+    case "codebase.conventions":
+      return ".blueprint/codebase/CONVENTIONS.md";
+    case "codebase.testing":
+      return ".blueprint/codebase/TESTING.md";
+    case "codebase.integrations":
+      return ".blueprint/codebase/INTEGRATIONS.md";
+    case "codebase.concerns":
+      return ".blueprint/codebase/CONCERNS.md";
+  }
+}
+function validateCodebaseArtifactContent(content, artifactId) {
+  const contract = readArtifactContract(artifactId);
+  const issues = [];
+  const warnings = [];
+  const requiredSectionIssues = validateRequiredMarkdownSections(
+    content,
+    `${contract.canonicalName} artifact`,
+    contract.requiredHeadings
+  );
+  const populatedRequiredSections = contract.requiredHeadings.filter(
+    (heading) => extractMarkdownSection(content, heading).trim().length > 0
+  );
+  const normalizedLines = content.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim());
+  const meaningfulLines = normalizedLines.filter(
+    (line) => line.length > 0 && !line.startsWith("#") && !line.startsWith("*Generated by") && !/^[-*]\s*$/.test(line)
+  );
+  const hasLegacySummary = countMeaningfulWords(meaningfulLines.join(" ")) >= 1;
+  if (!/^# .+\S\s*$/m.test(content)) {
+    issues.push(`${contract.canonicalName} artifact must start with a markdown H1 title.`);
+  }
+  issues.push(
+    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal)).map(
+      (signal) => `${contract.canonicalName} artifact still contains placeholder scaffold text: ${signal}.`
+    )
+  );
+  if (requiredSectionIssues.length > 0) {
+    if (populatedRequiredSections.length === 0 && hasLegacySummary) {
+      warnings.push(
+        `${contract.canonicalName} artifact uses a legacy concise format without the canonical section headings.`
+      );
+    } else {
+      issues.push(...requiredSectionIssues);
+    }
+  }
+  if (populatedRequiredSections.length === 0 && !hasLegacySummary) {
+    issues.push(
+      `${contract.canonicalName} artifact must include either substantive mapped prose or at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
+    );
+  }
+  for (const heading of contract.requiredHeadings) {
+    const section = extractMarkdownSection(content, heading);
+    if (section.trim().length === 0) {
+      continue;
+    }
+    if (!hasBootstrapText(section, 2)) {
+      issues.push(
+        `${contract.canonicalName} artifact section ${heading} must contain substantive repo evidence instead of scaffold placeholders.`
+      );
+    }
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
 function hasNonEmptyBulletedList(section) {
   return section.split("\n").map((line) => line.trim()).some((line) => /^[-*]\s+\S/.test(line));
 }
@@ -19406,10 +19979,27 @@ async function inspectBlueprintArtifacts(projectRoot) {
   );
   const codebasePresent = [];
   const codebaseMissing = [];
+  const codebaseValid = [];
+  const codebaseInvalid = [];
+  const codebaseWarnings = [];
   for (const artifact of CODEBASE_ARTIFACTS) {
     const artifactPath = resolveBlueprintPath(projectRoot, artifact);
     if (await pathExists(artifactPath)) {
       codebasePresent.push(artifact);
+      const contractId = resolveCodebaseArtifactPathContractId(artifact);
+      const raw = await fs.readFile(artifactPath, "utf8");
+      const validation = validateCodebaseArtifactContent(raw, contractId);
+      if (validation.valid) {
+        codebaseValid.push(artifact);
+      } else {
+        codebaseInvalid.push(artifact);
+        codebaseWarnings.push(
+          `${artifact}: ${validation.issues.join(" ")}`
+        );
+      }
+      for (const warning of validation.warnings) {
+        codebaseWarnings.push(`${artifact}: ${warning}`);
+      }
     } else {
       codebaseMissing.push(artifact);
     }
@@ -19426,7 +20016,11 @@ async function inspectBlueprintArtifacts(projectRoot) {
     reports,
     codebase: {
       present: codebasePresent,
-      missing: codebaseMissing
+      missing: codebaseMissing,
+      valid: codebaseValid,
+      invalid: codebaseInvalid,
+      mapped: codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0,
+      warnings: codebaseWarnings
     }
   };
 }
@@ -19441,8 +20035,7 @@ async function assessBootstrapRepoShape(projectRoot, inspection) {
   const hasBuildManifest = substantiveEntries.some(
     (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
   );
-  const codebasePresentCount = inspection?.codebase.present.length ?? 0;
-  const codebaseMapped = codebasePresentCount === CODEBASE_ARTIFACTS.length;
+  const codebaseMapped = inspection?.codebase.mapped ?? false;
   let repoShape = "greenfield";
   const reasons = [];
   if (hasSourceDirectories || hasBuildManifest && substantiveEntries.length >= 2 || substantiveEntries.length >= 4) {
@@ -19594,9 +20187,22 @@ async function inspectBootstrapArtifacts(projectRoot) {
   const roadmapContent = contents.get(`${BLUEPRINT_DIR}/ROADMAP.md`) ?? "";
   const traceability = validateBootstrapRequirementTraceability(requirementsContent, roadmapContent);
   traceabilityWarnings.push(...traceability.warnings, ...traceability.issues);
+  if (brownfield.provisionalRoadmap && inspection.codebase.present.length > 0 && (inspection.codebase.missing.length > 0 || inspection.codebase.invalid.length > 0)) {
+    const missingBit = inspection.codebase.missing.length > 0 ? ` missing ${inspection.codebase.missing.join(", ")}` : "";
+    const invalidBit = inspection.codebase.invalid.length > 0 ? ` invalid ${inspection.codebase.invalid.join(", ")}` : "";
+    traceabilityWarnings.push(
+      `Codebase artifact bundle is not yet mapped${missingBit}${invalidBit}.`
+    );
+  }
   if (brownfield.provisionalRoadmap) {
     traceabilityWarnings.push(
       "Brownfield roadmap remains provisional until `/blu-map-codebase` captures the existing codebase."
+    );
+  } else if (inspection.codebase.mapped) {
+    traceabilityWarnings.push("Codebase artifact bundle is validated and ready for reuse.");
+  } else if (inspection.codebase.present.length > 0 && inspection.codebase.invalid.length > 0) {
+    traceabilityWarnings.push(
+      "Codebase artifacts are present but remain incomplete or non-canonical; reuse should stay provisional until validation passes."
     );
   }
   return {
@@ -19698,6 +20304,11 @@ async function blueprintArtifactList(args = {}) {
   const warnings = [];
   if (inspection.codebase.present.length > 0 && inspection.codebase.missing.length > 0) {
     missing.push(...inspection.codebase.missing);
+  }
+  if (inspection.codebase.invalid.length > 0) {
+    warnings.push(
+      `Existing codebase artifacts are present but not yet valid: ${inspection.codebase.invalid.join(", ")}`
+    );
   }
   if (inspection.codebase.present.length > 0) {
     warnings.push(
@@ -20219,13 +20830,17 @@ async function blueprintArtifactValidate(args = {}) {
     issues.push(issue2);
     suggestedRepairs.add("Restore or regenerate the missing phase artifacts before execution.");
   }
-  if (inspection.codebase.present.length > 0 && inspection.codebase.missing.length > 0) {
-    issues.push(
-      `Codebase artifact bundle is incomplete: missing ${inspection.codebase.missing.join(", ")}`
-    );
+  if (inspection.codebase.present.length > 0 && (inspection.codebase.missing.length > 0 || inspection.codebase.invalid.length > 0)) {
+    const missingText = inspection.codebase.missing.length > 0 ? ` missing ${inspection.codebase.missing.join(", ")}` : "";
+    const invalidText = inspection.codebase.invalid.length > 0 ? ` invalid ${inspection.codebase.invalid.join(", ")}` : "";
+    issues.push(`Codebase artifact bundle is incomplete or non-canonical:${missingText}${invalidText}`);
     suggestedRepairs.add("Re-run /blu-map-codebase to recreate the missing codebase artifacts.");
   }
-  if (inspection.codebase.present.length > 0) {
+  if (inspection.codebase.invalid.length > 0) {
+    warnings.push(
+      `Existing codebase artifacts are present but not yet valid: ${inspection.codebase.invalid.join(", ")}`
+    );
+  } else if (inspection.codebase.present.length > 0) {
     warnings.push(
       "Existing codebase artifacts are present and should be reused unless replace is explicitly confirmed."
     );
@@ -20422,6 +21037,15 @@ function summarizeIntegrations(dependencies, sourceFiles, trackedFiles) {
   );
   return uniqueSorted([...integrationPackages, ...integrationPaths]).slice(0, 5);
 }
+function collectFocusEvidence(focusArea, candidates) {
+  const normalizedFocus = focusArea?.trim().toLowerCase();
+  if (!normalizedFocus) {
+    return [];
+  }
+  return uniqueSorted(
+    candidates.filter((candidate) => candidate.toLowerCase().includes(normalizedFocus))
+  );
+}
 function buildCodebaseDigestSections(args) {
   const dependencies = collectDependencyNames(args.packageManifest);
   const testFramework = detectTestFramework(args.packageManifest, args.testFiles);
@@ -20434,29 +21058,51 @@ function buildCodebaseDigestSections(args) {
     args.sourceFiles,
     args.trackedFiles
   );
-  const focusSuffix = args.focusArea && args.focusArea.trim().length > 0 ? ` Focus area requested: ${args.focusArea.trim()}.` : "";
+  const focusLabel = args.focusArea?.trim();
+  const focusedSourceFiles = collectFocusEvidence(focusLabel, args.sourceFiles);
+  const focusedDocFiles = collectFocusEvidence(focusLabel, args.docFiles);
+  const focusedTrackedFiles = collectFocusEvidence(focusLabel, args.trackedFiles);
+  const focusedDependencies = collectFocusEvidence(focusLabel, dependencies);
+  const focusedEvidence = uniqueSorted([
+    ...focusedSourceFiles,
+    ...focusedDocFiles,
+    ...focusedTrackedFiles,
+    ...focusedDependencies
+  ]);
+  const focusNarrative = focusLabel && focusedEvidence.length > 0 ? ` Focused ${focusLabel} evidence comes from ${focusedEvidence.slice(0, 3).join(", ")}.` : focusLabel ? ` Focus area requested: ${focusLabel}, but the supplied evidence did not include direct ${focusLabel} matches.` : "";
   return [
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/STACK.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/STACK.md`],
-      summary: `${runtime} ${moduleType} project with ${testFramework}. Key package evidence comes from ${args.packageJsonPath ?? "package.json"} and tracked source files.${focusSuffix}`,
+      summary: `${runtime} ${moduleType} project with ${testFramework}. Key package evidence comes from ${args.packageJsonPath ?? "package.json"} and tracked source files.${focusNarrative}`,
       evidence: uniqueSorted(
-        [args.packageJsonPath, ...args.sourceFiles.slice(0, 2), ...args.testFiles.slice(0, 1)].filter(
-          (value) => Boolean(value)
-        )
+        [
+          args.packageJsonPath,
+          ...focusedDependencies.slice(0, 2),
+          ...focusedSourceFiles.slice(0, 2),
+          ...args.sourceFiles.slice(0, 2),
+          ...args.testFiles.slice(0, 1)
+        ].filter((value) => Boolean(value))
       )
     },
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/ARCHITECTURE.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/ARCHITECTURE.md`],
-      summary: `Primary layout centers on ${sourceRoots.join(", ") || "the repo root"}, with ${args.trackedFiles.length} tracked files informing the initial architecture map.${focusSuffix}`,
-      evidence: uniqueSorted([...args.sourceFiles.slice(0, 3), ...args.trackedFiles.slice(0, 2)])
+      summary: `Primary layout centers on ${sourceRoots.join(", ") || "the repo root"}, with ${args.trackedFiles.length} tracked files informing the initial architecture map.${focusNarrative}`,
+      evidence: uniqueSorted([
+        ...focusedSourceFiles.slice(0, 3),
+        ...focusedTrackedFiles.slice(0, 2),
+        ...args.sourceFiles.slice(0, 3),
+        ...args.trackedFiles.slice(0, 2)
+      ])
     },
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/STRUCTURE.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/STRUCTURE.md`],
-      summary: `Repository structure is anchored around ${sourceRoots.join(", ") || "the repo root"} with document roots in ${docRoots.join(", ") || "README-only docs"}. Use this map to find implementation seams quickly.${focusSuffix}`,
+      summary: `Repository structure is anchored around ${sourceRoots.join(", ") || "the repo root"} with document roots in ${docRoots.join(", ") || "README-only docs"}. Use this map to find implementation seams quickly.${focusNarrative}`,
       evidence: uniqueSorted([
+        ...focusedSourceFiles.slice(0, 4),
+        ...focusedDocFiles.slice(0, 2),
         ...args.sourceFiles.slice(0, 4),
         ...args.docFiles.slice(0, 2),
         ...args.trackedFiles.slice(0, 2)
@@ -20465,35 +21111,54 @@ function buildCodebaseDigestSections(args) {
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/CONVENTIONS.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/CONVENTIONS.md`],
-      summary: `The repo signals ${runtime} conventions, ${moduleType} modules, and documented guidance via ${docRoots.join(", ") || "README-only docs"}.`,
+      summary: `The repo signals ${runtime} conventions, ${moduleType} modules, and documented guidance via ${docRoots.join(", ") || "README-only docs"}.${focusNarrative}`,
       evidence: uniqueSorted(
-        [args.readmePath, ...args.docFiles.slice(0, 2), ...args.sourceFiles.slice(0, 2)].filter(
-          (value) => Boolean(value)
-        )
+        [
+          args.readmePath,
+          ...focusedDocFiles.slice(0, 2),
+          ...focusedSourceFiles.slice(0, 2),
+          ...args.docFiles.slice(0, 2),
+          ...args.sourceFiles.slice(0, 2)
+        ].filter((value) => Boolean(value))
       )
     },
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/TESTING.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/TESTING.md`],
-      summary: `Testing evidence points to ${testFramework} with ${args.testFiles.length} test file(s) and documentation coverage in ${docRoots.includes("docs") ? "docs/" : "README.md"}.`,
+      summary: `Testing evidence points to ${testFramework} with ${args.testFiles.length} test file(s) and documentation coverage in ${docRoots.includes("docs") ? "docs/" : "README.md"}.${focusNarrative}`,
       evidence: uniqueSorted(
-        [...args.testFiles.slice(0, 3), ...args.docFiles.filter((file2) => file2.startsWith("docs/")).slice(0, 1)]
+        [
+          ...focusedSourceFiles.filter((file2) => /test|spec/i.test(file2)).slice(0, 2),
+          ...args.testFiles.slice(0, 3),
+          ...args.docFiles.filter((file2) => file2.startsWith("docs/")).slice(0, 1)
+        ]
       )
     },
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/INTEGRATIONS.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/INTEGRATIONS.md`],
-      summary: integrations.length > 0 ? `Detected integration signals include ${integrations.join(", ")}.` : "No explicit third-party integration surface was detected from the supplied repo evidence.",
+      summary: integrations.length > 0 ? `Detected integration signals include ${integrations.join(", ")}.${focusNarrative}` : "No explicit third-party integration surface was detected from the supplied repo evidence.",
       evidence: uniqueSorted(
-        [...integrations, ...args.sourceFiles.filter((file2) => file2.includes("/integrations/")).slice(0, 2)]
+        [
+          ...focusedDependencies.slice(0, 2),
+          ...focusedSourceFiles.slice(0, 2),
+          ...integrations,
+          ...args.sourceFiles.filter((file2) => file2.includes("/integrations/")).slice(0, 2)
+        ]
       )
     },
     {
       artifact: `${BLUEPRINT_CODEBASE_PATH}/CONCERNS.md`,
       title: CODEBASE_SECTION_TITLES[`${BLUEPRINT_CODEBASE_PATH}/CONCERNS.md`],
-      summary: args.docFiles.length > 0 ? `Docs exist under ${docRoots.join(", ")}, but reruns should preserve edited codebase docs unless replace is explicitly confirmed.` : "Documentation signals are thin, so generated codebase docs should be reviewed before deeper discovery or planning.",
+      summary: args.docFiles.length > 0 ? `Docs exist under ${docRoots.join(", ")}, but reruns should preserve edited codebase docs unless replace is explicitly confirmed.${focusNarrative}` : "Documentation signals are thin, so generated codebase docs should be reviewed before deeper discovery or planning.",
       evidence: uniqueSorted(
-        [...args.docFiles.slice(0, 2), ...args.trackedFiles.slice(0, 2), ...args.testFiles.slice(0, 1)]
+        [
+          ...focusedDocFiles.slice(0, 2),
+          ...focusedTrackedFiles.slice(0, 2),
+          ...args.docFiles.slice(0, 2),
+          ...args.trackedFiles.slice(0, 2),
+          ...args.testFiles.slice(0, 1)
+        ]
       )
     }
   ];
@@ -20765,7 +21430,96 @@ async function blueprintArtifactReportWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
+async function blueprintCodebaseArtifactWrite(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  if (inspection.readiness === "uninitialized") {
+    throw new Error(
+      "Blueprint codebase writes require an initialized or partial Blueprint project with a .blueprint/ directory."
+    );
+  }
+  const pathValue = resolveCodebaseArtifactPath(args.artifactId);
+  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+  const normalizedContent = args.content.endsWith("\n") ? args.content : `${args.content}
+`;
+  const warnings = [];
+  const exists = await pathExists(absolutePath);
+  const validation = validateCodebaseArtifactContent(normalizedContent, args.artifactId);
+  if (normalizedContent.trim().length === 0) {
+    return {
+      path: pathValue,
+      artifactId: args.artifactId,
+      written: false,
+      created: false,
+      overwritten: false,
+      reused: false,
+      status: "invalid",
+      issues: ["Codebase artifact content must not be empty."],
+      warnings: []
+    };
+  }
+  if (!validation.valid) {
+    return {
+      path: pathValue,
+      artifactId: args.artifactId,
+      written: false,
+      created: false,
+      overwritten: false,
+      reused: false,
+      status: "invalid",
+      issues: [...validation.issues],
+      warnings: [...validation.warnings]
+    };
+  }
+  if (exists) {
+    const existingContent = await fs.readFile(absolutePath, "utf8");
+    const existingValidation = validateCodebaseArtifactContent(existingContent, args.artifactId);
+    if (existingContent === normalizedContent) {
+      warnings.push("Preserved existing codebase artifact because the content was unchanged.");
+      return {
+        path: pathValue,
+        artifactId: args.artifactId,
+        written: false,
+        created: false,
+        overwritten: false,
+        reused: true,
+        status: "reused",
+        issues: [],
+        warnings
+      };
+    }
+    if (!existingValidation.valid && !(args.overwrite ?? false)) {
+      warnings.push(
+        "Replacing the existing scaffold or non-canonical codebase artifact with authored content."
+      );
+    } else if (!(args.overwrite ?? false)) {
+      throw new Error(
+        `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+      );
+    }
+  }
+  warnings.push(
+    ...await writeTextFile(absolutePath, normalizedContent, {
+      label: pathValue
+    })
+  );
+  if (exists) {
+    warnings.push(`Replaced existing codebase artifact: ${pathValue}`);
+  }
+  warnings.push(...validation.warnings);
+  return {
+    path: pathValue,
+    artifactId: args.artifactId,
+    written: true,
+    created: !exists,
+    overwritten: exists,
+    reused: false,
+    status: exists ? "updated" : "created",
+    issues: [],
+    warnings
+  };
+}
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -20807,6 +21561,15 @@ var init_artifacts = __esm({
       `${BLUEPRINT_CODEBASE_PATH}/TESTING.md`,
       `${BLUEPRINT_CODEBASE_PATH}/INTEGRATIONS.md`,
       `${BLUEPRINT_CODEBASE_PATH}/CONCERNS.md`
+    ];
+    CODEBASE_ARTIFACT_CONTRACT_IDS = [
+      "codebase.stack",
+      "codebase.architecture",
+      "codebase.structure",
+      "codebase.conventions",
+      "codebase.testing",
+      "codebase.integrations",
+      "codebase.concerns"
     ];
     SUPPORTED_SCAFFOLD_ARTIFACTS = [
       ...SUPPORTED_BOOTSTRAP_ARTIFACTS,
@@ -20916,55 +21679,13 @@ var init_artifacts = __esm({
       ".blueprint/REQUIREMENTS.md": renderRequirementsArtifact,
       ".blueprint/ROADMAP.md": renderRoadmapArtifact,
       ".blueprint/phases/": () => "",
-      ".blueprint/codebase/STACK.md": () => `# Stack
-
-Generated by \`/blu-map-codebase\`.
-
-- Record the runtime, languages, packages, and build tooling confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`,
-      ".blueprint/codebase/ARCHITECTURE.md": () => `# Architecture
-
-Generated by \`/blu-map-codebase\`.
-
-- Record the primary source layout, boundaries, and execution flow confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`,
-      ".blueprint/codebase/STRUCTURE.md": () => `# Structure
-
-Generated by \`/blu-map-codebase\`.
-
-- Record the directory layout, key file locations, and structural seams confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`,
-      ".blueprint/codebase/CONVENTIONS.md": () => `# Conventions
-
-Generated by \`/blu-map-codebase\`.
-
-- Record coding, naming, module, and documentation conventions confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`,
-      ".blueprint/codebase/TESTING.md": () => `# Testing
-
-Generated by \`/blu-map-codebase\`.
-
-- Record the test framework, commands, and coverage signals confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`,
-      ".blueprint/codebase/INTEGRATIONS.md": () => `# Integrations
-
-Generated by \`/blu-map-codebase\`.
-
-- Record external services, SDKs, and integration points confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`,
-      ".blueprint/codebase/CONCERNS.md": () => `# Concerns
-
-Generated by \`/blu-map-codebase\`.
-
-- Record current risks, thin areas, and follow-up questions confirmed by repo evidence.
-- Refresh only after explicit replace confirmation when the codebase changes materially.
-`
+      ".blueprint/codebase/STACK.md": () => renderArtifactScaffoldTemplate("codebase.stack"),
+      ".blueprint/codebase/ARCHITECTURE.md": () => renderArtifactScaffoldTemplate("codebase.architecture"),
+      ".blueprint/codebase/STRUCTURE.md": () => renderArtifactScaffoldTemplate("codebase.structure"),
+      ".blueprint/codebase/CONVENTIONS.md": () => renderArtifactScaffoldTemplate("codebase.conventions"),
+      ".blueprint/codebase/TESTING.md": () => renderArtifactScaffoldTemplate("codebase.testing"),
+      ".blueprint/codebase/INTEGRATIONS.md": () => renderArtifactScaffoldTemplate("codebase.integrations"),
+      ".blueprint/codebase/CONCERNS.md": () => renderArtifactScaffoldTemplate("codebase.concerns")
     };
     artifactScaffoldInputSchema = {
       cwd: string2().optional(),
@@ -21071,6 +21792,12 @@ Generated by \`/blu-map-codebase\`.
       content: string2(),
       overwrite: boolean2().optional()
     };
+    artifactCodebaseWriteInputSchema = {
+      cwd: string2().optional(),
+      artifactId: _enum(CODEBASE_ARTIFACT_CONTRACT_IDS),
+      content: string2(),
+      overwrite: boolean2().optional()
+    };
     CODEBASE_SECTION_TITLES = {
       ".blueprint/codebase/STACK.md": "Stack",
       ".blueprint/codebase/ARCHITECTURE.md": "Architecture",
@@ -21146,6 +21873,12 @@ Generated by \`/blu-map-codebase\`.
         description: "Create or reuse Blueprint bootstrap, codebase, and phase artifacts inside .blueprint/.",
         inputSchema: artifactScaffoldInputSchema,
         handler: async (args) => blueprintArtifactScaffold(args)
+      },
+      {
+        name: "blueprint_codebase_artifact_write",
+        description: "Write a substantive Blueprint codebase artifact with contract validation and overwrite protection.",
+        inputSchema: artifactCodebaseWriteInputSchema,
+        handler: async (args) => blueprintCodebaseArtifactWrite(args)
       },
       {
         name: "blueprint_artifact_list",
@@ -24974,10 +25707,15 @@ function summarizeSavedArtifact(raw) {
   };
 }
 async function readMappedCodebaseContext(projectRoot) {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
   const artifacts = [];
   const missingArtifacts = [];
+  const invalidArtifacts = new Set(inspection.codebase.invalid);
   const digest = [];
   for (const artifact of CODEBASE_ARTIFACTS) {
+    if (invalidArtifacts.has(artifact)) {
+      continue;
+    }
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     try {
       const raw = await fs6.readFile(absolutePath, "utf8");
@@ -24997,16 +25735,22 @@ async function readMappedCodebaseContext(projectRoot) {
       throw error2;
     }
   }
-  const mapped = artifacts.length === CODEBASE_ARTIFACTS.length;
+  const mapped = inspection.codebase.mapped;
   const warnings = [];
   if (artifacts.length > 0 && !mapped) {
+    const missingBit = missingArtifacts.length > 0 ? `missing ${missingArtifacts.join(", ")}` : "";
+    const invalidBit = inspection.codebase.invalid.length > 0 ? `invalid ${inspection.codebase.invalid.join(", ")}` : "";
     warnings.push(
-      `Mapped codebase bundle is incomplete: missing ${missingArtifacts.join(", ")}.`
+      `Mapped codebase bundle is incomplete or non-canonical: ${[missingBit, invalidBit].filter((value) => value.length > 0).join("; ")}.`
     );
   }
   if (mapped) {
     warnings.push(
       "Mapped codebase summaries are available and should be reused before rereading broad repo surfaces."
+    );
+  } else if (inspection.codebase.invalid.length > 0) {
+    warnings.push(
+      "Saved codebase docs exist but are not yet valid enough to reuse as authoritative mapped context."
     );
   }
   return {
@@ -37008,7 +37752,8 @@ var REQUIRED_READ_PATH_TOOL_NAMES = [
   "blueprint_artifact_validate"
 ];
 var REQUIRED_MAPPING_TOOL_NAMES = [
-  "blueprint_artifact_summary_digest"
+  "blueprint_artifact_summary_digest",
+  "blueprint_codebase_artifact_write"
 ];
 var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_project_init",
@@ -37028,6 +37773,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_phase_checkpoint_put",
   "blueprint_phase_checkpoint_delete",
   "blueprint_artifact_scaffold",
+  "blueprint_codebase_artifact_write",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record"
@@ -37169,6 +37915,9 @@ function buildSubject(toolName, result) {
   }
   if (toolName === "blueprint_artifact_list") {
     return "artifact inventory";
+  }
+  if (toolName === "blueprint_codebase_artifact_write") {
+    return "codebase artifact";
   }
   if (toolName === "blueprint_review_scope") {
     return "review scope";

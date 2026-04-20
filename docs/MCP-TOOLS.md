@@ -73,9 +73,10 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding, not as the final persistence layer for filled-in artifacts | `{createdFiles, reusedFiles, warnings}` |
+| `blueprint_artifact_scaffold` | Create or seed artifacts from templates; use it for first-write scaffolding or reuse/refresh seeding, not as the final persistence layer for filled-in artifacts | `{createdFiles, reusedFiles, warnings}` |
 | `blueprint_artifact_contract_read` | Read canonical artifact contracts, including scaffold templates, locked markers, and required headings | `{artifactId, contract}` or `{artifactId: null, contracts}` |
 | `blueprint_artifact_list` | Enumerate known core, phase, codebase, and report artifacts | `{artifacts, reports, missing, warnings}` |
+| `blueprint_codebase_artifact_write` | Persist substantive codebase mapping content for one of the seven `.blueprint/codebase/*.md` artifacts, with contract validation and overwrite protection | `{path, artifactId, written, created, overwritten, reused, status, issues, warnings}` |
 | `blueprint_artifact_mutate_index` | Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
 | `blueprint_artifact_summary_digest` | Build digests from saved artifacts plus optional code, tests, docs, and tracked-file inputs | `{digest, inputsUsed}` |
@@ -113,7 +114,7 @@ These tool names are part of the documented future contract, but they are not re
 
 - `/blu`, `help`, `progress`, and `next` rely on `blueprint_command_catalog`, project status, and other read-oriented tools. They must only surface commands whose catalog entry is `implemented`.
 - `new-project` leans on project, config, state, `blueprint_artifact_contract_read`, `blueprint_artifact_validate`, and `blueprint_artifact_scaffold`.
-- `map-codebase` uses `blueprint_project_status`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, and `blueprint_artifact_summary_digest`.
+- `map-codebase` uses `blueprint_project_status`, `blueprint_artifact_contract_read`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_codebase_artifact_write`, and `blueprint_artifact_validate` to keep the seven-document bundle contract-read before seeding, treat scaffold as reuse-or-seed only, persist substantive mapping content through MCP instead of raw file edits, and validate the resulting bundle before concluding.
 - `add-backlog` uses `blueprint_artifact_mutate_index` and, when the user explicitly reserves a parking-lot phase, `blueprint_artifact_scaffold`.
 - `review-backlog` uses `blueprint_roadmap_promote_backlog`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to preview backlog candidates, append promoted roadmap phases, preserve backlog history through status transitions, and route the repo into `/blu-discuss-phase`.
 - `explore` uses `blueprint_project_status`, `blueprint_artifact_mutate_index`, `blueprint_roadmap_add_phase`, and `blueprint_artifact_scaffold` to classify ideas before persistence, keep capture writes confirmation-gated, and scaffold the first phase context when a confirmed idea is promoted directly into the active roadmap.

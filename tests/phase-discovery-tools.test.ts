@@ -7,7 +7,8 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   CODEBASE_ARTIFACTS,
-  blueprintArtifactScaffold
+  blueprintArtifactScaffold,
+  blueprintCodebaseArtifactWrite
 } from "../src/mcp/tools/artifacts.js";
 import {
   phaseToolDefinitions,
@@ -139,6 +140,42 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
+async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
+  const authoredBundle: Record<
+    | "codebase.stack"
+    | "codebase.architecture"
+    | "codebase.structure"
+    | "codebase.conventions"
+    | "codebase.testing"
+    | "codebase.integrations"
+    | "codebase.concerns",
+    string
+  > = {
+    "codebase.stack": "# Stack\n\nTypeScript runtime with MCP-facing tooling.\n",
+    "codebase.architecture":
+      "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
+    "codebase.structure":
+      "# Structure\n\nBlueprint runtime code lives in src/, with tests under tests/.\n",
+    "codebase.conventions":
+      "# Conventions\n\nBlueprint keeps runtime tool names explicit and persistence inside MCP.\n",
+    "codebase.testing":
+      "# Testing\n\nThe repo uses node:test via tsx and fixture-backed integration coverage.\n",
+    "codebase.integrations":
+      "# Integrations\n\nThe runtime integrates through @modelcontextprotocol/sdk and related command surfaces.\n",
+    "codebase.concerns":
+      "# Concerns\n\nPlaceholder codebase docs should not be treated as authoritative mapped context.\n"
+  };
+
+  for (const [artifactId, content] of Object.entries(authoredBundle)) {
+    const result = await blueprintCodebaseArtifactWrite({
+      cwd: repoPath,
+      artifactId: artifactId as keyof typeof authoredBundle,
+      content
+    });
+    assert.notEqual(result.status, "invalid", JSON.stringify(result));
+  }
+}
+
 async function createLegacyDecimalPhaseRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-phase-tools-legacy-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -250,11 +287,7 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
       ...CODEBASE_ARTIFACTS
     ]
   });
-  await writeFile(
-    path.join(repoPath, ".blueprint/codebase/ARCHITECTURE.md"),
-    "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
-    "utf8"
-  );
+  await writeMappedCodebaseBundle(repoPath);
 
   const roadmap = await blueprintRoadmapRead({ cwd: repoPath });
   const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "03" });

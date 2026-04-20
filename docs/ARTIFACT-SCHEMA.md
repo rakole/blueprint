@@ -771,6 +771,11 @@ Current shipped bundle:
 - `INTEGRATIONS.md`
 - `CONCERNS.md`
 
+Contract notes:
+- `map-codebase` keeps the same seven-artifact bundle even when the user asks for a focused deepening pass such as `api`, `auth`, or `mcp`.
+- Focused mapping narrows evidence collection and section depth; it does not change the bundle shape or create a suffix-specific artifact family.
+- Reuse versus refresh decisions stay confirmation-gated at the command layer, and the resulting bundle should be validated before it is treated as complete.
+
 ### `workstreams/`
 
 Planned contents:

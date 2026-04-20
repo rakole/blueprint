@@ -15,6 +15,8 @@ export declare const BLUEPRINT_NOTES_INDEX_PATH = ".blueprint/notes/NOTES.md";
 export declare const SUPPORTED_BOOTSTRAP_ARTIFACTS: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/"];
 export declare const CORE_PROJECT_ARTIFACTS: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/STATE.md", ".blueprint/config.json", ".blueprint/phases/"];
 export declare const CODEBASE_ARTIFACTS: readonly [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"];
+declare const CODEBASE_ARTIFACT_CONTRACT_IDS: readonly ["codebase.stack", "codebase.architecture", "codebase.structure", "codebase.conventions", "codebase.testing", "codebase.integrations", "codebase.concerns"];
+type CodebaseArtifactContractId = (typeof CODEBASE_ARTIFACT_CONTRACT_IDS)[number];
 export declare const SUPPORTED_SCAFFOLD_ARTIFACTS: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/", ".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"];
 export type SupportedScaffoldArtifact = (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
 export type BlueprintReadiness = "uninitialized" | "partial" | "initialized";
@@ -62,6 +64,14 @@ export type BootstrapArtifactDiagnostics = {
     placeholderArtifacts: string[];
     traceabilityWarnings: string[];
     brownfield: BootstrapAssessment;
+};
+export type CodebaseArtifactDiagnostics = {
+    present: string[];
+    missing: string[];
+    valid: string[];
+    invalid: string[];
+    mapped: boolean;
+    warnings: string[];
 };
 export declare const DURABLE_REQUIREMENT_ID_PATTERN: RegExp;
 type ArtifactScaffoldArgs = {
@@ -208,6 +218,23 @@ type ArtifactReportWriteResult = {
     status: "created" | "updated" | "reused" | "invalid";
     warnings: string[];
 };
+type ArtifactCodebaseWriteArgs = {
+    cwd?: string;
+    artifactId: CodebaseArtifactContractId;
+    content: string;
+    overwrite?: boolean;
+};
+type ArtifactCodebaseWriteResult = {
+    path: string;
+    artifactId: CodebaseArtifactContractId;
+    written: boolean;
+    created: boolean;
+    overwritten: boolean;
+    reused: boolean;
+    status: "created" | "updated" | "reused" | "invalid";
+    issues: string[];
+    warnings: string[];
+};
 type TextWriteOptions = {
     label?: string;
     enforcePromptBoundary?: boolean;
@@ -321,10 +348,7 @@ export declare function inspectBlueprintArtifacts(projectRoot: string): Promise<
     };
     phases: string[];
     reports: string[];
-    codebase: {
-        present: string[];
-        missing: string[];
-    };
+    codebase: CodebaseArtifactDiagnostics;
 }>;
 export declare function inspectBootstrapArtifacts(projectRoot: string): Promise<BootstrapArtifactDiagnostics>;
 export declare function blueprintArtifactScaffold(args?: ArtifactScaffoldArgs): Promise<ArtifactScaffoldResult>;
@@ -334,6 +358,7 @@ export declare function blueprintArtifactValidate(args?: ArtifactValidateArgs): 
 export declare function blueprintArtifactSummaryDigest(args?: ArtifactSummaryDigestArgs): Promise<ArtifactSummaryDigestResult>;
 export declare function blueprintArtifactContractRead(args?: ArtifactContractReadArgs): Promise<ArtifactContractReadResult>;
 export declare function blueprintArtifactReportWrite(args: ArtifactReportWriteArgs): Promise<ArtifactReportWriteResult>;
+export declare function blueprintCodebaseArtifactWrite(args: ArtifactCodebaseWriteArgs): Promise<ArtifactCodebaseWriteResult>;
 export declare const artifactToolDefinitions: ({
     name: string;
     description: string;
@@ -342,6 +367,13 @@ export declare const artifactToolDefinitions: ({
             "bootstrap.project": "bootstrap.project";
             "bootstrap.requirements": "bootstrap.requirements";
             "bootstrap.roadmap": "bootstrap.roadmap";
+            "codebase.stack": "codebase.stack";
+            "codebase.architecture": "codebase.architecture";
+            "codebase.structure": "codebase.structure";
+            "codebase.conventions": "codebase.conventions";
+            "codebase.testing": "codebase.testing";
+            "codebase.integrations": "codebase.integrations";
+            "codebase.concerns": "codebase.concerns";
             "phase.context": "phase.context";
             "phase.discussion-log": "phase.discussion-log";
             "phase.research": "phase.research";
@@ -382,7 +414,6 @@ export declare const artifactToolDefinitions: ({
             ".blueprint/PROJECT.md": ".blueprint/PROJECT.md";
             ".blueprint/REQUIREMENTS.md": ".blueprint/REQUIREMENTS.md";
             ".blueprint/ROADMAP.md": ".blueprint/ROADMAP.md";
-            ".blueprint/phases/": ".blueprint/phases/";
             ".blueprint/codebase/STACK.md": ".blueprint/codebase/STACK.md";
             ".blueprint/codebase/ARCHITECTURE.md": ".blueprint/codebase/ARCHITECTURE.md";
             ".blueprint/codebase/STRUCTURE.md": ".blueprint/codebase/STRUCTURE.md";
@@ -390,6 +421,7 @@ export declare const artifactToolDefinitions: ({
             ".blueprint/codebase/TESTING.md": ".blueprint/codebase/TESTING.md";
             ".blueprint/codebase/INTEGRATIONS.md": ".blueprint/codebase/INTEGRATIONS.md";
             ".blueprint/codebase/CONCERNS.md": ".blueprint/codebase/CONCERNS.md";
+            ".blueprint/phases/": ".blueprint/phases/";
         }>, z.ZodString]>>>;
         bootstrapSeed: z.ZodOptional<z.ZodObject<{
             vision: z.ZodOptional<z.ZodString>;
@@ -434,6 +466,24 @@ export declare const artifactToolDefinitions: ({
         }, z.core.$strip>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ArtifactScaffoldResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        artifactId: z.ZodEnum<{
+            "codebase.stack": "codebase.stack";
+            "codebase.architecture": "codebase.architecture";
+            "codebase.structure": "codebase.structure";
+            "codebase.conventions": "codebase.conventions";
+            "codebase.testing": "codebase.testing";
+            "codebase.integrations": "codebase.integrations";
+            "codebase.concerns": "codebase.concerns";
+        }>;
+        content: z.ZodString;
+        overwrite: z.ZodOptional<z.ZodBoolean>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<ArtifactCodebaseWriteResult>;
 } | {
     name: string;
     description: string;

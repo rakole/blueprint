@@ -1,4 +1,4 @@
-export type ArtifactContractScope = "bootstrap" | "phase" | "review" | "report";
+export type ArtifactContractScope = "bootstrap" | "codebase" | "phase" | "review" | "report";
 
 export type ArtifactContractFreehandPolicy =
   | "additional-top-level-headings"
@@ -8,6 +8,13 @@ export type ArtifactContractId =
   | "bootstrap.project"
   | "bootstrap.requirements"
   | "bootstrap.roadmap"
+  | "codebase.stack"
+  | "codebase.architecture"
+  | "codebase.structure"
+  | "codebase.conventions"
+  | "codebase.testing"
+  | "codebase.integrations"
+  | "codebase.concerns"
   | "phase.context"
   | "phase.discussion-log"
   | "phase.research"
@@ -244,6 +251,316 @@ function renderBootstrapRoadmapTemplate(): string {
 ## Notes
 
 - <bootstrap assumption>`;
+}
+
+type CodebaseTemplateSection = {
+  heading: string;
+  bullets: string[];
+};
+
+function renderCodebaseTemplate(
+  title: string,
+  sections: CodebaseTemplateSection[],
+  options: { footer?: boolean } = {}
+): string {
+  const body = [
+    `# ${title}`,
+    "",
+    "## Purpose",
+    "",
+    "- Capture the mapped repo evidence for this codebase area.",
+    "",
+    ...sections.flatMap((section) => [
+      `## ${section.heading}`,
+      "",
+      ...section.bullets.map((bullet) => `- ${bullet}`),
+      ""
+    ])
+  ];
+
+  const content = body.join("\n").trimEnd();
+
+  if (!options.footer) {
+    return `${content}\n`;
+  }
+
+  return `${withScaffoldFooter(content)}`;
+}
+
+function renderCodebaseStackTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Stack",
+    [
+      {
+        heading: "Runtime",
+        bullets: [
+          "Primary language or runtime: <runtime>",
+          "Module system or platform: <module system>",
+          "Package manager or build entrypoint: <package manager>"
+        ]
+      },
+      {
+        heading: "Tooling",
+        bullets: [
+          "Build command: <build command>",
+          "Test command: <test command>",
+          "Lint or format command: <lint or format command>"
+        ]
+      },
+      {
+        heading: "Dependencies",
+        bullets: [
+          "Core dependencies: <core dependencies>",
+          "Notable dev dependencies: <dev dependencies>",
+          "Generated or vendored tooling: <tooling notes>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<stack note>"]
+      }
+    ],
+    options
+  );
+}
+
+function renderCodebaseArchitectureTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Architecture",
+    [
+      {
+        heading: "Overview",
+        bullets: [
+          "Map the primary execution model and top-level application shape: <overview>",
+          "Describe the main repo boundary or runtime surface: <boundary note>"
+        ]
+      },
+      {
+        heading: "Boundaries",
+        bullets: [
+          "Primary subsystems or layers: <boundary>",
+          "Cross-cutting concerns or shared services: <boundary>"
+        ]
+      },
+      {
+        heading: "Flow",
+        bullets: [
+          "Entry points and request path: <entry points>",
+          "Data flow or orchestration path: <flow summary>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<architecture note>"]
+      }
+    ],
+    options
+  );
+}
+
+function renderCodebaseStructureTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Structure",
+    [
+      {
+        heading: "Directory Map",
+        bullets: [
+          "`<directory>`: <purpose>",
+          "`<directory>`: <purpose>"
+        ]
+      },
+      {
+        heading: "Key Files",
+        bullets: [
+          "`<file path>`: <purpose>",
+          "`<file path>`: <purpose>"
+        ]
+      },
+      {
+        heading: "Seams",
+        bullets: [
+          "Important refactor or ownership seam: <seam>",
+          "Additional seam or boundary: <seam>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<structure note>"]
+      }
+    ],
+    options
+  );
+}
+
+function renderCodebaseConventionsTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Conventions",
+    [
+      {
+        heading: "Naming",
+        bullets: [
+          "File, type, and module naming conventions: <naming convention>",
+          "Repo-specific vocabulary or prefixes: <naming detail>"
+        ]
+      },
+      {
+        heading: "Module Boundaries",
+        bullets: [
+          "Import/export or package boundary rules: <boundary rule>",
+          "Directory ownership or layering rule: <boundary rule>"
+        ]
+      },
+      {
+        heading: "Error Handling",
+        bullets: [
+          "Error and logging pattern: <error handling pattern>",
+          "Retry, guard, or failure conventions: <error handling detail>"
+        ]
+      },
+      {
+        heading: "Documentation",
+        bullets: [
+          "Commenting or README style: <documentation convention>",
+          "Where durable notes should live: <documentation location>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<convention note>"]
+      }
+    ],
+    options
+  );
+}
+
+function renderCodebaseTestingTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Testing",
+    [
+      {
+        heading: "Framework",
+        bullets: [
+          "Primary test runner: <runner>",
+          "Assertion or mocking stack: <assertion stack>"
+        ]
+      },
+      {
+        heading: "Commands",
+        bullets: [
+          "Full test command: <test command>",
+          "Focused or watch command: <focused command>"
+        ]
+      },
+      {
+        heading: "Coverage",
+        bullets: [
+          "Key coverage signal: <coverage signal>",
+          "Gap or limitation that still needs attention: <coverage gap>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<testing note>"]
+      }
+    ],
+    options
+  );
+}
+
+function renderCodebaseIntegrationsTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Integrations",
+    [
+      {
+        heading: "External Systems",
+        bullets: [
+          "Service, provider, or backend dependency: <system>",
+          "Additional external surface: <system>"
+        ]
+      },
+      {
+        heading: "SDKs And APIs",
+        bullets: [
+          "SDK or API surface: <sdk or api>",
+          "Integration entrypoint or client wrapper: <integration detail>"
+        ]
+      },
+      {
+        heading: "Authentication And Secrets",
+        bullets: [
+          "Auth flow, credentials, or secrets handling: <auth detail>",
+          "Operational boundary or environment note: <auth detail>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<integration note>"]
+      }
+    ],
+    options
+  );
+}
+
+function renderCodebaseConcernsTemplate(
+  _context?: ArtifactTemplateContext,
+  options: { footer?: boolean } = {}
+): string {
+  return renderCodebaseTemplate(
+    "Concerns",
+    [
+      {
+        heading: "Risks",
+        bullets: [
+          "Current risk that could slow mapping or delivery: <risk>",
+          "Additional risk or unknown: <risk>"
+        ]
+      },
+      {
+        heading: "Gaps",
+        bullets: [
+          "Thin area, missing evidence, or unknown: <gap>",
+          "Follow-up evidence still needed: <gap>"
+        ]
+      },
+      {
+        heading: "Follow-Ups",
+        bullets: [
+          "Next concrete follow-up: <follow-up>",
+          "Later revisit item: <follow-up>"
+        ]
+      },
+      {
+        heading: "Questions",
+        bullets: [
+          "Open question that still needs an answer: <question>",
+          "Additional question or assumption to verify: <question>"
+        ]
+      },
+      {
+        heading: "Notes",
+        bullets: ["<concern note>"]
+      }
+    ],
+    options
+  );
 }
 
 function renderContextTemplate(context?: ArtifactTemplateContext): string {
@@ -1284,6 +1601,199 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     renderScaffoldTemplate: renderBootstrapRoadmapTemplate,
     renderAuthoringTemplate: renderBootstrapRoadmapTemplate
   },
+  "codebase.stack": {
+    id: "codebase.stack",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Stack",
+    canonicalFilePattern: ".blueprint/codebase/STACK.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "Runtime", "Tooling", "Dependencies", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<runtime>",
+      "<module system>",
+      "<package manager>",
+      "<build command>",
+      "<test command>",
+      "<lint or format command>",
+      "<core dependencies>",
+      "<dev dependencies>",
+      "<tooling notes>",
+      "<stack note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Stack mapping should record the runtime, package manager, build/test commands, and dependency profile confirmed by repo evidence.",
+      "The scaffold template is intentionally placeholder-heavy so scaffold-only output never counts as a completed mapping."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseStackTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseStackTemplate
+  },
+  "codebase.architecture": {
+    id: "codebase.architecture",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Architecture",
+    canonicalFilePattern: ".blueprint/codebase/ARCHITECTURE.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "Overview", "Boundaries", "Flow", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<overview>",
+      "<boundary note>",
+      "<boundary>",
+      "<entry points>",
+      "<flow summary>",
+      "<architecture note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Architecture mapping should capture the execution model, subsystem boundaries, and high-level data flow.",
+      "The scaffold template should remain obviously incomplete until the content is replaced with real repo evidence."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseArchitectureTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseArchitectureTemplate
+  },
+  "codebase.structure": {
+    id: "codebase.structure",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Structure",
+    canonicalFilePattern: ".blueprint/codebase/STRUCTURE.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "Directory Map", "Key Files", "Seams", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<directory>",
+      "<purpose>",
+      "<file path>",
+      "<seam>",
+      "<structure note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Structure mapping should make the repo layout and important file seams easy to navigate.",
+      "Populate the directory map and key files with repo-specific evidence instead of generic placeholders."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseStructureTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseStructureTemplate
+  },
+  "codebase.conventions": {
+    id: "codebase.conventions",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Conventions",
+    canonicalFilePattern: ".blueprint/codebase/CONVENTIONS.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "Naming", "Module Boundaries", "Error Handling", "Documentation", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<naming convention>",
+      "<naming detail>",
+      "<boundary rule>",
+      "<error handling pattern>",
+      "<error handling detail>",
+      "<documentation convention>",
+      "<documentation location>",
+      "<convention note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Conventions mapping should describe durable naming, module boundary, error handling, and documentation practices.",
+      "The contract favors repo-specific conventions over generic style guidance."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseConventionsTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseConventionsTemplate
+  },
+  "codebase.testing": {
+    id: "codebase.testing",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Testing",
+    canonicalFilePattern: ".blueprint/codebase/TESTING.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "Framework", "Commands", "Coverage", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<runner>",
+      "<assertion stack>",
+      "<test command>",
+      "<focused command>",
+      "<coverage signal>",
+      "<coverage gap>",
+      "<testing note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Testing mapping should capture the runnable test surface and any coverage gaps that still need attention.",
+      "Preserve the actual commands and framework signals that were confirmed in the repo."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseTestingTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseTestingTemplate
+  },
+  "codebase.integrations": {
+    id: "codebase.integrations",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Integrations",
+    canonicalFilePattern: ".blueprint/codebase/INTEGRATIONS.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "External Systems", "SDKs And APIs", "Authentication And Secrets", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<system>",
+      "<sdk or api>",
+      "<integration detail>",
+      "<auth detail>",
+      "<integration note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Integrations mapping should call out third-party systems, SDKs, APIs, and secret-handling assumptions.",
+      "The file should stay grounded in observed repo evidence, not guessed integrations."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseIntegrationsTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseIntegrationsTemplate
+  },
+  "codebase.concerns": {
+    id: "codebase.concerns",
+    scope: "codebase",
+    ownerTool: "blueprint_codebase_artifact_write",
+    pathOwner: "blueprint_codebase_artifact_write",
+    canonicalName: "Codebase Concerns",
+    canonicalFilePattern: ".blueprint/codebase/CONCERNS.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: ["Purpose", "Risks", "Gaps", "Follow-Ups", "Questions", "Notes"],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "<risk>",
+      "<gap>",
+      "<follow-up>",
+      "<question>",
+      "<concern note>",
+      "Generated by `blueprint_artifact_scaffold`",
+      "Generated by `/blu-map-codebase`"
+    ],
+    notes: [
+      "Concerns mapping should preserve unresolved risks, thin areas, and the follow-up questions that matter for future work.",
+      "Do not treat a placeholder-only concerns file as a completed brownfield mapping artifact."
+    ],
+    renderScaffoldTemplate: () => renderCodebaseConcernsTemplate(undefined, { footer: true }),
+    renderAuthoringTemplate: renderCodebaseConcernsTemplate
+  },
   "phase.context": {
     id: "phase.context",
     scope: "phase",
@@ -2050,6 +2560,34 @@ export function resolveReviewArtifactContractId(
       return "review.security";
     case "ui-review":
       return "review.ui-review";
+  }
+}
+
+export function resolveCodebaseArtifactContractId(
+  artifact:
+    | "stack"
+    | "architecture"
+    | "structure"
+    | "conventions"
+    | "testing"
+    | "integrations"
+    | "concerns"
+): ArtifactContractId {
+  switch (artifact) {
+    case "stack":
+      return "codebase.stack";
+    case "architecture":
+      return "codebase.architecture";
+    case "structure":
+      return "codebase.structure";
+    case "conventions":
+      return "codebase.conventions";
+    case "testing":
+      return "codebase.testing";
+    case "integrations":
+      return "codebase.integrations";
+    case "concerns":
+      return "codebase.concerns";
   }
 }
 

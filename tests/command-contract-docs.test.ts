@@ -232,6 +232,40 @@ test("capture skill and shipped note, backlog, and explore docs are marked imple
   );
 });
 
+test("map-codebase docs keep the repaired brownfield mapping contract explicit", async () => {
+  const [catalogMarkdown, commandDoc, skillDoc, runtimeReference, mcpToolsDoc] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/map-codebase.md"),
+    readRepoFile("skills/blueprint-map/SKILL.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    readRepoFile("docs/MCP-TOOLS.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented` \|/
+  );
+  assert.match(commandDoc, /ask_user/i);
+  assert.match(commandDoc, /blueprint_artifact_contract_read/i);
+  assert.match(commandDoc, /blueprint_artifact_scaffold/i);
+  assert.match(commandDoc, /blueprint_artifact_summary_digest/i);
+  assert.match(commandDoc, /blueprint_codebase_artifact_write/i);
+  assert.match(commandDoc, /blueprint_artifact_validate/i);
+  assert.match(commandDoc, /Existing codebase docs should be reused by default\./i);
+  assert.match(skillDoc, /ask_user/i);
+  assert.match(skillDoc, /blueprint_artifact_contract_read/i);
+  assert.match(skillDoc, /reuse-by-default behavior/i);
+  assert.match(skillDoc, /reuse-versus-refresh guidance/i);
+  assert.match(
+    runtimeReference,
+    /\| `map-codebase` \| `docs\/commands\/map-codebase\.md` \| `blueprint-map` \| `blueprint_project_status`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_codebase_artifact_write`<br>`blueprint_artifact_validate` \| `blueprint-mapper` \|/
+  );
+  assert.match(
+    mcpToolsDoc,
+    /`map-codebase` uses `blueprint_project_status`, `blueprint_artifact_contract_read`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_codebase_artifact_write`, and `blueprint_artifact_validate`/i
+  );
+});
+
 test("add-todo docs and catalog metadata are marked implemented with the shipped capture tool", async () => {
   const [catalogMarkdown, addTodoDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
