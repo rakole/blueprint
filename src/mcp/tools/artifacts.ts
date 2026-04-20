@@ -1923,6 +1923,59 @@ function validateLockedMarkers(
     .map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
 
+const VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS: Array<{
+  pattern: RegExp;
+  signal: string;
+}> = [
+  { pattern: /\bPhase XX\b/i, signal: "Phase XX" },
+  { pattern: /<Phase Name>/i, signal: "<Phase Name>" },
+  { pattern: /<phase-dir>/i, signal: "<phase-dir>" },
+  {
+    pattern: /\b(?:XX|\d{2}(?:\.\d+)?)\-YY-SUMMARY\.md\b/i,
+    signal: "XX-YY-SUMMARY.md"
+  },
+  { pattern: /\bXX-VERIFICATION\.md\b/i, signal: "XX-VERIFICATION.md" },
+  { pattern: /\bXX-UAT\.md\b/i, signal: "XX-UAT.md" },
+  { pattern: /<requirement-id>/i, signal: "<requirement-id>" },
+  { pattern: /<task or check>/i, signal: "<task or check>" },
+  {
+    pattern: /<summary path, command, or saved evidence>/i,
+    signal: "<summary path, command, or saved evidence>"
+  },
+  { pattern: /<coverage note>/i, signal: "<coverage note>" },
+  { pattern: /<manual-only item>/i, signal: "<manual-only item>" },
+  { pattern: /<coverage gap class>/i, signal: "<coverage gap class>" },
+  { pattern: /<scope>/i, signal: "<scope>" },
+  { pattern: /<evidence>/i, signal: "<evidence>" },
+  { pattern: /<repair>/i, signal: "<repair>" },
+  { pattern: /<name or pending>/i, signal: "<name or pending>" },
+  { pattern: /<ready for UAT or not ready>/i, signal: "<ready for UAT or not ready>" },
+  { pattern: /\bPASS\|PARTIAL\|BLOCKED\b/i, signal: "PASS|PARTIAL|BLOCKED" },
+  { pattern: /\bPASS\|MANUAL\|DEFERRED\|BLOCKED\b/i, signal: "PASS|MANUAL|DEFERRED|BLOCKED" },
+  { pattern: /\bMANUAL\|DEFERRED\|NONE\b/i, signal: "MANUAL|DEFERRED|NONE" },
+  {
+    pattern: /Concise readiness result grounded in the saved summaries\./i,
+    signal: "Concise readiness result grounded in the saved summaries."
+  },
+  {
+    pattern: /Concise user-facing result grounded in the saved summaries and verification artifact\./i,
+    signal: "Concise user-facing result grounded in the saved summaries and verification artifact."
+  },
+  { pattern: /\bPASS\|FAIL\|PARTIAL\b/i, signal: "PASS|FAIL|PARTIAL" }
+];
+
+function validateValidationScaffoldPlaceholders(
+  content: string,
+  artifactLabel: string
+): string[] {
+  return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
+    ({ pattern, signal }) => {
+      const matchedPlaceholder = content.match(pattern)?.[0] ?? signal;
+      return `${artifactLabel} still contains placeholder scaffold text: ${matchedPlaceholder}.`;
+    }
+  );
+}
+
 function validateContractBackedMarkdown(
   content: string,
   contractId: ArtifactContractId,
@@ -1989,6 +2042,35 @@ function hasRequirementTableRows(section: string): boolean {
         /^id$/i.test(cells[0] ?? "") &&
         /^description$/i.test(cells[1] ?? "") &&
         /^research support$/i.test(cells[2] ?? "");
+      const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+      return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
+    });
+}
+
+function hasCoverageTableRows(section: string): boolean {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .some((line) => {
+      if (!/^\|.*\|$/.test(line)) {
+        return false;
+      }
+
+      const cells = line
+        .slice(1, -1)
+        .split("|")
+        .map((cell) => cell.trim());
+
+      if (cells.length < 4) {
+        return false;
+      }
+
+      const isHeader =
+        /^requirement$/i.test(cells[0] ?? "") &&
+        /^task or check$/i.test(cells[1] ?? "") &&
+        /^evidence$/i.test(cells[2] ?? "") &&
+        /^coverage state$/i.test(cells[3] ?? "");
       const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 
       return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
@@ -2102,6 +2184,21 @@ export function validateVerificationArtifactContent(
     );
   }
 
+  issues.push(...validateValidationScaffoldPlaceholders(content, "Verification artifact"));
+  if (!/^\*\*Gate State:\*\*\s*.+$/m.test(content)) {
+    issues.push("Verification artifact must declare **Gate State:** with the readiness gate state.");
+  }
+
+  if (/^\*\*Sign-off:\*\*\s*verified\|pending\|blocked\s*$/m.test(content)) {
+    issues.push(
+      "Verification artifact must replace the raw **Sign-off:** verified|pending|blocked placeholder with the verification owner or pending state."
+    );
+  }
+
+  if (!/^\*\*Sign-off:\*\*\s*.+$/m.test(content)) {
+    issues.push("Verification artifact must declare **Sign-off:** with the verification owner or pending state.");
+  }
+
   issues.push(
     ...validateRequiredMarkdownSections(
       content,
@@ -2110,10 +2207,17 @@ export function validateVerificationArtifactContent(
     )
   );
 
+  const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
+  if (!hasCoverageTableRows(requirementCoverage)) {
+    issues.push(
+      "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
+    );
+  }
+
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
   if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
-    warnings.push(
-      "Verification artifact should cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    issues.push(
+      "Verification artifact must cite at least one saved execution summary path or filename under ## Evidence Reviewed."
     );
   }
 
@@ -2145,6 +2249,7 @@ export function validateUatArtifactContent(
     issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
   }
 
+  issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
 
   const uatSummary = extractMarkdownSection(content, "UAT Summary");

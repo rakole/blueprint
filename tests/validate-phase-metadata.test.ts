@@ -32,10 +32,10 @@ test("validate-phase manifest references the validation tools, config gates, and
 });
 
 test("validate-phase skill captures summary-backed validation and verifier usage rules", async () => {
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"),
-    "utf8"
-  );
+  const [skillFile, docFile] = await Promise.all([
+    readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/validate-phase.md"), "utf8")
+  ]);
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-validate-phase/);
@@ -47,4 +47,5 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(skillFile, /workflow\.nyquist_validation/);
   assert.match(skillFile, /artifactId: "phase\.verification"/);
   assert.match(skillFile, /locked markers and required section names unchanged/i);
+  assert.match(docFile, /required-tool derivation through `blueprint_artifact_contract_read`/i);
 });

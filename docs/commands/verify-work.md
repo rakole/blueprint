@@ -38,7 +38,7 @@
 - effective Blueprint config through `blueprint_config_get`
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation and UAT artifacts through `blueprint_phase_validation_read`
-- canonical authoring templates through `blueprint_artifact_contract_read`
+- canonical authoring templates and required-tool derivation through `blueprint_artifact_contract_read`
 
 
 ## Blueprint And Global State Writes
@@ -68,6 +68,7 @@
 - Pass `phase` as the resolved numeric phase reference and `artifact: "uat"`.
 - UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final normalization.
+- Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; do not invent separate tool-owned artifacts.
 
@@ -114,7 +115,8 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 
 ## User Prompts And Confirmation Gates
 
-- Confirm any overwrite before replacing an existing UAT artifact.
+- Use Gemini CLI `ask_user` to capture the structured `view`, `resume`, or `update` decision when an existing UAT artifact is present.
+- Confirm any overwrite before replacing an existing UAT artifact; use `ask_user` for that confirmation path.
 - Confirm any explicit follow-up fix capture before persisting it in the UAT artifact.
 
 

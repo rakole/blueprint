@@ -13,9 +13,10 @@ Follow this flow exactly:
 5. If the phase does not have a `XX-VERIFICATION.md` artifact yet, stop and route to `/blu-validate-phase` first.
 6. Read every available execution summary through `mcp_blueprint_blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
 7. If `XX-UAT.md` already exists, inspect it and take an explicit path:
+   - Use Gemini CLI `ask_user` to capture the structured decision: `view`, `resume`, or `update`
    - `view`: summarize the existing UAT state and stop without mutating files
    - `resume`: continue the conversational UAT from the saved artifact without replacing it
-   - `update`: only continue to replacement after explicit confirmation
+   - `update`: continue to replacement only after `ask_user` explicitly confirms the overwrite
    Reuse and resume are the default when the user does not ask for a replacement.
 8. Honor normalized config when describing the UAT pass:
    - `workflow.verifier=true`: use the `blueprint-verifier` subagent for bounded conversational UAT analysis.
