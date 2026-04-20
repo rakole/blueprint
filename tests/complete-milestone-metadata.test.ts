@@ -15,11 +15,13 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
+  assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /milestone-complete-<milestone>/);
   assert.match(commandFile, /\/blu-milestone-summary <milestone>/);
   assert.doesNotMatch(commandFile, /blueprint_phase_mark_complete/);
@@ -32,8 +34,11 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
   );
 
   assert.match(skillFile, /\/blu-complete-milestone/);
+  assert.match(skillFile, /report\.milestone-complete/);
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /report-driven and state-driven/i);
   assert.match(skillFile, /\/blu-milestone-summary <milestone>/);
+  assert.match(skillFile, /ask_user/);
 });

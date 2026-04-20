@@ -119,6 +119,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const securityContract = readArtifactContract("review.security");
   const verificationContract = readArtifactContract("phase.verification");
   const uatContract = readArtifactContract("phase.uat");
+  const milestoneAuditContract = readArtifactContract("report.milestone-audit");
 
   assert.equal(single.artifactId, "phase.research");
   assert.match(single.contract.authoringTemplate, /^# Phase XX: <Phase Name> - Research$/m);
@@ -227,6 +228,29 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "**Resume State:**",
     "**Checkpoint:**"
   ]);
+  assert.deepEqual(milestoneAuditContract.requiredHeadings, [
+    "Audit Verdict",
+    "Milestone Evidence Dimensions",
+    "Original Intent Snapshot",
+    "Roadmap And Phase Evidence",
+    "Gaps Found",
+    "Archival Blockers",
+    "Next Safe Action"
+  ]);
+  assert.deepEqual(milestoneAuditContract.lockedMarkers, [
+    "**Verdict:**",
+    "**Evidence Dimensions:**"
+  ]);
+  assert.match(
+    milestoneAuditContract.authoringTemplate,
+    /\*\*Verdict:\*\* READY_TO_CLOSE\|FOLLOW_UP\|BLOCKED/
+  );
+  assert.match(milestoneAuditContract.authoringTemplate, /## Audit Verdict/);
+  assert.match(milestoneAuditContract.authoringTemplate, /## Milestone Evidence Dimensions/);
+  assert.match(
+    milestoneAuditContract.notes.join("\n"),
+    /concrete verdict and milestone-level evidence dimensions/i
+  );
   assert.match(uatContract.authoringTemplate, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
   assert.match(uatContract.authoringTemplate, /\*\*Checkpoint:\*\* <saved checkpoint path or none>/);
   assert.match(uatContract.authoringTemplate, /## Session State/);
@@ -497,6 +521,7 @@ test("review and report contracts validate canonical sections while keeping extr
 - /blu-progress
 `;
   const securityContract = readArtifactContract("review.security");
+  const milestoneAuditContract = readArtifactContract("report.milestone-audit");
   const securityScaffoldValidation = validateReviewArtifactContent(
     securityContract.authoringTemplate,
     "security"
@@ -558,18 +583,149 @@ test("review and report contracts validate canonical sections while keeping extr
 
 - .blueprint/phases/04-release-readiness/04-01-SUMMARY.md
 `;
+  const milestoneAuditReport = `# Milestone v2 - Audit
+
+**Verdict:** READY_TO_CLOSE
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE
+- Rationale: All milestone phases have validation and UAT evidence, so the milestone can close.
+- Decision basis: ROADMAP, verification, UAT, and summary evidence remain aligned.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | The release-readiness phase has durable validation evidence. |
+| UAT evidence | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | The UAT closeout evidence is saved. |
+| Carry-forward evidence | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+- .blueprint/phases/04-release-readiness/04-UAT.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
+`;
+  const thinMilestoneAuditReport = `# Milestone v2 - Audit
+
+## Original Intent Snapshot
+
+- .blueprint/ROADMAP.md
+
+## Roadmap And Phase Evidence
+
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
+`;
+  const invalidVerdictMilestoneAuditReport = `# Milestone v2 - Audit
+
+**Verdict:** READY_TO_CLOSE
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Rationale: The milestone needs one more pass before closeout.
+- Decision basis: ROADMAP, verification, UAT, and summary evidence remain aligned.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | The release-readiness phase has durable validation evidence. |
+| UAT evidence | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | The UAT closeout evidence is saved. |
+| Carry-forward evidence | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+- .blueprint/phases/04-release-readiness/04-UAT.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
+`;
   const customReport = `# Team Notes
 
 - Non-contract report payloads stay permissive.
 `;
   const reviewValidation = validateReviewArtifactContent(review, "code-review");
   const thinReviewValidation = validateReviewArtifactContent(thinReview, "code-review");
+  const milestoneAuditScaffoldValidation = validateReportArtifactContent(
+    milestoneAuditContract.authoringTemplate,
+    "milestone-audit-v2"
+  );
+  const milestoneAuditValidation = validateReportArtifactContent(
+    milestoneAuditReport,
+    "milestone-audit-v2"
+  );
+  const invalidVerdictMilestoneAuditValidation = validateReportArtifactContent(
+    invalidVerdictMilestoneAuditReport,
+    "milestone-audit-v2"
+  );
+  const invalidStatusMilestoneAuditReport = milestoneAuditReport.replace(
+    "| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |",
+    "| Roadmap intent | .blueprint/ROADMAP.md | PASS|GAP|BLOCKED | The milestone intent and phase list are locked. |"
+  );
+  const invalidStatusMilestoneAuditValidation = validateReportArtifactContent(
+    invalidStatusMilestoneAuditReport,
+    "milestone-audit-v2"
+  );
+  const thinMilestoneAuditValidation = validateReportArtifactContent(
+    thinMilestoneAuditReport,
+    "milestone-audit-v2"
+  );
   assert.match(
     securityContract.authoringTemplate,
     /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/
   );
   assert.equal(securityScaffoldValidation.valid, false);
   assert.match(securityScaffoldValidation.issues.join("\n"), /placeholder scaffold text/i);
+  assert.equal(milestoneAuditScaffoldValidation.valid, false);
+  assert.match(milestoneAuditScaffoldValidation.issues.join("\n"), /placeholder scaffold text/i);
   assert.equal(thinSecurityValidation.valid, false);
   assert.match(thinSecurityValidation.issues.join("\n"), /Threat Register/);
   assert.match(thinSecurityValidation.issues.join("\n"), /Accepted Risks/);
@@ -590,6 +746,20 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.match(thinAuditFixValidation.issues.join("\n"), /Changes Applied/);
   assert.match(thinAuditFixValidation.issues.join("\n"), /Remaining Gaps/);
   assert.match(thinAuditFixValidation.issues.join("\n"), /Next Safe Action/);
+  assert.equal(milestoneAuditValidation.valid, true, milestoneAuditValidation.issues.join("\n"));
+  assert.equal(invalidVerdictMilestoneAuditValidation.valid, false);
+  assert.match(
+    invalidVerdictMilestoneAuditValidation.issues.join("\n"),
+    /Verdict line/
+  );
+  assert.equal(invalidStatusMilestoneAuditValidation.valid, false);
+  assert.match(
+    invalidStatusMilestoneAuditValidation.issues.join("\n"),
+    /keep each evidence row in the Dimension, Evidence, Status, and Notes columns/
+  );
+  assert.equal(thinMilestoneAuditValidation.valid, false);
+  assert.match(thinMilestoneAuditValidation.issues.join("\n"), /Audit Verdict/);
+  assert.match(thinMilestoneAuditValidation.issues.join("\n"), /Milestone Evidence Dimensions/);
   assert.equal(customReportValidation.valid, true, customReportValidation.issues.join("\n"));
 });
 

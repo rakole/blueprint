@@ -196,6 +196,15 @@ type MilestoneEvidenceStatus = {
   allCompletedPhasesReady: boolean;
 };
 
+type MilestoneAuditReportStatus = {
+  found: boolean;
+  verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+  hasActionableGaps: boolean;
+  hasArchivalBlockers: boolean;
+  nextSafeAction: string | null;
+  readyForCompletion: boolean;
+};
+
 type BootstrapRoutingSignals = {
   brownfieldDetected: boolean;
   codebaseMapped: boolean;
@@ -946,13 +955,141 @@ function inspectMilestoneEvidence(
   };
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractMarkdownSectionLines(content: string, heading: string): string[] {
+  const lines = content.split(/\r?\n/);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
+  const startIndex = lines.findIndex((line) => headingPattern.test(line.trim()));
+
+  if (startIndex === -1) {
+    return [];
+  }
+
+  const sectionLines: string[] = [];
+
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+
+    if (/^##\s+/.test(line)) {
+      break;
+    }
+
+    if (line.length === 0) {
+      continue;
+    }
+
+    sectionLines.push(line);
+  }
+
+  return sectionLines;
+}
+
+function normalizeReportSignalLine(line: string): string {
+  return line
+    .replace(/^[*-]\s+/, "")
+    .replace(/`/g, "")
+    .trim()
+    .replace(/[.]+$/, "")
+    .toLowerCase();
+}
+
+function isNoneLikeReportSignal(line: string): boolean {
+  const normalized = normalizeReportSignalLine(line);
+
+  return (
+    normalized === "none" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized.startsWith("no gaps") ||
+    normalized.startsWith("no actionable gaps") ||
+    normalized.startsWith("no blockers") ||
+    normalized.startsWith("no archival blockers")
+  );
+}
+
+function extractBlueprintCommand(line: string): string | null {
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
+
+  return match?.[0]?.trim() ?? null;
+}
+
+async function inspectMilestoneAuditReportStatus(args: {
+  projectRoot: string;
+  currentMilestone: string | null;
+  reports: string[];
+}): Promise<MilestoneAuditReportStatus> {
+  if (args.currentMilestone === null) {
+    return {
+      found: false,
+      verdict: null,
+      hasActionableGaps: false,
+      hasArchivalBlockers: false,
+      nextSafeAction: null,
+      readyForCompletion: false
+    };
+  }
+
+  const reportPath = buildBlueprintReportPath(`milestone-audit-${args.currentMilestone}`);
+
+  if (!args.reports.includes(reportPath)) {
+    return {
+      found: false,
+      verdict: null,
+      hasActionableGaps: false,
+      hasArchivalBlockers: false,
+      nextSafeAction: null,
+      readyForCompletion: false
+    };
+  }
+
+  try {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
+    const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
+    const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
+    const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
+    const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
+    const verdict =
+      auditVerdictLines
+        .map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null)
+        .find((value): value is "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" => value !== null) ??
+      null;
+    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
+    const nextSafeAction =
+      nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+
+    return {
+      found: true,
+      verdict,
+      hasActionableGaps: gapsFound.some((line) => !isNoneLikeReportSignal(line)),
+      hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
+      nextSafeAction,
+      readyForCompletion:
+        !verdictBlocksCompletion &&
+        gapsFound.every(isNoneLikeReportSignal) &&
+        archivalBlockers.every(isNoneLikeReportSignal)
+    };
+  } catch {
+    return {
+      found: true,
+      verdict: null,
+      hasActionableGaps: false,
+      hasArchivalBlockers: false,
+      nextSafeAction: null,
+      readyForCompletion: false
+    };
+  }
+}
+
 async function deriveNextAction(args: {
   projectStatus: string;
   blockers: string[];
   currentPhase: string | null;
   currentMilestone: string | null;
   allPhasesComplete: boolean;
-  hasMilestoneAudit: boolean;
+  milestoneAuditReport: MilestoneAuditReportStatus;
   hasMilestoneCompletion: boolean;
   hasMilestoneSummary: boolean;
   phaseArtifacts: CurrentPhaseArtifactStatus;
@@ -985,6 +1122,7 @@ async function deriveNextAction(args: {
   const validatePhaseCommand = blueprintDirectCommand("validate-phase");
   const verifyWorkCommand = blueprintDirectCommand("verify-work");
   const auditMilestoneCommand = blueprintDirectCommand("audit-milestone");
+  const planMilestoneGapsCommand = blueprintDirectCommand("plan-milestone-gaps");
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
@@ -1095,7 +1233,7 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    !args.hasMilestoneAudit &&
+    !args.milestoneAuditReport.found &&
     implementedCommands.has(auditMilestoneCommand)
   ) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
@@ -1106,7 +1244,32 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    args.hasMilestoneAudit &&
+    args.milestoneAuditReport.found &&
+    args.milestoneAuditReport.verdict !== null &&
+    args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" &&
+    args.milestoneAuditReport.nextSafeAction &&
+    implementedCommands.has(
+      args.milestoneAuditReport.nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? ""
+    )
+  ) {
+    return args.milestoneAuditReport.nextSafeAction;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
+    args.milestoneAuditReport.found &&
+    (args.milestoneAuditReport.hasActionableGaps || args.milestoneAuditReport.hasArchivalBlockers) &&
+    implementedCommands.has(planMilestoneGapsCommand)
+  ) {
+    return `Run ${planMilestoneGapsCommand} to close milestone gaps before archival`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.allCompletedPhasesReady &&
+    args.milestoneAuditReport.found &&
+    args.milestoneAuditReport.readyForCompletion &&
     !args.hasMilestoneCompletion &&
     implementedCommands.has(completeMilestoneCommand)
   ) {
@@ -1118,7 +1281,7 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    args.hasMilestoneAudit &&
+    args.milestoneAuditReport.found &&
     args.hasMilestoneCompletion &&
     !args.hasMilestoneSummary &&
     implementedCommands.has(milestoneSummaryCommand)
@@ -1131,7 +1294,7 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.allCompletedPhasesReady &&
-    args.hasMilestoneAudit &&
+    args.milestoneAuditReport.found &&
     args.hasMilestoneCompletion &&
     args.hasMilestoneSummary &&
     implementedCommands.has(newMilestoneCommand)
@@ -1186,10 +1349,6 @@ async function buildSyncedState(projectRoot: string): Promise<{
     );
   }
 
-  const milestoneAuditReportPath =
-    currentMilestone === null
-      ? null
-      : buildBlueprintReportPath(`milestone-audit-${currentMilestone}`);
   const milestoneCompletionReportPath =
     currentMilestone === null
       ? null
@@ -1198,6 +1357,11 @@ async function buildSyncedState(projectRoot: string): Promise<{
     currentMilestone === null
       ? null
       : buildBlueprintReportPath(`milestone-summary-${currentMilestone}`);
+  const milestoneAuditReport = await inspectMilestoneAuditReportStatus({
+    projectRoot,
+    currentMilestone,
+    reports: inspection.reports
+  });
   const structuralBlockers = inspection.core.missing.map(
     (artifact) => `Missing ${artifact}`
   );
@@ -1277,9 +1441,7 @@ async function buildSyncedState(projectRoot: string): Promise<{
               currentPhase,
               currentMilestone,
               allPhasesComplete: roadmapSignals.allPhasesComplete,
-              hasMilestoneAudit:
-                milestoneAuditReportPath !== null &&
-                inspection.reports.includes(milestoneAuditReportPath),
+              milestoneAuditReport,
               hasMilestoneCompletion:
                 milestoneCompletionReportPath !== null &&
                 inspection.reports.includes(milestoneCompletionReportPath),

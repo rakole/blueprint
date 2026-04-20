@@ -25,6 +25,7 @@
 
 - A roadmap and at least one completed phase evidence set should exist.
 - An existing audit report should only be replaced with explicit confirmation.
+- Read the canonical `report.milestone-audit` contract before drafting or revising the report.
 
 
 ## Outputs
@@ -40,6 +41,7 @@
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 
 
@@ -55,11 +57,13 @@
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
 ## Digest And Report Contract
 
+- Read `report.milestone-audit` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final report body to the returned `authoringTemplate` when the contract provides one.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
 - Pass only the bare report name `milestone-audit-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
@@ -103,6 +107,7 @@
 
 
 - Require explicit confirmation before replacing an existing milestone audit report.
+- Prefer Gemini CLI `ask_user` for that overwrite confirmation gate.
 
 
 ## Edge Cases
@@ -136,4 +141,3 @@
 - Roadmap mutation fixture.
 - Renumbering or archival regression fixture.
 - Direct `audit-milestone` happy-path fixture.
-
