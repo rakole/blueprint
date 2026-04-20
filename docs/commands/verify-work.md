@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`verify-work` is Blueprint's command for validate built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads saved execution and validation evidence first, persists resumable phase-scoped `XX-UAT.md` content through dedicated validation MCP tools, and keeps optional follow-up fixes explicit instead of hiding them in chat.
+`verify-work` is Blueprint's command for validating built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads saved execution and validation evidence first, resumes an existing `XX-UAT.md` unless the user chooses otherwise, normalizes the final body to the canonical UAT template before persistence, validates the written artifact before updating state, and only leaves roadmap completion green when the saved evidence remains valid.
 
 
 ## Command Path And Examples
@@ -25,12 +25,13 @@
 - The target phase must already have execution summaries.
 - The target phase must already have a `XX-VERIFICATION.md` artifact from `validate-phase`.
 - Existing UAT artifacts should be resumed or reused unless the user explicitly asks for a replacement.
+- Confirm any follow-up-fix capture before it is written into the UAT artifact.
 
 
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: writes `XX-UAT.md` through MCP, marks the phase complete in `.blueprint/ROADMAP.md` once execution, validation, and UAT evidence all exist, may record explicit follow-up fix capture in the same artifact, and updates `.blueprint/STATE.md` when the next safe action changes.
+- Repo side effects: writes `XX-UAT.md` through MCP, validates the saved artifact after the write, updates `.blueprint/ROADMAP.md` when valid execution, verification, and UAT evidence make completion durable, may record explicit follow-up fix capture in the same artifact after confirmation, and updates `.blueprint/STATE.md` when the next safe action changes.
 
 
 ## Blueprint And Global State Reads
@@ -39,14 +40,15 @@
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation and UAT artifacts through `blueprint_phase_validation_read`
 - canonical authoring templates and required-tool derivation through `blueprint_artifact_contract_read`
+- post-write artifact validation through `blueprint_artifact_validate`
 
 
 ## Blueprint And Global State Writes
 
 - `phase XX-UAT.md`
-- `.blueprint/ROADMAP.md` when the phase completion signal becomes durable
+- `.blueprint/ROADMAP.md` when valid lifecycle evidence closes or reopens the phase
 - `.blueprint/STATE.md`
-- optional explicit follow-up fix capture in the same UAT artifact
+- optional explicit follow-up fix capture in the same UAT artifact after confirmation
 
 
 ## Required MCP Tools
@@ -69,16 +71,18 @@
 - UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final normalization.
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
+- Self-check the normalized draft against the returned contract before writing so the final body matches the persisted shape.
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
-- Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; do not invent separate tool-owned artifacts.
+- Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; confirm follow-up-fix capture before persistence and do not invent separate tool-owned artifacts.
 
 ## Canonical UAT Contract
 
 Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.uat` `authoringTemplate`.
 
-- Do not rename the contract's required headings or replace the locked `**Status:**` marker.
+- Do not rename the contract's required headings or replace the locked `**Status:**`, `**Resume State:**`, or `**Checkpoint:**` markers.
 - Keep summary references inside the contract-defined summary-aware sections so `blueprint_phase_validation_write` validation passes cleanly.
 - Allow extra top-level headings only when the returned contract policy says they are supported.
+- After writing, run artifact validation before updating state so schema drift is caught in the same command path.
 
 
 ## Skills And Subagents
@@ -115,8 +119,8 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 
 ## User Prompts And Confirmation Gates
 
-- Use Gemini CLI `ask_user` to capture the structured `view`, `resume`, or `update` decision when an existing UAT artifact is present.
-- Confirm any overwrite before replacing an existing UAT artifact; use `ask_user` for that confirmation path.
+- Use Gemini CLI `ask_user` to capture a focused structured decision when an existing UAT artifact is present: `view` (`view current UAT`), `resume` (`resume saved UAT`), or `update` (`replace UAT`).
+- Confirm any overwrite before replacing an existing UAT artifact; use a separate `ask_user` confirmation path for that overwrite.
 - Confirm any explicit follow-up fix capture before persisting it in the UAT artifact.
 
 

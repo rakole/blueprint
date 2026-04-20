@@ -118,6 +118,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const reviewContract = readArtifactContract("review.code-review");
   const securityContract = readArtifactContract("review.security");
   const verificationContract = readArtifactContract("phase.verification");
+  const uatContract = readArtifactContract("phase.uat");
 
   assert.equal(single.artifactId, "phase.research");
   assert.match(single.contract.authoringTemplate, /^# Phase XX: <Phase Name> - Research$/m);
@@ -212,6 +213,36 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "**Gate State:**",
     "**Sign-off:**"
   ]);
+  assert.deepEqual(uatContract.requiredHeadings, [
+    "UAT Summary",
+    "Session State",
+    "Questions Asked",
+    "Observed Behavior",
+    "Unresolved Gaps",
+    "Follow-Up Fixes",
+    "Next Safe Action"
+  ]);
+  assert.deepEqual(uatContract.lockedMarkers, [
+    "**Status:**",
+    "**Resume State:**",
+    "**Checkpoint:**"
+  ]);
+  assert.match(uatContract.authoringTemplate, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
+  assert.match(uatContract.authoringTemplate, /\*\*Checkpoint:\*\* <saved checkpoint path or none>/);
+  assert.match(uatContract.authoringTemplate, /## Session State/);
+  assert.match(
+    uatContract.authoringTemplate,
+    /Resume source: <saved summary path, checkpoint, or none>/
+  );
+  assert.match(
+    uatContract.authoringTemplate,
+    /Continuity notes: <what must remain stable between sessions>/
+  );
+  assert.match(uatContract.notes.join("\n"), /resumable across sessions/i);
+  assert.match(
+    uatContract.notes.join("\n"),
+    /saved summaries inside UAT Summary, Session State, or Observed Behavior/i
+  );
   assert.deepEqual(reviewContract.requiredHeadings, [
     "Review Summary",
     "Scope Reviewed",
@@ -327,10 +358,18 @@ test("canonical lifecycle contracts allow additional top-level headings without 
   const uat = `# Phase 03: Discovery - UAT
 
 **Status:** PASS
+**Resume State:** RESUMED
+**Checkpoint:** none
 
 ## UAT Summary
 
-- The saved behavior matched \`03-01-SUMMARY.md\`.
+- The saved behavior matched the accepted summary evidence.
+
+## Session State
+
+- Resume source: saved summary evidence
+- Current session step: Confirm the accepted behavior still holds after a pause.
+- Continuity notes: Keep the same summary-backed outcome when the session resumes.
 
 ## Questions Asked
 
@@ -364,10 +403,19 @@ test("canonical lifecycle contracts allow additional top-level headings without 
   const uatValidation = validateUatArtifactContent(uat, [
     ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
   ]);
+  const invalidCheckpointUat = uat.replace("**Checkpoint:** none", "**Checkpoint:** pending");
+  const invalidCheckpointValidation = validateUatArtifactContent(invalidCheckpointUat, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
 
   assert.equal(researchValidation.valid, true, researchValidation.issues.join("\n"));
   assert.equal(verificationValidation.valid, true, verificationValidation.issues.join("\n"));
   assert.equal(uatValidation.valid, true, uatValidation.issues.join("\n"));
+  assert.equal(invalidCheckpointValidation.valid, false, invalidCheckpointValidation.issues.join("\n"));
+  assert.match(
+    invalidCheckpointValidation.issues.join("\n"),
+    /saved checkpoint path ending in `-DISCUSS-CHECKPOINT\.json` or `none`|`none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT\.json`/
+  );
 });
 
 test("research contract rejects skeleton content that lacks substantive section detail", () => {

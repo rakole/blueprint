@@ -442,10 +442,18 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -1237,16 +1245,25 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: [
       "UAT Summary",
+      "Session State",
       "Questions Asked",
       "Observed Behavior",
       "Unresolved Gaps",
       "Follow-Up Fixes",
       "Next Safe Action"
     ],
-    lockedMarkers: ["**Status:**"],
-    placeholderSignals: ["PASS|FAIL|PARTIAL"],
+    lockedMarkers: ["**Status:**", "**Resume State:**", "**Checkpoint:**"],
+    placeholderSignals: [
+      "PASS|FAIL|PARTIAL",
+      "RESUMED|NEW|CONTINUED",
+      "<saved checkpoint path or none>",
+      "<saved summary path, checkpoint, or none>",
+      "<what is being resumed now>",
+      "<what must remain stable between sessions>"
+    ],
     notes: [
-      "UAT artifacts stay resumable and must reference saved summaries inside UAT Summary or Observed Behavior."
+      "UAT artifacts stay resumable across sessions and must reference saved summaries inside UAT Summary, Session State, or Observed Behavior.",
+      "Write validation keeps the resume checkpoint and current session state explicit so the artifact can be safely continued after a pause."
     ],
     renderScaffoldTemplate: renderUatTemplate,
     renderAuthoringTemplate: renderUatTemplate

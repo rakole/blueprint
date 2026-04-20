@@ -75,6 +75,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and full artifact content. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
 - `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.verification` or `phase.uat` instead of relying on copied prompt-local templates.
 - `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. Use the returned `path` as authoritative.
+- `blueprint_artifact_validate`: run after every validation or UAT write so the persisted artifact is checked before the next state update is written.
 
 ## Canonical Validation Contracts
 
@@ -105,9 +106,10 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
 5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
 6. Normalize the final UAT draft to the canonical `phase.uat` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths inside the contract-defined summary-aware sections, and keep all required section names unchanged.
-7. Persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-8. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update.
-9. Update `STATE.md` with the UAT result and the next safe implemented action.
+7. Self-check the normalized draft against the returned contract before writing, then persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact. Use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
+8. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update, and confirm any follow-up-fix capture before persisting it.
+9. Run `blueprint_artifact_validate` after the write and before `STATE.md` is updated.
+10. Update `STATE.md` with the UAT result and the next safe implemented action.
 
 ### `add-tests`
 

@@ -102,11 +102,60 @@ async function createMilestoneAuditRepo(): Promise<string> {
     path.join(priorPhaseDir, "03-VERIFICATION.md"),
     `# Phase 03: Execution - Verification
 
-**Status:** PASS
+**Coverage:** Reviewed any saved execution evidence for validation completeness.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Execution evidence for the earlier milestone phase is complete.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| MILESTONE-00 | Preserve earlier validation evidence | saved phase evidence | PASS | Earlier milestone evidence remains durable. |
+
+## Evidence Reviewed
+
+- saved phase evidence
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution evidence
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | saved phase evidence | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 3
 `,
     "utf8"
   );
@@ -115,10 +164,38 @@ async function createMilestoneAuditRepo(): Promise<string> {
     `# Phase 03: Execution - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
 - Earlier milestone UAT closed without blocking issues.
+
+## Session State
+
+- Resume source: saved phase evidence
+- Current session step: none
+- Continuity notes: none
+
+## Questions Asked
+
+- none
+
+## Observed Behavior
+
+- The accepted behavior matched the saved phase evidence.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
 `,
     "utf8"
   );
@@ -265,11 +342,60 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
     path.join(phaseDir, "04-VERIFICATION.md"),
     `# Phase 04: Release Readiness - Verification
 
-**Status:** PASS
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Validation confirms the milestone is ready for UAT closeout.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| MILESTONE-01 | Confirm release-readiness evidence exists | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | Milestone readiness is grounded in the saved summary. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-release-readiness/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- /blu-verify-work 4
 `,
     "utf8"
   );
@@ -278,10 +404,38 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
     `# Phase 04: Release Readiness - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- UAT closed with no blocking issues.
+- UAT closed with no blocking issues against \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`
+- Current session step: none
+- Continuity notes: none
+
+## Questions Asked
+
+- none
+
+## Observed Behavior
+
+- The accepted behavior matched \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
 `,
     "utf8"
   );

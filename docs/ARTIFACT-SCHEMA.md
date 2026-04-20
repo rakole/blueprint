@@ -394,7 +394,10 @@ Validation expectations:
 
 Minimum expected structure:
 - `**Status:** PASS|FAIL|PARTIAL`
+- `**Resume State:** RESUMED|NEW|CONTINUED`
+- `**Checkpoint:** <saved checkpoint path or none>`
 - `## UAT Summary`
+- `## Session State`
 - `## Questions Asked`
 - `## Observed Behavior`
 - `## Unresolved Gaps`
@@ -404,7 +407,9 @@ Minimum expected structure:
 UAT expectations:
 - must be grounded in the saved execution summaries for the phase
 - should preserve resumable conversational state rather than acting like a one-shot transcript
+- should be normalized to the canonical `phase.uat` authoring template before persistence
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
+- should be validated after write so schema drift or heading drift is caught before the next state update
 
 Exact persistence template:
 
@@ -412,10 +417,18 @@ Exact persistence template:
 # Phase XX: <Phase Name> - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -439,9 +452,10 @@ Exact persistence template:
 ```
 
 Contract notes:
-- Keep the `**Status:**` marker exactly as written.
+- Keep the `**Status:**`, `**Resume State:**`, and `**Checkpoint:**` markers exactly as written.
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
-- Reference at least one saved summary path or filename inside `## UAT Summary` or `## Observed Behavior`.
+- Reference at least one saved summary path or filename inside `## UAT Summary`, `## Session State`, or `## Observed Behavior`.
+- Keep follow-up-fix captures explicit enough that the parent command can ask for confirmation before persistence.
 
 ### `XX-REVIEW-FIX.md`
 

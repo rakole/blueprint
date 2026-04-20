@@ -14640,10 +14640,18 @@ function renderUatTemplate(context) {
   return `# ${phaseLabel(context)} - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -15516,16 +15524,25 @@ var init_artifact_contracts = __esm({
         freehandPolicy: "additional-top-level-headings",
         requiredHeadings: [
           "UAT Summary",
+          "Session State",
           "Questions Asked",
           "Observed Behavior",
           "Unresolved Gaps",
           "Follow-Up Fixes",
           "Next Safe Action"
         ],
-        lockedMarkers: ["**Status:**"],
-        placeholderSignals: ["PASS|FAIL|PARTIAL"],
+        lockedMarkers: ["**Status:**", "**Resume State:**", "**Checkpoint:**"],
+        placeholderSignals: [
+          "PASS|FAIL|PARTIAL",
+          "RESUMED|NEW|CONTINUED",
+          "<saved checkpoint path or none>",
+          "<saved summary path, checkpoint, or none>",
+          "<what is being resumed now>",
+          "<what must remain stable between sessions>"
+        ],
         notes: [
-          "UAT artifacts stay resumable and must reference saved summaries inside UAT Summary or Observed Behavior."
+          "UAT artifacts stay resumable across sessions and must reference saved summaries inside UAT Summary, Session State, or Observed Behavior.",
+          "Write validation keeps the resume checkpoint and current session state explicit so the artifact can be safely continued after a pause."
         ],
         renderScaffoldTemplate: renderUatTemplate,
         renderAuthoringTemplate: renderUatTemplate
@@ -17823,14 +17840,29 @@ function validateUatArtifactContent(content, summaryPaths = []) {
   if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
     issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
   }
+  if (!/^\*\*Resume State:\*\*\s*(RESUMED|NEW|CONTINUED)\s*$/m.test(content)) {
+    issues.push("UAT artifact must declare **Resume State:** RESUMED, NEW, or CONTINUED.");
+  }
+  if (!/^\*\*Checkpoint:\*\*\s*(?:none|(?:\.blueprint\/phases\/[^\s/]+\/)?[^\s]+-DISCUSS-CHECKPOINT\.json)\s*$/m.test(
+    content
+  )) {
+    issues.push(
+      "UAT artifact must declare **Checkpoint:** with `none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT.json`."
+    );
+  }
   issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
+  const sessionState = extractMarkdownSection(content, "Session State");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
-  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(`${uatSummary}
-${observedBehavior}`, summaryPaths)) {
-    warnings.push(
-      "UAT artifact should reference at least one saved execution summary path or filename in ## UAT Summary or ## Observed Behavior."
+  if (summaryPaths.length > 0 && !containsReferencedSummaryPath(
+    `${uatSummary}
+${sessionState}
+${observedBehavior}`,
+    summaryPaths
+  )) {
+    issues.push(
+      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
     );
   }
   return {
@@ -18697,6 +18729,12 @@ function collectPhaseBundleIssues(phaseArtifacts, phaseDirectories) {
   }
   return issues;
 }
+function collectPhaseSummaryPathsForArtifact(phaseArtifacts, artifactPath) {
+  const phaseRoot = artifactPath.slice(0, artifactPath.lastIndexOf("/") + 1);
+  return phaseArtifacts.filter(
+    (value) => value.startsWith(phaseRoot) && value.endsWith("-SUMMARY.md")
+  );
+}
 async function blueprintArtifactValidate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
@@ -18769,6 +18807,40 @@ async function blueprintArtifactValidate(args = {}) {
     if (!validation.valid) {
       suggestedRepairs.add(
         "Regenerate or update malformed phase research through /blu-research-phase before planning."
+      );
+    }
+  }
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
+    const validation = validateVerificationArtifactContent(raw, summaryPaths);
+    for (const issue2 of validation.issues) {
+      issues.push(`${artifact}: ${issue2}`);
+    }
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed phase verification through /blu-validate-phase before UAT."
+      );
+    }
+  }
+  for (const artifact of inspection.phases.filter((value) => value.endsWith("-UAT.md"))) {
+    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+    const raw = await fs.readFile(absolutePath, "utf8");
+    const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
+    const validation = validateUatArtifactContent(raw, summaryPaths);
+    for (const issue2 of validation.issues) {
+      issues.push(`${artifact}: ${issue2}`);
+    }
+    for (const warning of validation.warnings) {
+      warnings.push(`${artifact}: ${warning}`);
+    }
+    if (!validation.valid) {
+      suggestedRepairs.add(
+        "Regenerate or update malformed UAT through /blu-verify-work after the saved summaries and verification artifact are corrected."
       );
     }
   }
@@ -22626,12 +22698,21 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
     resolveBlueprintPath(projectRoot, resolved.phaseDir),
     projectRoot
   );
-  const hasSummaries = phaseArtifacts.some((artifact) => artifact.endsWith("-SUMMARY.md"));
-  const hasVerification = phaseArtifacts.includes(
-    validationArtifactPathFor(resolved, "verification")
+  const summaryPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
+  const hasSummaries = summaryPaths.length > 0;
+  const verificationAccepted = await isAcceptedValidationArtifact(
+    projectRoot,
+    resolved,
+    "verification",
+    summaryPaths
   );
-  const hasUat = phaseArtifacts.includes(validationArtifactPathFor(resolved, "uat"));
-  const completed = hasSummaries && hasVerification && hasUat;
+  const uatAccepted = await isAcceptedValidationArtifact(
+    projectRoot,
+    resolved,
+    "uat",
+    summaryPaths
+  );
+  const completed = hasSummaries && verificationAccepted && uatAccepted;
   const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -22658,6 +22739,16 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
     completed ? `Marked Phase ${resolved.phaseNumber} completed in ${BLUEPRINT_DIR}/ROADMAP.md.` : `Reopened Phase ${resolved.phaseNumber} in ${BLUEPRINT_DIR}/ROADMAP.md until validation evidence is complete.`
   );
   return warnings;
+}
+async function isAcceptedValidationArtifact(projectRoot, resolved, artifact, summaryPaths) {
+  const artifactPath = validationArtifactPathFor(resolved, artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+  if (!await pathExists4(absolutePath)) {
+    return false;
+  }
+  const content = await fs6.readFile(absolutePath, "utf8");
+  const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths);
+  return validation.valid && validation.warnings.length === 0;
 }
 async function pathExists4(targetPath) {
   try {
@@ -24041,6 +24132,7 @@ async function blueprintPhaseValidationWrite(args) {
     }
   }
   if (!validation.valid) {
+    warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -24054,7 +24146,7 @@ async function blueprintPhaseValidationWrite(args) {
       overwritten: false,
       status: "invalid",
       issues: validation.issues,
-      warnings: validation.warnings
+      warnings: [...warnings, ...validation.warnings]
     };
   }
   warnings.push(

@@ -561,10 +561,18 @@ test("validation tools reject scaffold placeholder evidence for verification and
   const uatPlaceholderContent = `# Phase XX: <Phase Name> - UAT
 
 **Status:** PASS|FAIL|PARTIAL
+**Resume State:** RESUMED|NEW|CONTINUED
+**Checkpoint:** <saved checkpoint path or none>
 
 ## UAT Summary
 
 - Concise user-facing result grounded in the saved summaries and verification artifact.
+
+## Session State
+
+- Resume source: <saved summary path, checkpoint, or none>
+- Current session step: <what is being resumed now>
+- Continuity notes: <what must remain stable between sessions>
 
 ## Questions Asked
 
@@ -599,6 +607,7 @@ test("validation tools reject scaffold placeholder evidence for verification and
   assert.equal(uatValidation.valid, false);
   assert.match(uatValidation.issues.join("\n"), /Phase XX/);
   assert.match(uatValidation.issues.join("\n"), /PASS\|FAIL\|PARTIAL/);
+  assert.match(uatValidation.issues.join("\n"), /Resume State/);
   assert.match(uatValidation.issues.join("\n"), /03\.1-YY-SUMMARY\.md/);
   assert.equal(uatWrite.status, "invalid");
   assert.equal(uatWrite.written, false);
@@ -683,10 +692,18 @@ test("validation tools mark ROADMAP phase completion after UAT closes", async (t
     content: `# Phase 03: Phase Discovery - UAT
 
 **Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
 
 ## UAT Summary
 
-- UAT closed without blocking issues.
+- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+- Current session step: Close the initial UAT pass.
+- Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
 ## Questions Asked
 
