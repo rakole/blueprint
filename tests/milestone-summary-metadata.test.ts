@@ -20,6 +20,7 @@ test("milestone-summary manifest references saved report evidence and new-milest
   assert.match(commandFile, /artifactPaths/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /milestone-summary-<milestone>/);
@@ -37,6 +38,7 @@ test("roadmap-admin skill keeps milestone-summary skill-led and Wave 2 local", a
   assert.match(skillFile, /report\.milestone-summary/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
+  assert.match(skillFile, /contract\.authoringTemplate/);
   assert.match(skillFile, /Do not pull in `blueprint-doc-writer`/);
   assert.match(skillFile, /\/blu-new-milestone/);
   assert.match(skillFile, /ask_user/);

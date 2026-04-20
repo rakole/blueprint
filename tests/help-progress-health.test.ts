@@ -966,9 +966,46 @@ Close the milestone.
       path.join(reportsDir, "milestone-audit-v2.md"),
       `# Milestone Audit: v2
 
-## Result
+**Verdict:** READY_TO_CLOSE
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
 
-- Audit complete.
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE
+- Rationale: All milestone phases have saved verification and UAT evidence.
+- Decision basis: The roadmap and evidence chain are aligned for closeout.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/02-validation-hardening/02-VERIFICATION.md | PASS | Validation evidence exists for the earlier milestone phase. |
+| UAT evidence | .blueprint/phases/02-validation-hardening/02-UAT.md | PASS | UAT evidence exists for the earlier milestone phase. |
+| Carry-forward evidence | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/02-validation-hardening/02-VERIFICATION.md
+- .blueprint/phases/02-validation-hardening/02-UAT.md
+- .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
 `,
       "utf8"
     );
@@ -1216,12 +1253,20 @@ test("project status routes milestone closeout through audit, completion, summar
 
   assert.match(noReportsStatus.nextAction, /\/blu-audit-milestone v2/);
   assert.match(noReportsState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
+  assert.equal(noReportsState.derivedStatus.milestoneAudit.found, false);
+  assert.equal(noReportsState.derivedStatus.milestoneAudit.readyForCompletion, false);
   assert.match(auditStatus.nextAction, /\/blu-complete-milestone v2/);
   assert.match(auditState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
+  assert.equal(auditState.derivedStatus.milestoneAudit.found, true);
+  assert.equal(auditState.derivedStatus.milestoneAudit.verdict, "READY_TO_CLOSE");
+  assert.equal(auditState.derivedStatus.milestoneAudit.readyForCompletion, true);
+  assert.match(auditState.derivedStatus.milestoneAudit.nextSafeAction ?? "", /\/blu-complete-milestone v2/);
   assert.match(completeStatus.nextAction, /\/blu-milestone-summary v2/);
   assert.match(completeState.derivedStatus.nextAction, /\/blu-milestone-summary v2/);
+  assert.equal(completeState.derivedStatus.milestoneAudit.readyForCompletion, true);
   assert.match(summaryStatus.nextAction, /\/blu-new-milestone/);
   assert.match(summaryState.derivedStatus.nextAction, /\/blu-new-milestone/);
+  assert.equal(summaryState.derivedStatus.milestoneAudit.readyForCompletion, true);
 });
 
 test("project status keeps blocked milestone audits on gap planning instead of completion", async (t) => {

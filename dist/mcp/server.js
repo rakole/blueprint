@@ -14929,48 +14929,77 @@ function renderMilestoneAuditTemplate(context) {
 function renderMilestoneCompleteTemplate(context) {
   return `# Milestone ${milestone(context)} - Completion
 
+**Decision:** READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+**Audit Report Used:** <saved milestone audit report path>
+**Evidence Ledger:** <roadmap, validation, UAT, carry-forward evidence ledger>
+
 ## Completion Decision
 
-- Whether the milestone is ready to close and why.
+- Decision: READY_TO_CLOSE|FOLLOW_UP|BLOCKED
+- Rationale: <why the milestone can or cannot close>
+- Closeout basis: <which saved evidence determined the decision>
 
 ## Audit Report Used
 
-- Saved milestone audit report path or \`none\`.
+- <saved milestone audit report path>
 
-## Completion Rationale
+## Milestone Evidence Ledger
 
-- Concise closeout rationale grounded in saved evidence.
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation evidence | <validation evidence> | PASS|GAP|BLOCKED | <what the verification evidence proves> |
+| UAT evidence | <uat evidence> | PASS|GAP|BLOCKED | <what the UAT evidence proves> |
+| Carry-forward evidence | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the closeout evidence proves> |
 
 ## Residual Watch Items
 
-- Remaining watch item or \`none\`.
+- <remaining watch item or none>
 
 ## Next Safe Action
 
-- /blu-progress`;
+- /blu-milestone-summary`;
 }
 function renderMilestoneSummaryTemplate(context) {
   return `# Milestone ${milestone(context)} - Summary
 
+**Sources Reviewed:** <saved audit report, completion report, and roadmap evidence>
+**Evidence Ledger:** <audit, completion, roadmap, carry-forward evidence ledger>
+**Carry-Forward Context:** <seed context for /blu-new-milestone>
+
 ## Scope Summary
 
-- Concise milestone scope and outcome summary.
+- Concise milestone scope and outcome summary grounded in saved reports.
 
 ## Source Reports Used
 
-- Saved milestone reports and supporting artifacts reviewed.
+- <saved milestone audit report path>
+- <saved milestone completion report path>
+
+## Milestone Evidence Ledger
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Audit report | <audit report evidence> | PASS|GAP|BLOCKED | <what the audit report proves> |
+| Completion report | <completion report evidence> | PASS|GAP|BLOCKED | <what the completion report proves> |
+| Roadmap context | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Carry-forward context | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the carry-forward evidence proves> |
 
 ## Shipped Outcomes
 
-- Major delivered outcomes.
+- <major delivered outcome>
 
 ## Deferred Follow-Ups
 
-- Deferred item or \`none\`.
+- <deferred item or none>
 
 ## Recommended Carry-Forward Context
 
-- Context that should seed the next milestone.`;
+- <context that should seed the next milestone>
+
+## Next Safe Action
+
+- /blu-new-milestone`;
 }
 function renderDebugTemplate() {
   return `# Debug Report
@@ -15750,10 +15779,28 @@ var init_artifact_contracts = __esm({
         canonicalName: "Milestone Completion Report",
         canonicalFilePattern: ".blueprint/reports/milestone-complete-<milestone>.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Completion Decision", "Audit Report Used", "Completion Rationale", "Residual Watch Items", "Next Safe Action"],
-        lockedMarkers: [],
-        placeholderSignals: ["<milestone-version>"],
-        notes: ["Complete-milestone owns this report through blueprint_artifact_report_write."],
+        requiredHeadings: [
+          "Completion Decision",
+          "Audit Report Used",
+          "Milestone Evidence Ledger",
+          "Residual Watch Items",
+          "Next Safe Action"
+        ],
+        lockedMarkers: ["**Decision:**", "**Audit Report Used:**", "**Evidence Ledger:**"],
+        placeholderSignals: [
+          "<milestone-version>",
+          "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
+          "<saved milestone audit report path>",
+          "<roadmap, validation, UAT, carry-forward evidence ledger>",
+          "<roadmap evidence>",
+          "<validation evidence>",
+          "<uat evidence>",
+          "<carry-forward evidence>"
+        ],
+        notes: [
+          "Complete-milestone owns this report through blueprint_artifact_report_write.",
+          "The completion contract captures a closeout decision and an evidence ledger backed by saved reports."
+        ],
         renderScaffoldTemplate: renderMilestoneCompleteTemplate,
         renderAuthoringTemplate: renderMilestoneCompleteTemplate
       },
@@ -15765,10 +15812,32 @@ var init_artifact_contracts = __esm({
         canonicalName: "Milestone Summary Report",
         canonicalFilePattern: ".blueprint/reports/milestone-summary-<milestone>.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Scope Summary", "Source Reports Used", "Shipped Outcomes", "Deferred Follow-Ups", "Recommended Carry-Forward Context"],
-        lockedMarkers: [],
-        placeholderSignals: ["<milestone-version>"],
-        notes: ["New-milestone uses this report as the default carry-forward seed."],
+        requiredHeadings: [
+          "Scope Summary",
+          "Source Reports Used",
+          "Milestone Evidence Ledger",
+          "Shipped Outcomes",
+          "Deferred Follow-Ups",
+          "Recommended Carry-Forward Context",
+          "Next Safe Action"
+        ],
+        lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
+        placeholderSignals: [
+          "<milestone-version>",
+          "<saved audit report, completion report, and roadmap evidence>",
+          "<audit, completion, roadmap, carry-forward evidence ledger>",
+          "<seed context for /blu-new-milestone>",
+          "<saved milestone audit report path>",
+          "<saved milestone completion report path>",
+          "<audit report evidence>",
+          "<completion report evidence>",
+          "<roadmap evidence>",
+          "<carry-forward evidence>"
+        ],
+        notes: [
+          "New-milestone uses this report as the default carry-forward seed.",
+          "The summary contract captures the saved milestone sources, evidence ledger, and next milestone handoff context."
+        ],
         renderScaffoldTemplate: renderMilestoneSummaryTemplate,
         renderAuthoringTemplate: renderMilestoneSummaryTemplate
       },
@@ -17701,6 +17770,63 @@ function validateRequiredMarkdownSections(content, artifactLabel, headings) {
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
+function validateMilestoneEvidenceLedger(content, artifactLabel, sectionHeading, requiredRows) {
+  const issues = [];
+  const section = extractMarkdownSection(content, sectionHeading);
+  const evidenceRows = section.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+  if (evidenceRows.length < requiredRows.length) {
+    issues.push(
+      `${artifactLabel} section ${sectionHeading} must include evidence rows for ${requiredRows.map((row) => row.label).join(", ")}.`
+    );
+  }
+  const rowLabels = [];
+  for (const row of evidenceRows) {
+    const cells = parseMarkdownTableCells(row);
+    if (cells.length !== 4) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must keep each evidence row in the Dimension, Evidence, Status, and Notes columns.`
+      );
+      continue;
+    }
+    const [dimension, evidence, status, notes] = cells;
+    rowLabels.push(dimension);
+    if (!/^(PASS|GAP|BLOCKED)$/i.test(status)) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must use PASS, GAP, or BLOCKED for ${dimension}.`
+      );
+    }
+    if (!evidence || !notes) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must keep evidence and notes populated for ${dimension}.`
+      );
+    }
+  }
+  for (const requiredRow of requiredRows) {
+    if (!rowLabels.some((label) => requiredRow.pattern.test(label))) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} is missing a ${requiredRow.label} row.`
+      );
+    }
+  }
+  return issues;
+}
+function validateMilestoneReportReferences(content, artifactLabel, sectionHeading, requiredMentions) {
+  const issues = [];
+  const section = extractMarkdownSection(content, sectionHeading);
+  if (!/^- /m.test(section)) {
+    issues.push(
+      `${artifactLabel} section ${sectionHeading} must include at least one bullet with saved report references.`
+    );
+  }
+  for (const mention of requiredMentions) {
+    if (!new RegExp(escapeRegex2(mention), "i").test(section)) {
+      issues.push(
+        `${artifactLabel} section ${sectionHeading} must reference ${mention}.`
+      );
+    }
+  }
+  return issues;
+}
 function parseMarkdownTableCells(line) {
   if (!/^\|.*\|$/.test(line)) {
     return [];
@@ -17749,6 +17875,39 @@ function summarizeMarkdownTableRow(line) {
   }
   return cells[0] ?? "";
 }
+function scoreDigestSectionHeading(heading) {
+  const normalized = heading.trim().toLowerCase();
+  const highPriorityPatterns = [
+    /(?:^|\b)verdict(?:\b|$)/i,
+    /(?:^|\b)decision(?:\b|$)/i,
+    /(?:^|\b)evidence(?:\b|$)/i,
+    /next safe action/i,
+    /source reports used/i,
+    /recommended carry-forward context/i,
+    /milestone evidence dimensions/i,
+    /roadmap and phase evidence/i,
+    /audit report used/i
+  ];
+  const mediumPriorityPatterns = [
+    /(?:^|\b)rationale(?:\b|$)/i,
+    /(?:^|\b)summary(?:\b|$)/i,
+    /(?:^|\b)carry-forward(?:\b|$)/i,
+    /(?:^|\b)follow[- ]ups?(?:\b|$)/i,
+    /(?:^|\b)blockers?(?:\b|$)/i,
+    /(?:^|\b)gaps?(?:\b|$)/i,
+    /(?:^|\b)outcomes?(?:\b|$)/i,
+    /(?:^|\b)watch items?(?:\b|$)/i,
+    /(?:^|\b)completion(?:\b|$)/i,
+    /(?:^|\b)intent(?:\b|$)/i
+  ];
+  if (highPriorityPatterns.some((pattern) => pattern.test(normalized))) {
+    return 2;
+  }
+  if (mediumPriorityPatterns.some((pattern) => pattern.test(normalized))) {
+    return 1;
+  }
+  return 0;
+}
 function summarizeMarkdownSectionBody(section) {
   const lines = section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("## "));
   if (lines.length === 0) {
@@ -17762,7 +17921,7 @@ function summarizeMarkdownSectionBody(section) {
     (line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)
   );
   if (tableRows.length > 0) {
-    return tableRows.slice(0, 2).map((line) => summarizeMarkdownTableRow(line)).filter((line) => line.length > 0).join("; ");
+    return tableRows.slice(0, 4).map((line) => summarizeMarkdownTableRow(line)).filter((line) => line.length > 0).join("; ");
   }
   const bullets = lines.filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0);
   if (bullets.length > 0) {
@@ -17805,7 +17964,10 @@ function summarizePreambleLines(lines) {
       synopsis.push(line.replace(/^[-*+]\s+/, "").trim());
     }
   }
-  return synopsis;
+  if (synopsis.length > 0) {
+    return synopsis;
+  }
+  return lines.map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).slice(0, 2);
 }
 function validateValidationScaffoldPlaceholders(content, artifactLabel) {
   return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
@@ -18036,8 +18198,6 @@ function validateReportArtifactContent(content, reportName2) {
   if (contractId === "report.milestone-audit") {
     const issues = [];
     const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
-    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
-    const evidenceRows = evidenceDimensions.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
     if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
       issues.push(
         "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
@@ -18046,48 +18206,68 @@ function validateReportArtifactContent(content, reportName2) {
     if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
       issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
     }
-    if (evidenceRows.length < 4) {
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Dimensions", [
+        { label: "Roadmap intent", pattern: /Roadmap intent/i },
+        { label: "Validation evidence", pattern: /Validation evidence/i },
+        { label: "UAT evidence", pattern: /UAT evidence/i },
+        { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
+      ])
+    );
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+  if (contractId === "report.milestone-complete") {
+    const issues = [];
+    const completionDecision = extractMarkdownSection(content, "Completion Decision");
+    if (!/^- Decision:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(completionDecision)) {
       issues.push(
-        "Report artifact section Milestone Evidence Dimensions must include roadmap, validation, UAT, and carry-forward evidence rows."
+        "Report artifact section Completion Decision must include a concrete Decision line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
       );
     }
-    const rowLabels = [];
-    for (const row of evidenceRows) {
-      const cells = parseMarkdownTableCells(row);
-      if (cells.length !== 4) {
-        issues.push(
-          "Report artifact section Milestone Evidence Dimensions must keep each evidence row in the Dimension, Evidence, Status, and Notes columns."
-        );
-        continue;
-      }
-      const [dimension, evidence, status, notes] = cells;
-      rowLabels.push(dimension);
-      if (!/^(PASS|GAP|BLOCKED)$/i.test(status)) {
-        issues.push(
-          `Report artifact section Milestone Evidence Dimensions must use PASS, GAP, or BLOCKED for ${dimension}.`
-        );
-      }
-      if (!evidence || !notes) {
-        issues.push(
-          `Report artifact section Milestone Evidence Dimensions must keep evidence and notes populated for ${dimension}.`
-        );
-      }
-    }
-    const rowLabelText = rowLabels.join(" ");
-    if (!/Roadmap intent/i.test(rowLabelText)) {
-      issues.push("Report artifact section Milestone Evidence Dimensions is missing a Roadmap intent row.");
-    }
-    if (!/Validation evidence/i.test(rowLabelText)) {
-      issues.push("Report artifact section Milestone Evidence Dimensions is missing a Validation evidence row.");
-    }
-    if (!/UAT evidence/i.test(rowLabelText)) {
-      issues.push("Report artifact section Milestone Evidence Dimensions is missing a UAT evidence row.");
-    }
-    if (!/Carry-forward evidence/i.test(rowLabelText)) {
+    if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(completionDecision)) {
       issues.push(
-        "Report artifact section Milestone Evidence Dimensions is missing a Carry-forward evidence row."
+        "Report artifact section Completion Decision still contains scaffold decision placeholder text."
       );
     }
+    issues.push(
+      ...validateMilestoneReportReferences(content, "Report artifact", "Audit Report Used", [
+        "milestone-audit"
+      ])
+    );
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Ledger", [
+        { label: "Roadmap intent", pattern: /Roadmap intent/i },
+        { label: "Validation evidence", pattern: /Validation evidence/i },
+        { label: "UAT evidence", pattern: /UAT evidence/i },
+        { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
+      ])
+    );
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: []
+    };
+  }
+  if (contractId === "report.milestone-summary") {
+    const issues = [];
+    issues.push(
+      ...validateMilestoneReportReferences(content, "Report artifact", "Source Reports Used", [
+        "milestone-audit",
+        "milestone-complete"
+      ])
+    );
+    issues.push(
+      ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Ledger", [
+        { label: "Audit report", pattern: /Audit report/i },
+        { label: "Completion report", pattern: /Completion report/i },
+        { label: "Roadmap context", pattern: /Roadmap context/i },
+        { label: "Carry-forward context", pattern: /Carry-forward context/i }
+      ])
+    );
     return {
       valid: issues.length === 0,
       issues,
@@ -19230,12 +19410,30 @@ function summarizeArtifactContent(content) {
     (line, index) => index > h1Index && /^##\s+/.test(line)
   );
   const preambleLines = h1Index >= 0 ? meaningfulLines.slice(h1Index + 1, firstSectionIndex >= 0 ? firstSectionIndex : meaningfulLines.length).filter((line) => !line.startsWith("#")) : [];
-  const sections = splitMarkdownSections(meaningfulLines);
+  const sections = splitMarkdownSections(meaningfulLines).map((section, index) => {
+    const summary = summarizeMarkdownSectionBody(section.body.join("\n"));
+    return {
+      ...section,
+      index,
+      summary,
+      score: scoreDigestSectionHeading(section.heading)
+    };
+  });
+  const prioritizedSections = sections.filter((section) => section.score > 0).sort((left, right) => right.score - left.score || left.index - right.index);
+  const selectedSectionIndexes = /* @__PURE__ */ new Set();
+  const preferredSections = prioritizedSections.length > 0 ? prioritizedSections.slice(0, 6) : sections.slice(0, 2);
+  for (const section of preferredSections) {
+    selectedSectionIndexes.add(section.index);
+  }
+  if (selectedSectionIndexes.size < 2) {
+    for (const section of sections.slice(0, 2)) {
+      selectedSectionIndexes.add(section.index);
+    }
+  }
   const summaryParts = [
     ...summarizePreambleLines(preambleLines),
-    ...sections.slice(0, 2).map((section) => {
-      const synopsis = summarizeMarkdownSectionBody(section.body.join("\n"));
-      return synopsis.length > 0 ? `${section.heading}: ${synopsis}` : section.heading;
+    ...sections.filter((section) => selectedSectionIndexes.has(section.index)).map((section) => {
+      return section.summary.length > 0 ? `${section.heading}: ${section.summary}` : section.heading;
     })
   ].filter((part) => part.length > 0);
   return {
@@ -21523,6 +21721,16 @@ var init_project = __esm({
 
 // src/mcp/tools/state.ts
 import { promises as fs5 } from "node:fs";
+function emptyMilestoneAuditReportStatus() {
+  return {
+    found: false,
+    verdict: null,
+    hasActionableGaps: false,
+    hasArchivalBlockers: false,
+    nextSafeAction: null,
+    readyForCompletion: false
+  };
+}
 function normalizeTextContent2(content) {
   return `${content.replace(/\r\n/g, "\n").trimEnd()}
 `;
@@ -22084,25 +22292,11 @@ function extractBlueprintCommand(line) {
 }
 async function inspectMilestoneAuditReportStatus(args) {
   if (args.currentMilestone === null) {
-    return {
-      found: false,
-      verdict: null,
-      hasActionableGaps: false,
-      hasArchivalBlockers: false,
-      nextSafeAction: null,
-      readyForCompletion: false
-    };
+    return emptyMilestoneAuditReportStatus();
   }
   const reportPath = buildBlueprintReportPath(`milestone-audit-${args.currentMilestone}`);
   if (!args.reports.includes(reportPath)) {
-    return {
-      found: false,
-      verdict: null,
-      hasActionableGaps: false,
-      hasArchivalBlockers: false,
-      nextSafeAction: null,
-      readyForCompletion: false
-    };
+    return emptyMilestoneAuditReportStatus();
   }
   try {
     const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
@@ -22111,7 +22305,6 @@ async function inspectMilestoneAuditReportStatus(args) {
     const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
     const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
     const verdict = auditVerdictLines.map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
-    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
     const nextSafeAction = nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
     return {
       found: true,
@@ -22119,16 +22312,12 @@ async function inspectMilestoneAuditReportStatus(args) {
       hasActionableGaps: gapsFound.some((line) => !isNoneLikeReportSignal(line)),
       hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
       nextSafeAction,
-      readyForCompletion: !verdictBlocksCompletion && gapsFound.every(isNoneLikeReportSignal) && archivalBlockers.every(isNoneLikeReportSignal)
+      readyForCompletion: verdict === "READY_TO_CLOSE" && gapsFound.every(isNoneLikeReportSignal) && archivalBlockers.every(isNoneLikeReportSignal)
     };
   } catch {
     return {
-      found: true,
-      verdict: null,
-      hasActionableGaps: false,
-      hasArchivalBlockers: false,
-      nextSafeAction: null,
-      readyForCompletion: false
+      ...emptyMilestoneAuditReportStatus(),
+      found: true
     };
   }
 }
@@ -22200,7 +22389,7 @@ async function deriveNextAction(args) {
     const milestoneSuffix = args.currentMilestone ? ` ${args.currentMilestone}` : "";
     return `Run ${auditMilestoneCommand}${milestoneSuffix} to audit milestone completion before archiving`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.milestoneAuditReport.verdict !== null && args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" && args.milestoneAuditReport.nextSafeAction && implementedCommands.has(
+  if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && args.milestoneAuditReport.found && args.milestoneAuditReport.verdict !== "READY_TO_CLOSE" && args.milestoneAuditReport.nextSafeAction && implementedCommands.has(
     args.milestoneAuditReport.nextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? ""
   )) {
     return args.milestoneAuditReport.nextSafeAction;
@@ -22326,7 +22515,8 @@ async function buildSyncedState(projectRoot) {
       roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
       lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
     },
-    warnings
+    warnings,
+    milestoneAuditReport
   };
 }
 async function blueprintPauseHandoffGet(args = {}) {
@@ -22428,10 +22618,12 @@ async function loadBlueprintState(cwd) {
 async function blueprintStateLoad(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const state = inspection.readiness === "uninitialized" ? await loadBlueprintState(projectRoot) : (await buildSyncedState(projectRoot)).state;
+  const syncedState = inspection.readiness === "uninitialized" ? null : await buildSyncedState(projectRoot);
+  const state = inspection.readiness === "uninitialized" ? await loadBlueprintState(projectRoot) : syncedState.state;
   const currentPhase2 = inspection.readiness === "uninitialized" ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
+  const milestoneAuditReport = inspection.readiness === "uninitialized" ? emptyMilestoneAuditReportStatus() : syncedState.milestoneAuditReport;
   return {
     state,
     blockers,
@@ -22439,7 +22631,8 @@ async function blueprintStateLoad(args = {}) {
       projectStatus: inspection.readiness,
       currentPhase: currentPhase2,
       nextAction,
-      hasBlockers: blockers.length > 0
+      hasBlockers: blockers.length > 0,
+      milestoneAudit: milestoneAuditReport
     }
   };
 }

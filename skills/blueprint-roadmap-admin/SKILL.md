@@ -145,20 +145,20 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 ### `complete-milestone`
 
 1. Read the roadmap first and then inspect `.blueprint/reports/` through `blueprint_artifact_list` so the closeout step stays grounded in the saved audit report instead of chat memory.
-2. Fail fast when the matching milestone audit report is missing. Route the user to `/blu-audit-milestone` instead of inventing closeout evidence.
-3. Read `report.milestone-complete` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final completion body to the returned authoring template when the contract provides one.
-4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before writing the completion report.
+2. Read `blueprint_state_load` so you can inspect `derivedStatus.milestoneAudit`. Fail fast unless `derivedStatus.milestoneAudit.readyForCompletion` is true. If the audit report is missing, route the user to `/blu-audit-milestone`. If the audit exists but is not ready, route them to `derivedStatus.milestoneAudit.nextSafeAction` when present, otherwise to `/blu-plan-milestone-gaps` when actionable gaps or blockers remain, and only fall back to `/blu-progress` when the report is malformed or undecidable.
+3. Read `report.milestone-complete` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final completion body to the returned `contract.authoringTemplate` when the contract provides one.
+4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before writing the completion report. Surface the audit readiness and evidence trail, not just a terse summary.
 5. Keep `complete-milestone` report-driven and state-driven. Do not rewrite `.blueprint/ROADMAP.md`, renumber phases, or invent a new `phase_mark_complete` substrate from the command prompt.
 6. Persist the completion report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 7. Require explicit overwrite confirmation before replacing an existing milestone completion report, and prefer `ask_user` for that confirmation gate.
 8. Update `STATE.md` through `blueprint_state_update` so `/blu-complete-milestone` is the active command and the next safe implemented follow-up is `/blu-milestone-summary <milestone>`.
-9. Keep follow-up routing inside implemented Blueprint commands only.
+9. Keep follow-up routing inside implemented Blueprint commands only. Do not loop back into `/blu-audit-milestone` when the saved audit already names a safer follow-up.
 
 ### `milestone-summary`
 
 1. Read the roadmap first and inspect `.blueprint/reports/` through `blueprint_artifact_list` so the summary stays grounded in the matching milestone audit and completion reports.
 2. Fail fast when either the audit report or completion report is missing. Route the user to `/blu-audit-milestone` or `/blu-complete-milestone` instead of fabricating missing inputs.
-3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final summary body to the returned authoring template when the contract provides one.
+3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final summary body to the returned `contract.authoringTemplate` when the contract provides one.
 4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-report inputs to build the milestone summary from durable evidence.
 5. Persist the summary report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 6. Require explicit overwrite confirmation before replacing an existing milestone summary report, and prefer `ask_user` for that confirmation gate.
@@ -194,6 +194,6 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - For `remove-phase`, report the removed phase plainly, summarize any renumbered phases or drift warnings, and end with the next safe implemented action.
 - For `plan-milestone-gaps`, show the grouped gap-closure phases compactly, call out any deferred optional gaps, and end with the first safe implemented follow-up.
 - For `audit-milestone`, call out the original milestone intent, the evidence that confirms or weakens it, any gaps, and the next safe implemented action.
-- For `complete-milestone`, report the milestone resolved, the audit report used, whether the completion report was created or replaced, and the next safe implemented action.
-- For `milestone-summary`, report the milestone resolved, the source reports used, whether the summary report was created or replaced, and the next safe implemented action.
+- For `complete-milestone`, report the milestone resolved, the audit readiness and evidence used, whether the completion report was created or replaced, and the next safe implemented action.
+- For `milestone-summary`, report the milestone resolved, the source reports and evidence used, whether the summary report was created or replaced, and the next safe implemented action.
 - For `new-milestone`, report the new milestone name, whether the flow used carry-forward or explicit reset, the first new phase scaffolded, and the next safe implemented action.
