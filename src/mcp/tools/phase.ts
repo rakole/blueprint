@@ -20,6 +20,7 @@ import {
   resolveBlueprintPath,
   toRepoRelativePath,
   writeJsonFile,
+  withBlueprintRepoLock,
   writeTextFile
 } from "./artifacts.js";
 import { loadBlueprintState } from "./state.js";
@@ -61,6 +62,7 @@ type RoadmapAuditBackedDetails = {
 type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
+  expectedPhaseNumber?: string;
   auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 
@@ -552,6 +554,7 @@ const roadmapReadInputSchema = {
 const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
   description: z.string(),
+  expectedPhaseNumber: z.string().optional(),
   auditBackedDetails: z
     .object({
       sourceReportPath: z.string().optional(),
@@ -867,6 +870,18 @@ function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
     : Math.max(...basePhaseNumbers);
 
   return String(maxIntegerPhase + 1);
+}
+
+function previousIntegerPhaseNumber(value: NumericInput): string | null {
+  const normalizedPhaseNumber = normalizePhaseNumber(value);
+
+  if (!isIntegerPhaseNumber(normalizedPhaseNumber)) {
+    return null;
+  }
+
+  const previousPhaseNumber = Number.parseInt(normalizedPhaseNumber, 10) - 1;
+
+  return previousPhaseNumber > 0 ? String(previousPhaseNumber) : null;
 }
 
 function nextDecimalPhaseNumber(
@@ -2373,7 +2388,6 @@ export async function blueprintRoadmapAddPhase(
   args: RoadmapAddPhaseArgs
 ): Promise<RoadmapAddPhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
   const normalizedDescription = normalizePhaseDescription(args.description);
   const auditBackedDetails = args.auditBackedDetails ?? null;
 
@@ -2383,77 +2397,92 @@ export async function blueprintRoadmapAddPhase(
     );
   }
 
-  const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
-  const phasePrefix = formatPhasePrefix(phaseNumber);
-  const slug = slugifyPhaseName(normalizedDescription);
-  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
-  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
-  const requirementRepair = auditBackedDetails?.repairRequirementIds?.length
-    ? await repairRequirementsTraceability(
-        projectRoot,
-        auditBackedDetails.repairRequirementIds,
-        phaseNumber,
-        normalizedDescription,
-        auditBackedDetails.sourceReportPath
-      )
-    : null;
-  const updatedRoadmap = appendPhaseDetailsToRoadmap(
-    appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
-    phaseNumber,
-    normalizedDescription,
-    auditBackedDetails
-      ? {
-          goal:
-            auditBackedDetails.goal ??
-            "Close the audit-identified milestone gaps and restore requirement traceability.",
-          requirements: auditBackedDetails.repairRequirementIds,
-          successCriteria:
-            auditBackedDetails.successCriteria ??
-            "Persist audit-backed gap details and repair traceability for the affected requirements.",
-          auditBackedDetails
-        }
-      : undefined
-  );
-  const warnings: string[] = [];
-  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+  return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
 
-  warnings.push(
-    ...await writeTextFile(roadmapPath, updatedRoadmap, {
-      label: roadmap.path
-    })
-  );
+    if (
+      args.expectedPhaseNumber &&
+      normalizePhaseNumber(args.expectedPhaseNumber) !== phaseNumber
+    ) {
+      throw new Error(
+        `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
+      );
+    }
 
-  if (requirementRepair) {
-    warnings.push(...requirementRepair.warnings);
-    warnings.push(
-      ...await writeTextFile(
-        resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
-        requirementRepair.content,
-        {
-          label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
-        }
-      )
+    const phasePrefix = formatPhasePrefix(phaseNumber);
+    const slug = slugifyPhaseName(normalizedDescription);
+    const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
+    const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+    const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+    const requirementRepair = auditBackedDetails?.repairRequirementIds?.length
+      ? await repairRequirementsTraceability(
+          projectRoot,
+          auditBackedDetails.repairRequirementIds,
+          phaseNumber,
+          normalizedDescription,
+          auditBackedDetails.sourceReportPath
+        )
+      : null;
+    const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
+    const updatedRoadmap = appendPhaseDetailsToRoadmap(
+      appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
+      phaseNumber,
+      normalizedDescription,
+      auditBackedDetails
+        ? {
+            dependsOnPhaseNumber,
+            goal:
+              auditBackedDetails.goal ??
+              "Close the audit-identified milestone gaps and restore requirement traceability.",
+            requirements: auditBackedDetails.repairRequirementIds,
+            successCriteria:
+              auditBackedDetails.successCriteria ??
+              "Persist audit-backed gap details and repair traceability for the affected requirements.",
+            auditBackedDetails
+          }
+        : { dependsOnPhaseNumber }
     );
-  }
+    const warnings: string[] = [];
+    const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
 
-  if (await pathExists(phaseDirPath)) {
-    warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
-  } else {
-    await fs.mkdir(phaseDirPath, { recursive: true });
-  }
+    warnings.push(
+      ...await writeTextFile(roadmapPath, updatedRoadmap, {
+        label: roadmap.path
+      })
+    );
 
-  return {
-    phaseNumber,
-    phasePrefix,
-    phaseName: normalizedDescription,
-    slug,
-    phaseDir,
-    roadmapPath: roadmap.path,
-    milestone: roadmap.milestone,
-    written: true,
-    warnings
-  };
+    if (requirementRepair) {
+      warnings.push(...requirementRepair.warnings);
+      warnings.push(
+        ...await writeTextFile(
+          resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
+          requirementRepair.content,
+          {
+            label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
+          }
+        )
+      );
+    }
+
+    if (await pathExists(phaseDirPath)) {
+      warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
+    } else {
+      await fs.mkdir(phaseDirPath, { recursive: true });
+    }
+
+    return {
+      phaseNumber,
+      phasePrefix,
+      phaseName: normalizedDescription,
+      slug,
+      phaseDir,
+      roadmapPath: roadmap.path,
+      milestone: roadmap.milestone,
+      written: true,
+      warnings
+    };
+  });
 }
 
 export async function blueprintRoadmapInsertPhase(
@@ -3051,6 +3080,7 @@ export async function blueprintRoadmapPromoteBacklog(
     const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
     const phasePrefix = formatPhasePrefix(phaseNumber);
     const phaseName = normalizePhaseDescription(item.description);
+    const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
     const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
       projectRoot,
       item,
@@ -3061,7 +3091,8 @@ export async function blueprintRoadmapPromoteBacklog(
     roadmapBody = appendPhaseDetailsToRoadmap(
       appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
       phaseNumber,
-      phaseName
+      phaseName,
+      { dependsOnPhaseNumber }
     );
     roadmapPhases.push({
       phaseNumber,

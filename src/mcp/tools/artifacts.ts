@@ -1618,6 +1618,55 @@ export async function writeTextFile(
   return prepared.warnings;
 }
 
+async function acquireBlueprintRepoLock(lockPath: string): Promise<void> {
+  const retryDelayMs = 50;
+  const staleAfterMs = 60_000;
+
+  await ensureParentDirectory(lockPath);
+
+  for (;;) {
+    try {
+      await fs.mkdir(lockPath);
+      return;
+    } catch (error) {
+      const lockError = error as NodeJS.ErrnoException;
+
+      if (lockError.code !== "EEXIST") {
+        throw error;
+      }
+
+      try {
+        const stats = await fs.stat(lockPath);
+
+        if (Date.now() - stats.mtimeMs > staleAfterMs) {
+          await fs.rm(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch {
+        continue;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+}
+
+export async function withBlueprintRepoLock<T>(
+  projectRoot: string,
+  lockName: string,
+  task: () => Promise<T>
+): Promise<T> {
+  const lockPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/locks/${lockName}.lock`);
+
+  await acquireBlueprintRepoLock(lockPath);
+
+  try {
+    return await task();
+  } finally {
+    await fs.rm(lockPath, { recursive: true, force: true });
+  }
+}
+
 function extractMarkdownSection(markdown: string, heading: string): string {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(

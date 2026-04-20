@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`add-phase` is Blueprint's command for add phase to end of current milestone in roadmap. In Blueprint it stays host-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state.
+`add-phase` is Blueprint's command for appending a new whole-number phase to the current milestone roadmap. In Blueprint it stays host-native, uses documented MCP tools to append the next whole-number phase, derives that number from the highest base phase number while ignoring decimal suffixes, and scaffolds the matching `.blueprint/phases/<phase-slug>/` directory before updating state. Its contract follows the same returned-metadata-first pattern as `insert-phase`, but it appends the next integer phase instead of inserting a decimal phase.
 
 
 ## Command Path And Examples
@@ -26,19 +26,20 @@
 - A Blueprint project and roadmap must already exist.
 - A non-empty phase description is required. The description becomes the new phase title and drives the scaffolded phase slug.
 - The next phase number is the next integer after the highest base phase number already present in the roadmap. Decimal suffixes are ignored for numbering, so `2.1` and `2.2` still advance the next append target to `3`.
+- The computed next phase number must be previewed from the roadmap read result before any mutation.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
-- Repo side effects: Appends the new phase to `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phase-slug>/`, updates `.blueprint/STATE.md`, and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Appends the new phase to `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
 
 
 ## Blueprint And Global State Reads
 
 
-- none
+- `.blueprint/ROADMAP.md` via `blueprint_roadmap_read`
 
 
 ## Blueprint And Global State Writes
@@ -53,13 +54,14 @@
 
 
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
-- `blueprint_roadmap_add_phase` -> `{phaseNumber, phaseDir, roadmapPath}`
+- `blueprint_roadmap_add_phase` -> `{phaseNumber, phasePrefix, phaseDir, roadmapPath}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Phase Creation Contract
 
-- Call `blueprint_roadmap_add_phase` with only the confirmed phase description. Do not precompute the phase number, slug, or directory path yourself.
+- Preview the exact computed next integer phase number from the roadmap read result before append, then use `ask_user` for the confirmation gate before any mutation.
+- Call `blueprint_roadmap_add_phase` with the confirmed phase description and the confirmed next phase number in `expectedPhaseNumber` after the user approves the previewed number. Do not precompute the slug or directory path yourself.
 - Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative new-phase metadata.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
 
@@ -98,7 +100,8 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the final phase description and resulting next integer phase number before append.
+- Preview the exact computed next integer phase number from the roadmap read result before append.
+- Use Gemini CLI's built-in `ask_user` dialog for the structured confirmation gate instead of prose-only confirmation when the user must approve that exact phase number.
 
 
 ## Edge Cases
@@ -110,17 +113,19 @@
 ## Failure Modes And Recovery
 
 
-- Show roadmap and phase-directory drift before mutation.
+- Show roadmap and phase-directory drift before mutation if the roadmap read reveals a mismatch.
 - Explain which base phase numbers were considered and which decimal suffixes were ignored when deriving the append target.
-- Return the nearest valid phase or milestone candidates when the target does not exist.
+- Reject the add-phase mutation if the live next phase no longer matches the confirmed `expectedPhaseNumber`; re-read the roadmap before retrying.
+- Stop without mutation when the phase description is missing, the roadmap is unavailable, or the previewed next phase number cannot be confirmed.
 
 
 ## Acceptance Criteria
 
 
-- Keeps roadmap, phase directories, and state synchronized.
-- Produces a durable report for milestone-level operations.
+- Keeps roadmap, phase directories, and state synchronized for add-phase only.
+- Previews the exact next integer phase number before append and confirms it through `ask_user`.
 - Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
+- Refuses to append when the confirmed next phase number is stale.
 - Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
 - Updates `.blueprint/STATE.md` with the new next action.
 - Returns `/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up.
@@ -137,4 +142,3 @@
 - Missing-description rejection fixture.
 - Renumbering or archival regression fixture.
 - Direct `add-phase` happy-path fixture.
-
