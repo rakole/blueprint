@@ -760,9 +760,11 @@ test("remove-phase command docs keep the roadmap removal contract explicit", asy
 
   assert.match(removePhaseDoc, /Primary skill: `blueprint-roadmap-admin`/);
   assert.match(removePhaseDoc, /blueprint_roadmap_read/);
+  assert.match(removePhaseDoc, /blueprint_phase_locate/);
   assert.match(removePhaseDoc, /blueprint_roadmap_remove_phase/);
-  assert.match(removePhaseDoc, /blueprint_artifact_list/);
   assert.match(removePhaseDoc, /blueprint_state_update/);
+  assert.match(removePhaseDoc, /ask_user/);
+  assert.match(removePhaseDoc, /force removal/i);
   assert.match(removePhaseDoc, /future phase/i);
   assert.match(removePhaseDoc, /execution evidence/i);
   assert.match(removePhaseDoc, /\/blu-progress/);

@@ -15,6 +15,7 @@ type RoadmapInsertPhaseArgs = {
 type RoadmapRemovePhaseArgs = {
     cwd?: string;
     phase: NumericInput;
+    force?: boolean;
 };
 type RoadmapPromoteBacklogArgs = {
     cwd?: string;
@@ -457,7 +458,8 @@ export declare const phaseToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
-        phase: z.ZodString;
+        phase: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+        force: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapRemovePhaseResult>;
 } | {

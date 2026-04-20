@@ -357,7 +357,7 @@ test("remove-phase is implemented once manifest, skill, and roadmap removal MCP 
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
-    "blueprint_artifact_list",
+    "blueprint_phase_locate",
     "blueprint_roadmap_read",
     "blueprint_roadmap_remove_phase",
     "blueprint_state_update"

@@ -1469,7 +1469,7 @@ test("help progress and health command files reference registered MCP tool names
       file: "commands/blu-remove-phase.toml",
       tools: [
         "blueprint_roadmap_read",
-        "blueprint_artifact_list",
+        "blueprint_phase_locate",
         "blueprint_roadmap_remove_phase",
         "blueprint_state_update"
       ]
