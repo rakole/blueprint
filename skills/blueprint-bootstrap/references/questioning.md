@@ -116,6 +116,16 @@ If they want to elaborate, respond with a plain conversational follow-up and
 let them keep talking. Return to short options only after you have processed
 their freeform answer and a concrete tradeoff would help.
 
+## Session Rhythm
+
+If bootstrap questioning turns into a long session, keep the stage visible with
+Gemini CLI's `update_topic` tool and maintain a short `write_todos` checklist
+for the overall flow.
+
+Do not interrupt a useful freeform answer just to narrate status in prose. Let
+the user keep talking, and use the Gemini-native progress helpers to keep the
+session organized in the background.
+
 ## Background Checklist
 
 Keep these in mind without reciting them:
