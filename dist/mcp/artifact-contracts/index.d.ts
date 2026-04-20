@@ -1,6 +1,6 @@
-export type ArtifactContractScope = "bootstrap" | "phase" | "review" | "report";
+export type ArtifactContractScope = "bootstrap" | "codebase" | "phase" | "review" | "report";
 export type ArtifactContractFreehandPolicy = "additional-top-level-headings" | "locked-structure";
-export type ArtifactContractId = "bootstrap.project" | "bootstrap.requirements" | "bootstrap.roadmap" | "phase.context" | "phase.discussion-log" | "phase.research" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix";
+export type ArtifactContractId = "bootstrap.project" | "bootstrap.requirements" | "bootstrap.roadmap" | "codebase.stack" | "codebase.architecture" | "codebase.structure" | "codebase.conventions" | "codebase.testing" | "codebase.integrations" | "codebase.concerns" | "phase.context" | "phase.discussion-log" | "phase.research" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix";
 export type ArtifactTemplateContext = {
     phaseLabel?: string;
     phasePrefix?: string;
@@ -43,4 +43,5 @@ export declare function renderArtifactScaffoldTemplate(contractId: ArtifactContr
 export declare function resolvePhaseArtifactContractId(artifact: "context" | "discussion-log" | "research" | "ui-spec"): ArtifactContractId;
 export declare function resolveValidationArtifactContractId(artifact: "verification" | "uat"): ArtifactContractId;
 export declare function resolveReviewArtifactContractId(artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review"): ArtifactContractId;
+export declare function resolveCodebaseArtifactContractId(artifact: "stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns"): ArtifactContractId;
 export declare function resolveReportContractId(name: string): ArtifactContractId | null;

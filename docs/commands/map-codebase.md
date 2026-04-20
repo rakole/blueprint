@@ -7,13 +7,13 @@
 
 ## Purpose
 
-`map-codebase` is Blueprint's command for analyze a brownfield codebase with mapper-style passes and produce durable codebase documents. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the brownfield contract explicit without reviving omitted commands such as `scan` or `intel`.
+`map-codebase` is Blueprint's command for analyzing a brownfield codebase with mapper-style passes and producing durable codebase documents. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the brownfield contract explicit without reviving omitted commands such as `scan` or `intel`. When a focus area is supplied, the command deepens that subsystem while still producing the full seven-artifact bundle.
 
 ## Command Path And Examples
 
 - CLI command path: `/blu-map-codebase`
 - Root router form: `/blu map-codebase`
-- Argument hint: `[optional: specific area to map, e.g., 'api' or 'auth']`
+- Argument hint: `[optional: specific area to deepen, e.g., 'api', 'auth', or 'mcp']`
 - `/blu-map-codebase auth`
 - `/blu map-codebase`
 
@@ -21,11 +21,13 @@
 
 - Default path: run after `new-project` so output is written into `.blueprint/codebase/`.
 - Brownfield intent should still be explicit: do not silently replace existing codebase docs and do not hide the mapping step behind another command.
+- Prefer Gemini CLI's built-in `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate.
 
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Existing codebase docs should be reused by default. If they are heavily edited and the user wants a refresh or replace path, use `ask_user` to confirm the choice before any overwrite.
 
 ## Blueprint And Global State Reads
 
@@ -47,11 +49,16 @@
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_codebase_artifact_write` -> `{path, artifactId, written, created, overwritten, reused, status, issues, warnings}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
+- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 
 ## Mapping Artifact Contract
 
 - Use `blueprint_artifact_scaffold` only with the seven supported repo-relative codebase artifact paths under `.blueprint/codebase/`. Bare names and absolute paths are invalid.
 - Treat scaffold output as seeding or reuse only; the authored mapping content still needs to match the real repo evidence.
+- Persist substantive mapping content through `blueprint_codebase_artifact_write` using canonical codebase artifact ids instead of raw file writes.
+- Read the canonical codebase-bundle contract before any scaffold or refresh decision, and validate the resulting bundle after digesting the evidence.
 - Pass only repo-relative evidence inputs to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative digest scope.
 

@@ -1,12 +1,14 @@
-description = "Map a brownfield repository into the stable .blueprint/codebase bundle without silently replacing edited docs."
+description = "Map a brownfield repository into the stable .blueprint/codebase bundle, with targeted deepening for a requested focus area and no silent replacement of edited docs."
 prompt = """
 You are the `/blu-map-codebase` command for Blueprint.
 
-Use `skills/blueprint-map.md` as the primary orchestration contract. When deeper mapper decomposition is helpful, follow `agents/blueprint-mapper.md`.
+Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract. When deeper mapper decomposition is helpful, follow `agents/blueprint-mapper.md`.
+
+Prefer Gemini CLI's built-in `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
 
 Follow this flow exactly:
 
-1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`.
+1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`. Treat it as targeted deepening of that subsystem, not as a generic suffix.
 2. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized or partial, stop and direct the user to `/blu-new-project` or `/blu-health` instead of guessing.
 3. Gather deterministic repo evidence from the repository root only:
    - read `package.json` when present
@@ -14,21 +16,25 @@ Follow this flow exactly:
    - inspect tests with `rg --files tests test`
    - inspect docs with `rg --files docs .`
    - inspect tracked files with `git ls-files`
-4. Call `mcp_blueprint_blueprint_artifact_list` before writing anything so you can see whether `.blueprint/codebase/STACK.md`, `.blueprint/codebase/ARCHITECTURE.md`, `.blueprint/codebase/STRUCTURE.md`, `.blueprint/codebase/CONVENTIONS.md`, `.blueprint/codebase/TESTING.md`, `.blueprint/codebase/INTEGRATIONS.md`, and `.blueprint/codebase/CONCERNS.md` already exist.
-5. If existing codebase docs appear heavily edited, require explicit confirmation before any replace path. Use reuse as the default.
-6. Call `mcp_blueprint_blueprint_artifact_scaffold` to create or reuse the seven `.blueprint/codebase/*.md` files. Pass repo-relative artifact paths only, for example:
+4. Read `mcp_blueprint_blueprint_artifact_contract_read` for the codebase-bundle contract before deciding whether to seed, reuse, or refresh any artifact.
+5. Call `mcp_blueprint_blueprint_artifact_list` before writing anything so you can see whether `.blueprint/codebase/STACK.md`, `.blueprint/codebase/ARCHITECTURE.md`, `.blueprint/codebase/STRUCTURE.md`, `.blueprint/codebase/CONVENTIONS.md`, `.blueprint/codebase/TESTING.md`, `.blueprint/codebase/INTEGRATIONS.md`, and `.blueprint/codebase/CONCERNS.md` already exist.
+6. If existing codebase docs appear heavily edited, require explicit confirmation before any refresh or replace path. Existing codebase docs should be reused by default.
+7. Call `mcp_blueprint_blueprint_artifact_scaffold` to create or reuse the seven `.blueprint/codebase/*.md` files. Pass repo-relative artifact paths only, for example:
    - `"artifacts": [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"]`
    - Never pass bare names like `"STACK"` and never pass absolute filesystem paths.
    - Do not replace existing codebase docs unless the user explicitly confirms a replace path.
-7. Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`. Treat the returned `inputsUsed` list as the authoritative digest scope.
-8. Summarize which files were created, which were reused, and which warnings matter.
-9. End with the next logical Blueprint action, usually discovery or planning, based on the mapped repo state.
+8. Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`. Treat the returned `inputsUsed` list as the authoritative digest scope.
+9. Persist substantive authored bundle content through `mcp_blueprint_blueprint_codebase_artifact_write`. Use the canonical codebase artifact ids (`codebase.stack`, `codebase.architecture`, `codebase.structure`, `codebase.conventions`, `codebase.testing`, `codebase.integrations`, `codebase.concerns`) instead of raw filesystem writes, and only pass `overwrite: true` after explicit refresh or replace confirmation.
+10. Validate the resulting bundle with `mcp_blueprint_blueprint_artifact_validate` before you conclude.
+11. Summarize which files were created, which were reused, and which warnings matter.
+12. End with the next logical Blueprint action, usually discovery or planning, based on the mapped repo state.
 
 Response requirements:
-- Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, and `mcp_blueprint_blueprint_artifact_summary_digest`.
+- Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_codebase_artifact_write`, and `mcp_blueprint_blueprint_artifact_validate`.
 - Keep persistence inside MCP tools only.
 - Mention the exact codebase artifact filenames when reporting results.
 - Explain when you are reusing existing docs versus replacing them.
 - Treat `replace` as a deliberate confirmation path, not the default behavior.
+- Keep focused mapping language explicit: the requested focus area deepens the same seven-artifact bundle instead of creating a separate suffix-driven flow.
 - Recommend a next step such as `/blu-progress` or the appropriate documented discovery/planning flow when the mapping is complete.
 """

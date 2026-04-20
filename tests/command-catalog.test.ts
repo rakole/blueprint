@@ -434,6 +434,30 @@ test("implemented commands expose their declared optional agent contracts when s
   ]);
 });
 
+test("map-codebase is implemented once the brownfield mapping contract and tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["map-codebase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu-map-codebase.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_list",
+    "blueprint_artifact_scaffold",
+    "blueprint_artifact_summary_digest",
+    "blueprint_artifact_validate",
+    "blueprint_codebase_artifact_write",
+    "blueprint_project_status"
+  ].sort());
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-mapper"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
 test("runtime command catalog only advertises metadata-valid optional agents", async () => {
   const catalog = await blueprintCommandCatalog();
   const availableAgents = new Set(

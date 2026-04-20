@@ -10,6 +10,7 @@ import {
   BLUEPRINT_PHASES_PATH,
   ensureParentDirectory,
   ensureRepoRoot,
+  inspectBlueprintArtifacts,
   parseCaptureIndexDocument,
   validatePhaseArtifactContent,
   validatePlanArtifactContent,
@@ -1944,11 +1945,17 @@ function summarizeSavedArtifact(raw: string): { title: string; summary: string }
 async function readMappedCodebaseContext(
   projectRoot: string
 ): Promise<PhaseContextResult["codebase"]> {
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
   const artifacts: string[] = [];
   const missingArtifacts: string[] = [];
+  const invalidArtifacts = new Set(inspection.codebase.invalid);
   const digest: PhaseContextResult["codebase"]["digest"] = [];
 
   for (const artifact of CODEBASE_ARTIFACTS) {
+    if (invalidArtifacts.has(artifact)) {
+      continue;
+    }
+
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
 
     try {
@@ -1975,18 +1982,29 @@ async function readMappedCodebaseContext(
     }
   }
 
-  const mapped = artifacts.length === CODEBASE_ARTIFACTS.length;
+  const mapped = inspection.codebase.mapped;
   const warnings: string[] = [];
 
   if (artifacts.length > 0 && !mapped) {
+    const missingBit = missingArtifacts.length > 0 ? `missing ${missingArtifacts.join(", ")}` : "";
+    const invalidBit =
+      inspection.codebase.invalid.length > 0
+        ? `invalid ${inspection.codebase.invalid.join(", ")}`
+        : "";
     warnings.push(
-      `Mapped codebase bundle is incomplete: missing ${missingArtifacts.join(", ")}.`
+      `Mapped codebase bundle is incomplete or non-canonical: ${[missingBit, invalidBit]
+        .filter((value) => value.length > 0)
+        .join("; ")}.`
     );
   }
 
   if (mapped) {
     warnings.push(
       "Mapped codebase summaries are available and should be reused before rereading broad repo surfaces."
+    );
+  } else if (inspection.codebase.invalid.length > 0) {
+    warnings.push(
+      "Saved codebase docs exist but are not yet valid enough to reuse as authoritative mapped context."
     );
   }
 

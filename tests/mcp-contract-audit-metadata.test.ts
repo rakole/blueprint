@@ -324,9 +324,23 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
   assert.match(cleanupCommand, /bare report name `cleanup-latest`/i);
   assert.match(cleanupDoc, /## Digest And Report Contract/);
 
+  assert.match(mapCodebaseCommand, /ask_user/i);
+  assert.match(mapCodebaseCommand, /blueprint_artifact_contract_read/i);
+  assert.match(mapCodebaseCommand, /blueprint_codebase_artifact_write/i);
+  assert.match(mapCodebaseCommand, /blueprint_artifact_validate/i);
   assert.match(mapCodebaseCommand, /explicit repo-relative evidence inputs/i);
   assert.match(mapCodebaseCommand, /returned `inputsUsed` list as the authoritative digest scope/i);
+  assert.match(mapCodebaseDoc, /ask_user/i);
+  assert.match(mapCodebaseDoc, /blueprint_artifact_contract_read/i);
+  assert.match(mapCodebaseDoc, /blueprint_codebase_artifact_write/i);
+  assert.match(mapCodebaseDoc, /blueprint_artifact_validate/i);
+  assert.match(mapCodebaseDoc, /Existing codebase docs should be reused by default\./i);
   assert.match(mapCodebaseDoc, /## Mapping Artifact Contract/);
+  assert.match(mapSkill, /ask_user/i);
+  assert.match(mapSkill, /blueprint_artifact_contract_read/i);
+  assert.match(mapSkill, /blueprint_codebase_artifact_write/i);
+  assert.match(mapSkill, /blueprint_artifact_validate/i);
+  assert.match(mapSkill, /reuse-by-default behavior/i);
   assert.match(mapSkill, /returned `inputsUsed` list as the authoritative digest scope/i);
 
   assert.match(healthCommand, /Pass a JSON-object `patch` only/i);

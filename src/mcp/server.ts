@@ -44,7 +44,8 @@ const REQUIRED_READ_PATH_TOOL_NAMES = [
   "blueprint_artifact_validate"
 ] as const;
 const REQUIRED_MAPPING_TOOL_NAMES = [
-  "blueprint_artifact_summary_digest"
+  "blueprint_artifact_summary_digest",
+  "blueprint_codebase_artifact_write"
 ] as const;
 export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_project_init",
@@ -64,6 +65,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_phase_checkpoint_put",
   "blueprint_phase_checkpoint_delete",
   "blueprint_artifact_scaffold",
+  "blueprint_codebase_artifact_write",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record"
@@ -235,6 +237,10 @@ function buildSubject(toolName: string, result: ToolResult): string {
 
   if (toolName === "blueprint_artifact_list") {
     return "artifact inventory";
+  }
+
+  if (toolName === "blueprint_codebase_artifact_write") {
+    return "codebase artifact";
   }
 
   if (toolName === "blueprint_review_scope") {

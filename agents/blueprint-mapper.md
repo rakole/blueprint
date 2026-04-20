@@ -6,7 +6,7 @@ description: >
   stable summary of architecture, conventions, testing, integrations, or
   concerns. Example scenarios: mapping an unfamiliar repository, deepening a
   focused area such as `mcp` or `auth`, and validating whether existing mapping
-  docs should be reused or replaced.
+  docs should be reused, refreshed, or replaced.
 kind: local
 tools:
   - list_directory
@@ -31,6 +31,7 @@ Blueprint.
   reuse versus refresh
 - the requested focus area when the mapping pass is deepening one subsystem
   rather than re-describing the whole repo
+- the canonical codebase-bundle contract when the parent needs a reuse-versus-refresh decision
 
 ## Focus Modes
 
@@ -50,7 +51,9 @@ Blueprint.
    into one narrative.
 5. Reuse existing codebase docs by default and treat replacement as a
    deliberate choice that should be justified explicitly.
-6. Keep summaries deterministic and repo-specific so repeated mapping runs can
+6. Validate the resulting bundle against the runtime contract before treating
+   the pass as complete.
+7. Keep summaries deterministic and repo-specific so repeated mapping runs can
    compare drift cleanly.
 
 ## Outputs
