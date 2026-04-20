@@ -17,7 +17,9 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_insert_phase/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
-  assert.match(commandFile, /explicit confirmation/i);
+  assert.match(commandFile, /roadmapEvolutionNotes/);
+  assert.match(commandFile, /confirmed integer phase number/);
+  assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /Do not accept decimal insertion targets/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
 });
@@ -33,5 +35,37 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /roadmap-driven/i);
   assert.match(skillFile, /conflicting decimal directory/i);
+  assert.match(skillFile, /roadmapEvolutionNotes/);
+  assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
+});
+
+test("insert-phase docs and MCP reference use numeric after anchors and phasePrefix-backed scaffolding", async () => {
+  const commandDoc = await readFile(
+    path.join(repoRoot, "docs/commands/insert-phase.md"),
+    "utf8"
+  );
+  const schemaDoc = await readFile(
+    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
+    "utf8"
+  );
+  const mcpDocs = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
+  const runtimeDocs = await readFile(
+    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
+    "utf8"
+  );
+
+  assert.match(commandDoc, /<afterPhaseNumber> <description>/);
+  assert.match(commandDoc, /phasePrefix/);
+  assert.match(commandDoc, /roadmapEvolutionNotes/);
+  assert.match(commandDoc, /Inserted: yes/);
+  assert.match(schemaDoc, /optional inserted marker/);
+  assert.match(schemaDoc, /Inserted: yes/);
+  assert.doesNotMatch(commandDoc, /may also mutate code or git state/i);
+  assert.match(mcpDocs, /`blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`/);
+  assert.match(mcpDocs, /`afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir`/);
+  assert.match(runtimeDocs, /returned `phasePrefix`/);
+  assert.match(runtimeDocs, /roadmapEvolutionNotes/);
+  assert.doesNotMatch(runtimeDocs, /roadmap-evolution marker/i);
 });

@@ -529,7 +529,7 @@ const roadmapAddPhaseInputSchema = {
 };
 const roadmapInsertPhaseInputSchema = {
   cwd: z.string().optional(),
-  after: z.string(),
+  after: z.union([z.string(), z.number()]),
   description: z.string()
 };
 const roadmapRemovePhaseInputSchema = {
@@ -690,6 +690,20 @@ function formatPhasePrefix(value: NumericInput): string {
 function extractPhaseNumberToken(value: NumericInput): string | null {
   const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
   return match ? normalizePhaseNumber(match[1]) : null;
+}
+
+function extractExactPhaseNumberToken(value: NumericInput): string | null {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  return normalizePhaseNumber(trimmed);
 }
 
 function isIntegerPhaseNumber(value: NumericInput): boolean {
@@ -979,13 +993,14 @@ function insertPhaseLineToRoadmap(
 function buildPhaseDetailBlock(
   phaseNumber: string,
   phaseName: string,
-  dependsOnPhaseNumber: string | null = null
+  dependsOnPhaseNumber: string | null = null,
+  insertedMarker: string | null = null
 ): string {
   return `### Phase ${phaseNumber}: ${phaseName}
 **Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
 **Requirements**: none yet
 **Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
-**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
+${insertedMarker ? `**Inserted**: ${insertedMarker}\n` : ""}**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
 **Status**: planned
 `;
 }
@@ -1036,7 +1051,12 @@ function insertPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber).trimEnd();
+  const detailBlock = buildPhaseDetailBlock(
+    phaseNumber,
+    phaseName,
+    dependsOnPhaseNumber,
+    "yes"
+  ).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (!phaseDetailsSectionPattern.test(raw)) {
@@ -2010,11 +2030,19 @@ export async function blueprintRoadmapInsertPhase(
     );
   }
 
-  const afterPhaseNumber = extractPhaseNumberToken(args.after ?? "");
+  const afterPhaseNumber = extractExactPhaseNumberToken(args.after ?? "");
 
   if (!afterPhaseNumber) {
+    const afterInput = normalizeBlueprintInput(args.after ?? "").trim();
+
+    if (afterInput.length === 0) {
+      throw new Error(
+        "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      );
+    }
+
     throw new Error(
-      "Phase number required. Re-run /blu-insert-phase with an integer phase number such as 3."
+      `Phase ${afterInput} is not a valid Blueprint integer phase number. Re-run /blu-insert-phase with an existing integer phase number such as 3.`
     );
   }
 

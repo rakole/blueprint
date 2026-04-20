@@ -237,7 +237,7 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
 
   const result = await blueprintRoadmapInsertPhase({
     cwd: repoPath,
-    after: "2",
+    after: 2,
     description: "API Stabilization"
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
@@ -260,6 +260,7 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
     await pathExists(path.join(repoPath, ".blueprint/phases/04-release-hardening")),
     true
   );
+  assert.match(roadmapBody, /\*\*Inserted\*\*: yes/);
   assert.match(
     roadmapBody,
     /Phase 2: Core Runtime[\s\S]*Phase 2\.1: API Stabilization[\s\S]*Phase 4: Release Hardening/
@@ -453,7 +454,43 @@ test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (
         after: "2.1",
         description: "Emergency follow-up"
       }),
-    /cannot be used as an insertion target/
+    /not a valid Blueprint integer phase number|cannot be used as an insertion target/
+  );
+});
+
+test("blueprint_roadmap_insert_phase rejects decimal-looking integer anchors before normalization", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  for (const after of ["2.0", "02.0"]) {
+    await assert.rejects(
+      () =>
+        blueprintRoadmapInsertPhase({
+          cwd: repoPath,
+          after,
+          description: "Emergency follow-up"
+        }),
+      /not a valid Blueprint integer phase number|cannot be used as an insertion target/
+    );
+  }
+});
+
+test("blueprint_roadmap_insert_phase rejects malformed free-text insertion anchors", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapInsertPhase({
+        cwd: repoPath,
+        after: "phase 2 please",
+        description: "Emergency follow-up"
+      }),
+    /not a valid Blueprint integer phase number/
   );
 });
 

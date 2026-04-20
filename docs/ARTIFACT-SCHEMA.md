@@ -68,6 +68,7 @@ Minimum locked fields per phase:
 - mapped requirements
 - success criteria
 - status
+- optional inserted marker for urgent decimal phase detail blocks, written as `Inserted: yes`
 
 Contract notes:
 - `new-milestone` may rewrite `ROADMAP.md` for the next milestone, but it should preserve historical phase artifacts and continue numbering at the next whole-number phase instead of renumbering prior milestones.
@@ -80,6 +81,7 @@ Purpose:
 - active phase / plan
 - blockers
 - next suggested action
+- durable roadmap evolution notes when an urgent decimal phase is inserted after an integer anchor
 
 Minimum locked fields:
 - project status
@@ -88,6 +90,9 @@ Minimum locked fields:
 - active command
 - blockers
 - last updated
+
+Optional durable section:
+- roadmap evolution notes, recorded as bullets under `## Roadmap Evolution Notes` and preserved across `STATE.md` sync/update cycles
 
 ### `config.json`
 
