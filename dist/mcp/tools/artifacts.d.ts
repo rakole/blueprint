@@ -31,6 +31,7 @@ export type BootstrapRoadmapPhase = {
     status?: "planned" | "in_progress" | "done";
     objective: string;
     requirementIds?: string[];
+    successCriteria?: string[];
     notes?: string[];
 };
 export type BootstrapSeed = {
@@ -408,6 +409,7 @@ export declare const artifactToolDefinitions: ({
                 }>>;
                 objective: z.ZodString;
                 requirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
                 notes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             }, z.core.$strip>>>;
             brownfieldMode: z.ZodOptional<z.ZodEnum<{

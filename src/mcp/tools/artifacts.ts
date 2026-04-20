@@ -84,6 +84,7 @@ export type BootstrapRoadmapPhase = {
   status?: "planned" | "in_progress" | "done";
   objective: string;
   requirementIds?: string[];
+  successCriteria?: string[];
   notes?: string[];
 };
 export type BootstrapSeed = {
@@ -419,6 +420,10 @@ function normalizeList(values: string[] | undefined, fallback: string[]): string
     .filter((value) => value.length > 0);
 
   return normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizeSuccessCriteria(values: string[] | undefined, fallback: string[]): string[] {
+  return normalizeList(values, fallback);
 }
 
 function escapeTableCell(value: string): string {
@@ -958,6 +963,10 @@ function buildDefaultBootstrapSeed(
             objective:
               "Capture the current repo architecture, constraints, and risk areas before locking in later delivery phases.",
             requirementIds: ["RQ-01", "RQ-03"],
+            successCriteria: [
+              "The existing repo architecture, constraints, and risk areas are documented clearly enough to support later planning.",
+              "The bootstrap handoff points directly to `/blu-map-codebase` before later phases are treated as durable."
+            ],
             notes: [
               "Route to `/blu-map-codebase` immediately after bootstrap.",
               "Treat later phases as provisional until mapping is complete."
@@ -968,7 +977,11 @@ function buildDefaultBootstrapSeed(
             title: "Align Requirements And Roadmap",
             objective:
               "Refine milestone scope and convert bootstrap findings into durable phased work once mapping evidence exists.",
-            requirementIds: ["RQ-02", "RQ-03"]
+            requirementIds: ["RQ-02", "RQ-03"],
+            successCriteria: [
+              "Requirement coverage and roadmap scope are aligned with mapped codebase evidence.",
+              "Later execution planning can continue without losing requirement traceability."
+            ]
           }
         ]
       : [
@@ -977,14 +990,22 @@ function buildDefaultBootstrapSeed(
             title: "Discovery And Definition",
             objective:
               "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
-            requirementIds: ["RQ-01", "RQ-02"]
+            requirementIds: ["RQ-01", "RQ-02"],
+            successCriteria: [
+              "The product direction and first milestone are explicit enough to guide downstream planning.",
+              "Requirements remain traceable into the roadmap without renumbering."
+            ]
           },
           {
             phase: "2",
             title: "Foundation Bootstrap",
             objective:
               "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
-            requirementIds: ["RQ-02", "RQ-03"]
+            requirementIds: ["RQ-02", "RQ-03"],
+            successCriteria: [
+              "The bootstrap draft is ready to support later discovery and execution planning.",
+              "Requirement traceability stays intact as the roadmap moves toward implementation."
+            ]
           }
         ];
   const defaultAssumptions =
@@ -1013,9 +1034,15 @@ function buildDefaultBootstrapSeed(
           requirement.id.trim().length > 0 && requirement.requirement.trim().length > 0
       ) ?? defaultRequirements,
     roadmapPhases:
-      seed?.roadmapPhases?.filter(
+      (seed?.roadmapPhases?.filter(
         (phase) => phase.phase.trim().length > 0 && phase.title.trim().length > 0
-      ) ?? defaultRoadmapPhases,
+      ) ?? defaultRoadmapPhases).map((phase) => ({
+        ...phase,
+        successCriteria: normalizeSuccessCriteria(phase.successCriteria, [
+          `Complete ${phase.title} with traceable handoff evidence.`,
+          "Keep requirement IDs traceable into later roadmap artifacts."
+        ])
+      })),
     brownfieldMode: seed?.brownfieldMode ?? assessment.repoShape,
     assumptions: normalizeList(seed?.assumptions, defaultAssumptions)
   };
@@ -1125,10 +1152,15 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
         phase.requirementIds && phase.requirementIds.length > 0
           ? ` (Requirements: ${phase.requirementIds.join(", ")})`
           : "";
+      const successCriteria = normalizeList(phase.successCriteria, []);
+      const successCriteriaBlock =
+        successCriteria.length > 0
+          ? `  - Success Criteria:\n${successCriteria.map((value) => `    - ${value}`).join("\n")}`
+          : "";
       const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
 
       return `- [${marker}] Phase ${normalizedPhaseNumber}: ${phase.title}${requirementClause}
-  - Objective: ${phase.objective}${notes ? `\n${notes}` : ""}`;
+  - Objective: ${phase.objective}${successCriteriaBlock ? `\n${successCriteriaBlock}` : ""}${notes ? `\n${notes}` : ""}`;
     })
     .join("\n");
 
@@ -1260,6 +1292,7 @@ const artifactScaffoldInputSchema = {
             status: z.enum(["planned", "in_progress", "done"]).optional(),
             objective: z.string(),
             requirementIds: z.array(z.string()).optional(),
+            successCriteria: z.array(z.string()).optional(),
             notes: z.array(z.string()).optional()
           })
         )

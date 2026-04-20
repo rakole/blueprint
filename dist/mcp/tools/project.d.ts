@@ -115,6 +115,7 @@ export declare const projectToolDefinitions: ({
                 }>>;
                 objective: z.ZodString;
                 requirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
                 notes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             }, z.core.$strip>>>;
             brownfieldMode: z.ZodOptional<z.ZodEnum<{

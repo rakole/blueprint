@@ -129,6 +129,11 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   assert.match(requirementsDoc, /\| RQ-01 \|/);
   assert.match(requirementsDoc, /## Traceability Notes/);
   assert.match(roadmapDoc, /Requirements: RQ-01, RQ-02/);
+  assert.match(roadmapDoc, /Success Criteria:/);
+  assert.match(
+    roadmapDoc,
+    /The product direction and first milestone are explicit enough to guide downstream planning\./
+  );
   assert.match(roadmapDoc, /Roadmap confidence: ready for progress review/);
   assert.match(roadmapDoc, /Phase 1: Discovery And Definition/);
   assert.match(roadmapDoc, /Phase 2: Foundation Bootstrap/);
@@ -257,7 +262,11 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
           phase: "1",
           title: "Define Workflow",
           objective: "Turn the custom bootstrap seed into a clear initial milestone.",
-          requirementIds: ["BP-01", "BP-02"]
+          requirementIds: ["BP-01", "BP-02"],
+          successCriteria: [
+            "The initial milestone scope is explicit and traceable.",
+            "The roadmap carries the custom phase criteria into persisted output."
+          ]
         }
       ],
       assumptions: ["The initial milestone should stay narrow enough for a single maintainer."]
@@ -273,6 +282,7 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
 
   assert.match(requirementsDoc, /\| BP-01 \| Capture the solo-maintainer workflow clearly\./);
   assert.match(roadmapDoc, /Phase 1: Define Workflow \(Requirements: BP-01, BP-02\)/);
+  assert.match(roadmapDoc, /The initial milestone scope is explicit and traceable\./);
   assert.equal(status.currentMilestone, "v2");
   assert.equal(status.currentPhase, "1");
 });
