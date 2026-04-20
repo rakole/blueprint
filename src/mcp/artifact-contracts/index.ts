@@ -723,9 +723,36 @@ function renderMilestoneAuditTemplate(context?: ArtifactTemplateContext): string
 
 - Completed phase evidence reviewed for this milestone.
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
 ## Gaps Found
 
-- Archival gap, stale assumption, or \`none\`.
+- Requirement gaps: none
+- Integration gaps: none
+- Flow gaps: none
+- Optional gaps: none
 
 ## Archival Blockers
 
@@ -1472,6 +1499,10 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Milestone Evidence Dimensions",
       "Original Intent Snapshot",
       "Roadmap And Phase Evidence",
+      "Requirement Gaps",
+      "Integration Gaps",
+      "Flow Gaps",
+      "Optional Gaps",
       "Gaps Found",
       "Archival Blockers",
       "Next Safe Action"

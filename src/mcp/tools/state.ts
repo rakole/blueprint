@@ -12,6 +12,7 @@ import {
   ensureRepoRoot,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
+  extractMarkdownTableRows,
   resolveBlueprintPath,
   toRepoRelativePath,
   validatePlanArtifactContent,
@@ -200,16 +201,35 @@ type MilestoneEvidenceStatus = {
 type MilestoneAuditReportStatus = {
   found: boolean;
   verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+  gapSections: {
+    requirement: MilestoneAuditGapRow[];
+    integration: MilestoneAuditGapRow[];
+    flow: MilestoneAuditGapRow[];
+    optional: MilestoneAuditGapRow[];
+  };
   hasActionableGaps: boolean;
   hasArchivalBlockers: boolean;
   nextSafeAction: string | null;
   readyForCompletion: boolean;
 };
 
+type MilestoneAuditGapRow = {
+  gapId: string;
+  surface: string;
+  evidence: string;
+  repair: string;
+};
+
 function emptyMilestoneAuditReportStatus(): MilestoneAuditReportStatus {
   return {
     found: false,
     verdict: null,
+    gapSections: {
+      requirement: [],
+      integration: [],
+      flow: [],
+      optional: []
+    },
     hasActionableGaps: false,
     hasArchivalBlockers: false,
     nextSafeAction: null,
@@ -1028,6 +1048,33 @@ function extractBlueprintCommand(line: string): string | null {
   return match?.[0]?.trim() ?? null;
 }
 
+function parseMilestoneAuditGapSection(section: string): MilestoneAuditGapRow[] {
+  return extractMarkdownTableRows(section).flatMap((row) => {
+    if (row.length !== 4) {
+      return [];
+    }
+
+    const [gapId, surface, evidence, repair] = row.map((cell) => cell.trim());
+
+    return [
+      {
+        gapId,
+        surface,
+        evidence,
+        repair
+      }
+    ];
+  });
+}
+
+function hasActionableMilestoneAuditGap(rows: MilestoneAuditGapRow[]): boolean {
+  return rows.some((row) => {
+    return [row.gapId, row.surface, row.evidence, row.repair].some(
+      (value) => !isNoneLikeReportSignal(value)
+    );
+  });
+}
+
 async function inspectMilestoneAuditReportStatus(args: {
   projectRoot: string;
   currentMilestone: string | null;
@@ -1046,26 +1093,52 @@ async function inspectMilestoneAuditReportStatus(args: {
   try {
     const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
     const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
+    const requirementGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection(raw, "Requirement Gaps")
+    );
+    const integrationGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection(raw, "Integration Gaps")
+    );
+    const flowGapRows = parseMilestoneAuditGapSection(extractMarkdownSection(raw, "Flow Gaps"));
+    const optionalGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection(raw, "Optional Gaps")
+    );
     const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
     const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
     const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
     const verdict =
       auditVerdictLines
         .map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null)
-        .find((value): value is "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" => value !== null) ??
+      .find((value): value is "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" => value !== null) ??
       null;
+    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
     const nextSafeAction =
       nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    const gapSections = {
+      requirement: requirementGapRows,
+      integration: integrationGapRows,
+      flow: flowGapRows,
+      optional: optionalGapRows
+    };
+    const hasStructuredGapSections = Object.values(gapSections).some((rows) => rows.length > 0);
+    const actionableGaps =
+      hasActionableMilestoneAuditGap(requirementGapRows) ||
+      hasActionableMilestoneAuditGap(integrationGapRows) ||
+      hasActionableMilestoneAuditGap(flowGapRows) ||
+      hasActionableMilestoneAuditGap(optionalGapRows) ||
+      (!hasStructuredGapSections && gapsFound.some((line) => !isNoneLikeReportSignal(line)));
 
     return {
       found: true,
       verdict,
-      hasActionableGaps: gapsFound.some((line) => !isNoneLikeReportSignal(line)),
+      gapSections,
+      hasActionableGaps: actionableGaps,
       hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
       nextSafeAction,
       readyForCompletion:
         verdict === "READY_TO_CLOSE" &&
-        gapsFound.every(isNoneLikeReportSignal) &&
+        !verdictBlocksCompletion &&
+        !actionableGaps &&
         archivalBlockers.every(isNoneLikeReportSignal)
     };
   } catch {

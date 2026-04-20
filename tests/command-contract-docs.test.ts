@@ -752,7 +752,38 @@ test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure 
   assert.match(planMilestoneGapsDoc, /blueprint_state_update/);
   assert.match(planMilestoneGapsDoc, /milestone audit report should already exist/i);
   assert.match(planMilestoneGapsDoc, /groups related gaps into a few coherent phases/i);
+  assert.match(planMilestoneGapsDoc, /ask_user/i);
+  assert.match(planMilestoneGapsDoc, /Requirement Gaps/i);
+  assert.match(planMilestoneGapsDoc, /Integration Gaps/i);
+  assert.match(planMilestoneGapsDoc, /Flow Gaps/i);
+  assert.match(planMilestoneGapsDoc, /Optional Gaps/i);
+  assert.match(planMilestoneGapsDoc, /requirements traceability repair/i);
   assert.match(planMilestoneGapsDoc, /\/blu-discuss-phase <phase>/);
+  assert.doesNotMatch(planMilestoneGapsDoc, /code or git mutation/i);
+});
+
+test("audit-milestone command docs keep the grouped-gap audit and traceability contract explicit", async () => {
+  const auditMilestoneDoc = await readRepoFile("docs/commands/audit-milestone.md");
+
+  assert.match(auditMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
+  assert.match(auditMilestoneDoc, /blueprint_roadmap_read/);
+  assert.match(auditMilestoneDoc, /blueprint_phase_summary_index/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_list/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_contract_read/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_summary_digest/);
+  assert.match(auditMilestoneDoc, /artifactPaths/);
+  assert.match(auditMilestoneDoc, /blueprint_artifact_report_write/);
+  assert.match(auditMilestoneDoc, /explicit confirmation before replacing/i);
+  assert.match(auditMilestoneDoc, /ask_user/);
+  assert.match(auditMilestoneDoc, /Requirement Gaps/i);
+  assert.match(auditMilestoneDoc, /Integration Gaps/i);
+  assert.match(auditMilestoneDoc, /Flow Gaps/i);
+  assert.match(auditMilestoneDoc, /Optional Gaps/i);
+  assert.match(auditMilestoneDoc, /traceability notes/i);
+  assert.match(auditMilestoneDoc, /\.blueprint\/reports\//);
+  assert.match(auditMilestoneDoc, /\/blu-plan-milestone-gaps/);
+  assert.match(auditMilestoneDoc, /\/blu-progress/);
+  assert.doesNotMatch(auditMilestoneDoc, /code or git history/i);
 });
 
 test("remove-phase command docs keep the roadmap removal contract explicit", async () => {

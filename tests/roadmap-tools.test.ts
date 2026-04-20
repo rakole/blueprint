@@ -95,6 +95,48 @@ async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
   return repoPath;
 }
 
+async function createAuditBackedRoadmapRepo(): Promise<string> {
+  const repoPath = await createRoadmapRepo("2.2");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| GAP-001 | Restore milestone audit traceability | done | Previously assigned to Phase 2. |
+| GAP-002 | Reconcile integration checks | done | Previously assigned to Phase 2. |
+| GAP-003 | Fix release flow handoff | done | Previously assigned to Phase 2. |
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+async function createAlreadyRepairedAuditBackedRoadmapRepo(): Promise<string> {
+  const repoPath = await createRoadmapRepo("2.2");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| GAP-001 | Restore milestone audit traceability | pending | Previously assigned to Phase 2. Reassigned to Phase 3 (Audit Gap Closure) from .blueprint/reports/milestone-audit-v2.md. |
+| GAP-002 | Reconcile integration checks | pending | Previously assigned to Phase 2. Reassigned to Phase 3 (Audit Gap Closure) from .blueprint/reports/milestone-audit-v2.md. |
+| GAP-003 | Fix release flow handoff | done | Previously assigned to Phase 2. |
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 async function createInsertRoadmapRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-insert-roadmap-tools-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -247,6 +289,100 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   assert.equal(after.phases.at(-1)?.phaseDir, ".blueprint/phases/03-notifications-flow");
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Notifications Flow\*\*/);
   assert.match(roadmapBody, /### Phase 3: Notifications Flow/);
+});
+
+test("blueprint_roadmap_add_phase persists audit-backed gap details and repairs requirement traceability", async (t) => {
+  const repoPath = await createAuditBackedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Audit Gap Closure",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Close milestone audit gaps and restore requirement traceability.",
+      successCriteria: "Repair the affected requirements and document the closure path.",
+      repairRequirementIds: ["GAP-001", "GAP-002"],
+      gapGroups: [
+        {
+          category: "requirement",
+          rows: [
+            {
+              gapId: "REQ-01",
+              surface: "GAP-001",
+              evidence: "Requirements table still shows the requirement as done.",
+              repair: "Reset to pending and assign Phase 3."
+            }
+          ]
+        },
+        {
+          category: "integration",
+          rows: [
+            {
+              gapId: "INT-01",
+              surface: "release checklist",
+              evidence: "Integration checks are still grouped under the old milestone flow.",
+              repair: "Document the closure handoff in the new phase."
+            }
+          ]
+        }
+      ]
+    }
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+
+  assert.equal(result.phaseNumber, "3");
+  assert.equal(result.phasePrefix, "03");
+  assert.match(roadmapBody, /## Audit-Backed Gap Details/);
+  assert.match(roadmapBody, /## Requirement Traceability Repair/);
+  assert.match(roadmapBody, /\*\*Source Audit\*\*: .blueprint\/reports\/milestone-audit-v2\.md/);
+  assert.match(roadmapBody, /\*\*Requirements\*\*: GAP-001, GAP-002/);
+  assert.match(roadmapBody, /\| REQ-01 \| GAP-001 \| Requirements table still shows the requirement as done\./);
+  assert.match(
+    requirementsBody,
+    /\| GAP-001 \| Restore milestone audit traceability \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+  assert.match(
+    requirementsBody,
+    /\| GAP-002 \| Reconcile integration checks \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+  assert.match(requirementsBody, /\| GAP-003 \| Fix release flow handoff \| done \| Previously assigned to Phase 2\. \|/);
+});
+
+test("blueprint_roadmap_add_phase keeps requirement reassignment notes idempotent when rerun against repaired rows", async (t) => {
+  const repoPath = await createAlreadyRepairedAuditBackedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Audit Gap Closure",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Close milestone audit gaps and restore requirement traceability.",
+      successCriteria: "Repair the affected requirements and document the closure path.",
+      repairRequirementIds: ["GAP-001", "GAP-002"]
+    }
+  });
+
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+  const reassignmentNote =
+    "Reassigned to Phase 3 (Audit Gap Closure) from .blueprint/reports/milestone-audit-v2.md.";
+  const noteMatches = requirementsBody.match(new RegExp(reassignmentNote.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? [];
+
+  assert.equal(noteMatches.length, 2);
+  assert.match(
+    requirementsBody,
+    /\| GAP-001 \| Restore milestone audit traceability \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
+  assert.match(
+    requirementsBody,
+    /\| GAP-002 \| Reconcile integration checks \| pending \| Previously assigned to Phase 2\. Reassigned to Phase 3 \(Audit Gap Closure\) from \.blueprint\/reports\/milestone-audit-v2\.md\. \|/
+  );
 });
 
 test("blueprint_roadmap_insert_phase inserts the first decimal phase after an integer target without renumbering later phases", async (t) => {

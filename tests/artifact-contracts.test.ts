@@ -235,6 +235,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Milestone Evidence Dimensions",
     "Original Intent Snapshot",
     "Roadmap And Phase Evidence",
+    "Requirement Gaps",
+    "Integration Gaps",
+    "Flow Gaps",
+    "Optional Gaps",
     "Gaps Found",
     "Archival Blockers",
     "Next Safe Action"
@@ -249,6 +253,11 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   );
   assert.match(milestoneAuditContract.authoringTemplate, /## Audit Verdict/);
   assert.match(milestoneAuditContract.authoringTemplate, /## Milestone Evidence Dimensions/);
+  assert.match(milestoneAuditContract.authoringTemplate, /## Requirement Gaps/);
+  assert.match(milestoneAuditContract.authoringTemplate, /## Integration Gaps/);
+  assert.match(milestoneAuditContract.authoringTemplate, /## Flow Gaps/);
+  assert.match(milestoneAuditContract.authoringTemplate, /## Optional Gaps/);
+  assert.match(milestoneAuditContract.authoringTemplate, /\| Gap ID \| Surface \| Evidence \| Repair \|/);
   assert.match(
     milestoneAuditContract.notes.join("\n"),
     /concrete verdict and milestone-level evidence dimensions/i
@@ -650,6 +659,30 @@ test("review and report contracts validate canonical sections while keeping extr
 - .blueprint/phases/04-release-readiness/04-VERIFICATION.md
 - .blueprint/phases/04-release-readiness/04-UAT.md
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
 ## Gaps Found
 
 - none
@@ -671,6 +704,30 @@ test("review and report contracts validate canonical sections while keeping extr
 ## Roadmap And Phase Evidence
 
 - .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -850,6 +907,30 @@ test("review and report contracts validate canonical sections while keeping extr
 - .blueprint/phases/04-release-readiness/04-VERIFICATION.md
 - .blueprint/phases/04-release-readiness/04-UAT.md
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
 ## Gaps Found
 
 - none
@@ -876,6 +957,48 @@ test("review and report contracts validate canonical sections while keeping extr
     milestoneAuditReport,
     "milestone-audit-v2"
   );
+  const legacyMilestoneAuditReport = `# Milestone v2 - Audit
+
+**Verdict:** READY_TO_CLOSE
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: READY_TO_CLOSE
+- Rationale: The milestone is ready to close.
+- Decision basis: ROADMAP, verification, UAT, and summary evidence remain aligned.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The milestone intent and phase list are locked. |
+| Validation evidence | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | The release-readiness phase has durable validation evidence. |
+| UAT evidence | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | The UAT closeout evidence is saved. |
+| Carry-forward evidence | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | The summary is ready to seed milestone completion. |
+
+## Original Intent Snapshot
+
+- Validate that milestone v2 outcomes match the planned roadmap intent.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+- .blueprint/phases/04-release-readiness/04-UAT.md
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v2
+`;
   const invalidVerdictMilestoneAuditValidation = validateReportArtifactContent(
     invalidVerdictMilestoneAuditReport,
     "milestone-audit-v2"
@@ -937,6 +1060,10 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.match(thinAuditFixValidation.issues.join("\n"), /Remaining Gaps/);
   assert.match(thinAuditFixValidation.issues.join("\n"), /Next Safe Action/);
   assert.equal(milestoneAuditValidation.valid, true, milestoneAuditValidation.issues.join("\n"));
+  assert.equal(
+    validateReportArtifactContent(legacyMilestoneAuditReport, "milestone-audit-v2").valid,
+    true
+  );
   assert.equal(invalidVerdictMilestoneAuditValidation.valid, false);
   assert.match(
     invalidVerdictMilestoneAuditValidation.issues.join("\n"),

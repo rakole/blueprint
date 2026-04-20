@@ -14914,9 +14914,36 @@ function renderMilestoneAuditTemplate(context) {
 
 - Completed phase evidence reviewed for this milestone.
 
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
 ## Gaps Found
 
-- Archival gap, stale assumption, or \`none\`.
+- Requirement gaps: none
+- Integration gaps: none
+- Flow gaps: none
+- Optional gaps: none
 
 ## Archival Blockers
 
@@ -15751,6 +15778,10 @@ var init_artifact_contracts = __esm({
           "Milestone Evidence Dimensions",
           "Original Intent Snapshot",
           "Roadmap And Phase Evidence",
+          "Requirement Gaps",
+          "Integration Gaps",
+          "Flow Gaps",
+          "Optional Gaps",
           "Gaps Found",
           "Archival Blockers",
           "Next Safe Action"
@@ -17547,6 +17578,9 @@ function extractMarkdownSection(markdown, heading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function extractMarkdownTableRows(section) {
+  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)).map((line) => parseMarkdownTableCells(line));
+}
 function stripPlanPlaceholderSignals(section) {
   return [...PLAN_PLACEHOLDER_SIGNALS, ...PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS].reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -17846,7 +17880,8 @@ function isMarkdownTableHeaderRow(line) {
     ["dimension", "evidence", "status", "notes"],
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
-    ["requirement", "task or check", "evidence", "coverage state"]
+    ["requirement", "task or check", "evidence", "coverage state"],
+    ["gap id", "surface", "evidence", "repair"]
   ];
   return headerPatterns.some(
     (pattern) => pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
@@ -18191,13 +18226,39 @@ function validateReportArtifactContent(content, reportName2) {
       warnings: []
     };
   }
+  const isMilestoneAudit = contractId === "report.milestone-audit";
+  const milestoneAuditGapHeadings = [
+    "Requirement Gaps",
+    "Integration Gaps",
+    "Flow Gaps",
+    "Optional Gaps"
+  ];
+  const hasStructuredMilestoneAuditGapSections = isMilestoneAudit ? milestoneAuditGapHeadings.some(
+    (heading) => new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(content)
+  ) : false;
+  const hasLegacyMilestoneAuditGapSummary = isMilestoneAudit ? /(?:^|\n)## Gaps Found\s*$/m.test(content) : false;
+  const legacyMilestoneAuditCompatibility = isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
   const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
-  if (!validation.valid) {
+  if (!validation.valid && !legacyMilestoneAuditCompatibility) {
     return validation;
   }
-  if (contractId === "report.milestone-audit") {
+  if (isMilestoneAudit) {
     const issues = [];
     const auditVerdict = extractMarkdownSection(content, "Audit Verdict");
+    const evidenceDimensions = extractMarkdownSection(content, "Milestone Evidence Dimensions");
+    const requirementGaps = extractMarkdownSection(content, "Requirement Gaps");
+    const integrationGaps = extractMarkdownSection(content, "Integration Gaps");
+    const flowGaps = extractMarkdownSection(content, "Flow Gaps");
+    const optionalGaps = extractMarkdownSection(content, "Optional Gaps");
+    const hasStructuredGapSections = [requirementGaps, integrationGaps, flowGaps, optionalGaps].some((section) => section.length > 0) || hasStructuredMilestoneAuditGapSections;
+    const hasLegacyGapSummary = hasLegacyMilestoneAuditGapSummary;
+    const evidenceRows = evidenceDimensions.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line));
+    const gapSections = [
+      ["Requirement Gaps", requirementGaps],
+      ["Integration Gaps", integrationGaps],
+      ["Flow Gaps", flowGaps],
+      ["Optional Gaps", optionalGaps]
+    ];
     if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
       issues.push(
         "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
@@ -18214,6 +18275,35 @@ function validateReportArtifactContent(content, reportName2) {
         { label: "Carry-forward evidence", pattern: /Carry-forward evidence/i }
       ])
     );
+    if (hasStructuredGapSections) {
+      for (const [heading, section] of gapSections) {
+        const rows = extractMarkdownTableRows(section);
+        if (rows.length === 0) {
+          issues.push(`Report artifact section ${heading} must include at least one structured gap row.`);
+          continue;
+        }
+        for (const row of rows) {
+          if (row.length !== 4) {
+            issues.push(
+              `Report artifact section ${heading} must keep each gap row in the Gap ID, Surface, Evidence, and Repair columns.`
+            );
+            continue;
+          }
+        }
+      }
+    }
+    if (!hasStructuredGapSections && hasLegacyGapSummary) {
+      const filteredValidationIssues = validation.issues.filter(
+        (issue2) => !milestoneAuditGapHeadings.some(
+          (heading) => issue2.includes(`missing required section: ${heading}`) || issue2.includes(`section ${heading} must not be empty.`)
+        )
+      );
+      return {
+        valid: issues.length === 0 && filteredValidationIssues.length === 0,
+        issues: [...filteredValidationIssues, ...issues],
+        warnings: []
+      };
+    }
     return {
       valid: issues.length === 0,
       issues,
@@ -21725,6 +21815,12 @@ function emptyMilestoneAuditReportStatus() {
   return {
     found: false,
     verdict: null,
+    gapSections: {
+      requirement: [],
+      integration: [],
+      flow: [],
+      optional: []
+    },
     hasActionableGaps: false,
     hasArchivalBlockers: false,
     nextSafeAction: null,
@@ -22290,6 +22386,29 @@ function extractBlueprintCommand(line) {
   const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
   return match?.[0]?.trim() ?? null;
 }
+function parseMilestoneAuditGapSection(section) {
+  return extractMarkdownTableRows(section).flatMap((row) => {
+    if (row.length !== 4) {
+      return [];
+    }
+    const [gapId, surface, evidence, repair] = row.map((cell) => cell.trim());
+    return [
+      {
+        gapId,
+        surface,
+        evidence,
+        repair
+      }
+    ];
+  });
+}
+function hasActionableMilestoneAuditGap(rows) {
+  return rows.some((row) => {
+    return [row.gapId, row.surface, row.evidence, row.repair].some(
+      (value) => !isNoneLikeReportSignal(value)
+    );
+  });
+}
 async function inspectMilestoneAuditReportStatus(args) {
   if (args.currentMilestone === null) {
     return emptyMilestoneAuditReportStatus();
@@ -22301,18 +22420,38 @@ async function inspectMilestoneAuditReportStatus(args) {
   try {
     const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
     const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
+    const requirementGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection3(raw, "Requirement Gaps")
+    );
+    const integrationGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection3(raw, "Integration Gaps")
+    );
+    const flowGapRows = parseMilestoneAuditGapSection(extractMarkdownSection3(raw, "Flow Gaps"));
+    const optionalGapRows = parseMilestoneAuditGapSection(
+      extractMarkdownSection3(raw, "Optional Gaps")
+    );
     const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
     const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
     const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
     const verdict = auditVerdictLines.map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
+    const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
     const nextSafeAction = nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    const gapSections = {
+      requirement: requirementGapRows,
+      integration: integrationGapRows,
+      flow: flowGapRows,
+      optional: optionalGapRows
+    };
+    const hasStructuredGapSections = Object.values(gapSections).some((rows) => rows.length > 0);
+    const actionableGaps = hasActionableMilestoneAuditGap(requirementGapRows) || hasActionableMilestoneAuditGap(integrationGapRows) || hasActionableMilestoneAuditGap(flowGapRows) || hasActionableMilestoneAuditGap(optionalGapRows) || !hasStructuredGapSections && gapsFound.some((line) => !isNoneLikeReportSignal(line));
     return {
       found: true,
       verdict,
-      hasActionableGaps: gapsFound.some((line) => !isNoneLikeReportSignal(line)),
+      gapSections,
+      hasActionableGaps: actionableGaps,
       hasArchivalBlockers: archivalBlockers.some((line) => !isNoneLikeReportSignal(line)),
       nextSafeAction,
-      readyForCompletion: verdict === "READY_TO_CLOSE" && gapsFound.every(isNoneLikeReportSignal) && archivalBlockers.every(isNoneLikeReportSignal)
+      readyForCompletion: verdict === "READY_TO_CLOSE" && !verdictBlocksCompletion && !actionableGaps && archivalBlockers.every(isNoneLikeReportSignal)
     };
   } catch {
     return {
@@ -23009,22 +23148,169 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
   }
   return content;
 }
-function buildPhaseDetailBlock(phaseNumber, phaseName, dependsOnPhaseNumber = null, insertedMarker = null) {
-  return `### Phase ${phaseNumber}: ${phaseName}
-**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
-**Requirements**: none yet
-**Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
-${insertedMarker ? `**Inserted**: ${insertedMarker}
-` : ""}**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
-**Status**: planned
-`;
+function titleCaseAuditBackedCategory(category) {
+  return category.split("-").map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`).join(" ");
 }
-function appendPhaseDetailsToRoadmap(raw, phaseNumber, phaseName) {
+function normalizeRoadmapDetailList(values) {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+function renderAuditBackedGapGroups(gapGroups) {
+  const renderedGroups = (gapGroups ?? []).filter((group) => group.rows.length > 0).map((group) => {
+    const rows = group.rows.map(
+      (row) => `| ${row.gapId.trim()} | ${row.surface.trim()} | ${row.evidence.trim()} | ${row.repair.trim()} |`
+    ).join("\n");
+    return `### ${titleCaseAuditBackedCategory(group.category)} Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${rows}`;
+  });
+  return renderedGroups.join("\n\n");
+}
+function renderRequirementTraceabilityRepairSection(requirementIds, phaseNumber, sourceReportPath) {
+  const ids = normalizeRoadmapDetailList(requirementIds);
+  if (ids.length === 0) {
+    return "";
+  }
+  const reportReference = sourceReportPath?.trim() || "milestone audit";
+  const rows = ids.map(
+    (requirementId) => `| ${requirementId} | pending | Phase ${phaseNumber} | Reassigned from ${reportReference}. |`
+  ).join("\n");
+  return `## Requirement Traceability Repair
+
+| Requirement ID | Status | Assignment | Notes |
+|----------------|--------|------------|-------|
+${rows}`;
+}
+function buildPhaseDetailBlock(options) {
+  const goal = options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
+  const requirements = normalizeRoadmapDetailList(options.requirements);
+  const successCriteria = options.successCriteria?.trim() || "Persist context, planning, execution, validation, and UAT evidence for this phase.";
+  const auditBackedDetails = options.auditBackedDetails ?? null;
+  const auditSections = auditBackedDetails ? [
+    "## Audit-Backed Gap Details",
+    `**Source Audit**: ${auditBackedDetails.sourceReportPath?.trim() || "none"}`,
+    `**Traceability Repair**: ${normalizeRoadmapDetailList(auditBackedDetails.repairRequirementIds).join(", ") || "none"}`,
+    renderAuditBackedGapGroups(auditBackedDetails.gapGroups),
+    renderRequirementTraceabilityRepairSection(
+      auditBackedDetails.repairRequirementIds,
+      options.phaseNumber,
+      auditBackedDetails.sourceReportPath
+    )
+  ].filter((section) => section.trim().length > 0).join("\n\n") : "";
+  return `### Phase ${options.phaseNumber}: ${options.phaseName}
+**Goal**: ${goal}
+**Requirements**: ${requirements.length > 0 ? requirements.join(", ") : "none yet"}
+**Depends on**: ${options.dependsOnPhaseNumber ? `Phase ${options.dependsOnPhaseNumber}` : "none"}
+${options.insertedMarker ? `**Inserted**: ${options.insertedMarker}
+` : ""}**Success Criteria**: ${successCriteria}
+**Status**: planned
+${auditSections ? `
+${auditSections}
+` : ""}`;
+}
+function parseRequirementTableRow(line) {
+  if (!/^\|.*\|$/.test(line)) {
+    return null;
+  }
+  const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+  if (cells.length !== 4) {
+    return null;
+  }
+  const [id, requirement, status, notes] = cells;
+  if (/^id$/i.test(id) && /^requirement$/i.test(requirement) && /^status$/i.test(status) && /^notes$/i.test(notes)) {
+    return null;
+  }
+  if (cells.every((cell) => /^-+$/.test(cell.replace(/:/g, "")))) {
+    return null;
+  }
+  return {
+    id,
+    requirement,
+    status,
+    notes
+  };
+}
+function renderRequirementTableRow(row) {
+  return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
+}
+async function repairRequirementsTraceability(projectRoot, requirementIds, phaseNumber, phaseName, sourceReportPath) {
+  const normalizedRequirementIds = [
+    ...new Set(requirementIds.map((value) => value.trim()).filter((value) => value.length > 0))
+  ];
+  if (normalizedRequirementIds.length === 0) {
+    return {
+      content: "",
+      warnings: []
+    };
+  }
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+  if (!await pathExists4(requirementsPath)) {
+    throw new Error(
+      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
+    );
+  }
+  const rawRequirements = await fs6.readFile(requirementsPath, "utf8");
+  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+  if (!requirementsSectionPattern.test(rawRequirements)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+    );
+  }
+  const remainingRequirementIds = new Set(normalizedRequirementIds);
+  const noteSource = sourceReportPath?.trim() || "the milestone audit report";
+  let updated = false;
+  const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
+  const content = rawRequirements.replace(
+    requirementsSectionPattern,
+    (_full, header, body) => {
+      const nextBody = body.split("\n").map((line) => {
+        const row = parseRequirementTableRow(line);
+        if (!row || !remainingRequirementIds.has(row.id)) {
+          return line;
+        }
+        remainingRequirementIds.delete(row.id);
+        const notes = row.notes.trim();
+        const nextNotes = notes.includes(reassignmentNote) ? notes : notes.length > 0 ? `${notes} ${reassignmentNote}` : reassignmentNote;
+        const nextStatus = "pending";
+        if (row.status.trim() === nextStatus && nextNotes === row.notes) {
+          return line;
+        }
+        updated = true;
+        return renderRequirementTableRow({
+          ...row,
+          status: nextStatus,
+          notes: nextNotes
+        });
+      }).join("\n");
+      return `${header}${nextBody}
+`;
+    }
+  );
+  if (remainingRequirementIds.size > 0) {
+    throw new Error(
+      `Requirement traceability repair could not find requirement IDs in ${BLUEPRINT_DIR}/REQUIREMENTS.md: ${[
+        ...remainingRequirementIds
+      ].join(", ")}`
+    );
+  }
+  return {
+    content,
+    warnings: updated ? [
+      `Reset requirements ${normalizedRequirementIds.join(", ")} to pending and reassigned them to Phase ${phaseNumber}.`
+    ] : [`Requirements ${normalizedRequirementIds.join(", ")} already reflected the requested repair.`]
+  };
+}
+function appendPhaseDetailsToRoadmap(raw, phaseNumber, phaseName, detailOptions = {}) {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName);
+  const detailBlock = buildPhaseDetailBlock({
+    phaseNumber,
+    phaseName,
+    ...detailOptions
+  });
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (phaseDetailsSectionPattern.test(raw)) {
     return raw.replace(
@@ -23045,17 +23331,18 @@ ${detailBlock.trimEnd()}`;
 
 ${detailBlock}`;
 }
-function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseName, dependsOnPhaseNumber) {
+function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseName, dependsOnPhaseNumber, detailOptions = {}) {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
-  const detailBlock = buildPhaseDetailBlock(
+  const detailBlock = buildPhaseDetailBlock({
     phaseNumber,
     phaseName,
     dependsOnPhaseNumber,
-    "yes"
-  ).trimEnd();
+    insertedMarker: "yes",
+    ...detailOptions
+  }).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phaseDetailsSectionPattern.test(raw)) {
     throw new Error(
@@ -23724,6 +24011,7 @@ async function blueprintRoadmapAddPhase(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const roadmap = await readRoadmap(projectRoot);
   const normalizedDescription = normalizePhaseDescription(args.description);
+  const auditBackedDetails = args.auditBackedDetails ?? null;
   if (normalizedDescription.length === 0) {
     throw new Error(
       "Phase description required. Re-run /blu-add-phase with a concise description."
@@ -23735,10 +24023,23 @@ async function blueprintRoadmapAddPhase(args) {
   const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slug}`;
   const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
   const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
+  const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
+    projectRoot,
+    auditBackedDetails.repairRequirementIds,
+    phaseNumber,
+    normalizedDescription,
+    auditBackedDetails.sourceReportPath
+  ) : null;
   const updatedRoadmap = appendPhaseDetailsToRoadmap(
     appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
     phaseNumber,
-    normalizedDescription
+    normalizedDescription,
+    auditBackedDetails ? {
+      goal: auditBackedDetails.goal ?? "Close the audit-identified milestone gaps and restore requirement traceability.",
+      requirements: auditBackedDetails.repairRequirementIds,
+      successCriteria: auditBackedDetails.successCriteria ?? "Persist audit-backed gap details and repair traceability for the affected requirements.",
+      auditBackedDetails
+    } : void 0
   );
   const warnings = [];
   const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
@@ -23747,6 +24048,18 @@ async function blueprintRoadmapAddPhase(args) {
       label: roadmap.path
     })
   );
+  if (requirementRepair) {
+    warnings.push(...requirementRepair.warnings);
+    warnings.push(
+      ...await writeTextFile(
+        resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
+        requirementRepair.content,
+        {
+          label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
+        }
+      )
+    );
+  }
   if (await pathExists4(phaseDirPath)) {
     warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
   } else {
@@ -25362,7 +25675,26 @@ var init_phase = __esm({
     };
     roadmapAddPhaseInputSchema = {
       cwd: string2().optional(),
-      description: string2()
+      description: string2(),
+      auditBackedDetails: object2({
+        sourceReportPath: string2().optional(),
+        goal: string2().optional(),
+        successCriteria: string2().optional(),
+        repairRequirementIds: array(string2()).optional(),
+        gapGroups: array(
+          object2({
+            category: _enum(["requirement", "integration", "flow", "optional"]),
+            rows: array(
+              object2({
+                gapId: string2(),
+                surface: string2(),
+                evidence: string2(),
+                repair: string2()
+              })
+            )
+          })
+        ).optional()
+      }).optional()
     };
     roadmapInsertPhaseInputSchema = {
       cwd: string2().optional(),

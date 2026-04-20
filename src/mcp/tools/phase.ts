@@ -36,9 +36,32 @@ type RoadmapReadArgs = {
 
 type NumericInput = string | number;
 
+type AuditBackedGapCategory = "requirement" | "integration" | "flow" | "optional";
+
+type AuditBackedGapRow = {
+  gapId: string;
+  surface: string;
+  evidence: string;
+  repair: string;
+};
+
+type AuditBackedGapGroup = {
+  category: AuditBackedGapCategory;
+  rows: AuditBackedGapRow[];
+};
+
+type RoadmapAuditBackedDetails = {
+  sourceReportPath?: string;
+  goal?: string;
+  successCriteria?: string;
+  repairRequirementIds?: string[];
+  gapGroups?: AuditBackedGapGroup[];
+};
+
 type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
+  auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 
 type RoadmapInsertPhaseArgs = {
@@ -526,7 +549,30 @@ const roadmapReadInputSchema = {
 
 const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
-  description: z.string()
+  description: z.string(),
+  auditBackedDetails: z
+    .object({
+      sourceReportPath: z.string().optional(),
+      goal: z.string().optional(),
+      successCriteria: z.string().optional(),
+      repairRequirementIds: z.array(z.string()).optional(),
+      gapGroups: z
+        .array(
+          z.object({
+            category: z.enum(["requirement", "integration", "flow", "optional"]),
+            rows: z.array(
+              z.object({
+                gapId: z.string(),
+                surface: z.string(),
+                evidence: z.string(),
+                repair: z.string()
+              })
+            )
+          })
+        )
+        .optional()
+    })
+    .optional()
 };
 const roadmapInsertPhaseInputSchema = {
   cwd: z.string().optional(),
@@ -992,25 +1038,263 @@ function insertPhaseLineToRoadmap(
   return content;
 }
 
-function buildPhaseDetailBlock(
+type PhaseDetailBlockOptions = {
+  phaseNumber: string;
+  phaseName: string;
+  dependsOnPhaseNumber?: string | null;
+  insertedMarker?: string | null;
+  goal?: string;
+  requirements?: string[];
+  successCriteria?: string;
+  auditBackedDetails?: RoadmapAuditBackedDetails | null;
+};
+
+function titleCaseAuditBackedCategory(category: AuditBackedGapCategory): string {
+  return category
+    .split("-")
+    .map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`)
+    .join(" ");
+}
+
+function normalizeRoadmapDetailList(values: string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+
+function renderAuditBackedGapGroups(gapGroups: AuditBackedGapGroup[] | undefined): string {
+  const renderedGroups = (gapGroups ?? [])
+    .filter((group) => group.rows.length > 0)
+    .map((group) => {
+      const rows = group.rows
+        .map(
+          (row) =>
+            `| ${row.gapId.trim()} | ${row.surface.trim()} | ${row.evidence.trim()} | ${row.repair.trim()} |`
+        )
+        .join("\n");
+
+      return `### ${titleCaseAuditBackedCategory(group.category)} Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+${rows}`;
+    });
+
+  return renderedGroups.join("\n\n");
+}
+
+function renderRequirementTraceabilityRepairSection(
+  requirementIds: string[] | undefined,
+  phaseNumber: string,
+  sourceReportPath: string | undefined
+): string {
+  const ids = normalizeRoadmapDetailList(requirementIds);
+
+  if (ids.length === 0) {
+    return "";
+  }
+
+  const reportReference = sourceReportPath?.trim() || "milestone audit";
+  const rows = ids
+    .map(
+      (requirementId) =>
+        `| ${requirementId} | pending | Phase ${phaseNumber} | Reassigned from ${reportReference}. |`
+    )
+    .join("\n");
+
+  return `## Requirement Traceability Repair
+
+| Requirement ID | Status | Assignment | Notes |
+|----------------|--------|------------|-------|
+${rows}`;
+}
+
+function buildPhaseDetailBlock(options: PhaseDetailBlockOptions): string {
+  const goal =
+    options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
+  const requirements = normalizeRoadmapDetailList(options.requirements);
+  const successCriteria =
+    options.successCriteria?.trim() ||
+    "Persist context, planning, execution, validation, and UAT evidence for this phase.";
+  const auditBackedDetails = options.auditBackedDetails ?? null;
+  const auditSections = auditBackedDetails
+    ? [
+        "## Audit-Backed Gap Details",
+        `**Source Audit**: ${auditBackedDetails.sourceReportPath?.trim() || "none"}`,
+        `**Traceability Repair**: ${
+          normalizeRoadmapDetailList(auditBackedDetails.repairRequirementIds).join(", ") || "none"
+        }`,
+        renderAuditBackedGapGroups(auditBackedDetails.gapGroups),
+        renderRequirementTraceabilityRepairSection(
+          auditBackedDetails.repairRequirementIds,
+          options.phaseNumber,
+          auditBackedDetails.sourceReportPath
+        )
+      ]
+        .filter((section) => section.trim().length > 0)
+        .join("\n\n")
+    : "";
+
+  return `### Phase ${options.phaseNumber}: ${options.phaseName}
+**Goal**: ${goal}
+**Requirements**: ${requirements.length > 0 ? requirements.join(", ") : "none yet"}
+**Depends on**: ${options.dependsOnPhaseNumber ? `Phase ${options.dependsOnPhaseNumber}` : "none"}
+${options.insertedMarker ? `**Inserted**: ${options.insertedMarker}\n` : ""}**Success Criteria**: ${successCriteria}
+**Status**: planned
+${auditSections ? `\n${auditSections}\n` : ""}`;
+}
+
+type RequirementTableRow = {
+  id: string;
+  requirement: string;
+  status: string;
+  notes: string;
+};
+
+function parseRequirementTableRow(line: string): RequirementTableRow | null {
+  if (!/^\|.*\|$/.test(line)) {
+    return null;
+  }
+
+  const cells = line
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+
+  if (cells.length !== 4) {
+    return null;
+  }
+
+  const [id, requirement, status, notes] = cells;
+
+  if (
+    /^id$/i.test(id) &&
+    /^requirement$/i.test(requirement) &&
+    /^status$/i.test(status) &&
+    /^notes$/i.test(notes)
+  ) {
+    return null;
+  }
+
+  if (cells.every((cell) => /^-+$/.test(cell.replace(/:/g, "")))) {
+    return null;
+  }
+
+  return {
+    id,
+    requirement,
+    status,
+    notes
+  };
+}
+
+function renderRequirementTableRow(row: RequirementTableRow): string {
+  return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
+}
+
+async function repairRequirementsTraceability(
+  projectRoot: string,
+  requirementIds: string[],
   phaseNumber: string,
   phaseName: string,
-  dependsOnPhaseNumber: string | null = null,
-  insertedMarker: string | null = null
-): string {
-  return `### Phase ${phaseNumber}: ${phaseName}
-**Goal**: Capture the phase boundary and implementation goal during /blu-discuss-phase.
-**Requirements**: none yet
-**Depends on**: ${dependsOnPhaseNumber ? `Phase ${dependsOnPhaseNumber}` : "none"}
-${insertedMarker ? `**Inserted**: ${insertedMarker}\n` : ""}**Success Criteria**: Persist context, planning, execution, validation, and UAT evidence for this phase.
-**Status**: planned
-`;
+  sourceReportPath?: string
+): Promise<{
+  content: string;
+  warnings: string[];
+}> {
+  const normalizedRequirementIds = [
+    ...new Set(requirementIds.map((value) => value.trim()).filter((value) => value.length > 0))
+  ];
+
+  if (normalizedRequirementIds.length === 0) {
+    return {
+      content: "",
+      warnings: []
+    };
+  }
+
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+
+  if (!(await pathExists(requirementsPath))) {
+    throw new Error(
+      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
+    );
+  }
+
+  const rawRequirements = await fs.readFile(requirementsPath, "utf8");
+  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!requirementsSectionPattern.test(rawRequirements)) {
+    throw new Error(
+      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+    );
+  }
+
+  const remainingRequirementIds = new Set(normalizedRequirementIds);
+  const noteSource = sourceReportPath?.trim() || "the milestone audit report";
+  let updated = false;
+  const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
+
+  const content = rawRequirements.replace(
+    requirementsSectionPattern,
+    (_full, header: string, body: string) => {
+      const nextBody = body
+        .split("\n")
+        .map((line) => {
+          const row = parseRequirementTableRow(line);
+
+          if (!row || !remainingRequirementIds.has(row.id)) {
+            return line;
+          }
+
+          remainingRequirementIds.delete(row.id);
+          const notes = row.notes.trim();
+          const nextNotes = notes.includes(reassignmentNote)
+            ? notes
+            : notes.length > 0
+              ? `${notes} ${reassignmentNote}`
+              : reassignmentNote;
+          const nextStatus = "pending";
+
+          if (row.status.trim() === nextStatus && nextNotes === row.notes) {
+            return line;
+          }
+
+          updated = true;
+
+          return renderRequirementTableRow({
+            ...row,
+            status: nextStatus,
+            notes: nextNotes
+          });
+        })
+        .join("\n");
+
+      return `${header}${nextBody}\n`;
+    }
+  );
+
+  if (remainingRequirementIds.size > 0) {
+    throw new Error(
+      `Requirement traceability repair could not find requirement IDs in ${BLUEPRINT_DIR}/REQUIREMENTS.md: ${[
+        ...remainingRequirementIds
+      ].join(", ")}`
+    );
+  }
+
+  return {
+    content,
+    warnings: updated
+      ? [
+          `Reset requirements ${normalizedRequirementIds.join(", ")} to pending and reassigned them to Phase ${phaseNumber}.`
+        ]
+      : [`Requirements ${normalizedRequirementIds.join(", ")} already reflected the requested repair.`]
+  };
 }
 
 function appendPhaseDetailsToRoadmap(
   raw: string,
   phaseNumber: string,
-  phaseName: string
+  phaseName: string,
+  detailOptions: Omit<PhaseDetailBlockOptions, "phaseNumber" | "phaseName"> = {}
 ): string {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
 
@@ -1018,7 +1302,11 @@ function appendPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = buildPhaseDetailBlock(phaseNumber, phaseName);
+  const detailBlock = buildPhaseDetailBlock({
+    phaseNumber,
+    phaseName,
+    ...detailOptions
+  });
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (phaseDetailsSectionPattern.test(raw)) {
@@ -1045,7 +1333,8 @@ function insertPhaseDetailsToRoadmap(
   phaseGroupNumbers: string[],
   phaseNumber: string,
   phaseName: string,
-  dependsOnPhaseNumber: string
+  dependsOnPhaseNumber: string,
+  detailOptions: Omit<PhaseDetailBlockOptions, "phaseNumber" | "phaseName" | "dependsOnPhaseNumber" | "insertedMarker"> = {}
 ): string {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
 
@@ -1053,12 +1342,13 @@ function insertPhaseDetailsToRoadmap(
     return raw;
   }
 
-  const detailBlock = buildPhaseDetailBlock(
+  const detailBlock = buildPhaseDetailBlock({
     phaseNumber,
     phaseName,
     dependsOnPhaseNumber,
-    "yes"
-  ).trimEnd();
+    insertedMarker: "yes",
+    ...detailOptions
+  }).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (!phaseDetailsSectionPattern.test(raw)) {
@@ -2017,6 +2307,7 @@ export async function blueprintRoadmapAddPhase(
   const projectRoot = await ensureRepoRoot(args.cwd);
   const roadmap = await readRoadmap(projectRoot);
   const normalizedDescription = normalizePhaseDescription(args.description);
+  const auditBackedDetails = args.auditBackedDetails ?? null;
 
   if (normalizedDescription.length === 0) {
     throw new Error(
@@ -2030,10 +2321,31 @@ export async function blueprintRoadmapAddPhase(
   const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slug}`;
   const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+  const requirementRepair = auditBackedDetails?.repairRequirementIds?.length
+    ? await repairRequirementsTraceability(
+        projectRoot,
+        auditBackedDetails.repairRequirementIds,
+        phaseNumber,
+        normalizedDescription,
+        auditBackedDetails.sourceReportPath
+      )
+    : null;
   const updatedRoadmap = appendPhaseDetailsToRoadmap(
     appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
     phaseNumber,
-    normalizedDescription
+    normalizedDescription,
+    auditBackedDetails
+      ? {
+          goal:
+            auditBackedDetails.goal ??
+            "Close the audit-identified milestone gaps and restore requirement traceability.",
+          requirements: auditBackedDetails.repairRequirementIds,
+          successCriteria:
+            auditBackedDetails.successCriteria ??
+            "Persist audit-backed gap details and repair traceability for the affected requirements.",
+          auditBackedDetails
+        }
+      : undefined
   );
   const warnings: string[] = [];
   const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
@@ -2043,6 +2355,19 @@ export async function blueprintRoadmapAddPhase(
       label: roadmap.path
     })
   );
+
+  if (requirementRepair) {
+    warnings.push(...requirementRepair.warnings);
+    warnings.push(
+      ...await writeTextFile(
+        resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
+        requirementRepair.content,
+        {
+          label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
+        }
+      )
+    );
+  }
 
   if (await pathExists(phaseDirPath)) {
     warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);

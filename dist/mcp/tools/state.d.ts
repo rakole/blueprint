@@ -101,10 +101,22 @@ type StateSyncResult = {
 type MilestoneAuditReportStatus = {
     found: boolean;
     verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED" | null;
+    gapSections: {
+        requirement: MilestoneAuditGapRow[];
+        integration: MilestoneAuditGapRow[];
+        flow: MilestoneAuditGapRow[];
+        optional: MilestoneAuditGapRow[];
+    };
     hasActionableGaps: boolean;
     hasArchivalBlockers: boolean;
     nextSafeAction: string | null;
     readyForCompletion: boolean;
+};
+type MilestoneAuditGapRow = {
+    gapId: string;
+    surface: string;
+    evidence: string;
+    repair: string;
 };
 export declare function blueprintPauseHandoffGet(args?: PauseHandoffGetArgs): Promise<PauseHandoffGetResult>;
 export declare function blueprintPauseHandoffWrite(args: PauseHandoffWriteArgs): Promise<PauseHandoffWriteResult>;

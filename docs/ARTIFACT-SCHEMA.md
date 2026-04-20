@@ -597,13 +597,16 @@ Purpose:
 Minimum locked sections:
 - milestone identifier and original intent snapshot
 - roadmap and phase evidence digest
-- gaps found and archival blockers
+- requirements traceability notes and repair candidates
+- grouped gaps found under requirement, integration, flow, and optional sections
+- archival blockers
 - next safe action
 
 Contract notes:
 - `audit-milestone` owns this report and writes it through the documented Blueprint persistence flow, including `blueprint_artifact_report_write`.
 - Replacing an existing audit report requires explicit confirmation.
 - The report should stay project-local in `.blueprint/reports/` and not spill into unrelated repo files.
+- The report should keep enough traceability detail for `/blu-plan-milestone-gaps` to convert grouped gaps into roadmap phases without re-running the audit.
 
 ### `reports/milestone-complete-<version>.md`
 
