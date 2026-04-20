@@ -248,6 +248,7 @@ export declare function ensureParentDirectory(targetPath: string): Promise<void>
 export declare function readJsonIfPresent(filePath: string): Promise<Record<string, unknown> | null>;
 export declare function writeJsonFile(filePath: string, value: Record<string, unknown>): Promise<void>;
 export declare function writeTextFile(filePath: string, value: string, options?: TextWriteOptions): Promise<string[]>;
+export declare function withBlueprintRepoLock<T>(projectRoot: string, lockName: string, task: () => Promise<T>): Promise<T>;
 export declare function extractMarkdownTableRows(section: string): string[][];
 export declare function validateResearchArtifactContent(content: string): {
     valid: boolean;

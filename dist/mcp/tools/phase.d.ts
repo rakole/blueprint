@@ -24,6 +24,7 @@ type RoadmapAuditBackedDetails = {
 type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
+    expectedPhaseNumber?: string;
     auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 type RoadmapInsertPhaseArgs = {
@@ -472,6 +473,7 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         description: z.ZodString;
+        expectedPhaseNumber: z.ZodOptional<z.ZodString>;
         auditBackedDetails: z.ZodOptional<z.ZodObject<{
             sourceReportPath: z.ZodOptional<z.ZodString>;
             goal: z.ZodOptional<z.ZodString>;
