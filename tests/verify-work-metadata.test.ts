@@ -27,6 +27,8 @@ test("verify-work manifest references the UAT template, validation tools, and sa
   assert.match(commandFile, /XX-UAT\.md/);
   assert.match(commandFile, /artifactId: "phase\.uat"/);
   assert.match(commandFile, /authoringTemplate/);
+  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /structured decision: `view`, `resume`, or `update`/i);
   assert.match(commandFile, /locked markers and required section names unchanged/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
 });

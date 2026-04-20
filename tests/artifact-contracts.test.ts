@@ -117,6 +117,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
   const securityContract = readArtifactContract("review.security");
+  const verificationContract = readArtifactContract("phase.verification");
 
   assert.equal(single.artifactId, "phase.research");
   assert.match(single.contract.authoringTemplate, /^# Phase XX: <Phase Name> - Research$/m);
@@ -175,6 +176,42 @@ test("artifact contract registry exposes canonical contract ids and templates", 
       "Registry and design-system safety: <how the draft avoids forking the registry or design system>"
     )
   );
+  assert.deepEqual(verificationContract.requiredHeadings, [
+    "Validation Summary",
+    "Requirement / Task Coverage",
+    "Evidence Reviewed",
+    "Test Infrastructure / Evidence Metadata",
+    "Manual-Only or Deferred Coverage",
+    "Gate State",
+    "Gap Classification",
+    "Gaps Found",
+    "Suggested Repairs",
+    "Next Safe Action"
+  ]);
+  assert.match(
+    verificationContract.authoringTemplate,
+    /## Requirement \/ Task Coverage/
+  );
+  assert.match(
+    verificationContract.authoringTemplate,
+    /## Test Infrastructure \/ Evidence Metadata/
+  );
+  assert.match(
+    verificationContract.authoringTemplate,
+    /## Manual-Only or Deferred Coverage/
+  );
+  assert.match(verificationContract.authoringTemplate, /## Gate State/);
+  assert.match(
+    verificationContract.authoringTemplate,
+    /## Gap Classification/
+  );
+  assert.match(verificationContract.authoringTemplate, /\*\*Gate State:\*\*/);
+  assert.match(verificationContract.authoringTemplate, /\*\*Sign-off:\*\*/);
+  assert.deepEqual(verificationContract.lockedMarkers, [
+    "**Coverage:**",
+    "**Gate State:**",
+    "**Sign-off:**"
+  ]);
   assert.deepEqual(reviewContract.requiredHeadings, [
     "Review Summary",
     "Scope Reviewed",
@@ -229,14 +266,47 @@ test("canonical lifecycle contracts allow additional top-level headings without 
   const verification = `# Phase 03: Discovery - Verification
 
 **Coverage:** Reviewed \`03-01-SUMMARY.md\` and related saved summaries.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - Validation coverage is sufficient for UAT.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| VALID-01 | Confirm saved execution summaries exist | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | Summary-backed coverage is present. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
 
 ## Gaps Found
 

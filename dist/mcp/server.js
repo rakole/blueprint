@@ -14582,14 +14582,47 @@ function renderVerificationTemplate(context) {
   return `# ${phaseLabel(context)} - Verification
 
 **Coverage:** Reviewed \`${summaryFile(context)}\` and any other saved phase summaries for validation evidence.
+**Gate State:** PASS|PARTIAL|BLOCKED
+**Sign-off:** verified|pending|blocked
 
 ## Validation Summary
 
 - Concise readiness result grounded in the saved summaries.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| <requirement-id> | <task or check> | <summary path, command, or saved evidence> | PASS|MANUAL|DEFERRED|BLOCKED | <coverage note> |
+
 ## Evidence Reviewed
 
 - \`${summaryPath(context)}\`
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness:
+- Commands:
+- Evidence type:
+- Test infrastructure status:
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+
+## Gate State
+
+- Gate: PASS|PARTIAL|BLOCKED
+- Sign-off: <name or pending>
+- Readiness: <ready for UAT or not ready>
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| <coverage gap class> | <scope> | <evidence> | <repair> |
 
 ## Gaps Found
 
@@ -15447,18 +15480,27 @@ var init_artifact_contracts = __esm({
         freehandPolicy: "additional-top-level-headings",
         requiredHeadings: [
           "Validation Summary",
+          "Requirement / Task Coverage",
           "Evidence Reviewed",
+          "Test Infrastructure / Evidence Metadata",
+          "Manual-Only or Deferred Coverage",
+          "Gate State",
+          "Gap Classification",
           "Gaps Found",
           "Suggested Repairs",
           "Next Safe Action"
         ],
-        lockedMarkers: ["**Coverage:**"],
+        lockedMarkers: ["**Coverage:**", "**Gate State:**", "**Sign-off:**"],
         placeholderSignals: [
-          "Reviewed",
+          "PASS|PARTIAL|BLOCKED",
+          "verified|pending|blocked",
+          "PASS|MANUAL|DEFERRED|BLOCKED",
+          "MANUAL|DEFERRED|NONE",
           "Concise readiness result grounded in the saved summaries."
         ],
         notes: [
-          "Verification artifacts must stay grounded in saved execution summaries.",
+          "Verification artifacts must stay grounded in saved execution summaries and preserve durable coverage state.",
+          "Requirement-to-task mapping, evidence metadata, manual or deferred coverage, and gap classification should remain visible in the saved artifact.",
           "Additional top-level headings are allowed, but evidence reviewed should still cite saved summaries."
         ],
         renderScaffoldTemplate: renderVerificationTemplate,
@@ -17606,6 +17648,14 @@ function validateRequiredMarkdownSections(content, artifactLabel, headings) {
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
+function validateValidationScaffoldPlaceholders(content, artifactLabel) {
+  return VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS.filter(({ pattern }) => pattern.test(content)).map(
+    ({ pattern, signal }) => {
+      const matchedPlaceholder = content.match(pattern)?.[0] ?? signal;
+      return `${artifactLabel} still contains placeholder scaffold text: ${matchedPlaceholder}.`;
+    }
+  );
+}
 function validateContractBackedMarkdown(content, contractId, artifactLabel) {
   const contract = readArtifactContract(contractId);
   const issues = [];
@@ -17641,6 +17691,20 @@ function hasRequirementTableRows(section) {
       return false;
     }
     const isHeader = /^id$/i.test(cells[0] ?? "") && /^description$/i.test(cells[1] ?? "") && /^research support$/i.test(cells[2] ?? "");
+    const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+    return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
+  });
+}
+function hasCoverageTableRows(section) {
+  return section.split("\n").map((line) => line.trim()).some((line) => {
+    if (!/^\|.*\|$/.test(line)) {
+      return false;
+    }
+    const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
+    if (cells.length < 4) {
+      return false;
+    }
+    const isHeader = /^requirement$/i.test(cells[0] ?? "") && /^task or check$/i.test(cells[1] ?? "") && /^evidence$/i.test(cells[2] ?? "") && /^coverage state$/i.test(cells[3] ?? "");
     const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell));
     return !isHeader && !isSeparator && cells.some((cell) => cell.length > 0);
   });
@@ -17713,6 +17777,18 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
       "Verification artifact must declare **Coverage:** with a brief summary of the validated summaries or plan slices."
     );
   }
+  issues.push(...validateValidationScaffoldPlaceholders(content, "Verification artifact"));
+  if (!/^\*\*Gate State:\*\*\s*.+$/m.test(content)) {
+    issues.push("Verification artifact must declare **Gate State:** with the readiness gate state.");
+  }
+  if (/^\*\*Sign-off:\*\*\s*verified\|pending\|blocked\s*$/m.test(content)) {
+    issues.push(
+      "Verification artifact must replace the raw **Sign-off:** verified|pending|blocked placeholder with the verification owner or pending state."
+    );
+  }
+  if (!/^\*\*Sign-off:\*\*\s*.+$/m.test(content)) {
+    issues.push("Verification artifact must declare **Sign-off:** with the verification owner or pending state.");
+  }
   issues.push(
     ...validateRequiredMarkdownSections(
       content,
@@ -17720,10 +17796,16 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
       REQUIRED_VERIFICATION_SECTIONS
     )
   );
+  const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
+  if (!hasCoverageTableRows(requirementCoverage)) {
+    issues.push(
+      "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
+    );
+  }
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
   if (summaryPaths.length > 0 && !containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
-    warnings.push(
-      "Verification artifact should cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    issues.push(
+      "Verification artifact must cite at least one saved execution summary path or filename under ## Evidence Reviewed."
     );
   }
   return {
@@ -17741,6 +17823,7 @@ function validateUatArtifactContent(content, summaryPaths = []) {
   if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
     issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
   }
+  issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
@@ -19084,7 +19167,7 @@ async function blueprintArtifactReportWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, REQUIRED_VERIFICATION_SECTIONS, REQUIRED_UAT_SECTIONS, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, REQUIRED_UAT_SECTIONS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -19389,6 +19472,43 @@ Generated by \`/blu-map-codebase\`.
       ".blueprint/codebase/INTEGRATIONS.md": "Integrations",
       ".blueprint/codebase/CONCERNS.md": "Concerns"
     };
+    VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS = [
+      { pattern: /\bPhase XX\b/i, signal: "Phase XX" },
+      { pattern: /<Phase Name>/i, signal: "<Phase Name>" },
+      { pattern: /<phase-dir>/i, signal: "<phase-dir>" },
+      {
+        pattern: /\b(?:XX|\d{2}(?:\.\d+)?)\-YY-SUMMARY\.md\b/i,
+        signal: "XX-YY-SUMMARY.md"
+      },
+      { pattern: /\bXX-VERIFICATION\.md\b/i, signal: "XX-VERIFICATION.md" },
+      { pattern: /\bXX-UAT\.md\b/i, signal: "XX-UAT.md" },
+      { pattern: /<requirement-id>/i, signal: "<requirement-id>" },
+      { pattern: /<task or check>/i, signal: "<task or check>" },
+      {
+        pattern: /<summary path, command, or saved evidence>/i,
+        signal: "<summary path, command, or saved evidence>"
+      },
+      { pattern: /<coverage note>/i, signal: "<coverage note>" },
+      { pattern: /<manual-only item>/i, signal: "<manual-only item>" },
+      { pattern: /<coverage gap class>/i, signal: "<coverage gap class>" },
+      { pattern: /<scope>/i, signal: "<scope>" },
+      { pattern: /<evidence>/i, signal: "<evidence>" },
+      { pattern: /<repair>/i, signal: "<repair>" },
+      { pattern: /<name or pending>/i, signal: "<name or pending>" },
+      { pattern: /<ready for UAT or not ready>/i, signal: "<ready for UAT or not ready>" },
+      { pattern: /\bPASS\|PARTIAL\|BLOCKED\b/i, signal: "PASS|PARTIAL|BLOCKED" },
+      { pattern: /\bPASS\|MANUAL\|DEFERRED\|BLOCKED\b/i, signal: "PASS|MANUAL|DEFERRED|BLOCKED" },
+      { pattern: /\bMANUAL\|DEFERRED\|NONE\b/i, signal: "MANUAL|DEFERRED|NONE" },
+      {
+        pattern: /Concise readiness result grounded in the saved summaries\./i,
+        signal: "Concise readiness result grounded in the saved summaries."
+      },
+      {
+        pattern: /Concise user-facing result grounded in the saved summaries and verification artifact\./i,
+        signal: "Concise user-facing result grounded in the saved summaries and verification artifact."
+      },
+      { pattern: /\bPASS\|FAIL\|PARTIAL\b/i, signal: "PASS|FAIL|PARTIAL" }
+    ];
     REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
       "phase.verification"
     ).requiredHeadings;

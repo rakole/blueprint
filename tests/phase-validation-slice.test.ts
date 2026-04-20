@@ -310,14 +310,47 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - Verification
 
 **Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - The validated feature set is ready for UAT.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -345,14 +378,47 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - Verification
 
 **Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - The validated feature set is ready for UAT.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
 
 ## Gaps Found
 
@@ -374,14 +440,47 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     content: `# Phase 04: Validation - Verification
 
 **Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PARTIAL
+**Sign-off:** pending
 
 ## Validation Summary
 
 - The validated feature set has a follow-up note.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Reconfirm validation evidence and follow-up note | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | DEFERRED | Follow-up note still needs confirmation. |
+
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| Follow-up note confirmation | Requires manual confirmation during UAT | Reconfirm during /blu-verify-work 4 | DEFERRED |
+
+## Gate State
+
+- Gate: PARTIAL
+- Sign-off: pending
+- Readiness: not ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| deferred | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Reconfirm during /blu-verify-work 4 |
 
 ## Gaps Found
 
@@ -461,6 +560,8 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.equal(verificationCreated.status, "created");
   assert.equal(verificationRead.found, true);
   assert.match(verificationRead.content ?? "", /ready for UAT/);
+  assert.match(verificationRead.content ?? "", /Requirement \/ Task Coverage/);
+  assert.match(verificationRead.content ?? "", /Gate State/);
   assert.equal(verificationReused.status, "reused");
   assert.equal(verificationUpdated.status, "updated");
   assert.match(beforeUatStatus.nextAction, /\/blu-verify-work 4/);

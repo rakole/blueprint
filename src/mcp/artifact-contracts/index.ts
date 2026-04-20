@@ -383,14 +383,47 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Verification
 
 **Coverage:** Reviewed \`${summaryFile(context)}\` and any other saved phase summaries for validation evidence.
+**Gate State:** PASS|PARTIAL|BLOCKED
+**Sign-off:** verified|pending|blocked
 
 ## Validation Summary
 
 - Concise readiness result grounded in the saved summaries.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| <requirement-id> | <task or check> | <summary path, command, or saved evidence> | PASS|MANUAL|DEFERRED|BLOCKED | <coverage note> |
+
 ## Evidence Reviewed
 
 - \`${summaryPath(context)}\`
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness:
+- Commands:
+- Evidence type:
+- Test infrastructure status:
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+
+## Gate State
+
+- Gate: PASS|PARTIAL|BLOCKED
+- Sign-off: <name or pending>
+- Readiness: <ready for UAT or not ready>
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| <coverage gap class> | <scope> | <evidence> | <repair> |
 
 ## Gaps Found
 
@@ -1168,18 +1201,27 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: [
       "Validation Summary",
+      "Requirement / Task Coverage",
       "Evidence Reviewed",
+      "Test Infrastructure / Evidence Metadata",
+      "Manual-Only or Deferred Coverage",
+      "Gate State",
+      "Gap Classification",
       "Gaps Found",
       "Suggested Repairs",
       "Next Safe Action"
     ],
-    lockedMarkers: ["**Coverage:**"],
+    lockedMarkers: ["**Coverage:**", "**Gate State:**", "**Sign-off:**"],
     placeholderSignals: [
-      "Reviewed",
+      "PASS|PARTIAL|BLOCKED",
+      "verified|pending|blocked",
+      "PASS|MANUAL|DEFERRED|BLOCKED",
+      "MANUAL|DEFERRED|NONE",
       "Concise readiness result grounded in the saved summaries."
     ],
     notes: [
-      "Verification artifacts must stay grounded in saved execution summaries.",
+      "Verification artifacts must stay grounded in saved execution summaries and preserve durable coverage state.",
+      "Requirement-to-task mapping, evidence metadata, manual or deferred coverage, and gap classification should remain visible in the saved artifact.",
       "Additional top-level headings are allowed, but evidence reviewed should still cite saved summaries."
     ],
     renderScaffoldTemplate: renderVerificationTemplate,
