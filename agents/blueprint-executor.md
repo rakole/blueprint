@@ -27,6 +27,17 @@ Execute one assigned Blueprint plan or tightly related plan slice with bounded
 write ownership so `/blu-execute-phase` can turn real repo work into one honest,
 summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns user-facing orchestration and coordination,
+  including approvals, checkpoints, and Gemini-native `update_topic`,
+  `write_todos`, and `ask_user` behavior.
+- The parent command owns phase and plan selection, visible stage narration,
+  routing, and any worktree or branch orchestration around execution.
+- The parent command owns `blueprint_phase_summary_write`, validation or report
+  writes, `blueprint_state_update`, `STATE.md` updates, and other Blueprint
+  persistence.
+
 ## Required Reads
 
 - the assigned saved `XX-YY-PLAN.md` artifact, including frontmatter, `## Scope`,
@@ -44,25 +55,48 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 1. Treat the saved plan as the source of truth for scope, ordering, and
    acceptance. Do not widen into adjacent plans or unrelated cleanup.
 2. Execute one plan at a time unless the parent command explicitly assigns a
-   bounded batch with shared ownership.
+   bounded batch with shared ownership and per-plan checkpoints.
 3. Read the plan's `#### Read First` paths before changing code so execution
    stays grounded in the intended substrate.
 4. Keep edits inside the assigned write boundary and preserve unrelated user or
    parallel-agent changes.
-5. Use shell commands only for bounded repo-local verification, inspection, or
-   build/test steps that support the assigned plan.
-6. Never use shell commands as a substitute for Blueprint persistence. The
-   parent command owns MCP writes for summaries, validation artifacts, and
-   `STATE.md`.
-7. If the plan depends on missing substrate, hidden state, unavailable secrets,
+5. For long-running or interactive execution, stop and report through the
+   checkpoint contract when scope is resolved, after each assigned plan or
+   major task group, when a blocker or deviation appears, and after
+   verification finishes.
+6. Use shell commands only for bounded repo-local inspection, verification, or
+   build/test support for the assigned plan.
+7. Shell must not own Blueprint persistence, MCP writes, approvals, routing,
+   or phase-level orchestration.
+8. If the plan depends on missing substrate, hidden state, unavailable secrets,
    auth-gated systems, or unapproved destructive operations, stop and return a
    blocker instead of guessing.
-8. Apply the plan's tasks in dependency order unless the saved plan explicitly
+9. Apply the plan's tasks in dependency order unless the saved plan explicitly
    allows safe reordering.
-9. Re-run only the verification needed to prove the touched acceptance criteria;
+10. Re-run only the verification needed to prove the touched acceptance criteria;
    if broader failures appear, report them without claiming they were fixed.
-10. Keep partial runs honest. A plan is not complete just because code changed;
+11. Keep partial runs honest. A plan is not complete just because code changed;
     it is complete only when the required acceptance evidence exists.
+
+## Progress Checkpoint Contract
+
+- For long-running or interactive execution, emit a progress checkpoint when
+  scope is resolved, after each assigned plan or major task group, when a
+  blocker or deviation appears, and after verification finishes.
+- Each checkpoint must surface the resolved scope, active stage, pending gate,
+  execution mode, and next safe action.
+- The parent command owns user-facing orchestration and coordination around
+  checkpoints, including approvals plus Gemini-native `update_topic`,
+  `write_todos`, and `ask_user` behavior.
+
+## Shell Isolation
+
+- `run_shell_command` is allowed only for bounded repo-local inspection,
+  verification, or build/test support tied to the assigned plan.
+- Shell must not own Blueprint persistence, MCP writes, approvals, routing, or
+  phase-level orchestration.
+- Treat shell output as supporting evidence for `## Verification Evidence`,
+  not as a persistence path or routing decision.
 
 ## Summary Contract
 
@@ -82,6 +116,9 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
   that support each claimed acceptance result.
 - In `## Deviations And Follow-Ups`, call out skipped tasks, blockers, or scope
   adjustments with exact reasons.
+- For long-running or interactive runs, checkpoint notes in `## Plan Outcome`
+  or `## Deviations And Follow-Ups` must identify the resolved scope, active
+  stage, pending gate, execution mode, and next safe action.
 - In `## Summary Draft`, provide concise markdown the parent command can persist
   through `blueprint_phase_summary_write`, including delivered work, evidence,
   and unresolved gaps when the run is partial.
@@ -118,4 +155,5 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - Do not mutate `.blueprint` planning/control artifacts, command docs, or agent
   definitions unless the assigned plan explicitly owns them.
 - Do not invent MCP results, hidden approvals, or completed acceptance criteria.
-- Do not reintroduce `.planning`, legacy slash-command surfaces, or script-owned persistence.
+- Do not reintroduce `.planning`, legacy slash-command surfaces, or
+  script-owned persistence.

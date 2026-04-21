@@ -209,6 +209,25 @@ test("execution and validation contracts stay explicit across manifests, docs, s
     executorAgent,
     /resolved numeric phase,\s+the numeric\s+`planId` for the matching saved plan/i
   );
+  assert.match(executorAgent, /## Progress Checkpoint Contract/);
+  assert.match(
+    executorAgent,
+    /resolved scope,\s+active stage,\s+pending gate,\s+execution mode,\s+and next safe action/i
+  );
+  assert.match(executorAgent, /when scope is resolved/i);
+  assert.match(executorAgent, /after each assigned plan or major task group/i);
+  assert.match(executorAgent, /when a blocker or deviation appears/i);
+  assert.match(executorAgent, /after verification finishes/i);
+  assert.match(executorAgent, /user-facing orchestration and coordination/i);
+  assert.match(executorAgent, /`update_topic`,[\s\S]*`write_todos`, and `ask_user`/i);
+  assert.match(
+    executorAgent,
+    /bounded repo-local inspection,[\s\S]*verification,[\s\S]*build\/test support/i
+  );
+  assert.match(
+    executorAgent,
+    /Shell must not own Blueprint persistence,[\s\S]*MCP writes,[\s\S]*approvals,[\s\S]*routing,[\s\S]*phase-level orchestration/i
+  );
 
   assert.match(validateCommand, /returned `path` plus `summaryPaths` are authoritative/i);
   assert.match(validateCommand, /artifactId: "phase\.verification"/);
