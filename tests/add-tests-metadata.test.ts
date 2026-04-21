@@ -7,13 +7,19 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
 
-test("add-tests manifest references validation/report tools, bounded agents, and safe follow-up routing", async () => {
+test("add-tests manifest references visibility, validation/report tools, bounded agents, and safe follow-up routing", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-add-tests.toml"),
     "utf8"
   );
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
+  assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(commandFile, /current verification status/i);
+  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /Prefer Gemini CLI's built-in `ask_user` tool/i);
   assert.match(commandFile, /`blueprint-executor` subagent/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);
 
@@ -22,6 +28,7 @@ test("add-tests manifest references validation/report tools, bounded agents, and
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",
     "blueprint_artifact_validate",
@@ -57,6 +64,9 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-executor/);
   assert.match(skillFile, /blueprint-verifier/);
+  assert.match(skillFile, /verification status/i);
+  assert.match(skillFile, /update_topic plus `write_todos`/i);
+  assert.match(skillFile, /Use `ask_user` for structured scope or breadth decisions/i);
   assert.match(skillFile, /add-tests-<phase>/);
   assert.match(skillFile, /\/blu-code-review <phase>/);
 });

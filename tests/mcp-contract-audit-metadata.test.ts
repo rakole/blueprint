@@ -260,9 +260,18 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(verifyDoc, /next safe action stays on `\/blu-verify-work <phase>`/i);
   assert.match(verifyDoc, /separate `ask_user` confirmation path/i);
 
+  assert.match(addTestsCommand, /Execution profile: `long-running-mutation`/);
+  assert.match(addTestsCommand, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(addTestsCommand, /current verification status/i);
+  assert.match(addTestsCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(addTestsCommand, /Prefer Gemini CLI's built-in `ask_user` tool/i);
   assert.match(addTestsCommand, /bare report name `add-tests-<phase>`/i);
   assert.match(addTestsCommand, /returned `path` plus `summaryPaths` as authoritative/i);
+  assert.match(addTestsCommand, /tool-owned `written` and `status` result/i);
   assert.match(addTestsDoc, /## Validation And Report Contract/);
+  assert.match(addTestsDoc, /## Shared Runtime Contract/);
+  assert.match(addTestsDoc, /## In-Flight Progress Contract/);
+  assert.match(addTestsDoc, /pending gates, verification status, and the next safe action explicit while add-tests is in flight/i);
   assert.match(addTestsDoc, /bare report name `add-tests-<phase>`/i);
   assert.match(validationSkill, /artifact enum `verification` or `uat`/i);
   assert.match(validationSkill, /Canonical Validation Contracts/);
@@ -271,6 +280,8 @@ test("execution and validation contracts stay explicit across manifests, docs, s
     validationSkill,
     /keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/i
   );
+  assert.match(validationSkill, /verification status/i);
+  assert.match(validationSkill, /update_topic plus `write_todos`/i);
   assert.match(validationSkill, /ask_user/);
   assert.match(validationSkill, /review`, `skip`, or `stop`/i);
   assert.match(validationSkill, /artifactId: "phase\.verification"/);
