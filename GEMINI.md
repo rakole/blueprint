@@ -8,6 +8,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - Phase 3 discovery shipped on 2026-04-11.
 - The live runtime now includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-add-tests`, `/blu-fast`, `/blu-quick`, `/blu-debug`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, `/blu-explore`, `/blu-docs-update`, `/blu-list-phase-assumptions`, `/blu-code-review`, `/blu-code-review-fix`, `/blu-audit-fix`, `/blu-secure-phase`, `/blu-review`, `/blu-ui-review`, `/blu-pr-branch`, `/blu-ship`, `/blu-undo`, and `/blu-cleanup`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, test-generation, lightweight execution, debugging, governance, roadmap-admin, capture, docs, review, review-fix, and maintenance contracts aligned while later commands remain blocked until their substrate exists.
 - Runtime routing must still surface only commands whose catalog entry is `implemented`.
+- Host-facing docs should keep using the shared effectiveness-spine vocabulary: execution profile, stage, pending gate/status, and next safe action. When Gemini-only helpers are unavailable, Blueprint should describe the fallback honestly rather than implying tool parity.
 
 ## Command Namespace
 
@@ -73,6 +74,7 @@ Blueprint is a Gemini-native planning and execution system for repository work.
 - Commands own UX and routing.
 - MCP tools own persistent reads and writes.
 - Do not create or mutate Blueprint artifacts through prompt-only prose when an MCP tool is responsible for the change.
+- Host docs may describe Gemini-only helpers such as `ask_user`, `write_todos`, `update_topic`, tracker tools, and resource tools, but they must also state the non-Gemini fallback posture instead of promising those helpers everywhere.
 - When you need to name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form `mcp_blueprint_<toolName>`.
 - Never try to reach Blueprint MCP tools through shell wrappers such as `mcp use ...`, `blueprint-mcp ...`, or ad-hoc `node -e` SDK scripts. If a Blueprint MCP tool is unavailable, say the Blueprint MCP server is disconnected or undiscovered and ask the user to check `/mcp` or restart Gemini CLI.
 

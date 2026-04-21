@@ -3,6 +3,7 @@
 ## Purpose
 
 This file keeps its historical name in the repo, but the shared constraints below apply to both Gemini CLI and Tabnine CLI unless a bullet explicitly calls out one host. It exists so future implementation sessions do not accidentally drift back toward legacy assumptions that only made sense in a different host environment.
+Blueprint remains Gemini-first, but the shared contract must still describe honest fallback behavior for hosts that do not expose Gemini-only helpers.
 
 ## Locked Runtime Constraints
 
@@ -22,6 +23,7 @@ This file keeps its historical name in the repo, but the shared constraints belo
 - Bundle runtime code into `dist/` before release so `gemini extensions install https://github.com/<repo>` and `tabnine extensions install https://github.com/<repo>` work without post-install setup.
 - Keep commands thin and deterministic by routing filesystem changes through MCP tools with explicit return shapes.
 - When Blueprint needs structured clarification or confirmation, prefer Gemini CLI's built-in `ask_user` dialog instead of imitating questionnaires in plain assistant prose.
+- When docs or prompts name the shared effectiveness-spine vocabulary, use the same execution-profile and stage/status terms across hosts, and state the fallback path when `ask_user`, `write_todos`, `update_topic`, tracker tools, or resource tools are not available.
 - Prefer direct command specs and shared contracts over hidden runtime conventions.
 - Separate project-local artifacts from maintenance-only global registries to keep `.blueprint/` portable across repos.
 - Treat config precedence, migration, and defaults loading as MCP-owned behavior rather than per-command prompt logic.

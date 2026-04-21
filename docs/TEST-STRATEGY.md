@@ -113,7 +113,15 @@ Every command spec in `docs/commands/` should yield:
 
 Security-sensitive command or MCP updates should also add at least one regression that proves the shared hardening layer is actually exercised instead of bypassed.
 
+For the shared effectiveness-spine contract layer, keep the checks narrow and metadata-only:
+
+- confirm each aligned doc names its execution profile, shared stage vocabulary, and in-flight status fields
+- confirm host-facing docs state the fallback posture when Gemini-only helpers are unavailable
+- confirm implemented-only exposure is preserved in router-facing guidance
+- avoid adding runtime integration tests for the host-doc alignment slice itself
+
 ## Non-Goals
 
 - no test coverage for omitted commands
 - no test reliance on an installer-generated runtime conversion layer
+- no runtime behavior assertions for the host-doc alignment slice beyond doc and metadata consistency
