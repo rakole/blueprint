@@ -213,9 +213,10 @@ ${summaryChanges}
 }
 
 test("code-review docs and catalog metadata promote the review scope slice to implemented", async () => {
-  const [catalogMarkdown, skillsMarkdown] = await Promise.all([
+  const [catalogMarkdown, skillsMarkdown, commandDoc] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/code-review.md"), "utf8")
   ]);
 
   assert.match(
@@ -226,6 +227,14 @@ test("code-review docs and catalog metadata promote the review scope slice to im
     skillsMarkdown,
     /\| `blueprint-reviewer` \| `implemented` \| Produce bounded code review findings from a resolved Blueprint scope \|/
   );
+  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(
+    commandDoc,
+    /resolved scope, active stage, pending gate, execution mode, rolling finding counts or severity buckets, artifact status, and next safe action/i
+  );
+  assert.match(commandDoc, /`update_topic` tool and keep a compact review checklist with `write_todos`/);
 });
 
 test("blueprint_review_scope prefers summary changed files over plan files when no explicit scope is provided", async (t) => {

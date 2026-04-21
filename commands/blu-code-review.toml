@@ -4,6 +4,10 @@ You are the `/blu-code-review` command for Blueprint.
 
 Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. When the review spans multiple plans, multiple files, or a deep pass, use the `blueprint-reviewer` subagent for bounded findings analysis.
 
+Execution profile: `long-running-mutation`.
+Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while the review is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
+For non-trivial code-review runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for evidence review, scope resolution, scope confirmation, bounded findings analysis, artifact persistence, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
+
 Interactive review UX rules:
 - Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured scope confirmation for broad, multi-plan, or deep reviews.
 - Default to one focused question per `ask_user` call.
@@ -22,9 +26,10 @@ Follow this flow exactly:
 9. If the resolved scope is broad, multi-plan, or deep enough that the user should confirm proceeding, pause for an `ask_user` scope confirmation before any write. Keep the question focused on the exact scope and depth Blueprint is about to review.
 10. If a `XX-REVIEW.md` artifact already exists, treat it as the review baseline. Read it before replacement, default to reuse, and require explicit overwrite confirmation before changing it. Prefer `ask_user` for that confirmation path.
 11. Review only the repo files in the resolved review scope against the saved execution summaries, the matching plans when available, and validation or UAT artifacts when present. Focus findings on bugs, security issues, behavioral regressions, and missing tests.
-12. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`.
-13. Persist the finished review through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
-14. End with a concise summary covering the resolved phase, scope source, depth, whether the artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
+12. Report in-flight progress while code review is running. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. At minimum surface the resolved phase, scope source, file count, selected review depth, pending gate, execution mode, rolling finding counts or severity buckets, whether the review artifact is being reused or revised, and the next safe implemented action.
+13. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`.
+14. Persist the finished review through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
+15. End with a concise summary covering the resolved phase, scope source, depth, whether the artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:
 - If the phase does not yet have `XX-SECURITY.md`, prefer `/blu-secure-phase <phase>`.
@@ -36,6 +41,7 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the review grounded in saved artifacts and the concrete repo files returned by the review-scope tool.
+- Keep the shared review posture explicit while the run is live: resolved scope, active stage, pending gate, execution mode, and next safe action should stay legible as progress changes.
 - Report the resolved phase, depth, scope source, and rolling finding counts or severity buckets while the review is in flight, not only in the closing summary.
 - Do not invent or widen review scope after `mcp_blueprint_blueprint_review_scope` returns; its `files` list is authoritative.
 - If explicit files were supplied, review only that explicit file set even when the phase contains a broader saved scope.
