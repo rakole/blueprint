@@ -36,6 +36,14 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - persistent writes remain phase-scoped inside `.blueprint/`
 - follow-up routing stays inside the implemented Blueprint surface
 
+## Shared Visibility Contract
+
+- Execution profile for `validate-phase`, `verify-work`, and the long-running parts of `add-tests`: `long-running-mutation`
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- When a validation-family run is non-trivial, keep those status fields visible with `update_topic`, `write_todos`, or an honest prose fallback rather than inventing persistence outside MCP.
+- Keep validation saved-summary-first: the `Execute` stage is bounded verifier analysis grounded in saved summaries and existing validation artifacts, not direct repo mutation or prompt-memory reconstruction.
+
 ## Required Inputs
 
 - `docs/commands/validate-phase.md`
@@ -91,12 +99,14 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 1. Resolve the target phase and require execution summaries before validation begins.
 2. Read summary index and relevant summary artifacts first so validation is grounded in the saved execution evidence.
-3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
-4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
-5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
-6. Normalize the final validation draft to the canonical `phase.verification` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths in the contract-defined evidence section, keep all required section names unchanged, and self-check the normalized draft against the returned contract before writing.
-7. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-8. Update `STATE.md` with the validation result and the next safe implemented action. Route valid ready-for-UAT verification to `/blu-verify-work <phase>`, and route PARTIAL or BLOCKED verification back to `/blu-validate-phase <phase>` for repair.
+3. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
+4. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update. When the saved artifact would change, keep the overwrite confirmation gate explicit instead of treating replacement as the default.
+5. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
+6. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
+7. Keep the validation pass saved-summary-first: `Execute` means bounded validation analysis over saved summaries plus any existing verification artifact, not direct repo mutation or fabrication from chat history.
+8. Normalize the final validation draft to the canonical `phase.verification` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths in the contract-defined evidence section, keep all required section names unchanged, and self-check the normalized draft against the returned contract before writing.
+9. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
+10. Update `STATE.md` with the validation result and the next safe implemented action. Route valid ready-for-UAT verification to `/blu-verify-work <phase>`, and route PARTIAL or BLOCKED verification back to `/blu-validate-phase <phase>` for repair.
 
 ### `verify-work`
 

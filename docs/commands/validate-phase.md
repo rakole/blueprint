@@ -3,8 +3,15 @@
 |---|---|
 | Wave | `1` |
 | Family | `Core Lifecycle` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
 
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `validate-phase` uses the shared long-running-mutation posture: resolve the target phase, read saved execution evidence and any existing verification artifact, decide whether validation can reuse or revise the current artifact, execute bounded verifier analysis, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
+- Keep the saved-summary-first contract explicit throughout the run: execution summaries are the validation baseline, overwrite confirmation is the pending gate when an existing `XX-VERIFICATION.md` would change, and the next safe action stays on `/blu-validate-phase <phase>` until the saved verification artifact is ready for `/blu-verify-work`.
 
 ## Purpose
 
@@ -31,6 +38,13 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: writes `XX-VERIFICATION.md` through MCP and updates `.blueprint/STATE.md`.
+- In-flight validation should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
+
+## In-Flight Progress Contract
+
+- For non-trivial validation runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact validation checklist with `write_todos`.
+- Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, and next safe action as the run moves from target resolution through saved-summary review, verifier analysis, persistence, post-write validation, and routing.
+- Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 
 
 ## Blueprint And Global State Reads
@@ -140,6 +154,7 @@
 
 - Reads and writes only the selected phase scope.
 - Reads completed execution summaries and any existing validation artifact before replacement.
+- Keeps verification stages, pending gates, and the next safe action explicit while validation is in flight.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
