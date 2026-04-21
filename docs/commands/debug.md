@@ -4,7 +4,14 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
 
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `debug` uses the shared interactive-read posture for evidence gathering, explicit follow-up decisions, report persistence, and implemented-command rerouting.
+- `debug` does not imply tracker-backed branching, hidden fix execution, or silent todo capture.
 
 ## Purpose
 
@@ -30,7 +37,8 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Writes the declared Blueprint artifacts, may inspect repo evidence through shell or tests, and only crosses from diagnosis into fix work after an explicit follow-up gate.
+- In-flight posture when the run pauses on a decision: keeps the resolved scope, active stage, pending gate, execution mode, and next safe action explicit.
 
 
 ## Blueprint And Global State Reads
@@ -59,7 +67,15 @@
 
 - Persist the durable debug report through `blueprint_artifact_report_write` with the bare report name `debug-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
-- When capturing a todo follow-up, append through `blueprint_artifact_mutate_index` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
+- Report persistence is independent from follow-up capture; writing `debug-latest` must not silently create a todo.
+- When capturing a todo follow-up, append through `blueprint_artifact_mutate_index` only after the user explicitly asks for capture or confirms that the follow-up should become a todo. Treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
+
+## Diagnose-Only And Follow-Up Gates
+
+- `--diagnose` keeps the run in diagnose-only mode until the user explicitly confirms any fix attempt after seeing the diagnosis.
+- When the investigation surfaces a concrete next step, stop on an explicit follow-up gate: keep the run report-only, capture a todo, route to `/blu-quick`, route to `/blu-plan-phase`, or defer to `/blu-progress` when multiple implemented follow-ups remain viable.
+- Confirm report replacement before overwriting `.blueprint/reports/debug-latest.md`.
+- Use one explicit decision boundary for follow-up capture instead of silently turning findings into todos.
 
 
 ## Skills And Subagents
@@ -98,6 +114,7 @@
 
 
 - Confirm fix attempts when the command was invoked in diagnose-only mode.
+- Confirm whether a follow-up should stay report-only, become a todo, or reroute into another implemented command.
 - Confirm report replacement before overwriting `.blueprint/reports/debug-latest.md`.
 
 
@@ -124,6 +141,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Persists the durable investigation report through `.blueprint/reports/debug-latest.md`.
+- Makes follow-up capture explicit instead of silently creating todos from report findings.
 - Treats `--diagnose` as a confirmation gate for any fix attempt.
 
 
@@ -133,4 +151,3 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `debug` happy-path fixture.
-

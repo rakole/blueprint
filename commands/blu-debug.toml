@@ -17,15 +17,20 @@ Follow this flow exactly:
    - returning a compact diagnosis, confidence level, and next-step options
 6. Keep the scope investigative. If the issue reveals a broad implementation ask, stop and route to `/blu-quick` for a bounded fix or `/blu-plan-phase` for a larger saved-plan rollout instead of improvising a wide refactor inside `debug`.
 7. Persist the durable investigation report through `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical report name `debug-latest`, not a `.blueprint/reports/...` path. If that report already exists and the user did not explicitly approve replacement, require explicit overwrite confirmation before replacing it. Treat the returned `path` as authoritative.
-8. If the investigation surfaces a concrete follow-up task that should be captured, use `mcp_blueprint_blueprint_artifact_mutate_index` only after the user explicitly asks to capture it or confirms the follow-up should become a todo. Append through `entry.text` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
-9. After the report is written, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-debug` as the active command and points to the next safe implemented action. Prefer `/blu-progress` when the best follow-up is not narrower.
-10. Return a concise completion summary covering the issue investigated, the evidence used, whether the run stayed diagnose-only, the report status, any captured todo follow-up, and the next safe implemented action.
+8. If the investigation surfaces a concrete next step, stop on an explicit follow-up gate after the diagnosis: keep the run report-only, capture a todo, route to `/blu-quick`, route to `/blu-plan-phase`, or defer to `/blu-progress` when multiple implemented follow-ups remain viable.
+9. Use `mcp_blueprint_blueprint_artifact_mutate_index` only after the user explicitly asks to capture a todo or confirms the follow-up should become one. Append through `entry.text` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
+10. After the report is written, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-debug` as the active command and points to the next safe implemented action. Prefer `/blu-progress` when the best follow-up is not narrower.
+11. Return a concise completion summary covering the issue investigated, the evidence used, whether the run stayed diagnose-only, whether the follow-up stayed report-only, became a captured todo, or rerouted into another implemented command, the report status, and the next safe implemented action.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_report_write`, `mcp_blueprint_blueprint_artifact_mutate_index`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Execution profile: `interactive-read`.
+- Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` only when those stages are actually reached during the investigation.
+- Keep the resolved scope, active stage, pending gate, execution mode, and next safe action explicit whenever the run is waiting on diagnose-only confirmation, report overwrite approval, follow-up todo capture, or implemented-command rerouting.
 - Keep Blueprint-owned writes inside `.blueprint/reports/debug-latest.md`, optional `.blueprint/todos/TODO.md`, and `.blueprint/STATE.md`.
 - Do not hand-build report paths or todo ids; use the MCP return values as authoritative.
 - Do not invent hidden debug state, checkpoint files, or `.planning/` helpers.
 - Treat `--diagnose` as confirmation-gated for any fix attempt.
+- Keep report persistence separate from follow-up capture; writing `debug-latest` must not silently create a todo.
 - Do not present planned-only commands as runnable follow-ups; prefer `/blu-quick`, `/blu-plan-phase`, `/blu-validate-phase`, or `/blu-progress` only when they fit the evidence.
 """
