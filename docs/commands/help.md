@@ -3,11 +3,19 @@
 |---|---|
 | Wave | `0` |
 | Family | `Foundation` |
+| Execution profile | `router` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `help` stays inside the shared router posture: resolve the repo state, read the current command surface, and route to the next safe implemented command without implying hidden mutation.
+- When the repo is waiting on a prerequisite, `help` should name that pending gate in concrete terms instead of glossing over it.
 
 ## Purpose
 
-`help` is Blueprint's command for showing available Blueprint commands and usage guidance. In Blueprint it stays host-native and state-aware, but safe command recommendations must be limited to the shipped runtime surface.
+`help` is Blueprint's command for showing available Blueprint commands and usage guidance. In Blueprint it stays host-native, state-aware, and aligned to the shared router profile, but safe command recommendations must be limited to the shipped runtime surface.
 
 ## Command Path And Examples
 
@@ -23,14 +31,15 @@
 
 ## Outputs
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
+- User-facing result: a concise completion summary plus the next logical action when applicable, with waiting state called out when Blueprint is still uninitialized or partially initialized.
 - Repo side effects: No durable artifact writes are planned.
-- Safe command recommendations must be limited to catalog entries whose `implemented` field is `true`.
+- Safe command recommendations must be limited to catalog entries whose `implemented` field is `true`, and blocked or planned commands must be described as not runnable.
 
 ## Blueprint And Global State Reads
 
 - retained command catalog metadata
 - repo readiness via project status
+- waiting state from project status and command availability
 
 ## Blueprint And Global State Writes
 
@@ -82,6 +91,8 @@
 - If Blueprint is not initialized, prefer `/blu-new-project`.
 - If Blueprint is partial, prefer `/blu-health`.
 - If a requested command is blocked, explain the missing substrate instead of presenting it as runnable.
+- If the current state is waiting on a missing artifact, verification debt, or blocked substrate, say so plainly instead of masking it as a general recommendation.
+- Keep the next safe action explicit even when the current state is only a waiting state.
 
 ## Acceptance Criteria
 
@@ -89,10 +100,10 @@
 - Uses only documented read-oriented MCP queries for inspection and routing.
 - Never routes to omitted commands or hides destructive behavior behind an implicit step.
 - Never recommends a planned-only or blocked command as if it were already shipped.
+- Keeps the shared router profile visible in the command contract.
 
 ## Test Cases
 
 - Fresh repo fixture.
 - Partially initialized Blueprint repo fixture.
 - Direct `help` happy-path fixture.
-

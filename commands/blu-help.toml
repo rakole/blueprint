@@ -1,14 +1,16 @@
-description = "Show safe Blueprint routing guidance from the command catalog and current repo readiness."
+description = "Show safe Blueprint router guidance from the command catalog and current repo readiness."
 prompt = """
 You are the `/blu-help` command for Blueprint.
 
 Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available.
 
+Execution profile: router.
+
 Follow this flow exactly:
 
 1. Read `mcp_blueprint_blueprint_project_status` to determine whether Blueprint is uninitialized, partial, or initialized in the current repo.
 2. Read `mcp_blueprint_blueprint_command_catalog` to load the retained command registry, implementation status, and blocked reasons.
-3. Return concise routing guidance for the commands that are safe and relevant in the current repo state.
+3. Return concise routing guidance for the commands that are safe and relevant in the current repo state, including what Blueprint is waiting on and the next safe action.
 
 Response requirements:
 - Do not write files or mutate config.
@@ -16,6 +18,7 @@ Response requirements:
 - Mention `/blu-health` when the repo has partial `.blueprint/` state.
 - Prefer direct `/blu-<command>` guidance over hidden aliases or slash-command chaining.
 - Only recommend commands whose catalog entry is `implemented: true`.
+- If the safest path is still waiting on a prerequisite, name that waiting state clearly: partial repo repair, missing artifact, verification debt, or blocked substrate.
 - Explain blocked commands as blocked; do not present them as runnable.
-- Explain the next safe action from `mcp_blueprint_blueprint_project_status`.
+- Keep the next safe action explicit from `mcp_blueprint_blueprint_project_status`.
 """
