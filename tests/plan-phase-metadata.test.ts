@@ -33,6 +33,10 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /actual saved context content|current context artifact content/i);
   assert.match(commandFile, /relevant discovery artifacts/i);
   assert.match(commandFile, /explicit confirmation path/i);
+  assert.match(commandFile, /requirements-coverage check|requirements coverage/i);
+  assert.match(commandFile, /too broad for one coherent plan|split it into prioritized dependency-aware waves/i);
+  assert.match(commandFile, /bounded number of passes|stop the loop/i);
+  assert.match(commandFile, /base: "synced"/);
   assert.match(commandFile, /planner\/checker revision loop|re-run the checker/i);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /Omit `planId` to auto-assign the next available slot/i);
@@ -69,6 +73,10 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /blueprint-checker/);
   assert.match(skillFile, /explicit overwrite confirmation/i);
   assert.match(skillFile, /revision loop/i);
+  assert.match(skillFile, /requirements-coverage check|requirements coverage/i);
+  assert.match(skillFile, /too broad for one coherent plan|split it into prioritized dependency-aware waves/i);
+  assert.match(skillFile, /bounded number of passes|stop the loop/i);
+  assert.match(skillFile, /base: "synced"/);
   assert.match(skillFile, /\/blu-progress/);
   assert.match(skillFile, /Omit `planId` to auto-assign the next slot/i);
   assert.match(skillFile, /numeric plan id when targeting a specific plan/i);
@@ -89,6 +97,10 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /artifact_contract_read/);
   assert.match(docFile, /artifactId: "phase\.plan"/);
   assert.match(docFile, /contract\.authoringTemplate/);
+  assert.match(docFile, /requirements-coverage check|requirements coverage/i);
+  assert.match(docFile, /too broad for one coherent plan|split\/prioritize/i);
+  assert.match(docFile, /bounded number of passes|stop the loop/i);
+  assert.match(docFile, /base: "synced"/);
   assert.match(docFile, /Omit `planId` to let Blueprint auto-assign the next available plan slot/i);
   assert.match(docFile, /If targeting a specific plan, pass only the numeric plan id/i);
   assert.match(docFile, /numeric inputs such as `1` are also accepted/i);
@@ -99,4 +111,32 @@ test("plan-phase command doc explains the plan write contract for planId", async
     docFile,
     /--auto|--research|--skip-research|--gaps|--skip-verify|--prd|--reviews|--text/
   );
+});
+
+test("plan-phase planner and checker guidance stays tied to the live contract and bounded recovery loop", async () => {
+  const [plannerFile, checkerFile, mcpToolsDoc] = await Promise.all([
+    readFile(path.join(repoRoot, "agents/blueprint-planner.md"), "utf8"),
+    readFile(path.join(repoRoot, "agents/blueprint-checker.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8")
+  ]);
+
+  assert.match(plannerFile, /live phase\.plan contract/i);
+  assert.match(plannerFile, /authoringTemplate/i);
+  assert.match(plannerFile, /requirements-coverage map/i);
+  assert.match(plannerFile, /too broad for one coherent plan|prioritize it|split it into smaller slices/i);
+  assert.match(plannerFile, /bounded number of passes|stop and return the best coherent draft/i);
+
+  assert.match(checkerFile, /live phase\.plan contract/i);
+  assert.match(checkerFile, /authoringTemplate/i);
+  assert.match(checkerFile, /coverage readiness/i);
+  assert.match(checkerFile, /prioritized waves|narrower phase slice/i);
+  assert.match(checkerFile, /bounded split|targeted revision/i);
+
+  assert.match(
+    mcpToolsDoc,
+    /`plan-phase` uses the canonical `phase\.plan` contract read, plan index, plan read and write tools, config, artifact validation, and state update tools\./i
+  );
+  assert.match(mcpToolsDoc, /requirements-coverage check before finalization/i);
+  assert.match(mcpToolsDoc, /prioritized waves when needed/i);
+  assert.match(mcpToolsDoc, /synced state recomputation/i);
 });

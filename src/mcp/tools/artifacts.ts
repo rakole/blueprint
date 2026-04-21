@@ -2313,6 +2313,283 @@ function validateRequiredMarkdownSections(
   return issues;
 }
 
+function extractTaskSubsection(taskBlock: string, subsectionHeading: string): string {
+  const escapedHeading = escapeRegex(subsectionHeading);
+  const match = taskBlock.match(
+    new RegExp(`(?:^|\\n)#### ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n#### |\\n### |$)`)
+  );
+
+  return match?.[1]?.trim() ?? "";
+}
+
+function isBlankOrPlaceholderPlanLine(line: string): boolean {
+  return (
+    line.length === 0 ||
+    /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(
+      line
+    ) ||
+    /replace with/i.test(line)
+  );
+}
+
+function isSubjectivePlanLine(line: string): boolean {
+  return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(
+    line
+  );
+}
+
+function isRepoRelativePlanPath(value: string): boolean {
+  const normalized = value.trim().replace(/\\/g, "/");
+
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  if (
+    path.isAbsolute(normalized) ||
+    /^[A-Za-z]:\//.test(normalized) ||
+    normalized.startsWith("//") ||
+    normalized.startsWith("~")
+  ) {
+    return false;
+  }
+
+  const segments = normalized.split("/");
+
+  if (segments[0] === ".") {
+    segments.shift();
+  }
+
+  if (segments.length === 0) {
+    return false;
+  }
+
+  return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+}
+
+function isGlobPlanPath(value: string): boolean {
+  return /[*?\[\]{}]/.test(value.trim().replace(/\\/g, "/"));
+}
+
+function isBlueprintCommandReference(value: string): boolean {
+  return /^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(value.trim());
+}
+
+function validatePlanPathList(entries: string[], label: string): string[] {
+  const issues: string[] = [];
+
+  for (const entry of entries) {
+    const normalizedEntry = entry.trim();
+
+    if (normalizedEntry.length === 0) {
+      issues.push(`Plan frontmatter ${label} entries must not be blank.`);
+      continue;
+    }
+
+    if (isGlobPlanPath(normalizedEntry)) {
+      issues.push(
+        `Plan frontmatter ${label} entry must be a concrete repo-relative path, not a glob pattern: ${entry}.`
+      );
+      continue;
+    }
+
+    if (!isRepoRelativePlanPath(normalizedEntry)) {
+      issues.push(
+        `Plan frontmatter ${label} entry must be a repo-relative path, not an absolute or traversing path: ${entry}.`
+      );
+    }
+  }
+
+  return issues;
+}
+
+function extractTaskPathReferenceCandidates(section: string): string[] {
+  const candidates = new Set<string>();
+
+  for (const line of section.replace(/\r\n/g, "\n").split("\n")) {
+    const tokens = line.match(/`[^`]+`|[^\s]+/g) ?? [];
+
+    for (const token of tokens) {
+      const normalizedToken = token
+        .trim()
+        .replace(/^[`"'([<{]+/, "")
+        .replace(/[)`"'\])>.,;:!?]+$/, "");
+
+      if (normalizedToken.length === 0 || /^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedToken)) {
+        continue;
+      }
+
+      const normalizedPath = normalizedToken.replace(/\\/g, "/");
+
+      if (isBlueprintCommandReference(normalizedPath)) {
+        continue;
+      }
+
+      if (
+        normalizedPath.includes("/") ||
+        normalizedPath.startsWith(".") ||
+        normalizedPath.startsWith("~") ||
+        /^[A-Za-z]:/.test(normalizedPath) ||
+        normalizedToken.includes("\\")
+      ) {
+        candidates.add(normalizedToken);
+      }
+    }
+  }
+
+  return [...candidates];
+}
+
+function validatePlanTaskPathList(section: string, label: string): string[] {
+  const issues: string[] = [];
+
+  for (const entry of extractTaskPathReferenceCandidates(section)) {
+    if (isGlobPlanPath(entry)) {
+      issues.push(
+        `${label} entry must be a concrete repo-relative path, not a glob pattern: ${entry}.`
+      );
+      continue;
+    }
+
+    if (!isRepoRelativePlanPath(entry)) {
+      issues.push(
+        `${label} entry must be a repo-relative path, not an absolute or traversing path: ${entry}.`
+      );
+    }
+  }
+
+  return issues;
+}
+
+function hasConcretePlanSubsectionContent(section: string): boolean {
+  const normalizedSection = stripPlanPlaceholderSignals(section);
+  const meaningfulLines = normalizedSection
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .map((line) => line.replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
+
+  if (meaningfulLines.length === 0) {
+    return false;
+  }
+
+  return meaningfulLines.some((line) => {
+    if (isBlankOrPlaceholderPlanLine(line)) {
+      return false;
+    }
+
+    if (
+      /`[^`]+`/.test(line) ||
+      /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) ||
+      /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) ||
+      /\/blu-[\w-]+(?:\b|$)/i.test(line) ||
+      /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line)
+    ) {
+      return true;
+    }
+
+    if (isSubjectivePlanLine(line)) {
+      return false;
+    }
+
+    const words = line.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g) ?? [];
+
+    return words.length >= 3;
+  });
+}
+
+function validateObjectivePlanBulletList(section: string, artifactLabel: string): string[] {
+  const issues: string[] = [];
+  const normalizedSection = stripPlanPlaceholderSignals(section);
+  const bulletItems = normalizedSection
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line))
+    .map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !isBlankOrPlaceholderPlanLine(line));
+
+  if (bulletItems.length === 0) {
+    issues.push(`${artifactLabel} must include at least one objective bullet.`);
+    return issues;
+  }
+
+  const objectiveSignals = [
+    /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
+    /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/,
+    /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/,
+    /\/blu-[\w-]+(?:\b|$)/i,
+    /`[^`]+`/
+  ] as const;
+
+  for (const bullet of bulletItems) {
+    if (!objectiveSignals.some((signal) => signal.test(bullet))) {
+      if (isSubjectivePlanLine(bullet)) {
+        issues.push(
+          `${artifactLabel} must use objectively checkable bullets instead of subjective language: ${bullet}.`
+        );
+        continue;
+      }
+
+      issues.push(
+        `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
+      );
+    }
+  }
+
+  return issues;
+}
+
+function validatePlanTaskBlock(taskBlock: string, taskNumber: number): string[] {
+  const issues: string[] = [];
+  const lines = taskBlock
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const heading = lines[0] ?? "";
+  const headingText = heading.replace(/^###\s+/, "").trim();
+
+  if (
+    headingText.length === 0 ||
+    /^Task\s+\d+(?::\s*)?$/i.test(headingText) ||
+    /(?:replace with|todo|tbd|placeholder|coming soon|insert here|fill in here)/i.test(headingText)
+  ) {
+    issues.push(`Task ${taskNumber} must use a concrete heading.`);
+  }
+
+  for (const subsectionHeading of ["Read First", "Action", "Acceptance Criteria"]) {
+    const subsection = extractTaskSubsection(taskBlock, subsectionHeading);
+
+    if (!hasConcretePlanSubsectionContent(subsection)) {
+      issues.push(`Task ${taskNumber} subsection ${subsectionHeading} must contain concrete content.`);
+    }
+  }
+
+  for (const subsectionHeading of ["Read First", "Action"]) {
+    const subsection = extractTaskSubsection(taskBlock, subsectionHeading);
+
+    issues.push(
+      ...validatePlanTaskPathList(
+        subsection,
+        `Task ${taskNumber} subsection ${subsectionHeading}`
+      )
+    );
+  }
+
+  const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
+  issues.push(
+    ...validateObjectivePlanBulletList(
+      acceptanceCriteria,
+      `Task ${taskNumber} subsection Acceptance Criteria`
+    )
+  );
+
+  return issues;
+}
+
 function validateLockedMarkers(
   content: string,
   artifactLabel: string,
@@ -3994,15 +4271,26 @@ export function validatePlanArtifactContent(
 
   if (metadata.filesModified.length === 0) {
     issues.push("Plan frontmatter must include at least one file or path in files_modified.");
+  } else {
+    issues.push(...validatePlanPathList(metadata.filesModified, "files_modified"));
   }
 
   if (metadata.readFirst.length === 0) {
     issues.push("Plan frontmatter must include at least one file or path in read_first.");
+  } else {
+    issues.push(...validatePlanPathList(metadata.readFirst, "read_first"));
   }
 
   if (metadata.acceptanceCriteria.length === 0) {
     issues.push(
       "Plan frontmatter must include at least one grep/test-verifiable item in acceptance_criteria."
+    );
+  } else {
+    issues.push(
+      ...validateObjectivePlanBulletList(
+        metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
+        "Plan frontmatter acceptance_criteria"
+      )
     );
   }
 
@@ -4032,16 +4320,16 @@ export function validatePlanArtifactContent(
   }
 
   for (const taskBlock of taskBlocks) {
+    const taskNumberMatch = taskBlock.match(/^###\s+Task\s+(\d+)/m);
+    const taskNumber = taskNumberMatch ? Number.parseInt(taskNumberMatch[1], 10) : taskBlocks.indexOf(taskBlock) + 1;
+
     for (const taskHeading of ["Read First", "Action", "Acceptance Criteria"]) {
-      if (
-        !new RegExp(
-          `(?:^|\\n)#### ${escapeRegex(taskHeading)}\\s*$`,
-          "m"
-        ).test(taskBlock)
-      ) {
+      if (!new RegExp(`(?:^|\\n)#### ${escapeRegex(taskHeading)}\\s*$`, "m").test(taskBlock)) {
         issues.push(`Each task must include a #### ${taskHeading} subsection.`);
       }
     }
+
+    issues.push(...validatePlanTaskBlock(taskBlock, taskNumber));
   }
 
   const verificationSection = extractMarkdownSection(content, "Verification");
@@ -4052,6 +4340,30 @@ export function validatePlanArtifactContent(
   const mustHavesSection = extractMarkdownSection(content, "Must Haves");
   if (!hasSubstantivePlanListContent(mustHavesSection)) {
     issues.push("Plan artifact must include at least one substantive bullet under ## Must Haves.");
+  }
+
+  const normalizedPlanId =
+    metadata.planId && /^\d+$/.test(metadata.planId)
+      ? Number.parseInt(metadata.planId, 10)
+      : null;
+  const dependencyIds = metadata.dependsOn
+    .filter((dependency) => /^\d+$/.test(dependency))
+    .map((dependency) => Number.parseInt(dependency, 10));
+
+  if (metadata.dependsOn.some((dependency) => !/^\d+$/.test(dependency))) {
+    issues.push("Plan frontmatter depends_on entries must be numeric plan ids.");
+  }
+
+  if (new Set(dependencyIds).size !== dependencyIds.length) {
+    issues.push("Plan frontmatter depends_on entries must not repeat plan ids.");
+  }
+
+  if (normalizedPlanId !== null) {
+    for (const dependency of dependencyIds) {
+      if (dependency === normalizedPlanId) {
+        issues.push("Plan frontmatter depends_on entries must not reference the plan itself.");
+      }
+    }
   }
 
   return {

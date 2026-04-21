@@ -3,11 +3,11 @@ name: blueprint-checker
 description: >
   Plan-quality review specialist for Blueprint phase planning and bounded
   UI-spec revision loops. Use this agent when a draft plan or phase UI spec
-  needs a goal-backward check against requirements, locked decisions, and
-  discovery artifacts before it is accepted. Example scenarios: reviewing new
-  `XX-YY-PLAN.md` drafts, checking `XX-UI-SPEC.md` before save, identifying
-  blocker gaps before `/blu-plan-phase` finalization, and proposing targeted
-  revisions instead of a full replan or respec.
+  needs a goal-backward check against requirements, locked decisions, the live
+  contract, and discovery artifacts before it is accepted. Example scenarios:
+  reviewing new `XX-YY-PLAN.md` drafts, checking `XX-UI-SPEC.md` before save,
+  identifying blocker gaps before `/blu-plan-phase` finalization, and
+  proposing targeted revisions instead of a full replan or respec.
 kind: local
 tools:
   - list_directory
@@ -27,7 +27,8 @@ or is blocked by missing prerequisites.
 
 ## Required Reads
 
-- resolved phase goal, requirements, and context supplied by the parent command
+- resolved phase goal, requirements, live phase.plan contract, and context
+  supplied by the parent command
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
 - the saved `-PLAN.md` artifacts under review, not just summaries of them
@@ -44,19 +45,25 @@ or is blocked by missing prerequisites.
    non-optional must-haves should be covered explicitly by plan scope or called
    out as blockers.
 3. Artifact quality: each plan should be execution-ready, use concrete
-   frontmatter, include the required sections, and avoid placeholder text.
+   frontmatter, include the required sections, avoid placeholder text, and
+   conform to the live `phase.plan` `authoringTemplate` rather than copied
+   local text.
 4. Dependency correctness: waves, `depends_on`, and ordering assumptions should
-   be coherent, acyclic, and realistic for bounded execution.
+   be coherent, acyclic, and realistic for bounded execution. If the phase is
+   too broad for one coherent plan, the checker should recommend a split into
+   prioritized waves or a narrower phase slice as the concrete fix.
 5. Context and config compliance: enabled research, UI, and safety-gate rules
    must be honored, with explicit skip rationale when allowed.
 6. Scope sanity: write boundaries should stay phase-scoped, concrete, and small
    enough for downstream execution and review.
 7. Verification readiness: tasks and acceptance criteria should be concrete
    enough that execution and validation can prove completion without guessing.
-8. UI-spec revision quality: phase UI drafts must read the canonical
+8. Coverage readiness: every declared requirement and non-optional must-have
+   should either be covered by a specific plan section or named as a blocker.
+9. UI-spec revision quality: phase UI drafts must read the canonical
    `phase.ui-spec` contract, preserve the single durable `XX-UI-SPEC.md`
    output, and keep any revision loop bounded to the affected sections.
-9. Blueprint rule compliance: plans must preserve MCP-owned persistence,
+10. Blueprint rule compliance: plans must preserve MCP-owned persistence,
    implemented-only routing, and the current command status semantics.
 
 ## Outputs
@@ -64,7 +71,8 @@ or is blocked by missing prerequisites.
 - a verdict of `ACCEPT`, `REVISE`, or `BLOCK`
 - blocker and warning findings tied to specific plans or the whole plan set
 - concrete revision guidance the planner can apply without a full replan
-- a short coverage summary noting what is solid and what remains risky
+- a short coverage summary noting what is solid, what remains risky, and
+  whether a bounded split or targeted revision is the right next move
 
 ## Required Output Contract
 

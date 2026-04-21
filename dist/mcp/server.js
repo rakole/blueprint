@@ -18844,6 +18844,187 @@ function validateRequiredMarkdownSections(content, artifactLabel, headings) {
   }
   return issues;
 }
+function extractTaskSubsection(taskBlock, subsectionHeading) {
+  const escapedHeading = escapeRegex2(subsectionHeading);
+  const match = taskBlock.match(
+    new RegExp(`(?:^|\\n)#### ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n#### |\\n### |$)`)
+  );
+  return match?.[1]?.trim() ?? "";
+}
+function isBlankOrPlaceholderPlanLine(line) {
+  return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(
+    line
+  ) || /replace with/i.test(line);
+}
+function isSubjectivePlanLine(line) {
+  return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(
+    line
+  );
+}
+function isRepoRelativePlanPath(value) {
+  const normalized = value.trim().replace(/\\/g, "/");
+  if (normalized.length === 0) {
+    return false;
+  }
+  if (path3.isAbsolute(normalized) || /^[A-Za-z]:\//.test(normalized) || normalized.startsWith("//") || normalized.startsWith("~")) {
+    return false;
+  }
+  const segments = normalized.split("/");
+  if (segments[0] === ".") {
+    segments.shift();
+  }
+  if (segments.length === 0) {
+    return false;
+  }
+  return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+}
+function isGlobPlanPath(value) {
+  return /[*?\[\]{}]/.test(value.trim().replace(/\\/g, "/"));
+}
+function isBlueprintCommandReference(value) {
+  return /^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(value.trim());
+}
+function validatePlanPathList(entries, label) {
+  const issues = [];
+  for (const entry of entries) {
+    const normalizedEntry = entry.trim();
+    if (normalizedEntry.length === 0) {
+      issues.push(`Plan frontmatter ${label} entries must not be blank.`);
+      continue;
+    }
+    if (isGlobPlanPath(normalizedEntry)) {
+      issues.push(
+        `Plan frontmatter ${label} entry must be a concrete repo-relative path, not a glob pattern: ${entry}.`
+      );
+      continue;
+    }
+    if (!isRepoRelativePlanPath(normalizedEntry)) {
+      issues.push(
+        `Plan frontmatter ${label} entry must be a repo-relative path, not an absolute or traversing path: ${entry}.`
+      );
+    }
+  }
+  return issues;
+}
+function extractTaskPathReferenceCandidates(section) {
+  const candidates = /* @__PURE__ */ new Set();
+  for (const line of section.replace(/\r\n/g, "\n").split("\n")) {
+    const tokens = line.match(/`[^`]+`|[^\s]+/g) ?? [];
+    for (const token of tokens) {
+      const normalizedToken = token.trim().replace(/^[`"'([<{]+/, "").replace(/[)`"'\])>.,;:!?]+$/, "");
+      if (normalizedToken.length === 0 || /^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedToken)) {
+        continue;
+      }
+      const normalizedPath = normalizedToken.replace(/\\/g, "/");
+      if (isBlueprintCommandReference(normalizedPath)) {
+        continue;
+      }
+      if (normalizedPath.includes("/") || normalizedPath.startsWith(".") || normalizedPath.startsWith("~") || /^[A-Za-z]:/.test(normalizedPath) || normalizedToken.includes("\\")) {
+        candidates.add(normalizedToken);
+      }
+    }
+  }
+  return [...candidates];
+}
+function validatePlanTaskPathList(section, label) {
+  const issues = [];
+  for (const entry of extractTaskPathReferenceCandidates(section)) {
+    if (isGlobPlanPath(entry)) {
+      issues.push(
+        `${label} entry must be a concrete repo-relative path, not a glob pattern: ${entry}.`
+      );
+      continue;
+    }
+    if (!isRepoRelativePlanPath(entry)) {
+      issues.push(
+        `${label} entry must be a repo-relative path, not an absolute or traversing path: ${entry}.`
+      );
+    }
+  }
+  return issues;
+}
+function hasConcretePlanSubsectionContent(section) {
+  const normalizedSection = stripPlanPlaceholderSignals(section);
+  const meaningfulLines = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).map((line) => line.replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
+  if (meaningfulLines.length === 0) {
+    return false;
+  }
+  return meaningfulLines.some((line) => {
+    if (isBlankOrPlaceholderPlanLine(line)) {
+      return false;
+    }
+    if (/`[^`]+`/.test(line) || /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) || /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) || /\/blu-[\w-]+(?:\b|$)/i.test(line) || /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line)) {
+      return true;
+    }
+    if (isSubjectivePlanLine(line)) {
+      return false;
+    }
+    const words = line.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g) ?? [];
+    return words.length >= 3;
+  });
+}
+function validateObjectivePlanBulletList(section, artifactLabel) {
+  const issues = [];
+  const normalizedSection = stripPlanPlaceholderSignals(section);
+  const bulletItems = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !isBlankOrPlaceholderPlanLine(line));
+  if (bulletItems.length === 0) {
+    issues.push(`${artifactLabel} must include at least one objective bullet.`);
+    return issues;
+  }
+  const objectiveSignals = [
+    /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
+    /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/,
+    /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/,
+    /\/blu-[\w-]+(?:\b|$)/i,
+    /`[^`]+`/
+  ];
+  for (const bullet of bulletItems) {
+    if (!objectiveSignals.some((signal) => signal.test(bullet))) {
+      if (isSubjectivePlanLine(bullet)) {
+        issues.push(
+          `${artifactLabel} must use objectively checkable bullets instead of subjective language: ${bullet}.`
+        );
+        continue;
+      }
+      issues.push(
+        `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
+      );
+    }
+  }
+  return issues;
+}
+function validatePlanTaskBlock(taskBlock, taskNumber) {
+  const issues = [];
+  const lines = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const heading = lines[0] ?? "";
+  const headingText = heading.replace(/^###\s+/, "").trim();
+  if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || /(?:replace with|todo|tbd|placeholder|coming soon|insert here|fill in here)/i.test(headingText)) {
+    issues.push(`Task ${taskNumber} must use a concrete heading.`);
+  }
+  for (const subsectionHeading of ["Read First", "Action", "Acceptance Criteria"]) {
+    const subsection = extractTaskSubsection(taskBlock, subsectionHeading);
+    if (!hasConcretePlanSubsectionContent(subsection)) {
+      issues.push(`Task ${taskNumber} subsection ${subsectionHeading} must contain concrete content.`);
+    }
+  }
+  for (const subsectionHeading of ["Read First", "Action"]) {
+    const subsection = extractTaskSubsection(taskBlock, subsectionHeading);
+    issues.push(
+      ...validatePlanTaskPathList(
+        subsection,
+        `Task ${taskNumber} subsection ${subsectionHeading}`
+      )
+    );
+  }
+  const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
+  issues.push(
+    ...validateObjectivePlanBulletList(
+      acceptanceCriteria,
+      `Task ${taskNumber} subsection Acceptance Criteria`
+    )
+  );
+  return issues;
+}
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
 }
@@ -19961,13 +20142,24 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   }
   if (metadata.filesModified.length === 0) {
     issues.push("Plan frontmatter must include at least one file or path in files_modified.");
+  } else {
+    issues.push(...validatePlanPathList(metadata.filesModified, "files_modified"));
   }
   if (metadata.readFirst.length === 0) {
     issues.push("Plan frontmatter must include at least one file or path in read_first.");
+  } else {
+    issues.push(...validatePlanPathList(metadata.readFirst, "read_first"));
   }
   if (metadata.acceptanceCriteria.length === 0) {
     issues.push(
       "Plan frontmatter must include at least one grep/test-verifiable item in acceptance_criteria."
+    );
+  } else {
+    issues.push(
+      ...validateObjectivePlanBulletList(
+        metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
+        "Plan frontmatter acceptance_criteria"
+      )
     );
   }
   if (metadata.autonomous === null) {
@@ -19987,14 +20179,14 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
     issues.push("Plan artifact must include at least one task under ## Tasks.");
   }
   for (const taskBlock of taskBlocks) {
+    const taskNumberMatch = taskBlock.match(/^###\s+Task\s+(\d+)/m);
+    const taskNumber = taskNumberMatch ? Number.parseInt(taskNumberMatch[1], 10) : taskBlocks.indexOf(taskBlock) + 1;
     for (const taskHeading of ["Read First", "Action", "Acceptance Criteria"]) {
-      if (!new RegExp(
-        `(?:^|\\n)#### ${escapeRegex2(taskHeading)}\\s*$`,
-        "m"
-      ).test(taskBlock)) {
+      if (!new RegExp(`(?:^|\\n)#### ${escapeRegex2(taskHeading)}\\s*$`, "m").test(taskBlock)) {
         issues.push(`Each task must include a #### ${taskHeading} subsection.`);
       }
     }
+    issues.push(...validatePlanTaskBlock(taskBlock, taskNumber));
   }
   const verificationSection = extractMarkdownSection(content, "Verification");
   if (!hasSubstantivePlanListContent(verificationSection)) {
@@ -20003,6 +20195,21 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   const mustHavesSection = extractMarkdownSection(content, "Must Haves");
   if (!hasSubstantivePlanListContent(mustHavesSection)) {
     issues.push("Plan artifact must include at least one substantive bullet under ## Must Haves.");
+  }
+  const normalizedPlanId = metadata.planId && /^\d+$/.test(metadata.planId) ? Number.parseInt(metadata.planId, 10) : null;
+  const dependencyIds = metadata.dependsOn.filter((dependency) => /^\d+$/.test(dependency)).map((dependency) => Number.parseInt(dependency, 10));
+  if (metadata.dependsOn.some((dependency) => !/^\d+$/.test(dependency))) {
+    issues.push("Plan frontmatter depends_on entries must be numeric plan ids.");
+  }
+  if (new Set(dependencyIds).size !== dependencyIds.length) {
+    issues.push("Plan frontmatter depends_on entries must not repeat plan ids.");
+  }
+  if (normalizedPlanId !== null) {
+    for (const dependency of dependencyIds) {
+      if (dependency === normalizedPlanId) {
+        issues.push("Plan frontmatter depends_on entries must not reference the plan itself.");
+      }
+    }
   }
   return {
     valid: issues.length === 0,
@@ -26099,6 +26306,107 @@ function parsePlanArtifactPath(pathValue, phasePrefix2) {
 function planPathFor(located, planId2) {
   return buildArtifactPath(located.phaseDir, located.phasePrefix, `-${normalizePlanId(planId2)}-PLAN.md`);
 }
+function replacePlanSlotLabel(value, fromPlanId, toPlanId) {
+  return value.replace(
+    new RegExp(`\\bPlan\\s+${fromPlanId}\\b`, "g"),
+    `Plan ${toPlanId}`
+  );
+}
+function extractPlanIdFromFrontmatterLine(line) {
+  const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
+  const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+  if (!rawValue) {
+    return null;
+  }
+  try {
+    return normalizePlanId(rawValue);
+  } catch {
+    return null;
+  }
+}
+function reconcilePlanTitleLine(line, fromPlanId, toPlanId) {
+  const match = line.match(/^(\s*title:\s*)(.+)$/);
+  if (!match) {
+    return null;
+  }
+  const prefix = match[1] ?? "";
+  const rawValue = match[2]?.trim() ?? "";
+  const quoteMatch = rawValue.match(/^(['"])([\s\S]*?)\1$/);
+  const quote = quoteMatch?.[1] ?? "";
+  const value = quoteMatch?.[2] ?? rawValue;
+  const updatedValue = replacePlanSlotLabel(value, fromPlanId, toPlanId);
+  if (updatedValue === value) {
+    return null;
+  }
+  return `${prefix}${quote}${updatedValue}${quote}`;
+}
+function reconcilePlanHeadingLine(line, fromPlanId, toPlanId) {
+  if (!/^#\s+/.test(line)) {
+    return null;
+  }
+  const updatedLine = replacePlanSlotLabel(line, fromPlanId, toPlanId);
+  return updatedLine === line ? null : updatedLine;
+}
+function reconcileAutoAssignedPlanContent(content, planId2) {
+  const normalizedPlanId = normalizePlanId(planId2);
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---(\n|$)/);
+  if (!frontmatterMatch || frontmatterMatch.index === void 0) {
+    return content;
+  }
+  const frontmatter = frontmatterMatch[1] ?? "";
+  const updatedFrontmatterLines = frontmatter.split("\n");
+  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanIdFromFrontmatterLine(line)).find((value) => value !== null);
+  const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
+  if (planIdLineIndex >= 0) {
+    updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
+  } else {
+    const phaseLineIndex = updatedFrontmatterLines.findIndex((line) => /^phase:\s*/.test(line));
+    if (phaseLineIndex >= 0) {
+      updatedFrontmatterLines.splice(phaseLineIndex + 1, 0, `plan_id: "${normalizedPlanId}"`);
+    } else {
+      updatedFrontmatterLines.unshift(`plan_id: "${normalizedPlanId}"`);
+    }
+  }
+  if (sourcePlanId && sourcePlanId !== normalizedPlanId) {
+    const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
+    if (titleLineIndex >= 0) {
+      const updatedTitleLine = reconcilePlanTitleLine(
+        updatedFrontmatterLines[titleLineIndex] ?? "",
+        sourcePlanId,
+        normalizedPlanId
+      );
+      if (updatedTitleLine) {
+        updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
+      }
+    }
+  }
+  const contentStart = frontmatterMatch.index;
+  const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
+  const reconciledBody = sourcePlanId && sourcePlanId !== normalizedPlanId ? (() => {
+    let headingRewritten = false;
+    return contentAfterFrontmatter.split("\n").map((line) => {
+      if (headingRewritten || !/^#\s+/.test(line)) {
+        return line;
+      }
+      headingRewritten = true;
+      return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
+    }).join("\n");
+  })() : contentAfterFrontmatter;
+  return `---
+${updatedFrontmatterLines.join("\n")}
+---${reconciledBody}`;
+}
+function collectInvalidPlanDependencyIssues(planPath, dependsOn) {
+  const issues = [];
+  for (const dependency of dependsOn) {
+    try {
+      normalizePlanId(dependency);
+    } catch {
+      issues.push(`${planPath}: invalid depends_on reference: ${dependency}`);
+    }
+  }
+  return issues;
+}
 function parseSummaryArtifactPath(pathValue, phasePrefix2) {
   const match = pathValue.match(
     new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-SUMMARY\\.md$`)
@@ -27431,6 +27739,11 @@ async function blueprintPhasePlanIndex(args = {}) {
     knownPlanIds.add(planId2);
     const content = await fs6.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record2 = toPhasePlanRecord(planId2, planPath, content, resolved.phaseNumber);
+    const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record2.dependsOn);
+    if (dependencyIssues.length > 0) {
+      record2.issues.push(...dependencyIssues);
+      record2.valid = false;
+    }
     plans.push(record2);
     if (record2.valid && record2.gapClosure) {
       gapClosurePlans.add(planId2);
@@ -27445,7 +27758,6 @@ async function blueprintPhasePlanIndex(args = {}) {
         const normalizedDependency = normalizePlanId(dependency);
         return knownPlanIds.has(normalizedDependency) ? [] : [planPathFor(resolved, normalizedDependency)];
       } catch {
-        warnings.push(`${plan.path}: invalid depends_on reference: ${dependency}`);
         return [];
       }
     })
@@ -27512,6 +27824,10 @@ async function blueprintPhasePlanRead(args) {
   }
   const content = await fs6.readFile(absolutePath, "utf8");
   const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
+  const dependencyIssues = collectInvalidPlanDependencyIssues(
+    pathValue,
+    validation.metadata.dependsOn
+  );
   return {
     phaseFound: true,
     found: true,
@@ -27536,8 +27852,8 @@ async function blueprintPhasePlanRead(args) {
       autonomous: validation.metadata.autonomous
     },
     validation: {
-      valid: validation.valid,
-      issues: validation.issues,
+      valid: validation.valid && dependencyIssues.length === 0,
+      issues: [...validation.issues, ...dependencyIssues],
       warnings: validation.warnings
     },
     reason: null
@@ -27545,69 +27861,34 @@ async function blueprintPhasePlanRead(args) {
 }
 async function blueprintPhasePlanWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const existingIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(
-    ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
-  ) + 1;
-  const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
-  const pathValue = planPathFor(resolved, planId2);
-  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = normalizeTextContent3(args.content);
   const strictValidation = (args.validationMode ?? "strict") === "strict";
-  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber, {
-    strict: strictValidation
-  });
-  const warnings = [];
-  const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
-  if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId2) {
-    const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId2}".`;
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId: planId2,
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: [...validation.issues, issue2],
-        warnings: validation.warnings
-      },
-      warnings: []
-    };
-  }
-  if (!validation.valid && strictValidation) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId: planId2,
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: validation.issues,
-        warnings: validation.warnings
-      },
-      warnings: []
-    };
-  }
-  const exists = await pathExists4(absolutePath);
-  if (exists) {
-    const existingContent = await fs6.readFile(absolutePath, "utf8");
-    if (existingContent === normalizedContent) {
-      warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+  return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+    const existingIndex = await blueprintPhasePlanIndex({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    });
+    const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(
+      ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
+    ) + 1;
+    const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
+    const pathValue = planPathFor(resolved, planId2);
+    const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+    const contentForValidation = args.planId === void 0 ? reconcileAutoAssignedPlanContent(normalizedContent, planId2) : normalizedContent;
+    const preparedContent = prepareTextForPersistence(contentForValidation, {
+      label: pathValue
+    });
+    const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
+      strict: strictValidation
+    });
+    const dependencyIssues = collectInvalidPlanDependencyIssues(
+      pathValue,
+      validation.metadata.dependsOn
+    );
+    const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
+    const validationIssues = [...validation.issues, ...dependencyIssues];
+    const warnings = [...preparedContent.warnings];
+    if (dependencyIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -27618,47 +27899,114 @@ async function blueprintPhasePlanWrite(args) {
         written: false,
         created: false,
         overwritten: false,
-        status: "reused",
+        status: "invalid",
         validation: {
-          valid: validation.valid,
-          issues: validation.issues,
+          valid: false,
+          issues: validationIssues,
           warnings: validation.warnings
         },
-        warnings
+        warnings: dependencyIssues
       };
     }
-    if (!(args.overwrite ?? false)) {
-      throw new Error(
-        `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
-      );
+    if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId2) {
+      const issue2 = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId2}".`;
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: [...validation.issues, issue2],
+          warnings: validation.warnings
+        },
+        warnings: []
+      };
     }
-  }
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: pathValue
-    })
-  );
-  if (exists) {
-    warnings.push(`Replaced existing plan artifact: ${pathValue}`);
-  }
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    planId: planId2,
-    path: pathValue,
-    written: true,
-    created: !exists,
-    overwritten: exists,
-    status: exists ? "updated" : "created",
-    validation: {
-      valid: validation.valid,
-      issues: validation.issues,
-      warnings: validation.warnings
-    },
-    warnings: [...warnings, ...validation.warnings]
-  };
+    if (!validation.valid && strictValidation) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: validationIssues,
+          warnings: validation.warnings
+        },
+        warnings: []
+      };
+    }
+    const exists = await pathExists4(absolutePath);
+    const normalizePersistedText = (value) => value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
+    if (exists) {
+      const existingContent = await fs6.readFile(absolutePath, "utf8");
+      if (normalizePersistedText(existingContent) === normalizePersistedText(preparedContent.content)) {
+        warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId2,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "reused",
+          validation: {
+            valid: validation.valid && dependencyIssues.length === 0,
+            issues: validationIssues,
+            warnings: validation.warnings
+          },
+          warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+        };
+      }
+      if (!(args.overwrite ?? false)) {
+        throw new Error(
+          `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+        );
+      }
+    }
+    warnings.push(
+      ...await writeTextFile(absolutePath, preparedContent.content, {
+        label: pathValue
+      })
+    );
+    if (exists) {
+      warnings.push(`Replaced existing plan artifact: ${pathValue}`);
+    }
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: pathValue,
+      written: true,
+      created: !exists,
+      overwritten: exists,
+      status: exists ? "updated" : "created",
+      validation: {
+        valid: validation.valid && dependencyIssues.length === 0,
+        issues: validationIssues,
+        warnings: validation.warnings
+      },
+      warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+    };
+  });
 }
 async function blueprintPhaseSummaryIndex(args = {}) {
   const located = await blueprintPhaseLocate(args);
