@@ -316,6 +316,7 @@ type SummaryValidationOptions = {
     linkedPlanPath?: string | null;
     requirePlanMarker?: boolean;
 };
+export declare function extractSummaryPlanReference(content: string): string | null;
 export declare function validateSummaryArtifactContent(content: string): {
     valid: boolean;
     issues: string[];

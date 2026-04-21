@@ -392,7 +392,9 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.deepEqual(index.completedPlans, ["01"]);
   assert.deepEqual(index.pendingPlans, []);
   assert.equal(read.found, true);
-  assert.equal(read.metadata?.linkedPlanPath, planPath);
+  assert.equal(read.metadata?.linkedPlanPath, "03-01-PLAN.md");
+  assert.equal(read.validation?.valid, true);
+  assert.deepEqual(read.validation?.issues, []);
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.issues.join("\n"), /must not be empty/i);
@@ -452,10 +454,75 @@ test("phase summary writes reject untouched templates and repo validation report
   const summaryPath = path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md");
 
   await writeFile(summaryPath, untouchedSummary, "utf8");
+  const invalidRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
 
   assert.equal(rejected.status, "invalid");
   assert.equal(missingRead.found, false);
+  assert.equal(invalidRead.found, true);
+  assert.equal(invalidRead.metadata?.linkedPlanPath, "03-01-PLAN.md");
+  assert.equal(invalidRead.validation?.valid, false);
+  assert.match(invalidRead.validation?.issues.join("\n") ?? "", /placeholder scaffold text|must start|locked marker/i);
   assert.match(rejected.issues.join("\n"), /locked marker|placeholder scaffold text|must start/i);
+});
+
+test("phase summary reads expose mismatched plan markers without inventing linked plan paths", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md");
+  await writeFile(
+    summaryPath,
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-02-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Added summary indexing coverage for execute-phase.
+
+## Verification
+
+- Ran the summary tooling test slice.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+
+  const read = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(read.found, true);
+  assert.equal(read.metadata?.linkedPlanPath, "03-02-PLAN.md");
+  assert.equal(read.validation?.valid, false);
+  assert.match(
+    read.validation?.issues.join("\n") ?? "",
+    /does not match linked plan path/i
+  );
+  assert.equal(index.summaries[0]?.linkedPlanPath, "03-02-PLAN.md");
+  assert.deepEqual(index.completedPlans, []);
+  assert.deepEqual(index.pendingPlans, ["01"]);
 });
 
 test("phase summary writes reject summaries whose H1 appears after body text", async (t) => {

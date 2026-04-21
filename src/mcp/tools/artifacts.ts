@@ -4169,7 +4169,7 @@ function normalizeSummaryPlanReference(value: string): string {
   return trimmed;
 }
 
-function extractSummaryPlanReference(content: string): string | null {
+export function extractSummaryPlanReference(content: string): string | null {
   const match = content.match(/^\*\*Plan:\*\*\s*(.+)$/m);
 
   return match ? normalizeSummaryPlanReference(match[1]) : null;

@@ -388,6 +388,26 @@ test("phase execution skill and bounded execution agent are marked implemented i
   );
 });
 
+test("execute-phase runtime references keep the summary contract read and lower-wave gating explicit", async () => {
+  const [runtimeReference, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
+  ]);
+
+  assert.match(
+    runtimeReference,
+    /\| `execute-phase` \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+  );
+  assert.match(runtimeReference, /reads the canonical `phase\.summary` contract before any summary write or replacement/i);
+  assert.match(runtimeReference, /stops later-wave execution when lower-wave gaps remain/i);
+  assert.match(
+    migrationMarkdown,
+    /\| `execute-phase` \| `commands\/gsd\/execute-phase\.md` \| GSD has an upstream workflow file \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+  );
+  assert.match(migrationMarkdown, /reads the canonical `phase\.summary` contract before summary writes/i);
+  assert.match(migrationMarkdown, /keeps later-wave work blocked until lower-wave gaps are closed/i);
+});
+
 test("quick command docs keep the bounded report-backed execution contract explicit", async () => {
   const quickDoc = await readRepoFile("docs/commands/quick.md");
 

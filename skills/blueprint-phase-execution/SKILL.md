@@ -34,9 +34,13 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 - plans remain the source of execution scope and dependency ordering
 - one valid durable summary artifact is written per executed plan
 - malformed summaries are repair or replace targets, not reusable execution evidence
+- pre-persistence gates must clear before any summary write
+- post-execution checks must run before state is updated
+- code-review, regression, and schema-drift warnings block summary persistence until they are repaired or explicitly acknowledged
 - bounded quick work stays report-backed and does not quietly become a phase-planning substitute
 - partial-wave, filtered, and gap-closure runs do not falsely complete the whole phase
 - later waves never erase lower-wave debt
+- `/blu-execute-phase` hands off to `/blu-validate-phase` before any phase-level completion claim, and `/blu-verify-work` remains the verifier follow-up once validation evidence exists
 - follow-up routing stays inside the implemented Blueprint surface
 
 ## Required Inputs
@@ -96,8 +100,8 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 12. Never treat later-wave execution as proof that lower-wave plans are done.
 13. For `--gaps-only`, target only the pending plan ids present in `blueprint_phase_plan_index.gapClosurePlans`. If none match, stop instead of silently falling back to all pending plans.
 14. If summaries overlap on a shared file set, treat that as a conflict risk and pause for confirmation instead of assuming the write is safe.
-15. Before summary persistence, verify the selected goal, acceptance criteria, dependency order, and any code-review, regression, or schema-drift warnings surfaced by validation or state reads so execution sequencing stays aligned with the plan.
-16. After summary writes, refresh validation signals and update `STATE.md` so the next safe implemented action stays accurate.
+15. Before summary persistence, verify the selected goal, acceptance criteria, dependency order, and any code-review, regression, or schema-drift warnings surfaced by validation or state reads so execution sequencing stays aligned with the plan. Treat those warnings as pre-persistence gates, not retrospective notes.
+16. After summary writes, run the post-execution checks and update `STATE.md` so the next safe implemented action stays accurate. Do not make a phase-level completion claim from execute-phase itself; that claim waits for the `/blu-validate-phase` handoff and the later `/blu-verify-work` verifier pass.
 17. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
 18. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
 19. For `/blu-quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.

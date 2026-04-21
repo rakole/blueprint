@@ -29,6 +29,13 @@
 - `--gaps-only` targets plans explicitly marked as gap closure through saved plan metadata, not every unsummarized plan.
 - Existing summary files only count as completed evidence when summary validation passes; malformed summaries remain repair or replace targets.
 
+## Execution Gates
+
+- Pre-persistence gates: read the selected plan index, summary index, effective config, canonical summary contract, artifact validation state, and phase state before any summary write.
+- If validation or state reads surface code-review, regression, or schema-drift warnings, treat them as blockers for summary persistence until they are cleared or repaired.
+- Post-execution checks: after summary writes finish, run artifact validation and then update `STATE.md` so the next safe implemented action stays current.
+- Verifier handoff: `/blu-execute-phase` records execution coverage but never makes a phase-level completion claim on its own; the downstream `/blu-validate-phase` handoff is required before any completion claim, and `/blu-verify-work` remains the next lifecycle step once validation evidence exists.
+
 
 ## Outputs
 
@@ -36,6 +43,7 @@
 - User-facing result: a concise completion summary, recorded execution evidence, and the next logical action when applicable.
 - Repo side effects: writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
 - Interactive runs include progress checkpoints and branch points for `review`, `skip`, or `stop` instead of a single preflight approval only.
+- Interactive runs still obey the same pre-persistence and post-execution gates before they can advance to the next plan.
 
 
 ## Blueprint And Global State Reads
@@ -63,7 +71,7 @@
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans, gapClosurePlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
-- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_summary_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`

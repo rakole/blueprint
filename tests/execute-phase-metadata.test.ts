@@ -34,6 +34,11 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /review, skip, or stop/i);
   assert.match(commandFile, /shared file set/i);
   assert.match(commandFile, /code-review, regression, or schema-drift/i);
+  assert.match(commandFile, /pre-persistence gates/i);
+  assert.match(commandFile, /post-execution checks/i);
+  assert.match(commandFile, /phase-level completion claim/i);
+  assert.match(commandFile, /\/blu-validate-phase/);
+  assert.match(commandFile, /\/blu-verify-work/);
   assert.match(commandFile, /gap-closure/i);
   assert.match(commandFile, /gapClosurePlans/);
   assert.match(commandFile, /Existing summaries only count as durable execution evidence when they are valid/i);
@@ -42,6 +47,9 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /\/blu-progress/);
   assert.match(docsFile, /Existing summary files only count as completed evidence when summary validation passes/i);
   assert.match(docsFile, /malformed summaries remain repair or replace targets/i);
+  assert.match(docsFile, /Pre-persistence gates/i);
+  assert.match(docsFile, /Verifier handoff/i);
+  assert.match(docsFile, /phase-level completion claim/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md|agents\/blueprint-executor\.md/);
 });
 
@@ -67,6 +75,11 @@ test("execute-phase skill captures wave-based execution and summary generation r
   assert.match(skillFile, /malformed summaries are repair or replace targets/i);
   assert.match(skillFile, /plans without valid summaries are pending work/i);
   assert.match(skillFile, /Existing valid summaries require explicit overwrite confirmation/i);
+  assert.match(skillFile, /pre-persistence gates/i);
+  assert.match(skillFile, /post-execution checks/i);
+  assert.match(skillFile, /phase-level completion claim/i);
+  assert.match(skillFile, /\/blu-validate-phase/);
+  assert.match(skillFile, /\/blu-verify-work/);
   assert.match(skillFile, /lower-wave debt/i);
   assert.match(skillFile, /gapClosurePlans/);
   assert.match(skillFile, /shared file set/i);

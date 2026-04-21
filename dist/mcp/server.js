@@ -28041,12 +28041,11 @@ async function blueprintPhaseSummaryIndex(args = {}) {
       continue;
     }
     const content = await fs6.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const linkedPlanPath = extractSummaryPlanReference(content);
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: knownPlanPaths.get(planId2) ?? null
     });
-    summaries.push(
-      toPhaseSummaryRecord(planId2, summaryPath2, content, knownPlanPaths.get(planId2) ?? null)
-    );
+    summaries.push(toPhaseSummaryRecord(planId2, summaryPath2, content, linkedPlanPath));
     if (validation.valid) {
       completedPlans.add(planId2);
     } else {
@@ -28089,6 +28088,7 @@ async function blueprintPhaseSummaryRead(args) {
       path: null,
       content: null,
       metadata: null,
+      validation: null,
       reason: located.reason
     };
   }
@@ -28107,12 +28107,17 @@ async function blueprintPhaseSummaryRead(args) {
       path: pathValue,
       content: null,
       metadata: null,
+      validation: null,
       reason: `${pathValue} does not exist yet.`
     };
   }
   const content = await fs6.readFile(absolutePath, "utf8");
   const metadata = summarizeMarkdownContent(content);
-  const linkedPlanPath = planPathFor(resolved, planId2);
+  const linkedPlanPath = extractSummaryPlanReference(content);
+  const validation = validateStrictSummaryArtifactContent(content, {
+    linkedPlanPath: planPathFor(resolved, planId2),
+    requirePlanMarker: true
+  });
   return {
     phaseFound: true,
     found: true,
@@ -28128,6 +28133,7 @@ async function blueprintPhaseSummaryRead(args) {
       title: metadata.title,
       summary: metadata.summary
     },
+    validation,
     reason: null
   };
 }
@@ -28621,7 +28627,7 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_summary_read",
-        description: "Read a phase-scoped SUMMARY artifact together with its linked plan path and concise metadata.",
+        description: "Read a phase-scoped SUMMARY artifact together with its linked plan path, concise metadata, and validation signal.",
         inputSchema: phaseSummaryReadInputSchema,
         handler: async (args) => blueprintPhaseSummaryRead(args)
       },

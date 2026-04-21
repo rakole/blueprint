@@ -18,6 +18,7 @@ import {
   validatePhaseArtifactContent,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
+  extractSummaryPlanReference,
   validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
@@ -588,6 +589,11 @@ type PhaseSummaryReadResult = {
   path: string | null;
   content: string | null;
   metadata: Omit<PhaseSummaryRecord, "path" | "planId"> | null;
+  validation: {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+  } | null;
   reason: string | null;
 };
 
@@ -4725,13 +4731,12 @@ export async function blueprintPhaseSummaryIndex(
     }
 
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
+    const linkedPlanPath = extractSummaryPlanReference(content);
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: knownPlanPaths.get(planId) ?? null
     });
 
-    summaries.push(
-      toPhaseSummaryRecord(planId, summaryPath, content, knownPlanPaths.get(planId) ?? null)
-    );
+    summaries.push(toPhaseSummaryRecord(planId, summaryPath, content, linkedPlanPath));
 
     if (validation.valid) {
       completedPlans.add(planId);
@@ -4784,6 +4789,7 @@ export async function blueprintPhaseSummaryRead(
       path: null,
       content: null,
       metadata: null,
+      validation: null,
       reason: located.reason
     };
   }
@@ -4804,13 +4810,18 @@ export async function blueprintPhaseSummaryRead(
       path: pathValue,
       content: null,
       metadata: null,
+      validation: null,
       reason: `${pathValue} does not exist yet.`
     };
   }
 
   const content = await fs.readFile(absolutePath, "utf8");
   const metadata = summarizeMarkdownContent(content);
-  const linkedPlanPath = planPathFor(resolved, planId);
+  const linkedPlanPath = extractSummaryPlanReference(content);
+  const validation = validateStrictSummaryArtifactContent(content, {
+    linkedPlanPath: planPathFor(resolved, planId),
+    requirePlanMarker: true
+  });
 
   return {
     phaseFound: true,
@@ -4827,6 +4838,7 @@ export async function blueprintPhaseSummaryRead(
       title: metadata.title,
       summary: metadata.summary
     },
+    validation,
     reason: null
   };
 }
@@ -5219,7 +5231,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_summary_read",
     description:
-      "Read a phase-scoped SUMMARY artifact together with its linked plan path and concise metadata.",
+      "Read a phase-scoped SUMMARY artifact together with its linked plan path, concise metadata, and validation signal.",
     inputSchema: phaseSummaryReadInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseSummaryRead(args as PhaseSummaryReadArgs)

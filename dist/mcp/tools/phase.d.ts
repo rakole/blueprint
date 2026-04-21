@@ -483,6 +483,11 @@ type PhaseSummaryReadResult = {
     path: string | null;
     content: string | null;
     metadata: Omit<PhaseSummaryRecord, "path" | "planId"> | null;
+    validation: {
+        valid: boolean;
+        issues: string[];
+        warnings: string[];
+    } | null;
     reason: string | null;
 };
 type PhaseSummaryWriteResult = {

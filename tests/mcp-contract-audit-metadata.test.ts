@@ -194,9 +194,17 @@ test("execution and validation contracts stay explicit across manifests, docs, s
 
   assert.match(executeCommand, /numeric `planId` for the matching saved plan/i);
   assert.match(executeCommand, /returned `path` and `linkedPlanPath` as authoritative/i);
+  assert.match(executeCommand, /pre-persistence gates/i);
+  assert.match(executeCommand, /post-execution checks/i);
+  assert.match(executeCommand, /phase-level completion claim/i);
   assert.match(executeDoc, /## Summary Persistence Contract/);
   assert.match(executeDoc, /Do not pass summary filenames, phase slugs, phase directories/i);
+  assert.match(executeDoc, /Pre-persistence gates/i);
+  assert.match(executeDoc, /Verifier handoff/i);
   assert.match(executionSkill, /matching plan must already exist/i);
+  assert.match(executionSkill, /pre-persistence gates/i);
+  assert.match(executionSkill, /post-execution checks/i);
+  assert.match(executionSkill, /phase-level completion claim/i);
   assert.match(
     executorAgent,
     /resolved numeric phase,\s+the numeric\s+`planId` for the matching saved plan/i
