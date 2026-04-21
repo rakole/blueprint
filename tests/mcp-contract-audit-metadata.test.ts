@@ -445,8 +445,26 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
   assert.match(debugCommand, /returned `createdEntryIds` as authoritative/i);
   assert.match(debugDoc, /## Report And Todo Contract/);
 
+  assert.match(quickCommand, /Execution profile: `long-running-mutation`/i);
+  assert.match(quickCommand, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/i);
+  assert.match(quickCommand, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(quickCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/i);
+  assert.match(quickCommand, /tracker-eligible/i);
+  assert.match(quickCommand, /do not let it impersonate a saved phase plan or broad lifecycle execution/i);
   assert.match(quickCommand, /bare canonical report name `quick-run-latest`/i);
+  assert.match(quickDoc, /## Shared Runtime Contract/);
   assert.match(quickDoc, /## Quick Report Contract/);
+  assert.match(quickDoc, /## In-Flight Progress Contract/);
+  assert.match(quickDoc, /## Tracker Eligibility/);
+  assert.match(quickDoc, /shared long-running-mutation posture/i);
+  assert.match(quickDoc, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(quickDoc, /Use `update_topic` to surface the active stage and `write_todos`/i);
+  assert.match(quickDoc, /When `update_topic` or `write_todos` are unavailable, preserve the same progress in prose/i);
+  assert.match(quickDoc, /tracker-eligible/i);
+  assert.match(quickDoc, /does not replace Blueprint MCP persistence/i);
+  assert.match(quickDoc, /must not create a hidden saved plan, summary artifact, or lifecycle claim/i);
+  assert.match(quickDoc, /When tracker support is unavailable, keep the same bounded quick flow linear/i);
+  assert.match(quickDoc, /returned report `path`, `written`, and `status` as authoritative/i);
 
   assert.match(docsUpdateCommand, /explicit repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, or `testFiles`/i);
   assert.match(docsUpdateCommand, /returned `inputsUsed` list as the authoritative digest scope/i);

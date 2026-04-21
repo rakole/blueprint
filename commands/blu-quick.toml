@@ -1,4 +1,4 @@
-description = "Execute a bounded repo task with reduced ceremony, optional depth gates, and a durable quick-run report."
+description = "Execute a bounded repo task with reduced ceremony, visible in-flight progress, tracker-eligible branch handling, and a durable quick-run report."
 prompt = """
 You are the `/blu-quick` command for Blueprint.
 
@@ -13,19 +13,27 @@ Follow this flow exactly:
    - `--research`: ask for explicit confirmation before doing repo or domain research beyond the minimum needed to execute.
    - `--validate`: ask for explicit confirmation before running a bounded verification pass after implementation.
    - `--full`: treat it as `--discuss`, `--research`, and `--validate` together, and require explicit confirmation before continuing.
-4. Keep `quick` bounded. If the request clearly needs a saved phase plan, multi-wave execution, or a larger cross-cutting rollout, stop and route to `/blu-plan-phase` or `/blu-execute-phase` instead of bluffing. Do not recommend `/blu-fast` unless `mcp_blueprint_blueprint_command_catalog` says it is implemented.
-5. When the scope is still a good quick-run fit:
+4. Treat `/blu-quick` as a shared execution-profile `long-running-mutation` command whenever the run is non-trivial. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
+5. For any non-trivial quick run, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact user-facing checklist aligned to the bounded task. These are session-local progress tools only; they do not replace Blueprint MCP persistence. When the host lacks them, preserve the same progress in prose instead of inventing persistence outside MCP.
+6. Treat branchy quick work as tracker-eligible. When the quick run branches across optional discuss, research, implementation, or validation substeps, you may use Gemini's task tracker for internal dependency management, but keep it session-local, pair it with visible `write_todos`, and do not let it impersonate a saved phase plan or broad lifecycle execution. When tracker support is unavailable, keep the same bounded quick flow linear and report the next safe step explicitly.
+7. Keep `quick` bounded. If the request clearly needs a saved phase plan, multi-wave execution, or a larger cross-cutting rollout, stop and route to `/blu-plan-phase` or `/blu-execute-phase` instead of bluffing. Do not recommend `/blu-fast` unless `mcp_blueprint_blueprint_command_catalog` says it is implemented.
+8. When the scope is still a good quick-run fit:
    - use `blueprint-researcher` only for a compact repo-context pass when `--research` or `--full` was confirmed
    - use `blueprint-planner` only for a compact bounded checklist when the task needs brief structure but not a durable phase plan
    - use `blueprint-executor` only for bounded implementation work that stays inside the agreed quick-run scope
    - use `blueprint-verifier` only when `--validate` or `--full` was confirmed
-6. Persist the durable Blueprint report through `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest`, not a `.blueprint/reports/...` path. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it. Treat the returned `path` as authoritative.
-7. After the quick run completes, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-quick` as the active command and points to the next safe implemented action. Prefer `/blu-progress` as the follow-up unless the quick run clearly leaves a narrower implemented next step.
-8. Return a concise completion summary covering the bounded task, whether optional discuss, research, or validation depth was used, the report status, any warnings or deferred follow-up work, and the next safe implemented action.
+9. Persist the durable Blueprint report through `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest`, not a `.blueprint/reports/...` path. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it. Treat the returned `path`, `written`, and `status` as authoritative.
+10. After the quick run completes, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-quick` as the active command and points to the next safe implemented action. Prefer `/blu-progress` as the follow-up unless the quick run clearly leaves a narrower implemented next step.
+11. Return a concise completion summary covering the bounded task, whether optional discuss, research, or validation depth was used, whether tracker-backed branching was needed, the report status, any warnings or deferred follow-up work, and the next safe implemented action.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Execution profile: `long-running-mutation`.
+- Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` only when those stages are actually reached during the quick run.
+- Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/quick-run-latest.md` plus `.blueprint/STATE.md`.
+- Keep `update_topic`, `write_todos`, and any tracker state session-local only; they must never replace Blueprint MCP persistence.
+- Tracker eligibility is only for branchy bounded quick work. Do not turn it into a durable plan, a hidden summary artifact, or a substitute for `/blu-plan-phase` or `/blu-execute-phase`.
 - Treat `--force` as the only way to bypass confirmation for replacing the canonical quick-run report.
 - Do not hand-build report paths; use the MCP return value as authoritative.
 - Do not invent phase plans, research artifacts, or validation artifacts as hidden side effects of `quick`.
