@@ -41,9 +41,10 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - Execution profile for `validate-phase`, `verify-work`, and the long-running parts of `add-tests`: `long-running-mutation`
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- For `add-tests`, keep the selected test scope, targeted test command or result, verification status, report status, and next safe action explicit while bounded repo mutation is in flight.
 - For structured interactive choices, confirmations, review, skip, or stop branching, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
 - When a validation-family run is non-trivial, keep those status fields visible with `update_topic`, `write_todos`, or an honest prose fallback rather than inventing persistence outside MCP.
-- Keep validation saved-summary-first: the `Execute` stage is bounded verifier analysis grounded in saved summaries and existing validation artifacts, not direct repo mutation or prompt-memory reconstruction.
+- Keep validation saved-summary-first: the `Execute` stage is bounded verifier analysis grounded in saved summaries and existing validation artifacts, not direct repo mutation or prompt-memory reconstruction. For `add-tests`, bounded repo mutation stays grounded in saved summaries plus validation evidence, and the resulting verification plus report status must come from MCP returns.
 
 ## Required Inputs
 
@@ -131,16 +132,16 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 2. Read summary artifacts plus any existing `XX-VERIFICATION.md` or `XX-UAT.md` so test generation is grounded in saved implementation evidence and explicit gaps.
 3. Require at least one validation or UAT artifact before proceeding. Route to `/blu-validate-phase` when both are missing.
 4. Keep repo mutation narrow: honor explicit user scope first, otherwise derive a focused test scope from completed summaries, saved gaps, and existing repo test conventions.
-5. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, verification status, and next safe action legible throughout the run.
-6. Treat broad test-scope confirmation, any broader-suite request, unclear repo test conventions, and verification persistence outcomes as explicit pending gates rather than post-hoc notes.
-7. For non-trivial add-tests runs, prefer update_topic plus `write_todos` so evidence review, scope confirmation, bounded implementation, verification-note persistence, post-write validation, and routing stay visible without becoming persistence.
+5. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, selected test scope, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action legible throughout the run.
+6. Treat broad test-scope confirmation, any broader-suite request, unclear repo test conventions, and verification or report persistence outcomes as explicit pending gates rather than post-hoc notes.
+7. For non-trivial add-tests runs, prefer update_topic plus `write_todos` so evidence review, scope confirmation, bounded implementation, targeted test execution, verification-note persistence, report persistence, post-write validation, and routing stay visible without becoming persistence.
 8. Use `ask_user` for structured scope or breadth decisions instead of burying those gates in prose.
 9. Inspect the relevant repo code, existing tests, and test-runner configuration before writing. Prefer extending nearby tests over duplicating the same coverage in a second suite.
 10. Use `blueprint-executor` for bounded multi-file test implementation when the harness or write scope is non-trivial.
 11. Use `blueprint-verifier` to review whether the proposed tests cover the saved execution behavior and any explicit validation or UAT gaps.
 12. Read `blueprint_artifact_contract_read` for `phase.verification`, normalize the final verification draft to `contract.authoringTemplate`, and self-check the normalized verification draft against the returned contract before persisting verification notes.
 13. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists. Keep the reported verification status aligned with the tool-owned `written` and `status` result.
-14. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path.
+14. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path. Keep the reported report status aligned with the tool-owned `written` and `status` result.
 15. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
 
 ## Non-Negotiables
