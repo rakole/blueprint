@@ -11,6 +11,13 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-plan-phase.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-planning` skill/);
+  assert.match(commandFile, /`long-running-mutation`/);
+  assert.match(commandFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
+  assert.match(
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
+  assert.match(commandFile, /structured `reuse`, `revise`, or `replace` gate/i);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /`blueprint-planner` and `blueprint-checker` subagents/);
   assert.match(commandFile, /artifact_contract_read/);
@@ -55,13 +62,20 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
 });
 
 test("plan-phase skill captures the revision loop and safe follow-up rules", async () => {
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-planning/SKILL.md"),
-    "utf8"
-  );
+  const [skillFile, runtimeReference] = await Promise.all([
+    readFile(path.join(repoRoot, "skills/blueprint-phase-planning/SKILL.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-plan-phase/);
+  assert.match(skillFile, /`long-running-mutation`/);
+  assert.match(skillFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
+  assert.match(
+    skillFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
+  assert.match(skillFile, /structured `reuse`, `revise`, or `replace` gate/i);
   assert.match(skillFile, /ask_user/);
   assert.match(skillFile, /artifact_contract_read/);
   assert.match(skillFile, /artifactId: "phase\.plan"/);
@@ -87,12 +101,34 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
     skillFile,
     /--auto|--research|--skip-research|--gaps|--skip-verify|--prd|--reviews|--text/
   );
+
+  assert.match(
+    runtimeReference,
+    /\| `plan-phase` \| `docs\/commands\/plan-phase\.md` \| `blueprint-phase-planning` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_context`<br>`blueprint_phase_research_status`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_plan_write`<br>`blueprint_config_get`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require a structured reuse\/revise\/replace gate before overwrite, and keep real `XX-YY-PLAN\.md` persistence on the dedicated MCP path with normalized-config planning behavior\./
+  );
 });
 
 test("plan-phase command doc explains the plan write contract for planId", async () => {
   const docFile = await readFile(path.join(repoRoot, "docs/commands/plan-phase.md"), "utf8");
 
   assert.match(docFile, /ask_user/);
+  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(docFile, /## Shared Runtime Contract/);
+  assert.match(
+    docFile,
+    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  );
+  assert.match(docFile, /shared long-running-mutation posture/i);
+  assert.match(docFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
+  assert.match(
+    docFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
+  assert.match(docFile, /structured `reuse`, `revise`, or `replace` gate/i);
   assert.match(docFile, /## Plan Persistence Contract/);
   assert.match(docFile, /artifact_contract_read/);
   assert.match(docFile, /artifactId: "phase\.plan"/);
