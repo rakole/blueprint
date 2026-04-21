@@ -122,6 +122,10 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 9. Require explicit overwrite confirmation before replacing existing research.
 10. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
 11. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+12. Break long-running research into topic-sized strands instead of forcing a single linear pass. Re-check the phase context and saved research status between strands so the command can continue from the last durable checkpoint instead of redoing settled work.
+13. When a strand reaches a natural pause, write or refresh the phase checkpoint with the completed topics, remaining topics, open questions, and a resume hint that stays inside the implemented Blueprint surface. Treat the checkpoint as the continuation point for the next run.
+14. If evidence stays incomplete or conflicts remain unresolved after a reasonable pass, mark the result as inconclusive rather than stretching the draft. Summarize what was verified, what remains unknown, and the next safe action within the implemented surface, such as continuing research, revisiting context, or moving to `/blu-progress` when planning is no longer appropriate.
+15. Do not imply auto-chaining or power-mode continuation. Any continuation path must be explicit, checkpointed, and resumable through the shipped discovery workflow.
 
 ### `list-phase-assumptions`
 
