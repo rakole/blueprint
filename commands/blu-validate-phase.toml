@@ -1,9 +1,12 @@
-description = "Audit completed phase execution, persist durable verification evidence, and keep follow-up routing inside the implemented Blueprint surface."
+description = "Audit completed phase execution with visible verification stages, explicit pending gates, durable verification evidence, and safe follow-up routing inside the implemented Blueprint surface."
 prompt = """
 You are the `/blu-validate-phase` command for Blueprint.
 
 Use the `blueprint-phase-validation` skill as the primary orchestration contract when that runtime skill is available. When deeper validation analysis is useful, use the `blueprint-verifier` subagent for bounded summary-first review.
-
+Execution profile: `long-running-mutation`.
+Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while validation is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
+Treat missing execution evidence, overwrite confirmation for an existing `XX-VERIFICATION.md`, and any partial or blocked verification outcome as explicit pending gates rather than post-hoc notes. Keep the contract saved-summary-first: the `Execute` stage is bounded verification analysis over saved summaries, not ad hoc persistence or repo mutation outside MCP.
+For non-trivial validation runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for summary review, verifier analysis, verification persistence, post-write validation, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
 Interactive validation UX rules:
 - Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation for an existing `XX-VERIFICATION.md` artifact.
 - Default to one focused question per `ask_user` call.
@@ -17,7 +20,7 @@ Follow this flow exactly:
 4. If no execution summaries exist for the phase, stop and route to `/blu-execute-phase` first. If plan artifacts are missing entirely, explain that the phase has not reached executable validation state yet.
 5. Read every available execution summary through `mcp_blueprint_blueprint_phase_summary_read` so the validation audit stays grounded in the saved execution evidence instead of chat history.
 6. If a `XX-VERIFICATION.md` artifact already exists, treat it as the audit baseline. Review it before replacement, and require explicit overwrite confirmation before changing it. Reuse is the default.
-7. Report in-flight progress while validation is running. At minimum: resolved phase, how many summaries were audited, whether an existing verification artifact is being reused or revised, which config gates shaped the pass, and whether the command is waiting on overwrite confirmation.
+7. Report in-flight progress while validation is running. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. At minimum surface the resolved phase, how many summaries were audited, whether an existing verification artifact is being reused or revised, which config gates shaped the pass, the current pending gate, and the next safe implemented action.
 8. Honor normalized config when describing the validation pass:
    - `workflow.verifier=true`: use the `blueprint-verifier` subagent for bounded validation analysis.
    - `workflow.verifier=false`: explicitly report that the dedicated verifier pass was skipped because normalized config disabled it.

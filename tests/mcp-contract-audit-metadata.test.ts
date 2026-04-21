@@ -231,7 +231,13 @@ test("execution and validation contracts stay explicit across manifests, docs, s
 
   assert.match(validateCommand, /returned `path` plus `summaryPaths` are authoritative/i);
   assert.match(validateCommand, /artifactId: "phase\.verification"/);
+  assert.match(validateCommand, /Execution profile: `long-running-mutation`/);
+  assert.match(validateCommand, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(validateCommand, /current pending gate, and the next safe implemented action/i);
   assert.match(validateDoc, /## Validation Persistence Contract/);
+  assert.match(validateDoc, /## Shared Runtime Contract/);
+  assert.match(validateDoc, /## In-Flight Progress Contract/);
+  assert.match(validateDoc, /saved-summary-first contract explicit/i);
   assert.match(validateDoc, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(validateDoc, /`uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION\.md` artifact/i);
 
@@ -249,6 +255,11 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(addTestsDoc, /bare report name `add-tests-<phase>`/i);
   assert.match(validationSkill, /artifact enum `verification` or `uat`/i);
   assert.match(validationSkill, /Canonical Validation Contracts/);
+  assert.match(validationSkill, /Execution profile for `validate-phase`, `verify-work`, and the long-running parts of `add-tests`: `long-running-mutation`/);
+  assert.match(
+    validationSkill,
+    /keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/i
+  );
   assert.match(validationSkill, /artifactId: "phase\.verification"/);
   assert.match(validationSkill, /artifactId: "phase\.uat"/);
 });
