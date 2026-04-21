@@ -3,7 +3,15 @@
 |---|---|
 | Wave | `4` |
 | Family | `Quality And Shipping` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `code-review` uses the shared long-running-mutation posture: resolve the target phase, read saved review settings plus phase evidence, decide the deterministic review scope and any scope or overwrite gate, execute bounded findings analysis, persist the durable review artifact through MCP, validate the saved review posture, and route to the next safe implemented follow-up.
+- Keep the review posture explicit throughout the run: resolved scope must stay tied to the scope source (`explicit-files` or saved phase evidence), pending gates stay limited to scope confirmation or overwrite confirmation when those gates are triggered, execution mode should reflect the effective review depth and whether the pass stays inline or uses the reviewer subagent, and rolling finding counts plus artifact status should come from the live review work instead of being invented after the fact.
 
 
 ## Purpose
@@ -32,6 +40,13 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable, with scope, depth, and finding-count progress reported while the review is in flight.
 - Repo side effects: Writes only the declared phase-scoped review artifact for this command.
+- In-flight code review should keep the resolved scope, active stage, pending gate, execution mode, rolling finding counts or severity buckets, artifact status, and next safe action legible while the run is still live.
+
+## In-Flight Progress Contract
+
+- For non-trivial code-review runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact review checklist with `write_todos`.
+- Keep that visible progress aligned to the resolved phase, scope source, file count, review depth, active stage, pending gate, execution mode, rolling finding counts or severity buckets, review artifact status, and next safe action as the run moves from evidence review through scope confirmation, bounded findings analysis, artifact persistence, and routing.
+- Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 
 
 ## Blueprint And Global State Reads
@@ -126,6 +141,7 @@
 
 - Produces a durable artifact for review, security, UI, or shipping work.
 - Honors the surfaced `workflow.code_review` and `workflow.code_review_depth` settings.
+- Keeps the review stages, pending gates, execution mode, finding posture, and next safe action explicit while code review is in flight.
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.

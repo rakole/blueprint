@@ -662,9 +662,10 @@ test("maintenance skill and undo docs keep the safe-revert contract explicit", a
 });
 
 test("code-review docs and reviewer agent are marked implemented in docs", async () => {
-  const [skillsMarkdown, codeReviewDoc] = await Promise.all([
+  const [skillsMarkdown, codeReviewDoc, runtimeReference] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/commands/code-review.md")
+    readRepoFile("docs/commands/code-review.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
   assert.match(
@@ -672,9 +673,18 @@ test("code-review docs and reviewer agent are marked implemented in docs", async
     /\| `blueprint-reviewer` \| `implemented` \| Produce bounded code review findings from a resolved Blueprint scope \|/
   );
   assert.match(codeReviewDoc, /Primary skill: `blueprint-review`/);
+  assert.match(codeReviewDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(codeReviewDoc, /## Shared Runtime Contract/);
+  assert.match(codeReviewDoc, /## In-Flight Progress Contract/);
   assert.match(codeReviewDoc, /`blueprint_review_scope`/);
   assert.match(codeReviewDoc, /`blueprint-reviewer`/);
   assert.match(codeReviewDoc, /phase XX-REVIEW\.md/);
+  assert.match(
+    runtimeReference,
+    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_config_get`<br>`blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+  );
+  assert.match(runtimeReference, /Long-running-mutation profile for deterministic phase-scoped review/i);
+  assert.match(runtimeReference, /use Gemini-native `update_topic` and `write_todos` for non-trivial review runs/i);
 });
 
 test("review docs and migration notes keep the peer-review contract explicit", async () => {

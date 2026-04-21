@@ -80,6 +80,12 @@ non-routable until their extra MCP substrate lands.
 - `blueprint-ui-auditor`
 - `blueprint-verifier`
 
+## Shared Runtime Contract
+
+- Execution profile for `code-review`: `long-running-mutation`
+- Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields for `code-review`: resolved scope, active stage, pending gate, execution mode, next safe action
+
 ## Shared MCP Contracts
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, and treat returned `files` as authoritative.
@@ -98,17 +104,28 @@ non-routable until their extra MCP substrate lands.
 3. Use `blueprint_review_scope` to derive the deterministic repo file list from
    executed plan metadata or explicit file arguments; do not guess from git
    diff alone.
-4. Require executed phase evidence unless the user supplied an explicit file
+4. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
+   resolved scope, pending gate, execution mode, and next safe action legible
+   throughout the run.
+5. For non-trivial code-review runs, prefer update_topic plus `write_todos` so
+   evidence review, scope resolution, scope confirmation, bounded findings
+   analysis, artifact persistence, and routing stay visible without becoming
+   persistence.
+6. Require executed phase evidence unless the user supplied an explicit file
    scope.
-5. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
+7. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
    to reuse unless the user explicitly asks for an update.
-6. Keep findings grounded in the selected repo files plus saved execution,
+8. Keep findings grounded in the selected repo files plus saved execution,
    validation, or UAT artifacts.
-7. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
+9. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
    or a deep pass that benefits from a bounded second look.
-8. Persist the finished review through `blueprint_review_record` with the
+10. Keep the scope confirmation gate explicit for broad, multi-plan, or deep
+    reviews, and keep rolling finding counts or severity buckets visible while
+    the review is in flight.
+11. Persist the finished review through `blueprint_review_record` with the
    `code-review` artifact.
-9. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+12. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-secure-phase <phase>` when the phase still lacks a security artifact,
    `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
    otherwise `/blu-progress`.

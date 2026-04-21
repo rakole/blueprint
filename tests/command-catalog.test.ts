@@ -617,6 +617,22 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("code-review runtime reference keeps the long-running review posture explicit", async () => {
+  const runtimeReference = await readRelativePath("docs/RUNTIME-REFERENCE.md");
+
+  assert.ok(runtimeReference);
+  assert.match(
+    runtimeReference,
+    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_config_get`<br>`blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+  );
+  assert.match(runtimeReference, /Long-running-mutation profile for deterministic phase-scoped review/i);
+  assert.match(
+    runtimeReference,
+    /Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+  );
+  assert.match(runtimeReference, /use Gemini-native `update_topic` and `write_todos` for non-trivial review runs/i);
+});
+
 test("review is implemented once manifest, review skill, and plan-backed peer-review tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["review"];
