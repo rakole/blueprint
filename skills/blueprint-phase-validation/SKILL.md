@@ -41,6 +41,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - Execution profile for `validate-phase`, `verify-work`, and the long-running parts of `add-tests`: `long-running-mutation`
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- For structured interactive choices, confirmations, review, skip, or stop branching, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
 - When a validation-family run is non-trivial, keep those status fields visible with `update_topic`, `write_todos`, or an honest prose fallback rather than inventing persistence outside MCP.
 - Keep validation saved-summary-first: the `Execute` stage is bounded verifier analysis grounded in saved summaries and existing validation artifacts, not direct repo mutation or prompt-memory reconstruction.
 
@@ -112,14 +113,17 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 1. Resolve the target phase and require both execution summaries and a `XX-VERIFICATION.md` artifact that is valid and ready for UAT before UAT begins. If the verification is valid but not ready, route back to `/blu-validate-phase <phase>` for repair.
 2. Read summary index, summary artifacts, and any existing validation or UAT artifact so conversational UAT is grounded in saved execution evidence.
-3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
-4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
-5. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
-6. Normalize the final UAT draft to the canonical `phase.uat` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths inside the contract-defined summary-aware sections, and keep all required section names unchanged.
-7. Self-check the normalized draft against the returned contract before writing, then persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact. Use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-8. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update, and confirm any follow-up-fix capture before persisting it.
-9. Run `blueprint_artifact_validate` after the write and before `STATE.md` is updated.
-10. Update `STATE.md` with the UAT result and the next safe implemented action.
+3. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
+4. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
+5. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
+6. Use `blueprint-verifier` to capture conversational UAT evidence, unresolved gaps, and optional follow-up fix notes.
+7. Keep non-trivial conversational UAT sequential and checkpointed: after each major evidence block or question group, surface progress and ask the user whether to `review`, `skip`, or `stop` before continuing.
+8. `review` means summarize the current checkpoint, observed behavior, and unresolved gaps before proceeding. `skip` means keep the skipped area explicit in the resumable UAT body and move to the next bounded step. `stop` means persist the current checkpoint and leave the next safe action on `/blu-verify-work <phase>` unless a missing prerequisite routes elsewhere.
+9. Normalize the final UAT draft to the canonical `phase.uat` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths inside the contract-defined summary-aware sections, keep all required section names unchanged, and keep the contract-owned `**Resume State:**` and `**Checkpoint:**` markers current.
+10. Self-check the normalized draft against the returned contract before writing, then persist finished UAT evidence through `blueprint_phase_validation_write` with the `uat` artifact. Use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
+11. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update, and confirm any follow-up-fix capture before persisting it.
+12. Run `blueprint_artifact_validate` after the write and before `STATE.md` is updated.
+13. Update `STATE.md` with the UAT result and the next safe implemented action.
 
 ### `add-tests`
 
