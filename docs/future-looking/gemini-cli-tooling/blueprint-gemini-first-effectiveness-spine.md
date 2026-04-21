@@ -5,6 +5,7 @@
 - Standardize one Gemini-native orchestration model across Blueprint so commands do three things consistently: stay grounded, visibly progress, and reliably follow through.
 - Keep Blueprint Gemini-first but not Gemini-exclusive: use Gemini CLI features aggressively where they help, while preserving graceful fallback for other hosts.
 - Baseline from the current repo: `ask_user` is already widespread, but `write_todos`, `update_topic`, tracker tools, and `get_internal_docs` are effectively concentrated in `new-project`; no Blueprint assets currently use `save_memory`, `google_web_search`, `web_fetch`, `list_mcp_resources`, or `read_mcp_resource`; only `blueprint-executor` currently exposes `run_shell_command`.
+- Capture the shared Gemini-tools boundaries in [blueprint-gemini-tools-playbook.md](./blueprint-gemini-tools-playbook.md) so later slices can inherit one consistent fallback and tool-usage contract.
 
 ## Implementation Changes
 
