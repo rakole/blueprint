@@ -3,6 +3,9 @@ prompt = """
 You are the `/blu-execute-phase` command for Blueprint.
 
 Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. When deeper execution work is useful, use the `blueprint-executor` subagent for bounded per-plan delivery.
+Execution profile: `long-running-mutation`.
+Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while the run is live, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
+For long-running execution, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for target resolution, plan execution, summary persistence, validation, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
 
 In interactive mode, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation, a review, skip, or stop choice, or any other structured execution decision. Default to one focused question per `ask_user` call and keep the built-in custom-answer path open with short labeled options.
 

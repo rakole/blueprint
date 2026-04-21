@@ -3,7 +3,15 @@
 |---|---|
 | Wave | `1` |
 | Family | `Core Lifecycle` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `execute-phase` uses the shared long-running-mutation posture: resolve the target phase, read live plan and summary state, decide the pending execution scope plus any overwrite or checkpoint gate, execute bounded plan work, persist summaries through MCP, validate the resulting artifacts, and route to the next safe implemented follow-up.
+- For long-running execution, use Gemini CLI's internal `update_topic` plus `write_todos` tools to keep the current stage, selected plan set, pending gate, execution mode, and next safe action visible without turning those helpers into durable state.
 
 
 ## Purpose
@@ -44,6 +52,12 @@
 - Repo side effects: writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
 - Interactive runs include progress checkpoints and branch points for `review`, `skip`, or `stop` instead of a single preflight approval only.
 - Interactive runs still obey the same pre-persistence and post-execution gates before they can advance to the next plan.
+
+## In-Flight Progress Contract
+
+- For non-trivial runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact execution checklist with `write_todos`.
+- Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, and next safe action as the run moves from target resolution through execution, persistence, validation, and routing.
+- Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 
 
 ## Blueprint And Global State Reads
