@@ -9,13 +9,34 @@ async function readAgent(agentFile: string): Promise<string> {
   return readFile(path.join(repoRoot, "agents", agentFile), "utf8");
 }
 
-test("blueprint-executor encodes bounded per-plan execution, summary output, and partial-run honesty", async () => {
+test("blueprint-executor encodes bounded per-plan execution, progress checkpoints, shell isolation, and partial-run honesty", async () => {
   const executor = await readAgent("blueprint-executor.md");
 
+  assert.match(executor, /## Parent-Owned Responsibilities/);
+  assert.match(executor, /user-facing orchestration and coordination/i);
+  assert.match(executor, /`update_topic`,[\s\S]*`write_todos`, and `ask_user`/i);
   assert.match(executor, /## Required Reads/);
   assert.match(executor, /saved `XX-YY-PLAN\.md` artifact/i);
   assert.match(executor, /## Execution Protocol/);
   assert.match(executor, /one plan at a time/i);
+  assert.match(executor, /## Progress Checkpoint Contract/);
+  assert.match(executor, /when scope is resolved/i);
+  assert.match(executor, /after each assigned plan or major task group/i);
+  assert.match(executor, /when a blocker or deviation appears/i);
+  assert.match(executor, /after verification finishes/i);
+  assert.match(
+    executor,
+    /resolved scope,\s+active stage,\s+pending gate,\s+execution mode,\s+and next safe action/i
+  );
+  assert.match(executor, /## Shell Isolation/);
+  assert.match(
+    executor,
+    /bounded repo-local inspection,[\s\S]*verification,[\s\S]*build\/test support/i
+  );
+  assert.match(
+    executor,
+    /Shell must not own Blueprint persistence,[\s\S]*MCP writes,[\s\S]*approvals,[\s\S]*routing,[\s\S]*phase-level orchestration/i
+  );
   assert.match(executor, /auth-gated systems|auth gate/i);
   assert.match(executor, /STATE\.md/);
   assert.match(executor, /## Summary Contract/);

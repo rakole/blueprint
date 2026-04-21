@@ -276,6 +276,23 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
         (frontmatter.tools as string[]).includes("write_file"),
         "blueprint-executor must be able to create files when a plan requires it"
       );
+      assert.match(body, /## Parent-Owned Responsibilities/);
+      assert.match(body, /user-facing orchestration and coordination/i);
+      assert.match(body, /`update_topic`,[\s\S]*`write_todos`, and `ask_user`/i);
+      assert.match(body, /## Progress Checkpoint Contract/);
+      assert.match(body, /when scope is resolved/i);
+      assert.match(body, /after each assigned plan or major task group/i);
+      assert.match(body, /when a blocker or deviation appears/i);
+      assert.match(body, /after verification finishes/i);
+      assert.match(
+        body,
+        /resolved scope,\s+active stage,\s+pending gate,\s+execution mode,\s+and next safe action/i
+      );
+      assert.match(body, /## Shell Isolation/);
+      assert.match(
+        body,
+        /Shell must not own Blueprint persistence,[\s\S]*MCP writes,[\s\S]*approvals,[\s\S]*routing,[\s\S]*phase-level orchestration/i
+      );
       continue;
     }
 
