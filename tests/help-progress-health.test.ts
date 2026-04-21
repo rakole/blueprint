@@ -1998,6 +1998,21 @@ test("help progress and health command files reference registered MCP tool names
   assert.match(healthCommand, /explicit confirmation-style response/i);
 });
 
+test("progress keeps the shared router waiting-state contract aligned", async () => {
+  const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
+  const progressDoc = await readFile(path.join(repoRoot, "docs/commands/progress.md"), "utf8");
+  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+
+  assert.match(progressCommand, /Execution profile: router\./);
+  assert.match(progressCommand, /missing artifact, partial repo repair, verification debt, or blocked substrate/i);
+  assert.match(progressDoc, /Execution profile/);
+  assert.match(progressDoc, /## Shared Runtime Contract/);
+  assert.match(progressDoc, /pending gate/);
+  assert.match(progressDoc, /next safe action/);
+  assert.match(runtimeReference, /\|\s*`progress`\s*\|\s*`docs\/commands\/progress\.md`\s*\|/);
+  assert.match(runtimeReference, /blockers, pending gates, and config warnings/i);
+});
+
 test("runtime-facing docs mention shipped command coverage instead of a docs-only runtime description", async () => {
   const geminiFile = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
   const readmeFile = await readFile(path.join(repoRoot, "README.md"), "utf8");
