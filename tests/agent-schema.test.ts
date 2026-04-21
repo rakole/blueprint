@@ -3,8 +3,6 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
-
 const repoRoot = process.cwd();
 const agentsDir = path.join(repoRoot, "agents");
 
@@ -200,6 +198,22 @@ async function loadAgent(agentName: AgentName) {
   };
 }
 
+async function loadCatalogOptionalAgentsFromSource(): Promise<Set<string>> {
+  const source = await readFile(path.join(repoRoot, "src/mcp/tools/project.ts"), "utf8");
+  const matches = source.matchAll(/availableOptionalAgents:\s*\[([^\]]*)\]/g);
+  const agentNames = new Set<string>();
+
+  for (const match of matches) {
+    const arrayBody = match[1] ?? "";
+
+    for (const nameMatch of arrayBody.matchAll(/"([^"]+)"/g)) {
+      agentNames.add(nameMatch[1]);
+    }
+  }
+
+  return agentNames;
+}
+
 test("shipped Blueprint agents match the expected workstream-1 file set", async () => {
   const files = (await readdir(agentsDir))
     .filter((entry) => entry.endsWith(".md"))
@@ -225,6 +239,17 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
     assert.match(frontmatter.description as string, /Use this agent when/i);
     assert.match(frontmatter.description as string, /Example scenarios:/i);
     assert.ok((frontmatter.description as string).length >= 120);
+
+    if (agentName === "blueprint-planner") {
+      assert.match(frontmatter.description as string, /execution-ready plan drafts/i);
+      assert.match(frontmatter.description as string, /drafting new `XX-YY-PLAN\.md` content/i);
+    }
+
+    if (agentName === "blueprint-checker") {
+      assert.match(frontmatter.description as string, /Plan-quality review specialist/i);
+      assert.match(frontmatter.description as string, /reviewing new `XX-YY-PLAN\.md` drafts/i);
+    }
+
     assert.deepEqual(frontmatter.tools, expected.tools);
     assert.equal(frontmatter.max_turns, String(expected.maxTurns));
     assert.equal(frontmatter.timeout_mins, String(expected.timeoutMins));
@@ -270,10 +295,7 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
 });
 
 test("command-catalog optional agents always point at valid Gemini subagent files", async () => {
-  const catalog = await blueprintCommandCatalog();
-  const availableAgents = new Set(
-    Object.values(catalog.commands).flatMap((entry) => entry.availableOptionalAgents)
-  );
+  const availableAgents = await loadCatalogOptionalAgentsFromSource();
 
   for (const agentName of availableAgents) {
     assert.ok(

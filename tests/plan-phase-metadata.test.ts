@@ -161,12 +161,41 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(plannerFile, /requirements-coverage map/i);
   assert.match(plannerFile, /too broad for one coherent plan|prioritize it|split it into smaller slices/i);
   assert.match(plannerFile, /bounded number of passes|stop and return the best coherent draft/i);
+  assert.match(plannerFile, /parent command owns orchestration/i);
+  assert.match(plannerFile, /visible stage narration/i);
+  assert.match(plannerFile, /user\s+checkpoints/i);
+  assert.match(plannerFile, /reuse\/revise\/replace or overwrite decision/i);
+  assert.match(plannerFile, /ready for\s+`blueprint_phase_plan_write` by the parent command/i);
+  assert.match(plannerFile, /Do not own orchestration/i);
+  assert.match(plannerFile, /user confirmations/i);
+  assert.match(plannerFile, /MCP validation/i);
+  assert.match(plannerFile, /any\s+persistence path/i);
+  assert.match(plannerFile, /Do not persist plan files/i);
+  assert.match(plannerFile, /update Blueprint state/i);
+  assert.match(plannerFile, /accept\/revise\/route decision/i);
 
   assert.match(checkerFile, /live phase\.plan contract/i);
   assert.match(checkerFile, /authoringTemplate/i);
   assert.match(checkerFile, /coverage readiness/i);
   assert.match(checkerFile, /prioritized waves|narrower phase slice/i);
   assert.match(checkerFile, /bounded split|targeted revision/i);
+  assert.match(checkerFile, /parent command owns all persistence/i);
+  assert.match(checkerFile, /overwrite handling/i);
+  assert.match(checkerFile, /follow-up routing after the checker returns a verdict/i);
+  assert.match(checkerFile, /findings only/i);
+  assert.match(checkerFile, /persist elsewhere if needed/i);
+  assert.match(
+    checkerFile,
+    /`ACCEPT` is a review verdict, not a persistence or orchestration decision/
+  );
+  assert.match(checkerFile, /Do not own orchestration/i);
+  assert.match(checkerFile, /user confirmations/i);
+  assert.match(checkerFile, /revision checkpoints/i);
+  assert.match(checkerFile, /MCP\s+persistence/i);
+  assert.match(checkerFile, /final routing/i);
+  assert.match(checkerFile, /Do not persist verdicts/i);
+  assert.match(checkerFile, /advance checkpoints/i);
+  assert.match(checkerFile, /update Blueprint state/i);
 
   assert.match(
     mcpToolsDoc,
