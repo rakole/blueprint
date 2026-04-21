@@ -16,6 +16,7 @@ It exists so Blueprint contracts can be understood and maintained without consul
 
 - `/blu`, `help`, and `progress` remain implementation-aware and may only recommend commands whose catalog entry is `implemented`.
 - The retained runtime is Blueprint-native: `.blueprint/` owns project state, MCP tools own durable state changes, skills own orchestration, and hooks stay advisory.
+- The implemented Blueprint runtime now uses dedicated plan index/read/write MCP tools for persisted phase plans.
 - Wave 2 roadmap administration, Wave 3 capture and lightweight execution, and the shipped Wave 4 review plus maintenance surfaces all remain locked to their documented command contracts.
 - Future metadata changes must stay aligned across `docs/COMMAND-CATALOG.md`, `docs/SKILLS-AND-AGENTS.md`, this runtime reference, and the per-command specs in `docs/commands/`.
 

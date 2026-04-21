@@ -37,19 +37,26 @@ test("next command manifest preserves safe fallback and routing guarantees", asy
   assert.match(raw, /Never rely on slash-command chaining, hidden aliases, or implicit destructive behavior/);
 });
 
-test("next command docs and runtime reference preserve waiting-state alignment", async () => {
-  const [commandDoc, runtimeReference] = await Promise.all([
+test("next command docs and runtime reference preserve waiting-state and fallback alignment", async () => {
+  const [nextDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/next.md"), "utf8"),
     readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
-  assert.match(commandDoc, /Execution profile \| `router`/);
-  assert.match(commandDoc, /waiting state/i);
-  assert.match(commandDoc, /next safe follow-up command/i);
+  assert.match(nextDoc, /Execution profile \| `router`/);
+  assert.match(nextDoc, /waiting state/i);
+  assert.match(nextDoc, /next safe follow-up command/i);
+
+  assert.match(nextDoc, /Uninitialized repos must fall back to `\/blu-new-project`/);
+  assert.match(nextDoc, /Partial repos must fall back to `\/blu-health`/);
+  assert.match(nextDoc, /safest implemented recovery command/i);
+
   assert.match(
     runtimeReference,
     /`next`[\s\S]*report waiting state and the next safe follow-up explicitly/i
   );
+  assert.match(runtimeReference, /\|\s*`next`\s*\|\s*`docs\/commands\/next\.md`\s*\|/);
+  assert.match(runtimeReference, /never hide destructive behavior behind implicit routing\./);
 });
 
 test("next is exposed as an implemented router command with no blockers", async () => {
