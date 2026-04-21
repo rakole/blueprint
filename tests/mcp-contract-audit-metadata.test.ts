@@ -243,10 +243,21 @@ test("execution and validation contracts stay explicit across manifests, docs, s
 
   assert.match(verifyCommand, /existing verification artifact are required/i);
   assert.match(verifyCommand, /artifactId: "phase\.uat"/);
+  assert.match(verifyCommand, /Execution profile: `long-running-mutation`/);
+  assert.match(verifyCommand, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(verifyCommand, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(verifyCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(verifyCommand, /review`, `skip`, or `stop`/i);
+  assert.match(verifyCommand, /\*\*Resume State:\*\*` and `\*\*Checkpoint:\*\*/i);
   assert.match(verifyDoc, /## UAT Persistence Contract/);
+  assert.match(verifyDoc, /## Shared Runtime Contract/);
+  assert.match(verifyDoc, /## In-Flight Progress Contract/);
+  assert.match(verifyDoc, /shared long-running-mutation posture/i);
   assert.match(verifyDoc, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(verifyDoc, /returned `path` plus `summaryPaths` as authoritative/i);
   assert.match(verifyDoc, /focused structured decision[\s\S]*`view`[\s\S]*`resume`[\s\S]*`update`/i);
+  assert.match(verifyDoc, /checkpoint decisions[\s\S]*`review`, `skip`, or `stop`/i);
+  assert.match(verifyDoc, /next safe action stays on `\/blu-verify-work <phase>`/i);
   assert.match(verifyDoc, /separate `ask_user` confirmation path/i);
 
   assert.match(addTestsCommand, /bare report name `add-tests-<phase>`/i);
@@ -260,6 +271,8 @@ test("execution and validation contracts stay explicit across manifests, docs, s
     validationSkill,
     /keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/i
   );
+  assert.match(validationSkill, /ask_user/);
+  assert.match(validationSkill, /review`, `skip`, or `stop`/i);
   assert.match(validationSkill, /artifactId: "phase\.verification"/);
   assert.match(validationSkill, /artifactId: "phase\.uat"/);
 });

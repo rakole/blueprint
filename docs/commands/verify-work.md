@@ -3,13 +3,21 @@
 |---|---|
 | Wave | `1` |
 | Family | `Core Lifecycle` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `verify-work` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and validation evidence, decide whether the current UAT artifact is viewed, resumed, replaced, or newly created, execute bounded conversational UAT, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
+- Keep the saved-summary-first contract explicit throughout the run: execution summaries plus a ready-for-UAT verification artifact are the UAT baseline, overwrite confirmation and interactive `review` / `skip` / `stop` checkpoints are the pending gates while evidence is still being collected, and the next safe action stays on `/blu-verify-work <phase>` until the saved UAT checkpoint is either completed or a prerequisite routes elsewhere.
 
 
 ## Purpose
 
 
-`verify-work` is Blueprint's command for validating built features through conversational UAT. Blueprint ships it as a summary-aware UAT command: it reads saved execution and validation evidence first, resumes an existing `XX-UAT.md` unless the user chooses otherwise, requires the verification artifact to be both structurally valid and ready for UAT, normalizes the final body to the canonical UAT template before persistence, validates the written artifact before updating state, and only leaves roadmap completion green when the saved evidence remains valid.
+`verify-work` is Blueprint's command for validating built features through conversational UAT. Blueprint ships it as a summary-aware, checkpointed UAT command: it reads saved execution and validation evidence first, resumes an existing `XX-UAT.md` unless the user chooses otherwise, requires the verification artifact to be both structurally valid and ready for UAT, keeps `review` / `skip` / `stop` checkpoints explicit while the pass is in flight, normalizes the final body to the canonical UAT template before persistence, validates the written artifact before updating state, and only leaves roadmap completion green when the saved evidence remains valid.
 
 
 ## Command Path And Examples
@@ -25,6 +33,7 @@
 - The target phase must already have execution summaries.
 - The target phase must already have a `XX-VERIFICATION.md` artifact from `validate-phase`, and that verification must be ready for UAT.
 - Existing UAT artifacts should be resumed or reused unless the user explicitly asks for a replacement.
+- Non-trivial interactive UAT should stay checkpointed and bounded: after each major evidence block, the user may `review`, `skip`, or `stop`.
 - Confirm any follow-up-fix capture before it is written into the UAT artifact.
 
 
@@ -32,6 +41,14 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: writes `XX-UAT.md` through MCP, validates the saved artifact after the write, updates `.blueprint/ROADMAP.md` when valid execution, verification, and UAT evidence make completion durable, may record explicit follow-up fix capture in the same artifact after confirmation, and updates `.blueprint/STATE.md` when the next safe action changes.
+- In-flight UAT should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
+
+## In-Flight Progress Contract
+
+- For non-trivial UAT runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact UAT checklist with `write_todos`.
+- Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, and next safe action as the run moves from target resolution through saved-summary review, verifier analysis, checkpointed conversational UAT, persistence, post-write validation, and routing.
+- Interactive checkpoints should use explicit `review`, `skip`, and `stop` choices rather than flattening the entire UAT pass into one preflight approval.
+- Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 
 
 ## Blueprint And Global State Reads
@@ -73,8 +90,10 @@
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
 - Self-check the normalized draft against the returned contract before writing so the final body matches the persisted shape.
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
+- Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume without inventing a second checkpoint file.
 - If the verification artifact is valid but not ready for UAT, route back to `/blu-validate-phase <phase>` for repair before attempting UAT persistence.
 - Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; confirm follow-up-fix capture before persistence and do not invent separate tool-owned artifacts.
+- Keep the next safe action on `/blu-verify-work <phase>` while the saved UAT artifact still reflects an in-progress or intentionally stopped checkpoint; route onward only when the saved evidence and current prerequisites support that follow-up.
 
 ## Canonical UAT Contract
 
@@ -82,6 +101,7 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 
 - Do not rename the contract's required headings or replace the locked `**Status:**`, `**Resume State:**`, or `**Checkpoint:**` markers.
 - Keep summary references inside the contract-defined summary-aware sections so `blueprint_phase_validation_write` validation passes cleanly.
+- Keep the `**Resume State:**` and `**Checkpoint:**` markers current when the user chooses `review`, `skip`, or `stop`, so the checkpoint remains resumable and bounded instead of drifting into prompt-only state.
 - Allow extra top-level headings only when the returned contract policy says they are supported.
 - After writing, run artifact validation before updating state so schema drift is caught in the same command path.
 
@@ -121,6 +141,7 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 ## User Prompts And Confirmation Gates
 
 - Use Gemini CLI `ask_user` to capture a focused structured decision when an existing UAT artifact is present: `view` (`view current UAT`), `resume` (`resume saved UAT`), or `update` (`replace UAT`).
+- In interactive mode, prefer `ask_user` for checkpoint decisions after each major UAT block: `review`, `skip`, or `stop`.
 - Confirm any overwrite before replacing an existing UAT artifact; use a separate `ask_user` confirmation path for that overwrite.
 - Confirm any explicit follow-up fix capture before persisting it in the UAT artifact.
 
@@ -142,12 +163,14 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 
 - Reads and writes only the selected phase scope.
 - Reads completed execution summaries plus the existing validation artifact before replacement.
+- Keeps UAT stages, checkpoints, pending gates, and the next safe action explicit while verification is in flight.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Uses execution summaries as the source of truth for conversational UAT coverage.
 - Persists UAT evidence through `blueprint_phase_validation_write` rather than direct file writes.
 - Marks the matching `ROADMAP.md` phase complete only after summary, verification, and UAT evidence all exist.
 - Keeps `XX-UAT.md` resumable and explicit about unresolved gaps or follow-up captures.
+- Uses bounded `review`, `skip`, and `stop` checkpoints instead of collapsing multi-step UAT into a single approval gate.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 
@@ -157,5 +180,6 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 - Single-phase happy path fixture.
 - Missing-summary recovery fixture.
 - Existing-UAT resume fixture.
+- Checkpointed `review` / `skip` / `stop` fixture.
 - Follow-up fix capture fixture.
 - Direct `verify-work` happy-path fixture.
