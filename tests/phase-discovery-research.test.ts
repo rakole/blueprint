@@ -6,7 +6,10 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
-import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactContractRead,
+  blueprintArtifactScaffold
+} from "../src/mcp/tools/artifacts.js";
 import {
   blueprintPhaseArtifactRead,
   blueprintPhaseArtifactWrite,
@@ -151,6 +154,14 @@ test("research-phase command references only registered tool names and safe rout
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
+  const docFile = await readFile(
+    path.join(repoRoot, "docs/commands/research-phase.md"),
+    "utf8"
+  );
+  const researcherAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-researcher.md"),
+    "utf8"
+  );
   const requiredTools = [
     "blueprint_command_catalog",
     "blueprint_phase_locate",
@@ -158,6 +169,9 @@ test("research-phase command references only registered tool names and safe rout
     "blueprint_phase_research_status",
     "blueprint_phase_artifact_read",
     "blueprint_phase_artifact_write",
+    "blueprint_phase_checkpoint_get",
+    "blueprint_phase_checkpoint_put",
+    "blueprint_phase_checkpoint_delete",
     "blueprint_artifact_scaffold",
     "blueprint_state_load",
     "blueprint_state_update"
@@ -177,14 +191,34 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /update/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, /artifactId: "phase\.research"/);
-  assert.match(commandFile, /authoringTemplate/);
+  assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /artifact_read` for the current `context` artifact before drafting|actual current context content/i);
+  assert.match(commandFile, /phase_checkpoint_get/i);
+  assert.match(commandFile, /phase_checkpoint_put/i);
+  assert.match(commandFile, /phase_checkpoint_delete/i);
+  assert.match(commandFile, /topic-sized strands/i);
+  assert.match(commandFile, /inconclusive/i);
   assert.match(commandFile, /PROJECT\.md/);
   assert.match(commandFile, /REQUIREMENTS\.md/);
   assert.match(commandFile, /STATE\.md/);
   assert.match(commandFile, /\/blu-progress/);
-  assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
+  assert.match(commandFile, /\/blu-plan-phase/);
+  assert.match(commandFile, /Do not treat its response as a routing decision/i);
+  assert.match(commandFile, /blueprint_state_load.+reported next safe action comes from the refreshed state/i);
+  assert.match(commandFile, /refreshed safe action is `\/blu-plan-phase`/i);
+  assert.doesNotMatch(commandFile, /state_update[^\n]+set the next safe action/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
+  assert.ok(docFile.includes("`blueprint_artifact_contract_read` -> `{artifactId, contract}`"));
+  assert.ok(docFile.includes("contract.authoringTemplate"));
+  assert.ok(docFile.includes("contract.freehandPolicy"));
+  assert.ok(docFile.includes("additional-top-level-headings"));
+
+  assert.match(researcherAgent, /comparing repo evidence against official docs with clear provenance/i);
+  assert.match(researcherAgent, /repo-root `AGENTS\.md`/i);
+  assert.match(researcherAgent, /official docs or explicitly supplied external references/i);
+  assert.match(researcherAgent, /provenance\s+captured at the claim level/i);
+  assert.match(researcherAgent, /comparison\s+notes when official docs are part of the evidence set/i);
+  assert.match(researcherAgent, /Keep citations, provenance, and repo-path evidence in `## Sources`/i);
 });
 
 test("research scaffold seeds the exact research template shape", async (t) => {
@@ -229,6 +263,7 @@ test("phase artifact write creates, reuses, updates, and validates research cont
     cwd: repoPath,
     artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
   });
+  const contract = await blueprintArtifactContractRead({ artifactId: "phase.research" });
   const created = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
@@ -274,6 +309,9 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.equal(afterCreate.researchValid, true);
   assert.deepEqual(afterCreate.researchIssues, []);
   assert.equal(createdArtifact.found, true);
+  assert.equal(contract.artifactId, "phase.research");
+  assert.match(contract.contract.authoringTemplate, /# Phase XX: <Phase Name> - Research/);
+  assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
   assert.equal(invalid.status, "invalid");

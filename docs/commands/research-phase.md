@@ -55,7 +55,10 @@
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
-- `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
+- `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}`
+- `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
+- `blueprint_phase_checkpoint_delete` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
@@ -65,13 +68,18 @@
 
 - Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"3"` or `3`.
 - Use `blueprint_artifact_scaffold` only with the repo-relative Blueprint research artifact path for the selected phase. Bare names such as `RESEARCH` and absolute paths are invalid.
-- Read the canonical `phase.research` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising `XX-RESEARCH.md`, and reuse the returned `authoringTemplate` for the final normalization pass.
+- Read the canonical `phase.research` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising `XX-RESEARCH.md`.
+- Treat the live response as `{artifactId, contract}` and use `contract.authoringTemplate` plus `contract.freehandPolicy` as the authoritative fields when normalizing or deciding whether extra top-level headings are allowed.
+- Pass `phase` to `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, and treat checkpoint `path` values as authoritative instead of hand-building checkpoint filenames.
 - Persist the final research body through `blueprint_phase_artifact_write` with `artifact: "research"` and treat the returned `path` as authoritative instead of deriving filenames from the phase slug.
 - `blueprint_phase_artifact_write` keeps research validation strict by default. Do not force a warn-only save just to bypass missing sections, citations, or other schema issues unless the user explicitly accepted that tradeoff.
-- Normalize the final research draft to the returned `authoringTemplate` after drafting and before persistence.
+- Normalize the final research draft to `contract.authoringTemplate` after drafting and before persistence.
 - Keep the contract's required section names and locked markers unchanged.
 - Replace every placeholder signal before persistence.
-- Allow extra top-level headings only when the returned contract policy says they are supported.
+- Allow extra top-level headings only when `contract.freehandPolicy` is `additional-top-level-headings`.
+- Use checkpoint persistence only as a resumability aid for long-running or inconclusive research, not as a second research artifact.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured checkpoint shape with `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. Keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`.
+- Delete the saved checkpoint through `blueprint_phase_checkpoint_delete` after a successful final research write so later runs do not resume stale continuation state.
 
 - Keep the section names unchanged and replace every angle-bracket placeholder before writing.
 
@@ -115,6 +123,7 @@
 - Confirm overwrite when research already exists.
 - Force an explicit `view`, `skip`, or `update` path when `XX-RESEARCH.md` already exists.
 - Prefer Gemini CLI's built-in `ask_user` dialog for the `view`/`skip`/`update` choice and overwrite confirmation instead of a plain-text menu.
+- Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
 
 
 ## Edge Cases
@@ -122,6 +131,8 @@
 
 - The target phase is omitted or ambiguous while multiple active phases exist.
 - Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
+- Research may need multiple bounded passes when evidence gathering is broad, contradictory, or blocked on external confirmation.
+- A partially completed research run should preserve resumable state instead of pretending the artifact is final.
 
 
 ## Failure Modes And Recovery
@@ -130,6 +141,7 @@
 - Explain exactly which phase artifact is missing and which command creates it.
 - Surface `blueprint_phase_locate.recovery` guidance for missing roadmap or phase-directory failures.
 - Write follow-up state back into `.blueprint/` instead of dropping context on failure.
+- When research remains inconclusive, persist a checkpoint, summarize verified versus unresolved areas, and route to the next safe implemented continuation step instead of fabricating certainty.
 
 
 ## Acceptance Criteria
@@ -141,6 +153,8 @@
 - Reads the actual saved context content before drafting or revising research instead of relying on status-only readiness signals.
 - Persists populated research content through MCP rather than raw prompt-side file writes.
 - Uses a research schema with citations, confidence, recommendations, and planner-friendly sections.
+- Handles long-running or inconclusive research through checkpointed continuation rather than a single all-or-nothing pass.
+- Reports the next safe action from refreshed runtime state instead of assuming `blueprint_state_update` returned it.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 
