@@ -3,11 +3,19 @@
 |---|---|
 | Wave | `0` |
 | Family | `Foundation` |
+| Execution profile | `router` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `progress` stays inside the shared router posture: resolve repo state, read the live status surface, and route to the next safe implemented command without implying hidden mutation.
+- When the repo is waiting on a prerequisite, `progress` should name the pending gate plainly instead of flattening it into a generic status update.
 
 ## Purpose
 
-`progress` is Blueprint's command for check project progress, show context, and route to next action. In Blueprint it stays read-oriented and host-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
+`progress` is Blueprint's command for checking project progress, showing context, and routing to the next safe action. In Blueprint it stays read-oriented and host-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
 
 ## Command Path And Examples
 
@@ -24,7 +32,7 @@
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- When initialized, include active model profile, branching mode, and config warnings that materially affect the recommended next step.
+- When initialized, include active model profile, branching mode, blockers, pending gates, and config warnings that materially affect the recommended next step.
 - Repo side effects: No durable artifact writes are planned.
 - Routed recommendations must be limited to commands whose catalog entry is `implemented`.
 
@@ -87,6 +95,7 @@
 - If the repo is uninitialized, route to `/blu-new-project`.
 - If the repo is partial, route to `/blu-health`.
 - If the natural next command is blocked, explain the missing substrate and keep the recommendation inside the implemented Wave 0 surface.
+- If the repo is waiting on a missing artifact, verification debt, or blocked substrate, say so explicitly.
 
 ## Acceptance Criteria
 
@@ -102,4 +111,3 @@
 - Partially initialized Blueprint repo fixture.
 - Config-warning fixture.
 - Direct `progress` happy-path fixture.
-
