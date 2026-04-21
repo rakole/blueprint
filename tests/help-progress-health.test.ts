@@ -2013,6 +2013,46 @@ test("progress keeps the shared router waiting-state contract aligned", async ()
   assert.match(runtimeReference, /blockers, pending gates, and config warnings/i);
 });
 
+test("root router and help/progress assets keep implemented-only waiting-state guidance explicit", async () => {
+  const rootRouterCommand = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
+  const helpCommand = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
+  const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
+  const rootRouterDoc = await readFile(path.join(repoRoot, "docs/commands/root-router.md"), "utf8");
+  const helpDoc = await readFile(path.join(repoRoot, "docs/commands/help.md"), "utf8");
+  const progressDoc = await readFile(path.join(repoRoot, "docs/commands/progress.md"), "utf8");
+  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+
+  assert.match(
+    rootRouterCommand,
+    /Only recommend or route commands whose `mcp_blueprint_blueprint_command_catalog` entry is `implemented: true`/
+  );
+  assert.match(
+    rootRouterCommand,
+    /surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate/
+  );
+  assert.match(rootRouterDoc, /Never recommend a command whose catalog entry is not `implemented`/);
+  assert.match(
+    helpCommand,
+    /Only recommend commands whose catalog entry is `implemented: true`/
+  );
+  assert.match(
+    helpCommand,
+    /If the safest path is still waiting on a prerequisite, name that waiting state clearly: partial repo repair, missing artifact, verification debt, or blocked substrate/
+  );
+  assert.match(helpDoc, /waiting state called out when Blueprint is still uninitialized or partially initialized/);
+  assert.match(helpDoc, /pending gate/);
+  assert.match(helpDoc, /next safe action/);
+  assert.match(
+    progressCommand,
+    /If the repo is waiting on a prerequisite, name the waiting state plainly: missing artifact, partial repo repair, verification debt, or blocked substrate/
+  );
+  assert.match(progressDoc, /pending gate/);
+  assert.match(progressDoc, /next safe action/);
+  assert.match(runtimeReference, /\|\s*`\/blu`\s*\|\s*`docs\/commands\/root-router\.md`\s*\|/);
+  assert.match(runtimeReference, /\|\s*`help`\s*\|\s*`docs\/commands\/help\.md`\s*\|/);
+  assert.match(runtimeReference, /\|\s*`progress`\s*\|\s*`docs\/commands\/progress\.md`\s*\|/);
+});
+
 test("runtime-facing docs mention shipped command coverage instead of a docs-only runtime description", async () => {
   const geminiFile = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
   const readmeFile = await readFile(path.join(repoRoot, "README.md"), "utf8");
