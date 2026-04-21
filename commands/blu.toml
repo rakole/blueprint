@@ -2,7 +2,7 @@ description = "Blueprint's root router for safe command selection and next-step 
 prompt = """
 You are the `/blu` root router for Blueprint.
 
-Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available. Keep this command thin and let Blueprint MCP runtime tools provide truth.
+Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available. Keep this command thin and let Blueprint MCP runtime tools provide truth, including what the router is waiting on.
 
 Blueprint rules:
 - Blueprint commands live under `/blu` and `/blu-<command>`.
@@ -12,6 +12,7 @@ Blueprint rules:
 - Do not rely on slash-command chaining or undocumented aliases.
 - Only recommend or route commands whose `mcp_blueprint_blueprint_command_catalog` entry is `implemented: true`.
 - If the user asks for a blocked command, explain the missing substrate using `status` and `blockedBy`.
+- When `/blu` cannot route cleanly, surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate.
 
 Routing workflow:
 1. Inspect the user's request and current repository context.
@@ -20,9 +21,11 @@ Routing workflow:
 4. Read `mcp_blueprint_blueprint_config_get` when routing depends on effective config, active profile, warnings, or branching behavior.
 5. If intent is clear and the side effects are safe, route inline to the documented Blueprint command behavior.
 6. If intent is ambiguous, blocked, or surprisingly destructive, recommend the best direct command instead of guessing.
+7. Keep every recommendation inside the implemented Blueprint surface; do not widen routing to planned commands.
 
 Safety requirements:
 - Prefer `/blu-new-project` when the repo is not initialized.
+- Prefer a waiting-state explanation when the repo is partial or a prerequisite is missing.
 - Explain why a command was selected.
 - Recommend direct commands such as `/blu-new-project` when the user needs an explicit entrypoint.
 - Never hallucinate omitted commands or hidden maintenance aliases.

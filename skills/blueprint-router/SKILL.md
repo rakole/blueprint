@@ -6,7 +6,8 @@ description: >
   safe command selection inside the implemented runtime surface. Example
   scenarios: choosing between `/blu-help` and `/blu-progress`, explaining why a
   documented command is blocked, routing a root `/blu` request to the safest
-  implemented command, and recommending the next action for a partial repo.
+  implemented command, surfacing the current waiting state for root `/blu`
+  requests, and recommending the next action for a partial repo.
 status: implemented
 commands:
   - /blu
@@ -38,6 +39,7 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 - host-native inline routing
 - no slash-command chaining
 - no hidden support commands
+- `/blu` waiting-state visibility without widening routable commands
 
 ## Required Inputs
 
@@ -66,6 +68,7 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 6. If repo state is uninitialized, prefer `/blu-new-project`.
 7. If repo state is partial, prefer `/blu-health`.
 8. Surface config warnings only when they materially change the next safe action.
+9. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a missing artifact or blocked substrate.
 
 ## Output Style
 
