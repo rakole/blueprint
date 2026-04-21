@@ -559,6 +559,20 @@ test("canonical lifecycle contracts allow additional top-level headings without 
     invalidCheckpointValidation.issues.join("\n"),
     /saved checkpoint path ending in `-DISCUSS-CHECKPOINT\.json` or `none`|`none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT\.json`/
   );
+
+  const contradictoryVerification = verification
+    .replace("**Gate State:** PASS", "**Gate State:** PASS with follow-up")
+    .replace("- Gate: PASS", "- Gate: BLOCKED")
+    .replace("- Readiness: ready for UAT", "- Readiness: not ready for UAT");
+  const contradictoryValidation = validateVerificationArtifactContent(contradictoryVerification, [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  ]);
+
+  assert.equal(contradictoryValidation.valid, false, contradictoryValidation.issues.join("\n"));
+  assert.match(
+    contradictoryValidation.issues.join("\n"),
+    /must declare \*\*Gate State:\*\* as PASS, PARTIAL, or BLOCKED|must keep the top \*\*Gate State:\*\* marker and the Gate section value consistent|must keep the Gate section Readiness value aligned with the Gate state/
+  );
 });
 
 test("research contract rejects skeleton content that lacks substantive section detail", () => {

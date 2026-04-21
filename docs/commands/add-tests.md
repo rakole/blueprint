@@ -40,6 +40,7 @@
 
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing verification and UAT artifacts through `blueprint_phase_validation_read`
+- canonical verification contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`
 - current Blueprint artifact inventory through `blueprint_artifact_list`
 - current state routing through `blueprint_state_load`
 
@@ -60,6 +61,7 @@
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
 - `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
+- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
@@ -71,6 +73,8 @@
 
 - Update verification coverage through `blueprint_phase_validation_write` with `artifact: "verification"` and the full final markdown body; do not edit `XX-VERIFICATION.md` directly.
 - Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
+- Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
+- Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, and self-check the normalized verification draft against the returned contract before writing.
 - Persist the durable add-tests report through `blueprint_artifact_report_write` with the bare report name `add-tests-<phase>`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
 
@@ -149,4 +153,3 @@
 - Phase review or shipping fixture.
 - Git or external CLI availability fixture.
 - Direct `add-tests` happy-path fixture.
-

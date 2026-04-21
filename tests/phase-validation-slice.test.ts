@@ -303,129 +303,132 @@ autonomous: true
   );
   await writeFile(
     path.join(phaseDir, "04-CONTEXT.md"),
-    `# Phase 04: Validation - Context
-
-## Phase Boundary
-- Keep validation evidence durable and summary-backed.
-- Cover verification, UAT, and gap closure artifacts.
-- Exclude replanning completed execution work.
-- Downstream validation should trace back to saved summaries.
-
-## Discovery Grounding
-- Project brief - this phase validates completed execution evidence.
-- Requirements grounding - preserve the summary-aware lifecycle contract.
-- Workflow posture - validate from saved artifacts rather than prompt memory.
-- Confirmed decisions - validation follows execution summaries.
-
-## Dependencies
-- Prior phase artifacts - execution summaries and roadmap state.
-- External constraints - repository writes stay inside `.blueprint/`.
-- Required follow-up reads - the saved summary and verification evidence.
-
-## Open Questions
-- Which gaps remain manual-only or deferred?
-
-## Deferred Ideas
-- Later follow-up: revisit any validation gap that needs a dedicated repair.
-- Reusable evidence: keep the next audit pass and any deferred evidence nearby.
-
-## Canonical References
-- Saved execution summaries and validation fixtures.
-`,
+    [
+      "# Phase 04: Validation - Context",
+      "",
+      "## Phase Boundary",
+      "- Keep validation evidence durable and summary-backed.",
+      "- Cover verification, UAT, and gap closure artifacts.",
+      "- Exclude replanning completed execution work.",
+      "- Downstream validation should trace back to saved summaries.",
+      "",
+      "## Discovery Grounding",
+      "- Project brief - this phase validates completed execution evidence.",
+      "- Requirements grounding - preserve the summary-aware lifecycle contract.",
+      "- Workflow posture - validate from saved artifacts rather than prompt memory.",
+      "- Confirmed decisions - validation follows execution summaries.",
+      "",
+      "## Dependencies",
+      "- Prior phase artifacts - execution summaries and roadmap state.",
+      "- External constraints - repository writes stay inside `.blueprint/`.",
+      "- Required follow-up reads - the saved summary and verification evidence.",
+      "",
+      "## Open Questions",
+      "- Which gaps remain manual-only or deferred?",
+      "",
+      "## Deferred Ideas",
+      "- Later follow-up: revisit any validation gap that needs a dedicated repair.",
+      "- Reusable evidence: keep the next audit pass and any deferred evidence nearby.",
+      "",
+      "## Canonical References",
+      "- Saved execution summaries and validation fixtures."
+    ].join("\n"),
     "utf8"
   );
   await writeFile(
     path.join(phaseDir, "04-RESEARCH.md"),
-    `# Phase 04: Validation - Research
-
-**Researched:** 2026-04-11
-**Domain:** validation slice routing
-**Confidence:** HIGH
-
-## Phase Requirements
-
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| EXEC-01 | Persist verification and UAT evidence after execution. | Use dedicated validation writes for verification and UAT. |
-
-## Summary
-
-- The phase is ready for validation once summaries exist.
-
-## Locked Decisions From Context
-
-- Preserve summary-aware validation before any UAT step.
-
-## User Constraints
-
-- Keep validation writes inside .blueprint/.
-
-## Standard Stack
-
-- TypeScript on Node.js
-
-## Installation And Setup
-
-- Run the saved summary and verification fixtures through the standard test harness.
-
-## Alternatives Considered
-
-- Direct prompt-only validation was rejected in favor of artifact-backed evidence reads.
-
-## Architecture Patterns
-
-- MCP tools own durable artifact writes.
-
-## Don't Hand-Roll
-
-- Don't write verification or UAT artifacts outside the phase tool surface.
-
-## Anti-Patterns
-
-- Treating verification as complete without durable summary evidence.
-
-## State Of The Art
-
-- Summary-aware validation is the current lifecycle substrate for this runtime slice.
-
-## Common Pitfalls
-
-- Treating validation evidence as optional noise.
-
-## Open Questions
-
-- Should validation also require explicit evidence for skipped checks?
-
-## Confidence Breakdown
-
-| Topic | Confidence | Why |
-|-------|------------|-----|
-| Validation routing | HIGH | The test fixture controls the saved summary and verification inputs. |
-
-## Code Examples
-
-\`\`\`ts
-await blueprintPhaseValidationWrite({ cwd: repoPath, phase: "4", artifact: "verification", content });
-\`\`\`
-
-## Recommendations
-
-- Route to /blu-validate-phase after execution summaries are present.
-
-## Sources
-
-- \`src/mcp/tools/phase.ts\` - phase validation reads and writes for this lifecycle slice.
-`,
+    [
+      "# Phase 04: Validation - Research",
+      "",
+      "**Researched:** 2026-04-11",
+      "**Domain:** validation slice routing",
+      "**Confidence:** HIGH",
+      "",
+      "## Phase Requirements",
+      "",
+      "| ID | Description | Research Support |",
+      "|----|-------------|------------------|",
+      "| EXEC-01 | Persist verification and UAT evidence after execution. | Use dedicated validation writes for verification and UAT. |",
+      "",
+      "## Summary",
+      "",
+      "- The phase is ready for validation once summaries exist.",
+      "",
+      "## Locked Decisions From Context",
+      "",
+      "- Preserve summary-aware validation before any UAT step.",
+      "",
+      "## User Constraints",
+      "",
+      "- Keep validation writes inside .blueprint/.",
+      "",
+      "## Standard Stack",
+      "",
+      "- TypeScript on Node.js",
+      "",
+      "## Installation And Setup",
+      "",
+      "- Run the saved summary and verification fixtures through the standard test harness.",
+      "",
+      "## Alternatives Considered",
+      "",
+      "- Direct prompt-only validation was rejected in favor of artifact-backed evidence reads.",
+      "",
+      "## Architecture Patterns",
+      "",
+      "- MCP tools own durable artifact writes.",
+      "",
+      "## Don't Hand-Roll",
+      "",
+      "- Don't write verification or UAT artifacts outside the phase tool surface.",
+      "",
+      "## Anti-Patterns",
+      "",
+      "- Treating verification as complete without durable summary evidence.",
+      "",
+      "## State Of The Art",
+      "",
+      "- Summary-aware validation is the current lifecycle substrate for this runtime slice.",
+      "",
+      "## Common Pitfalls",
+      "",
+      "- Treating validation evidence as optional noise.",
+      "",
+      "## Open Questions",
+      "",
+      "- Should validation also require explicit evidence for skipped checks?",
+      "",
+      "## Confidence Breakdown",
+      "",
+      "| Topic | Confidence | Why |",
+      "|-------|------------|-----|",
+      "| Validation routing | HIGH | The test fixture controls the saved summary and verification inputs. |",
+      "",
+      "## Code Examples",
+      "",
+      "```ts",
+      'await blueprintPhaseValidationWrite({ cwd: repoPath, phase: "4", artifact: "verification", content });',
+      "```",
+      "",
+      "## Recommendations",
+      "",
+      "- Route to /blu-validate-phase after execution summaries are present.",
+      "",
+      "## Sources",
+      "",
+      "- `src/mcp/tools/phase.ts` - phase validation reads and writes for this lifecycle slice."
+    ].join("\n"),
     "utf8"
   );
   await writeFile(
     path.join(phaseDir, "04-UI-SPEC.md"),
-    `# Phase 04: Validation - UI Spec
-
-## Outcome Mode
-
-- Explicit skip rationale
-`,
+    [
+      "# Phase 04: Validation - UI Spec",
+      "",
+      "## Outcome Mode",
+      "",
+      "- Explicit skip rationale"
+    ].join("\n"),
     "utf8"
   );
 
@@ -485,7 +488,7 @@ test("validate-phase and verify-work manifests reference registered validation t
   assert.match(verifyManifest, /`blueprint-verifier` subagent/);
   assert.match(validateManifest, /artifact: "verification"/);
   assert.match(verifyManifest, /artifact: "uat"/);
-  assert.match(validateManifest, /\/blu-progress/);
+  assert.match(validateManifest, /\/blu-validate-phase <phase>/);
   assert.match(verifyManifest, /\/blu-progress/);
   assert.doesNotMatch(validateManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
   assert.doesNotMatch(verifyManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
@@ -697,6 +700,69 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   });
   const beforeUatStatus = await blueprintProjectStatus({ cwd: repoPath });
   const beforeUatState = await blueprintStateLoad({ cwd: repoPath });
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "verification",
+    content: `# Phase 04: Validation - Verification
+
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
+
+- The validated feature set is ready for UAT.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 4\`.
+`,
+    overwrite: true
+  });
   const invalidUat = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
@@ -777,8 +843,8 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.match(verificationRead.content ?? "", /Gate State/);
   assert.equal(verificationReused.status, "reused");
   assert.equal(verificationUpdated.status, "updated");
-  assert.match(beforeUatStatus.nextAction, /\/blu-verify-work 4/);
-  assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-verify-work 4/);
+  assert.match(beforeUatStatus.nextAction, /\/blu-validate-phase 4/);
+  assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-validate-phase 4/);
   assert.equal(invalidUat.status, "invalid");
   assert.match(invalidUat.issues.join("\n"), /\*\*Status:\*\*/);
   assert.match(invalidUat.issues.join("\n"), /Resume State/);
@@ -786,6 +852,69 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.match(invalidUat.issues.join("\n"), /Session State/);
   assert.match(invalidUat.issues.join("\n"), /Questions Asked/);
   assert.match(invalidUat.issues.join("\n"), /Observed Behavior/);
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "verification",
+    content: `# Phase 04: Validation - Verification
+
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
+
+- The validated feature set is ready for UAT.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 4\`.
+`,
+    overwrite: true
+  });
   assert.equal(uatCreated.status, "created");
   assert.equal(uatRead.found, true);
   assert.match(uatRead.content ?? "", /user acceptance run passed/i);
@@ -800,7 +929,10 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.ok(
     artifactList.artifacts.phases.includes(".blueprint/phases/04-phase-validation/04-UAT.md")
   );
-  assert.match(roadmapBody, /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+  assert.match(
+    roadmapBody,
+    /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/
+  );
   assert.match(roadmapBody, /### Phase 4: Validation[\s\S]*\*\*Status\*\*: completed/);
   assert.match(afterUatStatus.nextAction, /\/blu-audit-milestone v2/);
   assert.match(afterUatState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
@@ -876,6 +1008,124 @@ test("verify-work refuses to persist UAT when the verification artifact is inval
   );
 });
 
+test("verify-work refuses to persist UAT when the verification artifact is valid but not ready for UAT", async (t) => {
+  const repoPath = await createValidationRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const readyVerification = `# Phase 04: Validation - Verification
+
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
+
+- The validated feature set is ready for UAT.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Execution summaries back the validation pass. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with \`/blu-verify-work 4\`.
+`;
+
+  const notReadyVerification = readyVerification
+    .replace("**Gate State:** PASS", "**Gate State:** PARTIAL")
+    .replace("- Gate: PASS", "- Gate: PARTIAL")
+    .replace("- Readiness: ready for UAT", "- Readiness: not ready for UAT")
+    .replace("- The validated feature set is ready for UAT.", "- The validated feature set needs a final repair pass before UAT.");
+
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "verification",
+    content: notReadyVerification,
+    overwrite: true
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintPhaseValidationWrite({
+        cwd: repoPath,
+        phase: "4",
+        artifact: "uat",
+        content: `# Phase 04: Validation - UAT
+
+**Status:** PASS
+
+## UAT Summary
+
+- The user acceptance run passed.
+
+## Questions Asked
+
+- Did the validated feature behave as expected for the saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
+`,
+        overwrite: true
+      }),
+    /ready for UAT/
+  );
+});
+
 test("validate-phase and verify-work command docs keep the validation skill and MCP contracts explicit", async () => {
   const [validateDoc, verifyDoc] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/validate-phase.md"), "utf8"),
@@ -892,6 +1142,8 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(validateDoc, /blueprint_config_get/);
   assert.match(validateDoc, /blueprint_artifact_validate/);
   assert.match(validateDoc, /blueprint_state_update/);
+  assert.match(validateDoc, /blueprint_artifact_contract_read/);
+  assert.match(validateDoc, /self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`/i);
   assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
   assert.match(validateDoc, /Direct `validate-phase` happy-path fixture\./);
   assert.match(verifyDoc, /Primary skill: `blueprint-phase-validation`/);
@@ -905,4 +1157,32 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(verifyDoc, /blueprint_state_update/);
   assert.match(verifyDoc, /phase XX-UAT\.md/);
   assert.match(verifyDoc, /Direct `verify-work` happy-path fixture\./);
+});
+
+test("validation contract docs keep the published verification schema aligned with the runtime contract", async () => {
+  const [artifactSchema, addTestsDoc, validateDoc] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/add-tests.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/validate-phase.md"), "utf8")
+  ]);
+
+  assert.match(artifactSchema, /### `XX-VERIFICATION\.md`/);
+  assert.match(artifactSchema, /\*\*Coverage:\*\*/);
+  assert.match(artifactSchema, /\*\*Gate State:\*\*/);
+  assert.match(artifactSchema, /\*\*Sign-off:\*\*/);
+  assert.match(artifactSchema, /## Validation Summary/);
+  assert.match(artifactSchema, /## Requirement \/ Task Coverage/);
+  assert.match(artifactSchema, /## Evidence Reviewed/);
+  assert.match(artifactSchema, /## Test Infrastructure \/ Evidence Metadata/);
+  assert.match(artifactSchema, /## Manual-Only or Deferred Coverage/);
+  assert.match(artifactSchema, /## Gate State/);
+  assert.match(artifactSchema, /## Gap Classification/);
+  assert.match(artifactSchema, /should only route the next safe action to `\/blu-verify-work` when the saved gate state is `PASS`/i);
+
+  assert.match(addTestsDoc, /blueprint_artifact_contract_read/);
+  assert.match(addTestsDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
+  assert.match(addTestsDoc, /self-check the normalized verification draft against the returned contract before writing/i);
+  assert.match(validateDoc, /blueprint_artifact_contract_read/);
+  assert.match(validateDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
+  assert.match(validateDoc, /self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`/i);
 });

@@ -94,13 +94,13 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 3. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
 5. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries.
-6. Normalize the final validation draft to the canonical `phase.verification` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths in the contract-defined evidence section, and keep all required section names unchanged.
+6. Normalize the final validation draft to the canonical `phase.verification` authoring template before calling `blueprint_phase_validation_write`. Keep summary filenames or paths in the contract-defined evidence section, keep all required section names unchanged, and self-check the normalized draft against the returned contract before writing.
 7. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-8. Update `STATE.md` with the validation result and the next safe implemented action. Prefer `/blu-verify-work`, and fall back to `/blu-progress` only if runtime availability changes.
+8. Update `STATE.md` with the validation result and the next safe implemented action. Route valid ready-for-UAT verification to `/blu-verify-work <phase>`, and route PARTIAL or BLOCKED verification back to `/blu-validate-phase <phase>` for repair.
 
 ### `verify-work`
 
-1. Resolve the target phase and require both execution summaries and a `XX-VERIFICATION.md` artifact before UAT begins.
+1. Resolve the target phase and require both execution summaries and a `XX-VERIFICATION.md` artifact that is valid and ready for UAT before UAT begins. If the verification is valid but not ready, route back to `/blu-validate-phase <phase>` for repair.
 2. Read summary index, summary artifacts, and any existing validation or UAT artifact so conversational UAT is grounded in saved execution evidence.
 3. Inspect any existing `XX-UAT.md` before proposing replacement and default to resume or reuse unless the user explicitly asks for an update.
 4. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing the UAT pass and any remaining acceptance gaps.
@@ -120,9 +120,10 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 5. Inspect the relevant repo code, existing tests, and test-runner configuration before writing. Prefer extending nearby tests over duplicating the same coverage in a second suite.
 6. Use `blueprint-executor` for bounded multi-file test implementation when the harness or write scope is non-trivial.
 7. Use `blueprint-verifier` to review whether the proposed tests cover the saved execution behavior and any explicit validation or UAT gaps.
-8. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists.
-9. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path.
-10. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
+8. Read `blueprint_artifact_contract_read` for `phase.verification`, normalize the final verification draft to `contract.authoringTemplate`, and self-check the normalized verification draft against the returned contract before persisting verification notes.
+9. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists.
+10. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path.
+11. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
 
 ## Non-Negotiables
 

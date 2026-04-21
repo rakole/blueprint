@@ -69,10 +69,12 @@
 - Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
 - Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
+- Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, and self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`.
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required validation-tool shape or heading structure is derived from the contract.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
 - `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
 - Keep the contract's required section names and locked markers unchanged, and allow extra top-level headings only when the returned contract policy says they are supported.
+- Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS` and readiness is ready for UAT; otherwise keep the next safe action on `/blu-validate-phase <phase>` for repair.
 - Prefer `blueprint_state_update` with `base: "synced"` after persistence so `STATE.md` derives the next safe action from the updated artifact inventory instead of leaving stale routing behind.
 
 

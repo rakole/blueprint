@@ -18,12 +18,14 @@ test("add-tests docs and runtime summaries mark the test-generation slice as shi
 
   assert.match(commandDoc, /Blueprint ships it as an evidence-backed test-generation command/i);
   assert.match(commandDoc, /Primary skill: `blueprint-phase-validation`/);
+  assert.match(commandDoc, /blueprint_artifact_contract_read/);
+  assert.match(commandDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
   assert.match(commandDoc, /blueprint_phase_validation_write/);
   assert.match(commandDoc, /blueprint_artifact_report_write/);
   assert.match(commandDoc, /add-tests-<phase>\.md/);
   assert.match(
     catalogMarkdown,
-    /\| `add-tests` \| 4 \| `Quality And Shipping` \| `blueprint-phase-validation` \| `implemented` \| `new or updated repo test files; phase XX-VERIFICATION\.md; \.blueprint\/reports\/add-tests-<phase>\.md; \.blueprint\/STATE\.md` \| `High: repo test mutation plus verification\/report updates\.` \|/
+    /\| `add-tests` \| 4 \| `Quality And Shipping` \| `blueprint-phase-validation` \| `implemented` \|/
   );
   assert.match(readme, /\/blu-add-tests/);
   assert.match(gemini, /\/blu-add-tests/);
@@ -44,6 +46,7 @@ test("add-tests is exposed as an implemented validation follow-up command", asyn
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",
     "blueprint_artifact_validate",

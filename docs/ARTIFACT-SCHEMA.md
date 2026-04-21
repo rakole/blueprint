@@ -397,8 +397,15 @@ Contract notes:
 
 Minimum expected structure:
 - `**Coverage:**` brief summary of which summaries or plan slices were validated
+- `**Gate State:**` `PASS|PARTIAL|BLOCKED`
+- `**Sign-off:**` named reviewer or `pending`
 - `## Validation Summary`
+- `## Requirement / Task Coverage`
 - `## Evidence Reviewed`
+- `## Test Infrastructure / Evidence Metadata`
+- `## Manual-Only or Deferred Coverage`
+- `## Gate State`
+- `## Gap Classification`
 - `## Gaps Found`
 - `## Suggested Repairs`
 - `## Next Safe Action`
@@ -406,6 +413,9 @@ Minimum expected structure:
 Validation expectations:
 - must be grounded in the saved execution summaries for the phase
 - should describe gaps and pass signals explicitly rather than only restating artifact content
+- should keep the locked markers `**Coverage:**`, `**Gate State:**`, and `**Sign-off:**` exactly as written
+- should keep the full heading set above so the persisted artifact matches the runtime validator and authoring template
+- should only route the next safe action to `/blu-verify-work` when the saved gate state is `PASS` and the artifact says readiness is ready for UAT; otherwise keep the next safe action on `/blu-progress` or the equivalent implemented fallback
 - should be resumable by the next `validate-phase` run if the artifact already exists
 
 ### `XX-UAT.md`
