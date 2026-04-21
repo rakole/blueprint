@@ -17,7 +17,10 @@ Follow this flow exactly:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status` and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Execution profile: `interactive-read`.
 - Keep Blueprint-owned writes limited to `.blueprint/STATE.md`, and only update it when Blueprint is initialized.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-fast`.
+- Do not turn `/blu-fast` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not create quick-run reports, phase artifacts, or other ad hoc persistence as side effects of `fast`.
 - Do not use subagents.
 - Do not present planned-only commands as runnable follow-ups.

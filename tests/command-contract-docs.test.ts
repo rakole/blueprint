@@ -452,12 +452,17 @@ test("debug command docs keep the report-backed investigation contract explicit"
 test("fast command docs keep the trivial inline execution contract explicit", async () => {
   const fastDoc = await readRepoFile("docs/commands/fast.md");
 
+  assert.match(fastDoc, /\| Execution profile \| `interactive-read` \|/);
+  assert.match(fastDoc, /## Shared Runtime Contract/);
   assert.match(fastDoc, /Primary skill: `blueprint-phase-execution`/);
   assert.match(fastDoc, /blueprint_project_status/);
   assert.match(fastDoc, /blueprint_state_update/);
   assert.match(fastDoc, /optional `?\.blueprint\/STATE\.md`?/);
   assert.match(fastDoc, /May run inside or outside a Blueprint project/);
   assert.match(fastDoc, /no subagents, no planning overhead/i);
+  assert.match(fastDoc, /does not adopt tracker-backed branching or the long-running progress layer used by `quick` and lifecycle execution/i);
+  assert.match(fastDoc, /Do not use `update_topic`, `write_todos`, or tracker tools to make a trivial run look long-running\./);
+  assert.match(fastDoc, /Explicitly excludes `update_topic`, `write_todos`, tracker-backed branching, and other long-running progress behavior\./);
   assert.match(fastDoc, /Does not create quick-run reports, phase artifacts, or subagent side effects\./);
   assert.match(fastDoc, /Leaves unrelated repo files untouched/i);
 });

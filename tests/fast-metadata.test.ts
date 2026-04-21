@@ -24,6 +24,28 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.match(commandFile, /\/blu-plan-phase/);
   assert.match(commandFile, /\/blu-health/);
   assert.match(commandFile, /\/blu-progress/);
+  assert.match(commandFile, /Execution profile: `interactive-read`/);
+  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
+  assert.match(commandFile, /Do not turn `\/blu-fast` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching\./);
+  assert.doesNotMatch(commandFile, /`update_topic` tool to keep the active stage visible/);
+  assert.doesNotMatch(commandFile, /tracker-eligible/i);
   assert.match(commandFile, /Do not use subagents\./);
   assert.match(commandFile, /STATE\.md`? records `\/blu-fast`/);
+});
+
+test("fast skill and runtime reference keep the trivial path off the tracker and long-running progress layer", async () => {
+  const [skillFile, runtimeReference] = await Promise.all([
+    readFile(path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.match(skillFile, /Execution profile for `\/blu-fast`: `interactive-read`/);
+  assert.match(
+    skillFile,
+    /`\/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker tools; finish the run inline or reroute/i
+  );
+  assert.match(
+    runtimeReference,
+    /`fast`[\s\S]*Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus `update_topic` or `write_todos` long-running visibility/i
+  );
 });
