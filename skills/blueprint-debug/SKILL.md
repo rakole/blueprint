@@ -20,10 +20,14 @@ the right next step is a bounded fix, a saved plan, or more validation.
 
 ## Runtime Call Rules
 
+- Execution profile: `interactive-read`
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
+- For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose when the host makes it available.
 
 ## Parity Goal
 
@@ -86,11 +90,15 @@ host-native boundaries:
 7. Persist the durable report through `blueprint_artifact_report_write` with
    the bare canonical `debug-latest` report name, not a `.blueprint/reports/...`
    path.
-8. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
+8. Stop on an explicit follow-up gate after the diagnosis: keep the run
+   report-only, capture a todo, route to `/blu-quick`, route to
+   `/blu-plan-phase`, or defer to `/blu-progress` when multiple implemented
+   next steps remain viable.
+9. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
    capture. Do not silently turn every finding into a todo.
-9. After persistence, update `STATE.md` through `blueprint_state_update` so the
-   next safe implemented action is explicit.
-10. Keep follow-up routing inside implemented commands only. Prefer
+10. After persistence, update `STATE.md` through `blueprint_state_update` so
+    the next safe implemented action is explicit.
+11. Keep follow-up routing inside implemented commands only. Prefer
     `/blu-progress` when the investigation ends with multiple viable next
     steps.
 
@@ -100,5 +108,7 @@ host-native boundaries:
 - Separate confirmed causes from hypotheses or likely next experiments.
 - State whether the run stayed diagnose-only or crossed into a confirmed fix
   attempt.
+- Name whether the follow-up stayed report-only, became a captured todo, or
+  rerouted into another implemented command.
 - Name the `debug-latest` report and any captured todo follow-up explicitly.
 - End on the safest implemented next action.
