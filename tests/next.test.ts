@@ -31,8 +31,25 @@ test("next command manifest preserves safe fallback and routing guarantees", asy
   assert.match(raw, /\/blu-new-project/);
   assert.match(raw, /\/blu-health/);
   assert.match(raw, /implemented: true/);
+  assert.match(raw, /waiting-state reporting/);
+  assert.match(raw, /next safe follow-up/);
   assert.match(raw, /Do not write files, mutate config, or call write-oriented MCP tools/);
   assert.match(raw, /Never rely on slash-command chaining, hidden aliases, or implicit destructive behavior/);
+});
+
+test("next command docs and runtime reference preserve waiting-state alignment", async () => {
+  const [commandDoc, runtimeReference] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/next.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.match(commandDoc, /Execution profile \| `router`/);
+  assert.match(commandDoc, /waiting state/i);
+  assert.match(commandDoc, /next safe follow-up command/i);
+  assert.match(
+    runtimeReference,
+    /`next`[\s\S]*report waiting state and the next safe follow-up explicitly/i
+  );
 });
 
 test("next is exposed as an implemented router command with no blockers", async () => {
