@@ -20,11 +20,17 @@ Orchestrate Blueprint's execution-family flows so saved plans run in a wave-awar
 
 ## Runtime Call Rules
 
+- Execution profile: `long-running-mutation`
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, review, skip, or stop branching, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
+- Use Gemini CLI's internal `update_topic` tool to keep long-running execution anchored on the active stage.
+- Use Gemini CLI's internal `write_todos` tool to maintain a compact visible checklist for target resolution, plan execution, summary persistence, validation, and routing when the run spans multiple stages.
+- Treat `update_topic` and `write_todos` as session-local coordination only; they do not replace Blueprint MCP persistence or `.blueprint/STATE.md`.
 
 ## Parity Goal
 
@@ -89,29 +95,30 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 1. Resolve the target phase before executing anything and stop if the phase cannot be inferred safely.
 2. Treat the plan index plus summary index as the execution source of truth; plans without valid summaries are pending work, and summaries without plans or with validation failures are repair warnings.
 3. If no plans exist yet, route to `/blu-plan-phase` before attempting execution.
-4. Read the selected plan artifacts before delegating execution so wave ordering, dependencies, and acceptance criteria stay grounded in the saved plan set.
-5. Respect `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from normalized effective config when describing execution mode.
-6. Use `blueprint-executor` for bounded per-plan work instead of collapsing the entire phase into one task.
-7. Persist execution evidence through `blueprint_phase_summary_write`; do not write raw summary files directly, and never pass summary filenames where the tool expects a numeric `planId`.
-8. Before drafting or replacing a summary, read the canonical `phase.summary` contract through `blueprint_artifact_contract_read` and normalize the body to its authoring template.
-9. Existing valid summaries require explicit overwrite confirmation before replacement. Reuse is the default only when the summary is valid.
-10. Interactive runs should be sequential and checkpointed: after each plan or major task group, surface progress and ask the user whether to review, skip, or stop before continuing.
-11. Keep partial-wave, `--wave`, and `--gaps-only` runs honest: they may advance execution coverage, but they must not claim the whole phase is complete while pending plans remain.
-12. Never treat later-wave execution as proof that lower-wave plans are done.
-13. For `--gaps-only`, target only the pending plan ids present in `blueprint_phase_plan_index.gapClosurePlans`. If none match, stop instead of silently falling back to all pending plans.
-14. If summaries overlap on a shared file set, treat that as a conflict risk and pause for confirmation instead of assuming the write is safe.
-15. Before summary persistence, verify the selected goal, acceptance criteria, dependency order, and any code-review, regression, or schema-drift warnings surfaced by validation or state reads so execution sequencing stays aligned with the plan. Treat those warnings as pre-persistence gates, not retrospective notes.
-16. After summary writes, run the post-execution checks and update `STATE.md` so the next safe implemented action stays accurate. Do not make a phase-level completion claim from execute-phase itself; that claim waits for the `/blu-validate-phase` handoff and the later `/blu-verify-work` verifier pass.
-17. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
-18. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
-19. For `/blu-quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.
-20. `/blu-quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
-21. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest` instead of inventing ad hoc state files or passing a `.blueprint/reports/...` path.
-22. `/blu-quick` should prefer `/blu-progress` after completion unless a narrower implemented next step is obvious and safe.
-23. `/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, and do not create durable reports or phase artifacts.
-24. `/blu-fast` may update `STATE.md` only when Blueprint is initialized and healthy; partial repos should reroute to `/blu-health`, and uninitialized repos should stay in safe suggestion mode for Blueprint persistence.
-25. Route any non-trivial or evidence-heavy ask from `/blu-fast` to `/blu-quick` or `/blu-plan-phase` instead of stretching the command past its contract.
-26. Do not recommend `/blu-fast` unless `blueprint_command_catalog` says it is implemented.
+4. Once the target plan set is known and the run is non-trivial, keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible with `update_topic`, `write_todos`, or the equivalent prose fallback.
+5. Read the selected plan artifacts before delegating execution so wave ordering, dependencies, and acceptance criteria stay grounded in the saved plan set.
+6. Respect `parallelization.*`, `workflow.use_worktrees`, and `git.branching_strategy` from normalized effective config when describing execution mode.
+7. Use `blueprint-executor` for bounded per-plan work instead of collapsing the entire phase into one task.
+8. Persist execution evidence through `blueprint_phase_summary_write`; do not write raw summary files directly, and never pass summary filenames where the tool expects a numeric `planId`.
+9. Before drafting or replacing a summary, read the canonical `phase.summary` contract through `blueprint_artifact_contract_read` and normalize the body to its authoring template.
+10. Existing valid summaries require explicit overwrite confirmation before replacement. Reuse is the default only when the summary is valid.
+11. Interactive runs should be sequential and checkpointed: after each plan or major task group, surface progress and ask the user whether to review, skip, or stop before continuing.
+12. Keep partial-wave, `--wave`, and `--gaps-only` runs honest: they may advance execution coverage, but they must not claim the whole phase is complete while pending plans remain.
+13. Never treat later-wave execution as proof that lower-wave plans are done.
+14. For `--gaps-only`, target only the pending plan ids present in `blueprint_phase_plan_index.gapClosurePlans`. If none match, stop instead of silently falling back to all pending plans.
+15. If summaries overlap on a shared file set, treat that as a conflict risk and pause for confirmation instead of assuming the write is safe.
+16. Before summary persistence, verify the selected goal, acceptance criteria, dependency order, and any code-review, regression, or schema-drift warnings surfaced by validation or state reads so execution sequencing stays aligned with the plan. Treat those warnings as pre-persistence gates, not retrospective notes.
+17. After summary writes, run the post-execution checks and update `STATE.md` so the next safe implemented action stays accurate. Do not make a phase-level completion claim from execute-phase itself; that claim waits for the `/blu-validate-phase` handoff and the later `/blu-verify-work` verifier pass.
+18. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+19. Do not present planned-only lifecycle commands as runnable or guaranteed next steps.
+20. For `/blu-quick`, start from `blueprint_project_status` and `blueprint_command_catalog`, keep the scope bounded, and refuse to impersonate a saved plan or a broad multi-phase rollout.
+21. `/blu-quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` only when the user explicitly confirms deeper discuss, research, or validation depth.
+22. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest` instead of inventing ad hoc state files or passing a `.blueprint/reports/...` path.
+23. `/blu-quick` should prefer `/blu-progress` after completion unless a narrower implemented next step is obvious and safe.
+24. `/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, and do not create durable reports or phase artifacts.
+25. `/blu-fast` may update `STATE.md` only when Blueprint is initialized and healthy; partial repos should reroute to `/blu-health`, and uninitialized repos should stay in safe suggestion mode for Blueprint persistence.
+26. Route any non-trivial or evidence-heavy ask from `/blu-fast` to `/blu-quick` or `/blu-plan-phase` instead of stretching the command past its contract.
+27. Do not recommend `/blu-fast` unless `blueprint_command_catalog` says it is implemented.
 
 ## Output Style
 

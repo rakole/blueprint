@@ -12,7 +12,15 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   const docsFile = await readFile(path.join(repoRoot, "docs/commands/execute-phase.md"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
+  assert.match(commandFile, /`long-running-mutation`/);
+  assert.match(commandFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
+  assert.match(
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /`update_topic`/);
+  assert.match(commandFile, /`write_todos`/);
   assert.match(commandFile, /`blueprint-executor` subagent/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
@@ -45,6 +53,17 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /repair or replace target/i);
   assert.doesNotMatch(commandFile, /Existing summaries mean that plan already has durable execution evidence/i);
   assert.match(commandFile, /\/blu-progress/);
+  assert.match(docsFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(docsFile, /## Shared Runtime Contract/);
+  assert.match(docsFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(
+    docsFile,
+    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  );
+  assert.match(docsFile, /shared long-running-mutation posture/i);
+  assert.match(docsFile, /`update_topic`/);
+  assert.match(docsFile, /`write_todos`/);
+  assert.match(docsFile, /## In-Flight Progress Contract/);
   assert.match(docsFile, /Existing summary files only count as completed evidence when summary validation passes/i);
   assert.match(docsFile, /malformed summaries remain repair or replace targets/i);
   assert.match(docsFile, /Pre-persistence gates/i);
@@ -61,8 +80,16 @@ test("execute-phase skill captures wave-based execution and summary generation r
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-execute-phase/);
+  assert.match(skillFile, /`long-running-mutation`/);
+  assert.match(skillFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
+  assert.match(
+    skillFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
   assert.match(skillFile, /wave-aware order/i);
   assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /`update_topic`/);
+  assert.match(skillFile, /`write_todos`/);
   assert.match(skillFile, /blueprint-executor/);
   assert.match(skillFile, /summary/i);
   assert.match(skillFile, /blueprint_phase_summary_write/);
