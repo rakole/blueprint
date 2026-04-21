@@ -33,6 +33,7 @@ import {
   formatBlueprintPhasePrefix,
   normalizeBlueprintPhaseRef,
   normalizeNumericArtifactId,
+  prepareTextForPersistence,
   safeJsonParseObject
 } from "../../shared/security.js";
 
@@ -2509,6 +2510,148 @@ function planPathFor(
   return buildArtifactPath(located.phaseDir, located.phasePrefix, `-${normalizePlanId(planId)}-PLAN.md`);
 }
 
+function replacePlanSlotLabel(value: string, fromPlanId: string, toPlanId: string): string {
+  return value.replace(
+    new RegExp(`\\bPlan\\s+${fromPlanId}\\b`, "g"),
+    `Plan ${toPlanId}`
+  );
+}
+
+function extractPlanIdFromFrontmatterLine(line: string): string | null {
+  const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
+  const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return normalizePlanId(rawValue);
+  } catch {
+    return null;
+  }
+}
+
+function reconcilePlanTitleLine(
+  line: string,
+  fromPlanId: string,
+  toPlanId: string
+): string | null {
+  const match = line.match(/^(\s*title:\s*)(.+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const prefix = match[1] ?? "";
+  const rawValue = match[2]?.trim() ?? "";
+  const quoteMatch = rawValue.match(/^(['"])([\s\S]*?)\1$/);
+  const quote = quoteMatch?.[1] ?? "";
+  const value = quoteMatch?.[2] ?? rawValue;
+  const updatedValue = replacePlanSlotLabel(value, fromPlanId, toPlanId);
+
+  if (updatedValue === value) {
+    return null;
+  }
+
+  return `${prefix}${quote}${updatedValue}${quote}`;
+}
+
+function reconcilePlanHeadingLine(
+  line: string,
+  fromPlanId: string,
+  toPlanId: string
+): string | null {
+  if (!/^#\s+/.test(line)) {
+    return null;
+  }
+
+  const updatedLine = replacePlanSlotLabel(line, fromPlanId, toPlanId);
+
+  return updatedLine === line ? null : updatedLine;
+}
+
+function reconcileAutoAssignedPlanContent(content: string, planId: string): string {
+  const normalizedPlanId = normalizePlanId(planId);
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---(\n|$)/);
+
+  if (!frontmatterMatch || frontmatterMatch.index === undefined) {
+    return content;
+  }
+
+  const frontmatter = frontmatterMatch[1] ?? "";
+  const updatedFrontmatterLines = frontmatter.split("\n");
+  const sourcePlanId = updatedFrontmatterLines
+    .map((line) => extractPlanIdFromFrontmatterLine(line))
+    .find((value): value is string => value !== null);
+  const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
+
+  if (planIdLineIndex >= 0) {
+    updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
+  } else {
+    const phaseLineIndex = updatedFrontmatterLines.findIndex((line) => /^phase:\s*/.test(line));
+
+    if (phaseLineIndex >= 0) {
+      updatedFrontmatterLines.splice(phaseLineIndex + 1, 0, `plan_id: "${normalizedPlanId}"`);
+    } else {
+      updatedFrontmatterLines.unshift(`plan_id: "${normalizedPlanId}"`);
+    }
+  }
+
+  if (sourcePlanId && sourcePlanId !== normalizedPlanId) {
+    const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
+
+    if (titleLineIndex >= 0) {
+      const updatedTitleLine = reconcilePlanTitleLine(
+        updatedFrontmatterLines[titleLineIndex] ?? "",
+        sourcePlanId,
+        normalizedPlanId
+      );
+
+      if (updatedTitleLine) {
+        updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
+      }
+    }
+  }
+
+  const contentStart = frontmatterMatch.index;
+  const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
+  const reconciledBody =
+    sourcePlanId && sourcePlanId !== normalizedPlanId
+      ? (() => {
+          let headingRewritten = false;
+
+          return contentAfterFrontmatter
+            .split("\n")
+            .map((line) => {
+              if (headingRewritten || !/^#\s+/.test(line)) {
+                return line;
+              }
+
+              headingRewritten = true;
+              return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
+            })
+            .join("\n");
+        })()
+      : contentAfterFrontmatter;
+
+  return `---\n${updatedFrontmatterLines.join("\n")}\n---${reconciledBody}`;
+}
+
+function collectInvalidPlanDependencyIssues(planPath: string, dependsOn: string[]): string[] {
+  const issues: string[] = [];
+
+  for (const dependency of dependsOn) {
+    try {
+      normalizePlanId(dependency);
+    } catch {
+      issues.push(`${planPath}: invalid depends_on reference: ${dependency}`);
+    }
+  }
+
+  return issues;
+}
+
 function parseSummaryArtifactPath(
   pathValue: string,
   phasePrefix: string
@@ -4207,6 +4350,13 @@ export async function blueprintPhasePlanIndex(
     knownPlanIds.add(planId);
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
     const record = toPhasePlanRecord(planId, planPath, content, resolved.phaseNumber);
+    const dependencyIssues = collectInvalidPlanDependencyIssues(planPath, record.dependsOn);
+
+    if (dependencyIssues.length > 0) {
+      record.issues.push(...dependencyIssues);
+      record.valid = false;
+    }
+
     plans.push(record);
 
     if (record.valid && record.gapClosure) {
@@ -4230,7 +4380,6 @@ export async function blueprintPhasePlanIndex(
                 ? []
                 : [planPathFor(resolved, normalizedDependency)];
             } catch {
-              warnings.push(`${plan.path}: invalid depends_on reference: ${dependency}`);
               return [];
             }
           })
@@ -4306,6 +4455,10 @@ export async function blueprintPhasePlanRead(
 
   const content = await fs.readFile(absolutePath, "utf8");
   const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
+  const dependencyIssues = collectInvalidPlanDependencyIssues(
+    pathValue,
+    validation.metadata.dependsOn
+  );
 
   return {
     phaseFound: true,
@@ -4331,8 +4484,8 @@ export async function blueprintPhasePlanRead(
       autonomous: validation.metadata.autonomous
     },
     validation: {
-      valid: validation.valid,
-      issues: validation.issues,
+      valid: validation.valid && dependencyIssues.length === 0,
+      issues: [...validation.issues, ...dependencyIssues],
       warnings: validation.warnings
     },
     reason: null
@@ -4343,81 +4496,68 @@ export async function blueprintPhasePlanWrite(
   args: PhasePlanWriteArgs
 ): Promise<PhasePlanWriteResult> {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const existingIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const nextPlanNumber =
-    existingIndex.plans.length === 0
-      ? 1
-      : Math.max(
-          ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
-        ) + 1;
-  const planId = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
-  const pathValue = planPathFor(resolved, planId);
-  const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = normalizeTextContent(args.content);
   const strictValidation = (args.validationMode ?? "strict") === "strict";
-  const validation = validatePlanArtifactContent(normalizedContent, resolved.phaseNumber, {
-    strict: strictValidation
-  });
-  const warnings: string[] = [];
-  const normalizedFrontmatterPlanId =
-    validation.metadata.planId && /^\d+$/.test(validation.metadata.planId)
-      ? normalizePlanId(validation.metadata.planId)
-      : null;
+  return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+    const existingIndex = await blueprintPhasePlanIndex({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    });
+    const nextPlanNumber =
+      existingIndex.plans.length === 0
+        ? 1
+        : Math.max(
+            ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
+          ) + 1;
+    const planId = args.planId
+      ? normalizePlanId(args.planId)
+      : normalizePlanId(String(nextPlanNumber));
+    const pathValue = planPathFor(resolved, planId);
+    const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+    const contentForValidation =
+      args.planId === undefined
+        ? reconcileAutoAssignedPlanContent(normalizedContent, planId)
+        : normalizedContent;
+    const preparedContent = prepareTextForPersistence(contentForValidation, {
+      label: pathValue
+    });
+    const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
+      strict: strictValidation
+    });
+    const dependencyIssues = collectInvalidPlanDependencyIssues(
+      pathValue,
+      validation.metadata.dependsOn
+    );
+    const normalizedFrontmatterPlanId =
+      validation.metadata.planId && /^\d+$/.test(validation.metadata.planId)
+        ? normalizePlanId(validation.metadata.planId)
+        : null;
+    const validationIssues = [...validation.issues, ...dependencyIssues];
+    const warnings: string[] = [...preparedContent.warnings];
 
-  if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId) {
-    const issue = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId}".`;
+    if (dependencyIssues.length > 0 && strictValidation) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: validationIssues,
+          warnings: validation.warnings
+        },
+        warnings: dependencyIssues
+      };
+    }
 
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: [...validation.issues, issue],
-        warnings: validation.warnings
-      },
-      warnings: []
-    };
-  }
-
-  if (!validation.valid && strictValidation) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: validation.issues,
-        warnings: validation.warnings
-      },
-      warnings: []
-    };
-  }
-
-  const exists = await pathExists(absolutePath);
-
-  if (exists) {
-    const existingContent = await fs.readFile(absolutePath, "utf8");
-
-    if (existingContent === normalizedContent) {
-      warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+    if (normalizedFrontmatterPlanId && normalizedFrontmatterPlanId !== planId) {
+      const issue = `Plan frontmatter plan_id "${validation.metadata.planId}" must match the requested planId "${planId}".`;
 
       return {
         phaseNumber: resolved.phaseNumber,
@@ -4429,51 +4569,103 @@ export async function blueprintPhasePlanWrite(
         written: false,
         created: false,
         overwritten: false,
-        status: "reused",
+        status: "invalid",
         validation: {
-          valid: validation.valid,
-          issues: validation.issues,
+          valid: false,
+          issues: [...validation.issues, issue],
           warnings: validation.warnings
         },
-        warnings
+        warnings: []
       };
     }
 
-    if (!(args.overwrite ?? false)) {
-      throw new Error(
-        `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
-      );
+    if (!validation.valid && strictValidation) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: validationIssues,
+          warnings: validation.warnings
+        },
+        warnings: []
+      };
     }
-  }
 
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: pathValue
-    })
-  );
+    const exists = await pathExists(absolutePath);
+    const normalizePersistedText = (value: string): string =>
+      value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
 
-  if (exists) {
-    warnings.push(`Replaced existing plan artifact: ${pathValue}`);
-  }
+    if (exists) {
+      const existingContent = await fs.readFile(absolutePath, "utf8");
 
-  return {
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    planId,
-    path: pathValue,
-    written: true,
-    created: !exists,
-    overwritten: exists,
-    status: exists ? "updated" : "created",
-    validation: {
-      valid: validation.valid,
-      issues: validation.issues,
-      warnings: validation.warnings
-    },
-    warnings: [...warnings, ...validation.warnings]
-  };
+      if (normalizePersistedText(existingContent) === normalizePersistedText(preparedContent.content)) {
+        warnings.push(`Preserved existing plan artifact because the content was unchanged.`);
+
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "reused",
+          validation: {
+            valid: validation.valid && dependencyIssues.length === 0,
+            issues: validationIssues,
+            warnings: validation.warnings
+          },
+          warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+        };
+      }
+
+      if (!(args.overwrite ?? false)) {
+        throw new Error(
+          `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+        );
+      }
+    }
+
+    warnings.push(
+      ...(await writeTextFile(absolutePath, preparedContent.content, {
+        label: pathValue
+      }))
+    );
+
+    if (exists) {
+      warnings.push(`Replaced existing plan artifact: ${pathValue}`);
+    }
+
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: pathValue,
+      written: true,
+      created: !exists,
+      overwritten: exists,
+      status: exists ? "updated" : "created",
+      validation: {
+        valid: validation.valid && dependencyIssues.length === 0,
+        issues: validationIssues,
+        warnings: validation.warnings
+      },
+      warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+    };
+  });
 }
 
 export async function blueprintPhaseSummaryIndex(

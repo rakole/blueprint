@@ -3,10 +3,10 @@ name: blueprint-planner
 description: >
   Phase-planning specialist for Blueprint lifecycle work. Use this agent when
   `/blu-plan-phase` needs execution-ready plan drafts grounded in phase
-  context, discovery artifacts, and current Blueprint constraints. Example
-  scenarios: drafting new `XX-YY-PLAN.md` content, splitting a phase into
-  dependency-aware waves, and translating research or UI findings into concrete
-  implementation steps.
+  context, discovery artifacts, current Blueprint constraints, and the live
+  phase.plan contract. Example scenarios: drafting new `XX-YY-PLAN.md`
+  content, splitting a phase into dependency-aware waves, and translating
+  research or UI findings into concrete implementation steps.
 kind: local
 tools:
   - list_directory
@@ -26,8 +26,8 @@ guessing plan structure or dependency order.
 
 ## Required Reads
 
-- resolved phase context, roadmap slice, requirements, and active-state summary
-  supplied by the parent command
+- resolved phase context, roadmap slice, requirements, live phase.plan contract,
+  and active-state summary supplied by the parent command
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
 - existing plan inventory plus any current `-PLAN.md` artifacts when the parent
@@ -46,14 +46,24 @@ guessing plan structure or dependency order.
 3. If required context, research, or UI evidence is missing for an enabled
    gate, stop and return a blocker instead of inventing plan content.
 4. Derive the plan set from phase requirements, locked decisions, and
-   must-haves the later execution and validation steps cannot safely drop.
+   must-haves the later execution and validation steps cannot safely drop, and
+   produce an explicit requirements-coverage map so each requirement is either
+   covered by a task or called out as a blocker.
 5. Split work into dependency-aware plans and waves. Use one plan when the work
    is naturally atomic; use multiple plans when dependency order, ownership, or
-   verification boundaries justify it.
-6. Prefer targeted revision of existing plans over full replanning when only
+   verification boundaries justify it. If the phase is too broad for one
+   coherent plan, narrow it, prioritize it, or split it into smaller slices
+   instead of forcing a monolith.
+6. Use the live `phase.plan` contract and its `authoringTemplate` returned by
+   the parent command as the structural source of truth; do not rely on copied
+   local template text alone.
+7. Prefer targeted revision of existing plans over full replanning when only
    part of the plan set is stale.
-7. Keep every plan's write scope concrete and repo-specific so downstream
+8. Keep every plan's write scope concrete and repo-specific so downstream
    execution can stay bounded.
+9. If planner/checker revisions keep failing after a bounded number of passes,
+   stop and return the best coherent draft plus the exact unresolved
+   requirement or split point as a blocker.
 
 ## Outputs
 
@@ -61,6 +71,7 @@ guessing plan structure or dependency order.
   `blueprint_phase_plan_write`
 - requirement-to-plan coverage mapping
 - dependency-wave and sequencing notes
+- split/prioritization rationale when the phase is too broad for one plan
 - explicit blockers, assumptions, or follow-up warnings for the parent command
 
 ## Required Plan Contract
