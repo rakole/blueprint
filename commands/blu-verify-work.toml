@@ -10,7 +10,7 @@ Follow this flow exactly:
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
 3. Read `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "verification"`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "uat"`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the execution evidence, existing validation and UAT state, normalized validation gates, repo artifact health, and the current safe follow-up state.
 4. Treat execution summaries as the prerequisite evidence for conversational UAT. If the target phase has no execution summaries yet, stop and route to `/blu-execute-phase` first.
-5. If the phase does not have a `XX-VERIFICATION.md` artifact yet, stop and route to `/blu-validate-phase` first.
+5. If the phase does not have a `XX-VERIFICATION.md` artifact yet, or if the verification artifact is not ready for UAT, stop and route to `/blu-validate-phase` first.
 6. Read every available execution summary through `mcp_blueprint_blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
 7. If `XX-UAT.md` already exists, inspect it and take an explicit path:
    - Use Gemini CLI `ask_user` to capture a focused structured decision: `view` (`view current UAT`), `resume` (`resume saved UAT`), or `update` (`replace UAT`)
@@ -29,7 +29,7 @@ Follow this flow exactly:
    - Keep saved summary citations inside the contract's summary-aware sections.
    - Additional top-level headings are allowed only when the returned contract policy says they are.
 11. Self-check the normalized draft against the returned contract before writing so the final body, required headings, and summary citations match the persisted shape.
-12. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "uat"`, and the full final markdown body. Saved execution summaries plus an existing verification artifact are required, and the returned `path` plus `summaryPaths` are authoritative. Do not write `XX-UAT.md` directly.
+12. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "uat"`, and the full final markdown body. Saved execution summaries plus an existing verification artifact are required, and that verification artifact must be both valid and ready for UAT; the returned `path` plus `summaryPaths` are authoritative. Do not write `XX-UAT.md` directly.
 13. If verification reveals follow-up fixes, confirm any follow-up-fix capture before persisting it in the UAT artifact or a later explicit state update; do not silently mutate unrelated code.
 14. Call `mcp_blueprint_blueprint_artifact_validate` after the write path, then `mcp_blueprint_blueprint_state_update` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action.
 15. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, created, or updated, which config gates shaped the pass, any gaps or follow-up captures, and the next safe implemented action.

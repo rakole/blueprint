@@ -126,7 +126,7 @@ These tool names are part of the documented future contract, but they are not re
 - `fast` uses `blueprint_project_status` and `blueprint_state_update` to keep trivial inline execution inside the implemented command surface without inventing extra Blueprint artifacts.
 - `quick` uses `blueprint_project_status`, `blueprint_command_catalog`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep bounded quick runs report-backed and routed inside the implemented command surface.
 - `validate-phase` and `verify-work` use summary index/read, validation read/write, `blueprint_artifact_contract_read`, config, artifact validation, and state update tools so their required tool shapes stay contract-derived.
-- `add-tests` uses phase locate, summary index/read, validation read/write, artifact list/validate/report-write, and state update tools to keep repo test generation grounded in saved execution evidence while keeping Blueprint-owned persistence phase-scoped and report-backed.
+- `add-tests` uses phase locate, summary index/read, validation read/write, `blueprint_artifact_contract_read`, artifact list/validate/report-write, and state update tools to keep repo test generation grounded in saved execution evidence while keeping Blueprint-owned persistence phase-scoped and report-backed.
 - `pause-work` and `resume-work` use state load and update tools together with pause handoff read and write support.
 - `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status`.
 - `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update`.
@@ -210,6 +210,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`. The matching plan must already exist.
 - `blueprint_phase_validation_write` requires numeric `phase`, enum `artifact` (`verification` or `uat`), and full validation content.
 - Verification and UAT writes both require saved execution summaries. UAT also requires an existing verification artifact.
+- `validate-phase` and `add-tests` should read `blueprint_artifact_contract_read` for `phase.verification`, normalize to `contract.authoringTemplate`, and self-check the normalized verification draft before `blueprint_phase_validation_write`.
 - Treat returned `path`, `linkedPlanPath`, `summaryPaths`, `planId`, `gapClosurePlans`, and `status` as authoritative. Do not invent plan or summary filenames manually.
 - Validation reads and writes expose only summaries whose `**Plan:**` marker matches the linked plan path; invalid summaries stay out of `summaryPaths`.
 

@@ -13,6 +13,7 @@ import {
   ensureRepoRoot,
   inspectBlueprintArtifacts,
   extractMarkdownTableRows,
+  isVerificationArtifactReadyForUat,
   parseCaptureIndexDocument,
   validatePhaseArtifactContent,
   validatePlanArtifactContent,
@@ -1746,6 +1747,7 @@ async function syncRoadmapPhaseCompletion(
   );
   const validationWarnings: string[] = [];
   let hasValidVerification = false;
+  let verificationReadyForUat = false;
   let hasValidUat = false;
 
   for (const artifact of ["verification", "uat"] as const) {
@@ -1764,6 +1766,12 @@ async function syncRoadmapPhaseCompletion(
     if (validation.valid) {
       if (artifact === "verification") {
         hasValidVerification = true;
+        verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+        if (!verificationReadyForUat) {
+          validationWarnings.push(
+            `${artifactPath}: verification artifact is valid but does not declare ready for UAT, so the phase cannot complete yet.`
+          );
+        }
       } else {
         hasValidUat = true;
       }
@@ -1781,6 +1789,7 @@ async function syncRoadmapPhaseCompletion(
     summaryIndex.pendingPlans.length === 0 &&
     summaryPaths.length > 0 &&
     hasValidVerification &&
+    verificationReadyForUat &&
     hasValidUat;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
@@ -4206,6 +4215,12 @@ export async function blueprintPhaseValidationWrite(
     if (!verificationValidation.valid) {
       throw new Error(
         `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT. Repair the verification evidence before writing ${artifactLabel} artifacts.`
+      );
+    }
+
+    if (!isVerificationArtifactReadyForUat(verificationContent)) {
+      throw new Error(
+        `Phase ${resolved.phaseNumber} must have a VERIFICATION artifact that is ready for UAT before writing ${artifactLabel} artifacts. Repair the verification evidence before writing ${artifactLabel} artifacts.`
       );
     }
   }

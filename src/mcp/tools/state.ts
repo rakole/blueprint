@@ -13,6 +13,7 @@ import {
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
   extractMarkdownTableRows,
+  isVerificationArtifactReadyForUat,
   resolveBlueprintPath,
   toRepoRelativePath,
   validatePlanArtifactContent,
@@ -180,6 +181,7 @@ type CurrentPhaseArtifactStatus = {
   hasResearch: boolean;
   hasUiSpec: boolean;
   hasVerification: boolean;
+  verificationReadyForUat: boolean;
   hasUat: boolean;
   hasPlans: boolean;
   hasSummaries: boolean;
@@ -197,6 +199,7 @@ type RoadmapPhaseSignal = {
 type MilestoneEvidenceStatus = {
   missingVerificationPhases: string[];
   missingUatPhases: string[];
+  verificationNotReadyPhases: string[];
   pendingSummaryCoveragePhases: string[];
   blockingPhase: string | null;
   allCompletedPhasesReady: boolean;
@@ -740,11 +743,13 @@ async function inspectValidatedPhaseValidationArtifacts(
   summaryPaths: string[]
 ): Promise<{
   hasVerification: boolean;
+  verificationReadyForUat: boolean;
   hasUat: boolean;
   warnings: string[];
 }> {
   const warnings: string[] = [];
   let hasVerification = false;
+  let verificationReadyForUat = false;
   let hasUat = false;
 
   if (summaryPaths.length === 0) {
@@ -752,7 +757,12 @@ async function inspectValidatedPhaseValidationArtifacts(
       `${phasePrefix}: no valid execution summaries were found, so VERIFICATION and UAT evidence cannot count toward milestone closeout.`
     );
 
-    return { hasVerification: false, hasUat: false, warnings };
+    return {
+      hasVerification: false,
+      verificationReadyForUat: false,
+      hasUat: false,
+      warnings
+    };
   }
 
   for (const artifact of ["verification", "uat"] as const) {
@@ -775,6 +785,13 @@ async function inspectValidatedPhaseValidationArtifacts(
     if (validation.valid) {
       if (artifact === "verification") {
         hasVerification = true;
+        verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+
+        if (!verificationReadyForUat) {
+          warnings.push(
+            `${artifactPath}: verification artifact is valid but does not declare ready for UAT, so it should not route to conversational UAT yet.`
+          );
+        }
       } else {
         hasUat = true;
       }
@@ -788,7 +805,7 @@ async function inspectValidatedPhaseValidationArtifacts(
     warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
 
-  return { hasVerification, hasUat, warnings };
+  return { hasVerification, verificationReadyForUat, hasUat, warnings };
 }
 
 async function listImmediateDirectories(rootPath: string): Promise<string[]> {
@@ -857,6 +874,7 @@ async function inspectCurrentPhaseArtifacts(
       hasResearch: false,
       hasUiSpec: false,
       hasVerification: false,
+      verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
       hasSummaries: false,
@@ -906,6 +924,7 @@ async function inspectCurrentPhaseArtifacts(
       hasResearch: false,
       hasUiSpec: false,
       hasVerification: false,
+      verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
       hasSummaries: false,
@@ -941,6 +960,7 @@ async function inspectCurrentPhaseArtifacts(
       hasResearch: false,
       hasUiSpec: false,
       hasVerification: false,
+      verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
       hasSummaries: false,
@@ -972,6 +992,7 @@ async function inspectCurrentPhaseArtifacts(
   } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix);
   const {
     hasVerification,
+    verificationReadyForUat,
     hasUat,
     warnings: validationWarnings
   } = await inspectValidatedPhaseValidationArtifacts(
@@ -1039,6 +1060,11 @@ async function inspectCurrentPhaseArtifacts(
       `Current phase ${currentPhase} has a VERIFICATION artifact without execution summaries; validate the summary trail before trusting completion state.`
     );
   }
+  if (hasVerification && !verificationReadyForUat) {
+    warnings.push(
+      `Current phase ${currentPhase} has a VERIFICATION artifact that is not ready for UAT; repair validation evidence before advancing to conversational UAT.`
+    );
+  }
   if (hasUat && !hasVerification) {
     warnings.push(
       `Current phase ${currentPhase} has a UAT artifact without a VERIFICATION artifact; confirm validation evidence is not missing.`
@@ -1062,6 +1088,7 @@ async function inspectCurrentPhaseArtifacts(
     hasResearch,
     hasUiSpec,
     hasVerification,
+    verificationReadyForUat,
     hasUat,
     hasPlans,
     hasSummaries,
@@ -1119,6 +1146,7 @@ async function inspectMilestoneEvidence(
 ): Promise<MilestoneEvidenceStatus> {
   const missingVerificationPhases: string[] = [];
   const missingUatPhases: string[] = [];
+  const verificationNotReadyPhases: string[] = [];
   const pendingSummaryCoveragePhases: string[] = [];
   const warnings: string[] = [];
 
@@ -1145,6 +1173,7 @@ async function inspectMilestoneEvidence(
 
     const {
       hasVerification,
+      verificationReadyForUat,
       hasUat,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
@@ -1160,6 +1189,13 @@ async function inspectMilestoneEvidence(
       missingVerificationPhases.push(phase.phaseNumber);
     }
 
+    if (hasVerification && !verificationReadyForUat) {
+      verificationNotReadyPhases.push(phase.phaseNumber);
+      warnings.push(
+        `Phase ${phase.phaseNumber} has verification evidence that is valid but not ready for UAT, so milestone closeout remains blocked until validation is repaired.`
+      );
+    }
+
     if (!hasUat) {
       missingUatPhases.push(phase.phaseNumber);
     }
@@ -1168,14 +1204,17 @@ async function inspectMilestoneEvidence(
   return {
     missingVerificationPhases,
     missingUatPhases,
+    verificationNotReadyPhases,
     pendingSummaryCoveragePhases,
     blockingPhase:
       missingVerificationPhases[0] ??
+      verificationNotReadyPhases[0] ??
       missingUatPhases[0] ??
       pendingSummaryCoveragePhases[0] ??
       null,
     allCompletedPhasesReady:
       missingVerificationPhases.length === 0 &&
+      verificationNotReadyPhases.length === 0 &&
       missingUatPhases.length === 0 &&
       pendingSummaryCoveragePhases.length === 0,
     warnings
@@ -1468,6 +1507,15 @@ async function deriveNextAction(args: {
 
   if (
     args.phaseArtifacts.hasVerification &&
+    !args.phaseArtifacts.verificationReadyForUat &&
+    implementedCommands.has(validatePhaseCommand)
+  ) {
+    return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
+  }
+
+  if (
+    args.phaseArtifacts.hasVerification &&
+    args.phaseArtifacts.verificationReadyForUat &&
     !args.phaseArtifacts.hasUat &&
     implementedCommands.has(verifyWorkCommand)
   ) {
@@ -1485,6 +1533,16 @@ async function deriveNextAction(args: {
   if (
     args.allPhasesComplete &&
     args.milestoneEvidence.missingVerificationPhases.length === 0 &&
+    args.milestoneEvidence.verificationNotReadyPhases.length > 0 &&
+    implementedCommands.has(validatePhaseCommand)
+  ) {
+    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.verificationNotReadyPhases[0]} to repair milestone validation evidence before closeout`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.missingVerificationPhases.length === 0 &&
+    args.milestoneEvidence.verificationNotReadyPhases.length === 0 &&
     args.milestoneEvidence.missingUatPhases.length > 0 &&
     implementedCommands.has(verifyWorkCommand)
   ) {

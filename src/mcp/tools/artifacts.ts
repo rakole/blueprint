@@ -3733,6 +3733,27 @@ const VERIFICATION_PLACEHOLDER_BODIES = [
   "Explicit blocker, follow-up, or `none`.",
   "Explicit next repair, follow-up, or `none`."
 ] as const;
+type VerificationGateState = "PASS" | "PARTIAL" | "BLOCKED";
+type VerificationReadinessState = "ready for UAT" | "not ready for UAT";
+
+function parseVerificationGateState(
+  content: string
+): {
+  topGateState: VerificationGateState | null;
+  gateState: VerificationGateState | null;
+  readinessState: VerificationReadinessState | null;
+} {
+  const topGateState = content.match(/^\*\*Gate State:\*\*\s*(PASS|PARTIAL|BLOCKED)\s*$/m)?.[1] ?? null;
+  const gateState = content.match(/^\s*-\s*Gate:\s*(PASS|PARTIAL|BLOCKED)\s*$/m)?.[1] ?? null;
+  const readinessState =
+    content.match(/^\s*-\s*Readiness:\s*(ready for UAT|not ready for UAT)\s*$/m)?.[1] ?? null;
+
+  return {
+    topGateState: topGateState as VerificationGateState | null,
+    gateState: gateState as VerificationGateState | null,
+    readinessState: readinessState as VerificationReadinessState | null
+  };
+}
 
 export function validateVerificationArtifactContent(
   content: string,
@@ -3756,8 +3777,39 @@ export function validateVerificationArtifactContent(
   }
 
   issues.push(...validateValidationScaffoldPlaceholders(content, "Verification artifact"));
-  if (!/^\*\*Gate State:\*\*\s*.+$/m.test(content)) {
-    issues.push("Verification artifact must declare **Gate State:** with the readiness gate state.");
+  const { topGateState, gateState, readinessState } = parseVerificationGateState(content);
+
+  if (!topGateState) {
+    issues.push(
+      "Verification artifact must declare **Gate State:** as PASS, PARTIAL, or BLOCKED."
+    );
+  }
+
+  if (!gateState) {
+    issues.push("Verification artifact must include a Gate State section with a concrete Gate value.");
+  }
+
+  if (!readinessState) {
+    issues.push(
+      "Verification artifact must include a Gate State section with a concrete Readiness value."
+    );
+  }
+
+  if (topGateState && gateState && topGateState !== gateState) {
+    issues.push(
+      "Verification artifact must keep the top **Gate State:** marker and the Gate section value consistent."
+    );
+  }
+
+  if (gateState && readinessState) {
+    const expectedReadiness: VerificationReadinessState =
+      gateState === "PASS" ? "ready for UAT" : "not ready for UAT";
+
+    if (readinessState !== expectedReadiness) {
+      issues.push(
+        "Verification artifact must keep the Gate section Readiness value aligned with the Gate state."
+      );
+    }
   }
 
   if (/^\*\*Sign-off:\*\*\s*verified\|pending\|blocked\s*$/m.test(content)) {
@@ -3805,6 +3857,16 @@ export function validateVerificationArtifactContent(
     issues,
     warnings
   };
+}
+
+export function isVerificationArtifactReadyForUat(content: string): boolean {
+  const { topGateState, gateState, readinessState } = parseVerificationGateState(content);
+
+  return (
+    topGateState === "PASS" &&
+    gateState === "PASS" &&
+    readinessState === "ready for UAT"
+  );
 }
 
 const REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings;

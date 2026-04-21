@@ -971,6 +971,83 @@ test("project status routes fully verified milestones to audit-milestone until t
   assert.match(afterState.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
 });
 
+test("project status keeps milestone closeout blocked when an earlier verification is valid but not ready for UAT", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-execution/03-VERIFICATION.md"),
+    `# Phase 03: Execution - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PARTIAL
+**Sign-off:** validation lead
+
+## Validation Summary
+
+- The earlier phase still needs validation repair before milestone closeout.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| MILESTONE-00 | Preserve earlier validation evidence | .blueprint/phases/03-execution/03-01-SUMMARY.md | DEFERRED | The verification pass is valid but not ready for UAT. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-execution/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: tsx --test
+- Evidence type: saved execution evidence
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| follow-up confirmation | Requires validation repair before UAT | Re-run /blu-validate-phase 3 | DEFERRED |
+
+## Gate State
+
+- Gate: PARTIAL
+- Sign-off: validation lead
+- Readiness: not ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| deferred | Follow-up confirmation | .blueprint/phases/03-execution/03-01-SUMMARY.md | Re-run /blu-validate-phase 3 |
+
+## Gaps Found
+
+- Capture the follow-up confirmation during validation repair.
+
+## Suggested Repairs
+
+- Re-run \`/blu-validate-phase 3\` before milestone closeout.
+
+## Next Safe Action
+
+- Continue with \`/blu-validate-phase 3\`.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-validate-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone v2/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone v2/);
+});
+
 test("blueprint_state_load exposes milestone-audit readiness only for explicit READY_TO_CLOSE verdicts", async (t) => {
   const readyRepo = await createMilestoneAuditRepo();
   const malformedRepo = await createMilestoneAuditRepo();
