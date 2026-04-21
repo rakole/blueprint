@@ -67,8 +67,40 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
     overwrite?: boolean;
 };
 type PhaseCheckpointRecord = Record<string, unknown>;
+type PhaseCheckpointDecisionRecord = {
+    topic: string;
+    decision: string;
+    rationale?: string;
+};
+type PhaseCheckpointDeferredIdeaRecord = {
+    idea: string;
+    reason?: string;
+    revisitWhen?: string;
+};
+type PhaseCheckpointReferenceRecord = {
+    label: string;
+    target: string;
+    note?: string;
+};
+type PhaseCheckpointResumeMetaRecord = {
+    mode: string;
+    pendingTopics: string[];
+    completedTopics: string[];
+    currentQuestion?: string;
+    notes: string[];
+    resumeHint?: string;
+    updatedAt: string;
+};
+type PhaseCheckpointWriteRecord = PhaseCheckpointRecord & {
+    completedAreas: string[];
+    remainingAreas: string[];
+    decisions: PhaseCheckpointDecisionRecord[];
+    deferredIdeas: PhaseCheckpointDeferredIdeaRecord[];
+    canonicalReferences: PhaseCheckpointReferenceRecord[];
+    resumeMeta: PhaseCheckpointResumeMetaRecord;
+};
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
-    checkpoint: PhaseCheckpointRecord;
+    checkpoint: PhaseCheckpointWriteRecord;
 };
 type PhasePlanReadArgs = PhaseLookupArgs & {
     planId: NumericInput;
@@ -730,22 +762,32 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         checkpoint: z.ZodObject<{
-            mode: z.ZodOptional<z.ZodString>;
-            pendingTopics: z.ZodOptional<z.ZodArray<z.ZodString>>;
-            completedTopics: z.ZodOptional<z.ZodArray<z.ZodString>>;
-            currentQuestion: z.ZodOptional<z.ZodString>;
-            answers: z.ZodOptional<z.ZodArray<z.ZodObject<{
-                prompt: z.ZodString;
-                response: z.ZodOptional<z.ZodString>;
-                status: z.ZodOptional<z.ZodEnum<{
-                    pending: "pending";
-                    answered: "answered";
-                    skipped: "skipped";
-                }>>;
-            }, z.core.$strip>>>;
-            notes: z.ZodOptional<z.ZodArray<z.ZodString>>;
-            resumeHint: z.ZodOptional<z.ZodString>;
-            updatedAt: z.ZodOptional<z.ZodString>;
+            completedAreas: z.ZodArray<z.ZodString>;
+            remainingAreas: z.ZodArray<z.ZodString>;
+            decisions: z.ZodArray<z.ZodObject<{
+                topic: z.ZodString;
+                decision: z.ZodString;
+                rationale: z.ZodOptional<z.ZodString>;
+            }, z.core.$catchall<z.ZodUnknown>>>;
+            deferredIdeas: z.ZodArray<z.ZodObject<{
+                idea: z.ZodString;
+                reason: z.ZodOptional<z.ZodString>;
+                revisitWhen: z.ZodOptional<z.ZodString>;
+            }, z.core.$catchall<z.ZodUnknown>>>;
+            canonicalReferences: z.ZodArray<z.ZodObject<{
+                label: z.ZodString;
+                target: z.ZodString;
+                note: z.ZodOptional<z.ZodString>;
+            }, z.core.$catchall<z.ZodUnknown>>>;
+            resumeMeta: z.ZodObject<{
+                mode: z.ZodString;
+                pendingTopics: z.ZodArray<z.ZodString>;
+                completedTopics: z.ZodArray<z.ZodString>;
+                currentQuestion: z.ZodOptional<z.ZodString>;
+                notes: z.ZodArray<z.ZodString>;
+                resumeHint: z.ZodOptional<z.ZodString>;
+                updatedAt: z.ZodString;
+            }, z.core.$catchall<z.ZodUnknown>>;
         }, z.core.$catchall<z.ZodUnknown>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointPutResult>;

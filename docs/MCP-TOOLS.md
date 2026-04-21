@@ -66,7 +66,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_phase_validation_read` | Read a phase-scoped validation artifact and its execution-summary coverage | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}` |
 | `blueprint_phase_validation_write` | Persist a phase-scoped `VERIFICATION` or `UAT` artifact with overwrite protection and execution-aware prerequisite checks | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}` |
 | `blueprint_phase_checkpoint_get` | Read the saved `discuss-phase` checkpoint for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}` |
-| `blueprint_phase_checkpoint_put` | Persist a `discuss-phase` checkpoint JSON object for a phase | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
+| `blueprint_phase_checkpoint_put` | Persist a `discuss-phase` checkpoint JSON object for a phase using the richer resumability shape | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
 | `blueprint_phase_checkpoint_delete` | Delete a saved `discuss-phase` checkpoint after successful completion | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}` |
 
 ### Artifact Management
@@ -118,7 +118,7 @@ These tool names are part of the documented future contract, but they are not re
 - `add-backlog` uses `blueprint_artifact_mutate_index` and, when the user explicitly reserves a parking-lot phase, `blueprint_artifact_scaffold`.
 - `review-backlog` uses `blueprint_roadmap_promote_backlog`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to preview backlog candidates, append promoted roadmap phases, preserve backlog history through status transitions, and route the repo into `/blu-discuss-phase`.
 - `explore` uses `blueprint_project_status`, `blueprint_artifact_mutate_index`, `blueprint_roadmap_add_phase`, and `blueprint_artifact_scaffold` to classify ideas before persistence, keep capture writes confirmation-gated, and scaffold the first phase context when a confirmed idea is promoted directly into the active roadmap.
-- `discuss-phase` uses phase location/context, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update`.
+- `discuss-phase` uses phase location/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`, discovery artifact read and write tools, checkpoint tools, scaffolding, and `blueprint_state_update` to keep the phase-discovery flow anchored in saved artifacts, checkpoint resumability, canonical plan-index and artifact-contract reads, and end-of-run state updates; it folds deferred ideas forward and does not claim a dedicated todo/backlog read path.
 - `research-phase` uses phase location/context, research status, discovery artifact read and write tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`.
 - `ui-phase` uses phase readiness, the canonical UI-spec contract read, discovery artifact read and write tools, scaffolding, config, a bounded checker review loop, and state update tools.
 - `plan-phase` uses the canonical `phase.plan` contract read, plan index, plan read and write tools, config, artifact validation, and state update tools.
@@ -200,7 +200,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - When normalizing authored phase artifacts, prefer `blueprint_artifact_contract_read` over copied prompt-local templates.
 - Research writes validate in `strict` mode by default. Use `validationMode: "warn"` only when the command intentionally wants warnings without blocking the write attempt.
 - Research writes should be normalized to Blueprint's exact `XX-RESEARCH.md` template before calling the tool, and angle-bracket placeholders must be replaced with real content.
-- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object. The tool owns the checkpoint filename and location.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object that includes `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. The tool owns the checkpoint filename and location, and legacy saved checkpoints remain readable.
 - Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative for artifact and checkpoint persistence.
 
 ### Plan, Summary, And Validation Artifacts

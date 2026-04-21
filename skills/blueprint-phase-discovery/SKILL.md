@@ -35,6 +35,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - commands stay thin and user-facing
 - MCP tools own state mutation
 - later chaining and power-mode variants stay deferred until the downstream lifecycle substrate exists
+- keep the GSD-inspired discovery staples Blueprint actually ships: prior-context sweeps, deferred-idea folding, methodology lenses, codebase-scout reuse, stronger assumptions-mode analysis, progress recaps, checkpoint-per-area persistence, and end-of-run `STATE.md` updates
 
 ## Required Inputs
 
@@ -78,11 +79,12 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `blueprint_phase_artifact_write`: pass numeric `phase`, the correct artifact enum, and full artifact content. The tool owns the final artifact `path`; use the returned `path` as authoritative and do not write raw filenames directly.
 - `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.research` or `phase.uat` instead of relying on copied prompt-local templates.
 - `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content.
-- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using the structured discuss-checkpoint shape, with at least one resumability field such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `answers`, `notes`, `resumeHint`, or `updatedAt`. The tool owns the checkpoint filename and location.
+- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using the structured discuss checkpoint shape, with `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. `resumeMeta` carries the resumability fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`. The tool owns the checkpoint filename and location.
 
 ## Workflow Rules
 
 0. Treat `blueprint_phase_context.codebase` as reusable brownfield repo evidence when it is present. Prefer the saved `.blueprint/codebase/` summaries before re-reading broad repo surfaces, and call out when the codebase bundle is missing or incomplete.
+   Sweep prior-phase context first so the session reuses the current evidence base before it asks for fresh detail; this is a saved-artifact sweep, not a dedicated todo/backlog file crawl.
 
 ### Canonical Research Contract
 
@@ -101,11 +103,11 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 4. Read the canonical contracts through `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting context and `artifactId: "phase.discussion-log"` before drafting any durable discussion log.
 5. Normalize the final context and discussion drafts to the returned `authoringTemplate` before any write, then run a blocking anti-pattern check for placeholders, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas before saving.
 6. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus. If an answer is vague, incomplete, or conflicts with saved context, ask a focused follow-up or retry the question with a narrower prompt before treating it as final.
-7. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, and reuse. Do not pretend power, chain, or auto modes are shipped.
+7. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the structured discuss checkpoint shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology. Do not pretend power, chain, or auto modes are shipped.
 8. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
 9. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
 10. Require explicit overwrite confirmation before replacing existing context artifacts.
-11. End with a next safe action inside the implemented Blueprint surface.
+11. End with a next safe action inside the implemented Blueprint surface and leave `STATE.md` legible about that next step.
 
 ### `research-phase`
 

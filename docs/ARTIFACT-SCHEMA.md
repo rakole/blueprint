@@ -226,8 +226,8 @@ Auxiliary phase artifacts:
 Validation expectations:
 - must start with an H1 title
 - must not persist scaffold placeholders such as `Goal:`, `Project brief:`, or `Question 1:`
-- must populate the richer discuss-phase contract sections from `Phase Boundary`, `Discovery Grounding`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`
-- a context file with only `## Decisions` no longer satisfies the contract
+- must populate the full discuss-phase context contract sections from `Phase Boundary`, `Discovery Grounding`, `Implementation Decisions`, `Specific Ideas`, `Existing Code Insights`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`
+- a context file with only `## Decisions`, or with just the older summary-style sections, no longer satisfies the contract
 
 ### `XX-DISCUSSION-LOG.md`
 
@@ -267,8 +267,9 @@ Validation expectations:
 
 Structured persistence expectations:
 - top-level JSON value must be an object
-- persisted checkpoints must include at least one resumability field such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `answers`, `notes`, `resumeHint`, or `updatedAt`
-- legacy object-shaped checkpoints may still be read for compatibility, but new writes should use the structured resumability shape
+- persisted checkpoints must use the richer resumability shape with `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`
+- `resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`
+- legacy object-shaped checkpoints may still be read for compatibility, but new writes should use the richer structured shape
 
 ### `XX-RESEARCH.md`
 

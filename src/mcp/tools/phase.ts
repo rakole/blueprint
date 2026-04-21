@@ -122,8 +122,45 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
 
 type PhaseCheckpointRecord = Record<string, unknown>;
 
+type PhaseCheckpointDecisionRecord = {
+  topic: string;
+  decision: string;
+  rationale?: string;
+};
+
+type PhaseCheckpointDeferredIdeaRecord = {
+  idea: string;
+  reason?: string;
+  revisitWhen?: string;
+};
+
+type PhaseCheckpointReferenceRecord = {
+  label: string;
+  target: string;
+  note?: string;
+};
+
+type PhaseCheckpointResumeMetaRecord = {
+  mode: string;
+  pendingTopics: string[];
+  completedTopics: string[];
+  currentQuestion?: string;
+  notes: string[];
+  resumeHint?: string;
+  updatedAt: string;
+};
+
+type PhaseCheckpointWriteRecord = PhaseCheckpointRecord & {
+  completedAreas: string[];
+  remainingAreas: string[];
+  decisions: PhaseCheckpointDecisionRecord[];
+  deferredIdeas: PhaseCheckpointDeferredIdeaRecord[];
+  canonicalReferences: PhaseCheckpointReferenceRecord[];
+  resumeMeta: PhaseCheckpointResumeMetaRecord;
+};
+
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
-  checkpoint: PhaseCheckpointRecord;
+  checkpoint: PhaseCheckpointWriteRecord;
 };
 
 type PhasePlanReadArgs = PhaseLookupArgs & {
@@ -711,41 +748,67 @@ const phaseSummaryWriteInputSchema = {
   overwrite: z.boolean().optional()
 };
 
-const phaseCheckpointQuestionSchema = z.object({
-  prompt: z.string(),
-  response: z.string().optional(),
-  status: z.enum(["pending", "answered", "skipped"]).optional()
-});
-
-const phaseCheckpointSchema = z
+const phaseCheckpointDecisionSchema = z
   .object({
-    mode: z.string().min(1).optional(),
-    pendingTopics: z.array(z.string()).optional(),
-    completedTopics: z.array(z.string()).optional(),
-    currentQuestion: z.string().optional(),
-    answers: z.array(phaseCheckpointQuestionSchema).optional(),
-    notes: z.array(z.string()).optional(),
-    resumeHint: z.string().optional(),
-    updatedAt: z.string().optional()
+    topic: z.string().min(1),
+    decision: z.string().min(1),
+    rationale: z.string().min(1).optional()
+  })
+  .catchall(z.unknown());
+
+const phaseCheckpointDeferredIdeaSchema = z
+  .object({
+    idea: z.string().min(1),
+    reason: z.string().min(1).optional(),
+    revisitWhen: z.string().min(1).optional()
+  })
+  .catchall(z.unknown());
+
+const phaseCheckpointReferenceSchema = z
+  .object({
+    label: z.string().min(1),
+    target: z.string().min(1),
+    note: z.string().min(1).optional()
+  })
+  .catchall(z.unknown());
+
+const phaseCheckpointResumeMetaSchema = z
+  .object({
+    mode: z.string().min(1),
+    pendingTopics: z.array(z.string().min(1)),
+    completedTopics: z.array(z.string().min(1)),
+    currentQuestion: z.string().min(1).optional(),
+    notes: z.array(z.string().min(1)),
+    resumeHint: z.string().min(1).optional(),
+    updatedAt: z.string().min(1)
+  })
+  .catchall(z.unknown());
+
+const phaseCheckpointWriteSchema = z
+  .object({
+    completedAreas: z.array(z.string().min(1)),
+    remainingAreas: z.array(z.string().min(1)),
+    decisions: z.array(phaseCheckpointDecisionSchema),
+    deferredIdeas: z.array(phaseCheckpointDeferredIdeaSchema),
+    canonicalReferences: z.array(phaseCheckpointReferenceSchema),
+    resumeMeta: phaseCheckpointResumeMetaSchema
   })
   .catchall(z.unknown())
   .superRefine((value, context) => {
-    const structuredKeys = [
-      "mode",
-      "pendingTopics",
-      "completedTopics",
-      "currentQuestion",
-      "answers",
-      "notes",
-      "resumeHint",
-      "updatedAt"
+    const requiredSections = [
+      "completedAreas",
+      "remainingAreas",
+      "decisions",
+      "deferredIdeas",
+      "canonicalReferences",
+      "resumeMeta"
     ];
 
-    if (!structuredKeys.some((key) => key in value)) {
+    if (!requiredSections.every((key) => key in value)) {
       context.addIssue({
         code: "custom",
         message:
-          "Checkpoint must include resumability fields such as mode, pendingTopics, currentQuestion, answers, notes, resumeHint, or updatedAt."
+          "Checkpoint writes must include completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
       });
     }
   });
@@ -753,7 +816,7 @@ const phaseCheckpointSchema = z
 const phaseCheckpointPutInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
-  checkpoint: phaseCheckpointSchema
+  checkpoint: phaseCheckpointWriteSchema
 };
 
 function normalizeBlueprintInput(value: NumericInput): string {
@@ -2615,15 +2678,17 @@ function ensureCheckpointObject(
 function ensureCheckpointForPersistence(
   checkpoint: unknown,
   checkpointPath: string
-): PhaseCheckpointRecord {
-  const parsed = phaseCheckpointSchema.safeParse(ensureCheckpointObject(checkpoint, checkpointPath));
+): PhaseCheckpointWriteRecord {
+  const parsed = phaseCheckpointWriteSchema.safeParse(
+    ensureCheckpointObject(checkpoint, checkpointPath)
+  );
 
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue) => issue.message).join("; ");
     throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
   }
 
-  return parsed.data as PhaseCheckpointRecord;
+  return parsed.data as PhaseCheckpointWriteRecord;
 }
 
 async function resolveLocatedPhaseForMutation(
@@ -4971,7 +5036,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_checkpoint_put",
     description:
-      "Persist a discuss-phase checkpoint JSON object for a phase.",
+      "Persist a discuss-phase checkpoint JSON object for a phase using the richer resumability contract.",
     inputSchema: phaseCheckpointPutInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseCheckpointPut(args as PhaseCheckpointPutArgs)

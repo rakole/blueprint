@@ -336,6 +336,20 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
 - Workflow posture - keep question asking adaptive and evidence-backed.
 - Confirmed decisions - discovery should persist the choices that matter for later planning.
 
+## Implementation Decisions
+- Decision 1 - keep the discovery record phase-scoped and resumable.
+- Tradeoffs or constraints - preserve explicit overwrite boundaries and the current router contract.
+
+## Specific Ideas
+- Specific idea 1 - carry the confirmed boundary into the next planning phase.
+- Specific idea 2 - reuse the saved checkpoint state as the starting point for later prompts.
+- Follow-up idea - turn the discovered boundary into a concrete plan stub if scope remains stable.
+
+## Existing Code Insights
+- Existing code insight 1 - the phase artifacts already provide reusable grounding for planning.
+- Reusable pattern - keep the same H1 and sectioned bullet format so the MCP writer can validate it cleanly.
+- Known gap or caution - avoid mixing execution summary language into the context record.
+
 ## Dependencies
 - Prior phase artifacts - saved research and any earlier context.
 - External constraints - repo-level safety and roadmap scope.
@@ -345,7 +359,7 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
 - Which unresolved gray areas still need user input?
 
 ## Deferred Ideas
-- Later follow-up: revisit anything that does not block the next planning step.
+- Later follow-up - revisit anything that does not block the next planning step.
 - Reusable references: keep canonical source notes handy for the next pass.
 
 ## Canonical References
@@ -382,7 +396,7 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
   assert.equal(invalidContext.status, "invalid");
   assert.match(
     invalidContext.validation?.issues.join("\n") ?? "",
-    /must include at least one populated contract section/i
+    /missing required contract sections/i
   );
   assert.equal(invalidDiscussion.status, "invalid");
   assert.match(invalidDiscussion.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);

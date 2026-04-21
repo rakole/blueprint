@@ -187,6 +187,9 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.deepEqual(contextContract.requiredHeadings, [
     "Phase Boundary",
     "Discovery Grounding",
+    "Implementation Decisions",
+    "Specific Ideas",
+    "Existing Code Insights",
     "Dependencies",
     "Open Questions",
     "Deferred Ideas",
@@ -197,16 +200,24 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(contextContract.authoringTemplate, /Requirements grounding:/);
   assert.match(contextContract.authoringTemplate, /Workflow posture:/);
   assert.match(contextContract.authoringTemplate, /Confirmed decisions:/);
+  assert.match(contextContract.authoringTemplate, /## Implementation Decisions/);
+  assert.match(contextContract.authoringTemplate, /<implementation decision 1>/);
+  assert.match(contextContract.authoringTemplate, /## Specific Ideas/);
+  assert.match(contextContract.authoringTemplate, /<specific idea 1>/);
+  assert.match(contextContract.authoringTemplate, /## Existing Code Insights/);
+  assert.match(contextContract.authoringTemplate, /<existing code insight 1>/);
+  assert.match(contextContract.authoringTemplate, /<prior phase artifacts>/);
+  assert.match(contextContract.authoringTemplate, /<open question 1>/);
   assert.match(contextContract.authoringTemplate, /## Deferred Ideas/);
   assert.match(contextContract.authoringTemplate, /## Canonical References/);
-  assert.ok(
-    contextContract.placeholderSignals.includes("Scope creep or later follow-up:")
-  );
-  assert.ok(
-    contextContract.placeholderSignals.includes("Ideas to revisit after this phase:")
-  );
-  assert.ok(contextContract.placeholderSignals.includes("Source 1:"));
-  assert.match(contextContract.notes.join("\n"), /richer discuss-phase context sections/i);
+  assert.ok(contextContract.placeholderSignals.includes("<implementation decision 1>"));
+  assert.ok(contextContract.placeholderSignals.includes("<specific idea 1>"));
+  assert.ok(contextContract.placeholderSignals.includes("<existing code insight 1>"));
+  assert.ok(contextContract.placeholderSignals.includes("<prior phase artifacts>"));
+  assert.ok(contextContract.placeholderSignals.includes("<open question 1>"));
+  assert.ok(contextContract.placeholderSignals.includes("<deferred idea>"));
+  assert.ok(contextContract.placeholderSignals.includes("<source 1>"));
+  assert.match(contextContract.notes.join("\n"), /downstream planning/i);
   assert.ok(Array.isArray(listed.contracts));
   assert.ok(listed.contracts.length >= 10);
   assert.deepEqual(uiContract.requiredHeadings, [

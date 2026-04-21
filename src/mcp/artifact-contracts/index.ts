@@ -580,24 +580,41 @@ function renderContextTemplate(context?: ArtifactTemplateContext): string {
 - Workflow posture:
 - Confirmed decisions:
 
+## Implementation Decisions
+
+- Implementation decision 1: <implementation decision 1>
+- Tradeoffs or constraints: <tradeoff or constraint>
+
+## Specific Ideas
+
+- Specific idea 1: <specific idea 1>
+- Specific idea 2: <specific idea 2>
+- Later follow-up: <later follow-up>
+
+## Existing Code Insights
+
+- Existing code insight 1: <existing code insight 1>
+- Reusable pattern: <reusable pattern>
+- Known gap or caution: <gap or caution>
+
 ## Dependencies
 
-- Prior phase artifacts:
-- External constraints:
-- Required follow-up reads:
+- Prior phase artifacts: <prior phase artifacts>
+- External constraints: <external constraints>
+- Required follow-up reads: <required follow-up reads>
 
 ## Open Questions
 
-- Question 1:
+- Question 1: <open question 1>
 
 ## Deferred Ideas
 
-- Scope creep or later follow-up:
-- Ideas to revisit after this phase:
+- Scope creep or later follow-up: <deferred idea>
+- Ideas to revisit after this phase: <deferred idea>
 
 ## Canonical References
 
-- Source 1:`;
+- Source 1: <source 1>`;
 }
 
 function renderDiscussionLogTemplate(context?: ArtifactTemplateContext): string {
@@ -1819,6 +1836,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     requiredHeadings: [
       "Phase Boundary",
       "Discovery Grounding",
+      "Implementation Decisions",
+      "Specific Ideas",
+      "Existing Code Insights",
       "Dependencies",
       "Open Questions",
       "Deferred Ideas",
@@ -1834,15 +1854,24 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Requirements grounding:",
       "Workflow posture:",
       "Confirmed decisions:",
-      "Required follow-up reads:",
-      "Question 1:",
-      "Scope creep or later follow-up:",
-      "Ideas to revisit after this phase:",
-      "Source 1:"
+      "<implementation decision 1>",
+      "<tradeoff or constraint>",
+      "<specific idea 1>",
+      "<specific idea 2>",
+      "<later follow-up>",
+      "<existing code insight 1>",
+      "<reusable pattern>",
+      "<gap or caution>",
+      "<prior phase artifacts>",
+      "<external constraints>",
+      "<required follow-up reads>",
+      "<open question 1>",
+      "<deferred idea>",
+      "<source 1>"
     ],
     notes: [
       "Discovery context is phase-scoped and MCP-owned.",
-      "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections."
+      "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
     ],
     renderScaffoldTemplate: renderContextTemplate,
     renderAuthoringTemplate: renderContextTemplate
