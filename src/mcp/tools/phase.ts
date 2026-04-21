@@ -8,9 +8,11 @@ import {
   BLUEPRINT_BACKLOG_INDEX_PATH,
   BLUEPRINT_DIR,
   BLUEPRINT_PHASES_PATH,
+  DURABLE_REQUIREMENT_ID_PATTERN,
   ensureParentDirectory,
   ensureRepoRoot,
   inspectBlueprintArtifacts,
+  extractMarkdownTableRows,
   parseCaptureIndexDocument,
   validatePhaseArtifactContent,
   validatePlanArtifactContent,
@@ -24,7 +26,9 @@ import {
   withBlueprintRepoLock,
   writeTextFile
 } from "./artifacts.js";
+import { blueprintConfigGet } from "./config.js";
 import { loadBlueprintState } from "./state.js";
+import { blueprintStateLoad } from "./state.js";
 import {
   formatBlueprintPhasePrefix,
   normalizeBlueprintPhaseRef,
@@ -271,6 +275,54 @@ type PhaseContextResult = {
       summaries: string[];
     };
   } | null;
+  projectBrief: {
+    found: boolean;
+    path: string | null;
+    title: string | null;
+    summary: string;
+    vision: string[];
+    audience: string[];
+    constraints: string[];
+    currentMilestone: string | null;
+    nonGoals: string[];
+    warnings: string[];
+  };
+  requirementsGrounding: {
+    found: boolean;
+    path: string | null;
+    canonicalRequirementIds: string[];
+    roadmapRequirementIds: string[];
+    traceabilityNotes: string[];
+    acceptanceNotes: string[];
+    deferredItems: string[];
+    summary: string;
+    warnings: string[];
+  };
+  workflowPosture: {
+    path: string | null;
+    projectStatus: string | null;
+    currentMilestone: string | null;
+    currentPhase: string | null;
+    activeCommand: string | null;
+    nextAction: string | null;
+    blockers: string[];
+    workflow: {
+      research: boolean;
+      planCheck: boolean;
+      verifier: boolean;
+      nyquistValidation: boolean;
+      uiPhase: boolean;
+      uiSafetyGate: boolean;
+      codeReview: boolean;
+      autoAdvance: boolean;
+      researchBeforeQuestions: boolean;
+      discussMode: string;
+      skipDiscuss: boolean;
+      useWorktrees: boolean;
+    };
+    summary: string;
+    warnings: string[];
+  };
   codebase: {
     mapped: boolean;
     artifacts: string[];
@@ -1942,6 +1994,243 @@ function summarizeSavedArtifact(raw: string): { title: string; summary: string }
   };
 }
 
+function extractMarkdownSection(markdown: string, heading: string): string {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+
+  return match?.[1]?.trim() ?? "";
+}
+
+function extractMarkdownHeading(markdown: string): string | null {
+  return markdown.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
+}
+
+function normalizeMarkdownListItems(section: string): string[] {
+  return section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.replace(/^[-*+]\s+/, "").trim())
+    .filter((line) => line.length > 0);
+}
+
+function sectionToList(section: string): string[] {
+  const lines = normalizeMarkdownListItems(section);
+  const bulletLines = lines.filter((line) => !/^[A-Za-z0-9_.-]+\s*:\s*/.test(line));
+
+  return bulletLines.length > 0 ? bulletLines : lines;
+}
+
+function extractRequirementIdsFromRequirementsTable(section: string): string[] {
+  return extractMarkdownTableRows(section)
+    .map((row) => row[0]?.trim() ?? "")
+    .filter((id) => DURABLE_REQUIREMENT_ID_PATTERN.test(id));
+}
+
+function summarizeContextPieces(pieces: string[], emptyMessage: string): string {
+  const meaningfulPieces = pieces
+    .map((piece) => piece.trim())
+    .filter((piece) => piece.length > 0);
+
+  return meaningfulPieces.length > 0 ? meaningfulPieces.join(" | ") : emptyMessage;
+}
+
+async function readMarkdownDocument(
+  projectRoot: string,
+  relativePath: string
+): Promise<string | null> {
+  const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
+
+  if (!(await pathExists(absolutePath))) {
+    return null;
+  }
+
+  return await fs.readFile(absolutePath, "utf8");
+}
+
+async function readPhaseContextGrounding(
+  projectRoot: string,
+  matchedPhase: ParsedRoadmapPhase | undefined
+): Promise<{
+  projectBrief: PhaseContextResult["projectBrief"];
+  requirementsGrounding: PhaseContextResult["requirementsGrounding"];
+  workflowPosture: PhaseContextResult["workflowPosture"];
+}> {
+  const projectPath = `${BLUEPRINT_DIR}/PROJECT.md`;
+  const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
+  const statePath = `${BLUEPRINT_DIR}/STATE.md`;
+  const [projectContent, requirementsContent, stateResult, configResult] = await Promise.all([
+    readMarkdownDocument(projectRoot, projectPath),
+    readMarkdownDocument(projectRoot, requirementsPath),
+    blueprintStateLoad({ cwd: projectRoot }),
+    blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
+    })
+  ]);
+  const projectWarnings: string[] = [];
+  const requirementsWarnings: string[] = [];
+  const workflowWarnings: string[] = [];
+
+  const vision = projectContent ? sectionToList(extractMarkdownSection(projectContent, "Vision")) : [];
+  const audience = projectContent ? sectionToList(extractMarkdownSection(projectContent, "Audience")) : [];
+  const constraints = projectContent
+    ? sectionToList(extractMarkdownSection(projectContent, "Constraints"))
+    : [];
+  const nonGoals = projectContent ? sectionToList(extractMarkdownSection(projectContent, "Non-Goals")) : [];
+  const currentMilestone = projectContent
+    ? extractMarkdownSection(projectContent, "Current Milestone") || null
+    : null;
+  const projectTitle = projectContent ? extractMarkdownHeading(projectContent) : null;
+
+  if (!projectContent) {
+    projectWarnings.push(`${projectPath} is missing, so the project brief is unavailable.`);
+  } else if (
+    vision.length === 0 &&
+    audience.length === 0 &&
+    constraints.length === 0 &&
+    nonGoals.length === 0
+  ) {
+    projectWarnings.push(`${projectPath} is present but does not yet contain a substantive brief.`);
+  }
+
+  const requirementsTable = requirementsContent
+    ? extractMarkdownSection(requirementsContent, "Requirements Table")
+    : "";
+  const traceabilityNotes = requirementsContent
+    ? sectionToList(extractMarkdownSection(requirementsContent, "Traceability Notes"))
+    : [];
+  const acceptanceNotes = requirementsContent
+    ? sectionToList(extractMarkdownSection(requirementsContent, "Acceptance Notes"))
+    : [];
+  const deferredItems = requirementsContent
+    ? sectionToList(extractMarkdownSection(requirementsContent, "Deferred Items"))
+    : [];
+  const canonicalRequirementIds = requirementsContent
+    ? extractRequirementIdsFromRequirementsTable(requirementsTable)
+    : [];
+  const roadmapRequirementIds = matchedPhase?.requirements ?? [];
+
+  if (!requirementsContent) {
+    requirementsWarnings.push(`${requirementsPath} is missing, so canonical requirement grounding is unavailable.`);
+  } else if (canonicalRequirementIds.length === 0) {
+    requirementsWarnings.push(
+      `${requirementsPath} is present but does not yet expose canonical requirement identifiers.`
+    );
+  }
+
+  if (requirementsContent && canonicalRequirementIds.length > 0 && roadmapRequirementIds.length === 0) {
+    requirementsWarnings.push(
+      `Phase requirements are missing from ROADMAP.md for this phase, so the requirement grounding is only partially linked.`
+    );
+  }
+
+  const projectBriefSummary = summarizeContextPieces(
+    [
+      projectTitle ? projectTitle.replace(/^Blueprint\s+/, "") : null,
+      currentMilestone ? `current milestone: ${currentMilestone}` : null,
+      vision[0] ?? null,
+      audience[0] ?? null,
+      constraints[0] ?? null
+    ].filter((piece): piece is string => piece !== null),
+    projectContent
+      ? "PROJECT.md is present but does not yet provide a reusable project brief."
+      : "PROJECT.md is missing."
+  );
+
+  const requirementsSummary = summarizeContextPieces(
+    [
+      canonicalRequirementIds.length > 0
+        ? `canonical requirements: ${canonicalRequirementIds.join(", ")}`
+        : null,
+      roadmapRequirementIds.length > 0
+        ? `phase requirements: ${roadmapRequirementIds.join(", ")}`
+        : null,
+      traceabilityNotes[0] ?? null,
+      acceptanceNotes[0] ?? null
+    ].filter((piece): piece is string => piece !== null),
+    requirementsContent
+      ? "REQUIREMENTS.md is present but does not yet provide reusable grounding."
+      : "REQUIREMENTS.md is missing."
+  );
+
+  const workflow = configResult.config.workflow;
+  const workflowSummary = summarizeContextPieces(
+    [
+      stateResult.derivedStatus.projectStatus
+        ? `project status: ${stateResult.derivedStatus.projectStatus}`
+        : null,
+      stateResult.state.currentMilestone
+        ? `milestone: ${stateResult.state.currentMilestone}`
+        : null,
+      stateResult.derivedStatus.currentPhase
+        ? `phase: ${stateResult.derivedStatus.currentPhase}`
+        : null,
+      workflow.discuss_mode ? `discuss_mode: ${workflow.discuss_mode}` : null,
+      workflow.skip_discuss ? "skip_discuss enabled" : "skip_discuss disabled",
+      workflow.research_before_questions
+        ? "research_before_questions enabled"
+        : "research_before_questions disabled",
+      stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
+    ].filter((piece): piece is string => piece !== null),
+    "Workflow posture is unavailable."
+  );
+
+  return {
+    projectBrief: {
+      found: projectContent !== null,
+      path: projectContent ? projectPath : null,
+      title: projectTitle,
+      summary: projectBriefSummary,
+      vision,
+      audience,
+      constraints,
+      currentMilestone,
+      nonGoals,
+      warnings: projectWarnings
+    },
+    requirementsGrounding: {
+      found: requirementsContent !== null,
+      path: requirementsContent ? requirementsPath : null,
+      canonicalRequirementIds,
+      roadmapRequirementIds,
+      traceabilityNotes,
+      acceptanceNotes,
+      deferredItems,
+      summary: requirementsSummary,
+      warnings: requirementsWarnings
+    },
+    workflowPosture: {
+      path: statePath,
+      projectStatus: stateResult.derivedStatus.projectStatus,
+      currentMilestone: stateResult.state.currentMilestone,
+      currentPhase: stateResult.derivedStatus.currentPhase,
+      activeCommand: stateResult.state.activeCommand,
+      nextAction: stateResult.derivedStatus.nextAction,
+      blockers: stateResult.blockers,
+      workflow: {
+        research: workflow.research,
+        planCheck: workflow.plan_check,
+        verifier: workflow.verifier,
+        nyquistValidation: workflow.nyquist_validation,
+        uiPhase: workflow.ui_phase,
+        uiSafetyGate: workflow.ui_safety_gate,
+        codeReview: workflow.code_review,
+        autoAdvance: workflow.auto_advance,
+        researchBeforeQuestions: workflow.research_before_questions,
+        discussMode: workflow.discuss_mode,
+        skipDiscuss: workflow.skip_discuss,
+        useWorktrees: workflow.use_worktrees
+      },
+      summary: workflowSummary,
+      warnings: workflowWarnings
+    }
+  };
+}
+
 async function readMappedCodebaseContext(
   projectRoot: string
 ): Promise<PhaseContextResult["codebase"]> {
@@ -3273,12 +3562,20 @@ export async function blueprintPhaseContext(
 ): Promise<PhaseContextResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const roadmap = await readRoadmap(projectRoot);
+  const state = await blueprintStateLoad({ cwd: projectRoot });
   const located = await blueprintPhaseLocate(args);
   const codebase = await readMappedCodebaseContext(projectRoot);
+  const matchedPhase = roadmap.phases.find(
+    (phase) => phase.phaseNumber === located.phaseNumber
+  );
+  const grounding = await readPhaseContextGrounding(projectRoot, matchedPhase);
 
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     return {
       phase: null,
+      projectBrief: grounding.projectBrief,
+      requirementsGrounding: grounding.requirementsGrounding,
+      workflowPosture: grounding.workflowPosture,
       codebase,
       requirements: [],
       missingArtifacts: [],
@@ -3286,9 +3583,6 @@ export async function blueprintPhaseContext(
     };
   }
 
-  const matchedPhase = roadmap.phases.find(
-    (phase) => phase.phaseNumber === located.phaseNumber
-  );
   const artifacts = located.artifacts;
   const contextPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-CONTEXT.md");
   const researchPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-RESEARCH.md");
@@ -3311,6 +3605,20 @@ export async function blueprintPhaseContext(
         plans: artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")),
         summaries: artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"))
       }
+    },
+    projectBrief: grounding.projectBrief,
+    requirementsGrounding: {
+      ...grounding.requirementsGrounding,
+      roadmapRequirementIds: matchedPhase?.requirements ?? grounding.requirementsGrounding.roadmapRequirementIds,
+      summary: grounding.requirementsGrounding.summary
+    },
+    workflowPosture: {
+      ...grounding.workflowPosture,
+      currentPhase: state.derivedStatus.currentPhase ?? grounding.workflowPosture.currentPhase,
+      currentMilestone: state.state.currentMilestone ?? grounding.workflowPosture.currentMilestone,
+      nextAction: state.derivedStatus.nextAction || grounding.workflowPosture.nextAction,
+      blockers: state.blockers.length > 0 ? state.blockers : grounding.workflowPosture.blockers,
+      summary: grounding.workflowPosture.summary
     },
     codebase,
     requirements: matchedPhase?.requirements ?? [],

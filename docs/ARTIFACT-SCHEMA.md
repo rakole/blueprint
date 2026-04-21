@@ -225,9 +225,9 @@ Auxiliary phase artifacts:
 
 Validation expectations:
 - must start with an H1 title
-- must not persist scaffold placeholders such as `Goal:` or `Question 1:`
-- must populate at least one contract section from `Phase Boundary`, `Decisions`, `Dependencies`, or `Open Questions`
-- missing contract sections are currently warnings, not hard failures
+- must not persist scaffold placeholders such as `Goal:`, `Project brief:`, or `Question 1:`
+- must populate the richer discuss-phase contract sections from `Phase Boundary`, `Discovery Grounding`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`
+- a context file with only `## Decisions` no longer satisfies the contract
 
 ### `XX-DISCUSSION-LOG.md`
 

@@ -71,6 +71,14 @@ test("discuss-phase command references only registered phase-discovery tool name
     path.join(repoRoot, "commands/blu-discuss-phase.toml"),
     "utf8"
   );
+  const skillFile = await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
+    "utf8"
+  );
+  const docFile = await readFile(
+    path.join(repoRoot, "docs/commands/discuss-phase.md"),
+    "utf8"
+  );
   const requiredTools = [
     "blueprint_phase_locate",
     "blueprint_phase_context",
@@ -102,6 +110,8 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /workflow\.research_before_questions/);
   assert.match(commandFile, /phase\.context/);
   assert.match(commandFile, /phase\.discussion-log/);
+  assert.match(commandFile, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
+  assert.match(commandFile, /blocking anti-pattern check/i);
   assert.match(commandFile, /PROJECT\.md/);
   assert.match(commandFile, /REQUIREMENTS\.md/);
   assert.match(commandFile, /STATE\.md/);
@@ -109,10 +119,24 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /gray areas/i);
   assert.match(commandFile, /next area|more questions/i);
   assert.match(commandFile, /canonical references/i);
-  assert.match(commandFile, /scope-creep|deferred ideas/i);
+  assert.match(commandFile, /deferred ideas/i);
+  assert.match(commandFile, /structured gray-area/i);
+  assert.match(commandFile, /answer is vague|retry the question/i);
   assert.match(commandFile, /power mode|chain mode|auto mode|auto-advance/i);
   assert.match(commandFile, /\/blu-progress/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
+
+  assert.match(skillFile, /blocking anti-pattern check/i);
+  assert.match(skillFile, /focused follow-up or retry the question/i);
+  assert.match(skillFile, /fold deferred ideas into the saved context or discussion log/i);
+  assert.match(skillFile, /Blueprint-friendly lenses/i);
+
+  assert.match(docFile, /not a claim of full GSD parity/i);
+  assert.match(docFile, /answer validation and retry/i);
+  assert.match(docFile, /reuse of prior context and discussion artifacts/i);
+  assert.match(docFile, /structured gray-area analysis/i);
+  assert.match(docFile, /blocking anti-pattern check before save/i);
+  assert.match(docFile, /folding deferred ideas into the saved record/i);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {
@@ -151,11 +175,34 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: `# Phase 03 Context
+    content: `# Phase 03: Phase Discovery - Context
 
-## Decisions
-- Discovery commands should persist real decisions, not only scaffold text.
-- Resume from saved checkpoints before restarting long discussions.
+## Phase Boundary
+- Persist the durable discovery record for this phase.
+- Keep decisions, dependencies, and open follow-ups available for later planning.
+- Exclude execution plans and implementation details.
+- Make it possible for the next phase to reuse the saved context without re-asking basics.
+
+## Discovery Grounding
+- Project brief - discovery should stay phase-scoped and resumable.
+- Requirements grounding - keep the saved requirements visible in the context.
+- Workflow posture - prefer evidence-backed questions and checkpointed follow-up.
+- Confirmed decisions - discovery commands should persist real decisions, not only scaffold text.
+
+## Dependencies
+- Prior phase artifacts - the roadmap and any earlier context already on disk.
+- External constraints - overwrite confirmation stays explicit.
+- Follow-up reads - resume from saved checkpoints before restarting long discussions.
+
+## Open Questions
+- Which gray areas still need more user input?
+
+## Deferred Ideas
+- Scope creep or later follow-up - preserve unresolved discussion branches for the next pass.
+- Ideas to revisit after this phase - canonical references that should be reused instead of re-elicited.
+
+## Canonical References
+- Source 1 - the saved roadmap, requirements, and phase artifacts that frame the discussion.
 `,
     overwrite: true
   });

@@ -571,19 +571,33 @@ function renderContextTemplate(context?: ArtifactTemplateContext): string {
 - Goal:
 - In scope:
 - Out of scope:
+- Success criteria:
 
-## Decisions
+## Discovery Grounding
 
-- Capture the confirmed choices for this phase here.
+- Project brief:
+- Requirements grounding:
+- Workflow posture:
+- Confirmed decisions:
 
 ## Dependencies
 
 - Prior phase artifacts:
 - External constraints:
+- Required follow-up reads:
 
 ## Open Questions
 
-- Question 1:`;
+- Question 1:
+
+## Deferred Ideas
+
+- Scope creep or later follow-up:
+- Ideas to revisit after this phase:
+
+## Canonical References
+
+- Source 1:`;
 }
 
 function renderDiscussionLogTemplate(context?: ArtifactTemplateContext): string {
@@ -1802,18 +1816,33 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Phase Context",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-CONTEXT.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Phase Boundary", "Decisions", "Dependencies", "Open Questions"],
+    requiredHeadings: [
+      "Phase Boundary",
+      "Discovery Grounding",
+      "Dependencies",
+      "Open Questions",
+      "Deferred Ideas",
+      "Canonical References"
+    ],
     lockedMarkers: [],
     placeholderSignals: [
       "Goal:",
       "In scope:",
       "Out of scope:",
+      "Success criteria:",
+      "Project brief:",
+      "Requirements grounding:",
+      "Workflow posture:",
+      "Confirmed decisions:",
+      "Required follow-up reads:",
       "Question 1:",
-      "Capture the confirmed choices for this phase here."
+      "Scope creep or later follow-up:",
+      "Ideas to revisit after this phase:",
+      "Source 1:"
     ],
     notes: [
       "Discovery context is phase-scoped and MCP-owned.",
-      "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
+      "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections."
     ],
     renderScaffoldTemplate: renderContextTemplate,
     renderAuthoringTemplate: renderContextTemplate

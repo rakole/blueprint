@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. The repaired Blueprint Phase 3 slice now reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. It is not a claim of full GSD parity; instead, the repaired Blueprint Phase 3 slice keeps the useful discovery intent while using Blueprint-specific replacements for the missing safeguards: answer validation and retry, reuse of prior context and discussion artifacts, structured gray-area analysis, folding deferred ideas into the saved record, and a blocking anti-pattern check before save. It still reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and normalizes the final context and discussion drafts to the canonical `authoringTemplate` before write. It restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
@@ -45,13 +45,14 @@
 - `optional phase XX-DISCUSSION-LOG.md`
 - `optional phase XX-DISCUSS-CHECKPOINT.json`
 - `.blueprint/STATE.md`
+- The final context and discussion bodies must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, or dropped deferred ideas are corrected before save.
 
 
 ## Required MCP Tools
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
+- `blueprint_phase_context` -> `{phase, projectBrief, requirementsGrounding, workflowPosture, codebase, requirements, missingArtifacts, warnings}`
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
@@ -70,6 +71,7 @@
 - Pass `phase` to `blueprint_phase_artifact_write` and `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, for example `"3"` or `3`.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting or revising `XX-CONTEXT.md`.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.discussion-log"` before drafting or revising `XX-DISCUSSION-LOG.md`.
+- Normalize the final context and discussion drafts to the returned `authoringTemplate` before writing, then self-check the normalized body against the contract and block the write if placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas remain.
 - Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
 - Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
 - Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
@@ -127,6 +129,9 @@
 - `workflow.discuss_mode` may switch the command into an evidence-first assumptions flow rather than an interview-style loop.
 - `workflow.skip_discuss=true` should shorten the discussion path instead of pretending no context capture is needed.
 - Earlier phase context artifacts may contain canonical references or deferred ideas that should be reused instead of re-elicited.
+- When answers are vague, incomplete, or inconsistent with saved context, retry the question with a narrower prompt instead of accepting them as final.
+- Use structured gray-area lenses such as scope, tradeoffs, dependencies, risks, and reuse so the discussion stays grounded in Blueprint-friendly decisions.
+- Fold deferred ideas into the saved context or discussion log rather than dropping them on the floor.
 
 
 ## Failure Modes And Recovery
@@ -146,6 +151,7 @@
 - Reads actual saved context and discussion content, plus the canonical `phase.context` and `phase.discussion-log` contracts, before drafting updates.
 - Warns clearly when refreshed discovery leaves existing saved plans unchanged until `/blu-plan-phase` is run again.
 - Captures canonical references plus deferred or scope-creep ideas when they surface during gray-area discussion.
+- Blocks save-time drift when the normalized body still contains placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas.
 - Uses checkpoint persistence only as a resumability aid and deletes the checkpoint after successful completion.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

@@ -305,8 +305,32 @@ autonomous: true
     path.join(phaseDir, "04-CONTEXT.md"),
     `# Phase 04: Validation - Context
 
-## Decisions
-- Validation follows execution summaries.
+## Phase Boundary
+- Keep validation evidence durable and summary-backed.
+- Cover verification, UAT, and gap closure artifacts.
+- Exclude replanning completed execution work.
+- Downstream validation should trace back to saved summaries.
+
+## Discovery Grounding
+- Project brief - this phase validates completed execution evidence.
+- Requirements grounding - preserve the summary-aware lifecycle contract.
+- Workflow posture - validate from saved artifacts rather than prompt memory.
+- Confirmed decisions - validation follows execution summaries.
+
+## Dependencies
+- Prior phase artifacts - execution summaries and roadmap state.
+- External constraints - repository writes stay inside `.blueprint/`.
+- Required follow-up reads - the saved summary and verification evidence.
+
+## Open Questions
+- Which gaps remain manual-only or deferred?
+
+## Deferred Ideas
+- Later follow-up: revisit any validation gap that needs a dedicated repair.
+- Reusable evidence: keep the next audit pass and any deferred evidence nearby.
+
+## Canonical References
+- Saved execution summaries and validation fixtures.
 `,
     "utf8"
   );

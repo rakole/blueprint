@@ -14723,19 +14723,33 @@ function renderContextTemplate(context) {
 - Goal:
 - In scope:
 - Out of scope:
+- Success criteria:
 
-## Decisions
+## Discovery Grounding
 
-- Capture the confirmed choices for this phase here.
+- Project brief:
+- Requirements grounding:
+- Workflow posture:
+- Confirmed decisions:
 
 ## Dependencies
 
 - Prior phase artifacts:
 - External constraints:
+- Required follow-up reads:
 
 ## Open Questions
 
-- Question 1:`;
+- Question 1:
+
+## Deferred Ideas
+
+- Scope creep or later follow-up:
+- Ideas to revisit after this phase:
+
+## Canonical References
+
+- Source 1:`;
 }
 function renderDiscussionLogTemplate(context) {
   return `# ${phaseLabel(context)} - Discussion Log
@@ -16046,18 +16060,33 @@ var init_artifact_contracts = __esm({
         canonicalName: "Phase Context",
         canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-CONTEXT.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Phase Boundary", "Decisions", "Dependencies", "Open Questions"],
+        requiredHeadings: [
+          "Phase Boundary",
+          "Discovery Grounding",
+          "Dependencies",
+          "Open Questions",
+          "Deferred Ideas",
+          "Canonical References"
+        ],
         lockedMarkers: [],
         placeholderSignals: [
           "Goal:",
           "In scope:",
           "Out of scope:",
+          "Success criteria:",
+          "Project brief:",
+          "Requirements grounding:",
+          "Workflow posture:",
+          "Confirmed decisions:",
+          "Required follow-up reads:",
           "Question 1:",
-          "Capture the confirmed choices for this phase here."
+          "Scope creep or later follow-up:",
+          "Ideas to revisit after this phase:",
+          "Source 1:"
         ],
         notes: [
           "Discovery context is phase-scoped and MCP-owned.",
-          "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
+          "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections."
         ],
         renderScaffoldTemplate: renderContextTemplate,
         renderAuthoringTemplate: renderContextTemplate
@@ -19000,7 +19029,7 @@ function validateValidationScaffoldPlaceholders(content, artifactLabel) {
 function validateContractBackedMarkdown(content, contractId, artifactLabel) {
   const contract = readArtifactContract(contractId);
   const issues = [];
-  if (!/^# .+\S\s*$/m.test(content)) {
+  if (!/^# .+\S(?:\r?\n|$)/.test(content)) {
     issues.push(`${artifactLabel} must start with a markdown H1 title.`);
   }
   issues.push(
@@ -19477,7 +19506,7 @@ function validatePhaseArtifactContent(content, artifact) {
   const artifactLabel = artifact === "context" ? "Context artifact" : artifact === "discussion-log" ? "Discussion log artifact" : "UI spec artifact";
   const issues = [];
   const warnings = [];
-  if (!/^# .+\S\s*$/m.test(content)) {
+  if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
     issues.push(`${artifactLabel} must start with a markdown H1 title.`);
   }
   issues.push(
@@ -25706,6 +25735,166 @@ function summarizeSavedArtifact(raw) {
     summary: bodyLine ?? "Artifact content is present and available for review."
   };
 }
+function extractMarkdownSection4(markdown, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+  return match?.[1]?.trim() ?? "";
+}
+function extractMarkdownHeading(markdown) {
+  return markdown.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
+}
+function normalizeMarkdownListItems(section) {
+  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((line) => line.replace(/^[-*+]\s+/, "").trim()).filter((line) => line.length > 0);
+}
+function sectionToList(section) {
+  const lines = normalizeMarkdownListItems(section);
+  const bulletLines = lines.filter((line) => !/^[A-Za-z0-9_.-]+\s*:\s*/.test(line));
+  return bulletLines.length > 0 ? bulletLines : lines;
+}
+function extractRequirementIdsFromRequirementsTable(section) {
+  return extractMarkdownTableRows(section).map((row) => row[0]?.trim() ?? "").filter((id) => DURABLE_REQUIREMENT_ID_PATTERN.test(id));
+}
+function summarizeContextPieces(pieces, emptyMessage) {
+  const meaningfulPieces = pieces.map((piece) => piece.trim()).filter((piece) => piece.length > 0);
+  return meaningfulPieces.length > 0 ? meaningfulPieces.join(" | ") : emptyMessage;
+}
+async function readMarkdownDocument(projectRoot, relativePath) {
+  const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
+  if (!await pathExists4(absolutePath)) {
+    return null;
+  }
+  return await fs6.readFile(absolutePath, "utf8");
+}
+async function readPhaseContextGrounding(projectRoot, matchedPhase) {
+  const projectPath = `${BLUEPRINT_DIR}/PROJECT.md`;
+  const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
+  const statePath = `${BLUEPRINT_DIR}/STATE.md`;
+  const [projectContent, requirementsContent, stateResult, configResult] = await Promise.all([
+    readMarkdownDocument(projectRoot, projectPath),
+    readMarkdownDocument(projectRoot, requirementsPath),
+    blueprintStateLoad({ cwd: projectRoot }),
+    blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
+    })
+  ]);
+  const projectWarnings = [];
+  const requirementsWarnings = [];
+  const workflowWarnings = [];
+  const vision = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Vision")) : [];
+  const audience = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Audience")) : [];
+  const constraints = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Constraints")) : [];
+  const nonGoals = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Non-Goals")) : [];
+  const currentMilestone = projectContent ? extractMarkdownSection4(projectContent, "Current Milestone") || null : null;
+  const projectTitle = projectContent ? extractMarkdownHeading(projectContent) : null;
+  if (!projectContent) {
+    projectWarnings.push(`${projectPath} is missing, so the project brief is unavailable.`);
+  } else if (vision.length === 0 && audience.length === 0 && constraints.length === 0 && nonGoals.length === 0) {
+    projectWarnings.push(`${projectPath} is present but does not yet contain a substantive brief.`);
+  }
+  const requirementsTable = requirementsContent ? extractMarkdownSection4(requirementsContent, "Requirements Table") : "";
+  const traceabilityNotes = requirementsContent ? sectionToList(extractMarkdownSection4(requirementsContent, "Traceability Notes")) : [];
+  const acceptanceNotes = requirementsContent ? sectionToList(extractMarkdownSection4(requirementsContent, "Acceptance Notes")) : [];
+  const deferredItems = requirementsContent ? sectionToList(extractMarkdownSection4(requirementsContent, "Deferred Items")) : [];
+  const canonicalRequirementIds = requirementsContent ? extractRequirementIdsFromRequirementsTable(requirementsTable) : [];
+  const roadmapRequirementIds = matchedPhase?.requirements ?? [];
+  if (!requirementsContent) {
+    requirementsWarnings.push(`${requirementsPath} is missing, so canonical requirement grounding is unavailable.`);
+  } else if (canonicalRequirementIds.length === 0) {
+    requirementsWarnings.push(
+      `${requirementsPath} is present but does not yet expose canonical requirement identifiers.`
+    );
+  }
+  if (requirementsContent && canonicalRequirementIds.length > 0 && roadmapRequirementIds.length === 0) {
+    requirementsWarnings.push(
+      `Phase requirements are missing from ROADMAP.md for this phase, so the requirement grounding is only partially linked.`
+    );
+  }
+  const projectBriefSummary = summarizeContextPieces(
+    [
+      projectTitle ? projectTitle.replace(/^Blueprint\s+/, "") : null,
+      currentMilestone ? `current milestone: ${currentMilestone}` : null,
+      vision[0] ?? null,
+      audience[0] ?? null,
+      constraints[0] ?? null
+    ].filter((piece) => piece !== null),
+    projectContent ? "PROJECT.md is present but does not yet provide a reusable project brief." : "PROJECT.md is missing."
+  );
+  const requirementsSummary = summarizeContextPieces(
+    [
+      canonicalRequirementIds.length > 0 ? `canonical requirements: ${canonicalRequirementIds.join(", ")}` : null,
+      roadmapRequirementIds.length > 0 ? `phase requirements: ${roadmapRequirementIds.join(", ")}` : null,
+      traceabilityNotes[0] ?? null,
+      acceptanceNotes[0] ?? null
+    ].filter((piece) => piece !== null),
+    requirementsContent ? "REQUIREMENTS.md is present but does not yet provide reusable grounding." : "REQUIREMENTS.md is missing."
+  );
+  const workflow = configResult.config.workflow;
+  const workflowSummary = summarizeContextPieces(
+    [
+      stateResult.derivedStatus.projectStatus ? `project status: ${stateResult.derivedStatus.projectStatus}` : null,
+      stateResult.state.currentMilestone ? `milestone: ${stateResult.state.currentMilestone}` : null,
+      stateResult.derivedStatus.currentPhase ? `phase: ${stateResult.derivedStatus.currentPhase}` : null,
+      workflow.discuss_mode ? `discuss_mode: ${workflow.discuss_mode}` : null,
+      workflow.skip_discuss ? "skip_discuss enabled" : "skip_discuss disabled",
+      workflow.research_before_questions ? "research_before_questions enabled" : "research_before_questions disabled",
+      stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
+    ].filter((piece) => piece !== null),
+    "Workflow posture is unavailable."
+  );
+  return {
+    projectBrief: {
+      found: projectContent !== null,
+      path: projectContent ? projectPath : null,
+      title: projectTitle,
+      summary: projectBriefSummary,
+      vision,
+      audience,
+      constraints,
+      currentMilestone,
+      nonGoals,
+      warnings: projectWarnings
+    },
+    requirementsGrounding: {
+      found: requirementsContent !== null,
+      path: requirementsContent ? requirementsPath : null,
+      canonicalRequirementIds,
+      roadmapRequirementIds,
+      traceabilityNotes,
+      acceptanceNotes,
+      deferredItems,
+      summary: requirementsSummary,
+      warnings: requirementsWarnings
+    },
+    workflowPosture: {
+      path: statePath,
+      projectStatus: stateResult.derivedStatus.projectStatus,
+      currentMilestone: stateResult.state.currentMilestone,
+      currentPhase: stateResult.derivedStatus.currentPhase,
+      activeCommand: stateResult.state.activeCommand,
+      nextAction: stateResult.derivedStatus.nextAction,
+      blockers: stateResult.blockers,
+      workflow: {
+        research: workflow.research,
+        planCheck: workflow.plan_check,
+        verifier: workflow.verifier,
+        nyquistValidation: workflow.nyquist_validation,
+        uiPhase: workflow.ui_phase,
+        uiSafetyGate: workflow.ui_safety_gate,
+        codeReview: workflow.code_review,
+        autoAdvance: workflow.auto_advance,
+        researchBeforeQuestions: workflow.research_before_questions,
+        discussMode: workflow.discuss_mode,
+        skipDiscuss: workflow.skip_discuss,
+        useWorktrees: workflow.use_worktrees
+      },
+      summary: workflowSummary,
+      warnings: workflowWarnings
+    }
+  };
+}
 async function readMappedCodebaseContext(projectRoot) {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const artifacts = [];
@@ -26701,20 +26890,25 @@ async function blueprintPhaseLocate(args = {}) {
 async function blueprintPhaseContext(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const roadmap = await readRoadmap(projectRoot);
+  const state = await blueprintStateLoad({ cwd: projectRoot });
   const located = await blueprintPhaseLocate(args);
   const codebase = await readMappedCodebaseContext(projectRoot);
+  const matchedPhase = roadmap.phases.find(
+    (phase) => phase.phaseNumber === located.phaseNumber
+  );
+  const grounding = await readPhaseContextGrounding(projectRoot, matchedPhase);
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     return {
       phase: null,
+      projectBrief: grounding.projectBrief,
+      requirementsGrounding: grounding.requirementsGrounding,
+      workflowPosture: grounding.workflowPosture,
       codebase,
       requirements: [],
       missingArtifacts: [],
       warnings: located.reason ? [located.reason] : []
     };
   }
-  const matchedPhase = roadmap.phases.find(
-    (phase) => phase.phaseNumber === located.phaseNumber
-  );
   const artifacts = located.artifacts;
   const contextPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-CONTEXT.md");
   const researchPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-RESEARCH.md");
@@ -26736,6 +26930,20 @@ async function blueprintPhaseContext(args = {}) {
         plans: artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")),
         summaries: artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"))
       }
+    },
+    projectBrief: grounding.projectBrief,
+    requirementsGrounding: {
+      ...grounding.requirementsGrounding,
+      roadmapRequirementIds: matchedPhase?.requirements ?? grounding.requirementsGrounding.roadmapRequirementIds,
+      summary: grounding.requirementsGrounding.summary
+    },
+    workflowPosture: {
+      ...grounding.workflowPosture,
+      currentPhase: state.derivedStatus.currentPhase ?? grounding.workflowPosture.currentPhase,
+      currentMilestone: state.state.currentMilestone ?? grounding.workflowPosture.currentMilestone,
+      nextAction: state.derivedStatus.nextAction || grounding.workflowPosture.nextAction,
+      blockers: state.blockers.length > 0 ? state.blockers : grounding.workflowPosture.blockers,
+      summary: grounding.workflowPosture.summary
     },
     codebase,
     requirements: matchedPhase?.requirements ?? [],
@@ -27747,6 +27955,8 @@ var init_phase = __esm({
     "use strict";
     init_v4();
     init_artifacts();
+    init_config();
+    init_state();
     init_state();
     init_security();
     PHASE_ARTIFACT_SUFFIXES = {

@@ -119,6 +119,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const requirementsContract = readArtifactContract("bootstrap.requirements");
   const roadmapContract = readArtifactContract("bootstrap.roadmap");
   const researchContract = readArtifactContract("phase.research");
+  const contextContract = readArtifactContract("phase.context");
   const uiContract = readArtifactContract("phase.ui-spec");
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
@@ -183,6 +184,29 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Recommendations",
     "Sources"
   ]);
+  assert.deepEqual(contextContract.requiredHeadings, [
+    "Phase Boundary",
+    "Discovery Grounding",
+    "Dependencies",
+    "Open Questions",
+    "Deferred Ideas",
+    "Canonical References"
+  ]);
+  assert.match(contextContract.authoringTemplate, /## Discovery Grounding/);
+  assert.match(contextContract.authoringTemplate, /Project brief:/);
+  assert.match(contextContract.authoringTemplate, /Requirements grounding:/);
+  assert.match(contextContract.authoringTemplate, /Workflow posture:/);
+  assert.match(contextContract.authoringTemplate, /Confirmed decisions:/);
+  assert.match(contextContract.authoringTemplate, /## Deferred Ideas/);
+  assert.match(contextContract.authoringTemplate, /## Canonical References/);
+  assert.ok(
+    contextContract.placeholderSignals.includes("Scope creep or later follow-up:")
+  );
+  assert.ok(
+    contextContract.placeholderSignals.includes("Ideas to revisit after this phase:")
+  );
+  assert.ok(contextContract.placeholderSignals.includes("Source 1:"));
+  assert.match(contextContract.notes.join("\n"), /richer discuss-phase context sections/i);
   assert.ok(Array.isArray(listed.contracts));
   assert.ok(listed.contracts.length >= 10);
   assert.deepEqual(uiContract.requiredHeadings, [
