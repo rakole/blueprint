@@ -5,6 +5,14 @@
 | Wave | `<0-5>` |
 | Family | `<family>` |
 | Root-routable | `Yes` or `No` |
+| Execution profile | `<one of: `router`, `interactive-read`, `long-running-mutation`, `high-risk-maintenance`>` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Record exactly one execution profile for the command, and use the stage/status labels only where the command actually reports them.
+- Do not imply richer runtime behavior than the command currently exposes.
 
 ## Purpose
 
