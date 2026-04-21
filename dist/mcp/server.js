@@ -14732,24 +14732,41 @@ function renderContextTemplate(context) {
 - Workflow posture:
 - Confirmed decisions:
 
+## Implementation Decisions
+
+- Implementation decision 1: <implementation decision 1>
+- Tradeoffs or constraints: <tradeoff or constraint>
+
+## Specific Ideas
+
+- Specific idea 1: <specific idea 1>
+- Specific idea 2: <specific idea 2>
+- Later follow-up: <later follow-up>
+
+## Existing Code Insights
+
+- Existing code insight 1: <existing code insight 1>
+- Reusable pattern: <reusable pattern>
+- Known gap or caution: <gap or caution>
+
 ## Dependencies
 
-- Prior phase artifacts:
-- External constraints:
-- Required follow-up reads:
+- Prior phase artifacts: <prior phase artifacts>
+- External constraints: <external constraints>
+- Required follow-up reads: <required follow-up reads>
 
 ## Open Questions
 
-- Question 1:
+- Question 1: <open question 1>
 
 ## Deferred Ideas
 
-- Scope creep or later follow-up:
-- Ideas to revisit after this phase:
+- Scope creep or later follow-up: <deferred idea>
+- Ideas to revisit after this phase: <deferred idea>
 
 ## Canonical References
 
-- Source 1:`;
+- Source 1: <source 1>`;
 }
 function renderDiscussionLogTemplate(context) {
   return `# ${phaseLabel(context)} - Discussion Log
@@ -16063,6 +16080,9 @@ var init_artifact_contracts = __esm({
         requiredHeadings: [
           "Phase Boundary",
           "Discovery Grounding",
+          "Implementation Decisions",
+          "Specific Ideas",
+          "Existing Code Insights",
           "Dependencies",
           "Open Questions",
           "Deferred Ideas",
@@ -16078,15 +16098,24 @@ var init_artifact_contracts = __esm({
           "Requirements grounding:",
           "Workflow posture:",
           "Confirmed decisions:",
-          "Required follow-up reads:",
-          "Question 1:",
-          "Scope creep or later follow-up:",
-          "Ideas to revisit after this phase:",
-          "Source 1:"
+          "<implementation decision 1>",
+          "<tradeoff or constraint>",
+          "<specific idea 1>",
+          "<specific idea 2>",
+          "<later follow-up>",
+          "<existing code insight 1>",
+          "<reusable pattern>",
+          "<gap or caution>",
+          "<prior phase artifacts>",
+          "<external constraints>",
+          "<required follow-up reads>",
+          "<open question 1>",
+          "<deferred idea>",
+          "<source 1>"
         ],
         notes: [
           "Discovery context is phase-scoped and MCP-owned.",
-          "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections."
+          "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
         ],
         renderScaffoldTemplate: renderContextTemplate,
         renderAuthoringTemplate: renderContextTemplate
@@ -19463,6 +19492,9 @@ function countNonEmptyContractSections(content, headings) {
     0
   );
 }
+function hasSubstantiveContractSection(section) {
+  return hasBootstrapText(section, 3);
+}
 function hasRequirementTableRows(section) {
   const lines = section.split("\n").map((line) => line.trim()).filter((line) => /^\|.*\|$/.test(line));
   return lines.some((line, index) => {
@@ -19525,6 +19557,10 @@ function validatePhaseArtifactContent(content, artifact) {
         "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
       );
     }
+  } else if (artifact === "context" && missingRequiredSections.length > 0) {
+    issues.push(
+      `Context artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    );
   } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
     issues.push(
       `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
@@ -19537,7 +19573,20 @@ function validatePhaseArtifactContent(content, artifact) {
   if (artifact === "ui-spec" && missingRequiredSections.includes("Outcome Mode")) {
     issues.push("UI spec artifact section Outcome Mode must not be empty.");
   }
-  if (artifact !== "ui-spec" && missingRequiredSections.length > 0) {
+  if (artifact === "context") {
+    for (const heading of contract.requiredHeadings) {
+      const section = extractMarkdownSection(content, heading);
+      if (section.trim().length === 0) {
+        continue;
+      }
+      if (!hasSubstantiveContractSection(section)) {
+        issues.push(
+          `Context artifact section ${heading} must contain substantive downstream-planning detail.`
+        );
+      }
+    }
+  }
+  if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {
     warnings.push(
       `${artifactLabel} is missing recommended contract sections: ${missingRequiredSections.join(", ")}.`
     );
@@ -26150,7 +26199,9 @@ function ensureCheckpointObject(checkpoint, checkpointPath) {
   return checkpoint;
 }
 function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
-  const parsed = phaseCheckpointSchema.safeParse(ensureCheckpointObject(checkpoint, checkpointPath));
+  const parsed = phaseCheckpointWriteSchema.safeParse(
+    ensureCheckpointObject(checkpoint, checkpointPath)
+  );
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue2) => issue2.message).join("; ");
     throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
@@ -27949,7 +28000,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema2, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointQuestionSchema, phaseCheckpointSchema, phaseCheckpointPutInputSchema, phaseToolDefinitions;
+var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema2, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointPutInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -28071,42 +28122,57 @@ var init_phase = __esm({
       content: string2(),
       overwrite: boolean2().optional()
     };
-    phaseCheckpointQuestionSchema = object2({
-      prompt: string2(),
-      response: string2().optional(),
-      status: _enum(["pending", "answered", "skipped"]).optional()
-    });
-    phaseCheckpointSchema = object2({
-      mode: string2().min(1).optional(),
-      pendingTopics: array(string2()).optional(),
-      completedTopics: array(string2()).optional(),
-      currentQuestion: string2().optional(),
-      answers: array(phaseCheckpointQuestionSchema).optional(),
-      notes: array(string2()).optional(),
-      resumeHint: string2().optional(),
-      updatedAt: string2().optional()
+    phaseCheckpointDecisionSchema = object2({
+      topic: string2().min(1),
+      decision: string2().min(1),
+      rationale: string2().min(1).optional()
+    }).catchall(unknown());
+    phaseCheckpointDeferredIdeaSchema = object2({
+      idea: string2().min(1),
+      reason: string2().min(1).optional(),
+      revisitWhen: string2().min(1).optional()
+    }).catchall(unknown());
+    phaseCheckpointReferenceSchema = object2({
+      label: string2().min(1),
+      target: string2().min(1),
+      note: string2().min(1).optional()
+    }).catchall(unknown());
+    phaseCheckpointResumeMetaSchema = object2({
+      mode: string2().min(1),
+      pendingTopics: array(string2().min(1)),
+      completedTopics: array(string2().min(1)),
+      currentQuestion: string2().min(1).optional(),
+      notes: array(string2().min(1)),
+      resumeHint: string2().min(1).optional(),
+      updatedAt: string2().min(1)
+    }).catchall(unknown());
+    phaseCheckpointWriteSchema = object2({
+      completedAreas: array(string2().min(1)),
+      remainingAreas: array(string2().min(1)),
+      decisions: array(phaseCheckpointDecisionSchema),
+      deferredIdeas: array(phaseCheckpointDeferredIdeaSchema),
+      canonicalReferences: array(phaseCheckpointReferenceSchema),
+      resumeMeta: phaseCheckpointResumeMetaSchema
     }).catchall(unknown()).superRefine((value, context) => {
-      const structuredKeys = [
-        "mode",
-        "pendingTopics",
-        "completedTopics",
-        "currentQuestion",
-        "answers",
-        "notes",
-        "resumeHint",
-        "updatedAt"
+      const requiredSections = [
+        "completedAreas",
+        "remainingAreas",
+        "decisions",
+        "deferredIdeas",
+        "canonicalReferences",
+        "resumeMeta"
       ];
-      if (!structuredKeys.some((key) => key in value)) {
+      if (!requiredSections.every((key) => key in value)) {
         context.addIssue({
           code: "custom",
-          message: "Checkpoint must include resumability fields such as mode, pendingTopics, currentQuestion, answers, notes, resumeHint, or updatedAt."
+          message: "Checkpoint writes must include completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
         });
       }
     });
     phaseCheckpointPutInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
-      checkpoint: phaseCheckpointSchema
+      checkpoint: phaseCheckpointWriteSchema
     };
     phaseToolDefinitions = [
       {
@@ -28225,7 +28291,7 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_checkpoint_put",
-        description: "Persist a discuss-phase checkpoint JSON object for a phase.",
+        description: "Persist a discuss-phase checkpoint JSON object for a phase using the richer resumability contract.",
         inputSchema: phaseCheckpointPutInputSchema,
         handler: async (args) => blueprintPhaseCheckpointPut(args)
       },

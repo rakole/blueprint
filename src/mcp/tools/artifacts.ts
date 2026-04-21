@@ -3284,6 +3284,10 @@ function countNonEmptyContractSections(
   );
 }
 
+function hasSubstantiveContractSection(section: string): boolean {
+  return hasBootstrapText(section, 3);
+}
+
 function hasRequirementTableRows(section: string): boolean {
   const lines = section
     .split("\n")
@@ -3396,6 +3400,10 @@ export function validatePhaseArtifactContent(
         "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
       );
     }
+  } else if (artifact === "context" && missingRequiredSections.length > 0) {
+    issues.push(
+      `Context artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    );
   } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
     issues.push(
       `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
@@ -3410,7 +3418,23 @@ export function validatePhaseArtifactContent(
     issues.push("UI spec artifact section Outcome Mode must not be empty.");
   }
 
-  if (artifact !== "ui-spec" && missingRequiredSections.length > 0) {
+  if (artifact === "context") {
+    for (const heading of contract.requiredHeadings) {
+      const section = extractMarkdownSection(content, heading);
+
+      if (section.trim().length === 0) {
+        continue;
+      }
+
+      if (!hasSubstantiveContractSection(section)) {
+        issues.push(
+          `Context artifact section ${heading} must contain substantive downstream-planning detail.`
+        );
+      }
+    }
+  }
+
+  if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {
     warnings.push(
       `${artifactLabel} is missing recommended contract sections: ${missingRequiredSections.join(", ")}.`
     );

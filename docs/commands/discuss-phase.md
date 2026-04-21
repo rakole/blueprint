@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. It is not a claim of full GSD parity; instead, the repaired Blueprint Phase 3 slice keeps the useful discovery intent while using Blueprint-specific replacements for the missing safeguards: answer validation and retry, reuse of prior context and discussion artifacts, structured gray-area analysis, folding deferred ideas into the saved record, and a blocking anti-pattern check before save. It still reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and normalizes the final context and discussion drafts to the canonical `authoringTemplate` before write. It restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. It is not a claim of full GSD parity; instead, the repaired Blueprint Phase 3 slice keeps the useful discovery intent while using Blueprint-specific replacements for the missing safeguards and must-haves: prior-context sweeps across saved phase artifacts and codebase scout summaries; answer validation and retry; stronger assumptions-mode analysis; methodology-shaped gray-area lenses; folding deferred ideas into the saved record; checkpoint-per-area behavior; progress recaps that keep the session legible; and a blocking anti-pattern check before save. The contract does not promise a dedicated todo/backlog file crawl; any follow-up references only carry forward when they are already present in the saved discovery record. It still reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and normalizes the final context and discussion drafts to the canonical `authoringTemplate` before write. It restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
@@ -75,7 +75,7 @@
 - Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
 - Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
 - Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
-- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss-checkpoint shape. Include at least one resumability field such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `answers`, `notes`, `resumeHint`, or `updatedAt`. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
 
 
 ## Skills And Subagents
@@ -130,7 +130,9 @@
 - `workflow.skip_discuss=true` should shorten the discussion path instead of pretending no context capture is needed.
 - Earlier phase context artifacts may contain canonical references or deferred ideas that should be reused instead of re-elicited.
 - When answers are vague, incomplete, or inconsistent with saved context, retry the question with a narrower prompt instead of accepting them as final.
-- Use structured gray-area lenses such as scope, tradeoffs, dependencies, risks, and reuse so the discussion stays grounded in Blueprint-friendly decisions.
+- Use structured gray-area lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology so the discussion stays grounded in Blueprint-friendly decisions.
+- Give short progress recaps as the session moves from one area to the next so the conversation stays legible.
+- Fold deferred ideas into the saved context or discussion log rather than dropping them on the floor.
 - Fold deferred ideas into the saved context or discussion log rather than dropping them on the floor.
 
 
@@ -145,12 +147,13 @@
 
 
 - Reads and writes only the selected phase scope.
-- Updates `STATE.md` whenever the next-step signal changes.
+- Updates `STATE.md` whenever the next-step signal changes and leaves the end-of-run `STATE.md` update legible.
 - Creates or updates only the declared artifacts for this command.
 - Persists real phase decisions into `XX-CONTEXT.md`, not only scaffold placeholders.
 - Reads actual saved context and discussion content, plus the canonical `phase.context` and `phase.discussion-log` contracts, before drafting updates.
 - Warns clearly when refreshed discovery leaves existing saved plans unchanged until `/blu-plan-phase` is run again.
 - Captures canonical references plus deferred or scope-creep ideas when they surface during gray-area discussion.
+- Captures prior-context sweep findings, deferred ideas, codebase scout notes, and per-area checkpoint progress when they surface during gray-area discussion.
 - Blocks save-time drift when the normalized body still contains placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas.
 - Uses checkpoint persistence only as a resumability aid and deletes the checkpoint after successful completion.
 - Uses only documented MCP tools for persistent state changes.

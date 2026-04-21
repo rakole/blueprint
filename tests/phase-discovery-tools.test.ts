@@ -12,6 +12,7 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import {
   phaseToolDefinitions,
+  blueprintPhaseCheckpointGet,
   blueprintPhaseContext,
   blueprintPhaseCheckpointPut,
   blueprintPhaseLocate,
@@ -478,7 +479,7 @@ test("phase research status returns warnings instead of throwing for unreadable 
   assert.match(status.suggestedRepairs.join("\n"), /restore or regenerate/i);
 });
 
-test("phase plan indexing and checkpoint persistence accept numeric inputs", async (t) => {
+test("phase plan indexing and checkpoint persistence accept numeric inputs with the richer resumability shape", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -488,9 +489,42 @@ test("phase plan indexing and checkpoint persistence accept numeric inputs", asy
     cwd: repoPath,
     phase: 3,
     checkpoint: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries"],
-      updatedAt: "2026-04-19T00:00:00.000Z"
+      completedAreas: ["Phase boundary and discovery grounding"],
+      remainingAreas: ["Dependency scan", "Open questions"],
+      decisions: [
+        {
+          topic: "Scope",
+          decision: "Keep discuss-phase focused on discovery boundary",
+          rationale: "The checkpoint needs to resume the next discovery question quickly."
+        }
+      ],
+      deferredIdeas: [
+        {
+          idea: "Revisit alias cleanup",
+          reason: "It is outside the current discovery boundary.",
+          revisitWhen: "After the phase context is captured"
+        }
+      ],
+      canonicalReferences: [
+        {
+          label: "Project brief",
+          target: ".blueprint/PROJECT.md",
+          note: "Canonical project intent"
+        },
+        {
+          label: "Requirements",
+          target: ".blueprint/REQUIREMENTS.md"
+        }
+      ],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["Open questions"],
+        completedTopics: ["Phase boundary"],
+        currentQuestion: "What still needs to be grounded before planning starts?",
+        notes: ["Capture the durable context before moving on."],
+        resumeHint: "Resume with the remaining discovery questions.",
+        updatedAt: "2026-04-19T00:00:00.000Z"
+      }
     }
   });
   const indexed = await blueprintPhasePlanIndex({ cwd: repoPath, phase: 3 });
@@ -503,7 +537,7 @@ test("phase plan indexing and checkpoint persistence accept numeric inputs", asy
   ]);
 });
 
-test("checkpoint persistence rejects arbitrary JSON objects without resumability fields", async (t) => {
+test("checkpoint persistence rejects legacy-style resumability fragments without the stronger shape", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -514,11 +548,39 @@ test("checkpoint persistence rejects arbitrary JSON objects without resumability
       cwd: repoPath,
       phase: 3,
       checkpoint: {
-        random: true
+        mode: "discuss",
+        pendingTopics: ["Scope boundaries"],
+        completedTopics: ["Phase boundary"],
+        updatedAt: "2026-04-19T00:00:00.000Z"
       }
     }),
     /structured discuss checkpoint/i
   );
+});
+
+test("checkpoint reads remain compatible with legacy object-shaped saves", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  const legacyCheckpoint = {
+    mode: "discuss",
+    pendingTopics: ["Scope boundaries"],
+    currentQuestion: "What remains to be clarified?",
+    updatedAt: "2026-04-19T00:00:00.000Z"
+  };
+
+  await writeFile(checkpointPath, `${JSON.stringify(legacyCheckpoint, null, 2)}\n`, "utf8");
+
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(checkpoint.found, true);
+  assert.deepEqual(checkpoint.checkpoint, legacyCheckpoint);
 });
 
 test("phase locate returns structured recovery when ROADMAP.md is missing", async (t) => {

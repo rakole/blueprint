@@ -17,6 +17,7 @@ import {
   blueprintPhaseCheckpointPut,
   blueprintPhaseContext
 } from "../src/mcp/tools/phase.js";
+import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 
@@ -112,6 +113,12 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /phase\.discussion-log/);
   assert.match(commandFile, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
   assert.match(commandFile, /blocking anti-pattern check/i);
+  assert.match(commandFile, /prior-context sweep/i);
+  assert.match(commandFile, /dedicated todo\/backlog file crawl/i);
+  assert.match(commandFile, /codebase scout/i);
+  assert.match(commandFile, /stronger assumptions-mode analysis/i);
+  assert.match(commandFile, /progress recap|session legibility/i);
+  assert.match(commandFile, /checkpoint-per-area|checkpoint per area/i);
   assert.match(commandFile, /PROJECT\.md/);
   assert.match(commandFile, /REQUIREMENTS\.md/);
   assert.match(commandFile, /STATE\.md/);
@@ -128,15 +135,30 @@ test("discuss-phase command references only registered phase-discovery tool name
 
   assert.match(skillFile, /blocking anti-pattern check/i);
   assert.match(skillFile, /focused follow-up or retry the question/i);
-  assert.match(skillFile, /fold deferred ideas into the saved context or discussion log/i);
+  assert.match(skillFile, /saved-artifact sweep, not a dedicated todo\/backlog file crawl/i);
   assert.match(skillFile, /Blueprint-friendly lenses/i);
+  assert.match(skillFile, /prior-context sweep/i);
+  assert.match(skillFile, /deferred-idea folding/i);
+  assert.match(skillFile, /methodology/i);
+  assert.match(skillFile, /codebase-scout reuse/i);
+  assert.match(skillFile, /stronger assumptions-mode analysis/i);
+  assert.match(skillFile, /progress recaps/i);
+  assert.match(skillFile, /checkpoint-per-area/i);
+  assert.match(skillFile, /end-of-run `STATE\.md` updates/i);
 
   assert.match(docFile, /not a claim of full GSD parity/i);
   assert.match(docFile, /answer validation and retry/i);
-  assert.match(docFile, /reuse of prior context and discussion artifacts/i);
-  assert.match(docFile, /structured gray-area analysis/i);
+  assert.match(docFile, /prior-context sweeps across saved phase artifacts/i);
+  assert.match(docFile, /methodology-shaped gray-area lenses/i);
   assert.match(docFile, /blocking anti-pattern check before save/i);
   assert.match(docFile, /folding deferred ideas into the saved record/i);
+  assert.match(docFile, /prior-context sweeps/i);
+  assert.match(docFile, /dedicated todo\/backlog file crawl/i);
+  assert.match(docFile, /codebase scout summaries/i);
+  assert.match(docFile, /stronger assumptions-mode analysis/i);
+  assert.match(docFile, /checkpoint-per-area/i);
+  assert.match(docFile, /progress recaps/i);
+  assert.match(docFile, /end-of-run `STATE\.md` update/i);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {
@@ -163,14 +185,73 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     cwd: repoPath,
     phase: "3",
     checkpoint: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"]
+      completedAreas: [],
+      remainingAreas: ["Scope boundaries", "UI expectations"],
+      decisions: [],
+      deferredIdeas: [],
+      canonicalReferences: [],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["Scope boundaries", "UI expectations"],
+        completedTopics: [],
+        notes: [],
+        updatedAt: "2026-04-11T00:00:00.000Z"
+      }
     }
   });
   const checkpointResumed = await blueprintPhaseCheckpointGet({
     cwd: repoPath,
     phase: "03"
   });
+  const checkpointAreaRefreshed = await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      completedAreas: ["Scope boundaries"],
+      remainingAreas: ["UI expectations"],
+      decisions: [
+        {
+          topic: "Scope boundaries",
+          decision: "Keep the discussion scoped to phase 3",
+          rationale: "Checkpoint per area for the discovery contract"
+        }
+      ],
+      deferredIdeas: [
+        {
+          idea: "Revisit UI expectations after the scope boundary recap",
+          revisitWhen: "After the next progress recap"
+        }
+      ],
+      canonicalReferences: [
+        {
+          label: "ROADMAP.md",
+          target: ".blueprint/ROADMAP.md",
+          note: "Phase discovery anchor"
+        }
+      ],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["UI expectations"],
+        completedTopics: ["Scope boundaries"],
+        currentQuestion: "What UI expectations still need input?",
+        notes: ["Resume after the progress recap"],
+        resumeHint: "Resume after the progress recap",
+        updatedAt: "2026-04-11T00:00:01.000Z"
+      }
+    }
+  });
+  const checkpointAreaLoaded = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const scaffoldContextBody = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    "utf8"
+  );
+  assert.match(scaffoldContextBody, /<implementation decision 1>/i);
+  assert.match(scaffoldContextBody, /<specific idea 1>/i);
+  assert.match(scaffoldContextBody, /<existing code insight 1>/i);
+  assert.match(scaffoldContextBody, /<source 1>/i);
   const contextWrite = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
@@ -178,31 +259,47 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     content: `# Phase 03: Phase Discovery - Context
 
 ## Phase Boundary
-- Persist the durable discovery record for this phase.
-- Keep decisions, dependencies, and open follow-ups available for later planning.
-- Exclude execution plans and implementation details.
-- Make it possible for the next phase to reuse the saved context without re-asking basics.
+- Keep discovery scoped to phase 3 and the saved artifacts in .blueprint/phases/03-phase-discovery/.
+- Capture durable context, not planning or execution detail.
+- Leave the next safe action in STATE.md.
 
 ## Discovery Grounding
 - Project brief - discovery should stay phase-scoped and resumable.
 - Requirements grounding - keep the saved requirements visible in the context.
-- Workflow posture - prefer evidence-backed questions and checkpointed follow-up.
-- Confirmed decisions - discovery commands should persist real decisions, not only scaffold text.
+- Workflow posture - prefer evidence-backed questions, progress recaps, and checkpointed follow-up.
+- Prior-context sweep - review existing context, discussion log, and codebase scout notes before asking fresh questions.
+
+## Implementation Decisions
+- Use one-question ask_user branching for gray areas and resume/discard decisions.
+- Record stronger assumptions-mode analysis when the workflow posture asks for evidence-first corrections.
+- Refresh checkpoint-per-area state after each major gray area so the flow can resume cleanly.
+- End with an explicit STATE.md update that points to /blu-progress.
+
+## Specific Ideas
+- Keep a short progress recap after each area so the session stays legible.
+- Fold deferred ideas into the saved record.
+- Reuse canonical references instead of re-eliciting them.
+
+## Existing Code Insights
+- The codebase scout notes are the right place for brownfield constraints and reusable patterns.
+- Existing artifacts already identify the phase directory and the current roadmap anchor.
 
 ## Dependencies
-- Prior phase artifacts - the roadmap and any earlier context already on disk.
-- External constraints - overwrite confirmation stays explicit.
-- Follow-up reads - resume from saved checkpoints before restarting long discussions.
+- Prior phase artifacts, the roadmap, and saved checkpoint state all constrain the next questions.
+- The command must not advertise power, chain, or auto behavior as shipped.
+- Explicit overwrite confirmation is required before replacing substantive context.
 
 ## Open Questions
-- Which gray areas still need more user input?
+- Which gray area should be discussed next?
+- What follow-up depends on the current phase checkpoint?
 
 ## Deferred Ideas
-- Scope creep or later follow-up - preserve unresolved discussion branches for the next pass.
-- Ideas to revisit after this phase - canonical references that should be reused instead of re-elicited.
+- Revisit any follow-up ideas that were already captured in the context after the current area closes.
+- Preserve later follow-up ideas in the discussion log rather than dropping them.
 
 ## Canonical References
-- Source 1 - the saved roadmap, requirements, and phase artifacts that frame the discussion.
+- ROADMAP.md and STATE.md define the current phase boundary and follow-up routing.
+- Prior phase context and discussion-log artifacts hold the saved discovery history.
 `,
     overwrite: true
   });
@@ -222,12 +319,21 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     cwd: repoPath,
     phase: "3"
   });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      activeCommand: "/blu-progress",
+      nextAction: "Run /blu-progress to review the saved discovery context",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
   const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
   const listed = await blueprintArtifactList({ cwd: repoPath });
   const contextBody = await readFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
     "utf8"
   );
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
 
   assert.deepEqual(first.createdFiles.sort(), [
     ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
@@ -239,13 +345,24 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   ]);
   assert.equal(checkpointCreated.updated, true);
   assert.equal(checkpointResumed.found, true);
-  assert.deepEqual(checkpointResumed.checkpoint?.pendingTopics, [
+  assert.deepEqual(checkpointResumed.checkpoint?.resumeMeta?.pendingTopics, [
     "Scope boundaries",
     "UI expectations"
   ]);
+  assert.equal(checkpointAreaRefreshed.updated, true);
+  assert.equal(checkpointAreaLoaded.found, true);
+  assert.deepEqual(checkpointAreaLoaded.checkpoint?.completedAreas, ["Scope boundaries"]);
+  assert.deepEqual(checkpointAreaLoaded.checkpoint?.resumeMeta?.completedTopics, ["Scope boundaries"]);
+  assert.equal(
+    checkpointAreaLoaded.checkpoint?.resumeMeta?.currentQuestion,
+    "What UI expectations still need input?"
+  );
   assert.equal(contextWrite.written, true);
+  assert.equal(contextWrite.overwritten, true);
   assert.equal(discussionWrite.written, true);
   assert.equal(checkpointDeleted.deleted, true);
+  assert.deepEqual(stateUpdate.updatedFields.sort(), ["lastUpdated", "nextAction"].sort());
+  assert.equal(stateUpdate.statePath, ".blueprint/STATE.md");
   assert.equal(
     context.phase?.artifacts.discussionLog,
     ".blueprint/phases/03-phase-discovery/03-DISCUSSION-LOG.md"
@@ -253,5 +370,7 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   assert.ok(
     listed.artifacts.phases.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
   );
-  assert.match(contextBody, /persist real decisions, not only scaffold text/i);
+  assert.match(contextBody, /checkpoint-per-area/i);
+  assert.notEqual(contextBody, scaffoldContextBody);
+  assert.match(stateBody, /Run \/blu-progress to review the saved discovery context/);
 });

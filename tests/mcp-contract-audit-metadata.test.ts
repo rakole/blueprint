@@ -39,6 +39,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   const [
     discussCommand,
     discussDoc,
+    artifactSchema,
+    discussRuntimeReference,
+    discussMigration,
+    mcpToolsDoc,
     researchCommand,
     researchDoc,
     uiCommand,
@@ -47,6 +51,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   ] = await Promise.all([
     readRepoFile("commands/blu-discuss-phase.toml"),
     readRepoFile("docs/commands/discuss-phase.md"),
+    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
     readRepoFile("commands/blu-research-phase.toml"),
     readRepoFile("docs/commands/research-phase.md"),
     readRepoFile("commands/blu-ui-phase.toml"),
@@ -55,20 +63,74 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   ]);
 
   assert.match(discussCommand, /repo-relative Blueprint artifact paths such as `?\.blueprint\/phases\//i);
-  assert.match(discussCommand, /`checkpoint` must be a JSON object/i);
-  assert.match(discussCommand, /at least one resumability field such as `mode`, `pendingTopics`/i);
+  assert.match(discussCommand, /structured discuss checkpoint shape/i);
+  assert.match(
+    discussCommand,
+    /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
+  );
+  assert.match(discussCommand, /`resumeMeta` must carry the resumability details/i);
   assert.match(discussCommand, /returned `path` as the authoritative saved filename/i);
   assert.match(discussCommand, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
   assert.match(discussCommand, /self-check the normalized body against the contract/i);
+  assert.match(discussCommand, /prior-context sweep/i);
+  assert.match(discussCommand, /codebase scout/i);
+  assert.match(discussCommand, /stronger assumptions-mode analysis/i);
+  assert.match(discussCommand, /checkpoint-per-area/i);
+  assert.match(discussCommand, /end-of-run `STATE\.md` update/i);
   assert.match(discussDoc, /## Artifact Persistence Contract/);
   assert.match(discussDoc, /resolved numeric phase reference only/i);
-  assert.match(discussDoc, /structured discuss-checkpoint shape/i);
-  assert.match(discussDoc, /at least one resumability field such as `mode`, `pendingTopics`/i);
+  assert.match(discussDoc, /structured discuss checkpoint shape/i);
+  assert.match(
+    discussDoc,
+    /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
+  );
+  assert.match(discussDoc, /`resumeMeta` with fields such as `mode`, `pendingTopics`/i);
   assert.match(discussDoc, /normalized to the canonical `authoringTemplate` before write/i);
   assert.match(discussDoc, /self-checked against that contract/i);
   assert.match(
     discussDoc,
     /blueprint_phase_context[\s\S]*projectBrief[\s\S]*requirementsGrounding[\s\S]*workflowPosture[\s\S]*codebase[\s\S]*requirements[\s\S]*missingArtifacts[\s\S]*warnings/i
+  );
+  assert.match(discussDoc, /prior-context sweeps/i);
+  assert.match(discussDoc, /dedicated todo\/backlog file crawl/i);
+  assert.match(discussDoc, /codebase scout summaries/i);
+  assert.match(discussDoc, /stronger assumptions-mode analysis/i);
+  assert.match(discussDoc, /progress recaps/i);
+  assert.match(discussDoc, /checkpoint-per-area/i);
+  assert.match(discussDoc, /end-of-run `STATE\.md` update/i);
+  assert.match(artifactSchema, /full discuss-phase context contract sections/i);
+  assert.match(
+    artifactSchema,
+    /`Phase Boundary`, `Discovery Grounding`, `Implementation Decisions`, `Specific Ideas`, `Existing Code Insights`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`/i
+  );
+  assert.match(artifactSchema, /`resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`/i);
+  assert.match(discussRuntimeReference, /prior-context sweep/i);
+  assert.match(discussRuntimeReference, /dedicated todo\/backlog file crawl/i);
+  assert.match(discussRuntimeReference, /codebase summaries/i);
+  assert.match(
+    discussRuntimeReference,
+    /`discuss-phase`[\s\S]*`blueprint_phase_plan_index`[\s\S]*`blueprint_artifact_contract_read`/i
+  );
+  assert.match(discussRuntimeReference, /stronger assumptions-mode analysis/i);
+  assert.match(discussRuntimeReference, /progress recaps/i);
+  assert.match(discussRuntimeReference, /checkpoint-per-area/i);
+  assert.match(discussRuntimeReference, /end-of-run `STATE\.md` updates/i);
+  assert.match(discussMigration, /prior-context sweeps/i);
+  assert.match(discussMigration, /dedicated todo\/backlog file crawl/i);
+  assert.match(discussMigration, /codebase summaries/i);
+  assert.match(
+    discussMigration,
+    /`discuss-phase`[\s\S]*`blueprint_phase_plan_index`[\s\S]*`blueprint_artifact_contract_read`/i
+  );
+  assert.match(discussMigration, /one-question ask_user branching/i);
+  assert.match(discussMigration, /stronger assumptions-mode analysis/i);
+  assert.match(discussMigration, /methodology lenses/i);
+  assert.match(discussMigration, /progress recaps/i);
+  assert.match(discussMigration, /checkpoint-per-area/i);
+  assert.match(discussMigration, /end-of-run `STATE\.md` updates/i);
+  assert.match(
+    mcpToolsDoc,
+    /`discuss-phase` uses phase location\/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`/i
   );
 
   assert.match(researchCommand, /default strict mode/i);
@@ -90,8 +152,12 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(uiDoc, /bounded checker review loop/i);
   assert.match(uiDoc, /single durable output/i);
 
-  assert.match(discoverySkill, /`blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object/i);
-  assert.match(discoverySkill, /at least one resumability field such as `mode`, `pendingTopics`/i);
+  assert.match(discoverySkill, /structured discuss checkpoint shape/i);
+  assert.match(
+    discoverySkill,
+    /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
+  );
+  assert.match(discoverySkill, /`resumeMeta` carries the resumability fields/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
   assert.match(discoverySkill, /Canonical Research Contract/);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);
