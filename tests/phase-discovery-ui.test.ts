@@ -230,7 +230,7 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
     content: `# Phase 03 Context
 
 ## Decisions
-- Capture the confirmed choices for this phase here.
+- Capture durable discuss-phase decisions in the phase artifact.
 `
   });
   const invalidDiscussion = await blueprintPhaseArtifactWrite({
@@ -242,6 +242,39 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
 ## Summary
 - Record the major discussion outcomes and unresolved questions here.
 `
+  });
+  const invalidContextLeadingText = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "context",
+    content: `intro
+# Phase 03 Context
+
+## Phase Boundary
+- Goal: keep the saved context grounded.
+
+## Discovery Grounding
+- Project brief: retain the actual brief.
+- Requirements grounding: preserve the current requirement grounding.
+- Workflow posture: keep discovery adaptive.
+- Confirmed decisions: capture durable decisions.
+
+## Dependencies
+- Prior phase artifacts: reuse the saved phase artifacts.
+- External constraints: respect repository constraints.
+- Required follow-up reads: read the roadmap before planning.
+
+## Open Questions
+- Question 1: what remains unresolved?
+
+## Deferred Ideas
+- Later follow-up: defer anything that does not block planning.
+- Reusable references: keep the next pass grounded in saved artifacts.
+
+## Canonical References
+- Roadmap and context artifacts.
+`,
+    overwrite: true
   });
   const invalidUiSpec = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
@@ -291,8 +324,32 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
     artifact: "context",
     content: `# Phase 03 Context
 
-## Decisions
-- Capture durable discuss-phase decisions in the phase artifact.
+## Phase Boundary
+- Capture durable discuss-phase context for the phase.
+- Confirm the phase boundary, grounding, and open issues.
+- Exclude execution planning and summary writing.
+- Downstream tools can reuse the discovery record without re-eliciting basics.
+
+## Discovery Grounding
+- Project brief - the phase needs a durable discovery record.
+- Requirements grounding - retain the saved requirements context.
+- Workflow posture - keep question asking adaptive and evidence-backed.
+- Confirmed decisions - discovery should persist the choices that matter for later planning.
+
+## Dependencies
+- Prior phase artifacts - saved research and any earlier context.
+- External constraints - repo-level safety and roadmap scope.
+- Required follow-up reads - the roadmap, requirements, and saved phase artifacts.
+
+## Open Questions
+- Which unresolved gray areas still need user input?
+
+## Deferred Ideas
+- Later follow-up: revisit anything that does not block the next planning step.
+- Reusable references: keep canonical source notes handy for the next pass.
+
+## Canonical References
+- Roadmap and requirement notes that shaped the discussion.
 `,
     overwrite: true
   });
@@ -323,9 +380,17 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
   });
 
   assert.equal(invalidContext.status, "invalid");
-  assert.match(invalidContext.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
+  assert.match(
+    invalidContext.validation?.issues.join("\n") ?? "",
+    /must include at least one populated contract section/i
+  );
   assert.equal(invalidDiscussion.status, "invalid");
   assert.match(invalidDiscussion.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
+  assert.equal(invalidContextLeadingText.status, "invalid");
+  assert.match(
+    invalidContextLeadingText.validation?.issues.join("\n") ?? "",
+    /must start with a markdown H1 title/i
+  );
   assert.equal(invalidUiSpec.status, "invalid");
   assert.match(invalidUiSpec.validation?.issues.join("\n") ?? "", /Outcome Mode must not be empty/i);
   assert.equal(invalidUiContractMissingSections.status, "invalid");

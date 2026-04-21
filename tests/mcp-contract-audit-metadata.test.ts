@@ -58,10 +58,18 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussCommand, /`checkpoint` must be a JSON object/i);
   assert.match(discussCommand, /at least one resumability field such as `mode`, `pendingTopics`/i);
   assert.match(discussCommand, /returned `path` as the authoritative saved filename/i);
+  assert.match(discussCommand, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
+  assert.match(discussCommand, /self-check the normalized body against the contract/i);
   assert.match(discussDoc, /## Artifact Persistence Contract/);
   assert.match(discussDoc, /resolved numeric phase reference only/i);
   assert.match(discussDoc, /structured discuss-checkpoint shape/i);
   assert.match(discussDoc, /at least one resumability field such as `mode`, `pendingTopics`/i);
+  assert.match(discussDoc, /normalized to the canonical `authoringTemplate` before write/i);
+  assert.match(discussDoc, /self-checked against that contract/i);
+  assert.match(
+    discussDoc,
+    /blueprint_phase_context[\s\S]*projectBrief[\s\S]*requirementsGrounding[\s\S]*workflowPosture[\s\S]*codebase[\s\S]*requirements[\s\S]*missingArtifacts[\s\S]*warnings/i
+  );
 
   assert.match(researchCommand, /default strict mode/i);
   assert.match(researchCommand, /returned `path` as authoritative/i);

@@ -28,8 +28,60 @@ async function createPhaseRepo(): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/PROJECT.md"),
+    `# Project: Blueprint Phase Discovery
+
+## Vision
+
+- Capture durable phase context before planning starts.
+
+## Audience
+
+- Blueprint operators
+- Future planning agents
+
+## Constraints
+
+- Keep persistent state inside .blueprint/.
+- Keep commands thin and MCP-owned.
+
+## Current Milestone
+
+- v1
+
+## Non-Goals
+
+- Do not mutate command manifests from discovery.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Blueprint Discovery Traceability
+
+## Requirements Table
+
+| ID | Scope | Requirement | Status | Notes |
+|----|-------|-------------|--------|-------|
+| LIFE-01 | committed | Capture real discovery context before planning. | ready | Use actual repository evidence. |
+| LIFE-02 | committed | Ground questions in project and requirements docs. | ready | Keep prompt-facing contracts truthful. |
+| LIFE-03 | committed | Surface workflow posture before asking follow-up questions. | ready | Use effective config and state. |
+
+## Traceability Notes
+
+- Discovery should point at the canonical project brief and workflow posture.
+
+## Acceptance Notes
+
+- Phase context output should tell the model which requirements matter now.
+
+## Deferred Items
+
+- Follow-up contract refinements can happen after the grounded snapshot exists.
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Fixture
@@ -58,8 +110,8 @@ async function createPhaseRepo(): Promise<string> {
 - Project status: initialized
 - Current milestone: v1
 - Current phase: 3
-- Active command: /blu-progress
-- Next action: Run /blu-progress
+- Active command: /blu-discuss-phase
+- Next action: Run /blu-discuss-phase 3 to rebuild the current phase context
 - Last updated: 2026-04-11T00:00:00.000Z
 
 ## Blockers
@@ -302,6 +354,29 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
   assert.ok(
     located.artifacts.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
   );
+  assert.equal(context.projectBrief.found, true);
+  assert.equal(context.projectBrief.title, "Project: Blueprint Phase Discovery");
+  assert.ok(context.projectBrief.summary.includes("Capture durable phase context"));
+  assert.deepEqual(context.projectBrief.vision, [
+    "Capture durable phase context before planning starts."
+  ]);
+  assert.deepEqual(context.requirementsGrounding.canonicalRequirementIds, [
+    "LIFE-01",
+    "LIFE-02",
+    "LIFE-03"
+  ]);
+  assert.deepEqual(context.requirementsGrounding.roadmapRequirementIds, [
+    "LIFE-01",
+    "LIFE-02",
+    "LIFE-03"
+  ]);
+  assert.match(context.requirementsGrounding.summary, /canonical requirements: LIFE-01, LIFE-02, LIFE-03/);
+  assert.equal(context.workflowPosture.projectStatus, "initialized");
+  assert.equal(context.workflowPosture.currentPhase, "3");
+  assert.equal(context.workflowPosture.nextAction, "Run /blu-research-phase 3 to capture phase research");
+  assert.equal(context.workflowPosture.workflow.discussMode, "discuss");
+  assert.equal(context.workflowPosture.workflow.skipDiscuss, false);
+  assert.equal(context.workflowPosture.workflow.researchBeforeQuestions, false);
   assert.deepEqual(context.requirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
   assert.ok(
     context.missingArtifacts.includes(".blueprint/phases/03-phase-discovery/03-RESEARCH.md")

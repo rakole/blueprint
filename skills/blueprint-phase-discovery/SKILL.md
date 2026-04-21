@@ -99,12 +99,13 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 2. Ground the flow in actual repo context before questioning: read the substantive project brief, requirements, and workflow posture already surfaced through `blueprint_phase_context`, then read the current `XX-CONTEXT.md`, `XX-DISCUSSION-LOG.md`, and earlier phase context artifacts when they materially reduce duplicate questions.
 3. Read `blueprint_phase_plan_index` before refreshing context so the command can warn that saved plans do not change automatically; users must re-run `/blu-plan-phase` if refreshed discovery should affect planning.
 4. Read the canonical contracts through `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting context and `artifactId: "phase.discussion-log"` before drafting any durable discussion log.
-5. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus.
-6. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, and record deferred or scope-creep ideas without pretending power, chain, or auto modes are shipped.
-7. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
-8. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
-9. Require explicit overwrite confirmation before replacing existing context artifacts.
-10. End with a next safe action inside the implemented Blueprint surface.
+5. Normalize the final context and discussion drafts to the returned `authoringTemplate` before any write, then run a blocking anti-pattern check for placeholders, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas before saving.
+6. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus. If an answer is vague, incomplete, or conflicts with saved context, ask a focused follow-up or retry the question with a narrower prompt before treating it as final.
+7. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, and reuse. Do not pretend power, chain, or auto modes are shipped.
+8. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
+9. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
+10. Require explicit overwrite confirmation before replacing existing context artifacts.
+11. End with a next safe action inside the implemented Blueprint surface.
 
 ### `research-phase`
 

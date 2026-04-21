@@ -192,6 +192,54 @@ type PhaseContextResult = {
             summaries: string[];
         };
     } | null;
+    projectBrief: {
+        found: boolean;
+        path: string | null;
+        title: string | null;
+        summary: string;
+        vision: string[];
+        audience: string[];
+        constraints: string[];
+        currentMilestone: string | null;
+        nonGoals: string[];
+        warnings: string[];
+    };
+    requirementsGrounding: {
+        found: boolean;
+        path: string | null;
+        canonicalRequirementIds: string[];
+        roadmapRequirementIds: string[];
+        traceabilityNotes: string[];
+        acceptanceNotes: string[];
+        deferredItems: string[];
+        summary: string;
+        warnings: string[];
+    };
+    workflowPosture: {
+        path: string | null;
+        projectStatus: string | null;
+        currentMilestone: string | null;
+        currentPhase: string | null;
+        activeCommand: string | null;
+        nextAction: string | null;
+        blockers: string[];
+        workflow: {
+            research: boolean;
+            planCheck: boolean;
+            verifier: boolean;
+            nyquistValidation: boolean;
+            uiPhase: boolean;
+            uiSafetyGate: boolean;
+            codeReview: boolean;
+            autoAdvance: boolean;
+            researchBeforeQuestions: boolean;
+            discussMode: string;
+            skipDiscuss: boolean;
+            useWorktrees: boolean;
+        };
+        summary: string;
+        warnings: string[];
+    };
     codebase: {
         mapped: boolean;
         artifacts: string[];

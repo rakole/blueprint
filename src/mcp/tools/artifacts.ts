@@ -2685,7 +2685,7 @@ function validateContractBackedMarkdown(
   const contract = readArtifactContract(contractId);
   const issues: string[] = [];
 
-  if (!/^# .+\S\s*$/m.test(content)) {
+  if (!/^# .+\S(?:\r?\n|$)/.test(content)) {
     issues.push(`${artifactLabel} must start with a markdown H1 title.`);
   }
 
@@ -3372,7 +3372,7 @@ export function validatePhaseArtifactContent(
   const issues: string[] = [];
   const warnings: string[] = [];
 
-  if (!/^# .+\S\s*$/m.test(content)) {
+  if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
     issues.push(`${artifactLabel} must start with a markdown H1 title.`);
   }
 
