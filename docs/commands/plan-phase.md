@@ -3,7 +3,15 @@
 |---|---|
 | Wave | `1` |
 | Family | `Core Lifecycle` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `plan-phase` uses the shared long-running-mutation posture: resolve the target phase, read live planning inputs, decide the reuse/revise/replace gate, execute bounded drafting, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
+- When saved plans already exist, keep the pending gate explicit and require a structured `reuse`, `revise`, or `replace` gate before any overwrite path.
 
 
 ## Purpose
@@ -36,6 +44,7 @@ Interactive planning UX rules:
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and updates `.blueprint/STATE.md` through MCP.
+- In-flight planning should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
 
 
 ## Blueprint And Global State Reads

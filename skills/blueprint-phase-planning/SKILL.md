@@ -16,6 +16,14 @@ commands:
 
 Orchestrate Blueprint's phase-planning flow so the final plan is grounded in current phase context, normalized config, the live phase.plan contract, and an explicit planner/checker revision loop with coverage gating.
 
+## Shared Runtime Contract
+
+- Execution profile: `long-running-mutation`
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while planning.
+- Use a structured `reuse`, `revise`, or `replace` gate before any overwrite path when plans already exist.
+
 ## Runtime Call Rules
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
