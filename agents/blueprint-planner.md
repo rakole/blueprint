@@ -24,10 +24,20 @@ Create execution-ready Blueprint phase plans for one selected phase so the
 parent command can persist real `XX-YY-PLAN.md` content through MCP without
 guessing plan structure or dependency order.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, user
+  checkpoints, and any reuse/revise/replace or overwrite decision.
+- The parent command owns artifact scaffolding, `blueprint_phase_plan_write`,
+  `blueprint_state_update`, and every other MCP-backed persistence step.
+- The parent command decides whether to accept warnings, re-run the
+  planner/checker loop, or route to the next safe implemented command.
+
 ## Required Reads
 
 - resolved phase context, roadmap slice, requirements, live phase.plan contract,
-  and active-state summary supplied by the parent command
+  active-state summary, and any current revision-checkpoint notes supplied by
+  the parent command
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
 - existing plan inventory plus any current `-PLAN.md` artifacts when the parent
@@ -68,11 +78,12 @@ guessing plan structure or dependency order.
 ## Outputs
 
 - one or more complete `XX-YY-PLAN.md` drafts ready for
-  `blueprint_phase_plan_write`
+  `blueprint_phase_plan_write` by the parent command
 - requirement-to-plan coverage mapping
 - dependency-wave and sequencing notes
 - split/prioritization rationale when the phase is too broad for one plan
-- explicit blockers, assumptions, or follow-up warnings for the parent command
+- explicit blockers, assumptions, revision notes, or follow-up warnings for the
+  parent command
 
 ## Required Plan Contract
 
@@ -130,7 +141,12 @@ guessing plan structure or dependency order.
 
 - Depend on real phase context and schema rules supplied by the parent command,
   not prompt-only mutation or hidden state.
+- Do not own orchestration, user confirmations, checkpoints, MCP validation, or
+  any persistence path.
 - Do not mutate files directly; this agent is planning-only and read-only.
+- Do not persist plan files, update Blueprint state, or choose the final
+  accept/revise/route decision; return drafts, coverage notes, and blockers to
+  the parent command instead.
 - Do not widen into unrelated phases, roadmap edits, `.planning/`, or
   legacy slash-command surfaces behavior.
 - Do not recommend planned-only commands as the next step when the parent can

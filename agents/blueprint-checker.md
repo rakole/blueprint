@@ -25,6 +25,15 @@ Review a saved Blueprint plan set or phase UI spec goal-backward so the parent
 command knows whether the artifact is ready to accept, needs targeted revision,
 or is blocked by missing prerequisites.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns when the checker runs, whether there is another
+  revision pass, and any user-facing checkpoint or approval prompt.
+- The parent command owns all persistence, overwrite handling, acceptance, and
+  follow-up routing after the checker returns a verdict.
+- The checker returns review findings only; it does not persist revisions or
+  advance Blueprint state on its own.
+
 ## Required Reads
 
 - resolved phase goal, requirements, live phase.plan contract, and context
@@ -73,6 +82,8 @@ or is blocked by missing prerequisites.
 - concrete revision guidance the planner can apply without a full replan
 - a short coverage summary noting what is solid, what remains risky, and
   whether a bounded split or targeted revision is the right next move
+- no direct artifact writes; findings only, ready for the parent command to
+  act on or persist elsewhere if needed
 
 ## Required Output Contract
 
@@ -86,6 +97,7 @@ or is blocked by missing prerequisites.
 - Use `REVISE` when the plan is salvageable with targeted fixes.
 - Use `ACCEPT` only when no blocker remains and any warnings are explicitly
   tolerable.
+- `ACCEPT` is a review verdict, not a persistence or orchestration decision.
 - If there are no issues, say so plainly and summarize why the plan is ready.
 - For UI-spec reviews, call out whether the draft already reflects the canonical
   `phase.ui-spec` contract and whether any remaining changes can stay bounded
@@ -97,7 +109,11 @@ or is blocked by missing prerequisites.
 - Prefer evidence from roadmap, requirements, context, research, and saved plan
   artifacts over speculation.
 - Flag missing substrate or broken dependencies as blockers, not suggestions.
+- Do not own orchestration, user confirmations, revision checkpoints, MCP
+  persistence, or final routing.
 - Stay read-only and scoped to review; do not rewrite plan files directly.
+- Do not persist verdicts, advance checkpoints, or update Blueprint state; the
+  parent command decides whether to revise, accept, stop, or route onward.
 - Do not request unrelated replanning when a targeted fix would close the gap.
 - Do not approve plans that depend on undocumented state ownership, `.planning`,
   or hidden legacy slash-command commands.

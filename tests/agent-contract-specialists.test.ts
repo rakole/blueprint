@@ -77,6 +77,49 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(checker, /re-run\s+the checker/i);
 });
 
+test("lifecycle planning specialist agents keep parent-owned orchestration and persistence explicit", async () => {
+  const planner = await readAgent("blueprint-planner");
+  const checker = await readAgent("blueprint-checker");
+
+  assert.match(planner, /## Parent-Owned Responsibilities/);
+  assert.match(planner, /parent command owns orchestration/i);
+  assert.match(planner, /visible stage narration/i);
+  assert.match(planner, /user\s+checkpoints/i);
+  assert.match(planner, /reuse\/revise\/replace or overwrite decision/i);
+  assert.match(planner, /artifact scaffolding/i);
+  assert.match(planner, /`blueprint_phase_plan_write`/);
+  assert.match(planner, /`blueprint_state_update`/);
+  assert.match(planner, /MCP-backed persistence step/i);
+  assert.match(planner, /ready for\s+`blueprint_phase_plan_write` by the parent command/i);
+  assert.match(planner, /Do not own orchestration/i);
+  assert.match(planner, /user confirmations/i);
+  assert.match(planner, /checkpoints/i);
+  assert.match(planner, /MCP validation/i);
+  assert.match(planner, /any\s+persistence path/i);
+  assert.match(planner, /Do not persist plan files/i);
+  assert.match(planner, /update Blueprint state/i);
+  assert.match(planner, /accept\/revise\/route decision/i);
+
+  assert.match(checker, /## Parent-Owned Responsibilities/);
+  assert.match(checker, /parent command owns when the checker runs/i);
+  assert.match(checker, /another\s+revision pass/i);
+  assert.match(checker, /user-facing checkpoint or approval prompt/i);
+  assert.match(checker, /parent command owns all persistence/i);
+  assert.match(checker, /overwrite handling/i);
+  assert.match(checker, /follow-up routing after the checker returns a verdict/i);
+  assert.match(checker, /findings only/i);
+  assert.match(checker, /persist elsewhere if needed/i);
+  assert.match(checker, /`ACCEPT` is a review verdict, not a persistence or orchestration decision/);
+  assert.match(checker, /Do not own orchestration/i);
+  assert.match(checker, /user confirmations/i);
+  assert.match(checker, /revision checkpoints/i);
+  assert.match(checker, /MCP\s+persistence/i);
+  assert.match(checker, /final routing/i);
+  assert.match(checker, /Do not persist verdicts/i);
+  assert.match(checker, /advance checkpoints/i);
+  assert.match(checker, /update Blueprint state/i);
+});
+
 test("docs specialist agents encode scoped drafting and evidence-backed verification rules", async () => {
   const docWriter = await readAgent("blueprint-doc-writer");
   const docVerifier = await readAgent("blueprint-doc-verifier");
