@@ -11,12 +11,12 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `add-tests` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and validation evidence, decide the narrowest safe test scope, execute bounded test generation, persist verification notes and the durable report through MCP, validate the saved artifact state, and route to the next safe implemented follow-up.
-- Keep the evidence-backed mutation contract explicit throughout the run: execution summaries plus saved verification or UAT artifacts remain the grounding source, scope confirmation or a broader-suite choice is the pending gate when the request would widen beyond targeted tests, and verification status must stay aligned with the tool-owned write result instead of being inferred from prompt progress alone.
+- Keep the evidence-backed mutation contract explicit throughout the run: execution summaries plus saved verification or UAT artifacts remain the grounding source, the selected test scope is part of the resolved scope, scope confirmation or a broader-suite choice is the pending gate when the request would widen beyond targeted tests, and targeted test results plus verification and report status must stay aligned with tool-owned results instead of being inferred from prompt progress alone.
 
 ## Purpose
 
 
-`add-tests` is Blueprint's command for generate tests for a completed phase based on UAT criteria and implementation. Blueprint ships it as an evidence-backed test-generation command: it reads saved execution summaries plus existing verification or UAT evidence first, keeps repo mutation scoped to the selected tests, persists updated verification notes through the validation MCP substrate, and writes a durable phase report under `.blueprint/reports/`.
+`add-tests` is Blueprint's command for generating tests for a completed phase based on UAT criteria and implementation. Blueprint ships it as an evidence-backed test-generation command: it reads saved execution summaries plus existing verification or UAT evidence first, keeps repo mutation scoped to the selected tests, persists updated verification notes through the validation MCP substrate, and writes a durable phase report under `.blueprint/reports/`.
 
 
 ## Command Path And Examples
@@ -40,12 +40,12 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: updates repo test files in the selected scope, persists updated verification notes through MCP, writes a durable `.blueprint/reports/add-tests-<phase>.md` report, and updates `.blueprint/STATE.md` when the next safe action changes.
-- In-flight add-tests should keep the resolved scope, active stage, pending gate, execution mode, verification status, and next safe action legible while the run is still live.
+- In-flight add-tests should keep the resolved scope, active stage, pending gate, execution mode, targeted test result, verification status, report status, and next safe action legible while the run is still live.
 
 ## In-Flight Progress Contract
 
 - For non-trivial add-tests runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact test-generation checklist with `write_todos`.
-- Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, current verification status, and next safe action as the run moves from evidence review through scope confirmation, bounded test implementation, verification persistence, post-write validation, and routing.
+- Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action as the run moves from evidence review through scope confirmation, bounded test implementation, targeted test execution, verification persistence, report persistence, post-write validation, and routing.
 - Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 
 
@@ -86,12 +86,12 @@
 ## Validation And Report Contract
 
 - Update verification coverage through `blueprint_phase_validation_write` with `artifact: "verification"` and the full final markdown body; do not edit `XX-VERIFICATION.md` directly.
-- Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
+- Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths`, `written`, and `status` as authoritative instead of rebuilding filenames or summary links manually.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
 - Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, and self-check the normalized verification draft against the returned contract before writing.
 - Keep the reported verification status aligned with the returned `written` and `status` fields instead of claiming a save from command progress alone.
 - Persist the durable add-tests report through `blueprint_artifact_report_write` with the bare report name `add-tests-<phase>`, not a `.blueprint/reports/...` path.
-- Treat the returned report `path` as authoritative.
+- Treat the returned report `path`, `written`, and `status` as authoritative, and keep the reported report status explicit even when targeted test execution or verification persistence fails.
 
 
 ## Skills And Subagents
@@ -155,9 +155,10 @@
 
 - Reads execution summaries plus existing verification or UAT evidence before generating tests.
 - Keeps repo mutation scoped to the selected tests and any minimal supporting helpers.
-- Keeps test-generation stages, pending gates, verification status, and the next safe action explicit while add-tests is in flight.
+- Keeps test-generation stages, pending gates, targeted test results, verification status, report status, and the next safe action explicit while add-tests is in flight.
 - Persists updated verification notes through `blueprint_phase_validation_write` rather than direct file edits.
 - Persists the durable report through `blueprint_artifact_report_write`.
+- Reports verification and report persistence outcomes from MCP return values instead of assuming they succeeded.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Uses only documented MCP tools for Blueprint-owned persistent state changes.
 - Leaves unrelated repo files untouched.

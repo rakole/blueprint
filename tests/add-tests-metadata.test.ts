@@ -17,7 +17,9 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(commandFile, /targeted test command or result/i);
   assert.match(commandFile, /current verification status/i);
+  assert.match(commandFile, /report status/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, /Prefer Gemini CLI's built-in `ask_user` tool/i);
   assert.match(commandFile, /`blueprint-executor` subagent/);
@@ -41,6 +43,8 @@ test("add-tests manifest references visibility, validation/report tools, bounded
 
   assert.match(commandFile, /XX-VERIFICATION\.md/);
   assert.match(commandFile, /add-tests-<phase>/);
+  assert.match(commandFile, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
+  assert.match(commandFile, /`path`, `written`, and `status` as authoritative/i);
   assert.match(commandFile, /\/blu-execute-phase <phase>/);
   assert.match(commandFile, /\/blu-validate-phase <phase>/);
   assert.match(commandFile, /\/blu-code-review <phase>/);
@@ -64,9 +68,29 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-executor/);
   assert.match(skillFile, /blueprint-verifier/);
+  assert.match(skillFile, /selected test scope, targeted test command or result, verification status, report status/i);
   assert.match(skillFile, /verification status/i);
   assert.match(skillFile, /update_topic plus `write_todos`/i);
   assert.match(skillFile, /Use `ask_user` for structured scope or breadth decisions/i);
+  assert.match(skillFile, /reported report status aligned with the tool-owned `written` and `status` result/i);
   assert.match(skillFile, /add-tests-<phase>/);
   assert.match(skillFile, /\/blu-code-review <phase>/);
+});
+
+test("add-tests doc and runtime reference keep bounded visibility explicit", async () => {
+  const [commandDoc, runtimeReference] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/add-tests.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(commandDoc, /targeted test result, verification status, report status, and next safe action/i);
+  assert.match(commandDoc, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
+  assert.match(commandDoc, /returned report `path`, `written`, and `status` as authoritative/i);
+  assert.match(commandDoc, /Reports verification and report persistence outcomes from MCP return values/i);
+  assert.match(
+    runtimeReference,
+    /`add-tests`[\s\S]*selected scope, pending gates, targeted test result, verification status, and report status explicit/i
+  );
 });
