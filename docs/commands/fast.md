@@ -4,12 +4,19 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
 
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `fast` uses the shared interactive-read classification only to keep the command metadata aligned; it does not adopt tracker-backed branching or the long-running progress layer used by `quick` and lifecycle execution.
+- `fast` completes inline or reroutes quickly. Do not use `update_topic`, `write_todos`, or tracker tools to make a trivial run look long-running.
 
 ## Purpose
 
 
-`fast` is Blueprint's command for execute a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, and updates state only when the repo is already initialized.
+`fast` is Blueprint's command for executing a trivial task inline — no subagents, no planning overhead. In Blueprint it is implemented as a host-native trivial-execution path that keeps Blueprint-owned persistence on MCP rails, avoids durable quick-run reports, excludes tracker or long-running progress behavior, and updates state only when the repo is already initialized.
 
 
 ## Command Path And Examples
@@ -31,6 +38,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: may mutate repo files for the trivial task and updates `STATE.md` only when running inside an initialized Blueprint project.
+- In-flight posture: none beyond a concise inline summary or reroute; `fast` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads
@@ -112,6 +120,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
+- Explicitly excludes `update_topic`, `write_todos`, tracker-backed branching, and other long-running progress behavior.
 - Does not create quick-run reports, phase artifacts, or subagent side effects.
 
 
@@ -121,5 +130,4 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `fast` happy-path fixture.
-
 

@@ -20,7 +20,8 @@ Orchestrate Blueprint's execution-family flows so saved plans run in a wave-awar
 
 ## Runtime Call Rules
 
-- Execution profile: `long-running-mutation`
+- Execution profile for `/blu-execute-phase` and non-trivial `/blu-quick`: `long-running-mutation`
+- Execution profile for `/blu-fast`: `interactive-read`
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
@@ -28,11 +29,12 @@ Orchestrate Blueprint's execution-family flows so saved plans run in a wave-awar
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, review, skip, or stop branching, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
-- Use Gemini CLI's internal `update_topic` tool to keep long-running execution anchored on the active stage.
-- Use Gemini CLI's internal `write_todos` tool to maintain a compact visible checklist for target resolution, plan execution, summary persistence, validation, and routing when the run spans multiple stages.
+- Use Gemini CLI's internal `update_topic` tool to keep `/blu-execute-phase` and non-trivial `/blu-quick` runs anchored on the active stage.
+- Use Gemini CLI's internal `write_todos` tool to maintain a compact visible checklist for `/blu-execute-phase` and non-trivial `/blu-quick` runs when the work spans multiple stages.
 - Treat branchy execution-family work, including tracker-eligible `/blu-quick` runs, as eligible for Gemini's internal task tracker when that tracker helps manage bounded dependencies across discuss, research, implementation, and validation substeps.
 - Treat `update_topic` and `write_todos` as session-local coordination only; they do not replace Blueprint MCP persistence or `.blueprint/STATE.md`.
 - Treat tracker state as session-local coordination only; it does not replace Blueprint MCP persistence, saved plans, or durable Blueprint reports.
+- `/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker tools; finish the run inline or reroute instead of building a long-running progress layer around trivial work.
 
 ## Parity Goal
 
@@ -119,7 +121,7 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 23. When a bounded `/blu-quick` run becomes branchy, it is tracker-eligible: use Gemini's task tracker only for session-local dependency management, pair it with visible `write_todos`, and do not let it impersonate a saved phase plan or full lifecycle execution.
 24. Persist durable quick-run evidence through `blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest` instead of inventing ad hoc state files or passing a `.blueprint/reports/...` path.
 25. `/blu-quick` should prefer `/blu-progress` after completion unless a narrower implemented next step is obvious and safe.
-26. `/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, and do not create durable reports or phase artifacts.
+26. `/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, do not use `update_topic`, `write_todos`, or tracker tools, and do not create durable reports or phase artifacts.
 27. `/blu-fast` may update `STATE.md` only when Blueprint is initialized and healthy; partial repos should reroute to `/blu-health`, and uninitialized repos should stay in safe suggestion mode for Blueprint persistence.
 28. Route any non-trivial or evidence-heavy ask from `/blu-fast` to `/blu-quick` or `/blu-plan-phase` instead of stretching the command past its contract.
 29. Do not recommend `/blu-fast` unless `blueprint_command_catalog` says it is implemented.
