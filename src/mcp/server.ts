@@ -14,6 +14,7 @@ import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
 import { reviewToolDefinitions } from "./tools/review.js";
 import { stateToolDefinitions } from "./tools/state.js";
+import { workspaceToolDefinitions } from "./tools/workspace.js";
 
 type ToolResult = Record<string, unknown>;
 type ToolDefinition = {
@@ -29,7 +30,8 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...stateToolDefinitions,
   ...phaseToolDefinitions,
   ...reviewToolDefinitions,
-  ...artifactToolDefinitions
+  ...artifactToolDefinitions,
+  ...workspaceToolDefinitions
 ];
 
 const REQUIRED_CONFIG_TOOL_NAMES = [
@@ -69,7 +71,8 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_codebase_artifact_write",
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
-  "blueprint_review_record"
+  "blueprint_review_record",
+  "blueprint_workspace_create"
 ]);
 const MUTATION_FAILURE_STATUSES = new Set([
   "invalid",

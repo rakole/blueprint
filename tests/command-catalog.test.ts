@@ -65,6 +65,7 @@ const IMPLEMENTED_COMMANDS = [
   "pr-branch",
   "ship",
   "undo",
+  "new-workspace",
   "cleanup"
 ] as const;
 
@@ -312,6 +313,26 @@ test("add-backlog is implemented once manifest, skill, and capture MCP tools exi
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_mutate_index",
     "blueprint_artifact_scaffold"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("new-workspace is implemented once manifest, skill, and workspace MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["new-workspace"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.ok(entry.manifestPath);
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_config_get",
+    "blueprint_workspace_create",
+    "blueprint_workspace_registry_get"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

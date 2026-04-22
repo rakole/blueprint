@@ -90,14 +90,19 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_review_load_findings` | Load structured findings, follow-ups, and severity counts from a saved phase-scoped review artifact | `{findings, severityCounts, followUps, path, warnings}` |
 | `blueprint_review_record` | Persist a phase-scoped review artifact such as `XX-SECURITY.md`, `XX-REVIEW.md`, `XX-REVIEWS.md`, or `XX-UI-REVIEW.md` with overwrite protection | `{reportPath, counts, followUps, status, warnings}` |
 
+### Workspace
+
+| Tool | Purpose | Returns |
+|---|---|---|
+| `blueprint_workspace_registry_get` | Read the host-global Blueprint workspace registry from `~/.<host>/blueprint/workspaces.json` without mutating it | `{registryPath, workspaces}` |
+| `blueprint_workspace_create` | Create a workspace directory plus `<workspace>/.blueprint-workspace.json` and append the matching host-global registry entry transactionally | `{workspacePath, manifestPath, registryPath, registryEntry, repoMembers}` |
+
 ## Planned Later Tool Families
 
 These tool names are part of the documented future contract, but they are not registered today.
 
-### Future Workspace and Workstream Tools
+### Future Workspace Removal and Workstream Tools
 
-- `blueprint_workspace_registry_get`
-- `blueprint_workspace_create`
 - `blueprint_workspace_remove`
 - `blueprint_workstream_list`
 - `blueprint_workstream_mutate`
@@ -167,6 +172,7 @@ Resource-adoption guardrails:
 - `ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep shipping evidence-backed, report-backed, explicit about push or PR mutation, and honest about the next safe follow-up when `gh` is unavailable; its maintenance flow should continue to apply the shared dirty-tree, scope, and report-before-mutate preflight checks.
 - `undo` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep revert previews evidence-backed, report-backed before git mutation, explicit about dependency impact, and aligned with safe `git revert` style execution instead of destructive history rewrites; its maintenance flow should continue to apply the shared dirty-tree, resolved-target, and report-before-mutate preflight checks.
 - `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection; its maintenance flow should continue to apply the shared dirty-tree, protected-scope, and report-before-mutate preflight checks.
+- `new-workspace` uses `blueprint_config_get`, `blueprint_workspace_registry_get`, and `blueprint_workspace_create` to keep default workspace-root selection aligned with normalized effective config, keep host-global registry writes bounded to `~/.<host>/blueprint/workspaces.json`, and keep workspace-directory plus registry mutation transactional instead of prompt-only.
 
 ## Planned Command Notes
 

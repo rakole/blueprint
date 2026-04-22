@@ -85,7 +85,7 @@ Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-pha
 - `update`
 - `reapply-patches`
 
-Shipped in this wave: `cleanup`.
+Shipped in this wave: `new-workspace`, `cleanup`.
 
 ## Dependency Matrix
 
