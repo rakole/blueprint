@@ -19778,6 +19778,16 @@ function validatePhaseArtifactContent(content, artifact) {
     warnings
   };
 }
+function parseVerificationGateState(content) {
+  const topGateState = content.match(/^\*\*Gate State:\*\*\s*(PASS|PARTIAL|BLOCKED)\s*$/m)?.[1] ?? null;
+  const gateState = content.match(/^\s*-\s*Gate:\s*(PASS|PARTIAL|BLOCKED)\s*$/m)?.[1] ?? null;
+  const readinessState = content.match(/^\s*-\s*Readiness:\s*(ready for UAT|not ready for UAT)\s*$/m)?.[1] ?? null;
+  return {
+    topGateState,
+    gateState,
+    readinessState
+  };
+}
 function validateVerificationArtifactContent(content, summaryPaths = []) {
   const issues = [];
   const warnings = [];
@@ -19790,8 +19800,32 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
     );
   }
   issues.push(...validateValidationScaffoldPlaceholders(content, "Verification artifact"));
-  if (!/^\*\*Gate State:\*\*\s*.+$/m.test(content)) {
-    issues.push("Verification artifact must declare **Gate State:** with the readiness gate state.");
+  const { topGateState, gateState, readinessState } = parseVerificationGateState(content);
+  if (!topGateState) {
+    issues.push(
+      "Verification artifact must declare **Gate State:** as PASS, PARTIAL, or BLOCKED."
+    );
+  }
+  if (!gateState) {
+    issues.push("Verification artifact must include a Gate State section with a concrete Gate value.");
+  }
+  if (!readinessState) {
+    issues.push(
+      "Verification artifact must include a Gate State section with a concrete Readiness value."
+    );
+  }
+  if (topGateState && gateState && topGateState !== gateState) {
+    issues.push(
+      "Verification artifact must keep the top **Gate State:** marker and the Gate section value consistent."
+    );
+  }
+  if (gateState && readinessState) {
+    const expectedReadiness = gateState === "PASS" ? "ready for UAT" : "not ready for UAT";
+    if (readinessState !== expectedReadiness) {
+      issues.push(
+        "Verification artifact must keep the Gate section Readiness value aligned with the Gate state."
+      );
+    }
   }
   if (/^\*\*Sign-off:\*\*\s*verified\|pending\|blocked\s*$/m.test(content)) {
     issues.push(
@@ -19832,6 +19866,10 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
     issues,
     warnings
   };
+}
+function isVerificationArtifactReadyForUat(content) {
+  const { topGateState, gateState, readinessState } = parseVerificationGateState(content);
+  return topGateState === "PASS" && gateState === "PASS" && readinessState === "ready for UAT";
 }
 function validateUatArtifactContent(content, summaryPaths = []) {
   const issues = [];
@@ -24241,12 +24279,18 @@ async function collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts,
 async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifacts, phasePrefix2, summaryPaths) {
   const warnings = [];
   let hasVerification = false;
+  let verificationReadyForUat = false;
   let hasUat = false;
   if (summaryPaths.length === 0) {
     warnings.push(
       `${phasePrefix2}: no valid execution summaries were found, so VERIFICATION and UAT evidence cannot count toward milestone closeout.`
     );
-    return { hasVerification: false, hasUat: false, warnings };
+    return {
+      hasVerification: false,
+      verificationReadyForUat: false,
+      hasUat: false,
+      warnings
+    };
   }
   for (const artifact of ["verification", "uat"]) {
     const artifactPath = phaseArtifacts.find(
@@ -24262,6 +24306,12 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     if (validation.valid) {
       if (artifact === "verification") {
         hasVerification = true;
+        verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+        if (!verificationReadyForUat) {
+          warnings.push(
+            `${artifactPath}: verification artifact is valid but does not declare ready for UAT, so it should not route to conversational UAT yet.`
+          );
+        }
       } else {
         hasUat = true;
       }
@@ -24273,7 +24323,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     warnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
     warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
-  return { hasVerification, hasUat, warnings };
+  return { hasVerification, verificationReadyForUat, hasUat, warnings };
 }
 async function listImmediateDirectories2(rootPath) {
   try {
@@ -24322,6 +24372,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasResearch: false,
       hasUiSpec: false,
       hasVerification: false,
+      verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
       hasSummaries: false,
@@ -24367,6 +24418,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasResearch: false,
       hasUiSpec: false,
       hasVerification: false,
+      verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
       hasSummaries: false,
@@ -24398,6 +24450,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasResearch: false,
       hasUiSpec: false,
       hasVerification: false,
+      verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
       hasSummaries: false,
@@ -24428,6 +24481,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix2);
   const {
     hasVerification,
+    verificationReadyForUat,
     hasUat,
     warnings: validationWarnings
   } = await inspectValidatedPhaseValidationArtifacts(
@@ -24479,6 +24533,11 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       `Current phase ${currentPhase2} has a VERIFICATION artifact without execution summaries; validate the summary trail before trusting completion state.`
     );
   }
+  if (hasVerification && !verificationReadyForUat) {
+    warnings.push(
+      `Current phase ${currentPhase2} has a VERIFICATION artifact that is not ready for UAT; repair validation evidence before advancing to conversational UAT.`
+    );
+  }
   if (hasUat && !hasVerification) {
     warnings.push(
       `Current phase ${currentPhase2} has a UAT artifact without a VERIFICATION artifact; confirm validation evidence is not missing.`
@@ -24500,6 +24559,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasResearch,
     hasUiSpec,
     hasVerification,
+    verificationReadyForUat,
     hasUat,
     hasPlans,
     hasSummaries,
@@ -24539,6 +24599,7 @@ async function readRoadmapSignals(projectRoot) {
 async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
   const missingVerificationPhases = [];
   const missingUatPhases = [];
+  const verificationNotReadyPhases = [];
   const pendingSummaryCoveragePhases = [];
   const warnings = [];
   for (const phase of phases) {
@@ -24561,6 +24622,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     }
     const {
       hasVerification,
+      verificationReadyForUat,
       hasUat,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
@@ -24573,6 +24635,12 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     if (!hasVerification) {
       missingVerificationPhases.push(phase.phaseNumber);
     }
+    if (hasVerification && !verificationReadyForUat) {
+      verificationNotReadyPhases.push(phase.phaseNumber);
+      warnings.push(
+        `Phase ${phase.phaseNumber} has verification evidence that is valid but not ready for UAT, so milestone closeout remains blocked until validation is repaired.`
+      );
+    }
     if (!hasUat) {
       missingUatPhases.push(phase.phaseNumber);
     }
@@ -24580,9 +24648,10 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
   return {
     missingVerificationPhases,
     missingUatPhases,
+    verificationNotReadyPhases,
     pendingSummaryCoveragePhases,
-    blockingPhase: missingVerificationPhases[0] ?? missingUatPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
-    allCompletedPhasesReady: missingVerificationPhases.length === 0 && missingUatPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
+    blockingPhase: missingVerificationPhases[0] ?? verificationNotReadyPhases[0] ?? missingUatPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
+    allCompletedPhasesReady: missingVerificationPhases.length === 0 && verificationNotReadyPhases.length === 0 && missingUatPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
     warnings
   };
 }
@@ -24749,13 +24818,19 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasPendingExecution && !args.phaseArtifacts.hasVerification && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.currentPhase} to validate the completed phase execution`;
   }
-  if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.hasUat && implementedCommands.has(verifyWorkCommand)) {
+  if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.verificationReadyForUat && implementedCommands.has(validatePhaseCommand)) {
+    return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
+  }
+  if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && !args.phaseArtifacts.hasUat && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
+    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.verificationNotReadyPhases[0]} to repair milestone validation evidence before closeout`;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.allCompletedPhasesReady && !args.milestoneAuditReport.found && implementedCommands.has(auditMilestoneCommand)) {
@@ -25777,6 +25852,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
   );
   const validationWarnings = [];
   let hasValidVerification = false;
+  let verificationReadyForUat = false;
   let hasValidUat = false;
   for (const artifact of ["verification", "uat"]) {
     const artifactPath = validationArtifactPathFor(resolved, artifact);
@@ -25788,6 +25864,12 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
     if (validation.valid) {
       if (artifact === "verification") {
         hasValidVerification = true;
+        verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+        if (!verificationReadyForUat) {
+          validationWarnings.push(
+            `${artifactPath}: verification artifact is valid but does not declare ready for UAT, so the phase cannot complete yet.`
+          );
+        }
       } else {
         hasValidUat = true;
       }
@@ -25799,7 +25881,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
     validationWarnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
     validationWarnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
-  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && hasValidUat;
+  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && hasValidUat;
   const rawRoadmap = await fs6.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -27616,6 +27698,11 @@ async function blueprintPhaseValidationWrite(args) {
     if (!verificationValidation.valid) {
       throw new Error(
         `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT. Repair the verification evidence before writing ${artifactLabel} artifacts.`
+      );
+    }
+    if (!isVerificationArtifactReadyForUat(verificationContent)) {
+      throw new Error(
+        `Phase ${resolved.phaseNumber} must have a VERIFICATION artifact that is ready for UAT before writing ${artifactLabel} artifacts. Repair the verification evidence before writing ${artifactLabel} artifacts.`
       );
     }
   }
