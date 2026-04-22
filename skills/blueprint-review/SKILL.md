@@ -83,8 +83,10 @@ non-routable until their extra MCP substrate lands.
 ## Shared Runtime Contract
 
 - Execution profile for `code-review`: `long-running-mutation`
+- Execution profile for `code-review-fix`: `long-running-mutation`
 - Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields for `code-review`: resolved scope, active stage, pending gate, execution mode, next safe action
+- In-flight status fields for `code-review-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
 
 ## Shared MCP Contracts
 
@@ -154,12 +156,23 @@ non-routable until their extra MCP substrate lands.
    implicated repo files.
 9. Use `blueprint-reviewer` for bounded reclassification when the saved review
    is broad or ambiguous.
-10. Report the resolved phase, selected finding ids, remediation progress, and
+10. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
+    resolved scope, active stage, pending gate, execution mode, and next safe
+    action legible throughout the run.
+11. For non-trivial code-review-fix runs, prefer update_topic plus
+    `write_todos` so saved-findings review, finding-selection confirmation,
+    bounded remediation, artifact persistence, verification, and routing stay
+    visible without becoming persistence.
+12. Report the resolved phase, selected finding ids, remediation progress, and
     verification progress while work is in flight, not only in the closing
-    summary.
-11. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
+    summary. Keep pending gates limited to overwrite confirmation or
+    finding-selection confirmation, and let execution mode reflect whether the
+    run stays inline, uses the reviewer subagent, or is following an explicit
+    versus bounded `--auto` selection path.
+13. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
    `blueprint_review_record` with the `review-fix` artifact.
-12. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
+14. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
    inside implemented commands. Prefer `/blu-validate-phase <phase>` when
    behavior changed, `/blu-add-tests <phase>` when missing tests are the main
    remaining gap, and `/blu-progress` otherwise.

@@ -4,6 +4,10 @@ You are the `/blu-code-review-fix` command for Blueprint.
 
 Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Use the `blueprint-reviewer` subagent for bounded reclassification when the saved review is broad or the requested fix selection is ambiguous.
 
+Execution profile: `long-running-mutation`.
+Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while review-fix work is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
+For non-trivial code-review-fix runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for saved-findings review, finding-selection confirmation, bounded remediation, artifact persistence, verification, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
+
 Interactive review-fix UX rules:
 - Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured confirmation of which findings Blueprint is about to fix.
 - Default to one focused question per `ask_user` call.
@@ -21,7 +25,7 @@ Follow this flow exactly:
 8. Confirm the specific findings to fix before repo mutation unless the user already made that explicit through `--all`, `--auto`, or a clear natural-language instruction. Use `ask_user` for that confirmation path when it is needed. Treat `--auto` as bounded automatic finding selection only; it does not authorize automatic commits, branch creation, or iterative re-review loops. Even with automatic selection, limit the fix set to high-confidence findings only.
 9. Keep repo mutation tightly bounded to the selected findings and the relevant repo files implicated by the saved review evidence. If the work expands into a broader implementation slice, stop and route to `/blu-audit-fix`, `/blu-quick`, or `/blu-plan-phase` instead of widening this command.
 10. Use the `blueprint-reviewer` subagent for a bounded second look when the saved findings are broad, severity is unclear, or the fix selection needs help.
-11. Report the resolved phase, selected finding ids, fix progress, and verification progress while the remediation is in flight, not only in the closing summary. Call out deferred findings and skipped checks explicitly as they become known.
+11. Report in-flight progress while review-fix work is running. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. At minimum surface the resolved phase, selected finding ids, active stage, pending gate, execution mode, remediation progress, verification progress, whether the review-fix artifact is being reused or revised, and the next safe implemented action. Keep pending gates limited to overwrite confirmation or finding-selection confirmation, and let execution mode reflect whether the run stays inline, uses the `blueprint-reviewer` subagent, or is following an explicit versus bounded `--auto` selection path.
 12. When you apply fixes, run the narrowest relevant verification you can justify from the repo's existing tooling. If you cannot run a reliable check, say so plainly in the artifact instead of fabricating a pass.
 13. Persist the durable remediation summary through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "review-fix"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW-FIX.md` directly.
 14. After the review-fix artifact path is settled, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-code-review-fix` as the active command and points to the next safe implemented action. Prefer `/blu-validate-phase <phase>` when behavior changed or verification evidence is now stale, `/blu-add-tests <phase>` when missing tests are the main remaining gap, and `/blu-progress` otherwise.
@@ -36,5 +40,7 @@ Response requirements:
 - Do not invent finding ids, severity counts, or follow-up lists after `mcp_blueprint_blueprint_review_load_findings`; its return payload is the remediation source of truth.
 - Do not guess missing findings from unstaged repo drift or chat memory when the saved review artifact is absent or too weak.
 - Treat the canonical `review.review-fix` artifact contract as the only valid authoring template for `XX-REVIEW-FIX.md`; do not embed an older prompt-local variant.
+- Keep the shared remediation posture explicit while the run is live: resolved scope, active stage, pending gate, execution mode, and next safe action should stay legible as progress changes.
+- Report the resolved phase, selected finding ids, active stage, remediation progress, and verification progress while the remediation is in flight, not only in the closing summary.
 - Keep next-step guidance inside implemented Blueprint commands only.
 """

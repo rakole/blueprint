@@ -88,9 +88,11 @@ async function createCodeReviewFixRepo(): Promise<string> {
 }
 
 test("code-review-fix docs and catalog metadata promote the review-remediation slice to implemented", async () => {
-  const [catalogMarkdown, implementationOrder] = await Promise.all([
+  const [catalogMarkdown, implementationOrder, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/code-review-fix.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
   assert.match(
@@ -100,6 +102,18 @@ test("code-review-fix docs and catalog metadata promote the review-remediation s
   assert.match(
     implementationOrder,
     /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
+  );
+  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(
+    commandDoc,
+    /selected finding ids, selected-finding mode \(`explicit`, `--all`, or bounded `--auto`\), active stage, pending gate, execution mode, remediation progress, verification progress, deferred findings, artifact status, and next safe action/i
+  );
+  assert.match(commandDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/);
+  assert.match(
+    runtimeReference,
+    /`code-review-fix`[\s\S]*Long-running-mutation profile for bounded review remediation[\s\S]*confirm overwrite or finding selection explicitly before mutation[\s\S]*explicit selection, `--all`, or bounded `--auto`/i
   );
 });
 
