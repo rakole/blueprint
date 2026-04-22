@@ -3,7 +3,20 @@
 |---|---|
 | Wave | `0` |
 | Family | `Foundation` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `new-project` uses the shared long-running-mutation posture while keeping the richer Gemini-native bootstrap flow: resolve repo shape and bootstrap intent, read saved defaults plus canonical bootstrap contracts, decide overwrite, approval, and workflow-preference gates, execute bounded discovery and shaping, persist through MCP, validate the resulting artifacts, and route to the next safe implemented follow-up.
+- Keep the richer bootstrap language grounded in the shared in-flight status contract:
+  - resolved scope: the target repo root, repo shape, auto vs interactive posture, and whether bootstrap is greenfield-ready or brownfield-provisional
+  - active stage: the current shared stage label behind the richer bootstrap narration
+  - pending gate: overwrite confirmation, missing brief, saved-default choice, pre-write approval, revision request, or MCP/runtime availability blocker
+  - execution mode: interactive bootstrap, `--auto`, and whether optional bounded research or roadmap synthesis is in play
+  - next safe action: the authoritative follow-up from project status, including `/blu-map-codebase` when brownfield mapping is still required
 
 ## Purpose
 
@@ -27,6 +40,7 @@
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
 - `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` must be substantive bootstrap drafts rather than scaffold-only placeholders.
 - Brownfield repos should be left ready for `map-codebase`, and project bootstrap should preserve durable requirement and roadmap traceability.
+- In-flight bootstrap should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
 
 ## Interaction Model
 
@@ -40,14 +54,13 @@
 
 ## Behavior Stages
 
-1. Preflight: confirm repo root, inspect saved defaults, classify repo shape, and require explicit overwrite confirmation when `.blueprint/` already exists.
-2. Session coordination: initialize Gemini-native progress tracking with `update_topic`, `write_todos`, and, when the bootstrap truly branches, internal task-tracking tools.
-3. Discovery: gather or synthesize a bootstrap brief with vision, audience, constraints, non-goals, milestone framing, and assumptions.
-4. Workflow preferences: offer saved defaults first, then gather repo-level workflow settings only when they materially shape bootstrap quality.
-5. Requirements shaping: draft specific, user-centered, traceable requirements and distinguish likely v1 scope from deferred or explicitly out-of-scope work.
-6. Roadmap shaping: synthesize grouped phases with requirement coverage and success criteria, then run a revision loop when the user requests roadmap adjustments.
-7. Persistence: use Blueprint MCP tools for the first write, then refine config or state through Blueprint MCP tools only.
-8. Validation and routing: validate the authored bootstrap and end with the next safe implemented command, routing brownfield repos to `map-codebase` when roadmap confidence is still provisional.
+1. `Resolve`: confirm repo root, detect `--auto`, classify repo shape, and require explicit overwrite confirmation when `.blueprint/` already exists.
+2. `Read`: inspect saved defaults, effective warnings, repo evidence, and canonical bootstrap artifact contracts before the first persistent write.
+3. `Decide`: initialize Gemini-native session coordination, gather or synthesize the bootstrap brief, offer saved defaults first, and run approval or revision gates when interactive shaping needs a decision.
+4. `Execute`: draft specific, user-centered, traceable requirements and grouped roadmap phases with success criteria, using optional bounded research or roadmapping help only when it materially improves the bootstrap.
+5. `Persist`: use Blueprint MCP tools for the first write, then refine config or state through Blueprint MCP tools only.
+6. `Validate`: validate the authored bootstrap, surface warnings or provisional roadmap confidence honestly, and keep the revision loop available before or after the first draft when the command contract calls for it.
+7. `Route`: end with the next safe implemented command, routing brownfield repos to `map-codebase` when roadmap confidence is still provisional.
 
 ## Blueprint And Global State Reads
 

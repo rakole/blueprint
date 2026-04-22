@@ -83,6 +83,20 @@ Current Blueprint delta:
 - `mcp_blueprint_blueprint_config_set` defaults to project-local writes. Use `scope: "defaults"` only when the user explicitly asks to update saved defaults.
 - `mcp_blueprint_blueprint_artifact_scaffold` is a seeding tool, not the durable source of truth for authored bootstrap content once `project_init` has run.
 
+## Shared Execution Contract
+
+- Execution profile: `long-running-mutation`.
+- Normalize visible progress to the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` while keeping the richer bootstrap language intact for the user.
+- Keep the in-flight status contract visible during non-trivial runs: resolved scope, active stage, pending gate, execution mode, and next safe action.
+- Map the bootstrap workflow to the shared stages:
+  - `Resolve`: repo-root confirmation, `--auto` detection, repo-shape classification, overwrite-risk surfacing
+  - `Read`: saved-default inspection, warnings review, repo evidence, bootstrap contracts, Gemini internal-doc verification when needed
+  - `Decide`: discovery turns, workflow-preference selection, approval gates, revision-loop choices
+  - `Execute`: bootstrap brief synthesis, requirement grouping, roadmap shaping, optional researcher or roadmapper synthesis
+  - `Persist`: `mcp_blueprint_blueprint_project_init`, followed by any bounded config or state updates
+  - `Validate`: artifact validation, warning review, and honest brownfield-provisional signaling
+  - `Route`: next safe implemented command, especially `/blu-map-codebase` when brownfield mapping remains outstanding
+
 ## Workflow Rules
 
 ### 1. Preflight
@@ -91,7 +105,7 @@ Current Blueprint delta:
 2. Inspect saved defaults before asking for changes, and treat `--auto` as a non-interactive bootstrap mode rather than a way to skip overwrite safety.
 3. Require explicit overwrite confirmation before replacing an existing `.blueprint/` tree.
 4. If repo evidence is fuzzy or brownfield risk is non-trivial, use `blueprint-project-researcher` for a bounded repo-and-product brief before proceeding.
-5. Start the session-local workflow structure early:
+5. Start the session-local workflow structure early so the `Resolve` and early `Read` stages stay visible:
    - set the current stage with `update_topic`
    - create a concise `write_todos` list for preflight, discovery, shaping, writing, validation, and routing
    - add tracker dependencies when the bootstrap will branch across optional research, revisions, or validation
@@ -105,7 +119,7 @@ Current Blueprint delta:
    - a substantive `PROJECT.md`
    - grouped and traceable bootstrap requirements
    - a credible first roadmap slice with success criteria
-5. In interactive mode, summarize your understanding and get explicit confirmation before the first persistent write. Prefer `ask_user` for that approval gate.
+5. In interactive mode, summarize your understanding and get explicit confirmation before the first persistent write. Prefer `ask_user` for that approval gate, and surface it as the active `Decide`-stage pending gate.
 
 ### 3. Workflow Preferences
 
@@ -139,7 +153,7 @@ Current Blueprint delta:
 5. Keep follow-up config changes inside `mcp_blueprint_blueprint_config_set`.
 6. If the repo is brownfield and mapping has not happened yet, route to `/blu-map-codebase` or mark the roadmap as provisional until mapping is complete.
 7. Re-read project status after initialization and end with the next safe implemented command.
-8. Before finishing, update `write_todos`, `update_topic`, and any tracker state so the session-local coordination view matches the final bootstrap outcome.
+8. Before finishing, update `write_todos`, `update_topic`, and any tracker state so the session-local coordination view matches the final bootstrap outcome and the `Route` stage reports the correct next safe action.
 9. Do not claim later lifecycle commands are runnable unless the catalog marks them implemented.
 10. If Blueprint MCP tools are unavailable, stop and report the disconnected runtime instead of trying shell wrappers such as `mcp use`, `blueprint-mcp`, or ad-hoc SDK scripts.
 
