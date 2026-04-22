@@ -84,9 +84,11 @@ non-routable until their extra MCP substrate lands.
 
 - Execution profile for `code-review`: `long-running-mutation`
 - Execution profile for `code-review-fix`: `long-running-mutation`
+- Execution profile for `audit-fix`: `long-running-mutation`
 - Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields for `code-review`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `code-review-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
+- In-flight status fields for `audit-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
 
 ## Shared MCP Contracts
 
@@ -259,26 +261,43 @@ non-routable until their extra MCP substrate lands.
 9. In mutation mode, use Gemini CLI `ask_user` for explicit confirmation before
    non-trivial remediation (for example: multiple findings, multi-file scope,
    or medium/high severity changes).
-10. Keep repo mutation tightly bounded to the resolved review scope and capped
+10. For non-trivial audit-fix runs, prefer update_topic plus `write_todos` so
+    saved-evidence review, candidate confirmation, bounded remediation,
+    verification, report overwrite handling, todo capture, and routing stay
+    visible without becoming persistence.
+11. Branchy audit-fix remediation is tracker-eligible when scoped findings or
+    targeted verification follow-through split into real dependency branches.
+    Treat tracker state as session-local coordination only, pair it with
+    visible `write_todos`, and fall back to linear prose when tracker support
+    is unavailable.
+12. Keep repo mutation tightly bounded to the resolved review scope and capped
     candidate list.
-11. Use `blueprint-reviewer` for bounded classification when evidence is broad,
+13. Use `blueprint-reviewer` for bounded classification when evidence is broad,
     and `blueprint-verifier` for bounded post-fix verification when targeted
     checks need a second pass. The planned `blueprint-fixer` is not a shipped
     runtime path for `audit-fix`.
-12. Report in-flight progress, including phase, source/severity/max filter
-    settings, candidate count, attempt index (`i/N`), verification status, and
-    whether the loop stopped early.
-13. Enforce stop-on-first-failure behavior in mutation mode: stop the loop on
+14. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
+    resolved scope, active stage, pending gate, execution mode, and next safe
+    action legible throughout the run.
+15. Report in-flight progress, including phase, source/severity/max/dry-run
+    settings, candidate count, attempt index (`i/N`), remediation progress,
+    verification progress, report status, and whether the loop stopped early.
+    Keep pending gates limited to non-trivial mutation confirmation, report
+    overwrite confirmation, or todo capture confirmation, and let execution
+    mode reflect dry-run versus mutation plus inline versus
+    reviewer/verifier-assisted remediation.
+16. Enforce stop-on-first-failure behavior in mutation mode: stop the loop on
     the first failed fix or failed required verification and record remaining
     candidates as unattempted.
-14. Persist the durable remediation report through
+17. Persist the durable remediation report through
     `blueprint_artifact_report_write` using the bare canonical report name
     `audit-fix-<phase>`, not a `.blueprint/reports/...` path. Capture commit
     traceability in the report (pre-fix HEAD, any created commit SHA(s), or
     `none`).
-15. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
+18. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
     explicit user confirmation via `ask_user`.
-16. Update `STATE.md` through `blueprint_state_update` so the next safe action
+19. Update `STATE.md` through `blueprint_state_update` so the next safe action
     points at `/blu-validate-phase <phase>`, `/blu-add-tests <phase>`, or
     `/blu-progress` based on the remaining evidence gap.
 

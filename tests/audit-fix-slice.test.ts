@@ -28,9 +28,24 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   assert.match(auditFixDoc, /--severity <medium\|high\|all>/);
   assert.match(auditFixDoc, /--max N/);
   assert.match(auditFixDoc, /--dry-run/);
+  assert.match(auditFixDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(auditFixDoc, /## Shared Runtime Contract/);
   assert.match(auditFixDoc, /ask_user/);
   assert.match(auditFixDoc, /## In-Flight Progress Contract/);
+  assert.match(auditFixDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
+  assert.match(auditFixDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/i);
+  assert.match(auditFixDoc, /report overwrite confirmation/i);
+  assert.match(auditFixDoc, /verification progress, early-stop status, report status/i);
+  assert.match(auditFixDoc, /## Tracker Eligibility/);
+  assert.match(auditFixDoc, /tracker-eligible/i);
+  assert.match(auditFixDoc, /session-local coordination only and must be paired with visible `write_todos`/i);
   assert.match(runtimeReference, /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*Long-running-mutation profile for bounded audit-driven remediation/i);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*`update_topic` and `write_todos` for non-trivial audit-fix runs/i);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*report overwrite, or todo capture explicit/i);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*verification progress, report status, and early-stop state explicit/i);
 });
 
 test("audit-fix is exposed as an implemented remediation command with the registered tools", async () => {
