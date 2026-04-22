@@ -108,12 +108,13 @@ test("code-review-fix docs and catalog metadata promote the review-remediation s
   assert.match(commandDoc, /## In-Flight Progress Contract/);
   assert.match(
     commandDoc,
-    /selected finding ids, selected-finding mode \(`explicit`, `--all`, or bounded `--auto`\), active stage, pending gate, execution mode, remediation progress, verification progress, deferred findings, artifact status, and next safe action/i
+    /resolved scope, selected finding ids, selected-finding mode \(`explicit`, `--all`, or bounded `--auto`\), active stage, pending gate, execution mode, remediation progress, verification progress, deferred findings, artifact status, and next safe action/i
   );
   assert.match(commandDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/);
+  assert.match(commandDoc, /auto-fixer behavior/i);
   assert.match(
     runtimeReference,
-    /`code-review-fix`[\s\S]*Long-running-mutation profile for bounded review remediation[\s\S]*confirm overwrite or finding selection explicitly before mutation[\s\S]*explicit selection, `--all`, or bounded `--auto`/i
+    /`code-review-fix`[\s\S]*Long-running-mutation profile for bounded review remediation[\s\S]*explicit finding-selection gate[\s\S]*No auto-fixer behavior, implicit commits or branches, or hidden iterative re-review loops are shipped\./i
   );
 });
 

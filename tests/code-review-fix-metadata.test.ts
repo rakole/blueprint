@@ -40,9 +40,11 @@ test("code-review-fix manifest references findings tools, canonical contracts, a
   assert.match(commandFile, /review\.review-fix/);
   assert.match(
     commandFile,
-    /selected finding ids, active stage, pending gate, execution mode, remediation progress, verification progress/i
+    /resolved scope, selected finding ids, active stage, pending gate, execution mode, remediation progress, verification progress/i
   );
+  assert.match(commandFile, /Treat finding selection as an explicit gate before repo mutation/i);
   assert.match(commandFile, /`--auto` as bounded automatic finding selection only/i);
+  assert.match(commandFile, /No auto-fixer behavior is shipped/i);
   assert.match(commandFile, /XX-REVIEW-FIX\.md/);
   assert.match(commandFile, /\/blu-code-review/);
   assert.match(commandFile, /\/blu-audit-fix/);
@@ -77,8 +79,9 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
   assert.match(skillFile, /update_topic plus `write_todos`/i);
   assert.match(
     skillFile,
-    /selected finding ids,\s+remediation progress,\s+and\s+verification progress/i
+    /resolved phase, resolved scope, selected finding ids,\s+remediation progress,\s+and\s+verification progress/i
   );
+  assert.match(skillFile, /No auto-fixer behavior is shipped/i);
   assert.match(skillFile, /run stays inline,\s+uses the reviewer subagent/i);
   assert.match(skillFile, /\/blu-validate-phase <phase>/);
   assert.match(skillFile, /\/blu-add-tests <phase>/);
