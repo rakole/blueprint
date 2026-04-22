@@ -4,6 +4,14 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `explore` uses the shared interactive-read classification only to keep the command metadata aligned; it stays a short ideation-and-routing pass, keeps persistence on MCP rails, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Optional researcher use is bounded to short context checks when that context materially changes the routing target; `/blu-explore` should not turn into a prolonged research session.
 
 
 ## Purpose
@@ -33,6 +41,7 @@
 
 - User-facing result: a concise completion summary plus the next logical implemented action when applicable.
 - Repo side effects: writes only the confirmed target artifact path and leaves unrelated repo files untouched.
+- In-flight posture: none beyond a concise inline summary or confirmation gate; `explore` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads
@@ -101,7 +110,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the final routing target before any durable write.
+- Confirm the final routing target before any durable write. Prefer Gemini CLI `ask_user` when a structured choice helps, otherwise keep the same gate explicit in prose.
 - Confirm the final phase description before promoting an explored idea directly into the active roadmap.
 
 
@@ -130,6 +139,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
+- Explicitly excludes `update_topic`, `write_todos`, tracker-backed branching, and other long-running progress behavior.
 
 
 ## Test Cases

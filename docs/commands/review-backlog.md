@@ -4,6 +4,14 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `review-backlog` uses the shared interactive-read classification only to keep the command metadata aligned; it reviews the canonical backlog in short deterministic passes and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Promotion or archival decisions stay explicit and local: preview first, confirm the exact backlog ids, then persist through MCP without turning the command into broader roadmap orchestration.
 
 
 ## Purpose
@@ -31,7 +39,8 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: updates `.blueprint/backlog/BACKLOG.md`, `.blueprint/ROADMAP.md`, any promoted phase directories, and `.blueprint/STATE.md`.
+- In-flight posture: none beyond concise preview, confirmation, and completion summaries; `review-backlog` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads
@@ -99,7 +108,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm each promote, keep, or remove decision.
+- Confirm each promote or remove decision. Keep is the default safe path. Prefer Gemini CLI `ask_user` when a structured choice helps, otherwise keep the same gates explicit in prose.
 
 
 ## Edge Cases
@@ -126,6 +135,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Promoted backlog items become active roadmap phases without deleting backlog history.
 - Leaves unrelated repo files untouched.
+- Explicitly excludes `update_topic`, `write_todos`, tracker-backed branching, and other long-running progress behavior.
 
 
 ## Test Cases
@@ -134,4 +144,3 @@
 - Backlog preview fixture.
 - No-project graceful degradation fixture.
 - Direct `review-backlog` happy-path fixture.
-

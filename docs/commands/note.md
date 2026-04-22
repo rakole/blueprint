@@ -4,6 +4,14 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `note` uses the shared interactive-read classification only to keep the command metadata aligned; it completes inline, stays grounded in local Blueprint state, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Unsupported list, promote, or global-note asks should stop quickly with implemented-only guidance instead of turning `/blu-note` into a broader workflow.
 
 
 ## Purpose
@@ -30,7 +38,8 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: appends to `.blueprint/notes/NOTES.md` only.
+- In-flight posture: none beyond a concise inline summary or reroute; `note` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads
@@ -118,6 +127,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Keeps notes project-local instead of reintroducing global-note behavior.
 - Leaves unrelated repo files untouched.
+- Explicitly excludes `update_topic`, `write_todos`, tracker-backed branching, and other long-running progress behavior.
 
 
 ## Test Cases
@@ -126,4 +136,3 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `note` happy-path fixture.
-

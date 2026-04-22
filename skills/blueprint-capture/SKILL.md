@@ -73,6 +73,12 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 
 ## Workflow Rules
 
+Execution profile for `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, and `/blu-explore`: `interactive-read`.
+
+In-flight status fields for this capture family: resolved scope, active stage, pending gate, execution mode, next safe action.
+
+Treat capture as short interactive routing or index mutation, not as long-running orchestration. Do not use `update_topic`, `write_todos`, or tracker tools to make these commands look like `quick`, lifecycle, review, or maintenance runs. When a capture command needs confirmation, prefer a single structured `ask_user` decision on Gemini; otherwise keep the same gate explicit in prose.
+
 ### `note`
 
 1. Require non-empty note text before any mutation.
@@ -88,7 +94,7 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 2. Use `blueprint_artifact_mutate_index` for durable backlog writes instead of raw append logic.
 3. Degrade to suggestion mode when the repo is not yet a Blueprint project.
 4. Treat normalized duplicate backlog descriptions as already captured work and report the existing entry instead of creating a second copy.
-5. Reserve a `999.x` phase stub only when the user explicitly asks for it and confirms that reservation.
+5. Reserve a `999.x` phase stub only when the user explicitly asks for it and confirms that reservation. Prefer Gemini's `ask_user` tool when a structured confirmation helps.
 6. When a stub is reserved, create its initial context scaffold through `blueprint_artifact_scaffold` rather than hand-writing the phase file.
 7. Keep follow-up guidance inside implemented commands only.
 
@@ -105,14 +111,14 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 1. Read `blueprint_project_status` before listing or mutating todos so missing or partial Blueprint state routes safely.
 2. Use `blueprint_artifact_mutate_index` with `target: "todo"` and `action: "list"` to inspect pending todos. Apply a query filter when the user supplies an area, ID, or keyword.
 3. When the user only wants the queue, keep the response read-oriented and show pending todos with any active item first.
-4. Require explicit confirmation before marking a todo `active` or `completed` unless the user request is already unmistakably explicit.
+4. Require explicit confirmation before marking a todo `active` or `completed` unless the user request is already unmistakably explicit. Prefer Gemini's `ask_user` tool when a structured confirmation helps.
 5. Use `blueprint_artifact_mutate_index` with `target: "todo"` and `action: "update"` for status changes, and prefer exact todo IDs when mutating.
 6. Keep follow-up guidance inside implemented commands only.
 
 ### `review-backlog`
 
 1. Start with `blueprint_roadmap_promote_backlog` in preview mode so backlog review decisions come from the canonical backlog index instead of chat memory.
-2. Require explicit confirmation for each promote or remove decision; keep is the default safe path.
+2. Require explicit confirmation for each promote or remove decision; keep is the default safe path. Prefer Gemini's `ask_user` tool when a structured decision helps.
 3. Promote confirmed backlog items through `blueprint_roadmap_promote_backlog` so roadmap append logic, next-phase numbering, and reserved `999.x` stub reuse stay deterministic. Use the preview result's `backlogId` values as the only valid promotion ids.
 4. After promotion, update the canonical backlog rows through `blueprint_artifact_mutate_index` with `action: "update"` so promoted items become `promoted` and clear any consumed reserved phase metadata. Reuse the same confirmed backlog ids instead of re-deriving them from prose.
 5. If the user explicitly removes backlog items from active consideration, mark them `archived` through `blueprint_artifact_mutate_index` instead of deleting history.
@@ -126,7 +132,7 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 3. Classify the idea into exactly one of `note`, `todo`, `backlog`, `roadmap`, or `no-write`.
 4. If the request is clearly execution-sized or phase-sized beyond a capture handoff, do not persist it through capture tools; route to `quick` or `plan-phase` instead.
 5. If the repo is not yet a Blueprint project, stop in suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
-6. Confirm the final routing target and normalized text before any write. Review is the default safe path.
+6. Confirm the final routing target and normalized text before any write. Review is the default safe path, and Gemini's `ask_user` tool is preferred when a structured confirmation helps.
 7. Use `blueprint_artifact_mutate_index` for confirmed `note`, `todo`, or `backlog` writes, and treat duplicate descriptions as already captured work instead of creating a second copy.
 8. Use `blueprint_roadmap_add_phase` only when the confirmed target is roadmap-ready active work; if project health is partial, route to `/blu-health` before roadmap mutation.
 9. After confirmed roadmap promotion, use `blueprint_artifact_scaffold` to create or reuse the initial phase context instead of hand-writing it.
