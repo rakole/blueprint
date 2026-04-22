@@ -169,6 +169,35 @@ Current normalized schema:
 }
 ```
 
+Reserved config contract additions for the effectiveness spine:
+
+- These keys and enum values are locked at the docs/schema layer in `S8.1`, but the current runtime does not read or persist them yet.
+- Until `S8.2` lands, they should not appear in normalized config output or interactive settings writes.
+
+```json
+{
+  "ux": {
+    "progress_mode": "quiet",
+    "structured_confirmations": "auto",
+    "user_checkpoints": "off"
+  },
+  "orchestration": {
+    "task_tracker": "off"
+  },
+  "research": {
+    "external_sources": "off"
+  }
+}
+```
+
+Reserved-key notes:
+- `ux.progress_mode` accepts only `quiet`, `stage`, or `checklist`.
+- `ux.structured_confirmations` accepts only `auto` or `required`.
+- `ux.user_checkpoints` accepts only `off`, `phase`, or `plan`.
+- `orchestration.task_tracker` accepts only `off` or `auto`.
+- `research.external_sources` accepts only `off`, `ask`, or `auto`.
+- These keys are interaction and orchestration preferences, not project-state or hook-ownership exceptions.
+
 Normalization and precedence rules:
 - Effective config precedence is hardcoded Blueprint defaults, then `~/.<host>/blueprint/defaults.json`, then `.blueprint/config.json`, then command flags.
 - `.blueprint/config.json` is persisted in normalized object form for every section, including `parallelization`, even if legacy or shorthand input was accepted at the tool boundary.
