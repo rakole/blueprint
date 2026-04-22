@@ -40,7 +40,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable, with remediation and verification status reported while the run is in flight.
 - Repo side effects: may apply bounded repo fixes, writes a durable review-fix artifact, and updates `.blueprint/STATE.md`.
-- In-flight review-fix work should keep the resolved phase, selected finding ids, active stage, pending gate, execution mode, remediation progress, verification progress, artifact status, and next safe action legible while the run is still live.
+- In-flight review-fix work should keep the resolved phase, resolved scope, selected finding ids, active stage, pending gate, execution mode, remediation progress, verification progress, artifact status, and next safe action legible while the run is still live.
 
 
 ## Blueprint And Global State Reads
@@ -73,7 +73,9 @@
 - Do not recreate finding ids or severity from chat memory, current branch drift, or a second prompt-only review when the saved artifact already exists.
 - Keep the canonical `XX-REVIEW-FIX.md` structure intact, including the `## Findings Addressed` section required by the review-fix contract.
 - Persist the durable remediation summary through `blueprint_review_record` with `artifact: "review-fix"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW-FIX.md`.
-- Treat `--auto` as bounded finding selection only. It may skip manual selection for a narrow, high-confidence saved finding set, but it does not authorize implicit commits, hidden re-review, or an unbounded fixer loop.
+- Treat finding selection as an explicit gate before repo mutation unless the user already made the exact fix set explicit through `--all`, `--auto`, or a comparably narrow instruction.
+- Keep repo mutation bounded to the selected findings and the repo files directly implicated by the saved review evidence; route broader remediation to another implemented command instead of widening this command in place.
+- Treat `--auto` as bounded finding selection only. It may skip manual selection for a narrow, high-confidence saved finding set, but it does not authorize auto-fixer behavior, implicit commits, hidden iterative re-review, or an unbounded fixer loop.
 
 
 ## Skills And Subagents
@@ -117,7 +119,7 @@
 ## In-Flight Progress Contract
 
 - For non-trivial code-review-fix runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact remediation checklist with `write_todos`.
-- Keep that visible progress aligned to the resolved phase, selected finding ids, selected-finding mode (`explicit`, `--all`, or bounded `--auto`), active stage, pending gate, execution mode, remediation progress, verification progress, deferred findings, artifact status, and next safe action as the run moves from saved-findings review through finding-selection confirmation, bounded remediation, artifact persistence, validation, and routing.
+- Keep that visible progress aligned to the resolved phase, resolved scope, selected finding ids, selected-finding mode (`explicit`, `--all`, or bounded `--auto`), active stage, pending gate, execution mode, remediation progress, verification progress, deferred findings, artifact status, and next safe action as the run moves from saved-findings review through finding-selection confirmation, bounded remediation, artifact persistence, validation, and routing.
 - Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 - Call out deferred findings, skipped checks, and remaining follow-up work explicitly as they become known.
 
@@ -148,7 +150,8 @@
 - Persists the durable remediation artifact through `blueprint_review_record`.
 - Updates `STATE.md` when the next-step signal changes.
 - Leaves unrelated repo files untouched.
-- Keeps `--auto` bounded to finding selection instead of implying hidden git automation or iterative re-review.
+- Keeps the finding-selection gate explicit and bounded to the saved review evidence.
+- Keeps `--auto` bounded to finding selection instead of implying hidden git automation, auto-fixer behavior, implicit branches or commits, or iterative re-review.
 
 
 ## Test Cases

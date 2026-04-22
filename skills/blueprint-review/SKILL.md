@@ -148,8 +148,8 @@ non-routable until their extra MCP substrate lands.
    structured confirmation of which findings Blueprint is about to fix.
 6. Treat `--auto` as bounded finding selection only. It may skip the manual
    selection step for a narrow, high-confidence saved finding set, but it does
-   not authorize automatic commits, branch creation, or iterative re-review
-   loops.
+   not authorize any auto-fixer behavior, automatic commits, branch creation,
+   or hidden iterative re-review loops.
 7. Require explicit confirmation of the selected findings unless the user
    clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
 8. Keep repo mutation tightly bounded to the selected review findings and the
@@ -164,9 +164,9 @@ non-routable until their extra MCP substrate lands.
     `write_todos` so saved-findings review, finding-selection confirmation,
     bounded remediation, artifact persistence, verification, and routing stay
     visible without becoming persistence.
-12. Report the resolved phase, selected finding ids, remediation progress, and
-    verification progress while work is in flight, not only in the closing
-    summary. Keep pending gates limited to overwrite confirmation or
+12. Report the resolved phase, resolved scope, selected finding ids,
+    remediation progress, and verification progress while work is in flight,
+    not only in the closing summary. Keep pending gates limited to overwrite confirmation or
     finding-selection confirmation, and let execution mode reflect whether the
     run stays inline, uses the reviewer subagent, or is following an explicit
     versus bounded `--auto` selection path.
@@ -176,6 +176,8 @@ non-routable until their extra MCP substrate lands.
    inside implemented commands. Prefer `/blu-validate-phase <phase>` when
    behavior changed, `/blu-add-tests <phase>` when missing tests are the main
    remaining gap, and `/blu-progress` otherwise.
+15. No auto-fixer behavior is shipped. Do not invent a `blueprint-fixer`,
+    implicit branch or commit flow, or hidden iterative re-review pass.
 
 ### `secure-phase`
 
