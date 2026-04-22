@@ -248,3 +248,91 @@ test("workstream list reports corrupt-workstream-index when WORKSTREAMS.md drift
   assert.equal(listed.waitingState, "corrupt-workstream-index");
   assert.match(listed.reason ?? "", /stale|corrupt/i);
 });
+
+test("failed workstream writes roll back newly created directories before the store is reloaded", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workstreams-rollback-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  const mutableFs = fs as typeof fs & {
+    rename: typeof fs.rename;
+  };
+  const originalRename = mutableFs.rename;
+
+  mutableFs.rename = async (oldPath, newPath) => {
+    if (String(newPath).endsWith(path.join("alpha-stream", "state.json"))) {
+      throw new Error("simulated state rename failure");
+    }
+
+    return originalRename(oldPath, newPath);
+  };
+
+  t.after(() => {
+    mutableFs.rename = originalRename;
+  });
+
+  await assert.rejects(
+    blueprintWorkstreamMutate({
+      cwd: repoPath,
+      operation: "create",
+      workstream: "Alpha Stream"
+    }),
+    /simulated state rename failure/
+  );
+
+  const slugPath = path.join(repoPath, ".blueprint/workstreams/alpha-stream");
+  const slugExists = await fs
+    .stat(slugPath)
+    .then(() => true)
+    .catch(() => false);
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(slugExists, false);
+  assert.equal(listed.status, "ready");
+  assert.equal(listed.summary.total, 0);
+  assert.deepEqual(listed.workstreams, []);
+});
+
+test("switching away from an active workstream blocks when the current STATE.md snapshot is missing", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workstreams-missing-state-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Beta Stream"
+  });
+  await fs.rm(path.join(repoPath, ".blueprint/STATE.md"), { force: true });
+
+  const blocked = await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "switch",
+    workstream: "beta-stream"
+  });
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.waitingState, "missing-resume-snapshot");
+  assert.equal(blocked.active?.slug, "alpha-stream");
+  assert.match(blocked.reason ?? "", /STATE\.md is missing/i);
+  assert.match(blocked.nextAction ?? "", /blu-progress/i);
+  assert.equal(listed.active?.slug, "alpha-stream");
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "alpha-stream")?.status,
+    "active"
+  );
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "beta-stream")?.status,
+    "paused"
+  );
+});
