@@ -17,6 +17,7 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
+  blueprintConfigGet,
   blueprintConfigSet,
   blueprintConfigSetProfile
 } from "../src/mcp/tools/config.js";
@@ -112,6 +113,17 @@ test("config_set persists normalized version 2 config for initialized repos", as
   assert.equal((config.planning as Record<string, unknown>).commit_docs, false);
   assert.equal((config.workflow as Record<string, unknown>).verifier, false);
   assert.equal(config.model_profile, "balanced");
+  assert.deepEqual(config.ux, {
+    progress_mode: "quiet",
+    structured_confirmations: "auto",
+    user_checkpoints: "off"
+  });
+  assert.deepEqual(config.orchestration, {
+    task_tracker: "off"
+  });
+  assert.deepEqual(config.research, {
+    external_sources: "off"
+  });
 });
 
 test("config_set_profile changes only model_profile and leaves saved defaults unchanged", async (t) => {
@@ -136,6 +148,17 @@ test("config_set_profile changes only model_profile and leaves saved defaults un
   const defaultsAfter = await readFile(defaultsPath, "utf8");
   const expectedConfig = structuredClone(beforeConfig);
   expectedConfig.model_profile = "budget";
+  expectedConfig.ux = {
+    progress_mode: "quiet",
+    structured_confirmations: "auto",
+    user_checkpoints: "off"
+  };
+  expectedConfig.orchestration = {
+    task_tracker: "off"
+  };
+  expectedConfig.research = {
+    external_sources: "off"
+  };
 
   assert.deepEqual(result.updatedKeys, ["model_profile"]);
   assert.equal(result.profile, "budget");
@@ -260,6 +283,98 @@ test("config_set reports only keys that actually changed", async (t) => {
 
   assert.deepEqual(result.updatedKeys, ["model_profile"]);
   assert.match(result.warnings.join("\n"), /Ignored unknown config key: unknown_top/);
+});
+
+test("defaults-scope writes for effectiveness-spine keys participate in effective precedence until project override", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await createDefaultsFile("valid-defaults.json", tempRoot);
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await blueprintConfigSet({
+    cwd: repoPath,
+    defaultsPath,
+    scope: "defaults",
+    patch: {
+      ux: {
+        progress_mode: "stage",
+        structured_confirmations: "required",
+        user_checkpoints: "plan"
+      },
+      orchestration: {
+        task_tracker: "auto"
+      },
+      research: {
+        external_sources: "ask"
+      }
+    }
+  });
+
+  const effectiveBeforeProjectOverride = await blueprintConfigGet({
+    cwd: repoPath,
+    defaultsPath,
+    scope: "effective"
+  });
+
+  assert.deepEqual(effectiveBeforeProjectOverride.config.ux, {
+    progress_mode: "stage",
+    structured_confirmations: "required",
+    user_checkpoints: "plan"
+  });
+  assert.deepEqual(effectiveBeforeProjectOverride.config.orchestration, {
+    task_tracker: "auto"
+  });
+  assert.deepEqual(effectiveBeforeProjectOverride.config.research, {
+    external_sources: "ask"
+  });
+
+  const projectOverride = await blueprintConfigSet({
+    cwd: repoPath,
+    defaultsPath,
+    patch: {
+      ux: {
+        progress_mode: "checklist"
+      },
+      orchestration: {
+        task_tracker: "off"
+      },
+      research: {
+        external_sources: "auto"
+      }
+    }
+  });
+
+  assert.deepEqual(projectOverride.config.ux, {
+    progress_mode: "checklist",
+    structured_confirmations: "required",
+    user_checkpoints: "plan"
+  });
+  assert.deepEqual(projectOverride.config.orchestration, {
+    task_tracker: "off"
+  });
+  assert.deepEqual(projectOverride.config.research, {
+    external_sources: "auto"
+  });
+
+  const effectiveAfterProjectOverride = await blueprintConfigGet({
+    cwd: repoPath,
+    defaultsPath,
+    scope: "effective"
+  });
+
+  assert.deepEqual(effectiveAfterProjectOverride.config.ux, {
+    progress_mode: "checklist",
+    structured_confirmations: "required",
+    user_checkpoints: "plan"
+  });
+  assert.deepEqual(effectiveAfterProjectOverride.config.orchestration, {
+    task_tracker: "off"
+  });
+  assert.deepEqual(effectiveAfterProjectOverride.config.research, {
+    external_sources: "auto"
+  });
 });
 
 test("settings and set-profile command contracts reference the registered MCP tools", async () => {

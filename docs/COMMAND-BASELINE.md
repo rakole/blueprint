@@ -76,7 +76,7 @@ The shared config contract also reserves these effectiveness-spine keys and enum
 - `orchestration.task_tracker`: `off | auto`
 - `research.external_sources`: `off | ask | auto`
 
-Those reserved keys stay documented and host-portable, but `/blu-settings` and the config MCP runtime must not surface them as writable or persisted until the dedicated runtime slice lands.
+Those keys stay host-portable. `S8.1` locked the names and enum values, and `S8.2` adds runtime normalization, defaults precedence, and persistence through the existing config MCP path without changing hook ownership or command-routing boundaries.
 
 ### Hook config
 

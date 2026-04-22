@@ -116,6 +116,17 @@ Current normalized schema:
     "commit_docs": true,
     "search_gitignored": false
   },
+  "ux": {
+    "progress_mode": "quiet",
+    "structured_confirmations": "auto",
+    "user_checkpoints": "off"
+  },
+  "orchestration": {
+    "task_tracker": "off"
+  },
+  "research": {
+    "external_sources": "off"
+  },
   "workflow": {
     "research": true,
     "plan_check": true,
@@ -169,34 +180,15 @@ Current normalized schema:
 }
 ```
 
-Reserved config contract additions for the effectiveness spine:
-
-- These keys and enum values are locked at the docs/schema layer in `S8.1`, but the current runtime does not read or persist them yet.
-- Until `S8.2` lands, they should not appear in normalized config output or interactive settings writes.
-
-```json
-{
-  "ux": {
-    "progress_mode": "quiet",
-    "structured_confirmations": "auto",
-    "user_checkpoints": "off"
-  },
-  "orchestration": {
-    "task_tracker": "off"
-  },
-  "research": {
-    "external_sources": "off"
-  }
-}
-```
-
-Reserved-key notes:
+Effectiveness-spine config extension notes:
 - `ux.progress_mode` accepts only `quiet`, `stage`, or `checklist`.
 - `ux.structured_confirmations` accepts only `auto` or `required`.
 - `ux.user_checkpoints` accepts only `off`, `phase`, or `plan`.
 - `orchestration.task_tracker` accepts only `off` or `auto`.
 - `research.external_sources` accepts only `off`, `ask`, or `auto`.
 - These keys are interaction and orchestration preferences, not project-state or hook-ownership exceptions.
+- `S8.1` locked the names and enum values. `S8.2` adds runtime normalization and persistence through the existing config MCP tools.
+- Older project configs that omit these keys still inherit them from saved defaults or hardcoded defaults until the project explicitly writes an override.
 
 Normalization and precedence rules:
 - Effective config precedence is hardcoded Blueprint defaults, then `~/.<host>/blueprint/defaults.json`, then `.blueprint/config.json`, then command flags.

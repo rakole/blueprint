@@ -60,7 +60,8 @@
 - `blueprint_config_set` defaults to `scope: "project"`. Pass a JSON-object `patch` only; do not try to write sparse file fragments or manual config text.
 - Use `scope: "defaults"` only after explicit user confirmation that saved defaults should be changed.
 - Treat the returned `configPath` as authoritative instead of reconstructing config paths manually.
-- The reserved effectiveness-spine keys `ux.progress_mode`, `ux.structured_confirmations`, `ux.user_checkpoints`, `orchestration.task_tracker`, and `research.external_sources` are documented contract-only in `S8.1`; do not offer or persist them through `/blu-settings` until runtime support lands.
+- The effectiveness-spine keys `ux.progress_mode`, `ux.structured_confirmations`, `ux.user_checkpoints`, `orchestration.task_tracker`, and `research.external_sources` now normalize and persist through the same config MCP path as other settings.
+- Older project configs may omit those keys; effective config should still inherit them from saved defaults or hardcoded defaults until the project explicitly writes an override.
 
 
 ## Skills And Subagents
@@ -106,7 +107,8 @@
 
 - Run a common settings pass for profile, research/plan/verify, Nyquist, UI, the `/blu-code-review` review toggle and depth, commit-docs, branching, and worktree isolation before offering advanced keys.
 - Offer an advanced settings pass for gate, safety, timeout, template, response-language, and agent-skill fields.
-- Do not present the reserved effectiveness-spine keys as interactive choices yet; if the user asks for them directly, explain that the config contract is documented but the runtime write path is not shipped until the dedicated infra implementation slice.
+- Keep the common settings pass stable; do not force the effectiveness-spine keys into that first pass just because runtime support exists now.
+- If the user asks for the effectiveness-spine keys directly, write them through the documented config MCP path instead of inventing a separate persistence flow.
 - Offer to save the resolved settings as `~/.<host>/blueprint/defaults.json` after project-local changes are applied.
 - Confirm broad config resets before applying them.
 
@@ -126,7 +128,7 @@
 - Stop with a precise repo-root or config-path error instead of guessing.
 - Preserve existing Blueprint artifacts unless the user explicitly confirms replacement.
 - Reject removed repo keys such as `workflow.use_workspaces`, `workflow.use_workstreams`, or repo-level `hooks.*` instead of writing them back into config.
-- If the user asks for a reserved effectiveness-spine config key before runtime support exists, report that it is documented but not yet writable instead of fabricating persistence.
+- If an older project config omits the effectiveness-spine keys, inherit them from saved defaults or hardcoded defaults until the project explicitly writes them.
 
 
 ## Acceptance Criteria
@@ -138,7 +140,8 @@
 - Persists project config in normalized full form and never treats `.blueprint/config.json` as a sparse override file.
 - Never stores hook enablement in repo config; hook control remains in `hooks/hooks.json`.
 - Keeps `workflow.code_review` and `workflow.code_review_depth` in the normalized config so `/blu-code-review` can read them as real defaults.
-- Does not present or persist the reserved effectiveness-spine config keys before the runtime implementation slice ships.
+- Normalizes and persists `ux.progress_mode`, `ux.structured_confirmations`, `ux.user_checkpoints`, `orchestration.task_tracker`, and `research.external_sources` through the documented config MCP path.
+- Preserves defaults precedence for those keys when older project configs still omit them.
 
 
 ## Test Cases

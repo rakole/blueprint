@@ -13,6 +13,11 @@ import { validateFieldNameSegment } from "../../shared/security.js";
 
 type ConfigScope = "project" | "defaults" | "effective";
 type ModelProfile = "quality" | "balanced" | "budget" | "inherit";
+type ProgressMode = "quiet" | "stage" | "checklist";
+type StructuredConfirmationsMode = "auto" | "required";
+type UserCheckpointMode = "off" | "phase" | "plan";
+type TaskTrackerMode = "off" | "auto";
+type ExternalSourcesMode = "off" | "ask" | "auto";
 
 type BlueprintConfig = {
   version: number;
@@ -25,6 +30,17 @@ type BlueprintConfig = {
   planning: {
     commit_docs: boolean;
     search_gitignored: boolean;
+  };
+  ux: {
+    progress_mode: ProgressMode;
+    structured_confirmations: StructuredConfirmationsMode;
+    user_checkpoints: UserCheckpointMode;
+  };
+  orchestration: {
+    task_tracker: TaskTrackerMode;
+  };
+  research: {
+    external_sources: ExternalSourcesMode;
   };
   workflow: {
     research: boolean;
@@ -141,6 +157,11 @@ type SeedProjectConfigResult = {
 };
 
 const MODEL_PROFILES = ["quality", "balanced", "budget", "inherit"] as const;
+const PROGRESS_MODES = ["quiet", "stage", "checklist"] as const;
+const STRUCTURED_CONFIRMATION_MODES = ["auto", "required"] as const;
+const USER_CHECKPOINT_MODES = ["off", "phase", "plan"] as const;
+const TASK_TRACKER_MODES = ["off", "auto"] as const;
+const EXTERNAL_SOURCE_MODES = ["off", "ask", "auto"] as const;
 const HARD_CODED_CONFIG_VERSION = 2;
 const HOST_DEFAULT_PATCH_REGISTRIES = {
   gemini: "~/.gemini/blueprint/patches",
@@ -190,6 +211,17 @@ function getHardCodedConfig(): BlueprintConfig {
     planning: {
       commit_docs: true,
       search_gitignored: false
+    },
+    ux: {
+      progress_mode: "quiet",
+      structured_confirmations: "auto",
+      user_checkpoints: "off"
+    },
+    orchestration: {
+      task_tracker: "off"
+    },
+    research: {
+      external_sources: "off"
     },
     workflow: {
       research: true,
@@ -344,7 +376,8 @@ function applyConfigLayer(
   source: Record<string, unknown>,
   scope: Exclude<ConfigScope, "effective">,
   warnings: string[],
-  pathPrefix: string[] = []
+  pathPrefix: string[] = [],
+  appliedPaths?: Set<string>
 ): void {
   for (const [key, value] of Object.entries(source)) {
     try {
@@ -371,6 +404,7 @@ function applyConfigLayer(
     if (fullPath === "version") {
       if (value === HARD_CODED_CONFIG_VERSION) {
         target[key] = value;
+        appliedPaths?.add(fullPath);
       } else {
         warnings.push(
           `Ignored unsupported config version ${String(value)}; using version ${HARD_CODED_CONFIG_VERSION}`
@@ -382,6 +416,60 @@ function applyConfigLayer(
     if (fullPath === "model_profile") {
       if (typeof value === "string" && MODEL_PROFILES.includes(value as ModelProfile)) {
         target[key] = value;
+        appliedPaths?.add(fullPath);
+      } else {
+        warnings.push(`Ignored invalid config value for ${fullPath}`);
+      }
+      continue;
+    }
+
+    if (fullPath === "ux.progress_mode") {
+      if (typeof value === "string" && PROGRESS_MODES.includes(value as ProgressMode)) {
+        target[key] = value;
+        appliedPaths?.add(fullPath);
+      } else {
+        warnings.push(`Ignored invalid config value for ${fullPath}`);
+      }
+      continue;
+    }
+
+    if (fullPath === "ux.structured_confirmations") {
+      if (
+        typeof value === "string" &&
+        STRUCTURED_CONFIRMATION_MODES.includes(value as StructuredConfirmationsMode)
+      ) {
+        target[key] = value;
+        appliedPaths?.add(fullPath);
+      } else {
+        warnings.push(`Ignored invalid config value for ${fullPath}`);
+      }
+      continue;
+    }
+
+    if (fullPath === "ux.user_checkpoints") {
+      if (typeof value === "string" && USER_CHECKPOINT_MODES.includes(value as UserCheckpointMode)) {
+        target[key] = value;
+        appliedPaths?.add(fullPath);
+      } else {
+        warnings.push(`Ignored invalid config value for ${fullPath}`);
+      }
+      continue;
+    }
+
+    if (fullPath === "orchestration.task_tracker") {
+      if (typeof value === "string" && TASK_TRACKER_MODES.includes(value as TaskTrackerMode)) {
+        target[key] = value;
+        appliedPaths?.add(fullPath);
+      } else {
+        warnings.push(`Ignored invalid config value for ${fullPath}`);
+      }
+      continue;
+    }
+
+    if (fullPath === "research.external_sources") {
+      if (typeof value === "string" && EXTERNAL_SOURCE_MODES.includes(value as ExternalSourcesMode)) {
+        target[key] = value;
+        appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
       }
@@ -391,6 +479,7 @@ function applyConfigLayer(
     if (fullPath === "agent_skills") {
       if (isPlainObject(value)) {
         target[key] = value;
+        appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid config value for ${fullPath}`);
       }
@@ -411,13 +500,14 @@ function applyConfigLayer(
         continue;
       }
 
-      applyConfigLayer(currentValue, value, scope, warnings, [...pathPrefix, key]);
+      applyConfigLayer(currentValue, value, scope, warnings, [...pathPrefix, key], appliedPaths);
       continue;
     }
 
     if (currentValue === null) {
       if (value === null || typeof value === "string") {
         target[key] = value;
+        appliedPaths?.add(fullPath);
       } else {
         warnings.push(`Ignored invalid nullable config value for ${fullPath}`);
       }
@@ -426,6 +516,7 @@ function applyConfigLayer(
 
     if (typeof value === typeof currentValue) {
       target[key] = value;
+      appliedPaths?.add(fullPath);
       continue;
     }
 
@@ -453,6 +544,71 @@ function normalizeConfigLayer(
   alignHostSpecificMaintenanceDefaults(config, warnings);
 
   return { config, warnings };
+}
+
+function getNestedValue(
+  source: Record<string, unknown>,
+  pathSegments: string[]
+): unknown {
+  let current: unknown = source;
+
+  for (const segment of pathSegments) {
+    if (!isPlainObject(current) || !(segment in current)) {
+      return undefined;
+    }
+
+    current = current[segment];
+  }
+
+  return current;
+}
+
+function buildAppliedConfigLayer(
+  normalized: BlueprintConfig,
+  appliedPaths: Set<string>
+): Record<string, unknown> {
+  const layer: Record<string, unknown> = {};
+
+  for (const fullPath of appliedPaths) {
+    const pathSegments = fullPath.split(".");
+    const value = getNestedValue(normalized as unknown as Record<string, unknown>, pathSegments);
+
+    if (value === undefined) {
+      continue;
+    }
+
+    setNestedValue(layer, pathSegments, value);
+  }
+
+  return layer;
+}
+
+function normalizeSparseConfigLayer(
+  candidate: unknown,
+  scope: Exclude<ConfigScope, "effective">
+): { config: Record<string, unknown>; warnings: string[] } {
+  if (!isPlainObject(candidate)) {
+    throw new Error("Blueprint config must be a JSON object.");
+  }
+
+  const config = getHardCodedConfig();
+  const warnings: string[] = [];
+  const appliedPaths = new Set<string>();
+  const coercedCandidate = coerceLegacyConfigCandidate(candidate, warnings);
+  applyConfigLayer(
+    config as unknown as Record<string, unknown>,
+    coercedCandidate,
+    scope,
+    warnings,
+    [],
+    appliedPaths
+  );
+  alignHostSpecificMaintenanceDefaults(config, warnings);
+
+  return {
+    config: buildAppliedConfigLayer(config, appliedPaths),
+    warnings
+  };
 }
 
 function flattenPatchKeys(
@@ -576,6 +732,7 @@ async function composeConfig(
   const defaults = await readDefaultsConfig(defaultsPath);
   const projectConfigRaw = await readProjectConfig(projectRoot);
   let projectConfig: BlueprintConfig | null = null;
+  let projectConfigLayer: Record<string, unknown> | null = null;
   let projectWarnings: string[] = [];
 
   if (defaults.config) {
@@ -587,6 +744,8 @@ async function composeConfig(
   if (projectConfigRaw) {
     const normalized = normalizeConfigLayer(projectConfigRaw, "project");
     projectConfig = normalized.config;
+    const sparseNormalized = normalizeSparseConfigLayer(projectConfigRaw, "project");
+    projectConfigLayer = sparseNormalized.config;
     projectWarnings = normalized.warnings;
   }
 
@@ -603,10 +762,10 @@ async function composeConfig(
     );
   }
 
-  if (projectConfig) {
+  if (projectConfigLayer) {
     applyConfigLayer(
       config as unknown as Record<string, unknown>,
-      projectConfig as unknown as Record<string, unknown>,
+      projectConfigLayer,
       "project",
       warnings
     );
@@ -721,7 +880,7 @@ export async function blueprintConfigSet(
 
   const projectRoot = await ensureRepoRoot(args.cwd);
   const baseResult = await blueprintConfigGet({
-    scope,
+    scope: scope === "project" ? "effective" : "defaults",
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
   });
