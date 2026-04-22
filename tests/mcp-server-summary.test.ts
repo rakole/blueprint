@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+
+import {
+  BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI,
+  BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE,
+  listBlueprintCommandRuntimeContractCommands
+} from "../src/mcp/command-resources.js";
+import { createBlueprintServer } from "../src/mcp/server.js";
 import {
   createToolResponseContent,
   summarizeToolResult
@@ -98,4 +107,74 @@ test("reused write results report preservation instead of a fresh save", () => {
     summary,
     "Reused existing Phase 3 verification at `.blueprint/phases/03-validation-engine/03-VERIFICATION.md` status: reused (1 summary links, 1 warnings)."
   );
+});
+
+test("server exposes read-only command resources without changing tool summaries", async () => {
+  const server = createBlueprintServer();
+  const client = new Client(
+    { name: "blueprint-resource-test-client", version: "1.0.0" },
+    { capabilities: {} }
+  );
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const expectedRuntimeContractUris = (
+    await listBlueprintCommandRuntimeContractCommands()
+  ).map((command) => `blueprint://commands/${encodeURIComponent(command)}/runtime-contract`);
+
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  try {
+    const [resources, templates, catalogRead] = await Promise.all([
+      client.listResources(),
+      client.listResourceTemplates(),
+      client.readResource({ uri: BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI })
+    ]);
+
+    assert.ok(
+      resources.resources.some((resource) => resource.uri === BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI)
+    );
+    assert.ok(
+      templates.resourceTemplates.some(
+        (resourceTemplate) =>
+          resourceTemplate.uriTemplate === BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE
+      )
+    );
+
+    const runtimeContractResources = resources.resources
+      .map((resource) => resource.uri)
+      .filter((uri) => uri.startsWith("blueprint://commands/") && uri.endsWith("/runtime-contract"))
+      .sort();
+
+    assert.deepEqual(
+      [...runtimeContractResources].sort((left, right) => left.localeCompare(right)),
+      [...expectedRuntimeContractUris].sort((left, right) => left.localeCompare(right))
+    );
+    assert.ok(runtimeContractResources.includes("blueprint://commands/help/runtime-contract"));
+
+    const catalogPayload = JSON.parse(catalogRead.contents[0].text);
+    assert.equal(catalogPayload.commands.help.status, "implemented");
+    assert.equal(catalogPayload.commands.help.implemented, true);
+
+    const contractReads = await Promise.all(
+      runtimeContractResources.map((uri) => client.readResource({ uri }))
+    );
+
+    for (const contractRead of contractReads) {
+      const contractPayload = JSON.parse(contractRead.contents[0].text);
+
+      assert.equal(
+        contractPayload.uri,
+        `blueprint://commands/${encodeURIComponent(contractPayload.command)}/runtime-contract`
+      );
+      assert.ok(contractPayload.spec);
+      assert.equal(contractPayload.spec.path, contractPayload.catalog.specPath);
+      assert.ok(contractPayload.runtimeReference);
+      assert.equal(contractPayload.runtimeReference.command, contractPayload.command);
+      assert.equal(
+        contractPayload.runtimeReference.commandSpecPath,
+        contractPayload.catalog.specPath
+      );
+    }
+  } finally {
+    await Promise.all([client.close(), server.close()]);
+  }
 });
