@@ -1,19 +1,18 @@
 # Blueprint Progress
 
-Last updated: 2026-04-22
+Last updated: 2026-04-23
 
 Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
 
 ## Incomplete Commands (Priority Up)
 
-Total: 4
+Total: 3
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
 | 1 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
 | 2 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
-| 3 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 4 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
+| 3 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -21,7 +20,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `update` | `remove-workspace` | `workstreams` | `reapply-patches`, `new-workspace`, `undo`, and `cleanup` are now shipped; the remaining maintenance work is advisory update plus the deferred workspace surfaces. |
+| 1 | `update` | `remove-workspace` | none | `reapply-patches`, `new-workspace`, `workstreams`, `undo`, and `cleanup` are now shipped; the remaining maintenance work is advisory update plus the deferred workspace-removal surface. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
@@ -31,7 +30,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 49
+Total: 50
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -82,5 +81,6 @@ Total: 49
 | 45 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 46 | `undo` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 47 | `new-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 48 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 49 | `reapply-patches` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 48 | `workstreams` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Medium |
+| 49 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 50 | `reapply-patches` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |

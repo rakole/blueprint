@@ -831,9 +831,59 @@ Contract notes:
 
 ### `workstreams/`
 
-Planned contents:
+Purpose:
+- project-local parallel-work tracking for `/blu-workstreams`
+- human-readable index plus canonical per-workstream mini-state
+
+Canonical contents:
 - `WORKSTREAMS.md`
-- one subdirectory per workstream, with its own mini-state
+- one subdirectory per workstream, each with `state.json`
+
+Canonical `WORKSTREAMS.md` shape:
+
+```md
+# Blueprint Workstreams
+
+- Active workstream: `backend-api`
+- Workstream counts: 1 active, 1 paused, 0 completed
+
+| Name | Slug | Status | Snapshot | Updated |
+|---|---|---|---|---|
+| `Backend API` | `backend-api` | `active` | `Phase 3; /blu-plan-phase` | `2026-04-23T09:15:00.000Z` |
+| `Docs Sweep` | `docs-sweep` | `paused` | `none` | `2026-04-23T08:10:00.000Z` |
+```
+
+Canonical `.blueprint/workstreams/<slug>/state.json` shape:
+
+```json
+{
+  "version": 1,
+  "name": "Backend API",
+  "slug": "backend-api",
+  "status": "active",
+  "createdAt": "2026-04-23T08:00:00.000Z",
+  "updatedAt": "2026-04-23T09:15:00.000Z",
+  "activatedAt": "2026-04-23T09:15:00.000Z",
+  "completedAt": null,
+  "stateSnapshot": {
+    "projectStatus": "active",
+    "currentMilestone": "v1",
+    "currentPhase": "3",
+    "activeCommand": "/blu-plan-phase",
+    "nextAction": "Run /blu-execute-phase 3",
+    "blockers": [],
+    "roadmapEvolutionNotes": [],
+    "lastUpdated": "2026-04-23T09:14:00.000Z"
+  }
+}
+```
+
+Contract notes:
+- `status` accepts only `active`, `paused`, or `completed`.
+- At most one workstream may be `active`.
+- `WORKSTREAMS.md` is the human index; the per-workstream `state.json` files are the canonical mini-state that the MCP tool validates and mirrors into the index.
+- `stateSnapshot` stores the saved `STATE.md` subset used by `resume`; it must stay project-local and must not be mirrored into host-global config or registries.
+- A stale or missing `WORKSTREAMS.md` relative to the canonical state files is corrupt workstream state and should block mutation until repaired.
 
 ## Global State Tree
 

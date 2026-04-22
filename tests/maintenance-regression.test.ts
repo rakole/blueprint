@@ -10,8 +10,9 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("maintenance manifests keep dirty-tree stops and report-before-mutate gates explicit", async () => {
-  const [newWorkspace, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
+  const [newWorkspace, workstreams, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
     readRepoFile("commands/blu-new-workspace.toml"),
+    readRepoFile("commands/blu-workstreams.toml"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("commands/blu-ship.toml"),
     readRepoFile("commands/blu-undo.toml"),
@@ -26,6 +27,17 @@ test("maintenance manifests keep dirty-tree stops and report-before-mutate gates
   assert.match(newWorkspace, /new-workspace-confirmation/);
   assert.match(newWorkspace, /do not silently switch to `clone`/i);
   assert.match(newWorkspace, /next safe action/i);
+
+  assert.match(workstreams, /mcp_blueprint_blueprint_workstream_list/);
+  assert.match(workstreams, /mcp_blueprint_blueprint_workstream_mutate/);
+  assert.match(workstreams, /mcp_blueprint_blueprint_state_update/);
+  assert.match(workstreams, /ask_user/);
+  assert.match(workstreams, /workstream-switch-confirmation/);
+  assert.match(workstreams, /workstream-archive-confirmation/);
+  assert.match(workstreams, /missing-resume-snapshot/);
+  assert.match(workstreams, /dirty-working-tree/);
+  assert.match(workstreams, /corrupt-workstream-index/);
+  assert.match(workstreams, /next safe action/i);
 
   assert.match(prBranch, /If the repo has uncommitted changes, stop/i);
   assert.match(prBranch, /pending gate `clean-working-tree`/);
@@ -68,7 +80,13 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow/i);
   assert.match(skill, /`blueprint_workspace_registry_get`/);
   assert.match(skill, /`blueprint_workspace_create`/);
+  assert.match(skill, /`blueprint_workstream_list`/);
+  assert.match(skill, /`blueprint_workstream_mutate`/);
   assert.match(skill, /`new-workspace-confirmation`/);
+  assert.match(skill, /`workstream-switch-confirmation`/);
+  assert.match(skill, /`workstream-archive-confirmation`/);
+  assert.match(skill, /`missing-resume-snapshot`/);
+  assert.match(skill, /`corrupt-workstream-index`/);
   assert.match(skill, /dirty working tree/i);
   assert.match(skill, /pending gate `clean-working-tree`/);
   assert.match(skill, /`review-branch-confirmation`/);
@@ -109,6 +127,11 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`new-workspace`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(runtimeReference, /`new-workspace`[\s\S]*workspace name, path, repo members, strategy, branch, manifest path, and registry mutation plan/i);
   assert.match(runtimeReference, /`new-workspace`[\s\S]*transactional/i);
+
+  assert.match(runtimeReference, /`workstreams`[\s\S]*Interactive-read profile for project-local workstream switching/i);
+  assert.match(runtimeReference, /`workstreams`[\s\S]*Gemini-native `ask_user`/i);
+  assert.match(runtimeReference, /`workstreams`[\s\S]*`workstream-switch-confirmation`, `workstream-archive-confirmation`, `missing-workstream`, `missing-resume-snapshot`, and `corrupt-workstream-index`/i);
+  assert.match(runtimeReference, /`workstreams`[\s\S]*blueprint_state_update` only for the final routing patch or returned resume snapshot/i);
 
   assert.match(runtimeReference, /`cleanup`[\s\S]*High-risk-maintenance profile for protected-scope phase-directory archival/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/i);
