@@ -28141,6 +28141,28 @@ async function readCurrentStateSnapshot(projectRoot) {
   const raw = await fs6.readFile(statePath, "utf8");
   return parseStateSnapshot(raw);
 }
+async function readRequiredCurrentStateSnapshot(projectRoot) {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  const stateRelativePath = toRepoRelativePath(projectRoot, statePath);
+  try {
+    const snapshot = await readCurrentStateSnapshot(projectRoot);
+    if (!snapshot) {
+      return {
+        status: "blocked",
+        reason: `Cannot capture the current active workstream because ${stateRelativePath} is missing.`
+      };
+    }
+    return {
+      status: "ready",
+      snapshot
+    };
+  } catch (error2) {
+    return {
+      status: "blocked",
+      reason: error2 instanceof Error ? `Cannot capture the current active workstream because ${stateRelativePath} could not be read: ${error2.message}` : `Cannot capture the current active workstream because ${stateRelativePath} could not be read.`
+    };
+  }
+}
 function normalizeStateSnapshot(value, slug) {
   if (value === null || value === void 0) {
     return null;
@@ -28289,6 +28311,14 @@ async function snapshotFiles(paths) {
     })
   );
 }
+async function snapshotDirectories(paths) {
+  return Promise.all(
+    [...new Set(paths)].map(async (targetPath) => ({
+      path: targetPath,
+      existed: await pathExists4(targetPath)
+    }))
+  );
+}
 async function restoreFileSnapshots(snapshots) {
   for (const snapshot of snapshots) {
     if (!snapshot.existed) {
@@ -28297,6 +28327,12 @@ async function restoreFileSnapshots(snapshots) {
     }
     await fs6.mkdir(path7.dirname(snapshot.path), { recursive: true });
     await fs6.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
+  }
+}
+async function restoreDirectorySnapshots(snapshots) {
+  const missingDirectories = snapshots.filter((snapshot) => !snapshot.existed).sort((left, right) => right.path.length - left.path.length);
+  for (const snapshot of missingDirectories) {
+    await fs6.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function workstreamsRootAbsolute(projectRoot) {
@@ -28471,6 +28507,21 @@ function buildMutationResult(store, base) {
     warnings: store.warnings
   };
 }
+function buildMissingCurrentStateSnapshotResult(store, operation, projectRoot, reason) {
+  const statePath = toRepoRelativePath(
+    projectRoot,
+    resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH)
+  );
+  return buildMutationResult(store, {
+    status: "blocked",
+    operation,
+    affectedPaths: [],
+    waitingState: "missing-resume-snapshot",
+    nextAction: `Run ${PROGRESS_COMMAND} to regenerate ${statePath} before changing the active workstream.`,
+    reason,
+    statePatch: null
+  });
+}
 function findWorkstreamEntry(workstreams, requested) {
   const normalizedName = requested.trim().toLowerCase();
   let requestedSlug = null;
@@ -28484,10 +28535,15 @@ function findWorkstreamEntry(workstreams, requested) {
 async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   const indexRelativePath = toRepoRelativePath(projectRoot, indexPath);
-  const statePaths = [...new Set(affectedSlugs)].map((slug) => workstreamStateAbsolute(projectRoot, slug));
+  const uniqueSlugs = [...new Set(affectedSlugs)];
+  const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(projectRoot, slug));
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
+  const directorySnapshots = await snapshotDirectories([
+    workstreamsRootAbsolute(projectRoot),
+    ...uniqueSlugs.map((slug) => path7.dirname(workstreamStateAbsolute(projectRoot, slug)))
+  ]);
   try {
-    for (const slug of [...new Set(affectedSlugs)]) {
+    for (const slug of uniqueSlugs) {
       const entry = workstreams.find((candidate) => candidate.slug === slug);
       if (!entry) {
         continue;
@@ -28500,10 +28556,11 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
     await writeFileAtomically(indexPath, renderWorkstreamsIndex(workstreams));
   } catch (error2) {
     await restoreFileSnapshots(snapshots);
+    await restoreDirectorySnapshots(directorySnapshots);
     throw error2;
   }
   return [
-    ...[...new Set(affectedSlugs)].map(
+    ...uniqueSlugs.map(
       (slug) => toRepoRelativePath(projectRoot, workstreamStateAbsolute(projectRoot, slug))
     ),
     indexRelativePath
@@ -29495,11 +29552,23 @@ async function blueprintWorkstreamMutate(args) {
         statePatch: null
       });
     }
-    const currentSnapshot = await readCurrentStateSnapshot(projectRoot);
+    let currentSnapshot = null;
+    if (currentActive) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
     if (currentActive) {
       currentActive.status = "paused";
       currentActive.updatedAt = now;
-      currentActive.stateSnapshot = currentSnapshot ?? currentActive.stateSnapshot;
+      currentActive.stateSnapshot = currentSnapshot;
     }
     target.status = "active";
     target.updatedAt = now;
@@ -29537,11 +29606,23 @@ async function blueprintWorkstreamMutate(args) {
         statePatch: null
       });
     }
-    const currentSnapshot = await readCurrentStateSnapshot(projectRoot);
+    let currentSnapshot = null;
+    if (currentActive && currentActive.slug !== target.slug) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
     if (currentActive && currentActive.slug !== target.slug) {
       currentActive.status = "paused";
       currentActive.updatedAt = now;
-      currentActive.stateSnapshot = currentSnapshot ?? currentActive.stateSnapshot;
+      currentActive.stateSnapshot = currentSnapshot;
     }
     target.status = "active";
     target.updatedAt = now;
