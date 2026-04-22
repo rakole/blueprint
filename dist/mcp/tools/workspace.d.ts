@@ -1,10 +1,71 @@
 import * as z from "zod/v4";
+import type { BlueprintState } from "./state.js";
 declare const WORKSPACE_STRATEGIES: readonly ["worktree", "clone"];
 declare const PATCH_AUDIT_ACTIONS: readonly ["record", "preview", "reapply"];
 declare const PATCH_OUTCOMES: readonly ["recorded", "applied", "conflict", "blocked"];
+declare const WORKSTREAM_STATUSES: readonly ["active", "paused", "completed"];
+declare const WORKSTREAM_OPERATIONS: readonly ["create", "switch", "resume", "complete"];
+declare const WORKSTREAM_WAITING_STATES: readonly ["workstream-switch-confirmation", "workstream-archive-confirmation", "missing-workstream", "missing-resume-snapshot", "dirty-working-tree", "corrupt-workstream-index"];
 type WorkspaceStrategy = (typeof WORKSPACE_STRATEGIES)[number];
 type PatchAuditAction = (typeof PATCH_AUDIT_ACTIONS)[number];
 type PatchOutcome = (typeof PATCH_OUTCOMES)[number];
+type WorkstreamStatus = (typeof WORKSTREAM_STATUSES)[number];
+type WorkstreamOperation = (typeof WORKSTREAM_OPERATIONS)[number];
+type WorkstreamWaitingState = (typeof WORKSTREAM_WAITING_STATES)[number];
+type WorkstreamStateSnapshot = Pick<BlueprintState, "projectStatus" | "currentMilestone" | "currentPhase" | "activeCommand" | "nextAction" | "blockers" | "roadmapEvolutionNotes" | "lastUpdated">;
+type WorkstreamStateDocument = {
+    version: number;
+    name: string;
+    slug: string;
+    status: WorkstreamStatus;
+    createdAt: string;
+    updatedAt: string;
+    activatedAt: string | null;
+    completedAt: string | null;
+    stateSnapshot: WorkstreamStateSnapshot | null;
+};
+type WorkstreamSummary = WorkstreamStateDocument & {
+    statePath: string;
+};
+type WorkstreamListArgs = {
+    cwd?: string;
+};
+type WorkstreamListResult = {
+    status: "ready" | "project_missing" | "invalid";
+    rootPath: string;
+    indexPath: string;
+    active: WorkstreamSummary | null;
+    workstreams: WorkstreamSummary[];
+    summary: {
+        total: number;
+        active: number;
+        paused: number;
+        completed: number;
+        nextAction: string | null;
+    };
+    warnings: string[];
+    waitingState: WorkstreamWaitingState | null;
+    reason: string | null;
+};
+type WorkstreamMutateArgs = {
+    cwd?: string;
+    operation: WorkstreamOperation;
+    workstream: string;
+};
+type WorkstreamMutateResult = {
+    status: "updated" | "reused" | "blocked" | "project_missing" | "invalid";
+    operation: WorkstreamOperation;
+    rootPath: string;
+    indexPath: string;
+    active: WorkstreamSummary | null;
+    workstreams: WorkstreamSummary[];
+    affectedPaths: string[];
+    warnings: string[];
+    waitingState: WorkstreamWaitingState | null;
+    nextAction: string | null;
+    reason: string | null;
+    statePatch: Partial<BlueprintState> | null;
+};
 type WorkspaceRepoMember = {
     name: string;
     sourcePath: string;
@@ -118,6 +179,8 @@ type PatchReapplyResult = {
 };
 export declare function blueprintWorkspaceRegistryGet(_args?: WorkspaceRegistryGetArgs): Promise<WorkspaceRegistryGetResult>;
 export declare function blueprintWorkspaceCreate(args: WorkspaceCreateArgs): Promise<WorkspaceCreateResult>;
+export declare function blueprintWorkstreamList(args?: WorkstreamListArgs): Promise<WorkstreamListResult>;
+export declare function blueprintWorkstreamMutate(args: WorkstreamMutateArgs): Promise<WorkstreamMutateResult>;
 export declare function blueprintPatchList(args?: PatchListArgs): Promise<PatchListResult>;
 export declare function blueprintPatchRecord(args: PatchRecordArgs): Promise<PatchRecordResult>;
 export declare function blueprintPatchReapply(args?: PatchReapplyArgs): Promise<PatchReapplyResult>;
@@ -143,6 +206,27 @@ export declare const workspaceToolDefinitions: ({
         branch: z.ZodOptional<z.ZodString>;
     };
     handler: (args: Record<string, unknown>) => Promise<WorkspaceCreateResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<WorkstreamListResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        operation: z.ZodEnum<{
+            complete: "complete";
+            create: "create";
+            switch: "switch";
+            resume: "resume";
+        }>;
+        workstream: z.ZodString;
+    };
+    handler: (args: Record<string, unknown>) => Promise<WorkstreamMutateResult>;
 } | {
     name: string;
     description: string;

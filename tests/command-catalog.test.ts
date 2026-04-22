@@ -66,6 +66,7 @@ const IMPLEMENTED_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
+  "workstreams",
   "cleanup",
   "reapply-patches"
 ] as const;
@@ -334,6 +335,26 @@ test("new-workspace is implemented once manifest, skill, and workspace MCP tools
     "blueprint_config_get",
     "blueprint_workspace_create",
     "blueprint_workspace_registry_get"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("workstreams is implemented once manifest, skill, and project-local workstream MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands.workstreams;
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("workstreams"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_state_update",
+    "blueprint_workstream_list",
+    "blueprint_workstream_mutate"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

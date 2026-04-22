@@ -66,6 +66,8 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_config_get`
 - `blueprint_workspace_registry_get`
 - `blueprint_workspace_create`
+- `blueprint_workstream_list`
+- `blueprint_workstream_mutate`
 - `blueprint_patch_list`
 - `blueprint_patch_reapply`
 - `blueprint_patch_record`
@@ -86,6 +88,25 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 Shared rule for all maintenance flows:
 
 - run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow when the command owns a durable maintenance report
+
+### `workstreams`
+
+- Execution profile: `interactive-read`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Persist`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `workstream-switch-confirmation` and `workstream-archive-confirmation` visible until the user clears them, and keep any `missing-workstream`, `missing-resume-snapshot`, `dirty-working-tree`, or `corrupt-workstream-index` waiting state explicit with the next safe action while the flow is blocked.
+
+1. Read `blueprint_workstream_list` first. Treat its returned `rootPath`, `indexPath`, `active`, `workstreams`, `summary`, `waitingState`, and `reason` as the authoritative project-local workstream state. Do not invent a second workstream registry outside `.blueprint/workstreams/`.
+2. Resolve the exact operation before mutation. If the user did not already provide a concrete operation or target and the host can ask interactively, use Gemini-native `ask_user` to select the workstream action or target instead of guessing.
+3. Keep read-only requests read-only. For `workstreams`, `list`, `status`, or `progress`, stay on `blueprint_workstream_list` and summarize the active workstream, paused or completed streams, snapshot availability, and the next safe action without mutating state.
+4. Keep the resolved target explicit before mutation: name the current active workstream, the selected target, whether a saved snapshot exists, and whether the run is read-only, confirmation-gated, or resume-ready.
+5. Treat dirty active-stream transitions as hard stops. `switch`, `resume`, and completing the current active workstream must stop on a dirty tree and keep that waiting state visible as `dirty-working-tree` with the next safe action.
+6. Require explicit confirmation through `ask_user` before switching away from an active workstream, and keep the pending gate explicit as `workstream-switch-confirmation` until the user approves.
+7. Require explicit confirmation through `ask_user` before completing the current active workstream, and keep the pending gate explicit as `workstream-archive-confirmation` until the user approves.
+8. Persist workstream state only through `blueprint_workstream_mutate`, and treat its returned `active`, `workstreams`, `affectedPaths`, `waitingState`, `nextAction`, and `statePatch` as authoritative. The mutate tool owns `WORKSTREAMS.md` regeneration plus per-stream `state.json` writes.
+9. Keep failure handling honest: stop on `missing-workstream`, `missing-resume-snapshot`, or `corrupt-workstream-index` instead of inventing fallback state. Do not smooth past a missing snapshot or a stale workstream index.
+10. For `resume`, apply only the returned `statePatch` through `blueprint_state_update`, let the state tool stamp `lastUpdated`, and keep the change bounded to the saved `STATE.md` subset. Do not widen the flow into `/blu-resume-work`.
+11. Keep workstream state project-local. Never reintroduce `workflow.use_workstreams`, a host-global workstream registry, or `.planning/` ownership for this feature.
 
 ### `new-workspace`
 
@@ -204,7 +225,7 @@ Shared in-flight contract for `cleanup`:
 
 ## Planned Later Command Guardrail
 
-- `remove-workspace`, `workstreams`, and `update` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `remove-workspace` and `update` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -213,5 +234,6 @@ Shared in-flight contract for `cleanup`:
 - For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
+- For `workstreams`, report the active workstream, the selected target, any affected paths, any active pending gate or waiting state, whether a resume state patch was returned, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
 - For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.

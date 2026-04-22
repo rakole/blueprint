@@ -40,6 +40,9 @@ test("router pilot surfaces remain implemented-only in the live command catalog"
       `${command} should keep its read-oriented router tool set`
     );
   }
+
+  assert.equal(catalog.commands.workstreams.implemented, true);
+  assert.equal(catalog.commands.workstreams.status, "implemented");
 });
 
 test("/blu root router manifest keeps implemented-only routing and waiting-state reporting explicit", async () => {
