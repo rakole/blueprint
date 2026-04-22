@@ -88,9 +88,11 @@ Capture cross-CLI peer review for the saved plan.
 }
 
 test("review docs and catalog metadata promote the peer-review slice to implemented", async () => {
-  const [catalogMarkdown, implementationOrder] = await Promise.all([
+  const [catalogMarkdown, implementationOrder, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/review.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
   assert.match(
@@ -100,6 +102,32 @@ test("review docs and catalog metadata promote the peer-review slice to implemen
   assert.match(
     implementationOrder,
     /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
+  );
+  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(
+    commandDoc,
+    /requested reviewer set, reviewer availability, disagreement posture, pending gate, execution mode, artifact status, and next safe action/i
+  );
+  assert.match(commandDoc, /`update_topic` tool and keep a compact peer-review checklist with `write_todos`/i);
+  assert.match(commandDoc, /`reviewer-availability`/i);
+  assert.match(commandDoc, /next-step guidance stays on `\/blu-review <phase>`/i);
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*Long-running-mutation profile for phase-plan peer review/i
+  );
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*`update_topic` and `write_todos` for non-trivial review runs/i
+  );
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*reviewer availability, partial reviewer coverage, disagreement posture, and artifact reuse or revision status explicit/i
+  );
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*`reviewer-availability` waiting state/i
   );
 });
 
