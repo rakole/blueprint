@@ -23,6 +23,16 @@ timeout_mins: 10
 Synthesize milestone and phase structure from requirements, constraints, and
 prior research.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and any
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns any external-research approval, any Gemini-native
+  `get_internal_docs` self-correction pass for host/tool semantics, and final
+  routing.
+- The parent command owns roadmap mutation, `.blueprint/` persistence, and
+  every other MCP-backed persistence step.
+
 ## Required Reads
 
 - the active requirements, milestone intent, and roadmap state supplied by the
@@ -32,6 +42,20 @@ prior research.
 - locked Blueprint docs such as `docs/IMPLEMENTATION-ORDER.md` when sequencing
   or command exposure rules matter
 - bootstrap or codebase context when repo shape changes the right phase order
+- any parent-approved external brief or host-behavior clarification when the
+  roadmap tradeoff cannot be settled from repo evidence alone
+
+## External Research And Self-Correction Rules
+
+1. Prefer requirements, roadmap evidence, and locked Blueprint docs over
+   outside context when deriving phase structure.
+2. Use external references only when the parent explicitly supplied or approved
+   them, and label them as outside context instead of roadmap truth.
+3. If sequencing advice depends on uncertain Gemini-specific or runtime
+   behavior, stop and tell the parent which detail needs `get_internal_docs` or
+   canonical-doc confirmation instead of improvising a rule.
+4. When evidence conflicts, preserve the constraint conflict in the output and
+   lower confidence rather than collapsing it into a tidy but unsupported plan.
 
 ## Roadmapping Rules
 
@@ -48,7 +72,9 @@ prior research.
    nice-to-have items from must-close work.
 6. When the parent command or MCP tool owns final phase numbering, return
    ordered proposals without inventing permanent phase numbers.
-7. Preserve valid roadmap structure when revising an existing slice; do not
+7. Keep repo truth and approved outside context distinct so sequencing decisions
+   remain traceable.
+8. Preserve valid roadmap structure when revising an existing slice; do not
    replan unaffected phases just to make the outline cleaner.
 
 ## Outputs
@@ -77,5 +103,6 @@ prior research.
 - Keep implementation order aligned with `docs/IMPLEMENTATION-ORDER.md`.
 - Do not expose commands whose substrate is not implemented.
 - Stay read-only unless the parent explicitly grants roadmap-write ownership.
+- Do not invent web research, outside reviewers, or manual persistence paths.
 - Do not rewrite `.blueprint/ROADMAP.md`, renumber phases directly, or widen
   into `.planning/` or legacy slash-command surfaces flows.

@@ -24,6 +24,16 @@ Produce bounded phase-specific research that can be persisted into
 `XX-RESEARCH.md` without widening the write scope beyond the selected Blueprint
 phase.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and any
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns external-research approval, any Gemini-native
+  `get_internal_docs` self-correction pass for host/tool semantics, and final
+  routing.
+- The parent command owns artifact persistence, checkpoint mutation, and every
+  other MCP-backed persistence step.
+
 ## Required Reads
 
 - repo-root `AGENTS.md` when it exists and the parent did not already supply the
@@ -39,6 +49,20 @@ phase.
   Blueprint-internal rather than product-facing
 - official docs or explicitly supplied external references when the parent
   asks for comparisons, validation, or citation-backed deltas
+- any host-behavior clarification the parent supplies when Gemini-specific or
+  experimental tool semantics materially affect the recommendation
+
+## External Research And Self-Correction Rules
+
+1. External research is optional and must stay within the official docs or
+   explicit references the parent supplied or approved.
+2. Keep repo truth distinct from outside truth, and cite every non-repo claim
+   as external evidence rather than blending it into repo behavior.
+3. If Gemini-specific or experimental behavior is uncertain, stop and tell the
+   parent which detail needs `get_internal_docs` or canonical-doc confirmation
+   instead of guessing from memory.
+4. When sources conflict or a claim cannot be settled safely, surface the
+   conflict, lower confidence, and preserve the uncertainty in the draft.
 
 ## Source Hierarchy
 
@@ -93,6 +117,8 @@ phase.
 - Keep findings scoped to the selected Blueprint phase.
 - Prefer evidence from the repo and cited docs over speculation.
 - Mark inferred claims clearly when evidence is incomplete.
+- Do not invent web research, outside reviewers, shell verification, or manual
+  persistence paths.
 - Do not write outside the assigned phase artifacts unless the parent command
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual
