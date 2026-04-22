@@ -92,6 +92,7 @@ type ResolvedSourceRepo = {
 
 type CreatedWorkspaceMember = WorkspaceRepoMember & {
   rollbackStrategy: WorkspaceStrategy;
+  createdSourceBranch: string | null;
 };
 
 type PatchCompatibility = {
@@ -426,12 +427,22 @@ async function readWorkspaceRegistryDocument(
   );
 
   const parsedRecord = parsed as Record<string, unknown>;
+  const version = parsedRecord.version;
+
+  if (typeof version !== "number" || !Number.isInteger(version)) {
+    throw new Error(
+      `Workspace registry is malformed at ${registryPath}; version must be ${WORKSPACE_REGISTRY_VERSION}.`
+    );
+  }
+
+  if (version !== WORKSPACE_REGISTRY_VERSION) {
+    throw new Error(
+      `Workspace registry version is unsupported at ${registryPath}: ${version}.`
+    );
+  }
 
   return {
-    version:
-      typeof parsedRecord.version === "number"
-        ? parsedRecord.version
-        : WORKSPACE_REGISTRY_VERSION,
+    version,
     workspaces
   };
 }
@@ -931,8 +942,16 @@ async function resolveDefaultWorkspaceRoot(cwd?: string): Promise<string> {
     if (configuredRoot) {
       return expandHomePath(configuredRoot);
     }
-  } catch {
-    // Fall back only when config is unavailable in the current repo context.
+  } catch (error) {
+    if (
+      !(
+        error instanceof Error &&
+        error.message ===
+          "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
+      )
+    ) {
+      throw error;
+    }
   }
 
   return path.join(os.homedir(), "blueprint-workspaces");
@@ -1057,6 +1076,7 @@ async function createWorkspaceMember(
 ): Promise<CreatedWorkspaceMember> {
   let candidateName = sourceRepo.name;
   let duplicateIndex = 2;
+  let createdSourceBranch: string | null = null;
 
   while (usedTargetNames.has(candidateName)) {
     candidateName = `${sourceRepo.name}-${duplicateIndex}`;
@@ -1083,6 +1103,7 @@ async function createWorkspaceMember(
           memberPath,
           `origin/${requestedBranch}`
         ]);
+        createdSourceBranch = requestedBranch;
       } else {
         await runGit([
           "-C",
@@ -1094,6 +1115,7 @@ async function createWorkspaceMember(
           memberPath,
           "HEAD"
         ]);
+        createdSourceBranch = requestedBranch;
       }
     } else {
       await runGit([
@@ -1134,7 +1156,8 @@ async function createWorkspaceMember(
     branch: (await gitCurrentBranch(memberPath)) ?? requestedBranch ?? null,
     head: await gitHeadSha(memberPath),
     blueprintProject: sourceRepo.blueprintProject,
-    rollbackStrategy: strategy
+    rollbackStrategy: strategy,
+    createdSourceBranch
   };
 }
 
@@ -1145,6 +1168,15 @@ async function rollbackCreatedMembers(createdMembers: CreatedWorkspaceMember[]):
         await runGit(["-C", member.sourcePath, "worktree", "remove", "--force", member.path], {
           allowFailure: true
         });
+      }
+
+      if (member.createdSourceBranch) {
+        await runGit(
+          ["-C", member.sourcePath, "branch", "--delete", "--force", member.createdSourceBranch],
+          {
+            allowFailure: true
+          }
+        );
       }
     } catch {
       // fall through to best-effort filesystem cleanup
@@ -1241,7 +1273,7 @@ export async function blueprintWorkspaceCreate(
 
     await writeJsonFile(manifestPath, registryEntry as unknown as Record<string, unknown>);
     await writeWorkspaceRegistryDocument(registryPath, {
-      version: registry.version || WORKSPACE_REGISTRY_VERSION,
+      version: WORKSPACE_REGISTRY_VERSION,
       workspaces: [...registry.workspaces, registryEntry]
     });
 

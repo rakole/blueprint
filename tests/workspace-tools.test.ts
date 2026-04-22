@@ -60,6 +60,24 @@ async function withGlobalHome<T>(
   }
 }
 
+async function withHomeDirectory<T>(
+  homeDirectory: string,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previousHome = process.env.HOME;
+  process.env.HOME = homeDirectory;
+
+  try {
+    return await callback();
+  } finally {
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+  }
+}
+
 test("workspace tools register registry and create MCP entries", () => {
   assert.ok(
     blueprintToolNames.includes("blueprint_workspace_registry_get"),
@@ -162,7 +180,7 @@ test("blueprint_workspace_create derives the default workspace root from effecti
   assert.equal(listed.workspaces[0]?.manifestPath, result.manifestPath);
 });
 
-test("blueprint_workspace_create rolls back disk state when host-global registry persistence fails", async (t) => {
+test("blueprint_workspace_create rolls back disk state and newly-created source branches when host-global registry persistence fails", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-rollback-"));
   t.after(async () => {
     await fs.rm(tempRoot, { recursive: true, force: true });
@@ -195,7 +213,8 @@ test("blueprint_workspace_create rolls back disk state when host-global registry
     withGlobalHome(brokenGlobalHome, () =>
       blueprintWorkspaceCreate({
         cwd: repoPath,
-        name: "feature-b"
+        name: "feature-b",
+        branch: "feature-b"
       })
     ),
     /ENOTDIR|not a directory|EEXIST/
@@ -207,6 +226,7 @@ test("blueprint_workspace_create rolls back disk state when host-global registry
   await assert.rejects(fs.access(workspacePath));
   await assert.rejects(fs.access(path.join(workspacePath, ".blueprint-workspace.json")));
   assert.doesNotMatch(worktreeList, /feature-b/);
+  assert.equal(await runGit(["branch", "--list", "feature-b"], repoPath), "");
 });
 
 test("blueprint_workspace_create appends to an existing host-global registry document", async (t) => {
@@ -321,5 +341,71 @@ test("blueprint_workspace_create rejects invalid branch names before git mutatio
   assert.doesNotMatch(
     await runGit(["worktree", "list", "--porcelain"], repoPath),
     new RegExp(workspacePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  );
+});
+
+test("blueprint_workspace_create rejects unsupported workspace registry versions before mutation", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-version-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryPath = path.join(globalHome, "workspaces.json");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-version");
+  const unsupportedRegistry = {
+    version: 99,
+    workspaces: []
+  };
+
+  await fs.mkdir(globalHome, { recursive: true });
+  await fs.writeFile(registryPath, `${JSON.stringify(unsupportedRegistry, null, 2)}\n`, "utf8");
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceCreate({
+        cwd: repoPath,
+        name: "feature-version",
+        path: workspacePath
+      })
+    ),
+    /Workspace registry version is unsupported/
+  );
+
+  await assert.rejects(fs.access(workspacePath));
+  assert.deepEqual(
+    JSON.parse(await fs.readFile(registryPath, "utf8")),
+    unsupportedRegistry
+  );
+});
+
+test("blueprint_workspace_create surfaces malformed config instead of falling back to the default workspace root", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-config-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const fakeHome = path.join(tempRoot, "home");
+
+  await fs.mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
+  await fs.writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n", "utf8");
+
+  await assert.rejects(
+    withHomeDirectory(fakeHome, () =>
+      withGlobalHome(globalHome, () =>
+        blueprintWorkspaceCreate({
+          cwd: repoPath,
+          name: "feature-config"
+        })
+      )
+    ),
+    /config\.json is not valid JSON/
+  );
+
+  await assert.rejects(
+    fs.access(path.join(fakeHome, "blueprint-workspaces", "feature-config"))
   );
 });
