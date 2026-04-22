@@ -73,10 +73,12 @@ async function createSecurePhaseRepo(): Promise<string> {
   return repoPath;
 }
 
-test("secure-phase docs and catalog metadata promote the first review slice to implemented", async () => {
-  const [catalogMarkdown, skillsMarkdown] = await Promise.all([
+test("secure-phase docs and catalog metadata keep the security review slice implemented and spine-aligned", async () => {
+  const [catalogMarkdown, skillsMarkdown, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/secure-phase.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
   assert.match(
@@ -90,6 +92,38 @@ test("secure-phase docs and catalog metadata promote the first review slice to i
   assert.match(
     skillsMarkdown,
     /\| `blueprint-security-auditor` \| `implemented` \| Verify threat mitigations and security coverage \|/
+  );
+  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
+  assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(commandDoc, /`update_topic` tool and keep a compact threat-review checklist with `write_todos`/i);
+  assert.match(commandDoc, /`pending-open-threat`/i);
+  assert.match(commandDoc, /next-step guidance stays blocked/i);
+  assert.match(commandDoc, /saved plan evidence only/i);
+  assert.match(
+    runtimeReference,
+    /`secure-phase`[\s\S]*Long-running-mutation profile for phase-scoped threat verification/i
+  );
+  assert.match(
+    runtimeReference,
+    /`secure-phase`[\s\S]*`update_topic` and `write_todos` for non-trivial secure-phase runs/i
+  );
+  assert.match(
+    runtimeReference,
+    /`secure-phase`[\s\S]*verify-versus-accept decisions, or a visible `pending-open-threat` waiting state/i
+  );
+  assert.match(
+    runtimeReference,
+    /`secure-phase`[\s\S]*inline versus security-auditor-assisted verification/i
+  );
+  assert.match(
+    runtimeReference,
+    /`secure-phase`[\s\S]*pending-open-threat status explicit/i
+  );
+  assert.match(
+    runtimeReference,
+    /`secure-phase`[\s\S]*route only to implemented follow-up commands/i
   );
 });
 
