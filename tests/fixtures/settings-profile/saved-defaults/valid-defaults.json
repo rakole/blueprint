@@ -10,6 +10,17 @@
     "commit_docs": false,
     "search_gitignored": true
   },
+  "ux": {
+    "progress_mode": "quiet",
+    "structured_confirmations": "auto",
+    "user_checkpoints": "off"
+  },
+  "orchestration": {
+    "task_tracker": "off"
+  },
+  "research": {
+    "external_sources": "off"
+  },
   "workflow": {
     "research": true,
     "plan_check": true,

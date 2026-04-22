@@ -41,19 +41,21 @@ test("config baseline locks the reserved effectiveness-spine keys and enum value
 
   assert.match(
     baselineDoc,
-    /must not surface them as writable or persisted until the dedicated runtime slice lands/i
+    /`S8\.2` adds runtime normalization, defaults precedence, and persistence through the existing config MCP path/i
   );
 });
 
-test("artifact schema documents the reserved config additions without claiming current runtime support", async () => {
+test("artifact schema documents the effectiveness-spine config additions as current runtime behavior", async () => {
   const schemaDoc = await readFile(
     path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
     "utf8"
   );
 
-  assert.match(schemaDoc, /Reserved config contract additions for the effectiveness spine/i);
-  assert.match(schemaDoc, /current runtime does not read or persist them yet/i);
-  assert.match(schemaDoc, /Until `S8\.2` lands, they should not appear in normalized config output/i);
+  assert.match(schemaDoc, /"ux": \{/);
+  assert.match(schemaDoc, /"orchestration": \{/);
+  assert.match(schemaDoc, /"research": \{/);
+  assert.match(schemaDoc, /`S8\.2` adds runtime normalization and persistence through the existing config MCP tools/i);
+  assert.match(schemaDoc, /Older project configs that omit these keys still inherit them from saved defaults or hardcoded defaults/i);
 
   for (const { key, values } of reservedKeyAssertions) {
     assert.match(schemaDoc, new RegExp(`\`${key.replace(".", "\\.")}\``));
@@ -63,7 +65,7 @@ test("artifact schema documents the reserved config additions without claiming c
   }
 });
 
-test("settings docs keep the reserved config keys documented but unavailable before runtime support", async () => {
+test("settings docs keep the effectiveness-spine keys on the normal config path without forcing them into the common pass", async () => {
   const settingsDoc = await readFile(
     path.join(repoRoot, "docs/commands/settings.md"),
     "utf8"
@@ -73,8 +75,8 @@ test("settings docs keep the reserved config keys documented but unavailable bef
     assert.match(settingsDoc, new RegExp(key.replace(".", "\\.")));
   }
 
-  assert.match(settingsDoc, /documented contract-only in `S8\.1`/i);
-  assert.match(settingsDoc, /do not offer or persist them through `\/blu-settings` until runtime support lands/i);
-  assert.match(settingsDoc, /config contract is documented but the runtime write path is not shipped/i);
-  assert.match(settingsDoc, /documented but not yet writable instead of fabricating persistence/i);
+  assert.match(settingsDoc, /now normalize and persist through the same config MCP path as other settings/i);
+  assert.match(settingsDoc, /effective config should still inherit them from saved defaults or hardcoded defaults/i);
+  assert.match(settingsDoc, /Keep the common settings pass stable; do not force the effectiveness-spine keys into that first pass/i);
+  assert.match(settingsDoc, /write them through the documented config MCP path instead of inventing a separate persistence flow/i);
 });
