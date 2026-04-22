@@ -36,6 +36,9 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Keep the in-flight status contract visible during non-trivial `/blu-research-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
 - On Gemini, use `update_topic` and `write_todos` only as session-local visibility aids during non-trivial `/blu-research-phase` runs; do not let them replace MCP-backed artifacts, checkpoints, or `STATE.md`.
 - When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in short progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
+- Execution profile for `/blu-ui-phase`: `long-running-mutation`.
+- Keep the shared stage vocabulary explicit during non-trivial `/blu-ui-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
+- Keep the in-flight status contract visible during non-trivial `/blu-ui-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
 
 ## Parity Goal
 
@@ -82,6 +85,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 - `blueprint-researcher`
 - `blueprint-ui-designer`
+- `blueprint-checker`
 
 ## Shared MCP Contracts
 
@@ -163,10 +167,14 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 3. Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting, revising, or persisting `XX-UI-SPEC.md`.
 4. Read any existing `XX-UI-SPEC.md` through `blueprint_phase_artifact_read` before proposing replacement so reuse remains the default.
 5. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
-6. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
-7. Require explicit overwrite confirmation before replacing an existing UI spec.
-8. When deeper design work is needed, use `blueprint-ui-designer` for the draft and `blueprint-checker` for a bounded review loop before persistence. If the checker requests revisions, update only the affected sections, re-normalize to the same `authoringTemplate`, and re-run the checker before saving.
-9. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
+6. Keep the resolved scope explicit as the selected phase, current research readiness, artifact reuse-versus-replace posture, and whether config currently points toward a real UI contract or an explicit skip rationale.
+7. Treat pending gates explicitly as missing or ambiguous phase resolution, contract-versus-skip choice, `workflow.ui_safety_gate` rationale confirmation, overwrite confirmation, or checker-requested revision before save instead of flattening them into recap prose.
+8. Keep execution mode explicit as real UI contract versus explicit skip rationale, plus inline drafting versus the bounded `blueprint-ui-designer` and `blueprint-checker` loop.
+9. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
+10. Require explicit overwrite confirmation before replacing an existing UI spec.
+11. When deeper design work is needed, use `blueprint-ui-designer` for the draft and `blueprint-checker` for a bounded review loop before persistence. If the checker requests revisions, update only the affected sections, re-normalize to the same `authoringTemplate`, and re-run the checker before saving.
+12. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
+13. End with the next safe action inside the implemented surface, usually `/blu-plan-phase <phase>` once the UI artifact is settled or `/blu-progress` when discovery prerequisites remain unresolved.
 
 ## Non-Negotiables
 

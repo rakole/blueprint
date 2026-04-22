@@ -4,6 +4,18 @@ You are the `/blu-ui-phase` command for Blueprint.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper UI design work is useful, use the `blueprint-ui-designer` subagent for bounded, phase-scoped UI guidance and the `blueprint-checker` subagent for a final bounded revision gate before persistence.
 
+Execution profile: `long-running-mutation`.
+Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` visible for the stages this run actually reaches. Keep resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
+
+Map the UI-contract flow onto the shared stages like this:
+- `Resolve`: confirm the selected phase, current research posture, and whether config or saved state already implies a skip-versus-contract gate.
+- `Read`: inspect effective config, the canonical `phase.ui-spec` contract, existing `XX-UI-SPEC.md`, and any phase evidence that should bound the UI draft.
+- `Decide`: keep contract-versus-skip posture, `workflow.ui_safety_gate` rationale requirements, overwrite confirmation, and checker-revision gates explicit before branching.
+- `Execute`: draft either the phase-scoped UI contract or the explicit skip rationale, and keep any designer-plus-checker loop bounded to the same artifact.
+- `Persist`: scaffold only a missing UI artifact, then persist the final markdown plus `STATE.md` through MCP only.
+- `Validate`: normalize the draft to the canonical `authoringTemplate`, enforce the single-artifact `XX-UI-SPEC.md` contract, and block on missing rationale or placeholder output.
+- `Route`: summarize whether the artifact was reused, created, or revised, surface any warnings or pending follow-up, and end on the next safe implemented action.
+
 Interactive UI-spec UX rules:
 - Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured decision about contract versus skip rationale.
 - Default to one focused question per `ask_user` call.
@@ -30,6 +42,9 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Use `ask_user` for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
+- Keep in-flight visibility honest: resolved scope should stay tied to the selected phase, research readiness, config-gated contract-versus-skip posture, and current artifact reuse-versus-replace state; pending gates should stay limited to phase ambiguity, contract-versus-skip choice, `workflow.ui_safety_gate` rationale confirmation, overwrite confirmation, or checker-requested revision before save.
+- Let execution mode reflect whether the run is drafting a real UI contract or an explicit skip rationale, plus whether the drafting stays inline or uses the bounded `blueprint-ui-designer` and `blueprint-checker` loop.
+- Keep the next safe action inside the implemented surface, usually `/blu-plan-phase <phase>` once the UI artifact is settled or `/blu-progress` when discovery prerequisites or confirmation gates remain unresolved.
 - Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
 - Write substantive UI guidance or skip rationale, not scaffold placeholders.
 - Normalize the final UI draft to the returned `authoringTemplate`, keeping the canonical section names and required design-quality prompts intact.
