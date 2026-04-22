@@ -96,6 +96,9 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_workspace_registry_get` | Read the host-global Blueprint workspace registry from `~/.<host>/blueprint/workspaces.json` without mutating it | `{registryPath, workspaces}` |
 | `blueprint_workspace_create` | Create a workspace directory plus `<workspace>/.blueprint-workspace.json` and append the matching host-global registry entry transactionally | `{workspacePath, manifestPath, registryPath, registryEntry, repoMembers}` |
+| `blueprint_patch_list` | Read host-global patch manifests from `~/.<host>/blueprint/patches/` and report compatibility against the current repo when available | `{registryPath, patches}` |
+| `blueprint_patch_record` | Persist or refresh a host-global patch manifest and append an audit entry under `~/.<host>/blueprint/patches/` | `{patchId, registryPath, manifestPath, patchPath, auditPath, trackedFiles, updated}` |
+| `blueprint_patch_reapply` | Preview or replay one recorded patch set against a clean repo while enforcing compatibility and installed-extension guards | `{registryPath, appliedPatches, skippedPatches, conflicts, preview, targetHead}` |
 
 ## Planned Later Tool Families
 
@@ -111,9 +114,6 @@ These tool names are part of the documented future contract, but they are not re
 
 - `blueprint_update_check`
 - `blueprint_update_plan`
-- `blueprint_patch_record`
-- `blueprint_patch_list`
-- `blueprint_patch_reapply`
 
 ## Planned Read-Only MCP Resource Surface
 
@@ -173,6 +173,7 @@ Resource-adoption guardrails:
 - `undo` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep revert previews evidence-backed, report-backed before git mutation, explicit about dependency impact, and aligned with safe `git revert` style execution instead of destructive history rewrites; its maintenance flow should continue to apply the shared dirty-tree, resolved-target, and report-before-mutate preflight checks.
 - `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection; its maintenance flow should continue to apply the shared dirty-tree, protected-scope, and report-before-mutate preflight checks.
 - `new-workspace` uses `blueprint_config_get`, `blueprint_workspace_registry_get`, and `blueprint_workspace_create` to keep default workspace-root selection aligned with normalized effective config, keep host-global registry writes bounded to `~/.<host>/blueprint/workspaces.json`, and keep workspace-directory plus registry mutation transactional instead of prompt-only.
+- `reapply-patches` uses `blueprint_patch_list`, `blueprint_patch_reapply`, and `blueprint_patch_record` to keep patch replay preview-backed, confirmation-gated, blocked on dirty or incompatible targets, and audited only under `~/.<host>/blueprint/patches/` instead of `.blueprint/reports/`.
 
 ## Planned Command Notes
 

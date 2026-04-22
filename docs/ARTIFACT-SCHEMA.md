@@ -853,6 +853,98 @@ Purpose:
 - update metadata and last-known version info
 - patch manifests for `reapply-patches`
 
+### `patches/index.json`
+
+Purpose:
+- authoritative host-global patch registry index for `reapply-patches`
+
+Canonical shape:
+
+```json
+{
+  "version": 1,
+  "patches": [
+    "theme-fix",
+    "lint-cleanup"
+  ]
+}
+```
+
+Contract notes:
+- patch ids are file-safe identifiers that map directly to `<patch-id>.json`, `<patch-id>.patch`, and `<patch-id>.audit.ndjson`
+- malformed or partial index entries are a hard stop for patch replay
+- this registry stays host-global under `~/.<host>/blueprint/patches/`; Blueprint must not mirror it into `.blueprint/`
+
+### `patches/<patch-id>.json`
+
+Purpose:
+- durable patch manifest for one replayable patch entry
+
+Canonical shape:
+
+```json
+{
+  "version": 1,
+  "patchId": "theme-fix",
+  "label": "Theme compatibility fix",
+  "createdAt": "2026-04-22T10:15:00.000Z",
+  "sourceVersion": "abc1234",
+  "repoRootName": "blueprint",
+  "repoRemote": "https://github.com/rakole/blueprint.git",
+  "patchFile": "theme-fix.patch",
+  "patchHash": "<sha256>",
+  "trackedFiles": [
+    "src/theme.ts",
+    "tests/theme.test.ts"
+  ],
+  "compatibility": {
+    "host": "gemini",
+    "repoRootName": "blueprint",
+    "remoteUrl": "https://github.com/rakole/blueprint.git"
+  },
+  "lastAppliedAt": "2026-04-22T10:20:00.000Z",
+  "lastOutcome": "applied"
+}
+```
+
+Contract notes:
+- the manifest points at the sibling patch payload file `<patch-id>.patch`
+- `patchHash` must match the on-disk patch payload; a mismatch is malformed-registry state
+- compatibility checks are host-global guardrails, not advisory hints; a mismatch is a hard stop before replay
+- `lastAppliedAt` and `lastOutcome` are replay metadata, not project-local evidence
+
+### `patches/<patch-id>.audit.ndjson`
+
+Purpose:
+- append-only replay audit history for one patch entry
+
+Canonical shape:
+
+```json
+{
+  "version": 1,
+  "timestamp": "2026-04-22T10:20:00.000Z",
+  "action": "reapply",
+  "outcome": "applied",
+  "cwd": "/path/to/repo",
+  "repoRoot": "/path/to/repo",
+  "targetHead": "def5678",
+  "trackedFiles": [
+    "src/theme.ts",
+    "tests/theme.test.ts"
+  ],
+  "conflicts": [],
+  "warnings": [],
+  "dryRun": false
+}
+```
+
+Contract notes:
+- audits are newline-delimited JSON entries appended by the patch MCP tools
+- preview runs should record `action: "preview"` with `dryRun: true`
+- replay runs should record `action: "reapply"` after preview completes and the approved replay step finishes or reports a clean blocker
+- patch audit lives only under `~/.<host>/blueprint/patches/`; do not create `.blueprint/reports/` runtime ownership for this flow
+
 ## Commit Expectations
 
 - `.blueprint/` is committed by default.

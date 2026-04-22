@@ -66,7 +66,8 @@ const IMPLEMENTED_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
-  "cleanup"
+  "cleanup",
+  "reapply-patches"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do"] as const;
@@ -1149,6 +1150,26 @@ test("undo is implemented once manifest, skill, and report-backed revert MCP too
     "blueprint_phase_locate",
     "blueprint_project_status",
     "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("reapply-patches is implemented once manifest, skill, and patch replay MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["reapply-patches"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("reapply-patches"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_patch_list",
+    "blueprint_patch_reapply",
+    "blueprint_patch_record"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

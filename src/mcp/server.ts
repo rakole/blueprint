@@ -72,7 +72,9 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
-  "blueprint_workspace_create"
+  "blueprint_workspace_create",
+  "blueprint_patch_record",
+  "blueprint_patch_reapply"
 ]);
 const MUTATION_FAILURE_STATUSES = new Set([
   "invalid",

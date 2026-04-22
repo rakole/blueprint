@@ -66,6 +66,9 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_config_get`
 - `blueprint_workspace_registry_get`
 - `blueprint_workspace_create`
+- `blueprint_patch_list`
+- `blueprint_patch_reapply`
+- `blueprint_patch_record`
 - `blueprint_roadmap_read`
 - `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
@@ -182,9 +185,26 @@ Shared in-flight contract for `cleanup`:
 10. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
 11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
 
+### `reapply-patches`
+
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `reapply-patches-confirmation` visible until the user approves, and keep any `dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target` waiting state explicit with the next safe action while the run is blocked.
+
+1. Read `blueprint_patch_list` first. Treat the returned `registryPath`, patch ids, manifest paths, patch paths, tracked files, compatibility notes, and audit paths as authoritative host-global patch state.
+2. Resolve the replay scope explicitly before mutation. Prefer the user-named patch ids; otherwise keep the candidate replay set bounded to the recorded registry entries that are compatible with the current repo instead of guessing across unrelated repos.
+3. Inspect git status and the resolved target before mutation. A dirty working tree, malformed patch registry, missing patch target, compatibility mismatch, or installed-extension target is a hard stop for replay. Keep that waiting state explicit as the pending gate `dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`, and keep the next safe action explicit before rerunning.
+4. Build the preview through `blueprint_patch_reapply` with `dryRun: true`. Treat its returned conflicts and target head as the authoritative preflight result for replay safety. Stop cleanly instead of mutating when the preview reports conflicts.
+5. Make the resolved target explicit before mutation: name the selected patch ids, registry path, tracked files, compatibility notes, preview result, and audit destination.
+6. Require explicit confirmation that includes the exact patch ids to replay, the tracked files, any compatibility notes, and the preview result. Keep the destructive approval gate visible as `reapply-patches-confirmation` until the user approves.
+7. After approval, replay only the confirmed patch set through `blueprint_patch_reapply` with `dryRun: false`. Never widen the replay scope after preview and confirmation.
+8. Persist the replay audit through `blueprint_patch_record` after the previewed replay path completes or reports a clean blocker. Keep host-global patch state under `~/.<host>/blueprint/patches/`; never create project-local `.blueprint/` runtime ownership for patch replay, and preserve the flow `preflight -> preview -> confirm -> replay -> record`.
+9. Keep failure handling honest: if replay is blocked by conflicts or compatibility drift, stop and surface the blocker clearly. Never claim success when repo mutation did not happen, and never mutate the installed extension directory.
+
 ## Planned Later Command Guardrail
 
-- `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `remove-workspace`, `workstreams`, and `update` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -194,3 +214,4 @@ Shared in-flight contract for `cleanup`:
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
+- For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.
