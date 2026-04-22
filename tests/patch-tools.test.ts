@@ -205,6 +205,33 @@ test("patch tools stop on malformed registry metadata", async (t) => {
   );
 });
 
+test("patch tools reject non-file-safe patch ids from the on-disk registry", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-unsafe-id-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const patchRegistryPath = path.join(globalHome, "patches");
+
+  await fs.mkdir(patchRegistryPath, { recursive: true });
+  await fs.writeFile(
+    path.join(patchRegistryPath, "index.json"),
+    JSON.stringify({ version: 1, patches: ["../escape"] }, null, 2),
+    "utf8"
+  );
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintPatchList({
+        cwd: repoPath
+      })
+    ),
+    /patch id is not file-safe/
+  );
+});
+
 test("patch replay stops before mutation on compatibility mismatch", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-mismatch-"));
   t.after(async () => {
@@ -240,6 +267,42 @@ test("patch replay stops before mutation on compatibility mismatch", async (t) =
   );
 });
 
+test("patch tools reject manifests whose patch id does not match the requested registry entry", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-manifest-mismatch-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const patchRegistryPath = path.join(globalHome, "patches");
+
+  await fs.writeFile(path.join(repoPath, "README.md"), "# repo\nalpha line\n", "utf8");
+  await recordPatchFromCurrentDiff(repoPath, globalHome, "alpha");
+  await runGit(["checkout", "--", "README.md"], repoPath);
+
+  await fs.writeFile(path.join(repoPath, "README.md"), "# repo\nbeta line\n", "utf8");
+  await recordPatchFromCurrentDiff(repoPath, globalHome, "beta");
+  await runGit(["checkout", "--", "README.md"], repoPath);
+
+  const alphaManifestPath = path.join(patchRegistryPath, "alpha.json");
+  const alphaManifest = JSON.parse(await fs.readFile(alphaManifestPath, "utf8")) as {
+    patchId: string;
+  };
+  alphaManifest.patchId = "beta";
+  await fs.writeFile(alphaManifestPath, JSON.stringify(alphaManifest, null, 2), "utf8");
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintPatchList({
+        cwd: repoPath,
+        patchIds: ["alpha"]
+      })
+    ),
+    /recorded manifest patch id does not match its registry entry/
+  );
+});
+
 test("patch replay reports conflicts without mutating repo files", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-conflict-"));
   t.after(async () => {
@@ -269,4 +332,136 @@ test("patch replay reports conflicts without mutating repo files", async (t) => 
   assert.equal(result.conflicts.length, 1);
   assert.equal(result.conflicts[0]?.patchId, "conflict");
   assert.match(await fs.readFile(path.join(repoPath, "README.md"), "utf8"), /conflicting line/);
+});
+
+test("audit-only patch recording preserves stored provenance and last applied metadata for blocked outcomes", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-audit-preserve-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const patchRegistryPath = path.join(globalHome, "patches");
+
+  await fs.writeFile(path.join(repoPath, "README.md"), "# repo\npatched line\n", "utf8");
+  await withGlobalHome(globalHome, () =>
+    blueprintPatchRecord({
+      cwd: repoPath,
+      patchId: "audit-preserve",
+      patch: "--- a/README.md\n+++ b/README.md\n@@ -1 +1,2 @@\n # repo\n+patched line\n",
+      trackedFiles: ["README.md"],
+      sourceVersion: "source-sha-1",
+      compatibility: {
+        host: "gemini",
+        repoRootName: "repo",
+        remoteUrl: "https://example.com/original.git"
+      }
+    })
+  );
+
+  const appliedResult = await withGlobalHome(globalHome, () =>
+    blueprintPatchRecord({
+      cwd: repoPath,
+      patchId: "audit-preserve",
+      trackedFiles: ["README.md"],
+      audit: {
+        action: "reapply",
+        outcome: "applied",
+        targetHead: "target-head-applied"
+      }
+    })
+  );
+
+  const appliedManifest = JSON.parse(
+    await fs.readFile(path.join(patchRegistryPath, "audit-preserve.json"), "utf8")
+  ) as {
+    sourceVersion: string | null;
+    repoRemote: string | null;
+    compatibility: {
+      host: string | null;
+      repoRootName: string;
+      remoteUrl: string | null;
+    };
+    lastAppliedAt: string | null;
+    lastOutcome: string | null;
+  };
+
+  await withGlobalHome(globalHome, () =>
+    blueprintPatchRecord({
+      cwd: repoPath,
+      patchId: "audit-preserve",
+      trackedFiles: ["README.md"],
+      sourceVersion: "source-sha-2",
+      compatibility: {
+        host: "other-host",
+        repoRootName: "other-repo",
+        remoteUrl: "https://example.com/override.git"
+      },
+      audit: {
+        action: "reapply",
+        outcome: "conflict",
+        targetHead: "target-head-conflict",
+        conflicts: ["README.md"]
+      }
+    })
+  );
+
+  const blockedManifest = JSON.parse(
+    await fs.readFile(path.join(patchRegistryPath, "audit-preserve.json"), "utf8")
+  ) as {
+    sourceVersion: string | null;
+    repoRemote: string | null;
+    compatibility: {
+      host: string | null;
+      repoRootName: string;
+      remoteUrl: string | null;
+    };
+    lastAppliedAt: string | null;
+    lastOutcome: string | null;
+  };
+  const auditLog = await fs.readFile(appliedResult.auditPath, "utf8");
+
+  assert.equal(appliedManifest.sourceVersion, "source-sha-1");
+  assert.equal(blockedManifest.sourceVersion, appliedManifest.sourceVersion);
+  assert.equal(blockedManifest.repoRemote, appliedManifest.repoRemote);
+  assert.deepEqual(blockedManifest.compatibility, appliedManifest.compatibility);
+  assert.equal(blockedManifest.lastAppliedAt, appliedManifest.lastAppliedAt);
+  assert.equal(blockedManifest.lastOutcome, "conflict");
+  assert.match(auditLog, /"outcome":"applied"/);
+  assert.match(auditLog, /"outcome":"conflict"/);
+});
+
+test("implicit patch replay stays bounded to compatible entries for the current repo", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-patch-compatible-scope-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoAPath = await createGitRepo(tempRoot, "repo-a");
+  const repoBPath = await createGitRepo(tempRoot, "repo-b");
+  const globalHome = path.join(tempRoot, "global-home");
+
+  await fs.writeFile(path.join(repoAPath, "README.md"), "# repo-a\npatch for repo a\n", "utf8");
+  await recordPatchFromCurrentDiff(repoAPath, globalHome, "repo-a-fix");
+  await runGit(["checkout", "--", "README.md"], repoAPath);
+
+  await fs.writeFile(path.join(repoBPath, "README.md"), "# repo-b\npatch for repo b\n", "utf8");
+  await recordPatchFromCurrentDiff(repoBPath, globalHome, "repo-b-fix");
+  await runGit(["checkout", "--", "README.md"], repoBPath);
+
+  const result = await withGlobalHome(globalHome, () =>
+    blueprintPatchReapply({
+      cwd: repoAPath
+    })
+  );
+
+  assert.deepEqual(result.appliedPatches, ["repo-a-fix"]);
+  assert.deepEqual(result.skippedPatches, []);
+  assert.deepEqual(result.conflicts, []);
+  assert.match(await fs.readFile(path.join(repoAPath, "README.md"), "utf8"), /patch for repo a/);
+  assert.doesNotMatch(
+    await fs.readFile(path.join(repoBPath, "README.md"), "utf8"),
+    /patch for repo b/
+  );
 });
