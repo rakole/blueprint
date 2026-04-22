@@ -4,6 +4,14 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `plan-milestone-gaps` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded audit-follow-up roadmap planning pass, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Keep the waiting state explicit as `missing-milestone-audit` when the source report is unavailable, `no-actionable-gaps` when no roadmap mutation is needed, and `gap-plan-confirmation` while the grouped plan is waiting for approval.
 
 
 ## Purpose
@@ -33,6 +41,7 @@
 
 - User-facing result: a concise “Gap Closure Plan” review plus a completion summary and the next safe implemented action when applicable.
 - Repo side effects: Appends approved gap-closure phases to the roadmap, creates the matching phase directories, and updates `.blueprint/STATE.md`.
+- In-flight posture: none beyond a concise inline review or confirmation gate; `plan-milestone-gaps` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads

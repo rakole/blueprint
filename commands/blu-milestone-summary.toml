@@ -19,9 +19,13 @@ Follow this flow exactly:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
+- Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/reports/` and `.blueprint/STATE.md`.
 - Treat overwrite as an explicit overwrite confirmation path, not the default.
 - Prefer `ask_user` for overwrite confirmation or any other high-risk confirmation gate.
+- Keep the waiting state explicit as `missing-milestone-audit`, `missing-milestone-complete`, or `milestone-summary-overwrite-confirmation` when the command is blocked before writing.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-milestone-summary`.
+- Do not turn `/blu-milestone-summary` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Keep this Wave 2 summary step skill-led; do not pull in any later-wave docs agent.
 - If `/blu-new-milestone` is unavailable for any reason, fall back to `/blu-progress` instead of suggesting a blocked command.
 """

@@ -85,6 +85,12 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 
 ## Workflow Rules
 
+Execution profile for `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, and `/blu-new-milestone`: `interactive-read`.
+
+In-flight status fields for this roadmap-admin family: resolved scope, active stage, pending gate, execution mode, next safe action.
+
+Treat roadmap-admin commands as short, bounded roadmap or report work, not as long-running orchestration. Do not use `update_topic`, `write_todos`, or tracker tools to make these commands look like lifecycle, review, or maintenance runs. When a roadmap-admin command needs confirmation, prefer Gemini's `ask_user` tool when a structured confirmation helps; otherwise keep the same decision boundary explicit in prose.
+
 ### `add-phase`
 
 1. Require a non-empty phase description before any mutation.

@@ -4,6 +4,14 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `add-phase` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded roadmap append, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Keep the waiting state explicit as `phase-number-confirmation` while the computed append target is waiting for approval, and as `stale-phase-number` when the previewed number is no longer current.
 
 
 ## Purpose
@@ -34,6 +42,7 @@
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
 - Repo side effects: Appends the new phase to `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
+- In-flight posture: none beyond a concise inline summary or confirmation gate; `add-phase` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads

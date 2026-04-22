@@ -13,6 +13,7 @@ test("complete-milestone manifest references report-driven closeout tools and su
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
+  assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_load/);
@@ -27,6 +28,10 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.match(commandFile, /\/blu-plan-milestone-gaps/);
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /missing-milestone-audit/);
+  assert.match(commandFile, /milestone-not-ready/);
+  assert.match(commandFile, /milestone-complete-overwrite-confirmation/);
+  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /milestone-complete-<milestone>/);
   assert.match(commandFile, /\/blu-milestone-summary <milestone>/);
   assert.doesNotMatch(commandFile, /blueprint_phase_mark_complete/);
@@ -51,4 +56,21 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
   assert.match(skillFile, /report-driven and state-driven/i);
   assert.match(skillFile, /\/blu-milestone-summary <milestone>/);
   assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
+  assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+});
+
+test("complete-milestone docs and runtime reference expose the interactive-read waiting-state contract", async () => {
+  const [docFile, runtimeFile] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/complete-milestone.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
+  ]);
+
+  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
+  assert.match(docFile, /shared interactive-read classification/i);
+  assert.match(docFile, /missing-milestone-audit/);
+  assert.match(docFile, /milestone-not-ready/);
+  assert.match(docFile, /milestone-complete-overwrite-confirmation/);
+  assert.match(docFile, /does not expose the long-running progress layer/i);
+  assert.match(runtimeFile, /`complete-milestone` .*Interactive-read profile for bounded milestone closeout:/);
 });

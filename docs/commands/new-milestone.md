@@ -4,6 +4,14 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `new-milestone` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded carry-forward or reset decision plus scaffold write, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Keep the waiting state explicit as `missing-milestone-summary`, `carry-forward-confirmation`, or `starter-doc-overwrite-confirmation` when the command is blocked before writing.
 
 
 ## Purpose
@@ -35,6 +43,7 @@
 
 - User-facing result: a concise completion summary plus the next safe implemented action when applicable.
 - Repo side effects: Rewrites the starter milestone docs in `.blueprint/`, scaffolds the first carried-forward phase context artifact, and updates `.blueprint/STATE.md`.
+- In-flight posture: none beyond a concise inline summary or confirmation gate; `new-milestone` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads

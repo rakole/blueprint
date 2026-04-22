@@ -19,9 +19,13 @@ Follow this flow exactly:
 Response requirements:
 - Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Use `mcp_blueprint_blueprint_state_load` to inspect `derivedStatus.milestoneAudit` before drafting the closeout report.
+- Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/reports/` and `.blueprint/STATE.md`.
 - Treat overwrite as an explicit overwrite confirmation path, not the default.
 - Prefer `ask_user` for overwrite confirmation or any other high-risk confirmation gate.
+- Keep the waiting state explicit as `missing-milestone-audit`, `milestone-not-ready`, or `milestone-complete-overwrite-confirmation` when the command is blocked before writing.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-complete-milestone`.
+- Do not turn `/blu-complete-milestone` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not rewrite `.blueprint/ROADMAP.md`, delete or rename phase directories, or invent a new milestone-closeout MCP tool path.
 - Keep the closeout flow report-driven and state-driven. If the next step is unavailable, fall back to `/blu-progress` instead of suggesting a blocked command.
 """

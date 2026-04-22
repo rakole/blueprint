@@ -16,8 +16,12 @@ Follow this flow exactly:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_roadmap_add_phase`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
+- Execution profile: `interactive-read`.
 - Keep writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
 - Do not infer a description when the user omitted one.
+- Keep the waiting state explicit as `phase-number-confirmation` while the command is waiting for approval, and as `stale-phase-number` when the previewed append target is no longer current.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-add-phase`.
+- Do not turn `/blu-add-phase` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not mutate anything until the computed next phase number has been previewed and confirmed through `ask_user`.
 - Do not advertise unimplemented roadmap commands as follow-up steps.
 - Keep the follow-up inside the shipped lifecycle surface; prefer `/blu-discuss-phase <phase>` over planning or execution shortcuts.
