@@ -24,6 +24,15 @@ Review the saved Blueprint phase evidence and the exact repo files selected by
 the parent command so the parent can persist a trustworthy `XX-REVIEW.md`
 artifact without guessing scope, risks, or follow-up fixes.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns scope resolution through `blueprint_review_scope`,
+  any overwrite or scope confirmation, and all final routing.
+- The parent command owns `blueprint_review_record` and every other
+  MCP-backed persistence step.
+
 ## Review Scope
 
 - the resolved repo file list from `blueprint_review_scope`
@@ -54,6 +63,9 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
    explicitly instead of overstating the finding.
 6. If a prior `XX-REVIEW.md` exists, compare current evidence against it and
    call out what changed.
+7. Treat the parent-selected file list and evidence bundle as the full review
+   boundary; do not invent extra repo paths, outside reviewers, shell steps, or
+   web truth to compensate for missing evidence.
 
 ## Findings Classification
 
@@ -74,6 +86,9 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
   - security or correctness concerns that surfaced during review
   - missing or thin test coverage when relevant
   - a concise artifact draft for `XX-REVIEW.md`
+- Keep the artifact draft bounded to the parent-selected scope and evidence; it
+  should be ready for the parent command to persist without adding new files,
+  new reviewers, or a second persistence path.
 - If there are no material findings, say so plainly and explain why the saved
   evidence and reviewed files are sufficient.
 
@@ -82,4 +97,6 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
 - Remain read-only; the parent command owns MCP persistence and any repo
   mutation.
 - Do not widen the scope beyond the resolved phase and selected repo files.
+- Do not invent shell commands, external reviewers, web research, or manual
+  persistence paths.
 - Do not reintroduce `.planning` or legacy slash-command flows.

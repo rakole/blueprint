@@ -24,6 +24,15 @@ Assess saved Blueprint phase evidence and the relevant frontend surface so the
 parent command can persist a trustworthy `XX-UI-REVIEW.md` artifact without
 guessing what was actually shipped.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns saved-evidence resolution, any overwrite
+  confirmation, and final routing.
+- The parent command owns `blueprint_review_record` and every other
+  MCP-backed persistence step.
+
 ## Audit Scope
 
 - phase execution summaries and the matching plan artifacts
@@ -56,6 +65,9 @@ guessing what was actually shipped.
    and note what improved or regressed.
 6. Keep findings concrete enough that the parent command can persist a durable
    artifact and recommend the next implemented Blueprint action safely.
+7. Keep the audit bounded to the parent-selected frontend surface and supplied
+   evidence; do not invent screenshots, shell-driven visual checks, outside
+   reviewers, or web truth.
 
 ## Gap Classification
 
@@ -76,6 +88,8 @@ guessing what was actually shipped.
   - strengths confirmed
   - gaps or regressions found
   - a concise artifact draft for `XX-UI-REVIEW.md`
+- Keep the artifact draft bounded to the selected phase surface and the
+  evidence actually reviewed.
 - If there are no material gaps, say so plainly and explain why the reviewed
   evidence is sufficient.
 
@@ -83,6 +97,8 @@ guessing what was actually shipped.
 
 - Remain read-only; the parent command owns MCP persistence and any repo
   mutation.
+- Do not invent shell commands, external reviewers, web research, or manual
+  persistence paths.
 - Do not widen into implementation execution or design brainstorming unrelated
   to the selected phase.
 - Do not reintroduce `.planning` or legacy slash-command flows.

@@ -124,17 +124,90 @@ test("docs specialist agents encode scoped drafting and evidence-backed verifica
   const docWriter = await readAgent("blueprint-doc-writer");
   const docVerifier = await readAgent("blueprint-doc-verifier");
 
+  assert.match(docWriter, /## Parent-Owned Responsibilities/);
+  assert.match(docWriter, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(docWriter, /doc-scope selection/i);
+  assert.match(docWriter, /external-verification decision/i);
   assert.match(docWriter, /## Required Reads/);
   assert.match(docWriter, /## Output Contract/);
   assert.match(docWriter, /Path: <repo path>/);
+  assert.match(docWriter, /repo truth distinct from optional external truth/i);
+  assert.match(
+    docWriter,
+    /Do not introduce outside-source claims unless the parent explicitly supplied\s+or approved them/i
+  );
+  assert.match(docWriter, /Do not invent shell steps, external reviewers, or persistence paths/i);
   assert.match(docWriter, /Preserve strong existing structure/i);
+  assert.match(
+    docWriter,
+    /Do not widen beyond the parent-selected doc files, digest scope, or approved\s+external sources/i
+  );
   assert.match(docWriter, /Do not widen into `\.blueprint\/`, `\.planning\/`, or hidden legacy slash-command behavior/);
 
+  assert.match(docVerifier, /## Parent-Owned Responsibilities/);
+  assert.match(docVerifier, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(docVerifier, /external-verification decision/i);
   assert.match(docVerifier, /## Verification Rules/);
   assert.match(docVerifier, /PASS`, `GAP`, or `BLOCKED`/);
+  assert.match(docVerifier, /repo truth distinct from optional external truth/i);
+  assert.match(
+    docVerifier,
+    /Do not invent shell verification steps, outside reviewers, or a new\s+persistence path/i
+  );
   assert.match(docVerifier, /## Required Output Contract/);
   assert.match(docVerifier, /Report Draft/);
+  assert.match(
+    docVerifier,
+    /bounded to the parent-selected\s+docs scope, digest scope, and any explicitly approved external sources/i
+  );
   assert.match(docVerifier, /Do not downgrade unsupported claims/i);
+});
+
+test("review-family specialist agents encode parent-owned orchestration and bounded evidence contracts", async () => {
+  const reviewer = await readAgent("blueprint-reviewer");
+  const verifier = await readAgent("blueprint-verifier");
+  const securityAuditor = await readAgent("blueprint-security-auditor");
+  const uiAuditor = await readAgent("blueprint-ui-auditor");
+
+  assert.match(reviewer, /## Parent-Owned Responsibilities/);
+  assert.match(reviewer, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(reviewer, /`blueprint_review_scope`/);
+  assert.match(
+    reviewer,
+    /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i
+  );
+  assert.match(reviewer, /Keep the artifact draft bounded to the parent-selected scope and evidence/i);
+
+  assert.match(verifier, /## Parent-Owned Responsibilities/);
+  assert.match(verifier, /follow-up fix capture gates/i);
+  assert.match(
+    verifier,
+    /Do not invent external reviewers, shell verification steps, web truth, or\s+persistence paths/i
+  );
+  assert.match(verifier, /Keep the draft bounded to the parent-selected validation or UAT scope/i);
+
+  assert.match(securityAuditor, /## Parent-Owned Responsibilities/);
+  assert.match(securityAuditor, /verify-versus-accept decision/i);
+  assert.match(securityAuditor, /declared threat model and mitigation register/i);
+  assert.match(
+    securityAuditor,
+    /do not expand into a generic security scan, shell-heavy\s+investigation, outside reviewers, or web truth gathering/i
+  );
+  assert.match(
+    securityAuditor,
+    /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i
+  );
+
+  assert.match(uiAuditor, /## Parent-Owned Responsibilities/);
+  assert.match(uiAuditor, /overwrite\s+confirmation/i);
+  assert.match(
+    uiAuditor,
+    /do not invent screenshots, shell-driven visual checks, outside\s+reviewers, or web truth/i
+  );
+  assert.match(
+    uiAuditor,
+    /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i
+  );
 });
 
 test("debug specialist agent encodes bounded investigation and report-ready diagnosis", async () => {
