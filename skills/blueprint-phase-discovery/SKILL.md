@@ -31,6 +31,11 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Keep the in-flight status contract visible during non-trivial `/blu-discuss-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
 - On Gemini, use `update_topic` and `write_todos` only as session-local visibility aids during non-trivial `/blu-discuss-phase` runs; do not let them replace MCP-backed artifacts, checkpoints, or `STATE.md`.
 - When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
+- Execution profile for `/blu-research-phase`: `long-running-mutation`.
+- Keep the shared stage vocabulary explicit during non-trivial `/blu-research-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
+- Keep the in-flight status contract visible during non-trivial `/blu-research-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
+- On Gemini, use `update_topic` and `write_todos` only as session-local visibility aids during non-trivial `/blu-research-phase` runs; do not let them replace MCP-backed artifacts, checkpoints, or `STATE.md`.
+- When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in short progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
 
 ## Parity Goal
 
@@ -126,15 +131,19 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 4. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
 5. Use `blueprint_artifact_scaffold` only to seed a missing research file.
 6. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
-7. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
-8. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
-9. Require explicit overwrite confirmation before replacing existing research.
-10. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
-11. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
-12. Break long-running research into topic-sized strands instead of forcing a single linear pass. Re-check the phase context and saved research status between strands so the command can continue from the last durable checkpoint instead of redoing settled work.
-13. When a strand reaches a natural pause, write or refresh the phase checkpoint with the completed topics, remaining topics, open questions, and a resume hint that stays inside the implemented Blueprint surface. Treat the checkpoint as the continuation point for the next run.
-14. If evidence stays incomplete or conflicts remain unresolved after a reasonable pass, mark the result as inconclusive rather than stretching the draft. Summarize what was verified, what remains unknown, and the next safe action within the implemented surface, such as continuing research, revisiting context, or moving to `/blu-progress` when planning is no longer appropriate.
-15. Do not imply auto-chaining or power-mode continuation. Any continuation path must be explicit, checkpointed, and resumable through the shipped discovery workflow.
+7. Keep the resolved scope explicit as the selected phase, current context and research reuse-versus-update posture, codebase-bundle availability, the topic strand currently in progress, and whether the run is repo-evidence-only or also checking external truth.
+8. Ground repo truth first in `blueprint_phase_context`, the actual saved `XX-CONTEXT.md` body, any existing research, and saved `.blueprint/codebase/` summaries before consulting external sources.
+9. Use official docs or explicitly supplied external references only when the repo cannot settle a claim, and keep repo-derived evidence distinct from external or web-derived evidence in the draft, recommendations, and `## Sources`. If external verification is skipped or unavailable, say so plainly instead of implying it happened.
+10. During non-trivial multi-strand research on Gemini, use `update_topic` and `write_todos` to keep the active stage and next safe action visible without turning either tool into persistence. When a host does not expose those helpers, keep the same visibility through short progress recaps plus MCP-backed checkpoints and `STATE.md`.
+11. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
+12. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
+13. Require explicit overwrite confirmation before replacing existing research.
+14. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
+15. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
+16. Break long-running research into topic-sized strands instead of forcing a single linear pass. Re-check the phase context and saved research status between strands so the command can continue from the last durable checkpoint instead of redoing settled work.
+17. When a strand reaches a natural pause, write or refresh the phase checkpoint with the completed topics, remaining topics, open questions, and a resume hint that stays inside the implemented Blueprint surface. Treat the checkpoint as the continuation point for the next run.
+18. If evidence stays incomplete or conflicts remain unresolved after a reasonable pass, mark the result as inconclusive rather than stretching the draft. Summarize what was verified, what remains unknown, and the next safe action within the implemented surface, such as continuing research, revisiting context, or moving to `/blu-progress` when planning is no longer appropriate.
+19. Do not imply auto-chaining or power-mode continuation. Any continuation path must be explicit, checkpointed, and resumable through the shipped discovery workflow.
 
 ### `list-phase-assumptions`
 
