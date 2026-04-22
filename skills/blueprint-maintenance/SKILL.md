@@ -145,15 +145,22 @@ Shared in-flight contract for `undo`:
 
 ### `cleanup`
 
+Shared in-flight contract for `cleanup`:
+
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep the protected scope explicit throughout the run: current phase, active roadmap references, evidence-incomplete directories, and the final protected exclusions must stay visible before any archive scope is approved.
+
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Read `blueprint_roadmap_read` before proposing any archive scope so the current phase and active roadmap references stay visible as protected exclusions.
-3. Inspect git status plus `.blueprint/phases/` before mutation. A dirty working tree, missing phase root, or obviously inconsistent phase layout is a hard stop for cleanup.
+3. Inspect git status plus `.blueprint/phases/` before mutation. A dirty working tree, missing phase root, or obviously inconsistent phase layout is a hard stop for cleanup. Keep that waiting state explicit as the pending gate `dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`, and keep the next safe action explicit before rerunning.
 4. Make the resolved target explicit before mutation: name the candidate phase directories, protected exclusions, and final archive destination.
 5. Read saved milestone completion, summary, and related evidence through `blueprint_artifact_list` before proposing any archive scope.
-6. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, and stop instead of guessing when saved evidence is incomplete.
+6. Keep the cleanup scope explicit: only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap, keep evidence-incomplete directories in the protected set, and stop instead of guessing when saved evidence is incomplete.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` so the cleanup plan stays grounded in the saved milestone evidence and the selected directories.
-8. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior.
-9. Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest` before filesystem mutation begins, and use the returned `path` as the authoritative saved report location.
+8. Require explicit confirmation that includes the selected phase directories, protected exclusions, archive destination, whether the operation is move versus copy-then-delete, and report overwrite behavior. Keep the destructive approval gate visible as `cleanup-confirmation` until the user approves. When a new cleanup destination would need to be created, keep that waiting state visible as `archive-destination-confirmation` until the user explicitly approves creating it.
+9. If replacing `cleanup-latest` needs overwrite approval, keep the report-overwrite waiting state visible as `report-overwrite-confirmation` and name the next safe action before continuing. Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest` before filesystem mutation begins, and use the returned `path` as the authoritative saved report location.
 10. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
 11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
 
@@ -167,4 +174,4 @@ Shared in-flight contract for `undo`:
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, make any active pending gate or waiting state explicit, and end with the safest implemented follow-up or manual next step.
 - For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
-- For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
+- For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.

@@ -5,7 +5,7 @@ import path from "node:path";
 
 const repoRoot = process.cwd();
 
-test("cleanup manifest references the maintenance skill, cleanup report, and explicit archival confirmation guards", async () => {
+test("cleanup manifest references the maintenance skill, high-risk maintenance profile, and explicit protected-scope confirmation guards", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-cleanup.toml"),
     "utf8"
@@ -13,6 +13,15 @@ test("cleanup manifest references the maintenance skill, cleanup report, and exp
 
   assert.match(commandFile, /`blueprint-maintenance` skill/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-maintenance\.md/);
+  assert.match(commandFile, /Execution profile: `high-risk-maintenance`/);
+  assert.match(
+    commandFile,
+    /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/
+  );
+  assert.match(
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
   assert.match(commandFile, /mcp_blueprint_blueprint_project_status/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
@@ -20,13 +29,18 @@ test("cleanup manifest references the maintenance skill, cleanup report, and exp
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /cleanup-latest/);
+  assert.match(commandFile, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
+  assert.match(commandFile, /cleanup-confirmation/);
+  assert.match(commandFile, /archive-destination-confirmation/);
+  assert.match(commandFile, /report-overwrite-confirmation/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /active roadmap/i);
+  assert.match(commandFile, /protected exclusions explicit/i);
   assert.match(commandFile, /Do not invent a new persistent archive schema/i);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("maintenance skill captures cleanup gating, report persistence, and active-phase safety", async () => {
+test("maintenance skill captures cleanup visibility, report persistence, and protected-scope safety", async () => {
   const skillFile = await readFile(
     path.join(repoRoot, "skills/blueprint-maintenance/SKILL.md"),
     "utf8"
@@ -39,9 +53,58 @@ test("maintenance skill captures cleanup gating, report persistence, and active-
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
+  assert.match(skillFile, /Execution profile: `high-risk-maintenance`/);
+  assert.match(
+    skillFile,
+    /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+  );
+  assert.match(
+    skillFile,
+    /resolved scope, active stage, pending gate, execution mode, next safe action/i
+  );
   assert.match(skillFile, /cleanup-latest/);
+  assert.match(skillFile, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
+  assert.match(skillFile, /cleanup-confirmation/);
+  assert.match(skillFile, /archive-destination-confirmation/);
+  assert.match(skillFile, /report-overwrite-confirmation/);
+  assert.match(skillFile, /protected scope explicit/i);
   assert.match(skillFile, /never the current phase/i);
   assert.match(skillFile, /before filesystem mutation begins/i);
+});
+
+test("cleanup docs and runtime reference expose the protected-scope visibility and waiting-state contract", async () => {
+  const [commandDoc, runtimeReference] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/cleanup.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
+  assert.match(
+    commandDoc,
+    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+  );
+  assert.match(
+    commandDoc,
+    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  );
+  assert.match(commandDoc, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
+  assert.match(commandDoc, /cleanup-confirmation/);
+  assert.match(commandDoc, /archive-destination-confirmation/);
+  assert.match(commandDoc, /report-overwrite-confirmation/);
+  assert.match(commandDoc, /protected exclusions/i);
+  assert.match(commandDoc, /next safe action/i);
+
+  assert.match(runtimeReference, /\| `cleanup` \| `docs\/commands\/cleanup\.md` \| `blueprint-maintenance` \|/);
+  assert.match(runtimeReference, /High-risk-maintenance profile for protected-scope phase-directory archival/i);
+  assert.match(
+    runtimeReference,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+  );
+  assert.match(runtimeReference, /current phase, active roadmap references, evidence-incomplete directories, and final protected exclusions explicit/i);
+  assert.match(runtimeReference, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
+  assert.match(runtimeReference, /cleanup-confirmation/);
+  assert.match(runtimeReference, /archive-destination-confirmation/);
+  assert.match(runtimeReference, /report-overwrite-confirmation/);
 });
 
 test("repo-facing status docs treat cleanup as a shipped command", async () => {
