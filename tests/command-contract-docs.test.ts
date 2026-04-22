@@ -245,6 +245,11 @@ test("map-codebase docs keep the repaired brownfield mapping contract explicit",
     catalogMarkdown,
     /\| `map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented` \|/
   );
+  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandDoc, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(commandDoc, /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/);
+  assert.match(commandDoc, /reuse-versus-refresh posture explicit/i);
+  assert.match(commandDoc, /focus-area deepening/i);
   assert.match(commandDoc, /ask_user/i);
   assert.match(commandDoc, /blueprint_artifact_contract_read/i);
   assert.match(commandDoc, /blueprint_artifact_scaffold/i);
@@ -254,8 +259,15 @@ test("map-codebase docs keep the repaired brownfield mapping contract explicit",
   assert.match(commandDoc, /Existing codebase docs should be reused by default\./i);
   assert.match(skillDoc, /ask_user/i);
   assert.match(skillDoc, /blueprint_artifact_contract_read/i);
+  assert.match(skillDoc, /Execution profile: `long-running-mutation`/);
+  assert.match(skillDoc, /Keep the shared stage vocabulary explicit during non-trivial runs/i);
+  assert.match(skillDoc, /Keep the in-flight status contract legible throughout the mapping pass/i);
   assert.match(skillDoc, /reuse-by-default behavior/i);
   assert.match(skillDoc, /reuse-versus-refresh guidance/i);
+  assert.match(
+    runtimeReference,
+    /Long-running-mutation profile for read-heavy brownfield mapping: keep `Resolve`\/`Read`\/`Decide`\/`Execute`\/`Persist`\/`Validate`\/`Route` narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+  );
   assert.match(
     runtimeReference,
     /\| `map-codebase` \| `docs\/commands\/map-codebase\.md` \| `blueprint-map` \| `blueprint_project_status`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_codebase_artifact_write`<br>`blueprint_artifact_validate` \| `blueprint-mapper` \|/

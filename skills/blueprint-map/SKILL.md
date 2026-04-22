@@ -24,6 +24,9 @@ Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-de
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Prefer Gemini CLI's built-in `ask_user` dialog for overwrite, reuse-versus-refresh, or any structured confirmation choice.
+- Execution profile: `long-running-mutation`.
+- Keep the shared stage vocabulary explicit during non-trivial runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
+- Keep the in-flight status contract legible throughout the mapping pass: resolved scope, active stage, pending gate, execution mode, and next safe action.
 - Treat a user-supplied focus area as targeted deepening of the same seven-artifact bundle, not as a separate suffix-only mode.
 - Read the canonical codebase-bundle contract before deciding whether to seed or refresh existing artifacts, and validate the resulting bundle before concluding.
 - For `mcp_blueprint_blueprint_artifact_scaffold`, pass repo-relative artifact paths such as `.blueprint/codebase/STACK.md`; do not guess bare names like `STACK` and do not pass absolute filesystem paths.
@@ -81,9 +84,11 @@ Blueprint deltas:
 
 1. Stop early if Blueprint is uninitialized or partial.
 2. Inspect the existing codebase bundle before writing.
-3. Reuse edited docs by default.
-4. Require explicit replace confirmation before overwriting existing codebase docs.
-5. Persist substantive mapping content through `blueprint_codebase_artifact_write` instead of raw file edits once the digest-backed summaries are ready.
-6. Validate the resulting bundle before treating the mapping pass as complete.
-7. Mention created, reused, and blocked artifacts separately.
-8. End with the next implemented Blueprint action, not a planned-only command.
+3. Keep the resolved scope explicit as the repo root, requested focus area if any, and the same seven-artifact bundle target.
+4. Reuse edited docs by default.
+5. Treat reuse-versus-refresh, replace confirmation, and validation blockers as explicit pending gates instead of post-hoc notes.
+6. Keep the execution mode explicit as full-bundle mapping versus focused deepening, plus reuse-default versus confirmed refresh.
+7. Persist substantive mapping content through `blueprint_codebase_artifact_write` instead of raw file edits once the digest-backed summaries are ready.
+8. Validate the resulting bundle before treating the mapping pass as complete.
+9. Mention created, reused, and blocked artifacts separately.
+10. End with the next implemented Blueprint action, not a planned-only command.
