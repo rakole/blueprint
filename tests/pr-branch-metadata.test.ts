@@ -22,6 +22,10 @@ test("pr-branch manifest references the maintenance skill, report tool, and git 
   assert.match(commandFile, /\.blueprint\/\*\*/);
   assert.match(commandFile, /planning\.commit_docs/);
   assert.match(commandFile, /uncommitted changes/i);
+  assert.match(commandFile, /pending gate `clean-working-tree`/);
+  assert.match(commandFile, /pending gate as `review-branch-confirmation`/);
+  assert.match(commandFile, /`report-overwrite-confirmation`/);
+  assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
@@ -39,8 +43,30 @@ test("maintenance skill captures pr-branch filtering, report persistence, and so
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /excluding `?\.blueprint\/\*\*`? bookkeeping paths/i);
   assert.match(skillFile, /dirty working tree/i);
+  assert.match(skillFile, /pending gate `clean-working-tree`/);
+  assert.match(skillFile, /`review-branch-confirmation`/);
+  assert.match(skillFile, /report overwrite confirmation/i);
   assert.match(skillFile, /without rewriting or deleting the source branch in place/i);
   assert.match(skillFile, /pr-branch-latest/);
+});
+
+test("pr-branch docs and runtime reference expose the waiting-state visibility contract", async () => {
+  const [docFile, runtimeFile] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/pr-branch.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.match(docFile, /\| Execution profile \| `high-risk-maintenance` \|/);
+  assert.match(docFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(docFile, /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/);
+  assert.match(docFile, /report-backed pre-mutation posture/i);
+  assert.match(docFile, /`clean-working-tree`/);
+  assert.match(docFile, /report overwrite confirmation/i);
+  assert.match(runtimeFile, /High-risk-maintenance profile for clean review-branch preparation/i);
+  assert.match(runtimeFile, /`clean-working-tree`, `review-branch-confirmation`, or report overwrite approval/);
+  assert.match(runtimeFile, /report-backed pre-mutation posture reviewable/i);
+  assert.match(runtimeFile, /next safe action explicit/i);
+  assert.match(runtimeFile, /never rewrite the source branch in place/i);
 });
 
 test("repo-facing status docs treat pr-branch as a shipped command", async () => {

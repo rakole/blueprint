@@ -4,6 +4,13 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `high-risk-maintenance` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep the pre-mutation posture explicit throughout the run: resolved scope must stay tied to the source branch, base branch, candidate review branch, filtered include or exclude decision, and digest-backed evidence; pending gates stay limited to `clean-working-tree`, `review-branch-confirmation`, and report overwrite confirmation when those gates are triggered; execution mode should reflect preview-only versus confirmed review-branch preparation; and the next safe action should stay visible while the command is waiting on cleanup, approval, or manual follow-through.
 
 
 ## Purpose
@@ -32,6 +39,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- In-flight pr-branch work should keep the resolved scope, active stage, pending gate, execution mode, report-backed pre-mutation posture, and next safe action legible while the run is still live.
 
 
 ## Blueprint And Global State Reads
@@ -102,7 +110,7 @@
 - If filtering produces an unexpectedly empty diff, the command should stop and explain why before creating noise branches.
 - Base-branch and commit-docs behavior should come from normalized effective config rather than a second branch-detection path inside the command.
 - The command should stop on a dirty working tree instead of mixing uncommitted changes into the review-branch replay path.
-- The command should also name the resolved source branch, base branch, and filtered target explicitly before mutation so preflight validation is reviewable.
+- The command should also name the resolved source branch, base branch, filtered target, pending gate, and next safe action explicitly before mutation so preflight validation is reviewable.
 
 
 ## User Prompts And Confirmation Gates
@@ -110,6 +118,7 @@
 
 - Always confirm the target base branch and filtered commit scope.
 - Confirm report replacement before overwriting `.blueprint/reports/pr-branch-latest.md`.
+- When the repo is dirty, the command should stop in a visible `clean-working-tree` waiting state instead of implying that branch creation can continue.
 
 
 ## Edge Cases
@@ -138,6 +147,7 @@
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
 - Preserves the source branch and records the created review branch plus filtered scope in `.blueprint/reports/pr-branch-latest.md`.
 - Honors normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` when preparing a review branch.
+- Keeps the report-backed pre-mutation posture, pending gates, and the next safe action explicit while the command is waiting on cleanup, confirmation, or report overwrite approval.
 
 
 ## Test Cases
@@ -147,4 +157,3 @@
 - Git or external CLI availability fixture.
 - Base-branch-from-config fixture.
 - Direct `pr-branch` happy-path fixture.
-
