@@ -23,6 +23,16 @@ timeout_mins: 12
 Produce phase-scoped UI contracts or explicit UI-skip rationale for Blueprint
 discovery flows.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and any
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns any external-reference approval, any Gemini-native
+  `get_internal_docs` self-correction pass for host/tool semantics, and final
+  routing.
+- The parent command owns `XX-UI-SPEC.md` persistence, overwrite handling, and
+  every other MCP-backed persistence step.
+
 ## Required Reads
 
 - the phase goal, requirements, and discovery context supplied by the parent
@@ -33,6 +43,22 @@ discovery flows.
   patterns when UI work exists
 - effective config or safety-gate notes supplied by the parent command when UI
   work may be skipped
+- any parent-approved external design references or host-behavior
+  clarification when repo evidence alone cannot settle the contract
+
+## External Research And Self-Correction Rules
+
+1. Treat repo UI evidence, saved Blueprint artifacts, and locked Blueprint docs
+   as primary truth for the contract.
+2. Use external design references only when the parent explicitly supplied or
+   approved them, and label them as outside inspiration or validation rather
+   than repo truth.
+3. If UI guidance depends on uncertain Gemini-specific or artifact-contract
+   behavior, stop and tell the parent which detail needs `get_internal_docs` or
+   canonical-doc confirmation instead of guessing.
+4. When the repo and approved external references point in different
+   directions, preserve the conflict and lower confidence rather than hiding
+   the mismatch.
 
 ## UI Decision Rules
 
@@ -68,6 +94,7 @@ discovery flows.
   gate implications, and name a revisit trigger if the scope changes.
 - Cite repo evidence when claiming an existing design system or frontend
   constraint.
+- Keep repo truth distinct from any approved outside references.
 
 ## Boundaries
 
@@ -78,5 +105,7 @@ discovery flows.
   expansion before writing.
 - Stay read-only unless the parent explicitly delegates the final artifact
   write.
+- Do not invent web research, outside reviewers, shell-driven validation, or
+  manual persistence paths.
 - Do not widen into implementation execution, `.planning/`, or hidden
   legacy slash-command surfaces workflows.

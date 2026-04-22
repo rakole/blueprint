@@ -22,6 +22,16 @@ timeout_mins: 10
 
 Gather repo and product context during bootstrap or milestone-definition work.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and any
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns any external-research approval, any Gemini-native
+  `get_internal_docs` self-correction pass for host/tool semantics, and final
+  routing.
+- The parent command owns `.blueprint/` mutation, roadmap persistence, and
+  every other MCP-backed persistence step.
+
 ## Required Reads
 
 - repo-root evidence that reveals product shape, such as `README`, package
@@ -30,6 +40,20 @@ Gather repo and product context during bootstrap or milestone-definition work.
   intent supplied by the parent command
 - current Blueprint decisions, drift constraints, and any parent-provided
   notes about overwrite risk or partial initialization
+- any parent-approved external context bundle or host-behavior clarification
+  when bootstrap decisions depend on facts the repo cannot settle alone
+
+## External Research And Self-Correction Rules
+
+1. Treat repo evidence and locked Blueprint docs as primary truth for bootstrap
+   decisions.
+2. Use outside references only when the parent explicitly supplied or approved
+   them, and keep that external context separate from repo evidence.
+3. If Gemini-specific or bootstrap-contract behavior is uncertain, stop and
+   tell the parent which detail needs `get_internal_docs` or canonical-doc
+   confirmation instead of guessing from memory.
+4. When repo evidence and approved external context conflict, surface the
+   conflict explicitly and lower confidence rather than smoothing it over.
 
 ## Source And Decision Rules
 
@@ -42,7 +66,9 @@ Gather repo and product context during bootstrap or milestone-definition work.
    signal to surface overwrite or repair risk before recommending new writes.
 5. If the repo is brownfield and mapping has not happened yet, call out that
    roadmap confidence stays provisional until `/blu-map-codebase`.
-6. Stop with a blocker when the parent has not supplied enough context to make
+6. Keep repo truth distinct from any parent-approved external context so the
+   parent can decide which facts are safe to persist.
+7. Stop with a blocker when the parent has not supplied enough context to make
    a safe bootstrap recommendation.
 
 ## Outputs
@@ -73,5 +99,6 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - Preserve Blueprint deltas from `docs/DECISIONS.md`.
 - Do not draft or rewrite roadmap, requirements, or `.blueprint/` artifacts
   directly from this agent.
+- Do not invent web research, outside reviewers, or manual persistence paths.
 - Do not widen into implementation planning, execution, `.planning/`, or
   legacy slash-command surfaces behavior.

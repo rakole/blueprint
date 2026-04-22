@@ -13,17 +13,36 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   const projectResearcher = await readAgent("blueprint-project-researcher");
   const roadmapper = await readAgent("blueprint-roadmapper");
 
+  assert.match(projectResearcher, /## Parent-Owned Responsibilities/);
+  assert.match(projectResearcher, /external-research approval/i);
+  assert.match(projectResearcher, /`get_internal_docs` self-correction pass/i);
+  assert.match(projectResearcher, /## External Research And Self-Correction Rules/);
+  assert.match(
+    projectResearcher,
+    /outside references only when the parent explicitly supplied or approved\s+them/i
+  );
+  assert.match(projectResearcher, /Keep repo truth distinct from any parent-approved external context/i);
   assert.match(projectResearcher, /## Required Reads/);
   assert.match(projectResearcher, /greenfield`, `scaffold-only`, or `brownfield`/);
   assert.match(projectResearcher, /Confidence:/);
   assert.match(projectResearcher, /\/blu-map-codebase/);
   assert.match(projectResearcher, /requirement-shaping signals/i);
   assert.match(projectResearcher, /biggest uncertainty still worth asking the user/i);
+  assert.match(projectResearcher, /Do not invent web research, outside reviewers, or manual persistence paths/i);
   assert.match(
     projectResearcher,
     /Do not draft or rewrite roadmap, requirements, or `\.blueprint\/` artifacts\s+directly/
   );
 
+  assert.match(roadmapper, /## Parent-Owned Responsibilities/);
+  assert.match(roadmapper, /external-research approval/i);
+  assert.match(roadmapper, /`get_internal_docs` self-correction pass/i);
+  assert.match(roadmapper, /## External Research And Self-Correction Rules/);
+  assert.match(
+    roadmapper,
+    /Use external references only when the parent explicitly supplied or approved\s+them/i
+  );
+  assert.match(roadmapper, /Keep repo truth and approved outside context distinct/i);
   assert.match(roadmapper, /## Required Reads/);
   assert.match(roadmapper, /requirement-to-phase coverage explicit/i);
   assert.match(roadmapper, /success criteria/i);
@@ -34,6 +53,7 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
     roadmapper,
     /return\s+ordered proposals without inventing permanent phase numbers/i
   );
+  assert.match(roadmapper, /Do not invent web research, outside reviewers, or manual persistence paths/i);
   assert.match(roadmapper, /Do not rewrite `\.blueprint\/ROADMAP\.md`/);
 });
 
@@ -53,6 +73,11 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(mapper, /Do not revive omitted commands such as `scan` or `intel`/);
 
   assert.match(researcher, /## Required Reads/);
+  assert.match(researcher, /## Parent-Owned Responsibilities/);
+  assert.match(researcher, /external-research approval/i);
+  assert.match(researcher, /`get_internal_docs` self-correction pass/i);
+  assert.match(researcher, /## External Research And Self-Correction Rules/);
+  assert.match(researcher, /Keep repo truth distinct from outside truth/i);
   assert.match(researcher, /## Required Output Contract/);
   assert.match(researcher, /Return content as the populated research body/i);
   assert.match(researcher, /## Revision Behavior/);
@@ -62,11 +87,24 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   );
   assert.match(researcher, /official docs or explicitly supplied external references/);
   assert.match(researcher, /Replace every angle-bracket placeholder before returning the draft/i);
+  assert.match(
+    researcher,
+    /Do not invent web research, outside reviewers, shell verification, or manual\s+persistence paths/i
+  );
 
   assert.match(uiDesigner, /## Required Reads/);
+  assert.match(uiDesigner, /## Parent-Owned Responsibilities/);
+  assert.match(uiDesigner, /external-reference approval/i);
+  assert.match(uiDesigner, /`get_internal_docs` self-correction pass/i);
+  assert.match(uiDesigner, /## External Research And Self-Correction Rules/);
   assert.match(uiDesigner, /## UI Decision Rules/);
   assert.match(uiDesigner, /UI Contract` or\s+`Explicit skip rationale/);
   assert.match(uiDesigner, /safety-gate/i);
+  assert.match(uiDesigner, /Keep repo truth distinct from any approved outside references/i);
+  assert.match(
+    uiDesigner,
+    /Do not invent web research, outside reviewers, shell-driven validation, or\s+manual\s+persistence paths/i
+  );
   assert.match(uiDesigner, /Do not invent a second artifact for skipped UI work/);
 
   assert.match(checker, /## Purpose/);
