@@ -62,6 +62,15 @@ async function createPhaseRepo(): Promise<string> {
 
 test("ui-phase command references registered tools and single-artifact UI handling", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-phase.toml"), "utf8");
+  const skillFile = await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
+    "utf8"
+  );
+  const docFile = await readFile(path.join(repoRoot, "docs/commands/ui-phase.md"), "utf8");
+  const runtimeReference = await readFile(
+    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
+    "utf8"
+  );
   const requiredTools = [
     "blueprint_phase_locate",
     "blueprint_phase_research_status",
@@ -81,14 +90,69 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /`blueprint-ui-designer` subagent/);
   assert.match(commandFile, /`blueprint-checker` subagent/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`\./);
+  assert.match(
+    commandFile,
+    /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/
+  );
+  assert.match(
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/
+  );
   assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /artifactId: "phase\.ui-spec"/);
   assert.match(commandFile, /authoringTemplate/);
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
+  assert.match(commandFile, /contract-versus-skip posture/i);
+  assert.match(commandFile, /checker-requested revision/i);
+  assert.match(commandFile, /\/blu-plan-phase <phase>/);
+  assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /XX-UI-SPEC\.md/);
   assert.doesNotMatch(commandFile, /UI-SKIP/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-ui-designer\.md/);
+
+  assert.match(skillFile, /Execution profile for `\/blu-ui-phase`: `long-running-mutation`\./);
+  assert.match(
+    skillFile,
+    /shared stage vocabulary explicit during non-trivial `\/blu-ui-phase` runs/i
+  );
+  assert.match(
+    skillFile,
+    /resolved scope, active stage, pending gate, execution mode, next safe action/
+  );
+  assert.match(skillFile, /contract-versus-skip choice/i);
+  assert.match(skillFile, /`workflow\.ui_safety_gate` rationale confirmation/);
+  assert.match(skillFile, /## Optional Agents[\s\S]*`blueprint-checker`/);
+  assert.match(skillFile, /checker-requested revision/i);
+  assert.match(skillFile, /\/blu-plan-phase <phase>/);
+  assert.match(skillFile, /\/blu-progress/);
+
+  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(
+    docFile,
+    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+  );
+  assert.match(
+    docFile,
+    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  );
+  assert.match(docFile, /## Behavior Stages/);
+  assert.match(docFile, /contract-versus-skip posture/i);
+  assert.match(docFile, /`workflow\.ui_safety_gate` rationale requirements/i);
+  assert.match(docFile, /checker revision gate/i);
+  assert.match(docFile, /\/blu-plan-phase <phase>/);
+  assert.match(docFile, /\/blu-progress/);
+
+  const uiRuntimeRow = runtimeReference
+    .split("\n")
+    .find((line) => line.startsWith("| `ui-phase` |"));
+  assert.ok(uiRuntimeRow, "runtime reference should include the ui-phase row");
+  assert.match(uiRuntimeRow, /Long-running-mutation profile for bounded UI-contract drafting/i);
+  assert.match(uiRuntimeRow, /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
+  assert.match(uiRuntimeRow, /contract-versus-skip posture/i);
+  assert.match(uiRuntimeRow, /`workflow\.ui_safety_gate` rationale confirmation/);
+  assert.match(uiRuntimeRow, /checker-requested revision/i);
 });
 
 test("ui-phase keeps UI output in a single reusable file for either contract or skip rationale", async (t) => {
