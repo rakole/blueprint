@@ -7,6 +7,7 @@ import {
   logRejectedMutationResult,
   logThrownMutationError
 } from "./write-failure-log.js";
+import { registerBlueprintCommandResources } from "./command-resources.js";
 import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
@@ -467,6 +468,8 @@ export function createBlueprintServer(): McpServer {
     name: "blueprint",
     version: "0.1.0"
   });
+
+  registerBlueprintCommandResources(server);
 
   for (const definition of TOOL_DEFINITIONS) {
     server.registerTool(

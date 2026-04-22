@@ -9,6 +9,10 @@ import {
   blueprintPrimaryManifestPath,
   blueprintRouterCommand
 } from "../src/mcp/command-paths.js";
+import {
+  buildBlueprintCommandRuntimeContractResource,
+  listBlueprintCommandRuntimeContractCommands
+} from "../src/mcp/command-resources.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintDiscoverableSkillPath,
@@ -171,6 +175,70 @@ test("runtime command catalog marks shipped commands as implemented once manifes
       /Missing command manifest: commands\/blu-list-phase-assumptions\.toml/
     );
   }
+});
+
+test("command runtime contract resource stays anchored to live catalog, command spec, and runtime reference truth", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+  const contract = await buildBlueprintCommandRuntimeContractResource("help");
+  const entry = catalog.commands.help;
+
+  assert.ok(advertisedCommands.includes("help"));
+
+  for (const commandName of advertisedCommands) {
+    const advertisedContract = await buildBlueprintCommandRuntimeContractResource(
+      commandName
+    );
+    const advertisedEntry = catalog.commands[commandName];
+
+    assert.deepEqual(advertisedContract.catalog, advertisedEntry);
+    assert.ok(advertisedContract.spec);
+    assert.equal(advertisedContract.spec.path, advertisedEntry.specPath);
+    assert.ok(advertisedContract.runtimeReference);
+    assert.equal(advertisedContract.runtimeReference.command, commandName);
+    assert.equal(
+      advertisedContract.runtimeReference.commandSpecPath,
+      advertisedEntry.specPath
+    );
+  }
+
+  assert.equal(contract.command, "help");
+  assert.equal(contract.uri, "blueprint://commands/help/runtime-contract");
+  assert.deepEqual(contract.catalog, entry);
+
+  assert.ok(contract.spec);
+  assert.equal(contract.spec.path, "docs/commands/help.md");
+  assert.equal(contract.spec.wave, 0);
+  assert.equal(contract.spec.family, "Foundation");
+  assert.equal(contract.spec.executionProfile, "router");
+  assert.equal(contract.spec.rootRoutable, true);
+  assert.equal(contract.spec.primarySkill, "blueprint-router");
+  assert.deepEqual(contract.spec.requiredTools, entry.requiredTools);
+  assert.deepEqual(contract.spec.optionalSubagents, []);
+  assert.match(contract.spec.purpose ?? "", /showing available Blueprint commands/i);
+  assert.deepEqual(contract.spec.writes, []);
+
+  assert.ok(contract.runtimeReference);
+  assert.equal(contract.runtimeReference.path, "docs/RUNTIME-REFERENCE.md");
+  assert.equal(contract.runtimeReference.wave, 0);
+  assert.equal(contract.runtimeReference.waveTitle, "Foundation");
+  assert.equal(contract.runtimeReference.command, "help");
+  assert.equal(contract.runtimeReference.commandSpecPath, "docs/commands/help.md");
+  assert.equal(contract.runtimeReference.primarySkill, "blueprint-router");
+  assert.deepEqual(contract.runtimeReference.exactMcpDestination, entry.requiredTools);
+  assert.deepEqual(contract.runtimeReference.optionalAgents, []);
+  assert.deepEqual(contract.runtimeReference.hookInvolvement, []);
+  assert.match(contract.runtimeReference.contractNotes ?? "", /never present planned or blocked commands as runnable/i);
+  assert.deepEqual(contract.runtimeReference.evidenceState, [
+    "locked",
+    "docs-aligned",
+    "needs-behavior-audit"
+  ]);
+
+  await assert.rejects(
+    buildBlueprintCommandRuntimeContractResource("review"),
+    /Missing runtime reference row for Blueprint command: review/
+  );
 });
 
 test("command path helpers centralize canonical, alias, and manifest forms", () => {
@@ -750,7 +818,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     runtimeReference,
-    /The planned `blueprint-fixer`, per-fix commits, and implicit auto re-review loop are not shipped behavior\./
+    /No auto-fixer behavior, implicit commits or branches, or hidden iterative re-review loops are shipped\./
   );
   assert.match(
     runtimeReference,
