@@ -49,6 +49,9 @@ test("blueprint-executor encodes bounded per-plan execution, progress checkpoint
 test("blueprint-verifier encodes summary-first validation, UAT mode, and gap classification", async () => {
   const verifier = await readAgent("blueprint-verifier.md");
 
+  assert.match(verifier, /## Parent-Owned Responsibilities/);
+  assert.match(verifier, /`update_topic`, `write_todos`, and `ask_user`/);
+  assert.match(verifier, /final routing/i);
   assert.match(verifier, /## Modes/);
   assert.match(verifier, /Validation mode/i);
   assert.match(verifier, /UAT mode/i);
@@ -64,5 +67,10 @@ test("blueprint-verifier encodes summary-first validation, UAT mode, and gap cla
   assert.match(verifier, /## Required Output Contract/);
   assert.match(verifier, /`XX-VERIFICATION\.md`/);
   assert.match(verifier, /`XX-UAT\.md`/);
+  assert.match(
+    verifier,
+    /Do not invent external reviewers, shell verification steps, web truth, or\s+persistence paths/i
+  );
+  assert.match(verifier, /Keep the draft bounded to the parent-selected validation or UAT scope/i);
   assert.match(verifier, /read-only/i);
 });

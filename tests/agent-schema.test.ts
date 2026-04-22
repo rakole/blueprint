@@ -296,6 +296,21 @@ test("every shipped Blueprint agent is a valid Gemini subagent definition with c
       continue;
     }
 
+    if (
+      agentName === "blueprint-reviewer" ||
+      agentName === "blueprint-verifier" ||
+      agentName === "blueprint-security-auditor" ||
+      agentName === "blueprint-ui-auditor" ||
+      agentName === "blueprint-doc-writer" ||
+      agentName === "blueprint-doc-verifier"
+    ) {
+      assert.match(body, /## Parent-Owned Responsibilities/);
+      assert.match(body, /`update_topic`, `write_todos`, and `ask_user`/);
+      assert.match(body, /MCP-backed persistence step|MCP persistence|report persistence/i);
+      assert.match(body, /final routing/i);
+      assert.match(body, /read-only/i);
+    }
+
     assert.ok(
       !(frontmatter.tools as string[]).includes("replace"),
       `${agentName} should remain read-only at the tool layer`

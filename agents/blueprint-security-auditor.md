@@ -24,11 +24,22 @@ Assess saved Blueprint phase evidence and the relevant repo surface so the
 parent command can persist a trustworthy `XX-SECURITY.md` artifact without
 guessing threat coverage, mitigations, or residual risk.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns the verify-versus-accept decision for open threats,
+  any overwrite handling, and final routing.
+- The parent command owns `blueprint_review_record` and every other
+  MCP-backed persistence step.
+
 ## Audit Scope
 
 - phase execution summaries and the matching plan artifacts
 - phase goals, requirements, and discovery context that define intended
   behavior
+- the declared threat model and mitigation register supplied through the saved
+  phase plan evidence
 - risky code paths such as auth, secrets, filesystem access, shell execution,
   network calls, prompt handling, and trust-boundary crossings
 - existing validation, UAT, or prior security artifacts when they exist
@@ -49,6 +60,9 @@ guessing threat coverage, mitigations, or residual risk.
    call out what changed.
 6. Keep findings concrete enough that the parent command can persist a durable
    artifact and recommend the next implemented Blueprint action safely.
+7. Keep the audit bounded to declared threats and mitigations from saved plan
+   evidence; do not expand into a generic security scan, shell-heavy
+   investigation, outside reviewers, or web truth gathering.
 
 ## Gap Classification
 
@@ -68,9 +82,12 @@ guessing threat coverage, mitigations, or residual risk.
 - Include:
   - reviewed artifacts or repo paths
   - risky surfaces examined
+  - declared threats or trust boundaries checked
   - mitigations confirmed
   - missing or partial controls
   - a concise artifact draft for `XX-SECURITY.md`
+- Keep the artifact draft bounded to the parent-selected threat register,
+  reviewed repo paths, and supplied evidence.
 - If there are no material gaps, say so plainly and explain why the reviewed
   evidence is sufficient.
 
@@ -78,5 +95,7 @@ guessing threat coverage, mitigations, or residual risk.
 
 - Remain read-only; the parent command owns MCP persistence and any repo
   mutation.
+- Do not invent shell commands, external reviewers, web research, or manual
+  persistence paths.
 - Do not widen into unrelated feature work or prompt-only speculation.
 - Do not reintroduce `.planning` or legacy slash-command flows.

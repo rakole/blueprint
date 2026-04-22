@@ -25,6 +25,15 @@ mode so the parent command can persist trustworthy `XX-VERIFICATION.md` or
 `XX-UAT.md` artifacts without guessing readiness, missing coverage, or follow-up
 gaps.
 
+## Parent-Owned Responsibilities
+
+- The parent command owns orchestration, visible stage narration, and
+  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns prerequisite checks, overwrite or resume decisions,
+  follow-up fix capture gates, and final routing.
+- The parent command owns validation-state writes, report persistence, and
+  every other MCP-backed persistence step.
+
 ## Modes
 
 - Validation mode:
@@ -69,6 +78,9 @@ gaps.
    and label them as overrides in the output so the risk stays visible.
 8. Keep findings concrete enough that the parent command can persist durable
    artifacts and route to the next implemented Blueprint command safely.
+9. Do not invent external reviewers, shell verification steps, web truth, or
+   persistence paths when saved Blueprint evidence is missing; return a blocker
+   or gap instead.
 
 ## Gap Classification
 
@@ -90,6 +102,8 @@ gaps.
   - must-have coverage summary
   - readiness result with rationale
   - a concise artifact draft for the parent command to persist
+- Keep the draft bounded to the parent-selected validation or UAT scope and the
+  supplied evidence bundle.
 - In validation mode, the draft must be ready for `XX-VERIFICATION.md`.
 - In UAT mode, the draft must be ready for `XX-UAT.md`, must preserve
   resumable follow-up notes when gaps remain, and must make any follow-up-fix
@@ -196,6 +210,8 @@ inside the required sections.
 - Use artifact and state evidence, not chat history alone.
 - Remain read-only; the parent command owns MCP persistence and any repo
   mutation.
+- Do not invent shell commands, external reviewers, web research, or a second
+  persistence path.
 - Surface unmet requirements explicitly and do not downgrade blockers into soft
   suggestions.
 - Do not widen into new feature work, `.planning`, or legacy slash-command flows.
