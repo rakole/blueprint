@@ -22,7 +22,7 @@ test("maintenance manifests keep dirty-tree stops and report-before-mutate gates
   assert.match(newWorkspace, /~\/blueprint-workspaces/);
   assert.match(newWorkspace, /workspace name, resolved workspace path, repo list, strategy, branch/i);
   assert.match(newWorkspace, /registry mutation plan/i);
-  assert.match(newWorkspace, /workspace-create-confirmation/);
+  assert.match(newWorkspace, /new-workspace-confirmation/);
   assert.match(newWorkspace, /do not silently switch to `clone`/i);
   assert.match(newWorkspace, /next safe action/i);
 
@@ -59,7 +59,7 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow/i);
   assert.match(skill, /`blueprint_workspace_registry_get`/);
   assert.match(skill, /`blueprint_workspace_create`/);
-  assert.match(skill, /`workspace-create-confirmation`/);
+  assert.match(skill, /`new-workspace-confirmation`/);
   assert.match(skill, /dirty working tree/i);
   assert.match(skill, /pending gate `clean-working-tree`/);
   assert.match(skill, /`review-branch-confirmation`/);

@@ -10,7 +10,7 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- Keep the workspace-creation posture explicit throughout the run: resolved scope must stay tied to the workspace name, resolved workspace path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan; pending gates stay limited to visible preflight blockers such as `dirty-working-tree`, `invalid-workspace-source`, or `workspace-conflict`, explicit strategy-change approval when `worktree` must fall back to `clone`, and the destructive approval gate `workspace-create-confirmation`; execution mode should reflect preview-only versus confirmed workspace creation; and the next safe action should stay visible while the command is waiting on cleanup, strategy approval, or workspace creation approval.
+- Keep the workspace-creation posture explicit throughout the run: resolved scope must stay tied to the workspace name, resolved workspace path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan; pending gates stay limited to visible preflight blockers such as `dirty-working-tree`, `invalid-workspace-source`, or `workspace-conflict`, explicit strategy-change approval when `worktree` must fall back to `clone`, and the destructive approval gate `new-workspace-confirmation`; execution mode should reflect preview-only versus confirmed workspace creation; and the next safe action should stay visible while the command is waiting on cleanup, strategy approval, or workspace creation approval.
 
 ## Purpose
 
@@ -66,7 +66,7 @@
 ## In-Flight Progress Contract
 
 - Keep the shared stage vocabulary visible only for the stages the workspace-creation run actually reaches.
-- Keep the waiting state explicit whenever workspace creation is blocked before mutation: preflight blockers should surface as `dirty-working-tree`, `invalid-workspace-source`, or `workspace-conflict`; strategy fallback should stay visible until the user explicitly approves switching from `worktree` to `clone`; and destructive approval should stay visible as `workspace-create-confirmation`.
+- Keep the waiting state explicit whenever workspace creation is blocked before mutation: preflight blockers should surface as `dirty-working-tree`, `invalid-workspace-source`, or `workspace-conflict`; strategy fallback should stay visible until the user explicitly approves switching from `worktree` to `clone`; and destructive approval should stay visible as `new-workspace-confirmation`.
 - Keep that visible progress aligned to the resolved workspace name and path, repo members, strategy, branch, manifest path, registry path, execution mode, and next safe action while the run moves from preview through confirmation, workspace creation, validation, and routing.
 - Execution mode should distinguish preview-only versus confirmed workspace creation.
 
@@ -107,7 +107,7 @@
 ## User Prompts And Confirmation Gates
 
 - Always preview the resolved workspace name, path, repo list, strategy, branch, workspace manifest path, and registry mutation plan before mutation.
-- Require explicit confirmation before creating the workspace, and keep the destructive approval gate visible as `workspace-create-confirmation` until the user approves.
+- Require explicit confirmation before creating the workspace, and keep the destructive approval gate visible as `new-workspace-confirmation` until the user approves.
 - When a `worktree` preview has to switch to `clone`, keep that strategy-change approval explicit instead of silently mutating the requested strategy.
 
 ## Edge Cases
