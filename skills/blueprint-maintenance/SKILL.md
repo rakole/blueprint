@@ -122,17 +122,26 @@ Shared in-flight contract for `ship`:
 
 ### `undo`
 
+Shared in-flight contract for `undo`:
+
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `undo-confirmation` and `report-overwrite-confirmation` visible until the user clears them, and name the next safe action while the flow is blocked.
+
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Resolve the undo scope explicitly. Prefer the user-named phase or plan when one was provided; otherwise keep any `last N commits` request bounded to the current branch and recent history instead of guessing across unrelated work.
 3. Read `blueprint_phase_locate` when the user names a phase or plan so the revert target stays anchored to authoritative Blueprint metadata instead of filenames or chat memory.
-4. Inspect git status before mutation. A dirty working tree, detached HEAD, or in-progress merge is a hard stop for undo.
+4. Inspect git status before mutation. A dirty working tree, detached HEAD, in-progress merge, or missing revert target is a hard stop for undo. Keep that waiting state explicit as pending gate `dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`, and keep the next safe action explicit before rerunning.
 5. Make the resolved target explicit before mutation: name the branch, candidate revert set, revert order, and any saved Blueprint evidence that would become stale if the revert succeeds.
 6. Read saved summaries, verification or UAT artifacts, review artifacts, shipping reports, and related evidence through `blueprint_artifact_list` before proposing the revert so dependency impact stays visible.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the undo plan stays grounded in the selected evidence and candidate revert set.
-8. Require explicit confirmation that includes the exact revert scope, candidate commits, dependency-impact notes, the `undo-latest` report, and the precise git commands that will run.
-9. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location.
-10. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
-11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and the revert succeeds.
+8. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
+9. Require explicit confirmation that includes the exact revert scope, candidate commits, dependency-impact notes, the `undo-latest` report, and the precise git commands that will run. Keep the pending gate explicit as `undo-confirmation` until the user approves.
+10. If replacing `undo-latest` needs overwrite approval, keep the report-overwrite waiting state explicit as `report-overwrite-confirmation` and name the next safe action before continuing.
+11. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location.
+12. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
+13. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and the revert succeeds.
 
 ### `cleanup`
 
@@ -157,5 +166,5 @@ Shared in-flight contract for `ship`:
 
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, make any active pending gate or waiting state explicit, and end with the safest implemented follow-up or manual next step.
 - For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
-- For `undo`, report the resolved revert scope, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
+- For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.

@@ -6,16 +6,21 @@ Use the `blueprint-maintenance` skill as the primary orchestration contract when
 
 Follow this flow exactly:
 
+Shared execution contract:
+- Execution profile: `high-risk-maintenance`
+- Keep the shared stage vocabulary visible throughout the run: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- Keep the in-flight status fields legible throughout the run: resolved scope, active stage, pending gate, execution mode, next safe action
+
 1. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
 2. Resolve the undo scope explicitly before any git mutation:
    - when the user named a phase or plan, read `mcp_blueprint_blueprint_phase_locate` for that phase and stop with a correction request if it does not exist
    - when the user asked for `--last N`, inspect recent git history and keep the candidate revert set explicit
    - never guess across unrelated commits, phases, or branches
-3. Inspect git status, the current branch, and the candidate commit set before mutation. A dirty working tree, detached HEAD, merge in progress, or missing revert target is a hard stop for undo.
+3. Inspect git status, the current branch, and the candidate commit set before mutation. A dirty working tree, detached HEAD, merge in progress, or missing revert target is a hard stop for undo. Surface that waiting state as the pending gate `dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`, and keep the next safe action explicit before rerunning.
 4. Read `mcp_blueprint_blueprint_artifact_list` and collect the Blueprint evidence that could be affected by the undo target: saved summaries, verification or UAT artifacts, review artifacts, shipping reports, and any saved reports that would become stale after the revert. Treat that evidence as a dependency signal, not a best-effort suggestion.
 5. Build a compact preview digest through `mcp_blueprint_blueprint_artifact_summary_digest`. Use explicit repo-relative `artifactPaths` and, when useful, repo-relative `trackedFiles` from the candidate revert set so the undo preview stays grounded in the selected Blueprint evidence and the actual files that would be reverted. Treat the returned `inputsUsed` list as the authoritative digest scope.
-6. Summarize the exact undo plan before any mutation: resolved scope, current branch, candidate commits in revert order, any later Blueprint artifacts or phase evidence that would become stale, the report name `undo-latest`, and the exact git commands you intend to run. Explicitly state that Blueprint uses safe `git revert` style steps and must not use hard reset or branch deletion. Require explicit confirmation before any git mutation, and require explicit overwrite confirmation before replacing an existing `undo-latest` report.
-7. Before running git revert, persist the approved undo plan through `mcp_blueprint_blueprint_artifact_report_write` with the bare report name `undo-latest`, not a `.blueprint/reports/...` path. Record the selected scope, candidate commits, dependency-impact notes, digest inputs, branch state, and the pending revert commands. Treat the returned `path` as authoritative.
+6. Summarize the exact undo plan before any mutation: resolved scope, current branch, candidate commits in revert order, any later Blueprint artifacts or phase evidence that would become stale, the report name `undo-latest`, and the exact git commands you intend to run. Explicitly state that Blueprint uses safe `git revert` style steps and must not use hard reset or branch deletion. Keep the destructive approval gate visible as `undo-confirmation` until the user explicitly approves, and name the next safe action while the run is waiting.
+7. Before running git revert, handle report replacement explicitly. If `undo-latest` would be replaced, keep the report-overwrite waiting state visible as `report-overwrite-confirmation`, require explicit overwrite confirmation, and name the next safe action before continuing. After approval, persist the approved undo plan through `mcp_blueprint_blueprint_artifact_report_write` with the bare report name `undo-latest`, not a `.blueprint/reports/...` path. Record the selected scope, candidate commits, dependency-impact notes, digest inputs, branch state, and the pending revert commands. Treat the returned `path` as authoritative.
 8. After confirmation and report persistence, run only the approved revert steps. Prefer `git revert` over destructive shortcuts, preserve unrelated local history, and stop immediately if conflicts or dependency mismatches make the revert unsafe.
 9. If undo changes the next safe Blueprint action, update it through `mcp_blueprint_blueprint_state_update` only after the report is written and the git revert succeeds. Keep the follow-up inside the implemented surface when possible; prefer `/blu-progress`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-code-review`, or `/blu-pr-branch` when they fit the reverted state.
 10. Return a concise completion summary covering the resolved undo scope, revert outcome, report status, any stale evidence or conflict warnings, and the next safe action. Do not present planned-only commands as runnable.
@@ -23,9 +28,11 @@ Follow this flow exactly:
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/undo-latest.md` plus `STATE.md` when state routing actually changes.
+- Keep the `high-risk-maintenance` posture explicit by reporting the active stage with the shared stage vocabulary and the in-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action.
 - Never mutate git state without an explicit confirmation gate that names the exact revert scope and commands.
 - Never use destructive git shortcuts such as `git reset --hard`, branch deletion, or implicit history rewriting.
 - Make dependency impact explicit before any revert runs, especially when later validation, review, or shipping artifacts would become stale.
 - Preserve a durable report of the approved undo plan before git mutation begins.
+- Keep destructive approval and report-overwrite waiting states visible as `undo-confirmation` and `report-overwrite-confirmation` instead of smoothing past them.
 - Do not present planned-only commands as runnable follow-ups.
 """
