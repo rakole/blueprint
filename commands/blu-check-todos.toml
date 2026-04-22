@@ -17,8 +17,12 @@ Follow this flow exactly:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status` and `mcp_blueprint_blueprint_artifact_mutate_index` for Blueprint-owned state work.
+- Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/todos/TODO.md`.
 - Do not advertise planned-only capture commands as runnable follow-ups.
+- Prefer Gemini CLI's built-in `ask_user` tool for status-change confirmation when a structured choice helps; otherwise keep the same confirmation gate explicit in prose.
 - Require explicit confirmation before changing todo status when the user intent is not already explicit.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-check-todos`.
+- Do not turn `/blu-check-todos` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - If a next step is helpful, prefer implemented commands such as `/blu-progress` or `/blu-add-todo`.
 """

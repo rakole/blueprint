@@ -4,6 +4,14 @@
 | Wave | `3` |
 | Family | `Capture And Lightweight Execution` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `add-backlog` uses the shared interactive-read classification only to keep the command metadata aligned; it performs short parking-lot capture, keeps persistence local to Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Optional `999.x` stub reservation remains a single confirmation gate, not a wider roadmap workflow.
 
 
 ## Purpose
@@ -30,7 +38,8 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: appends to `.blueprint/backlog/BACKLOG.md` and may scaffold one returned reserved stub path under `.blueprint/phases/`.
+- In-flight posture: none beyond a concise inline summary or confirmation gate; `add-backlog` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads
@@ -94,7 +103,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm immediate phase-stub reservation when used.
+- Confirm immediate phase-stub reservation when used. Prefer Gemini CLI `ask_user` when a structured choice helps, otherwise keep the same gate explicit in prose.
 
 
 ## Edge Cases
@@ -119,6 +128,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
+- Explicitly excludes `update_topic`, `write_todos`, tracker-backed branching, and other long-running progress behavior.
 
 
 ## Test Cases
@@ -127,4 +137,3 @@
 - Capture append fixture.
 - No-project graceful degradation fixture.
 - Direct `add-backlog` happy-path fixture.
-

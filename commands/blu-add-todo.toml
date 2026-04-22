@@ -14,8 +14,11 @@ Follow this flow exactly:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_artifact_mutate_index` for persistent state work.
+- Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/todos/`.
 - Treat todo capture as append-only unless the MCP tool reports a duplicate.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-add-todo`.
+- Do not turn `/blu-add-todo` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not advertise planned-only capture commands as runnable follow-ups.
 - If a next step is helpful, prefer implemented commands such as `/blu-progress`.
 """
