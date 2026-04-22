@@ -26,6 +26,11 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
+- Execution profile for `/blu-discuss-phase`: `long-running-mutation`.
+- Keep the shared stage vocabulary explicit during non-trivial `/blu-discuss-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
+- Keep the in-flight status contract visible during non-trivial `/blu-discuss-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
+- On Gemini, use `update_topic` and `write_todos` only as session-local visibility aids during non-trivial `/blu-discuss-phase` runs; do not let them replace MCP-backed artifacts, checkpoints, or `STATE.md`.
+- When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
 
 ## Parity Goal
 
@@ -97,17 +102,21 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 ### `discuss-phase`
 
+0. Keep the resolved scope explicit as the selected phase, prior-context bundle, artifact reuse-versus-replace posture, and current gray area.
 1. Resolve the phase through MCP tools before asking the user to confirm any write path.
 2. Ground the flow in actual repo context before questioning: read the substantive project brief, requirements, and workflow posture already surfaced through `blueprint_phase_context`, then read the current `XX-CONTEXT.md`, `XX-DISCUSSION-LOG.md`, and earlier phase context artifacts when they materially reduce duplicate questions.
 3. Read `blueprint_phase_plan_index` before refreshing context so the command can warn that saved plans do not change automatically; users must re-run `/blu-plan-phase` if refreshed discovery should affect planning.
 4. Read the canonical contracts through `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting context and `artifactId: "phase.discussion-log"` before drafting any durable discussion log.
 5. Normalize the final context and discussion drafts to the returned `authoringTemplate` before any write, then run a blocking anti-pattern check for placeholders, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas before saving.
 6. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus. If an answer is vague, incomplete, or conflicts with saved context, ask a focused follow-up or retry the question with a narrower prompt before treating it as final.
-7. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the structured discuss checkpoint shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology. Do not pretend power, chain, or auto modes are shipped.
-8. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
-9. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
-10. Require explicit overwrite confirmation before replacing existing context artifacts.
-11. End with a next safe action inside the implemented Blueprint surface and leave `STATE.md` legible about that next step.
+7. Treat pending gates explicitly as phase ambiguity, resume-versus-discard checkpoint choice, gray-area selection, overwrite confirmation, or validation blockers instead of burying them in recap prose.
+8. Keep execution mode explicit as interactive `workflow.discuss_mode="discuss"`, stronger assumptions-mode analysis, or repo-evidence-driven `workflow.skip_discuss=true`, plus fresh versus resumed checkpoint posture.
+9. During non-trivial multi-area discovery runs on Gemini, use `update_topic` and `write_todos` to keep the active stage and next safe action visible without turning either tool into persistence. When a host does not expose those helpers, keep the same visibility through normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
+10. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the structured discuss checkpoint shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology. Do not pretend power, chain, or auto modes are shipped.
+11. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
+12. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
+13. Require explicit overwrite confirmation before replacing existing context artifacts.
+14. End with a next safe action inside the implemented Blueprint surface and leave `STATE.md` legible about that next step.
 
 ### `research-phase`
 

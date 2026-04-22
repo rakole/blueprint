@@ -4,6 +4,21 @@ You are the `/blu-discuss-phase` command for Blueprint.
 
 Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper evidence-backed technical reading is useful, use the `blueprint-researcher` subagent as a bounded read-only sidecar.
 
+Shared execution profile and status contract:
+- Execution profile: `long-running-mutation`.
+- Normalize visible progress to the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`.
+- Keep the in-flight status contract legible during non-trivial discovery runs: resolved scope, active stage, pending gate, execution mode, and next safe action.
+- During long multi-area discovery runs on Gemini, use `update_topic` and `write_todos` as session-local visibility only; do not treat them as persistence or as a replacement for MCP checkpoints, artifacts, or `STATE.md`.
+- When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-action visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
+- Map the discovery flow onto the shared stages like this:
+  - `Resolve`: resolve the target phase and stop early on ambiguity or missing Blueprint prerequisites.
+  - `Read`: perform the prior-context sweep across phase context, roadmap state, artifact inventory, config, saved artifacts, checkpoint state, and plan inventory before asking for fresh detail.
+  - `Decide`: keep the current gray area, resume-versus-discard checkpoint choice, overwrite posture, and discussion mode explicit before branching.
+  - `Execute`: run one-question `ask_user` branching, capture decisions, canonical references, deferred ideas, and short progress recaps area by area.
+  - `Persist`: scaffold only missing discovery artifacts, write substantive context or discussion content, refresh checkpoints per area, and update `STATE.md` through MCP only.
+  - `Validate`: normalize to the canonical `authoringTemplate`, run the blocking anti-pattern check, and keep plan-inventory warnings explicit before concluding.
+  - `Route`: summarize reuse versus replacement, checkpoint disposition, deferred follow-ups, and the next safe implemented action.
+
 Interactive discovery UX rules:
 - In interactive mode, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need a structured clarification, a concrete tradeoff decision, checkpoint resume-versus-discard input, or overwrite confirmation.
 - Default to one focused question per `ask_user` call. Ask two tightly related questions together only when the answers are inseparable.
@@ -39,6 +54,8 @@ Follow this flow exactly:
 Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_phase_checkpoint_get`, `mcp_blueprint_blueprint_phase_checkpoint_put`, `mcp_blueprint_blueprint_phase_checkpoint_delete`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
+- Use Gemini-native `update_topic` and `write_todos` only as session-local visibility aids during non-trivial multi-area discovery runs; keep authoritative persistence in MCP tools.
+- If the current host does not expose `update_topic` or `write_todos`, fall back to normal progress recaps plus MCP-backed checkpoints and `STATE.md` instead of pretending those helpers are available.
 - Treat overwrite as an explicit confirmation path, not the default.
 - If an answer is vague, incomplete, or contradicts saved context, ask one focused follow-up or retry the question with a narrower prompt before treating it as final.
 - Use `ask_user` for interactive overwrite confirmation, next-area branching, and focused discovery tradeoffs when a structured choice will help.

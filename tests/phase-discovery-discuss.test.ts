@@ -80,6 +80,10 @@ test("discuss-phase command references only registered phase-discovery tool name
     path.join(repoRoot, "docs/commands/discuss-phase.md"),
     "utf8"
   );
+  const runtimeReference = await readFile(
+    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
+    "utf8"
+  );
   const requiredTools = [
     "blueprint_phase_locate",
     "blueprint_phase_context",
@@ -103,6 +107,20 @@ test("discuss-phase command references only registered phase-discovery tool name
   }
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`\./);
+  assert.match(
+    commandFile,
+    /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/
+  );
+  assert.match(
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/
+  );
+  assert.match(commandFile, /`update_topic` and `write_todos`/);
+  assert.match(
+    commandFile,
+    /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
+  );
   assert.match(commandFile, /explicit overwrite confirmation/i);
   assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /one focused question per `ask_user` call/i);
@@ -134,6 +152,14 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
 
   assert.match(skillFile, /blocking anti-pattern check/i);
+  assert.match(skillFile, /Execution profile for `\/blu-discuss-phase`: `long-running-mutation`\./);
+  assert.match(skillFile, /shared stage vocabulary explicit during non-trivial `\/blu-discuss-phase` runs/i);
+  assert.match(skillFile, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
+  assert.match(skillFile, /`update_topic` and `write_todos`/);
+  assert.match(
+    skillFile,
+    /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
+  );
   assert.match(skillFile, /focused follow-up or retry the question/i);
   assert.match(skillFile, /saved-artifact sweep, not a dedicated todo\/backlog file crawl/i);
   assert.match(skillFile, /Blueprint-friendly lenses/i);
@@ -147,6 +173,15 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, /end-of-run `STATE\.md` updates/i);
 
   assert.match(docFile, /not a claim of full GSD parity/i);
+  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(docFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
+  assert.match(docFile, /resolved scope, active stage, pending gate, execution mode, next safe action/);
+  assert.match(docFile, /`update_topic` and `write_todos`/);
+  assert.match(
+    docFile,
+    /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
+  );
+  assert.match(docFile, /## Behavior Stages/);
   assert.match(docFile, /answer validation and retry/i);
   assert.match(docFile, /prior-context sweeps across saved phase artifacts/i);
   assert.match(docFile, /methodology-shaped gray-area lenses/i);
@@ -159,6 +194,21 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(docFile, /checkpoint-per-area/i);
   assert.match(docFile, /progress recaps/i);
   assert.match(docFile, /end-of-run `STATE\.md` update/i);
+
+  const discussRuntimeRow = runtimeReference
+    .split("\n")
+    .find((line) => line.startsWith("| `discuss-phase` |"));
+  assert.ok(discussRuntimeRow, "runtime reference should include the discuss-phase row");
+  assert.match(discussRuntimeRow, /Long-running-mutation profile for branchy phase discovery/i);
+  assert.match(discussRuntimeRow, /`update_topic` and `write_todos`/);
+  assert.match(
+    discussRuntimeRow,
+    /helpers are unavailable fall back to normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
+  );
+  assert.match(
+    discussRuntimeRow,
+    /The contract does not promise a dedicated todo\/backlog file crawl\./i
+  );
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {
