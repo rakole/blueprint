@@ -83,9 +83,16 @@
 - `S8.2` Implement those config keys in [config.ts](/Users/rhishi/dev/repositories/blueprint/src/mcp/tools/config.ts) plus `settings` docs/tests.
 - `S8.3` MCP resource contract docs/tests in `docs/MCP-TOOLS.md`, `docs/ARTIFACT-SCHEMA.md`, and `docs/RUNTIME-REFERENCE.md`.
 - `S8.4` Resource implementation: command catalog + per-command contract.
-- `S8.5` Resource implementation: phase bundle + codebase bundle.
+- `S8.5` Resource implementation: phase bundle + codebase bundle. Blocked as of 2026-04-22 until the resource contract can carry repo/workspace scope for project-local bundle reads and keep bundle warnings strictly read-only.
 - `S8.6` Resource implementation: latest reports index.
 - `S8.7` Router/progress/discovery adoption of resources with fallback coverage.
+
+Blocked slice note:
+
+- `S8.5` should not resume from the abandoned implementation attempt.
+- The blocker is contract-level, not just code-level: `blueprint://phases/<phase>/bundle` and `blueprint://codebase/bundle` currently lack an explicit project selector, so reads can resolve against the server process `cwd` instead of the intended Blueprint repo.
+- The blocked attempt also leaked write-oriented inventory language into the codebase bundle, so the next pass must preserve the locked read-only resource posture at the payload level, not only in docs.
+- `S8.7` remains downstream of a fixed `S8.5` because router/progress/discovery adoption cannot safely consume incorrectly scoped bundle resources.
 
 ## Test Plan
 

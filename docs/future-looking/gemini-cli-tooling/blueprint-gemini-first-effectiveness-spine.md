@@ -41,6 +41,8 @@
   - Expose read-only Blueprint MCP resources for command catalog, runtime contracts, phase bundle, codebase bundle, and latest reports.
   - Prefer `list_mcp_resources` and `read_mcp_resource` for router/progress/discovery-style context reads once those resources exist, instead of repeated file crawls and duplicated prompt instructions.
   - Keep writes on the existing MCP tool surface; resources are for discovery and grounding, not persistence.
+  - Current blocker as of 2026-04-22: `S8.5` is blocked because the planned phase/codebase bundle resources are project-local reads, but the current URI shape does not yet carry repo/workspace scope strongly enough to keep those reads anchored to the intended Blueprint repo instead of the server process `cwd`.
+  - The next `S8.5` pass must also keep bundle warnings read-only; resource payloads cannot inherit write-path guidance from inventory helpers.
 - Keep state boundaries clean:
   - Do not make `save_memory` part of core Blueprint state or workflow configuration.
   - If used at all, restrict it to explicit user-approved personal interaction preferences surfaced through `/blu-settings`, never project state or Blueprint routing data.

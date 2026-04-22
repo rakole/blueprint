@@ -96,3 +96,10 @@
 | `S8.5` | Resource implementation: phase and codebase bundles | Infra | One resource implementation slice plus tests | `S8.4` | Bundle reads match existing artifact truth | Resource scope stays read-only |
 | `S8.6` | Resource implementation: latest reports index | Infra | One resource implementation slice plus tests | `S8.4` | Latest-report index stays accurate and read-only | No report-write semantics leak in |
 | `S8.7` | Resource adoption in router/progress/discovery | Infra adoption | Narrow adoption slices plus fallback tests | `S8.4`, `S8.5`, `S8.6` | Commands use resources with coherent fallback when unavailable | Adoption does not change command truth or routing guarantees |
+
+Blocked status note as of 2026-04-22:
+
+- `S8.5` is currently blocked.
+- The attempted `blueprint://phases/<phase>/bundle` and `blueprint://codebase/bundle` implementation exposed a missing repo/workspace scoping contract: the resource URIs do not yet carry enough project identity to keep project-local reads from falling back to the server process `cwd`.
+- The attempted codebase bundle also pulled write-path guidance through read inventory warnings, which violates the locked read-only resource contract.
+- Unblock `S8.5` only after the resource shape can target the intended Blueprint repo explicitly and server-level list/read tests prove the bundle payload stays read-only.
