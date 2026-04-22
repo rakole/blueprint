@@ -33,7 +33,7 @@ test("new-workspace manifest references the maintenance skill, workspace MCP too
     /resolved workspace name, path, repo list, strategy, branch/i
   );
   assert.match(commandFile, /registry mutation plan/i);
-  assert.match(commandFile, /workspace-create-confirmation/);
+  assert.match(commandFile, /new-workspace-confirmation/);
   assert.match(commandFile, /do not silently switch to `clone`/i);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
@@ -56,14 +56,14 @@ test("new-workspace docs, runtime reference, and maintenance skill align to the 
   );
   assert.match(commandDoc, /<workspace>\/\.blueprint-workspace\.json/);
   assert.match(commandDoc, /~\/.<host>\/blueprint\/workspaces\.json/);
-  assert.match(commandDoc, /workspace-create-confirmation/);
+  assert.match(commandDoc, /new-workspace-confirmation/);
   assert.match(commandDoc, /dirty-working-tree/);
   assert.match(commandDoc, /transactional/i);
 
   assert.match(skillDoc, /\/blu-new-workspace/);
   assert.match(skillDoc, /blueprint_workspace_registry_get/);
   assert.match(skillDoc, /blueprint_workspace_create/);
-  assert.match(skillDoc, /workspace-create-confirmation/);
+  assert.match(skillDoc, /new-workspace-confirmation/);
   assert.doesNotMatch(
     skillDoc,
     /`new-workspace`, `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable/

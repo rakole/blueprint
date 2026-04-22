@@ -19,11 +19,20 @@ async function runGit(args: string[], cwd?: string): Promise<string> {
   return stdout.trim();
 }
 
+async function initializeGitRepo(repoPath: string): Promise<void> {
+  try {
+    await runGit(["init", "-b", "main"], repoPath);
+  } catch {
+    await runGit(["init"], repoPath);
+    await runGit(["checkout", "-b", "main"], repoPath);
+  }
+}
+
 async function createGitRepo(tempRoot: string, name: string): Promise<string> {
   const repoPath = path.join(tempRoot, name);
 
   await fs.mkdir(repoPath, { recursive: true });
-  await runGit(["init", "-b", "main"], repoPath);
+  await initializeGitRepo(repoPath);
   await runGit(["config", "user.name", "Blueprint Tests"], repoPath);
   await runGit(["config", "user.email", "blueprint-tests@example.com"], repoPath);
   await fs.writeFile(path.join(repoPath, "README.md"), `# ${name}\n`, "utf8");
@@ -198,4 +207,119 @@ test("blueprint_workspace_create rolls back disk state when host-global registry
   await assert.rejects(fs.access(workspacePath));
   await assert.rejects(fs.access(path.join(workspacePath, ".blueprint-workspace.json")));
   assert.doesNotMatch(worktreeList, /feature-b/);
+});
+
+test("blueprint_workspace_create appends to an existing host-global registry document", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-registry-update-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+
+  const firstWorkspace = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-a",
+      path: path.join(tempRoot, "workspaces", "feature-a")
+    })
+  );
+  const secondWorkspace = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-b",
+      path: path.join(tempRoot, "workspaces", "feature-b")
+    })
+  );
+
+  const registry = JSON.parse(await fs.readFile(firstWorkspace.registryPath, "utf8")) as {
+    workspaces: Array<{ name: string; path: string }>;
+  };
+
+  assert.deepEqual(
+    registry.workspaces.map((workspace) => workspace.name),
+    ["feature-a", "feature-b"]
+  );
+  assert.deepEqual(
+    registry.workspaces.map((workspace) => workspace.path),
+    [firstWorkspace.workspacePath, secondWorkspace.workspacePath]
+  );
+});
+
+test("blueprint_workspace_create tracks origin branch when worktree mode targets a remote-only branch", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remote-branch-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const seedRepo = await createGitRepo(tempRoot, "seed");
+  const remoteRepoPath = path.join(tempRoot, "remote.git");
+  await runGit(["clone", "--bare", seedRepo, remoteRepoPath]);
+  await runGit(["remote", "add", "origin", remoteRepoPath], seedRepo);
+  await runGit(["push", "-u", "origin", "main"], seedRepo);
+  await runGit(["checkout", "-b", "feature-remote"], seedRepo);
+  await fs.writeFile(path.join(seedRepo, "feature.txt"), "feature branch\n", "utf8");
+  await runGit(["add", "feature.txt"], seedRepo);
+  await runGit(["commit", "-m", "feature remote"], seedRepo);
+  await runGit(["push", "-u", "origin", "feature-remote"], seedRepo);
+  await runGit(["checkout", "main"], seedRepo);
+
+  const sourceRepo = path.join(tempRoot, "source");
+  await runGit(["clone", remoteRepoPath, sourceRepo]);
+  await runGit(["config", "user.name", "Blueprint Tests"], sourceRepo);
+  await runGit(["config", "user.email", "blueprint-tests@example.com"], sourceRepo);
+
+  assert.equal(await runGit(["branch", "--list", "feature-remote"], sourceRepo), "");
+
+  const featureHead = await runGit(["rev-parse", "feature-remote"], seedRepo);
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-remote");
+  const result = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: sourceRepo,
+      name: "feature-remote",
+      path: workspacePath,
+      branch: "feature-remote"
+    })
+  );
+
+  assert.equal(result.repoMembers[0]?.branch, "feature-remote");
+  assert.equal(await runGit(["rev-parse", "HEAD"], result.repoMembers[0]!.path), featureHead);
+  assert.equal(
+    await runGit(
+      ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+      result.repoMembers[0]!.path
+    ),
+    "origin/feature-remote"
+  );
+});
+
+test("blueprint_workspace_create rejects invalid branch names before git mutation", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-invalid-branch-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "invalid-branch");
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceCreate({
+        cwd: repoPath,
+        name: "invalid-branch",
+        path: workspacePath,
+        branch: "-bad-branch"
+      })
+    ),
+    /Workspace branch name is invalid: -bad-branch/
+  );
+
+  await assert.rejects(fs.access(workspacePath));
+  assert.doesNotMatch(
+    await runGit(["worktree", "list", "--porcelain"], repoPath),
+    new RegExp(workspacePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  );
 });

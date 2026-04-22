@@ -364,7 +364,40 @@ async function writeWorkspaceRegistryDocument(
 
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(tempPath, `${JSON.stringify(document, null, 2)}\n`, "utf8");
-  await fs.rename(tempPath, registryPath);
+
+  if (!(await pathExists(registryPath))) {
+    await fs.rename(tempPath, registryPath);
+    return;
+  }
+
+  const backupPath = path.join(
+    directory,
+    `${path.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+  );
+  let restoredOriginal = false;
+
+  try {
+    await fs.rename(registryPath, backupPath);
+    await fs.rename(tempPath, registryPath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => undefined);
+
+    if (!(await pathExists(registryPath)) && (await pathExists(backupPath))) {
+      await fs.rename(backupPath, registryPath)
+        .then(() => {
+          restoredOriginal = true;
+        })
+        .catch(() => undefined);
+    }
+
+    if (error instanceof Error && !restoredOriginal) {
+      throw new Error(`Unable to update workspace registry at ${registryPath}: ${error.message}`);
+    }
+
+    throw error;
+  }
+
+  await fs.rm(backupPath, { force: true }).catch(() => undefined);
 }
 
 async function resolveDefaultWorkspaceRoot(cwd?: string): Promise<string> {
@@ -392,6 +425,25 @@ async function resolveWorkspacePath(args: WorkspaceCreateArgs): Promise<string> 
 
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
   return path.join(workspaceRoot, normalizeWorkspaceName(args.name));
+}
+
+async function validateWorkspaceBranchName(branch: string): Promise<string> {
+  const trimmed = branch.trim();
+  assertNoNullBytes(trimmed, "Workspace branch");
+
+  if (trimmed.startsWith("-")) {
+    throw new Error(`Workspace branch name is invalid: ${trimmed}`);
+  }
+
+  const result = await runGit(["check-ref-format", "--branch", trimmed], {
+    allowFailure: true
+  });
+
+  if (!result.success || result.stdout.length === 0) {
+    throw new Error(`Workspace branch name is invalid: ${trimmed}`);
+  }
+
+  return trimmed;
 }
 
 function resolveRequestedRepos(args: WorkspaceCreateArgs): string[] {
@@ -444,23 +496,25 @@ function ensureWorkspaceTargetIsSafe(
   workspacePath: string,
   sourceRepos: ResolvedSourceRepo[]
 ): void {
+  const containmentEscapePrefix = "Workspace path escapes the allowed root:";
+
   for (const sourceRepo of sourceRepos) {
     try {
       ensurePathWithinRootSync(sourceRepo.sourcePath, workspacePath, {
         label: "Workspace path"
       });
-      throw new Error(
-        `Workspace path must not be inside the source repo root: ${workspacePath}`
-      );
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message ===
-          `Workspace path must not be inside the source repo root: ${workspacePath}`
+        error.message.startsWith(containmentEscapePrefix)
       ) {
-        throw error;
+        continue;
       }
+
+      throw error;
     }
+
+    throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
   }
 }
 
@@ -497,6 +551,18 @@ async function createWorkspaceMember(
     if (requestedBranch) {
       if (await localBranchExists(sourceRepo.sourcePath, requestedBranch)) {
         await runGit(["-C", sourceRepo.sourcePath, "worktree", "add", memberPath, requestedBranch]);
+      } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
+        await runGit([
+          "-C",
+          sourceRepo.sourcePath,
+          "worktree",
+          "add",
+          "--track",
+          "-b",
+          requestedBranch,
+          memberPath,
+          `origin/${requestedBranch}`
+        ]);
       } else {
         await runGit([
           "-C",
@@ -586,7 +652,9 @@ export async function blueprintWorkspaceCreate(
   args: WorkspaceCreateArgs
 ): Promise<WorkspaceCreateResult> {
   const normalizedName = normalizeWorkspaceName(args.name);
-  const requestedBranch = args.branch?.trim() || null;
+  const requestedBranch = args.branch
+    ? await validateWorkspaceBranchName(args.branch)
+    : null;
   const strategy = args.strategy ?? "worktree";
   const registryPath = expandHomePath(
     resolveBlueprintRuntimeHost().workspaceRegistryPath

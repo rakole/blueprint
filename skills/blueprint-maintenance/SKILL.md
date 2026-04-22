@@ -89,14 +89,14 @@ Shared rule for all maintenance flows:
 - Execution profile: `high-risk-maintenance`
 - Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- Keep `workspace-create-confirmation` visible until the user approves, and keep any `dirty-working-tree`, `invalid-workspace-source`, `workspace-conflict`, or strategy-change waiting state explicit with the next safe action while the run is blocked.
+- Keep `new-workspace-confirmation` visible until the user approves, and keep any `dirty-working-tree`, `invalid-workspace-source`, `workspace-conflict`, or strategy-change waiting state explicit with the next safe action while the run is blocked.
 
 1. Read `blueprint_config_get` before deriving the default workspace root. Prefer an explicit target path from the user; otherwise derive the workspace root from normalized `maintenance.workspace_root` and fall back to `~/blueprint-workspaces` only when config cannot provide a root.
 2. Read `blueprint_workspace_registry_get` before mutation. Treat the returned `registryPath` and `workspaces` as authoritative host-global workspace state, and stop on malformed or conflicting registry state instead of guessing.
 3. Resolve the full workspace plan before mutation: workspace name, resolved workspace path, repo members, strategy, branch, workspace manifest path, and the registry mutation plan. Keep that resolved scope visible throughout the run.
 4. Inspect every source repo before mutation. A dirty working tree, invalid git repo, or target-path conflict is a hard stop for workspace creation. Keep those blockers visible as `dirty-working-tree`, `invalid-workspace-source`, or `workspace-conflict`.
 5. Prefer `worktree` when it is safe, but if preflight proves that `worktree` cannot satisfy the requested branch or source-repo conditions, do not silently switch to `clone`. Preview the clone fallback and require explicit approval before changing strategy.
-6. Require one explicit confirmation that includes the resolved workspace name and path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan before calling `blueprint_workspace_create`. Keep the pending gate explicit as `workspace-create-confirmation` until the user approves.
+6. Require one explicit confirmation that includes the resolved workspace name and path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan before calling `blueprint_workspace_create`. Keep the pending gate explicit as `new-workspace-confirmation` until the user approves.
 7. Persist the workspace only through `blueprint_workspace_create`, and treat its returned `workspacePath`, `manifestPath`, `registryPath`, `registryEntry`, and `repoMembers` as authoritative. Keep host-global state under `~/.<host>/blueprint/`; never invent a project-local workspace registry.
 8. Keep failure handling honest: if creation fails, stop and surface the blocker clearly. Never claim success when the workspace manifest or registry entry was not written, and never leave a partial registry entry behind.
 
