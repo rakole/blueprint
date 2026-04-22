@@ -468,21 +468,26 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     readRepoFile("docs/commands/health.md")
   ]);
 
-  assert.match(debugCommand, /Execution profile: `interactive-read`/i);
-  assert.match(debugCommand, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(debugCommand, /Execution profile: `long-running-mutation`/i);
+  assert.match(debugCommand, /resolved scope, active stage, pending gate, execution mode, and next safe implemented action/i);
+  assert.match(debugCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/i);
+  assert.match(debugCommand, /session-local visibility tools only/i);
   assert.match(
     debugCommand,
-    /report-only,[\s\S]*capture a todo,[\s\S]*\/blu-quick[\s\S]*\/blu-plan-phase[\s\S]*\/blu-progress/i
+    /report-only,[\s\S]*capture a todo only after an explicit user ask or confirmation,[\s\S]*\/blu-quick[\s\S]*\/blu-plan-phase[\s\S]*\/blu-validate-phase[\s\S]*\/blu-progress/i
   );
   assert.match(debugCommand, /bare canonical report name `debug-latest`/i);
   assert.match(debugCommand, /returned `createdEntryIds` as authoritative/i);
   assert.match(debugCommand, /must not silently create a todo/i);
   assert.match(debugDoc, /## Shared Runtime Contract/);
   assert.match(debugDoc, /## Report And Todo Contract/);
+  assert.match(debugDoc, /## In-Flight Progress Contract/);
   assert.match(debugDoc, /## Diagnose-Only And Follow-Up Gates/);
+  assert.match(debugDoc, /Use `update_topic` to surface the active stage and `write_todos`/i);
+  assert.match(debugDoc, /session-local visibility only and do not replace Blueprint MCP persistence or explicit todo capture/i);
   assert.match(
     debugDoc,
-    /report-only,[\s\S]*capture a todo,[\s\S]*\/blu-quick[\s\S]*\/blu-plan-phase[\s\S]*\/blu-progress/i
+    /report-only,[\s\S]*capture a todo only after an explicit user ask or confirmation,[\s\S]*\/blu-quick[\s\S]*\/blu-plan-phase[\s\S]*\/blu-validate-phase[\s\S]*\/blu-progress/i
   );
 
   assert.match(quickCommand, /Execution profile: `long-running-mutation`/i);
