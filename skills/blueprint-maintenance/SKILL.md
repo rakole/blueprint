@@ -64,6 +64,8 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_project_status`
 - `blueprint_phase_locate`
 - `blueprint_config_get`
+- `blueprint_workspace_registry_get`
+- `blueprint_workspace_create`
 - `blueprint_roadmap_read`
 - `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
@@ -81,6 +83,22 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 Shared rule for all maintenance flows:
 
 - run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow when the command owns a durable maintenance report
+
+### `new-workspace`
+
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `workspace-create-confirmation` visible until the user approves, and keep any `dirty-working-tree`, `invalid-workspace-source`, `workspace-conflict`, or strategy-change waiting state explicit with the next safe action while the run is blocked.
+
+1. Read `blueprint_config_get` before deriving the default workspace root. Prefer an explicit target path from the user; otherwise derive the workspace root from normalized `maintenance.workspace_root` and fall back to `~/blueprint-workspaces` only when config cannot provide a root.
+2. Read `blueprint_workspace_registry_get` before mutation. Treat the returned `registryPath` and `workspaces` as authoritative host-global workspace state, and stop on malformed or conflicting registry state instead of guessing.
+3. Resolve the full workspace plan before mutation: workspace name, resolved workspace path, repo members, strategy, branch, workspace manifest path, and the registry mutation plan. Keep that resolved scope visible throughout the run.
+4. Inspect every source repo before mutation. A dirty working tree, invalid git repo, or target-path conflict is a hard stop for workspace creation. Keep those blockers visible as `dirty-working-tree`, `invalid-workspace-source`, or `workspace-conflict`.
+5. Prefer `worktree` when it is safe, but if preflight proves that `worktree` cannot satisfy the requested branch or source-repo conditions, do not silently switch to `clone`. Preview the clone fallback and require explicit approval before changing strategy.
+6. Require one explicit confirmation that includes the resolved workspace name and path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan before calling `blueprint_workspace_create`. Keep the pending gate explicit as `workspace-create-confirmation` until the user approves.
+7. Persist the workspace only through `blueprint_workspace_create`, and treat its returned `workspacePath`, `manifestPath`, `registryPath`, `registryEntry`, and `repoMembers` as authoritative. Keep host-global state under `~/.<host>/blueprint/`; never invent a project-local workspace registry.
+8. Keep failure handling honest: if creation fails, stop and surface the blocker clearly. Never claim success when the workspace manifest or registry entry was not written, and never leave a partial registry entry behind.
 
 ### `pr-branch`
 
@@ -166,7 +184,7 @@ Shared in-flight contract for `cleanup`:
 
 ## Planned Later Command Guardrail
 
-- `new-workspace`, `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -174,4 +192,5 @@ Shared in-flight contract for `cleanup`:
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, make any active pending gate or waiting state explicit, and end with the safest implemented follow-up or manual next step.
 - For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
+- For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.

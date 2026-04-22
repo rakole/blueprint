@@ -1,0 +1,45 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { blueprintCommandCatalog } from "./tools/project.js";
+export declare const BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI = "blueprint://commands/catalog";
+export declare const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE = "blueprint://commands/{command}/runtime-contract";
+type CommandCatalogResult = Awaited<ReturnType<typeof blueprintCommandCatalog>>;
+type CommandCatalogEntry = CommandCatalogResult["commands"][string];
+export type BlueprintCommandSpecResource = {
+    path: string;
+    title: string | null;
+    wave: number | null;
+    family: string | null;
+    executionProfile: string | null;
+    rootRoutable: boolean | null;
+    purpose: string | null;
+    requiredTools: string[];
+    primarySkill: string | null;
+    optionalSubagents: string[];
+    reads: string[];
+    writes: string[];
+};
+export type BlueprintRuntimeReferenceRowResource = {
+    path: string;
+    wave: number | null;
+    waveTitle: string | null;
+    command: string;
+    commandSpecPath: string | null;
+    primarySkill: string | null;
+    exactMcpDestination: string[];
+    optionalAgents: string[];
+    hookInvolvement: string[];
+    contractNotes: string | null;
+    evidenceState: string[];
+};
+export type BlueprintCommandRuntimeContractResource = {
+    command: string;
+    uri: string;
+    catalog: CommandCatalogEntry;
+    spec: BlueprintCommandSpecResource | null;
+    runtimeReference: BlueprintRuntimeReferenceRowResource | null;
+};
+export declare function buildBlueprintCommandCatalogResource(): Promise<CommandCatalogResult>;
+export declare function listBlueprintCommandRuntimeContractCommands(): Promise<string[]>;
+export declare function buildBlueprintCommandRuntimeContractResource(commandName: string): Promise<BlueprintCommandRuntimeContractResource>;
+export declare function registerBlueprintCommandResources(server: McpServer): void;
+export {};

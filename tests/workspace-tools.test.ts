@@ -1,0 +1,201 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
+
+import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
+import {
+  blueprintWorkspaceCreate,
+  blueprintWorkspaceRegistryGet
+} from "../src/mcp/tools/workspace.js";
+
+const execFileAsync = promisify(execFile);
+
+async function runGit(args: string[], cwd?: string): Promise<string> {
+  const { stdout } = await execFileAsync("git", args, { cwd });
+  return stdout.trim();
+}
+
+async function createGitRepo(tempRoot: string, name: string): Promise<string> {
+  const repoPath = path.join(tempRoot, name);
+
+  await fs.mkdir(repoPath, { recursive: true });
+  await runGit(["init", "-b", "main"], repoPath);
+  await runGit(["config", "user.name", "Blueprint Tests"], repoPath);
+  await runGit(["config", "user.email", "blueprint-tests@example.com"], repoPath);
+  await fs.writeFile(path.join(repoPath, "README.md"), `# ${name}\n`, "utf8");
+  await runGit(["add", "README.md"], repoPath);
+  await runGit(["commit", "-m", "init"], repoPath);
+
+  return repoPath;
+}
+
+async function withGlobalHome<T>(
+  globalHome: string,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previous = process.env.BLUEPRINT_GLOBAL_HOME;
+  process.env.BLUEPRINT_GLOBAL_HOME = globalHome;
+
+  try {
+    return await callback();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.BLUEPRINT_GLOBAL_HOME;
+    } else {
+      process.env.BLUEPRINT_GLOBAL_HOME = previous;
+    }
+  }
+}
+
+test("workspace tools register registry and create MCP entries", () => {
+  assert.ok(
+    blueprintToolNames.includes("blueprint_workspace_registry_get"),
+    "blueprint_workspace_registry_get should be registered"
+  );
+  assert.ok(
+    blueprintToolNames.includes("blueprint_workspace_create"),
+    "blueprint_workspace_create should be registered"
+  );
+  assert.equal(
+    blueprintToolRegistry.blueprint_workspace_create.inputSchema.strategy.safeParse("worktree")
+      .success,
+    true
+  );
+  assert.equal(
+    blueprintToolRegistry.blueprint_workspace_create.inputSchema.strategy.safeParse("clone")
+      .success,
+    true
+  );
+});
+
+test("blueprint_workspace_registry_get returns an empty host-global registry when missing", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-registry-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const globalHome = path.join(tempRoot, "global-home");
+  const result = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+
+  assert.equal(result.registryPath, path.join(globalHome, "workspaces.json"));
+  assert.deepEqual(result.workspaces, []);
+});
+
+test("blueprint_workspace_create derives the default workspace root from effective config and persists registry plus manifest", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-create-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const canonicalRepoPath = await fs.realpath(repoPath);
+  const configuredWorkspaceRoot = path.join(tempRoot, "configured-workspaces");
+  const globalHome = path.join(tempRoot, "global-home");
+
+  await fs.mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
+  await fs.writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        maintenance: {
+          workspace_root: configuredWorkspaceRoot
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await runGit(["add", ".blueprint/config.json"], repoPath);
+  await runGit(["commit", "-m", "add blueprint config"], repoPath);
+
+  const result = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-a"
+    })
+  );
+
+  assert.equal(result.workspacePath, path.join(configuredWorkspaceRoot, "feature-a"));
+  assert.equal(result.manifestPath, path.join(result.workspacePath, ".blueprint-workspace.json"));
+  assert.equal(result.registryPath, path.join(globalHome, "workspaces.json"));
+  assert.equal(result.registryEntry.name, "feature-a");
+  assert.equal(result.registryEntry.strategy, "worktree");
+  assert.equal(result.registryEntry.branch, null);
+  assert.equal(result.repoMembers.length, 1);
+  assert.equal(result.repoMembers[0]?.sourcePath, canonicalRepoPath);
+  assert.equal(result.repoMembers[0]?.strategy, "worktree");
+  assert.equal(result.repoMembers[0]?.blueprintProject, true);
+
+  const manifest = JSON.parse(await fs.readFile(result.manifestPath, "utf8")) as {
+    name: string;
+    path: string;
+    repos: Array<{ path: string }>;
+  };
+  const registry = JSON.parse(await fs.readFile(result.registryPath, "utf8")) as {
+    workspaces: Array<{ name: string; path: string }>;
+  };
+
+  assert.equal(manifest.name, "feature-a");
+  assert.equal(manifest.path, result.workspacePath);
+  assert.equal(manifest.repos[0]?.path, result.repoMembers[0]?.path);
+  assert.equal(registry.workspaces.length, 1);
+  assert.equal(registry.workspaces[0]?.name, "feature-a");
+  assert.equal(registry.workspaces[0]?.path, result.workspacePath);
+
+  const listed = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+  assert.equal(listed.workspaces.length, 1);
+  assert.equal(listed.workspaces[0]?.manifestPath, result.manifestPath);
+});
+
+test("blueprint_workspace_create rolls back disk state when host-global registry persistence fails", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-rollback-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const configuredWorkspaceRoot = path.join(tempRoot, "configured-workspaces");
+  const brokenGlobalHome = path.join(tempRoot, "global-home-file");
+
+  await fs.mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
+  await fs.writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        maintenance: {
+          workspace_root: configuredWorkspaceRoot
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await runGit(["add", ".blueprint/config.json"], repoPath);
+  await runGit(["commit", "-m", "add blueprint config"], repoPath);
+  await fs.writeFile(brokenGlobalHome, "not-a-directory", "utf8");
+
+  await assert.rejects(
+    withGlobalHome(brokenGlobalHome, () =>
+      blueprintWorkspaceCreate({
+        cwd: repoPath,
+        name: "feature-b"
+      })
+    ),
+    /ENOTDIR|not a directory|EEXIST/
+  );
+
+  const workspacePath = path.join(configuredWorkspaceRoot, "feature-b");
+  const worktreeList = await runGit(["worktree", "list", "--porcelain"], repoPath);
+
+  await assert.rejects(fs.access(workspacePath));
+  await assert.rejects(fs.access(path.join(workspacePath, ".blueprint-workspace.json")));
+  assert.doesNotMatch(worktreeList, /feature-b/);
+});

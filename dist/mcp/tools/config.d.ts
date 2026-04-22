@@ -1,6 +1,11 @@
 import * as z from "zod/v4";
 type ConfigScope = "project" | "defaults" | "effective";
 type ModelProfile = "quality" | "balanced" | "budget" | "inherit";
+type ProgressMode = "quiet" | "stage" | "checklist";
+type StructuredConfirmationsMode = "auto" | "required";
+type UserCheckpointMode = "off" | "phase" | "plan";
+type TaskTrackerMode = "off" | "auto";
+type ExternalSourcesMode = "off" | "ask" | "auto";
 type BlueprintConfig = {
     version: number;
     mode: string;
@@ -12,6 +17,17 @@ type BlueprintConfig = {
     planning: {
         commit_docs: boolean;
         search_gitignored: boolean;
+    };
+    ux: {
+        progress_mode: ProgressMode;
+        structured_confirmations: StructuredConfirmationsMode;
+        user_checkpoints: UserCheckpointMode;
+    };
+    orchestration: {
+        task_tracker: TaskTrackerMode;
+    };
+    research: {
+        external_sources: ExternalSourcesMode;
     };
     workflow: {
         research: boolean;

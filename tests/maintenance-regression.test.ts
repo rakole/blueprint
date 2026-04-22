@@ -10,12 +10,21 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("maintenance manifests keep dirty-tree stops and report-before-mutate gates explicit", async () => {
-  const [prBranch, ship, undo, cleanup] = await Promise.all([
+  const [newWorkspace, prBranch, ship, undo, cleanup] = await Promise.all([
+    readRepoFile("commands/blu-new-workspace.toml"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("commands/blu-ship.toml"),
     readRepoFile("commands/blu-undo.toml"),
     readRepoFile("commands/blu-cleanup.toml")
   ]);
+
+  assert.match(newWorkspace, /maintenance\.workspace_root/);
+  assert.match(newWorkspace, /~\/blueprint-workspaces/);
+  assert.match(newWorkspace, /workspace name, resolved workspace path, repo list, strategy, branch/i);
+  assert.match(newWorkspace, /registry mutation plan/i);
+  assert.match(newWorkspace, /workspace-create-confirmation/);
+  assert.match(newWorkspace, /do not silently switch to `clone`/i);
+  assert.match(newWorkspace, /next safe action/i);
 
   assert.match(prBranch, /If the repo has uncommitted changes, stop/i);
   assert.match(prBranch, /pending gate `clean-working-tree`/);
@@ -48,6 +57,9 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   const skill = await readRepoFile("skills/blueprint-maintenance/SKILL.md");
 
   assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow/i);
+  assert.match(skill, /`blueprint_workspace_registry_get`/);
+  assert.match(skill, /`blueprint_workspace_create`/);
+  assert.match(skill, /`workspace-create-confirmation`/);
   assert.match(skill, /dirty working tree/i);
   assert.match(skill, /pending gate `clean-working-tree`/);
   assert.match(skill, /`review-branch-confirmation`/);
@@ -79,6 +91,11 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`undo`[\s\S]*`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/i);
   assert.match(runtimeReference, /`undo`[\s\S]*`undo-confirmation` and `report-overwrite-confirmation` visible/i);
   assert.match(runtimeReference, /`undo`[\s\S]*persist `undo-latest` before git mutation/i);
+
+  assert.match(runtimeReference, /`new-workspace`[\s\S]*High-risk-maintenance profile for confirmation-gated workspace creation/i);
+  assert.match(runtimeReference, /`new-workspace`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
+  assert.match(runtimeReference, /`new-workspace`[\s\S]*workspace name, path, repo members, strategy, branch, manifest path, and registry mutation plan/i);
+  assert.match(runtimeReference, /`new-workspace`[\s\S]*transactional/i);
 
   assert.match(runtimeReference, /`cleanup`[\s\S]*High-risk-maintenance profile for protected-scope phase-directory archival/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/i);
