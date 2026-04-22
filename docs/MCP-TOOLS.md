@@ -110,6 +110,26 @@ These tool names are part of the documented future contract, but they are not re
 - `blueprint_patch_list`
 - `blueprint_patch_reapply`
 
+## Planned Read-Only MCP Resource Surface
+
+These Blueprint MCP resources are part of the documented future contract for read-heavy grounding, but they are not registered today. `S8.4` through `S8.7` still own implementation and adoption. Until then, commands must keep using the existing local docs plus read-oriented MCP tools directly.
+
+Blueprint resources are read-only discovery surfaces. They do not accept write inputs, they do not become a second persistence layer, and they must not move writes off the existing MCP tool surface.
+
+| Resource URI | Purpose | Backing truth | Write policy | Fallback before registration |
+|---|---|---|---|---|
+| `blueprint://commands/catalog` | Read the retained runtime command catalog as one resource view | live `blueprint_command_catalog` truth | read-only; never a write target | call `blueprint_command_catalog` directly |
+| `blueprint://commands/<command>/runtime-contract` | Read the runtime contract for one retained command | live command-catalog metadata plus the locked command spec and runtime-reference row for that command | read-only; never a write target | read the command spec, runtime reference, and current tool docs directly |
+| `blueprint://phases/<phase>/bundle` | Read a phase-grounding bundle for discovery-style workflows | saved `.blueprint/` core docs plus the resolved phase artifact set | read-only; never a write target | use `blueprint_phase_context`, artifact reads, roadmap/state reads, and local docs directly |
+| `blueprint://codebase/bundle` | Read the saved seven-document codebase mapping bundle as one resource view | `.blueprint/codebase/*.md` plus existing artifact-contract truth | read-only; never a write target | use `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and local files directly |
+| `blueprint://reports/latest` | Read the latest-report index for durable Blueprint reports | `.blueprint/reports/` inventory and existing report metadata | read-only; never a write target | use `blueprint_artifact_list` and direct report reads |
+
+Resource-adoption guardrails:
+
+- Prefer `list_mcp_resources` and `read_mcp_resource` only after the matching Blueprint resources exist.
+- Router, progress, and discovery-style reads may adopt these resources later, but implemented-only command exposure must stay unchanged.
+- Resource views must mirror existing command/tool truth; they do not get to invent new routing, status, or persistence semantics.
+
 ## Implemented Command Ownership Notes
 
 - `/blu`, `help`, `progress`, and `next` rely on `blueprint_command_catalog`, project status, and other read-oriented tools. They must only surface commands whose catalog entry is `implemented`.

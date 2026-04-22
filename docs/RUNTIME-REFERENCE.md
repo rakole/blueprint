@@ -28,6 +28,26 @@ These labels define the shared command-facing contract for Blueprint docs and ru
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 
+## Planned Read-Only MCP Resource Contract
+
+Blueprint now documents one explicit read-only MCP resource contract, but the resources themselves are not registered today. `S8.4`, `S8.5`, and `S8.6` own implementation; `S8.7` owns command adoption and fallback coverage.
+
+Locked resource URIs:
+
+- `blueprint://commands/catalog`
+- `blueprint://commands/<command>/runtime-contract`
+- `blueprint://phases/<phase>/bundle`
+- `blueprint://codebase/bundle`
+- `blueprint://reports/latest`
+
+Runtime rules:
+
+- These resources are read-only context surfaces for discovery and grounding. They do not own persistence, confirmation, routing, or write semantics.
+- Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists.
+- Once implemented, `list_mcp_resources` and `read_mcp_resource` become the preferred read path for these views, with fallback to the existing direct docs/tool reads when resources are unavailable.
+- `blueprint://commands/catalog` may mirror the full retained catalog metadata, but `/blu`, `help`, `progress`, and `next` must still recommend only commands whose catalog entry is `implemented`.
+- `blueprint://reports/latest` is an index-only surface over saved reports. Report authoring and overwrites remain on `blueprint_artifact_report_write`.
+
 ## Command Runtime Matrix
 
 The command tables below map each retained Blueprint command to its current runtime contract. Exact skills, agents, and MCP tools come from the existing Blueprint command specs; hook involvement comes from the locked hook policy and each command's declared write surface.
