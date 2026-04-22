@@ -4,6 +4,14 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `audit-milestone` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded evidence audit and report write, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Keep the waiting state explicit as `milestone-audit-overwrite-confirmation` while an existing report is waiting for replacement approval.
 
 
 ## Purpose
@@ -33,6 +41,7 @@
 
 - User-facing result: a concise completion summary plus the next safe implemented action when applicable.
 - Repo side effects: Writes a durable milestone audit report in `.blueprint/reports/`.
+- In-flight posture: none beyond a concise inline summary or overwrite confirmation gate; `audit-milestone` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads

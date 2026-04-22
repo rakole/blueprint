@@ -4,6 +4,14 @@
 | Wave | `2` |
 | Family | `Roadmap And Milestone` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `interactive-read` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `insert-phase` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded roadmap insert, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Keep the waiting state explicit as `phase-insert-confirmation` while the computed decimal insert is waiting for approval, `invalid-insertion-anchor` when the requested integer anchor is unusable, and `conflicting-decimal-directory` when on-disk state blocks the insert.
 
 
 ## Purpose
@@ -35,6 +43,7 @@
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
 - Repo side effects: Inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phasePrefix>-<phaseSlug>/`, updates `.blueprint/STATE.md`, and does not mutate code or git state.
+- In-flight posture: none beyond a concise inline summary or confirmation gate; `insert-phase` does not expose the long-running progress layer.
 
 
 ## Blueprint And Global State Reads
