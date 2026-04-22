@@ -46,7 +46,11 @@ Runtime rules:
 - Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists.
 - Once implemented, `list_mcp_resources` and `read_mcp_resource` become the preferred read path for these views, with fallback to the existing direct docs/tool reads when resources are unavailable.
 - `blueprint://commands/catalog` may mirror the full retained catalog metadata, but `/blu`, `help`, `progress`, and `next` must still recommend only commands whose catalog entry is `implemented`.
+- `blueprint://commands/<command>/runtime-contract` must mirror live command-catalog metadata plus the locked command spec and runtime-reference row for that command; it does not become a second command-status authority.
+- `blueprint://phases/<phase>/bundle` must mirror saved `.blueprint/` phase-grounding inputs and the resolved phase artifact set, with fallback to `blueprint_phase_context`, direct artifact reads, roadmap/state reads, and local docs until the resource exists.
+- `blueprint://codebase/bundle` must mirror the saved seven-document `.blueprint/codebase/` bundle plus artifact-contract truth, with fallback to `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and local files until the resource exists.
 - `blueprint://reports/latest` is an index-only surface over saved reports. Report authoring and overwrites remain on `blueprint_artifact_report_write`.
+- No writes move onto resource surfaces. Config, roadmap, phase, report, review, and capture persistence remain on the existing Blueprint MCP tool surface.
 
 ## Command Runtime Matrix
 

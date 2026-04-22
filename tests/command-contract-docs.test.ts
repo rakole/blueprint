@@ -168,6 +168,48 @@ test("phase 2.2 drift fixes stay locked for the known ownership mismatches", asy
   }
 });
 
+test("resource contract docs keep resource adoption future-only and read-only", async () => {
+  const [mcpToolsDoc, artifactSchema, runtimeReference] = await Promise.all([
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
+  ]);
+
+  assert.match(mcpToolsDoc, /## Planned Read-Only MCP Resource Surface/);
+  assert.match(
+    mcpToolsDoc,
+    /Router, progress, and discovery-style reads may adopt these resources later, but implemented-only command exposure must stay unchanged/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /Resource views must mirror existing command\/tool truth; they do not get to invent new routing, status, or persistence semantics/i
+  );
+
+  assert.match(artifactSchema, /## Read-Only MCP Resource Views/);
+  assert.match(
+    artifactSchema,
+    /Blueprint's planned MCP resources are derived read views over existing runtime truth/i
+  );
+  assert.match(
+    artifactSchema,
+    /Resource views are for discovery and grounding only\. Writes remain on the existing MCP tool surface for config, roadmap, phase, report, review, and capture persistence/i
+  );
+
+  assert.match(runtimeReference, /## Planned Read-Only MCP Resource Contract/);
+  assert.match(
+    runtimeReference,
+    /Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists/i
+  );
+  assert.match(
+    runtimeReference,
+    /`blueprint:\/\/commands\/catalog` may mirror the full retained catalog metadata, but `\/blu`, `help`, `progress`, and `next` must still recommend only commands whose catalog entry is `implemented`/i
+  );
+  assert.match(
+    runtimeReference,
+    /No writes move onto resource surfaces\. Config, roadmap, phase, report, review, and capture persistence remain on the existing Blueprint MCP tool surface/i
+  );
+});
+
 test("phase discovery skill and bounded agent contracts are marked implemented in docs", async () => {
   const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
 
