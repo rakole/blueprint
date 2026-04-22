@@ -20,7 +20,7 @@ the right next step is a bounded fix, a saved plan, or more validation.
 
 ## Runtime Call Rules
 
-- Execution profile: `interactive-read`
+- Execution profile: `long-running-mutation`
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
@@ -28,6 +28,9 @@ the right next step is a bounded fix, a saved plan, or more validation.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose when the host makes it available.
+- Use Gemini CLI's internal `update_topic` tool to keep non-trivial debugging anchored on the active stage.
+- Use Gemini CLI's internal `write_todos` tool to maintain a compact visible checklist for non-trivial investigations.
+- Treat `update_topic` and `write_todos` as session-local coordination only; they do not replace Blueprint MCP persistence, and they are not permission to capture persisted follow-up todos implicitly.
 
 ## Parity Goal
 
@@ -36,7 +39,7 @@ host-native boundaries:
 
 - investigations stay grounded in repo evidence rather than chat memory
 - persistence remains explicit through a durable `.blueprint/reports/` artifact
-- follow-up work can be captured intentionally instead of disappearing into chat
+- follow-up work can be captured intentionally instead of disappearing into chat, but only after an explicit ask or confirmation
 - diagnose-only runs stay distinct from fix attempts
 - routing stays inside the implemented Blueprint surface
 
@@ -78,27 +81,37 @@ host-native boundaries:
    route to `/blu-new-project`.
 3. Treat `--diagnose` as a hard diagnose-only boundary until the user confirms
    a fix attempt.
-4. Read the most relevant local evidence directly, including existing
+4. For non-trivial investigations, keep the resolved scope, active stage,
+   pending gate, execution mode, and next safe action visible with
+   `update_topic`, `write_todos`, or the equivalent prose fallback.
+5. Read the most relevant local evidence directly, including existing
    `.blueprint/reports/debug-latest.md` content when a prior run should be
    continued instead of replaced.
-5. Use `blueprint-debugger` for bounded hypothesis testing, reproduction, log
+6. Use `blueprint-debugger` for bounded hypothesis testing, reproduction, log
    review, and confidence-rated diagnosis when the investigation is more than a
    quick local inspection.
-6. Keep `debug` investigative. When the result is a real implementation task,
-   route to `/blu-quick` for a bounded fix or `/blu-plan-phase` for a broader
-   saved-plan rollout instead of widening the debug run indefinitely.
-7. Persist the durable report through `blueprint_artifact_report_write` with
+7. Keep `debug` investigative. When the result is a bounded fix, route to
+   `/blu-quick`. When it needs a broader saved-plan rollout, route to
+   `/blu-plan-phase`. When the next safe step is saved verification evidence,
+   route to `/blu-validate-phase`. Prefer `/blu-progress` when multiple
+   implemented next steps remain viable instead of widening the debug run
+   indefinitely.
+8. Persist the durable report through `blueprint_artifact_report_write` with
    the bare canonical `debug-latest` report name, not a `.blueprint/reports/...`
    path.
-8. Stop on an explicit follow-up gate after the diagnosis: keep the run
-   report-only, capture a todo, route to `/blu-quick`, route to
-   `/blu-plan-phase`, or defer to `/blu-progress` when multiple implemented
-   next steps remain viable.
-9. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
-   capture. Do not silently turn every finding into a todo.
-10. After persistence, update `STATE.md` through `blueprint_state_update` so
+9. Stop on an explicit follow-up gate after the diagnosis: keep the run
+   report-only, capture a todo only after an explicit user ask or confirmation,
+   route to `/blu-quick`, route to `/blu-plan-phase`, route to
+   `/blu-validate-phase`, or defer to `/blu-progress` when multiple
+   implemented next steps remain viable.
+10. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
+   capture after the user asks to capture it or confirms that the diagnosis or
+   saved report should become a persisted todo. Do not silently turn every
+   finding into a todo, and do not confuse visible `write_todos` checklists
+   with persisted Blueprint follow-up capture.
+11. After persistence, update `STATE.md` through `blueprint_state_update` so
     the next safe implemented action is explicit.
-11. Keep follow-up routing inside implemented commands only. Prefer
+12. Keep follow-up routing inside implemented commands only. Prefer
     `/blu-progress` when the investigation ends with multiple viable next
     steps.
 
@@ -108,6 +121,8 @@ host-native boundaries:
 - Separate confirmed causes from hypotheses or likely next experiments.
 - State whether the run stayed diagnose-only or crossed into a confirmed fix
   attempt.
+- State whether any in-flight visibility stayed session-local only and whether
+  any persisted todo follow-up was explicitly approved.
 - Name whether the follow-up stayed report-only, became a captured todo, or
   rerouted into another implemented command.
 - Name the `debug-latest` report and any captured todo follow-up explicitly.
