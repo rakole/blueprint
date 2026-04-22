@@ -87,9 +87,11 @@ async function createUiReviewRepo(): Promise<string> {
 }
 
 test("ui-review docs and catalog metadata promote the UI audit slice to implemented", async () => {
-  const [catalogMarkdown, skillsMarkdown] = await Promise.all([
+  const [catalogMarkdown, skillsMarkdown, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/ui-review.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
   assert.match(
@@ -99,6 +101,36 @@ test("ui-review docs and catalog metadata promote the UI audit slice to implemen
   assert.match(
     skillsMarkdown,
     /\| `blueprint-ui-auditor` \| `implemented` \| Perform retroactive six-pillar UI audits \|/
+  );
+  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(
+    commandDoc,
+    /saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW\.md` artifact is being created, reused, or revised, main findings or pass signals, and next safe action/i
+  );
+  assert.match(commandDoc, /`update_topic` tool and keep a compact UI-review checklist with `write_todos`/i);
+  assert.match(commandDoc, /actual frontend surface under review/i);
+  assert.match(commandDoc, /created, reused, or revised/i);
+  assert.match(
+    runtimeReference,
+    /`ui-review`[\s\S]*Long-running-mutation profile for phase-scoped UI audit/i
+  );
+  assert.match(
+    runtimeReference,
+    /`ui-review`[\s\S]*`update_topic` and `write_todos` for non-trivial ui-review runs/i
+  );
+  assert.match(
+    runtimeReference,
+    /`ui-review`[\s\S]*saved `XX-UI-SPEC\.md` coverage and the actual frontend surface explicit/i
+  );
+  assert.match(
+    runtimeReference,
+    /`ui-review`[\s\S]*inline versus `blueprint-ui-auditor`-assisted analysis/i
+  );
+  assert.match(
+    runtimeReference,
+    /`ui-review`[\s\S]*artifact create\/reuse\/revise status plus findings-or-pass posture explicit/i
   );
 });
 
