@@ -69,6 +69,15 @@ These remain host-native router flows. They do not depend on slash-command chain
 
 Blueprint stores normalized repo config in `.blueprint/config.json` and user defaults in `~/.<host>/blueprint/defaults.json`. It persists repo config in fully materialized form and keeps the same hardcoded-defaults -> user-defaults -> repo-config -> flag precedence model.
 
+The shared config contract also reserves these effectiveness-spine keys and enum values ahead of runtime support:
+- `ux.progress_mode`: `quiet | stage | checklist`
+- `ux.structured_confirmations`: `auto | required`
+- `ux.user_checkpoints`: `off | phase | plan`
+- `orchestration.task_tracker`: `off | auto`
+- `research.external_sources`: `off | ask | auto`
+
+Those reserved keys stay documented and host-portable, but `/blu-settings` and the config MCP runtime must not surface them as writable or persisted until the dedicated runtime slice lands.
+
 ### Hook config
 
 Repo config does not own hook toggles. Blueprint hooks stay advisory and are configured only through extension-owned `hooks/hooks.json`, not through `.blueprint/config.json`.
