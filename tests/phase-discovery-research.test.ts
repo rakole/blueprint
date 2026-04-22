@@ -158,6 +158,15 @@ test("research-phase command references only registered tool names and safe rout
     path.join(repoRoot, "docs/commands/research-phase.md"),
     "utf8"
   );
+  const runtimeReference = await readFile(
+    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
+    "utf8"
+  );
+  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
+  const skillFile = await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
+    "utf8"
+  );
   const researcherAgent = await readFile(
     path.join(repoRoot, "agents/blueprint-researcher.md"),
     "utf8"
@@ -197,7 +206,13 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /phase_checkpoint_put/i);
   assert.match(commandFile, /phase_checkpoint_delete/i);
   assert.match(commandFile, /topic-sized strands/i);
+  assert.match(commandFile, /long-running-mutation/);
+  assert.match(commandFile, /update_topic/);
+  assert.match(commandFile, /write_todos/);
   assert.match(commandFile, /inconclusive/i);
+  assert.match(commandFile, /Keep repo truth explicit/i);
+  assert.match(commandFile, /official docs or explicitly supplied external references/i);
+  assert.match(commandFile, /distinct from repo-derived evidence/i);
   assert.match(commandFile, /PROJECT\.md/);
   assert.match(commandFile, /REQUIREMENTS\.md/);
   assert.match(commandFile, /STATE\.md/);
@@ -212,6 +227,29 @@ test("research-phase command references only registered tool names and safe rout
   assert.ok(docFile.includes("contract.authoringTemplate"));
   assert.ok(docFile.includes("contract.freehandPolicy"));
   assert.ok(docFile.includes("additional-top-level-headings"));
+  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(docFile, /topic-strand phase research/i);
+  assert.match(docFile, /update_topic/);
+  assert.match(docFile, /write_todos/);
+  assert.match(docFile, /repo truth/i);
+  assert.match(docFile, /official docs or explicitly supplied external references/i);
+
+  assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
+  assert.match(runtimeReference, /Long-running-mutation profile for topic-strand phase research/i);
+  assert.match(runtimeReference, /update_topic/);
+  assert.match(runtimeReference, /write_todos/);
+  assert.match(runtimeReference, /repo truth/i);
+  assert.match(runtimeReference, /external truth/i);
+  assert.match(
+    mcpToolsDoc,
+    /`research-phase` uses phase location\/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
+  );
+
+  assert.match(skillFile, /Execution profile for `\/blu-research-phase`: `long-running-mutation`/);
+  assert.match(skillFile, /update_topic/);
+  assert.match(skillFile, /write_todos/);
+  assert.match(skillFile, /official docs or explicitly supplied external references/i);
+  assert.match(skillFile, /repo-derived evidence distinct from external or web-derived evidence/i);
 
   assert.match(researcherAgent, /comparing repo evidence against official docs with clear provenance/i);
   assert.match(researcherAgent, /repo-root `AGENTS\.md`/i);
