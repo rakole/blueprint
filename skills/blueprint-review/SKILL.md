@@ -87,12 +87,14 @@ non-routable until their extra MCP substrate lands.
 - Execution profile for `audit-fix`: `long-running-mutation`
 - Execution profile for `secure-phase`: `long-running-mutation`
 - Execution profile for `review`: `long-running-mutation`
+- Execution profile for `ui-review`: `long-running-mutation`
 - Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields for `code-review`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `code-review-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `audit-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `secure-phase`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `review`: resolved scope, active stage, pending gate, execution mode, next safe action
+- In-flight status fields for `ui-review`: resolved scope, active stage, pending gate, execution mode, next safe action
 
 ## Shared MCP Contracts
 
@@ -242,12 +244,24 @@ non-routable until their extra MCP substrate lands.
    default to reuse unless the user explicitly asks for an update.
 4. Keep the audit grounded in saved repo evidence, the phase goal, and the
    actual frontend or UX surface under review.
-5. Use `blueprint-ui-auditor` when the phase spans multiple screens, includes
+5. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
+   resolved scope, active stage, pending gate, execution mode, and next safe
+   action legible throughout the run.
+6. For non-trivial ui-review runs, prefer update_topic plus `write_todos` so
+   saved-evidence review, bounded UI analysis, artifact persistence,
+   validation, and routing stay visible without becoming persistence.
+7. Report the resolved phase, saved execution and UI-spec coverage, whether
+   the existing `XX-UI-REVIEW.md` artifact is being created, reused, or
+   revised, and the current findings-or-pass posture while work is in flight.
+   Let execution mode reflect inline versus `blueprint-ui-auditor`-assisted
+   analysis, and keep pending gates limited to overwrite confirmation only.
+8. Use `blueprint-ui-auditor` when the phase spans multiple screens, includes
    richer interaction work, or benefits from a higher-confidence six-pillar UI
    audit.
-6. Persist finished UI audit evidence through `blueprint_review_record` with
+9. Persist finished UI audit evidence through `blueprint_review_record` with
    the `ui-review` artifact.
-7. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+10. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
    depending on which lifecycle artifacts already exist and whether follow-up UI
    work remains.
