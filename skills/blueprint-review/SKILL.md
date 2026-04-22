@@ -85,10 +85,12 @@ non-routable until their extra MCP substrate lands.
 - Execution profile for `code-review`: `long-running-mutation`
 - Execution profile for `code-review-fix`: `long-running-mutation`
 - Execution profile for `audit-fix`: `long-running-mutation`
+- Execution profile for `secure-phase`: `long-running-mutation`
 - Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields for `code-review`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `code-review-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
 - In-flight status fields for `audit-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
+- In-flight status fields for `secure-phase`: resolved scope, active stage, pending gate, execution mode, next safe action
 
 ## Shared MCP Contracts
 
@@ -195,25 +197,38 @@ non-routable until their extra MCP substrate lands.
 5. Read `blueprint_phase_plan_index` and `blueprint_phase_plan_read` so the
    saved phase threat model can be parsed from executed plan evidence, then
    build a threat register from the declared threats and mitigations.
-6. Keep the audit bounded to that declared security scope rather than a broad
-   scan.
-7. Distinguish confirmed mitigations, open threats, accepted risks, and
+6. Keep the audit bounded to that declared security scope from saved plan
+   evidence only rather than a broad scan.
+7. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
+   resolved scope, active stage, pending gate, execution mode, and next safe
+   action legible throughout the run.
+8. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
+   so saved-plan review, threat verification, overwrite gates, artifact
+   persistence, post-write validation, and routing stay visible without
+   becoming persistence.
+9. Report the resolved scope, threat-register coverage, whether the security
+   artifact is being reused or revised, and the current pending-open-threat
+   status while work is in flight. Keep the verify-versus-accept decision
+   explicit whenever threats remain open. Keep pending gates limited to
+   overwrite confirmation, the verify-versus-accept decision, or
+   `pending-open-threat`, and let execution mode reflect inline versus
+   `blueprint-security-auditor`-assisted review.
+10. Distinguish confirmed mitigations, open threats, accepted risks, and
    follow-up hardening work explicitly inside the saved security artifact.
-8. Present the user with the choice to verify open threats or explicitly accept
+11. Present the user with the choice to verify open threats or explicitly accept
    them, use Gemini CLI's `ask_user` for that structured decision, and block
    advancement when any threat remains open instead of always computing a next
    action.
-9. Report in-flight progress while the audit is running, including the
-   resolved phase, threat-register coverage, whether the security artifact is
-   being reused or revised, and the current verify-versus-accept state for
-   open threats.
-10. Use `blueprint-security-auditor` when the phase spans multiple plans,
+12. Use `blueprint-security-auditor` when the phase spans multiple plans,
    touches risky surfaces, or needs a higher-confidence mitigation review.
-11. Persist finished security evidence through `blueprint_review_record` with
+13. Persist finished security evidence through `blueprint_review_record` with
    the `security` artifact.
-12. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu-validate-phase`, then `/blu-verify-work`, and otherwise `/blu-progress`
-   only after all threats are closed or accepted.
+14. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+   `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>`, and
+   otherwise `/blu-progress` only after all threats are closed or accepted.
+   Do not emit next-step routing while threats remain open, and keep the
+   waiting state explicit as `pending-open-threat` until the gate clears.
 
 ### `ui-review`
 

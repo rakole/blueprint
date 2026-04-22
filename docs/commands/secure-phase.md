@@ -3,7 +3,15 @@
 |---|---|
 | Wave | `4` |
 | Family | `Quality And Shipping` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `secure-phase` uses the shared long-running-mutation posture: resolve the target phase, read saved execution plus plan evidence, decide the overwrite or open-threat gate, execute a threat-model-bounded audit, persist the durable security artifact through MCP, validate the saved result against the security contract, and route to the next safe implemented follow-up only when threats no longer remain open.
+- Keep the threat-review posture explicit throughout the run: resolved scope must stay tied to the saved plan evidence and declared threat register, pending gates stay limited to overwrite confirmation, the verify-versus-accept decision, or the visible `pending-open-threat` waiting state, execution mode should reflect inline versus `blueprint-security-auditor`-assisted review, and next safe action must stay blocked until every threat is closed or explicitly accepted.
 
 
 ## Purpose
@@ -31,6 +39,7 @@
 
 - User-facing result: a concise completion summary, then either a verification-or-acceptance decision for open threats or a blocked advancement result when threats remain open.
 - Repo side effects: Writes only the declared phase-scoped security artifact for this command.
+- In-flight secure-phase work should keep the resolved scope, active stage, plan coverage, threat-register coverage, pending gate, execution mode, security artifact reuse or revision status, pending-open-threat status, and next safe action legible while the run is still live. When threats remain open, next-step guidance stays blocked.
 
 
 ## Blueprint And Global State Reads
@@ -59,6 +68,7 @@
 
 - Read the canonical `review.security` contract through `blueprint_artifact_contract_read` before drafting or revising `XX-SECURITY.md`, and use the returned template and required headings as the baseline instead of a copied prompt-local variant.
 - Use `blueprint_phase_plan_index` and `blueprint_phase_plan_read` to parse the saved phase threat model from the executed plan evidence before building the threat register.
+- Keep the threat-model-bounded behavior explicit: use saved plan evidence only to define the declared threats and mitigations, then audit against that register instead of widening into a generic security scan.
 - Keep the returned template's threat register, accepted risks, and audit-trail structure explicit even when the final audit concludes there are no open threats.
 - Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`.
 - Do not compute a next action until all threats are closed or explicitly accepted.
@@ -107,9 +117,11 @@
 ## In-Flight Progress Contract
 
 
-- Report the resolved phase, threat-register coverage, and whether the existing `XX-SECURITY.md` artifact is being reused or revised while the audit is running.
-- When open threats remain, report whether the command is waiting on verification or explicit acceptance before advancing.
-- Closing summary must include whether the security artifact was created, reused, or revised, plus the blocked-versus-cleared status for the threat register.
+- For non-trivial secure-phase runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact threat-review checklist with `write_todos`.
+- Keep that visible progress aligned to the resolved scope, active stage, saved-plan coverage, threat-register coverage, pending gate, execution mode, whether the existing `XX-SECURITY.md` artifact is being reused or revised, current pending-open-threat status, and next safe action as the run moves from target resolution through saved-plan review, threat verification, persistence, validation, and routing.
+- Treat `update_topic` and `write_todos` as session-local visibility only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
+- When open threats remain, keep the waiting state explicit as `pending-open-threat` and do not emit next-step routing until that gate is cleared.
+- Closing summary must include whether the security artifact was created, reused, or revised, plus the blocked-versus-cleared status for the threat register and the final pending-open-threat status.
 
 
 ## Edge Cases
@@ -131,13 +143,15 @@
 
 
 - Produces a durable artifact for review, security, UI, or shipping work.
+- Non-trivial secure-phase runs use the shared long-running-mutation posture with visible stage and status fields.
+- Keeps pending gates explicit for overwrite confirmation and pending-open-threat / verify-versus-accept decisions.
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Uses Gemini-native `ask_user` confirmation for overwrite and verify-versus-accept decision paths.
 - Leaves unrelated repo files untouched.
 - Distinguishes confirmed mitigations, open threats, accepted risks, suspicious artifact content, and explicit hardening follow-ups inside the saved security evidence.
-- Parses the saved phase threat model, builds a threat register, and keeps the audit bounded to declared threats and mitigations.
+- Parses the saved phase threat model, builds a threat register, and keeps the audit bounded to declared threats and mitigations from saved plan evidence only.
 - Blocks advancement while any threat remains open.
 
 
