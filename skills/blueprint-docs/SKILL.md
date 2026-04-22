@@ -60,6 +60,12 @@ Blueprint's host-native boundaries:
 - `blueprint-doc-writer`
 - `blueprint-doc-verifier`
 
+## Shared Runtime Contract
+
+- Execution profile for `docs-update`: `long-running-mutation`
+- Stage vocabulary for visible docs-update posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields for `docs-update`: resolved scope, active stage, pending gate, execution mode, next safe action
+
 ## Shared MCP Contracts
 
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, and `testFiles` only, and treat `inputsUsed` as the authoritative digest scope.
@@ -74,25 +80,50 @@ Blueprint's host-native boundaries:
    missing or unhealthy.
 2. Resolve the doc scope before drafting anything. Default to the user-named
    files, or a narrow `README.md`-first pass when scope is otherwise omitted.
-3. Keep broad repo-doc refreshes blocked until the repo has enough saved
-   evidence, especially the `.blueprint/codebase/` bundle from
+3. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
+   resolved scope, active stage, pending gate, execution mode, and next safe
+   action legible throughout the run.
+4. For non-trivial docs-update runs, prefer update_topic plus `write_todos` so
+   scope resolution, evidence review, optional external verification, bounded
+   drafting or verification, report persistence, and routing stay visible
+   without becoming persistence.
+5. Keep broad repo-doc refreshes confirmation-gated and blocked until the repo
+   has enough saved evidence, especially the `.blueprint/codebase/` bundle from
    `/blu-map-codebase`.
-4. Build the evidence base through `blueprint_artifact_summary_digest` with
+6. Treat the selected repo docs, source files, tests, and saved Blueprint
+   artifacts as repo truth. Use external web tools only when the user
+   explicitly asked for outside verification or the documentation claim depends
+   on current external API, library, or product facts that cannot come from
+   repo truth alone. Keep cited external truth separate from repo truth in the
+   saved report and user summary; if web tools are unavailable, continue with
+   repo truth only and note that the external verification was skipped.
+7. Build the evidence base through `blueprint_artifact_summary_digest` with
    explicit artifact and repo file inputs instead of relying on chat memory.
-5. Treat `--verify-only` as read-only for repo docs. The command may still
+8. Report in-flight progress, including the resolved doc scope, whether the
+   digest-backed evidence stays repo-only or also uses cited external truth,
+   active stage, pending gate, execution mode, whether the run is verify-only
+   or update mode, whether the pass stays inline or uses `blueprint-doc-writer`
+   or `blueprint-doc-verifier`, repo-doc mutation status, report status, and
+   next safe action.
+9. Keep pending gates limited to broad-scope confirmation, doc overwrite
+   confirmation, report overwrite confirmation, or `none`.
+10. Treat `--verify-only` as read-only for repo docs. The command may still
    write the durable `.blueprint/reports/docs-update-latest.md` report.
-6. Use `blueprint-doc-writer` for bounded drafting when the update spans
+11. Use `blueprint-doc-writer` for bounded drafting when the update spans
    multiple sections or files.
-7. Use `blueprint-doc-verifier` to fact-check either the current docs or the
+12. Use `blueprint-doc-verifier` to fact-check either the current docs or the
    drafted update before finalizing results.
-8. Require explicit overwrite confirmation before replacing heavily edited docs
+13. Require explicit overwrite confirmation before replacing heavily edited docs
    or the canonical `docs-update-latest` report unless the user passed
    `--force`.
-9. Keep repo mutations scoped to the selected documentation files only. Do not
+14. Keep repo mutations scoped to the selected documentation files only. Do not
    widen into code edits, test edits, `.blueprint/` rewrites, or git flows from
    this command.
-10. Persist the durable report through `blueprint_artifact_report_write` and
-    keep follow-up routing inside implemented Blueprint commands only.
+15. Persist the durable report through `blueprint_artifact_report_write` and
+   keep follow-up routing inside implemented Blueprint commands only. Prefer
+   `/blu-map-codebase` when broad refresh evidence is missing and
+   `/blu-progress` when the safest follow-up is otherwise ambiguous.
 
 ## Non-Negotiables
 
