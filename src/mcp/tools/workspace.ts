@@ -13,6 +13,7 @@ import { resolveBlueprintRuntimeHost } from "../runtime-host.js";
 import {
   assertNoNullBytes,
   ensurePathWithinRootSync,
+  isPathWithinRootSync,
   safeJsonParseObject,
   validateFieldNameSegment
 } from "../../shared/security.js";
@@ -26,6 +27,8 @@ const PATCH_MANIFEST_VERSION = 1;
 const PATCH_AUDIT_VERSION = 1;
 const PATCH_AUDIT_ACTIONS = ["record", "preview", "reapply"] as const;
 const PATCH_OUTCOMES = ["recorded", "applied", "conflict", "blocked"] as const;
+const WORKSPACE_REGISTRY_LOCK_RETRY_MS = 50;
+const WORKSPACE_REGISTRY_LOCK_STALE_MS = 60_000;
 
 type WorkspaceStrategy = (typeof WORKSPACE_STRATEGIES)[number];
 type PatchAuditAction = (typeof PATCH_AUDIT_ACTIONS)[number];
@@ -396,17 +399,10 @@ async function remoteBranchExists(repoPath: string, branch: string): Promise<boo
   return result.success && result.stdout.length > 0;
 }
 
-async function readWorkspaceRegistryDocument(
+function parseWorkspaceRegistryDocument(
+  raw: string,
   registryPath: string
-): Promise<WorkspaceRegistryDocument> {
-  if (!(await pathExists(registryPath))) {
-    return {
-      version: WORKSPACE_REGISTRY_VERSION,
-      workspaces: []
-    };
-  }
-
-  const raw = await fs.readFile(registryPath, "utf8");
+): WorkspaceRegistryDocument {
   const parsed = safeJsonParseObject(raw, {
     label: registryPath
   }) as unknown;
@@ -445,6 +441,99 @@ async function readWorkspaceRegistryDocument(
     version,
     workspaces
   };
+}
+
+async function listWorkspaceRegistryBackups(registryPath: string): Promise<string[]> {
+  const directory = path.dirname(registryPath);
+  const backupPrefix = `${path.basename(registryPath)}.bak-`;
+
+  let entries: Array<{ isFile: () => boolean; name: string }>;
+
+  try {
+    entries = (await fs.readdir(directory, {
+      encoding: "utf8",
+      withFileTypes: true
+    })) as Array<{ isFile: () => boolean; name: string }>;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const backupCandidates = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(backupPrefix))
+    .map((entry) => path.join(directory, entry.name));
+
+  const backupsWithStats = await Promise.all(
+    backupCandidates.map(async (backupPath) => {
+      try {
+        const stats = await fs.stat(backupPath);
+        return {
+          backupPath,
+          mtimeMs: stats.mtimeMs
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return backupsWithStats
+    .filter((entry): entry is { backupPath: string; mtimeMs: number } => entry !== null)
+    .sort((left, right) => right.mtimeMs - left.mtimeMs)
+    .map((entry) => entry.backupPath);
+}
+
+async function recoverWorkspaceRegistryDocument(
+  registryPath: string
+): Promise<WorkspaceRegistryDocument | null> {
+  const backupPaths = await listWorkspaceRegistryBackups(registryPath);
+  let lastError: Error | null = null;
+
+  for (const backupPath of backupPaths) {
+    try {
+      const raw = await fs.readFile(backupPath, "utf8");
+      const document = parseWorkspaceRegistryDocument(raw, backupPath);
+
+      await fs.mkdir(path.dirname(registryPath), { recursive: true });
+      await fs.copyFile(backupPath, registryPath).catch(() => undefined);
+
+      return document;
+    } catch (error) {
+      lastError =
+        error instanceof Error ? error : new Error("Workspace registry backup recovery failed.");
+    }
+  }
+
+  if (lastError) {
+    throw new Error(
+      `Workspace registry recovery failed at ${registryPath}: ${lastError.message}`
+    );
+  }
+
+  return null;
+}
+
+async function readWorkspaceRegistryDocument(
+  registryPath: string
+): Promise<WorkspaceRegistryDocument> {
+  if (!(await pathExists(registryPath))) {
+    const recovered = await recoverWorkspaceRegistryDocument(registryPath);
+
+    if (recovered) {
+      return recovered;
+    }
+
+    return {
+      version: WORKSPACE_REGISTRY_VERSION,
+      workspaces: []
+    };
+  }
+
+  const raw = await fs.readFile(registryPath, "utf8");
+  return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 
 function normalizeRegistryEntry(value: unknown): WorkspaceRegistryEntry {
@@ -544,13 +633,13 @@ async function writeWorkspaceRegistryDocument(
   let restoredOriginal = false;
 
   try {
-    await fs.rename(registryPath, backupPath);
+    await fs.copyFile(registryPath, backupPath);
     await fs.rename(tempPath, registryPath);
   } catch (error) {
     await fs.rm(tempPath, { force: true }).catch(() => undefined);
 
     if (!(await pathExists(registryPath)) && (await pathExists(backupPath))) {
-      await fs.rename(backupPath, registryPath)
+      await fs.copyFile(backupPath, registryPath)
         .then(() => {
           restoredOriginal = true;
         })
@@ -565,6 +654,52 @@ async function writeWorkspaceRegistryDocument(
   }
 
   await fs.rm(backupPath, { force: true }).catch(() => undefined);
+}
+
+async function acquireWorkspaceRegistryLock(lockPath: string): Promise<void> {
+  await fs.mkdir(path.dirname(lockPath), { recursive: true });
+
+  for (;;) {
+    try {
+      await fs.mkdir(lockPath);
+      return;
+    } catch (error) {
+      const lockError = error as NodeJS.ErrnoException;
+
+      if (lockError.code !== "EEXIST") {
+        throw error;
+      }
+
+      try {
+        const stats = await fs.stat(lockPath);
+
+        if (Date.now() - stats.mtimeMs > WORKSPACE_REGISTRY_LOCK_STALE_MS) {
+          await fs.rm(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch (statError) {
+        if ((statError as NodeJS.ErrnoException).code === "ENOENT") {
+          continue;
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, WORKSPACE_REGISTRY_LOCK_RETRY_MS));
+    }
+  }
+}
+
+async function withWorkspaceRegistryLock<T>(
+  registryPath: string,
+  callback: () => Promise<T>
+): Promise<T> {
+  const lockPath = `${registryPath}.lock`;
+  await acquireWorkspaceRegistryLock(lockPath);
+
+  try {
+    return await callback();
+  } finally {
+    await fs.rm(lockPath, { recursive: true, force: true }).catch(() => undefined);
+  }
 }
 
 function normalizePatchId(value: string): string {
@@ -1035,25 +1170,10 @@ function ensureWorkspaceTargetIsSafe(
   workspacePath: string,
   sourceRepos: ResolvedSourceRepo[]
 ): void {
-  const containmentEscapePrefix = "Workspace path escapes the allowed root:";
-
   for (const sourceRepo of sourceRepos) {
-    try {
-      ensurePathWithinRootSync(sourceRepo.sourcePath, workspacePath, {
-        label: "Workspace path"
-      });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.startsWith(containmentEscapePrefix)
-      ) {
-        continue;
-      }
-
-      throw error;
+    if (isPathWithinRootSync(sourceRepo.sourcePath, workspacePath)) {
+      throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
     }
-
-    throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
   }
 }
 
@@ -1065,6 +1185,40 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath: string): Promise
 
 function buildWorkspaceManifestPath(workspacePath: string): string {
   return path.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+}
+
+function assertNotInstalledExtensionPath(candidatePath: string, label: string): void {
+  const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
+
+  if (!extensionPath) {
+    return;
+  }
+
+  if (isPathWithinRootSync(extensionPath, candidatePath)) {
+    throw new Error(
+      `${label} must not target the installed extension directory: ${path.resolve(extensionPath)}`
+    );
+  }
+}
+
+async function rollbackPartialWorktreeAdd(
+  sourceRepoPath: string,
+  memberPath: string,
+  createdSourceBranch: string | null
+): Promise<void> {
+  await runGit(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
+    allowFailure: true
+  });
+  await fs.rm(memberPath, { recursive: true, force: true }).catch(() => undefined);
+
+  if (createdSourceBranch) {
+    await runGit(
+      ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
+      {
+        allowFailure: true
+      }
+    );
+  }
 }
 
 async function createWorkspaceMember(
@@ -1088,45 +1242,72 @@ async function createWorkspaceMember(
   const memberPath = path.join(workspacePath, candidateName);
 
   if (strategy === "worktree") {
+    const localBranchAlreadyExists = requestedBranch
+      ? await localBranchExists(sourceRepo.sourcePath, requestedBranch)
+      : false;
+    const partialCreatedBranch =
+      requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
+
     if (requestedBranch) {
-      if (await localBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-        await runGit(["-C", sourceRepo.sourcePath, "worktree", "add", memberPath, requestedBranch]);
-      } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-        await runGit([
-          "-C",
+      try {
+        if (localBranchAlreadyExists) {
+          await runGit([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            memberPath,
+            requestedBranch
+          ]);
+        } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
+          await runGit([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            "--track",
+            "-b",
+            requestedBranch,
+            memberPath,
+            `origin/${requestedBranch}`
+          ]);
+          createdSourceBranch = requestedBranch;
+        } else {
+          await runGit([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            "-b",
+            requestedBranch,
+            memberPath,
+            "HEAD"
+          ]);
+          createdSourceBranch = requestedBranch;
+        }
+      } catch (error) {
+        await rollbackPartialWorktreeAdd(
           sourceRepo.sourcePath,
-          "worktree",
-          "add",
-          "--track",
-          "-b",
-          requestedBranch,
           memberPath,
-          `origin/${requestedBranch}`
-        ]);
-        createdSourceBranch = requestedBranch;
-      } else {
+          partialCreatedBranch
+        );
+        throw error;
+      }
+    } else {
+      try {
         await runGit([
           "-C",
           sourceRepo.sourcePath,
           "worktree",
           "add",
-          "-b",
-          requestedBranch,
+          "--detach",
           memberPath,
           "HEAD"
         ]);
-        createdSourceBranch = requestedBranch;
+      } catch (error) {
+        await rollbackPartialWorktreeAdd(sourceRepo.sourcePath, memberPath, null);
+        throw error;
       }
-    } else {
-      await runGit([
-        "-C",
-        sourceRepo.sourcePath,
-        "worktree",
-        "add",
-        "--detach",
-        memberPath,
-        "HEAD"
-      ]);
     }
   } else {
     await runGit(["clone", sourceRepo.sourcePath, memberPath]);
@@ -1216,13 +1397,15 @@ export async function blueprintWorkspaceCreate(
     name: normalizedName
   });
   const sourceRepos = await resolveSourceRepos(resolveRequestedRepos(args), args.cwd);
-  const registry = await readWorkspaceRegistryDocument(registryPath);
   const manifestPath = buildWorkspaceManifestPath(workspacePath);
 
+  assertNotInstalledExtensionPath(workspacePath, "Workspace path");
   ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos);
   await ensureWorkspaceTargetDoesNotExist(workspacePath);
 
   for (const sourceRepo of sourceRepos) {
+    assertNotInstalledExtensionPath(sourceRepo.sourcePath, "Workspace source repo");
+
     if (!(await gitWorkingTreeClean(sourceRepo.sourcePath))) {
       throw new Error(
         `Workspace source repo has uncommitted changes and must be clean before workspace creation: ${sourceRepo.sourcePath}`
@@ -1230,70 +1413,74 @@ export async function blueprintWorkspaceCreate(
     }
   }
 
-  if (
-    registry.workspaces.some(
-      (workspace) =>
-        workspace.name === normalizedName ||
-        path.resolve(workspace.path) === path.resolve(workspacePath)
-    )
-  ) {
-    throw new Error(
-      `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
-    );
-  }
+  return withWorkspaceRegistryLock(registryPath, async () => {
+    const registry = await readWorkspaceRegistryDocument(registryPath);
 
-  const createdMembers: CreatedWorkspaceMember[] = [];
-  const usedTargetNames = new Set<string>();
-  const createdAt = new Date().toISOString();
-
-  try {
-    await fs.mkdir(path.dirname(workspacePath), { recursive: true });
-    await fs.mkdir(workspacePath, { recursive: false });
-
-    for (const sourceRepo of sourceRepos) {
-      const createdMember = await createWorkspaceMember(
-        workspacePath,
-        sourceRepo,
-        strategy,
-        requestedBranch,
-        usedTargetNames
+    if (
+      registry.workspaces.some(
+        (workspace) =>
+          workspace.name === normalizedName ||
+          path.resolve(workspace.path) === path.resolve(workspacePath)
+      )
+    ) {
+      throw new Error(
+        `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
       );
-      createdMembers.push(createdMember);
     }
 
-    const registryEntry: WorkspaceRegistryEntry = {
-      name: normalizedName,
-      path: workspacePath,
-      manifestPath,
-      strategy,
-      branch: requestedBranch,
-      createdAt,
-      repos: createdMembers.map(({ rollbackStrategy: _rollbackStrategy, ...member }) => member)
-    };
+    const createdMembers: CreatedWorkspaceMember[] = [];
+    const usedTargetNames = new Set<string>();
+    const createdAt = new Date().toISOString();
 
-    await writeJsonFile(manifestPath, registryEntry as unknown as Record<string, unknown>);
-    await writeWorkspaceRegistryDocument(registryPath, {
-      version: WORKSPACE_REGISTRY_VERSION,
-      workspaces: [...registry.workspaces, registryEntry]
-    });
+    try {
+      await fs.mkdir(path.dirname(workspacePath), { recursive: true });
+      await fs.mkdir(workspacePath, { recursive: false });
 
-    return {
-      workspacePath,
-      manifestPath,
-      registryPath,
-      registryEntry,
-      repoMembers: registryEntry.repos
-    };
-  } catch (error) {
-    await rollbackCreatedMembers(createdMembers);
-    await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
+      for (const sourceRepo of sourceRepos) {
+        const createdMember = await createWorkspaceMember(
+          workspacePath,
+          sourceRepo,
+          strategy,
+          requestedBranch,
+          usedTargetNames
+        );
+        createdMembers.push(createdMember);
+      }
 
-    if (error instanceof Error) {
+      const registryEntry: WorkspaceRegistryEntry = {
+        name: normalizedName,
+        path: workspacePath,
+        manifestPath,
+        strategy,
+        branch: requestedBranch,
+        createdAt,
+        repos: createdMembers.map(({ rollbackStrategy: _rollbackStrategy, ...member }) => member)
+      };
+
+      await writeJsonFile(manifestPath, registryEntry as unknown as Record<string, unknown>);
+      await writeWorkspaceRegistryDocument(registryPath, {
+        version: WORKSPACE_REGISTRY_VERSION,
+        workspaces: [...registry.workspaces, registryEntry]
+      });
+
+      return {
+        workspacePath,
+        manifestPath,
+        registryPath,
+        registryEntry,
+        repoMembers: registryEntry.repos
+      };
+    } catch (error) {
+      await rollbackCreatedMembers(createdMembers);
+      await fs.rm(workspacePath, { recursive: true, force: true }).catch(() => undefined);
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
       throw error;
     }
-
-    throw error;
-  }
+  });
 }
 
 export async function blueprintPatchList(

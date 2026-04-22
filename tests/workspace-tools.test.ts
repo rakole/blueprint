@@ -78,6 +78,35 @@ async function withHomeDirectory<T>(
   }
 }
 
+async function withEnvironment<T>(
+  overrides: Record<string, string | undefined>,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previousValues = new Map<string, string | undefined>();
+
+  for (const [key, value] of Object.entries(overrides)) {
+    previousValues.set(key, process.env[key]);
+
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    return await callback();
+  } finally {
+    for (const [key, value] of previousValues.entries()) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
 test("workspace tools register registry and create MCP entries", () => {
   assert.ok(
     blueprintToolNames.includes("blueprint_workspace_registry_get"),
@@ -407,5 +436,208 @@ test("blueprint_workspace_create surfaces malformed config instead of falling ba
 
   await assert.rejects(
     fs.access(path.join(fakeHome, "blueprint-workspaces", "feature-config"))
+  );
+});
+
+test("blueprint_workspace_create refuses installed extension repos and installed extension target paths", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-extension-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const extensionRepo = await createGitRepo(tempRoot, "installed-extension");
+  const otherRepo = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const extensionPath = extensionRepo;
+  const extensionTarget = path.join(extensionPath, "workspaces", "feature-target");
+
+  await assert.rejects(
+    withEnvironment({ BLUEPRINT_EXTENSION_PATH: extensionPath }, () =>
+      withGlobalHome(globalHome, () =>
+        blueprintWorkspaceCreate({
+          cwd: extensionRepo,
+          name: "feature-source"
+        })
+      )
+    ),
+    /Workspace source repo must not target the installed extension directory/
+  );
+
+  await assert.rejects(
+    withEnvironment({ BLUEPRINT_EXTENSION_PATH: extensionPath }, () =>
+      withGlobalHome(globalHome, () =>
+        blueprintWorkspaceCreate({
+          cwd: otherRepo,
+          name: "feature-target",
+          path: extensionTarget
+        })
+      )
+    ),
+    /Workspace path must not target the installed extension directory/
+  );
+
+  await assert.rejects(fs.access(extensionTarget));
+  const registryResult = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+  assert.deepEqual(registryResult.workspaces, []);
+});
+
+test("blueprint_workspace_registry_get recovers from the newest backup when the primary registry file is missing", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-registry-recover-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryPath = path.join(globalHome, "workspaces.json");
+  const backupPath = path.join(globalHome, "workspaces.json.bak-1234-5678");
+  const recoveredDocument = {
+    version: 1,
+    workspaces: [
+      {
+        name: "feature-recovered",
+        path: path.join(tempRoot, "workspaces", "feature-recovered"),
+        manifestPath: path.join(
+          tempRoot,
+          "workspaces",
+          "feature-recovered",
+          ".blueprint-workspace.json"
+        ),
+        strategy: "worktree",
+        branch: null,
+        createdAt: "2026-04-22T00:00:00.000Z",
+        repos: [
+          {
+            name: "repo",
+            sourcePath: path.join(tempRoot, "repo"),
+            path: path.join(tempRoot, "workspaces", "feature-recovered", "repo"),
+            strategy: "worktree",
+            branch: null,
+            head: "abc123",
+            blueprintProject: false
+          }
+        ]
+      }
+    ]
+  };
+
+  await fs.mkdir(globalHome, { recursive: true });
+  await fs.writeFile(backupPath, `${JSON.stringify(recoveredDocument, null, 2)}\n`, "utf8");
+
+  const result = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+
+  assert.equal(result.workspaces.length, 1);
+  assert.equal(result.workspaces[0]?.name, "feature-recovered");
+  assert.deepEqual(JSON.parse(await fs.readFile(registryPath, "utf8")), recoveredDocument);
+});
+
+test("blueprint_workspace_create waits for the registry lock before mutating workspace state", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-locking-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryLockPath = path.join(globalHome, "workspaces.json.lock");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-lock");
+
+  await fs.mkdir(registryLockPath, { recursive: true });
+
+  const createPromise = withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-lock",
+      path: workspacePath
+    })
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await assert.rejects(fs.access(workspacePath));
+
+  await fs.rm(registryLockPath, { recursive: true, force: true });
+  const result = await createPromise;
+
+  assert.equal(result.workspacePath, workspacePath);
+  assert.equal((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces.length, 1);
+});
+
+test("blueprint_workspace_create allows workspace roots that merely share a path prefix with the source repo", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-prefix-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "repo-workspaces", "feature-prefix");
+
+  const result = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-prefix",
+      path: workspacePath
+    })
+  );
+
+  assert.equal(result.workspacePath, workspacePath);
+  await fs.access(path.join(workspacePath, ".blueprint-workspace.json"));
+});
+
+test("blueprint_workspace_create rolls back partially-created worktrees and branches when git reports failure after mutation", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-partial-worktree-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-partial");
+  const fakeBin = path.join(tempRoot, "fake-bin");
+  const realGitPath = (await execFileAsync("sh", ["-lc", "command -v git"])).stdout.trim();
+  const fakeGitPath = path.join(fakeBin, "git");
+
+  await fs.mkdir(fakeBin, { recursive: true });
+  await fs.writeFile(
+    fakeGitPath,
+    `#!/bin/sh
+set -eu
+REAL_GIT=${JSON.stringify(realGitPath)}
+if [ "$#" -ge 6 ] && [ "$3" = "worktree" ] && [ "$4" = "add" ]; then
+  "$REAL_GIT" "$@"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    exit "$status"
+  fi
+  exit 1
+fi
+exec "$REAL_GIT" "$@"
+`,
+    "utf8"
+  );
+  await fs.chmod(fakeGitPath, 0o755);
+
+  await assert.rejects(
+    withEnvironment(
+      {
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`
+      },
+      () =>
+        withGlobalHome(globalHome, () =>
+          blueprintWorkspaceCreate({
+            cwd: repoPath,
+            name: "feature-partial",
+            path: workspacePath,
+            branch: "feature-partial"
+          })
+        )
+    ),
+    /Command failed/
+  );
+
+  await assert.rejects(fs.access(workspacePath));
+  assert.equal(await runGit(["branch", "--list", "feature-partial"], repoPath), "");
+  assert.doesNotMatch(
+    await runGit(["worktree", "list", "--porcelain"], repoPath),
+    /feature-partial/
   );
 });

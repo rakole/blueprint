@@ -16850,6 +16850,14 @@ function ensurePathWithinRootSync(rootPath, candidatePath, options = {}) {
   }
   return path.resolve(candidatePath);
 }
+function isPathWithinRootSync(rootPath, candidatePath) {
+  try {
+    ensurePathWithinRootSync(rootPath, candidatePath, { label: "Path" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 function resolveRepoRelativeInputPathSync(rootPath, candidatePath, options = {}) {
   const label = options.label ?? "Path";
   assertNoNullBytes(candidatePath, label);
@@ -28150,14 +28158,7 @@ async function remoteBranchExists(repoPath, branch) {
   );
   return result.success && result.stdout.length > 0;
 }
-async function readWorkspaceRegistryDocument(registryPath) {
-  if (!await pathExists4(registryPath)) {
-    return {
-      version: WORKSPACE_REGISTRY_VERSION,
-      workspaces: []
-    };
-  }
-  const raw = await fs6.readFile(registryPath, "utf8");
+function parseWorkspaceRegistryDocument(raw, registryPath) {
   const parsed = safeJsonParseObject(raw, {
     label: registryPath
   });
@@ -28185,6 +28186,72 @@ async function readWorkspaceRegistryDocument(registryPath) {
     version: version2,
     workspaces
   };
+}
+async function listWorkspaceRegistryBackups(registryPath) {
+  const directory = path7.dirname(registryPath);
+  const backupPrefix = `${path7.basename(registryPath)}.bak-`;
+  let entries;
+  try {
+    entries = await fs6.readdir(directory, {
+      encoding: "utf8",
+      withFileTypes: true
+    });
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return [];
+    }
+    throw error2;
+  }
+  const backupCandidates = entries.filter((entry) => entry.isFile() && entry.name.startsWith(backupPrefix)).map((entry) => path7.join(directory, entry.name));
+  const backupsWithStats = await Promise.all(
+    backupCandidates.map(async (backupPath) => {
+      try {
+        const stats = await fs6.stat(backupPath);
+        return {
+          backupPath,
+          mtimeMs: stats.mtimeMs
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return backupsWithStats.filter((entry) => entry !== null).sort((left, right) => right.mtimeMs - left.mtimeMs).map((entry) => entry.backupPath);
+}
+async function recoverWorkspaceRegistryDocument(registryPath) {
+  const backupPaths = await listWorkspaceRegistryBackups(registryPath);
+  let lastError = null;
+  for (const backupPath of backupPaths) {
+    try {
+      const raw = await fs6.readFile(backupPath, "utf8");
+      const document = parseWorkspaceRegistryDocument(raw, backupPath);
+      await fs6.mkdir(path7.dirname(registryPath), { recursive: true });
+      await fs6.copyFile(backupPath, registryPath).catch(() => void 0);
+      return document;
+    } catch (error2) {
+      lastError = error2 instanceof Error ? error2 : new Error("Workspace registry backup recovery failed.");
+    }
+  }
+  if (lastError) {
+    throw new Error(
+      `Workspace registry recovery failed at ${registryPath}: ${lastError.message}`
+    );
+  }
+  return null;
+}
+async function readWorkspaceRegistryDocument(registryPath) {
+  if (!await pathExists4(registryPath)) {
+    const recovered = await recoverWorkspaceRegistryDocument(registryPath);
+    if (recovered) {
+      return recovered;
+    }
+    return {
+      version: WORKSPACE_REGISTRY_VERSION,
+      workspaces: []
+    };
+  }
+  const raw = await fs6.readFile(registryPath, "utf8");
+  return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 function normalizeRegistryEntry(value) {
   if (typeof value !== "object" || value === null) {
@@ -28249,12 +28316,12 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   );
   let restoredOriginal = false;
   try {
-    await fs6.rename(registryPath, backupPath);
+    await fs6.copyFile(registryPath, backupPath);
     await fs6.rename(tempPath, registryPath);
   } catch (error2) {
     await fs6.rm(tempPath, { force: true }).catch(() => void 0);
     if (!await pathExists4(registryPath) && await pathExists4(backupPath)) {
-      await fs6.rename(backupPath, registryPath).then(() => {
+      await fs6.copyFile(backupPath, registryPath).then(() => {
         restoredOriginal = true;
       }).catch(() => void 0);
     }
@@ -28264,6 +28331,41 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     throw error2;
   }
   await fs6.rm(backupPath, { force: true }).catch(() => void 0);
+}
+async function acquireWorkspaceRegistryLock(lockPath) {
+  await fs6.mkdir(path7.dirname(lockPath), { recursive: true });
+  for (; ; ) {
+    try {
+      await fs6.mkdir(lockPath);
+      return;
+    } catch (error2) {
+      const lockError = error2;
+      if (lockError.code !== "EEXIST") {
+        throw error2;
+      }
+      try {
+        const stats = await fs6.stat(lockPath);
+        if (Date.now() - stats.mtimeMs > WORKSPACE_REGISTRY_LOCK_STALE_MS) {
+          await fs6.rm(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch (statError) {
+        if (statError.code === "ENOENT") {
+          continue;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, WORKSPACE_REGISTRY_LOCK_RETRY_MS));
+    }
+  }
+}
+async function withWorkspaceRegistryLock(registryPath, callback) {
+  const lockPath = `${registryPath}.lock`;
+  await acquireWorkspaceRegistryLock(lockPath);
+  try {
+    return await callback();
+  } finally {
+    await fs6.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+  }
 }
 function normalizePatchId(value) {
   const trimmed = value.trim();
@@ -28583,19 +28685,10 @@ async function resolveSourceRepos(repoInputs, cwd) {
   return resolved;
 }
 function ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos) {
-  const containmentEscapePrefix = "Workspace path escapes the allowed root:";
   for (const sourceRepo of sourceRepos) {
-    try {
-      ensurePathWithinRootSync(sourceRepo.sourcePath, workspacePath, {
-        label: "Workspace path"
-      });
-    } catch (error2) {
-      if (error2 instanceof Error && error2.message.startsWith(containmentEscapePrefix)) {
-        continue;
-      }
-      throw error2;
+    if (isPathWithinRootSync(sourceRepo.sourcePath, workspacePath)) {
+      throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
     }
-    throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
   }
 }
 async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
@@ -28605,6 +28698,31 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function buildWorkspaceManifestPath(workspacePath) {
   return path7.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+}
+function assertNotInstalledExtensionPath(candidatePath, label) {
+  const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
+  if (!extensionPath) {
+    return;
+  }
+  if (isPathWithinRootSync(extensionPath, candidatePath)) {
+    throw new Error(
+      `${label} must not target the installed extension directory: ${path7.resolve(extensionPath)}`
+    );
+  }
+}
+async function rollbackPartialWorktreeAdd(sourceRepoPath, memberPath, createdSourceBranch) {
+  await runGit(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
+    allowFailure: true
+  });
+  await fs6.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
+  if (createdSourceBranch) {
+    await runGit(
+      ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
+      {
+        allowFailure: true
+      }
+    );
+  }
 }
 async function createWorkspaceMember(workspacePath, sourceRepo, strategy, requestedBranch, usedTargetNames) {
   let candidateName = sourceRepo.name;
@@ -28617,45 +28735,68 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
   usedTargetNames.add(candidateName);
   const memberPath = path7.join(workspacePath, candidateName);
   if (strategy === "worktree") {
+    const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
+    const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
     if (requestedBranch) {
-      if (await localBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-        await runGit(["-C", sourceRepo.sourcePath, "worktree", "add", memberPath, requestedBranch]);
-      } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-        await runGit([
-          "-C",
+      try {
+        if (localBranchAlreadyExists) {
+          await runGit([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            memberPath,
+            requestedBranch
+          ]);
+        } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
+          await runGit([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            "--track",
+            "-b",
+            requestedBranch,
+            memberPath,
+            `origin/${requestedBranch}`
+          ]);
+          createdSourceBranch = requestedBranch;
+        } else {
+          await runGit([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            "-b",
+            requestedBranch,
+            memberPath,
+            "HEAD"
+          ]);
+          createdSourceBranch = requestedBranch;
+        }
+      } catch (error2) {
+        await rollbackPartialWorktreeAdd(
           sourceRepo.sourcePath,
-          "worktree",
-          "add",
-          "--track",
-          "-b",
-          requestedBranch,
           memberPath,
-          `origin/${requestedBranch}`
-        ]);
-        createdSourceBranch = requestedBranch;
-      } else {
+          partialCreatedBranch
+        );
+        throw error2;
+      }
+    } else {
+      try {
         await runGit([
           "-C",
           sourceRepo.sourcePath,
           "worktree",
           "add",
-          "-b",
-          requestedBranch,
+          "--detach",
           memberPath,
           "HEAD"
         ]);
-        createdSourceBranch = requestedBranch;
+      } catch (error2) {
+        await rollbackPartialWorktreeAdd(sourceRepo.sourcePath, memberPath, null);
+        throw error2;
       }
-    } else {
-      await runGit([
-        "-C",
-        sourceRepo.sourcePath,
-        "worktree",
-        "add",
-        "--detach",
-        memberPath,
-        "HEAD"
-      ]);
     }
   } else {
     await runGit(["clone", sourceRepo.sourcePath, memberPath]);
@@ -28730,69 +28871,73 @@ async function blueprintWorkspaceCreate(args) {
     name: normalizedName
   });
   const sourceRepos = await resolveSourceRepos(resolveRequestedRepos(args), args.cwd);
-  const registry2 = await readWorkspaceRegistryDocument(registryPath);
   const manifestPath = buildWorkspaceManifestPath(workspacePath);
+  assertNotInstalledExtensionPath(workspacePath, "Workspace path");
   ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos);
   await ensureWorkspaceTargetDoesNotExist(workspacePath);
   for (const sourceRepo of sourceRepos) {
+    assertNotInstalledExtensionPath(sourceRepo.sourcePath, "Workspace source repo");
     if (!await gitWorkingTreeClean(sourceRepo.sourcePath)) {
       throw new Error(
         `Workspace source repo has uncommitted changes and must be clean before workspace creation: ${sourceRepo.sourcePath}`
       );
     }
   }
-  if (registry2.workspaces.some(
-    (workspace) => workspace.name === normalizedName || path7.resolve(workspace.path) === path7.resolve(workspacePath)
-  )) {
-    throw new Error(
-      `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
-    );
-  }
-  const createdMembers = [];
-  const usedTargetNames = /* @__PURE__ */ new Set();
-  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
-  try {
-    await fs6.mkdir(path7.dirname(workspacePath), { recursive: true });
-    await fs6.mkdir(workspacePath, { recursive: false });
-    for (const sourceRepo of sourceRepos) {
-      const createdMember = await createWorkspaceMember(
-        workspacePath,
-        sourceRepo,
-        strategy,
-        requestedBranch,
-        usedTargetNames
+  return withWorkspaceRegistryLock(registryPath, async () => {
+    const registry2 = await readWorkspaceRegistryDocument(registryPath);
+    if (registry2.workspaces.some(
+      (workspace) => workspace.name === normalizedName || path7.resolve(workspace.path) === path7.resolve(workspacePath)
+    )) {
+      throw new Error(
+        `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
       );
-      createdMembers.push(createdMember);
     }
-    const registryEntry = {
-      name: normalizedName,
-      path: workspacePath,
-      manifestPath,
-      strategy,
-      branch: requestedBranch,
-      createdAt,
-      repos: createdMembers.map(({ rollbackStrategy: _rollbackStrategy, ...member }) => member)
-    };
-    await writeJsonFile(manifestPath, registryEntry);
-    await writeWorkspaceRegistryDocument(registryPath, {
-      version: WORKSPACE_REGISTRY_VERSION,
-      workspaces: [...registry2.workspaces, registryEntry]
-    });
-    return {
-      workspacePath,
-      manifestPath,
-      registryPath,
-      registryEntry,
-      repoMembers: registryEntry.repos
-    };
-  } catch (error2) {
-    await rollbackCreatedMembers(createdMembers);
-    await fs6.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
-    if (error2 instanceof Error) {
+    const createdMembers = [];
+    const usedTargetNames = /* @__PURE__ */ new Set();
+    const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+    try {
+      await fs6.mkdir(path7.dirname(workspacePath), { recursive: true });
+      await fs6.mkdir(workspacePath, { recursive: false });
+      for (const sourceRepo of sourceRepos) {
+        const createdMember = await createWorkspaceMember(
+          workspacePath,
+          sourceRepo,
+          strategy,
+          requestedBranch,
+          usedTargetNames
+        );
+        createdMembers.push(createdMember);
+      }
+      const registryEntry = {
+        name: normalizedName,
+        path: workspacePath,
+        manifestPath,
+        strategy,
+        branch: requestedBranch,
+        createdAt,
+        repos: createdMembers.map(({ rollbackStrategy: _rollbackStrategy, ...member }) => member)
+      };
+      await writeJsonFile(manifestPath, registryEntry);
+      await writeWorkspaceRegistryDocument(registryPath, {
+        version: WORKSPACE_REGISTRY_VERSION,
+        workspaces: [...registry2.workspaces, registryEntry]
+      });
+      return {
+        workspacePath,
+        manifestPath,
+        registryPath,
+        registryEntry,
+        repoMembers: registryEntry.repos
+      };
+    } catch (error2) {
+      await rollbackCreatedMembers(createdMembers);
+      await fs6.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+      if (error2 instanceof Error) {
+        throw error2;
+      }
       throw error2;
     }
-    throw error2;
-  }
+  });
 }
 async function blueprintPatchList(args = {}) {
   const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
@@ -29014,7 +29159,7 @@ async function blueprintPatchReapply(args = {}) {
     targetHead
   };
 }
-var execFileAsync, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
+var execFileAsync, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
@@ -29032,6 +29177,8 @@ var init_workspace = __esm({
     PATCH_AUDIT_VERSION = 1;
     PATCH_AUDIT_ACTIONS = ["record", "preview", "reapply"];
     PATCH_OUTCOMES = ["recorded", "applied", "conflict", "blocked"];
+    WORKSPACE_REGISTRY_LOCK_RETRY_MS = 50;
+    WORKSPACE_REGISTRY_LOCK_STALE_MS = 6e4;
     workspaceRegistryGetInputSchema = {
       cwd: string2().optional()
     };
