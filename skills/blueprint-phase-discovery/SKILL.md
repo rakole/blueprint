@@ -39,6 +39,9 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Execution profile for `/blu-ui-phase`: `long-running-mutation`.
 - Keep the shared stage vocabulary explicit during non-trivial `/blu-ui-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the in-flight status contract visible during non-trivial `/blu-ui-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
+- Execution profile for `/blu-list-phase-assumptions`: `interactive-read`.
+- Keep `/blu-list-phase-assumptions` conversational and read-only; do not turn it into staged long-running progress, tracker-backed branching, visible todos, or hidden planning.
+- Do not use `update_topic`, `write_todos`, or task tracker tools for `/blu-list-phase-assumptions`; when phase resolution is blocked, name the waiting state plainly and give the next safe implemented follow-up instead.
 
 ## Parity Goal
 
@@ -151,6 +154,7 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 ### `list-phase-assumptions`
 
+0. Treat `/blu-list-phase-assumptions` as an `interactive-read` summary, not a long-running progress flow.
 1. Resolve the phase through `blueprint_phase_locate`; omitted phase input may be inferred from state or roadmap, but an explicit invalid phase must fail clearly.
 2. Read `blueprint_project_status`, `blueprint_roadmap_read`, and `blueprint_phase_context` before presenting any assumptions so the answer stays grounded in actual repo readiness, roadmap intent, and saved discovery artifacts.
 3. Keep the command read-only. Do not scaffold, write, repair, or update `.blueprint/` artifacts from this flow.
@@ -158,7 +162,8 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 5. Mark uncertainty explicitly instead of overstating confidence; use evidence-first language when context is thin or missing.
 6. If the requested phase cannot be resolved, report the exact failure reason and list valid roadmap phases instead of guessing a substitute.
 7. When deeper technical context would materially improve the summary, `blueprint-researcher` may be used as a bounded read-only sidecar, but the command still ends with conversational output only.
-8. End by inviting corrections and keeping any next-step suggestion inside the implemented Blueprint surface.
+8. Keep blocked or missing phase resolution in a visible waiting-state posture with an explicit next safe action instead of smoothing it away.
+9. End by inviting corrections and keeping any next-step suggestion inside the implemented Blueprint surface.
 
 ### `ui-phase`
 
