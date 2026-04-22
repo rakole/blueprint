@@ -23,6 +23,27 @@ Blueprint-managed repositories store project state here:
 
 In shared docs, `~/.<host>/blueprint/` means `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI.
 
+## Read-Only MCP Resource Views
+
+Blueprint's planned MCP resources are derived read views over existing runtime truth. They are not stored as separate files under `.blueprint/`, they do not replace any artifact in this schema, and they must never become write targets.
+
+Locked resource URIs:
+
+- `blueprint://commands/catalog`
+- `blueprint://commands/<command>/runtime-contract`
+- `blueprint://phases/<phase>/bundle`
+- `blueprint://codebase/bundle`
+- `blueprint://reports/latest`
+
+Contract notes:
+
+- `blueprint://commands/catalog` is a read-only projection of the retained command registry and its runtime availability metadata; it does not widen implemented-only exposure rules.
+- `blueprint://commands/<command>/runtime-contract` is a read-only projection of one command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row.
+- `blueprint://phases/<phase>/bundle` is a read-only projection over saved Blueprint phase-grounding inputs such as `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, and the resolved phase artifact set for the requested phase.
+- `blueprint://codebase/bundle` is a read-only projection over the saved seven-document `.blueprint/codebase/` bundle and its artifact-contract metadata.
+- `blueprint://reports/latest` is a read-only projection over durable report inventory in `.blueprint/reports/`; it is an index view, not a report authoring path.
+- Resource views are for discovery and grounding only. Writes remain on the existing MCP tool surface for config, roadmap, phase, report, review, and capture persistence.
+
 ## Core Top-Level Artifacts
 
 ### `PROJECT.md`
