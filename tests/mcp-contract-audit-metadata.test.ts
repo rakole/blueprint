@@ -35,6 +35,124 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   );
 });
 
+test("planned MCP resource docs keep the read-only contract, backing truth, and fallback path explicit", async () => {
+  const [mcpToolsDoc, artifactSchema, runtimeReference] = await Promise.all([
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
+  ]);
+
+  for (const uri of [
+    "blueprint://commands/catalog",
+    "blueprint://commands/<command>/runtime-contract",
+    "blueprint://phases/<phase>/bundle",
+    "blueprint://codebase/bundle",
+    "blueprint://reports/latest"
+  ]) {
+    const escapedUri = uri.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    assert.match(mcpToolsDoc, new RegExp(escapedUri));
+    assert.match(artifactSchema, new RegExp(escapedUri));
+    assert.match(runtimeReference, new RegExp(escapedUri));
+  }
+
+  assert.match(
+    mcpToolsDoc,
+    /These Blueprint MCP resources are part of the documented future contract for read-heavy grounding, but they are not registered today/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint:\/\/commands\/catalog` \| Read the retained runtime command catalog as one resource view \| live `blueprint_command_catalog` truth \| read-only; never a write target \| call `blueprint_command_catalog` directly \|/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint:\/\/commands\/<command>\/runtime-contract` \| Read the runtime contract for one retained command \| live command-catalog metadata plus the locked command spec and runtime-reference row for that command \| read-only; never a write target \| read the command spec, runtime reference, and current tool docs directly \|/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint:\/\/phases\/<phase>\/bundle` \| Read a phase-grounding bundle for discovery-style workflows \| saved `\.blueprint\/` core docs plus the resolved phase artifact set \| read-only; never a write target \| use `blueprint_phase_context`, artifact reads, roadmap\/state reads, and local docs directly \|/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint:\/\/codebase\/bundle` \| Read the saved seven-document codebase mapping bundle as one resource view \| `\.blueprint\/codebase\/\*\.md` plus existing artifact-contract truth \| read-only; never a write target \| use `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and local files directly \|/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint:\/\/reports\/latest` \| Read the latest-report index for durable Blueprint reports \| `\.blueprint\/reports\/` inventory and existing report metadata \| read-only; never a write target \| use `blueprint_artifact_list` and direct report reads \|/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /Resource views must mirror existing command\/tool truth; they do not get to invent new routing, status, or persistence semantics/i
+  );
+
+  assert.match(
+    artifactSchema,
+    /They are not stored as separate files under `\.blueprint\/`, they do not replace any artifact in this schema, and they must never become write targets/i
+  );
+  assert.match(
+    artifactSchema,
+    /`blueprint:\/\/commands\/catalog` is a read-only projection of the retained command registry and its runtime availability metadata; it does not widen implemented-only exposure rules/i
+  );
+  assert.match(
+    artifactSchema,
+    /`blueprint:\/\/commands\/<command>\/runtime-contract` is a read-only projection of one command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row/i
+  );
+  assert.match(
+    artifactSchema,
+    /`blueprint:\/\/phases\/<phase>\/bundle` is a read-only projection over saved Blueprint phase-grounding inputs such as `PROJECT\.md`, `REQUIREMENTS\.md`, `ROADMAP\.md`, `STATE\.md`, and the resolved phase artifact set for the requested phase/i
+  );
+  assert.match(
+    artifactSchema,
+    /`blueprint:\/\/codebase\/bundle` is a read-only projection over the saved seven-document `\.blueprint\/codebase\/` bundle and its artifact-contract metadata/i
+  );
+  assert.match(
+    artifactSchema,
+    /`blueprint:\/\/reports\/latest` is a read-only projection over durable report inventory in `\.blueprint\/reports\/`; it is an index view, not a report authoring path/i
+  );
+  assert.match(
+    artifactSchema,
+    /Resource views are for discovery and grounding only\. Writes remain on the existing MCP tool surface for config, roadmap, phase, report, review, and capture persistence/i
+  );
+
+  assert.match(runtimeReference, /## Planned Read-Only MCP Resource Contract/);
+  assert.match(
+    runtimeReference,
+    /These resources are read-only context surfaces for discovery and grounding\. They do not own persistence, confirmation, routing, or write semantics/i
+  );
+  assert.match(
+    runtimeReference,
+    /Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists/i
+  );
+  assert.match(
+    runtimeReference,
+    /Once implemented, `list_mcp_resources` and `read_mcp_resource` become the preferred read path for these views, with fallback to the existing direct docs\/tool reads when resources are unavailable/i
+  );
+  assert.match(
+    runtimeReference,
+    /`blueprint:\/\/commands\/catalog` may mirror the full retained catalog metadata, but `\/blu`, `help`, `progress`, and `next` must still recommend only commands whose catalog entry is `implemented`/i
+  );
+  assert.match(
+    runtimeReference,
+    /`blueprint:\/\/commands\/<command>\/runtime-contract` must mirror live command-catalog metadata plus the locked command spec and runtime-reference row for that command; it does not become a second command-status authority/i
+  );
+  assert.match(
+    runtimeReference,
+    /`blueprint:\/\/phases\/<phase>\/bundle` must mirror saved `\.blueprint\/` phase-grounding inputs and the resolved phase artifact set, with fallback to `blueprint_phase_context`, direct artifact reads, roadmap\/state reads, and local docs until the resource exists/i
+  );
+  assert.match(
+    runtimeReference,
+    /`blueprint:\/\/codebase\/bundle` must mirror the saved seven-document `\.blueprint\/codebase\/` bundle plus artifact-contract truth, with fallback to `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and local files until the resource exists/i
+  );
+  assert.match(
+    runtimeReference,
+    /`blueprint:\/\/reports\/latest` is an index-only surface over saved reports\. Report authoring and overwrites remain on `blueprint_artifact_report_write`/i
+  );
+  assert.match(
+    runtimeReference,
+    /No writes move onto resource surfaces\. Config, roadmap, phase, report, review, and capture persistence remain on the existing Blueprint MCP tool surface/i
+  );
+});
+
 test("discovery contracts stay explicit across discuss, research, and ui command surfaces", async () => {
   const [
     discussCommand,
