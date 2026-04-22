@@ -577,6 +577,9 @@ test("map-codebase command file uses runtime FQNs and explicit repo-relative art
   assert.match(commandFile, /ARCHITECTURE\.md/);
   assert.match(commandFile, /STRUCTURE\.md/);
   assert.match(commandFile, /CONCERNS\.md/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`\./);
+  assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
+  assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/);
   assert.match(commandFile, /ask_user/i);
   assert.match(commandFile, /blueprint_artifact_contract_read/i);
   assert.match(commandFile, /blueprint_codebase_artifact_write/i);

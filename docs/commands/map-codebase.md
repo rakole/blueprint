@@ -3,7 +3,20 @@
 |---|---|
 | Wave | `0` |
 | Family | `Foundation` |
+| Execution profile | `long-running-mutation` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- `map-codebase` uses the shared long-running-mutation posture for read-heavy brownfield mapping: resolve the repo root and requested focus area, read project status plus the canonical codebase-bundle contract, decide reuse-versus-refresh gates before any overwrite, execute deterministic repo evidence collection and digest-backed mapping, persist the seven-document bundle through MCP only, validate the resulting bundle, and route to the next safe implemented command.
+- Keep the in-flight mapping posture honest while the run is live:
+  - resolved scope: repo root, full-repo mapping versus focused deepening, and the seven-artifact bundle target
+  - active stage: the current shared stage label behind the mapping pass
+  - pending gate: Blueprint initialization blocker, reuse-versus-refresh confirmation, replace confirmation, or validation blocker
+  - execution mode: full-bundle mapping versus focus-area deepening, plus reuse-default versus confirmed refresh
+  - next safe action: the authoritative follow-up from project status after validation, usually `/blu-progress` or the next documented discovery or planning step
 
 ## Purpose
 
@@ -28,6 +41,17 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
 - Existing codebase docs should be reused by default. If they are heavily edited and the user wants a refresh or replace path, use `ask_user` to confirm the choice before any overwrite.
+- In-flight mapping should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible until the bundle is validated or the command stops on a confirmation gate.
+
+## Behavior Stages
+
+1. `Resolve`: confirm the repo root, detect an optional focus area, and stop early when Blueprint is uninitialized or partial.
+2. `Read`: inspect project status, the canonical codebase-bundle contract, any existing codebase artifacts, and deterministic repo evidence inputs before any overwrite decision.
+3. `Decide`: keep reuse-versus-refresh posture explicit, default to reuse, and require `ask_user` confirmation for replace or refresh behavior when existing docs are heavily edited.
+4. `Execute`: collect repo evidence and produce digest-backed mapping summaries for the same seven-artifact bundle whether the run is full-repo or focus-area deepening.
+5. `Persist`: create or reuse scaffolds and persist substantive authored content through `blueprint_codebase_artifact_write` only.
+6. `Validate`: run `blueprint_artifact_validate` against the resulting bundle and surface warnings honestly.
+7. `Route`: summarize created versus reused artifacts and end on the next safe implemented follow-up.
 
 ## Blueprint And Global State Reads
 

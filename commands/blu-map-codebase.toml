@@ -6,6 +6,19 @@ Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract. When 
 
 Prefer Gemini CLI's built-in `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
 
+Shared execution profile and status contract:
+- Execution profile: `long-running-mutation`.
+- Normalize visible progress to the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`.
+- Keep the in-flight status contract legible during non-trivial mapping runs: resolved scope, active stage, pending gate, execution mode, and next safe action.
+- Map the mapping flow onto the shared stages like this:
+  - `Resolve`: confirm repo root, detect the optional focus area, and stop early when Blueprint is uninitialized or partial.
+  - `Read`: inspect project status, the canonical codebase-bundle contract, existing codebase artifacts, and deterministic repo evidence.
+  - `Decide`: default to reuse, surface reuse-versus-refresh posture explicitly, and require `ask_user` confirmation before any replace or refresh path.
+  - `Execute`: collect repo evidence and produce digest-backed summaries for the same seven-artifact bundle whether the run is full-repo or focus-area deepening.
+  - `Persist`: create or reuse scaffolds and persist substantive mapping content through Blueprint MCP tools only.
+  - `Validate`: validate the resulting bundle and surface warnings honestly.
+  - `Route`: summarize created versus reused artifacts and end on the next safe implemented action.
+
 Follow this flow exactly:
 
 1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`. Treat it as targeted deepening of that subsystem, not as a generic suffix.
@@ -32,6 +45,7 @@ Follow this flow exactly:
 Response requirements:
 - Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_codebase_artifact_write`, and `mcp_blueprint_blueprint_artifact_validate`.
 - Keep persistence inside MCP tools only.
+- Keep the active stage, resolved scope, pending gate, execution mode, and next safe action explicit whenever the run pauses or spans multiple mapping steps.
 - Mention the exact codebase artifact filenames when reporting results.
 - Explain when you are reusing existing docs versus replacing them.
 - Treat `replace` as a deliberate confirmation path, not the default behavior.
