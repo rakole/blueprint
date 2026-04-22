@@ -297,6 +297,7 @@ export declare function validateVerificationArtifactContent(content: string, sum
     issues: string[];
     warnings: string[];
 };
+export declare function isVerificationArtifactReadyForUat(content: string): boolean;
 export declare function validateUatArtifactContent(content: string, summaryPaths?: string[]): {
     valid: boolean;
     issues: string[];
