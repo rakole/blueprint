@@ -87,14 +87,16 @@ Shared rule for all maintenance flows:
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Read effective config through `blueprint_config_get` before deriving base-branch or commit-docs behavior. Prefer explicit user input, then `git.base_branch`, then safe repo detection.
 3. Inspect git status before mutation. A dirty working tree is a hard stop for the clean review-branch flow.
-4. Make the resolved target explicit before mutation: name the source branch, base branch, candidate review branch, and whether `.blueprint/**` is included.
-5. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
-6. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
-7. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
-8. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, and included versus excluded scope before any git mutation.
-9. Create the review branch without rewriting or deleting the source branch in place.
-10. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, and use the returned `path` as the authoritative saved report location.
-11. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
+4. Keep the waiting state explicit before mutation: a dirty working tree should surface the pending gate `clean-working-tree` plus the next safe action to clean, stash, or commit before rerunning.
+5. Make the resolved target explicit before mutation: name the source branch, base branch, candidate review branch, and whether `.blueprint/**` is included.
+6. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
+7. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
+8. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
+9. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, and included versus excluded scope before any git mutation, and keep the pending gate visible as `review-branch-confirmation` until the user approves.
+10. If a later `pr-branch-latest` replacement is blocked on an existing report, keep the pending gate explicit as report overwrite confirmation and name the next safe action instead of smoothing past it.
+11. Create the review branch without rewriting or deleting the source branch in place.
+12. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, and use the returned `path` as the authoritative saved report location.
+13. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
 
 ### `ship`
 
@@ -145,7 +147,7 @@ Shared rule for all maintenance flows:
 
 ## Output Style
 
-- For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, and end with the safest implemented follow-up or manual next step.
+- For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, make any active pending gate or waiting state explicit, and end with the safest implemented follow-up or manual next step.
 - For `ship`, report the selected scope, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
