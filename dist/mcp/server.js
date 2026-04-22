@@ -28048,6 +28048,7 @@ var init_review = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promises as fs6 } from "node:fs";
 import os from "node:os";
 import path7 from "node:path";
@@ -28252,6 +28253,214 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     throw error2;
   }
   await fs6.rm(backupPath, { force: true }).catch(() => void 0);
+}
+function normalizePatchId(value) {
+  const trimmed = value.trim();
+  validateFieldNameSegment(trimmed, "Patch id");
+  return trimmed;
+}
+function patchIndexPath(registryPath) {
+  return path7.join(registryPath, "index.json");
+}
+function patchManifestPath(registryPath, patchId) {
+  return path7.join(registryPath, `${patchId}.json`);
+}
+function patchContentPath(registryPath, patchId) {
+  return path7.join(registryPath, `${patchId}.patch`);
+}
+function patchAuditPath(registryPath, patchId) {
+  return path7.join(registryPath, `${patchId}.audit.ndjson`);
+}
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+function normalizeTrackedFiles(repoRoot, trackedFiles) {
+  const normalized = /* @__PURE__ */ new Set();
+  for (const trackedFile of trackedFiles) {
+    assertNoNullBytes(trackedFile, "Patch tracked file");
+    const candidatePath = path7.isAbsolute(trackedFile) ? path7.resolve(trackedFile) : path7.resolve(repoRoot, trackedFile);
+    ensurePathWithinRootSync(repoRoot, candidatePath, {
+      label: "Patch tracked file"
+    });
+    const relativePath = path7.relative(repoRoot, candidatePath).replaceAll(path7.sep, "/");
+    if (!relativePath || relativePath === ".") {
+      throw new Error("Patch tracked file must resolve to a file path inside the repo.");
+    }
+    normalized.add(relativePath);
+  }
+  return [...normalized];
+}
+async function gitRemoteUrl(repoPath) {
+  const result = await runGit(["-C", repoPath, "remote", "get-url", "origin"], {
+    allowFailure: true
+  });
+  return result.success && result.stdout.length > 0 ? result.stdout : null;
+}
+function normalizePatchManifest(value, patchId) {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`Patch manifest is malformed for ${patchId}.`);
+  }
+  const manifest = value;
+  if (typeof manifest.version !== "number" || typeof manifest.patchId !== "string" || typeof manifest.createdAt !== "string" || typeof manifest.patchFile !== "string" || typeof manifest.patchHash !== "string" || typeof manifest.repoRootName !== "string" || !Array.isArray(manifest.trackedFiles) || typeof manifest.compatibility !== "object" || manifest.compatibility === null) {
+    throw new Error(`Patch manifest is missing required fields for ${patchId}.`);
+  }
+  const compatibility = manifest.compatibility;
+  if (typeof compatibility.repoRootName !== "string") {
+    throw new Error(`Patch compatibility is malformed for ${patchId}.`);
+  }
+  const trackedFiles = manifest.trackedFiles.map((trackedFile) => {
+    if (typeof trackedFile !== "string" || trackedFile.trim().length === 0) {
+      throw new Error(`Patch tracked files are malformed for ${patchId}.`);
+    }
+    return trackedFile;
+  });
+  const lastOutcome = typeof manifest.lastOutcome === "string" && PATCH_OUTCOMES.includes(manifest.lastOutcome) ? manifest.lastOutcome : null;
+  return {
+    version: manifest.version,
+    patchId: manifest.patchId,
+    label: typeof manifest.label === "string" ? manifest.label : null,
+    createdAt: manifest.createdAt,
+    sourceVersion: typeof manifest.sourceVersion === "string" ? manifest.sourceVersion : null,
+    repoRootName: manifest.repoRootName,
+    repoRemote: typeof manifest.repoRemote === "string" ? manifest.repoRemote : null,
+    patchFile: manifest.patchFile,
+    patchHash: manifest.patchHash,
+    trackedFiles,
+    compatibility: {
+      host: typeof compatibility.host === "string" ? compatibility.host : null,
+      repoRootName: compatibility.repoRootName,
+      remoteUrl: typeof compatibility.remoteUrl === "string" ? compatibility.remoteUrl : null
+    },
+    lastAppliedAt: typeof manifest.lastAppliedAt === "string" ? manifest.lastAppliedAt : null,
+    lastOutcome
+  };
+}
+async function readPatchRegistryDocument(registryPath) {
+  const indexPath = patchIndexPath(registryPath);
+  if (!await pathExists4(indexPath)) {
+    return {
+      version: PATCH_REGISTRY_VERSION,
+      patches: []
+    };
+  }
+  const raw = await fs6.readFile(indexPath, "utf8");
+  const parsed = safeJsonParseObject(raw, {
+    label: indexPath
+  });
+  if (typeof parsed !== "object" || parsed === null || !("patches" in parsed) || !Array.isArray(parsed.patches)) {
+    throw new Error(
+      `Patch registry is malformed at ${indexPath}; repair or remove it before replaying patches.`
+    );
+  }
+  const patchIds = (parsed.patches ?? []).map((patchId) => {
+    if (typeof patchId !== "string" || patchId.trim().length === 0) {
+      throw new Error(
+        `Patch registry is malformed at ${indexPath}; patch ids must be non-empty strings.`
+      );
+    }
+    return patchId;
+  });
+  return {
+    version: typeof parsed.version === "number" ? parsed.version : PATCH_REGISTRY_VERSION,
+    patches: [...new Set(patchIds)]
+  };
+}
+async function writePatchRegistryDocument(registryPath, document) {
+  await fs6.mkdir(registryPath, { recursive: true });
+  await writeJsonFile(patchIndexPath(registryPath), document);
+}
+async function readPatchManifest(registryPath, patchId) {
+  const manifestPath = patchManifestPath(registryPath, patchId);
+  if (!await pathExists4(manifestPath)) {
+    throw new Error(`Patch target is missing from the registry: ${patchId}`);
+  }
+  const raw = await fs6.readFile(manifestPath, "utf8");
+  const parsed = safeJsonParseObject(raw, {
+    label: manifestPath
+  });
+  return normalizePatchManifest(parsed, patchId);
+}
+async function appendPatchAuditEntry(registryPath, patchId, entry) {
+  await fs6.mkdir(registryPath, { recursive: true });
+  await fs6.appendFile(
+    patchAuditPath(registryPath, patchId),
+    `${JSON.stringify(entry)}
+`,
+    "utf8"
+  );
+}
+async function loadPatchContent(registryPath, manifest) {
+  const contentPath = patchContentPath(registryPath, manifest.patchId);
+  if (!await pathExists4(contentPath)) {
+    throw new Error(`Patch target is missing from the registry: ${manifest.patchId}`);
+  }
+  const patch = await fs6.readFile(contentPath, "utf8");
+  if (sha256(patch) !== manifest.patchHash) {
+    throw new Error(
+      `Patch registry is malformed for ${manifest.patchId}; recorded patch content does not match its manifest.`
+    );
+  }
+  return patch;
+}
+function assertNotInstalledExtensionTarget(repoRoot) {
+  const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
+  if (!extensionPath) {
+    return;
+  }
+  const resolvedRepoRoot = path7.resolve(repoRoot);
+  const resolvedExtensionPath = path7.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path7.sep}`)) {
+    throw new Error(
+      `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
+    );
+  }
+}
+async function resolvePatchReplayTarget(cwd) {
+  const repoRoot = await resolveGitRepoRoot(cwd ?? process.cwd());
+  assertNotInstalledExtensionTarget(repoRoot);
+  return repoRoot;
+}
+async function buildPatchCompatibilityStatus(manifest, repoRoot) {
+  if (!repoRoot) {
+    return {
+      status: "unknown",
+      reasons: []
+    };
+  }
+  const runtimeHost = resolveBlueprintRuntimeHost();
+  const reasons = [];
+  const repoName = path7.basename(repoRoot);
+  if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
+    reasons.push(
+      `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
+    );
+  }
+  if (manifest.compatibility.repoRootName !== repoName) {
+    reasons.push(
+      `Recorded for repo ${manifest.compatibility.repoRootName}, but current repo is ${repoName}.`
+    );
+  }
+  const currentRemote = await gitRemoteUrl(repoRoot);
+  if (manifest.compatibility.remoteUrl && manifest.compatibility.remoteUrl !== currentRemote) {
+    reasons.push("Recorded origin remote does not match the current repo origin.");
+  }
+  return {
+    status: reasons.length === 0 ? "compatible" : "mismatch",
+    reasons
+  };
+}
+function selectedPatchIds(registry2, requestedPatchIds) {
+  if (!requestedPatchIds || requestedPatchIds.length === 0) {
+    return registry2.patches;
+  }
+  const normalized = requestedPatchIds.map((patchId) => normalizePatchId(patchId));
+  const known = new Set(registry2.patches);
+  for (const patchId of normalized) {
+    if (!known.has(patchId)) {
+      throw new Error(`Patch target is missing from the registry: ${patchId}`);
+    }
+  }
+  return normalized;
 }
 async function resolveDefaultWorkspaceRoot(cwd) {
   try {
@@ -28521,7 +28730,199 @@ async function blueprintWorkspaceCreate(args) {
     throw error2;
   }
 }
-var execFileAsync, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceToolDefinitions;
+async function blueprintPatchList(args = {}) {
+  const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
+  const registry2 = await readPatchRegistryDocument(registryPath);
+  const repoRoot = args.cwd ? await resolveGitRepoRoot(args.cwd) : null;
+  const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
+  const patchIds = selectedPatchIds(registry2, requestedPatchIds);
+  const patches = await Promise.all(
+    patchIds.map(async (patchId) => {
+      const manifest = await readPatchManifest(registryPath, patchId);
+      await loadPatchContent(registryPath, manifest);
+      return {
+        patchId,
+        label: manifest.label,
+        createdAt: manifest.createdAt,
+        sourceVersion: manifest.sourceVersion,
+        trackedFiles: manifest.trackedFiles,
+        manifestPath: patchManifestPath(registryPath, patchId),
+        patchPath: patchContentPath(registryPath, patchId),
+        auditPath: patchAuditPath(registryPath, patchId),
+        lastAppliedAt: manifest.lastAppliedAt,
+        lastOutcome: manifest.lastOutcome,
+        compatibility: await buildPatchCompatibilityStatus(manifest, repoRoot)
+      };
+    })
+  );
+  return {
+    registryPath,
+    patches
+  };
+}
+async function blueprintPatchRecord(args) {
+  const repoRoot = await resolvePatchReplayTarget(args.cwd);
+  const runtimeHost = resolveBlueprintRuntimeHost();
+  const registryPath = expandHomePath(runtimeHost.patchRegistryPath);
+  const patchId = normalizePatchId(args.patchId);
+  const trackedFiles = normalizeTrackedFiles(repoRoot, args.trackedFiles);
+  const registry2 = await readPatchRegistryDocument(registryPath);
+  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+  const patchPath = patchContentPath(registryPath, patchId);
+  const manifestPath = patchManifestPath(registryPath, patchId);
+  const auditPath = patchAuditPath(registryPath, patchId);
+  const existingManifest = await pathExists4(manifestPath) ? await readPatchManifest(registryPath, patchId) : null;
+  const patch = typeof args.patch === "string" && args.patch.length > 0 ? args.patch : existingManifest ? await loadPatchContent(registryPath, existingManifest) : null;
+  if (!patch) {
+    throw new Error(`Patch content is required when creating a new registry entry: ${patchId}`);
+  }
+  assertNoNullBytes(patch, "Patch content");
+  const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}
+`;
+  const patchHash = sha256(normalizedPatch);
+  const sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
+  const repoRemote = await gitRemoteUrl(repoRoot);
+  const manifest = {
+    version: PATCH_MANIFEST_VERSION,
+    patchId,
+    label: args.label?.trim() || null,
+    createdAt: existingManifest?.createdAt ?? createdAt,
+    sourceVersion,
+    repoRootName: path7.basename(repoRoot),
+    repoRemote,
+    patchFile: path7.basename(patchPath),
+    patchHash,
+    trackedFiles,
+    compatibility: {
+      host: args.compatibility?.host ?? runtimeHost.host,
+      repoRootName: args.compatibility?.repoRootName ?? path7.basename(repoRoot),
+      remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
+    },
+    lastAppliedAt: args.audit?.outcome && args.audit.outcome !== "recorded" ? createdAt : existingManifest?.lastAppliedAt ?? null,
+    lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
+  };
+  await fs6.mkdir(registryPath, { recursive: true });
+  await fs6.writeFile(patchPath, normalizedPatch, "utf8");
+  await writeJsonFile(manifestPath, manifest);
+  if (!registry2.patches.includes(patchId)) {
+    await writePatchRegistryDocument(registryPath, {
+      version: registry2.version || PATCH_REGISTRY_VERSION,
+      patches: [...registry2.patches, patchId]
+    });
+  }
+  const auditEntry = {
+    version: PATCH_AUDIT_VERSION,
+    timestamp: createdAt,
+    action: args.audit?.action ?? "record",
+    outcome: args.audit?.outcome ?? "recorded",
+    cwd: path7.resolve(args.cwd ?? process.cwd()),
+    repoRoot,
+    targetHead: args.audit?.targetHead ?? sourceVersion,
+    trackedFiles,
+    conflicts: args.audit?.conflicts ?? [],
+    warnings: args.audit?.warnings ?? [],
+    dryRun: args.audit?.dryRun ?? false
+  };
+  await appendPatchAuditEntry(registryPath, patchId, auditEntry);
+  return {
+    patchId,
+    registryPath,
+    manifestPath,
+    patchPath,
+    auditPath,
+    trackedFiles,
+    updated: existingManifest !== null
+  };
+}
+async function blueprintPatchReapply(args = {}) {
+  const repoRoot = await resolvePatchReplayTarget(args.cwd);
+  const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
+  const registry2 = await readPatchRegistryDocument(registryPath);
+  const patchIds = selectedPatchIds(registry2, args.patchIds);
+  const dirtyTree = !await gitWorkingTreeClean(repoRoot);
+  if (dirtyTree) {
+    throw new Error(`Patch replay requires a clean working tree: ${repoRoot}`);
+  }
+  const targetHead = await gitHeadSha(repoRoot);
+  const conflicts = [];
+  const patchFiles = [];
+  for (const patchId of patchIds) {
+    const manifest = await readPatchManifest(registryPath, patchId);
+    const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
+    if (compatibility.status === "mismatch") {
+      throw new Error(
+        `Patch compatibility mismatch for ${patchId}: ${compatibility.reasons.join(" ")}`
+      );
+    }
+    await loadPatchContent(registryPath, manifest);
+    patchFiles.push(patchContentPath(registryPath, patchId));
+  }
+  const checkResult = await runGit(
+    ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
+    { allowFailure: true }
+  );
+  if (!checkResult.success) {
+    for (const patchId of patchIds) {
+      const patchFile = patchContentPath(registryPath, patchId);
+      const patchCheck = await runGit(
+        ["-C", repoRoot, "apply", "--check", "--verbose", patchFile],
+        { allowFailure: true }
+      );
+      if (!patchCheck.success) {
+        conflicts.push({
+          patchId,
+          message: patchCheck.stderr || patchCheck.stdout || "Patch did not apply cleanly."
+        });
+      }
+    }
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: patchIds,
+      conflicts,
+      preview: args.dryRun ?? false,
+      targetHead
+    };
+  }
+  if (args.dryRun) {
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: [],
+      conflicts: [],
+      preview: true,
+      targetHead
+    };
+  }
+  const applyResult = await runGit(
+    ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
+    { allowFailure: true }
+  );
+  if (!applyResult.success) {
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: patchIds,
+      conflicts: [
+        {
+          patchId: patchIds.join(","),
+          message: applyResult.stderr || applyResult.stdout || "Patch replay failed."
+        }
+      ],
+      preview: false,
+      targetHead
+    };
+  }
+  return {
+    registryPath,
+    appliedPatches: patchIds,
+    skippedPatches: [],
+    conflicts: [],
+    preview: false,
+    targetHead
+  };
+}
+var execFileAsync, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
@@ -28534,6 +28935,11 @@ var init_workspace = __esm({
     WORKSPACE_MANIFEST_FILE = ".blueprint-workspace.json";
     WORKSPACE_REGISTRY_VERSION = 1;
     WORKSPACE_STRATEGIES = ["worktree", "clone"];
+    PATCH_REGISTRY_VERSION = 1;
+    PATCH_MANIFEST_VERSION = 1;
+    PATCH_AUDIT_VERSION = 1;
+    PATCH_AUDIT_ACTIONS = ["record", "preview", "reapply"];
+    PATCH_OUTCOMES = ["recorded", "applied", "conflict", "blocked"];
     workspaceRegistryGetInputSchema = {
       cwd: string2().optional()
     };
@@ -28544,6 +28950,36 @@ var init_workspace = __esm({
       path: string2().trim().min(1).optional(),
       strategy: _enum(WORKSPACE_STRATEGIES).optional(),
       branch: string2().trim().min(1).optional()
+    };
+    patchListInputSchema = {
+      cwd: string2().optional(),
+      patchIds: array(string2().trim().min(1)).optional()
+    };
+    patchRecordInputSchema = {
+      cwd: string2().optional(),
+      patchId: string2().trim().min(1),
+      patch: string2().min(1).optional(),
+      trackedFiles: array(string2().trim().min(1)).min(1),
+      label: string2().trim().min(1).optional(),
+      sourceVersion: string2().trim().min(1).optional(),
+      compatibility: object2({
+        host: string2().trim().min(1).nullable().optional(),
+        repoRootName: string2().trim().min(1).optional(),
+        remoteUrl: string2().trim().min(1).nullable().optional()
+      }).optional(),
+      audit: object2({
+        action: _enum(PATCH_AUDIT_ACTIONS).optional(),
+        outcome: _enum(PATCH_OUTCOMES).optional(),
+        conflicts: array(string2()).optional(),
+        warnings: array(string2()).optional(),
+        dryRun: boolean2().optional(),
+        targetHead: string2().trim().min(1).nullable().optional()
+      }).optional()
+    };
+    patchReapplyInputSchema = {
+      cwd: string2().optional(),
+      patchIds: array(string2().trim().min(1)).optional(),
+      dryRun: boolean2().optional()
     };
     workspaceToolDefinitions = [
       {
@@ -28557,6 +28993,24 @@ var init_workspace = __esm({
         description: "Create a Blueprint workspace on disk and record it in the host-global registry transactionally.",
         inputSchema: workspaceCreateInputSchema,
         handler: async (args) => blueprintWorkspaceCreate(args)
+      },
+      {
+        name: "blueprint_patch_list",
+        description: "List recorded Blueprint patch manifests from the host-global patch registry and report repo compatibility.",
+        inputSchema: patchListInputSchema,
+        handler: async (args) => blueprintPatchList(args)
+      },
+      {
+        name: "blueprint_patch_record",
+        description: "Persist a patch manifest plus audit entry in the host-global Blueprint patch registry.",
+        inputSchema: patchRecordInputSchema,
+        handler: async (args) => blueprintPatchRecord(args)
+      },
+      {
+        name: "blueprint_patch_reapply",
+        description: "Preview or replay recorded patches against a clean repo while enforcing host-global registry and compatibility guards.",
+        inputSchema: patchReapplyInputSchema,
+        handler: async (args) => blueprintPatchReapply(args)
       }
     ];
   }
@@ -39605,7 +40059,9 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
-  "blueprint_workspace_create"
+  "blueprint_workspace_create",
+  "blueprint_patch_record",
+  "blueprint_patch_reapply"
 ]);
 var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
   "invalid",

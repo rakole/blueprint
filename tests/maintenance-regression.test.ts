@@ -10,12 +10,13 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("maintenance manifests keep dirty-tree stops and report-before-mutate gates explicit", async () => {
-  const [newWorkspace, prBranch, ship, undo, cleanup] = await Promise.all([
+  const [newWorkspace, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
     readRepoFile("commands/blu-new-workspace.toml"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("commands/blu-ship.toml"),
     readRepoFile("commands/blu-undo.toml"),
-    readRepoFile("commands/blu-cleanup.toml")
+    readRepoFile("commands/blu-cleanup.toml"),
+    readRepoFile("commands/blu-reapply-patches.toml")
   ]);
 
   assert.match(newWorkspace, /maintenance\.workspace_root/);
@@ -51,6 +52,14 @@ test("maintenance manifests keep dirty-tree stops and report-before-mutate gates
   assert.match(cleanup, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
   assert.match(cleanup, /approved cleanup (plan|scope)[\s\S]*before filesystem mutation begins/i);
   assert.match(cleanup, /next safe action/i);
+
+  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_list/);
+  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_reapply/);
+  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_record/);
+  assert.match(reapplyPatches, /dirty working tree, malformed patch registry, missing patch target, compatibility mismatch, or installed-extension target is a hard stop/i);
+  assert.match(reapplyPatches, /reapply-patches-confirmation/);
+  assert.match(reapplyPatches, /preflight -> preview -> confirm -> replay -> record/i);
+  assert.match(reapplyPatches, /next safe action/i);
 });
 
 test("maintenance skill keeps family-wide preflight, pending-gate, and report-before-mutate boundaries aligned", async () => {
@@ -71,6 +80,10 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /`cleanup-confirmation`/);
   assert.match(skill, /`archive-destination-confirmation`/);
   assert.match(skill, /before filesystem mutation begins/i);
+  assert.match(skill, /\/blu-reapply-patches/);
+  assert.match(skill, /`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/);
+  assert.match(skill, /`reapply-patches-confirmation`/);
+  assert.match(skill, /`preflight -> preview -> confirm -> replay -> record`/);
   assert.match(skill, /next safe action/i);
 });
 
@@ -101,4 +114,9 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`cleanup`[\s\S]*`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*`cleanup-confirmation`, `archive-destination-confirmation`, and `report-overwrite-confirmation` visible/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*next safe action visible/i);
+
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*High-risk-maintenance profile for confirmation-gated patch replay/i);
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/i);
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*`preflight -> preview -> confirm -> replay -> record`/i);
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*next safe action visible/i);
 });

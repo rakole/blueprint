@@ -70,7 +70,7 @@ const SKILL_BUNDLES = [
   {
     name: "blueprint-maintenance",
     description: "Git, review-branch prep, workspace, cleanup, update, and patch operations for",
-    commands: ["/blu-pr-branch", "/blu-ship", "/blu-cleanup", "/blu-undo"]
+    commands: ["/blu-pr-branch", "/blu-ship", "/blu-cleanup", "/blu-undo", "/blu-reapply-patches"]
   }
 ] as const;
 
