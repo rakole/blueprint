@@ -100,6 +100,12 @@ Shared rule for all maintenance flows:
 
 ### `ship`
 
+Shared in-flight contract for `ship`:
+
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- For non-trivial `ship` runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact shipping checklist with `write_todos`.
+- Treat branchy `ship` runs as tracker-eligible only for session-local coordination. Pair tracker state with visible `write_todos`, and never let tracker state replace the durable `ship-latest` report or Blueprint MCP persistence.
+
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Resolve the shipping scope explicitly. Prefer the user-named phase, otherwise anchor the flow to the current phase and saved Blueprint evidence instead of guessing across unrelated work.
 3. Read effective config through `blueprint_config_get` before deriving base-branch, branching, or commit-docs behavior. Prefer explicit user input, then `git.base_branch`, then safe repo detection.
@@ -107,10 +113,12 @@ Shared rule for all maintenance flows:
 5. Make the resolved target explicit before mutation: name the selected phase or milestone, source branch, base branch, and the evidence set that is gating the ship path.
 6. Read saved verification, UAT, review, security, and `pr-branch` evidence through `blueprint_artifact_list` before proposing a draft or ready PR path.
 7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, tracked-file inputs so the shipping plan stays grounded in the saved Blueprint evidence and the active diff.
-8. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
-9. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
-10. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
-11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
+8. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
+9. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
+10. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
+11. When the flow branches across local prep, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing, tracker-backed coordination may be used, but treat tracker state as session-local coordination only and keep the visible checklist authoritative for the user.
+12. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
+13. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
 
 ### `undo`
 
@@ -148,6 +156,6 @@ Shared rule for all maintenance flows:
 ## Output Style
 
 - For `pr-branch`, report the created review branch plainly, name the base and source branches, call out the included and excluded scope compactly, mention the durable report status, make any active pending gate or waiting state explicit, and end with the safest implemented follow-up or manual next step.
-- For `ship`, report the selected scope, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, and the safest implemented follow-up or manual next step.
+- For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.

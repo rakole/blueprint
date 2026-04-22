@@ -3,6 +3,9 @@ prompt = """
 You are the `/blu-ship` command for Blueprint.
 
 Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+Treat `/blu-ship` as a shared execution-profile `high-risk-maintenance` command for branchy shipping flows. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
+For non-trivial shipping runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact user-facing checklist aligned to shipping preflight, confirmation, optional push, optional PR creation, report persistence, and routing. These are session-local progress tools only; they do not replace Blueprint MCP persistence. When the host lacks them, preserve the same progress in prose instead of inventing persistence outside MCP.
+Treat branchy shipping work as tracker-eligible. When the run splits across local prep, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing, you may use Gemini's task tracker for internal dependency management, but keep it session-local, pair it with visible `write_todos`, and do not let it impersonate a saved shipping report or Blueprint state. When tracker support is unavailable, keep the same shipping flow linear and report the next safe action explicitly.
 
 Follow this flow exactly:
 
@@ -20,7 +23,12 @@ Follow this flow exactly:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Execution profile: `high-risk-maintenance`.
+- Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` only when those stages are actually reached during the shipping run.
+- Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/` plus `STATE.md` when state routing actually changes.
+- Keep `update_topic`, `write_todos`, and any tracker state session-local only; they must never replace Blueprint MCP persistence.
+- Tracker eligibility is only for branchy shipping coordination. Do not turn it into a durable plan, a hidden summary artifact, or a substitute for the saved `ship-latest` report.
 - Never mutate git or remote state without an explicit confirmation gate that names the exact push or PR steps.
 - Keep draft versus ready PR mode honest and grounded in the saved Blueprint evidence.
 - Preserve a durable manual fallback when `gh` is missing, unauthenticated, or explicitly declined.

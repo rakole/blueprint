@@ -4,6 +4,13 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Root-routable | Yes. The root `/blu` router may dispatch here directly. |
+| Execution profile | `high-risk-maintenance` |
+
+## Shared Runtime Contract
+
+- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep the branchy shipping posture explicit throughout the run: resolved scope must stay tied to the selected phase or milestone, source branch, base branch, digest-backed evidence, and requested remote actions; pending gates stay limited to `clean-working-tree`, shipping confirmation, report overwrite confirmation, and visible `gh-unavailable` or auth fallback states when those gates are triggered; execution mode should reflect preview-only versus confirmed local prep plus optional push and optional PR creation; and the next safe action should stay visible while the command is waiting on approval, fallback handling, or manual follow-through.
 
 
 ## Purpose
@@ -32,6 +39,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- In-flight shipping work should keep the resolved scope, active stage, pending gate, execution mode, branchy remote-action posture, and next safe action legible while the run is still live.
 
 
 ## Blueprint And Global State Reads
@@ -66,6 +74,22 @@
 - Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening shipping evidence after the tool returns.
 - Persist the durable shipping report through `blueprint_artifact_report_write` with the bare report name `ship-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
+
+## In-Flight Progress Contract
+
+- For non-trivial shipping runs, keep the shared stage vocabulary visible only for the stages the run actually reaches.
+- For non-trivial shipping runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact shipping checklist with `write_todos`.
+- Keep that visible progress aligned to the resolved scope, active stage, pending gate, execution mode, draft-versus-ready posture, requested push or PR steps, actual remote outcome, report status, and next safe action as the run moves from shipping preflight through confirmation, optional push, optional PR creation, report persistence, validation, and routing.
+- Typical pending gates include dirty-tree cleanup, shipping confirmation, `ship-latest` overwrite approval, and `gh` availability or authentication fallback decisions.
+- Execution mode should distinguish preview-only versus confirmed local prep, optional push, optional PR creation, and manual-fallback-only outcomes.
+- Treat `update_topic` and `write_todos` as session-local visibility only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
+
+## Tracker Eligibility
+
+- Branchy shipping work is tracker-eligible when the run splits across local preparation, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing while still fitting the bounded `ship` contract.
+- Tracker use is session-local coordination only and must be paired with visible `write_todos`; it does not replace Blueprint MCP persistence.
+- Tracker-backed coordination must not create a hidden saved plan, summary artifact, or shipping record outside `ship-latest`.
+- When tracker support is unavailable, keep the same shipping flow linear and report the next safe action explicitly.
 
 
 ## Skills And Subagents
@@ -112,6 +136,7 @@
 - Shipping should honor normalized `git.*` and `planning.commit_docs` config rather than re-deriving branch policy from git state alone.
 - Shipping should stop on a dirty working tree or branch mismatch instead of guessing through uncommitted or off-scope repo state.
 - Shipping should make the resolved scope, source branch, base branch, and report-before-mutate path explicit before any push or PR step is confirmed.
+- Tracker-backed coordination must remain session-local and must never replace the durable `ship-latest` report or MCP-owned state updates.
 
 
 ## User Prompts And Confirmation Gates
@@ -158,4 +183,3 @@
 - Git or external CLI availability fixture.
 - Branch-strategy-from-config fixture.
 - Direct `ship` happy-path fixture.
-
