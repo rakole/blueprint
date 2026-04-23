@@ -459,14 +459,23 @@ function parseStateSnapshot(raw: string): WorkstreamStateSnapshot {
     const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
     return match ? match[1].trim() : null;
   };
+  const getRequiredLineValue = (label: string): string => {
+    const value = getLineValue(label);
+
+    if (!value) {
+      throw new Error(`STATE.md is malformed; missing required field "${label}".`);
+    }
+
+    return value;
+  };
 
   return {
-    projectStatus: getLineValue("Project status") ?? "unknown",
-    currentMilestone: getLineValue("Current milestone") ?? "unknown",
-    currentPhase: getLineValue("Current phase") ?? "unknown",
-    activeCommand: getLineValue("Active command") ?? PROGRESS_COMMAND,
-    nextAction: getLineValue("Next action") ?? `Run ${PROGRESS_COMMAND} to inspect current state`,
-    lastUpdated: getLineValue("Last updated") ?? new Date(0).toISOString(),
+    projectStatus: getRequiredLineValue("Project status"),
+    currentMilestone: getRequiredLineValue("Current milestone"),
+    currentPhase: getRequiredLineValue("Current phase"),
+    activeCommand: getRequiredLineValue("Active command"),
+    nextAction: getRequiredLineValue("Next action"),
+    lastUpdated: getRequiredLineValue("Last updated"),
     blockers: parseBulletSection(raw, "Blockers"),
     roadmapEvolutionNotes: parseBulletSection(raw, "Roadmap Evolution Notes")
   };
@@ -1043,7 +1052,7 @@ function buildMissingCurrentStateSnapshotResult(
     operation,
     affectedPaths: [],
     waitingState: "missing-resume-snapshot",
-    nextAction: `Run ${PROGRESS_COMMAND} to regenerate ${statePath} before changing the active workstream.`,
+    nextAction: `Run ${PROGRESS_COMMAND} to regenerate ${statePath} before retrying the requested workstream change.`,
     reason,
     statePatch: null
   });
@@ -2596,8 +2605,18 @@ export async function blueprintWorkstreamMutate(
   }
 
   if (targetIsActive) {
-    const currentSnapshot = await readCurrentStateSnapshot(projectRoot);
-    target.stateSnapshot = currentSnapshot ?? target.stateSnapshot;
+    const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+
+    if (snapshotResult.status === "blocked") {
+      return buildMissingCurrentStateSnapshotResult(
+        store,
+        operation,
+        projectRoot,
+        snapshotResult.reason
+      );
+    }
+
+    target.stateSnapshot = snapshotResult.snapshot;
   }
 
   target.status = "completed";

@@ -336,3 +336,106 @@ test("switching away from an active workstream blocks when the current STATE.md 
     "paused"
   );
 });
+
+test("switching away from an active workstream blocks when the current STATE.md snapshot is truncated", async (t) => {
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "blueprint-workstreams-truncated-state-")
+  );
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Beta Stream"
+  });
+  await fs.writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    "# Blueprint State\n\n- Project status: active\n",
+    "utf8"
+  );
+
+  const blocked = await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "switch",
+    workstream: "beta-stream"
+  });
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.waitingState, "missing-resume-snapshot");
+  assert.equal(blocked.active?.slug, "alpha-stream");
+  assert.match(blocked.reason ?? "", /missing required field "Current milestone"/i);
+  assert.match(blocked.nextAction ?? "", /blu-progress/i);
+  assert.equal(listed.active?.slug, "alpha-stream");
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "alpha-stream")?.status,
+    "active"
+  );
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "beta-stream")?.status,
+    "paused"
+  );
+});
+
+test("completing the active workstream blocks cleanly when the current STATE.md snapshot cannot be read", async (t) => {
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "blueprint-workstreams-complete-state-read-")
+  );
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+  const mutableFs = fs as typeof fs & {
+    readFile: typeof fs.readFile;
+  };
+  const originalReadFile = mutableFs.readFile;
+
+  mutableFs.readFile = (async (...args: Parameters<typeof originalReadFile>) => {
+    if (String(args[0]).endsWith(path.join(".blueprint", "STATE.md"))) {
+      const error = new Error("permission denied") as Error & { code?: string };
+      error.code = "EACCES";
+      throw error;
+    }
+
+    return originalReadFile(...args);
+  }) as typeof fs.readFile;
+
+  t.after(() => {
+    mutableFs.readFile = originalReadFile;
+  });
+
+  const blocked = await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "complete",
+    workstream: "alpha-stream"
+  });
+
+  mutableFs.readFile = originalReadFile;
+
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.waitingState, "missing-resume-snapshot");
+  assert.equal(blocked.active?.slug, "alpha-stream");
+  assert.match(blocked.reason ?? "", /could not be read: permission denied/i);
+  assert.match(blocked.nextAction ?? "", /blu-progress/i);
+  assert.equal(listed.active?.slug, "alpha-stream");
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "alpha-stream")?.status,
+    "active"
+  );
+});
