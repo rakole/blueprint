@@ -881,9 +881,10 @@ Canonical `.blueprint/workstreams/<slug>/state.json` shape:
 Contract notes:
 - `status` accepts only `active`, `paused`, or `completed`.
 - At most one workstream may be `active`.
+- `createdAt` and `updatedAt` are required non-empty ISO-8601 strings; `activatedAt` and `completedAt` must be missing, `null`, or non-empty ISO-8601 strings. Malformed timestamp values are corrupt canonical state and should block workstream reads or mutation through the existing invalid/corrupt path.
 - `WORKSTREAMS.md` is the human index; the per-workstream `state.json` files are the canonical mini-state that the MCP tool validates and mirrors into the index.
 - `stateSnapshot` stores the saved `STATE.md` subset used by `resume`; it must stay project-local and must not be mirrored into host-global config or registries.
-- A stale or missing `WORKSTREAMS.md` relative to the canonical state files is corrupt workstream state and should block mutation until repaired.
+- A stale or missing `WORKSTREAMS.md` relative to the canonical state files, or malformed canonical `state.json` content such as bad timestamps, is corrupt workstream state and should block mutation until repaired.
 
 ## Global State Tree
 

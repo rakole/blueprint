@@ -20,7 +20,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `update` | `remove-workspace` | none | `reapply-patches`, `new-workspace`, `workstreams`, `undo`, and `cleanup` are now shipped; the remaining maintenance work is advisory update plus the deferred workspace-removal surface. |
+| 1 | `update` | `remove-workspace` | none | `reapply-patches`, `new-workspace`, `workstreams`, `undo`, and `cleanup` are now shipped; `workstreams` also closed its canonical-state hardening pass on 2026-04-23, so the remaining maintenance work is advisory update plus the deferred workspace-removal surface. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
