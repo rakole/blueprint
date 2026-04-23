@@ -74,6 +74,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_review_record",
   "blueprint_workspace_create",
   "blueprint_workspace_remove",
+  "blueprint_workstream_mutate",
   "blueprint_patch_record",
   "blueprint_patch_reapply"
 ]);
@@ -117,6 +118,7 @@ const SUMMARY_PATH_KEYS = [
   "reportPath",
   "configPath",
   "statePath",
+  "indexPath",
   "roadmapPath",
   "linkedPlanPath",
   "sourcePath",
@@ -155,7 +157,8 @@ const SUMMARY_COUNT_KEYS = [
   ["summaryPaths", "summary links"],
   ["warnings", "warnings"],
   ["issues", "issues"],
-  ["suggestedRepairs", "repairs"]
+  ["suggestedRepairs", "repairs"],
+  ["workstreams", "workstreams"]
 ] as const satisfies ReadonlyArray<readonly [string, string]>;
 
 function getString(result: ToolResult, key: string): string | null {
@@ -254,6 +257,14 @@ function buildSubject(toolName: string, result: ToolResult): string {
     return "review scope";
   }
 
+  if (toolName === "blueprint_workstream_list") {
+    return "workstreams";
+  }
+
+  if (toolName === "blueprint_workstream_mutate") {
+    return "workstream state";
+  }
+
   return humanizeIdentifier(toolName.replace(/^blueprint_/, ""));
 }
 
@@ -350,6 +361,18 @@ function summarizeMutationOutcome(toolName: string, result: ToolResult): string 
 
   if (toolName.endsWith("_delete") && deleted === false && status === "invalid") {
     return "Did not delete";
+  }
+
+  if (toolName === "blueprint_workstream_mutate") {
+    if (status === "reused") {
+      return "Reused existing";
+    }
+
+    if (status === "blocked" || status === "invalid" || status === "project_missing") {
+      return "Did not update";
+    }
+
+    return "Updated";
   }
 
   return null;

@@ -28076,6 +28076,22 @@ function normalizeWorkspaceName(value) {
   validateFieldNameSegment(trimmed, "Workspace name");
   return trimmed;
 }
+function normalizeWorkstreamName(value) {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  assertNoNullBytes(normalized, "Workstream name");
+  if (normalized.length === 0) {
+    throw new Error("Workstream name is required.");
+  }
+  return normalized;
+}
+function slugifyWorkstreamName(value) {
+  const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
+  if (slug.length === 0) {
+    throw new Error(`Workstream name must include letters or numbers: ${value}`);
+  }
+  validateFieldNameSegment(slug, "Workstream slug");
+  return slug;
+}
 function slugifyRepoName(value) {
   const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
   return slug.length > 0 ? slug : "repo";
@@ -28094,6 +28110,488 @@ async function canonicalizePath(candidatePath) {
   } catch {
     return path7.resolve(candidatePath);
   }
+}
+function normalizeTextForComparison(value) {
+  return value.replace(/\r\n/g, "\n").trimEnd();
+}
+function extractMarkdownSection4(markdown, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+  return match?.[1]?.trim() ?? "";
+}
+function parseBulletSection2(markdown, heading) {
+  return extractMarkdownSection4(markdown, heading).split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
+}
+function parseStateSnapshot(raw) {
+  const getLineValue = (label) => {
+    const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
+    return match ? match[1].trim() : null;
+  };
+  const getRequiredLineValue = (label) => {
+    const value = getLineValue(label);
+    if (!value) {
+      throw new Error(`STATE.md is malformed; missing required field "${label}".`);
+    }
+    return value;
+  };
+  return {
+    projectStatus: getRequiredLineValue("Project status"),
+    currentMilestone: getRequiredLineValue("Current milestone"),
+    currentPhase: getRequiredLineValue("Current phase"),
+    activeCommand: getRequiredLineValue("Active command"),
+    nextAction: getRequiredLineValue("Next action"),
+    lastUpdated: getRequiredLineValue("Last updated"),
+    blockers: parseBulletSection2(raw, "Blockers"),
+    roadmapEvolutionNotes: parseBulletSection2(raw, "Roadmap Evolution Notes")
+  };
+}
+async function readCurrentStateSnapshot(projectRoot) {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  if (!await pathExists4(statePath)) {
+    return null;
+  }
+  const raw = await fs6.readFile(statePath, "utf8");
+  return parseStateSnapshot(raw);
+}
+async function readRequiredCurrentStateSnapshot(projectRoot) {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  const stateRelativePath = toRepoRelativePath(projectRoot, statePath);
+  try {
+    const snapshot = await readCurrentStateSnapshot(projectRoot);
+    if (!snapshot) {
+      return {
+        status: "blocked",
+        reason: `Cannot capture the current active workstream because ${stateRelativePath} is missing.`
+      };
+    }
+    return {
+      status: "ready",
+      snapshot
+    };
+  } catch (error2) {
+    return {
+      status: "blocked",
+      reason: error2 instanceof Error ? `Cannot capture the current active workstream because ${stateRelativePath} could not be read: ${error2.message}` : `Cannot capture the current active workstream because ${stateRelativePath} could not be read.`
+    };
+  }
+}
+function normalizeStateSnapshot(value, slug) {
+  if (value === null || value === void 0) {
+    return null;
+  }
+  if (typeof value !== "object") {
+    throw new Error(`Workstream snapshot is malformed for ${slug}.`);
+  }
+  const snapshot = value;
+  const stringField = (field) => {
+    const currentValue = snapshot[field];
+    if (typeof currentValue !== "string" || currentValue.trim().length === 0) {
+      throw new Error(`Workstream snapshot field ${field} is malformed for ${slug}.`);
+    }
+    return currentValue;
+  };
+  const arrayField = (field) => {
+    const currentValue = snapshot[field];
+    if (!Array.isArray(currentValue)) {
+      throw new Error(`Workstream snapshot field ${field} is malformed for ${slug}.`);
+    }
+    return currentValue.map((entry) => {
+      if (typeof entry !== "string" || entry.trim().length === 0) {
+        throw new Error(`Workstream snapshot field ${field} is malformed for ${slug}.`);
+      }
+      return entry;
+    });
+  };
+  return {
+    projectStatus: stringField("projectStatus"),
+    currentMilestone: stringField("currentMilestone"),
+    currentPhase: stringField("currentPhase"),
+    activeCommand: stringField("activeCommand"),
+    nextAction: stringField("nextAction"),
+    lastUpdated: stringField("lastUpdated"),
+    blockers: arrayField("blockers"),
+    roadmapEvolutionNotes: arrayField("roadmapEvolutionNotes")
+  };
+}
+function normalizeWorkstreamStateDocument(value, expectedSlug) {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`Workstream state is malformed for ${expectedSlug}.`);
+  }
+  const document = value;
+  if (typeof document.version !== "number" || typeof document.name !== "string" || typeof document.slug !== "string" || typeof document.status !== "string" || typeof document.createdAt !== "string" || typeof document.updatedAt !== "string") {
+    throw new Error(`Workstream state is missing required fields for ${expectedSlug}.`);
+  }
+  if (document.version !== WORKSTREAM_STATE_VERSION) {
+    throw new Error(
+      `Workstream state version is unsupported for ${expectedSlug}: ${document.version}.`
+    );
+  }
+  const slug = slugifyWorkstreamName(document.slug);
+  if (slug !== expectedSlug) {
+    throw new Error(
+      `Workstream state slug mismatch for ${expectedSlug}; recorded slug is ${document.slug}.`
+    );
+  }
+  if (!WORKSTREAM_STATUSES.includes(document.status)) {
+    throw new Error(`Workstream state has unsupported status for ${expectedSlug}.`);
+  }
+  if (document.createdAt.trim().length === 0 || document.updatedAt.trim().length === 0) {
+    throw new Error(`Workstream state has malformed timestamps for ${expectedSlug}.`);
+  }
+  const optionalTimestampField = (field) => {
+    const currentValue = document[field];
+    if (currentValue === void 0 || currentValue === null) {
+      return null;
+    }
+    if (typeof currentValue !== "string" || currentValue.trim().length === 0) {
+      throw new Error(`Workstream state has malformed timestamps for ${expectedSlug}.`);
+    }
+    return currentValue;
+  };
+  return {
+    version: document.version,
+    name: normalizeWorkstreamName(document.name),
+    slug,
+    status: document.status,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+    activatedAt: optionalTimestampField("activatedAt"),
+    completedAt: optionalTimestampField("completedAt"),
+    stateSnapshot: normalizeStateSnapshot(document.stateSnapshot, slug)
+  };
+}
+function compareWorkstreams(left, right) {
+  const statusOrder = {
+    active: 0,
+    paused: 1,
+    completed: 2
+  };
+  const statusComparison = statusOrder[left.status] - statusOrder[right.status];
+  if (statusComparison !== 0) {
+    return statusComparison;
+  }
+  const createdComparison = left.createdAt.localeCompare(right.createdAt);
+  if (createdComparison !== 0) {
+    return createdComparison;
+  }
+  return left.name.localeCompare(right.name);
+}
+function summarizeSnapshot(snapshot) {
+  if (!snapshot) {
+    return "none";
+  }
+  return `Phase ${snapshot.currentPhase}; ${snapshot.activeCommand}`;
+}
+function summarizeCounts(workstreams) {
+  const counts = {
+    active: workstreams.filter((entry) => entry.status === "active").length,
+    paused: workstreams.filter((entry) => entry.status === "paused").length,
+    completed: workstreams.filter((entry) => entry.status === "completed").length
+  };
+  return `${counts.active} active, ${counts.paused} paused, ${counts.completed} completed`;
+}
+function renderWorkstreamsIndex(workstreams) {
+  const ordered = [...workstreams].sort(compareWorkstreams);
+  const active = ordered.find((entry) => entry.status === "active") ?? null;
+  const rows = ordered.length === 0 ? "| none | none | none | none | none |\n" : ordered.map(
+    (entry) => `| \`${entry.name}\` | \`${entry.slug}\` | \`${entry.status}\` | \`${summarizeSnapshot(entry.stateSnapshot)}\` | \`${entry.updatedAt}\` |`
+  ).join("\n");
+  return [
+    "# Blueprint Workstreams",
+    "",
+    `- Active workstream: ${active ? `\`${active.name}\`` : "none"}`,
+    `- Workstream counts: ${summarizeCounts(ordered)}`,
+    "",
+    "| Name | Slug | Status | Snapshot | Updated |",
+    "|---|---|---|---|---|",
+    rows,
+    ""
+  ].join("\n");
+}
+async function writeFileAtomically(filePath, content) {
+  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fs6.mkdir(path7.dirname(filePath), { recursive: true });
+  await fs6.writeFile(tempPath, content, "utf8");
+  await fs6.rename(tempPath, filePath);
+}
+async function writeJsonAtomically(filePath, value) {
+  await writeFileAtomically(filePath, `${JSON.stringify(value, null, 2)}
+`);
+}
+async function snapshotFiles(paths) {
+  return Promise.all(
+    [...new Set(paths)].map(async (targetPath) => {
+      if (!await pathExists4(targetPath)) {
+        return {
+          path: targetPath,
+          existed: false,
+          content: null
+        };
+      }
+      return {
+        path: targetPath,
+        existed: true,
+        content: await fs6.readFile(targetPath, "utf8")
+      };
+    })
+  );
+}
+async function snapshotDirectories(paths) {
+  return Promise.all(
+    [...new Set(paths)].map(async (targetPath) => ({
+      path: targetPath,
+      existed: await pathExists4(targetPath)
+    }))
+  );
+}
+async function restoreFileSnapshots(snapshots) {
+  for (const snapshot of snapshots) {
+    if (!snapshot.existed) {
+      await fs6.rm(snapshot.path, { force: true }).catch(() => void 0);
+      continue;
+    }
+    await fs6.mkdir(path7.dirname(snapshot.path), { recursive: true });
+    await fs6.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
+  }
+}
+async function restoreDirectorySnapshots(snapshots) {
+  const missingDirectories = snapshots.filter((snapshot) => !snapshot.existed).sort((left, right) => right.path.length - left.path.length);
+  for (const snapshot of missingDirectories) {
+    await fs6.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function workstreamsRootAbsolute(projectRoot) {
+  return resolveBlueprintPath(projectRoot, WORKSTREAMS_ROOT_PATH);
+}
+function workstreamsIndexAbsolute(projectRoot) {
+  return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
+}
+function workstreamStateAbsolute(projectRoot, slug) {
+  return path7.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+}
+function workstreamSummary(projectRoot, entry) {
+  return {
+    ...entry,
+    statePath: toRepoRelativePath(projectRoot, workstreamStateAbsolute(projectRoot, entry.slug))
+  };
+}
+function workstreamNextAction(workstreams) {
+  if (workstreams.length === 0) {
+    return `Run ${WORKSTREAMS_COMMAND} create <name> to add the first project-local workstream`;
+  }
+  const active = workstreams.find((entry) => entry.status === "active");
+  if (active) {
+    return `Run ${PROGRESS_COMMAND} or ${WORKSTREAMS_COMMAND} resume ${active.slug} to continue the active workstream`;
+  }
+  const resumable = workstreams.find((entry) => entry.stateSnapshot !== null);
+  if (resumable) {
+    return `Run ${WORKSTREAMS_COMMAND} resume ${resumable.slug} to restore saved state for that workstream`;
+  }
+  const paused = workstreams.find((entry) => entry.status === "paused");
+  if (paused) {
+    return `Run ${WORKSTREAMS_COMMAND} switch ${paused.slug} to make that paused workstream active`;
+  }
+  return `Run ${WORKSTREAMS_COMMAND} create <name> to add another workstream`;
+}
+function buildResumeStatePatch(snapshot) {
+  if (!snapshot) {
+    return null;
+  }
+  return {
+    projectStatus: snapshot.projectStatus,
+    currentMilestone: snapshot.currentMilestone,
+    currentPhase: snapshot.currentPhase,
+    activeCommand: snapshot.activeCommand,
+    nextAction: snapshot.nextAction,
+    blockers: snapshot.blockers,
+    roadmapEvolutionNotes: snapshot.roadmapEvolutionNotes
+  };
+}
+async function loadWorkstreamStore(projectRoot) {
+  const blueprintRoot = path7.join(projectRoot, BLUEPRINT_DIR);
+  const rootPath = workstreamsRootAbsolute(projectRoot);
+  const indexPath = workstreamsIndexAbsolute(projectRoot);
+  if (!await pathExists4(blueprintRoot)) {
+    return {
+      status: "project_missing",
+      projectRoot,
+      rootPath,
+      indexPath,
+      workstreams: [],
+      active: null,
+      warnings: [],
+      waitingState: null,
+      reason: "Blueprint project state is missing; initialize the repo before managing workstreams."
+    };
+  }
+  let entries;
+  try {
+    entries = await fs6.readdir(rootPath, {
+      encoding: "utf8",
+      withFileTypes: true
+    });
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return {
+        status: "ready",
+        projectRoot,
+        rootPath,
+        indexPath,
+        workstreams: [],
+        active: null,
+        warnings: []
+      };
+    }
+    throw error2;
+  }
+  try {
+    const workstreams = [];
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        continue;
+      }
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const statePath = path7.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      if (!await pathExists4(statePath)) {
+        throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
+      }
+      const raw = await fs6.readFile(statePath, "utf8");
+      const parsed = safeJsonParseObject(raw, {
+        label: statePath
+      });
+      workstreams.push(normalizeWorkstreamStateDocument(parsed, entry.name));
+    }
+    workstreams.sort(compareWorkstreams);
+    const activeWorkstreams = workstreams.filter((entry) => entry.status === "active");
+    if (activeWorkstreams.length > 1) {
+      throw new Error("More than one active workstream is recorded on disk.");
+    }
+    const expectedIndex = renderWorkstreamsIndex(workstreams);
+    const indexExists = await pathExists4(indexPath);
+    if (workstreams.length > 0 && !indexExists) {
+      throw new Error("The workstream index is missing while workstream state files exist.");
+    }
+    if (indexExists) {
+      const actualIndex = await fs6.readFile(indexPath, "utf8");
+      if (normalizeTextForComparison(actualIndex) !== normalizeTextForComparison(expectedIndex)) {
+        throw new Error("The workstream index is stale relative to the canonical state files.");
+      }
+    }
+    return {
+      status: "ready",
+      projectRoot,
+      rootPath,
+      indexPath,
+      workstreams,
+      active: activeWorkstreams[0] ?? null,
+      warnings: []
+    };
+  } catch (error2) {
+    return {
+      status: "invalid",
+      projectRoot,
+      rootPath,
+      indexPath,
+      workstreams: [],
+      active: null,
+      warnings: [],
+      waitingState: "corrupt-workstream-index",
+      reason: error2 instanceof Error ? `Workstream state is corrupt: ${error2.message}` : "Workstream state is corrupt."
+    };
+  }
+}
+function buildWorkstreamListResult(store) {
+  const summaries = store.status === "ready" ? store.workstreams.map((entry) => workstreamSummary(store.projectRoot, entry)) : [];
+  return {
+    status: store.status,
+    rootPath: toRepoRelativePath(store.projectRoot, store.rootPath),
+    indexPath: toRepoRelativePath(store.projectRoot, store.indexPath),
+    active: store.status === "ready" && store.active ? workstreamSummary(store.projectRoot, store.active) : null,
+    workstreams: summaries,
+    summary: {
+      total: summaries.length,
+      active: summaries.filter((entry) => entry.status === "active").length,
+      paused: summaries.filter((entry) => entry.status === "paused").length,
+      completed: summaries.filter((entry) => entry.status === "completed").length,
+      nextAction: store.status === "ready" ? workstreamNextAction(store.workstreams) : null
+    },
+    warnings: store.warnings,
+    waitingState: store.status === "ready" ? null : store.waitingState,
+    reason: store.status === "ready" ? null : store.reason
+  };
+}
+function buildMutationResult(store, base) {
+  return {
+    ...base,
+    rootPath: toRepoRelativePath(store.projectRoot, store.rootPath),
+    indexPath: toRepoRelativePath(store.projectRoot, store.indexPath),
+    active: store.status === "ready" && store.active ? workstreamSummary(store.projectRoot, store.active) : null,
+    workstreams: store.status === "ready" ? store.workstreams.map((entry) => workstreamSummary(store.projectRoot, entry)) : [],
+    warnings: store.warnings
+  };
+}
+function buildMissingCurrentStateSnapshotResult(store, operation, projectRoot, reason) {
+  const statePath = toRepoRelativePath(
+    projectRoot,
+    resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH)
+  );
+  return buildMutationResult(store, {
+    status: "blocked",
+    operation,
+    affectedPaths: [],
+    waitingState: "missing-resume-snapshot",
+    nextAction: `Run ${PROGRESS_COMMAND} to regenerate ${statePath} before retrying the requested workstream change.`,
+    reason,
+    statePatch: null
+  });
+}
+function findWorkstreamEntry(workstreams, requested) {
+  const normalizedName = requested.trim().toLowerCase();
+  let requestedSlug = null;
+  try {
+    requestedSlug = slugifyWorkstreamName(requested);
+  } catch {
+    requestedSlug = null;
+  }
+  return workstreams.find((entry) => entry.slug === requested) ?? workstreams.find((entry) => entry.name.toLowerCase() === normalizedName) ?? (requestedSlug ? workstreams.find((entry) => entry.slug === requestedSlug) ?? null : null);
+}
+async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
+  const indexPath = workstreamsIndexAbsolute(projectRoot);
+  const indexRelativePath = toRepoRelativePath(projectRoot, indexPath);
+  const uniqueSlugs = [...new Set(affectedSlugs)];
+  const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(projectRoot, slug));
+  const snapshots = await snapshotFiles([indexPath, ...statePaths]);
+  const directorySnapshots = await snapshotDirectories([
+    workstreamsRootAbsolute(projectRoot),
+    ...uniqueSlugs.map((slug) => path7.dirname(workstreamStateAbsolute(projectRoot, slug)))
+  ]);
+  try {
+    for (const slug of uniqueSlugs) {
+      const entry = workstreams.find((candidate) => candidate.slug === slug);
+      if (!entry) {
+        continue;
+      }
+      await writeJsonAtomically(
+        workstreamStateAbsolute(projectRoot, slug),
+        entry
+      );
+    }
+    await writeFileAtomically(indexPath, renderWorkstreamsIndex(workstreams));
+  } catch (error2) {
+    await restoreFileSnapshots(snapshots);
+    await restoreDirectorySnapshots(directorySnapshots);
+    throw error2;
+  }
+  return [
+    ...uniqueSlugs.map(
+      (slug) => toRepoRelativePath(projectRoot, workstreamStateAbsolute(projectRoot, slug))
+    ),
+    indexRelativePath
+  ];
 }
 async function runGit(args, options = {}) {
   try {
@@ -28185,6 +28683,25 @@ async function gitWorkingTreeClean(repoPath) {
   const result = await runGit(["-C", repoPath, "status", "--short"], {
     allowFailure: true
   });
+  return result.success && result.stdout.length === 0;
+}
+async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
+  const result = await runGit(
+    [
+      "-C",
+      repoPath,
+      "status",
+      "--short",
+      "--untracked-files=all",
+      "--",
+      ".",
+      `:(exclude)${WORKSTREAMS_ROOT_PATH}/**`,
+      `:(exclude)${BLUEPRINT_STATE_PATH}`
+    ],
+    {
+      allowFailure: true
+    }
+  );
   return result.success && result.stdout.length === 0;
 }
 async function localBranchExists(repoPath, branch) {
@@ -29331,6 +29848,273 @@ async function blueprintWorkspaceRemove(args) {
     }
   });
 }
+async function blueprintWorkstreamList(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const store = await loadWorkstreamStore(projectRoot);
+  return buildWorkstreamListResult(store);
+}
+async function blueprintWorkstreamMutate(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const store = await loadWorkstreamStore(projectRoot);
+  if (store.status !== "ready") {
+    return buildMutationResult(store, {
+      status: store.status,
+      operation: args.operation,
+      affectedPaths: [],
+      waitingState: store.waitingState,
+      nextAction: store.status === "project_missing" ? "Initialize Blueprint project state before creating workstreams." : `Repair ${toRepoRelativePath(projectRoot, store.indexPath)} before mutating workstreams.`,
+      reason: store.reason,
+      statePatch: null
+    });
+  }
+  const operation = args.operation;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const workstreams = store.workstreams.map((entry) => ({ ...entry }));
+  if (operation === "create") {
+    const name = normalizeWorkstreamName(args.workstream);
+    const slug = slugifyWorkstreamName(name);
+    const existing = findWorkstreamEntry(workstreams, slug);
+    if (existing) {
+      return buildMutationResult(store, {
+        status: "reused",
+        operation,
+        affectedPaths: [],
+        waitingState: null,
+        nextAction: existing.status === "active" ? `Continue the active workstream ${existing.slug} or inspect progress with ${PROGRESS_COMMAND}.` : `Run ${WORKSTREAMS_COMMAND} switch ${existing.slug} or ${WORKSTREAMS_COMMAND} resume ${existing.slug} when you want to return to it.`,
+        reason: `Workstream ${existing.name} already exists.`,
+        statePatch: null
+      });
+    }
+    let currentSnapshot = null;
+    if (!store.active) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
+    const newEntry = {
+      version: WORKSTREAM_STATE_VERSION,
+      name,
+      slug,
+      status: store.active ? "paused" : "active",
+      createdAt: now,
+      updatedAt: now,
+      activatedAt: store.active ? null : now,
+      completedAt: null,
+      stateSnapshot: store.active ? null : currentSnapshot
+    };
+    workstreams.push(newEntry);
+    workstreams.sort(compareWorkstreams);
+    const reloadedStore2 = {
+      ...store,
+      workstreams,
+      active: workstreams.find((entry) => entry.status === "active") ?? null
+    };
+    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [slug]);
+    return buildMutationResult(reloadedStore2, {
+      status: "updated",
+      operation,
+      affectedPaths: affectedPaths2,
+      waitingState: null,
+      nextAction: newEntry.status === "active" ? `Continue the active workstream ${slug} or inspect repo status with ${PROGRESS_COMMAND}.` : `Run ${WORKSTREAMS_COMMAND} switch ${slug} when you want to make the new workstream active.`,
+      reason: null,
+      statePatch: null
+    });
+  }
+  const target = findWorkstreamEntry(workstreams, args.workstream);
+  if (!target) {
+    return buildMutationResult(store, {
+      status: "blocked",
+      operation,
+      affectedPaths: [],
+      waitingState: "missing-workstream",
+      nextAction: `Run ${WORKSTREAMS_COMMAND} create <name> to add a new workstream first.`,
+      reason: `No workstream matched ${args.workstream}.`,
+      statePatch: null
+    });
+  }
+  const currentActive = workstreams.find((entry) => entry.status === "active") ?? null;
+  const targetIsActive = currentActive?.slug === target.slug;
+  const requiresCleanTree = operation === "switch" ? !targetIsActive : operation === "resume" ? true : targetIsActive;
+  if (requiresCleanTree && !await gitWorkingTreeCleanForWorkstreamTransition(projectRoot)) {
+    return buildMutationResult(store, {
+      status: "blocked",
+      operation,
+      affectedPaths: [],
+      waitingState: "dirty-working-tree",
+      nextAction: "Clean or stash the working tree before retrying the workstream transition.",
+      reason: "Workstream transitions that change the active stream require a clean working tree.",
+      statePatch: null
+    });
+  }
+  if (operation === "switch") {
+    if (target.status === "completed") {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: "missing-workstream",
+        nextAction: `Run ${WORKSTREAMS_COMMAND} resume ${target.slug} to reactivate that completed workstream from its saved snapshot.`,
+        reason: `Completed workstream ${target.name} must be resumed instead of switched.`,
+        statePatch: null
+      });
+    }
+    if (targetIsActive) {
+      return buildMutationResult(store, {
+        status: "reused",
+        operation,
+        affectedPaths: [],
+        waitingState: null,
+        nextAction: `Run ${PROGRESS_COMMAND} to inspect the current active workstream.`,
+        reason: `Workstream ${target.name} is already active.`,
+        statePatch: null
+      });
+    }
+    let currentSnapshot = null;
+    if (currentActive) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
+    if (currentActive) {
+      currentActive.status = "paused";
+      currentActive.updatedAt = now;
+      currentActive.stateSnapshot = currentSnapshot;
+    }
+    target.status = "active";
+    target.updatedAt = now;
+    target.activatedAt = now;
+    target.completedAt = null;
+    workstreams.sort(compareWorkstreams);
+    const reloadedStore2 = {
+      ...store,
+      workstreams,
+      active: target
+    };
+    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [
+      ...currentActive ? [currentActive.slug] : [],
+      target.slug
+    ]);
+    return buildMutationResult(reloadedStore2, {
+      status: "updated",
+      operation,
+      affectedPaths: affectedPaths2,
+      waitingState: null,
+      nextAction: target.stateSnapshot === null ? `Run ${PROGRESS_COMMAND} to continue from the current repo state, then switch away later to capture a resumable snapshot for ${target.slug}.` : `Run ${WORKSTREAMS_COMMAND} resume ${target.slug} to restore its saved state snapshot.`,
+      reason: null,
+      statePatch: null
+    });
+  }
+  if (operation === "resume") {
+    if (target.stateSnapshot === null) {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: "missing-resume-snapshot",
+        nextAction: `Switch to ${target.slug}, do the work, and switch away later to capture a saved snapshot before trying to resume it.`,
+        reason: `Workstream ${target.name} does not have a saved STATE.md snapshot to restore.`,
+        statePatch: null
+      });
+    }
+    let currentSnapshot = null;
+    if (currentActive && currentActive.slug !== target.slug) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
+    if (currentActive && currentActive.slug !== target.slug) {
+      currentActive.status = "paused";
+      currentActive.updatedAt = now;
+      currentActive.stateSnapshot = currentSnapshot;
+    }
+    target.status = "active";
+    target.updatedAt = now;
+    target.activatedAt = now;
+    target.completedAt = null;
+    workstreams.sort(compareWorkstreams);
+    const reloadedStore2 = {
+      ...store,
+      workstreams,
+      active: target
+    };
+    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [
+      ...currentActive && currentActive.slug !== target.slug ? [currentActive.slug] : [],
+      target.slug
+    ]);
+    return buildMutationResult(reloadedStore2, {
+      status: targetIsActive ? "reused" : "updated",
+      operation,
+      affectedPaths: affectedPaths2,
+      waitingState: null,
+      nextAction: `Apply the returned state patch through blueprint_state_update, then continue work on ${target.slug}.`,
+      reason: null,
+      statePatch: buildResumeStatePatch(target.stateSnapshot)
+    });
+  }
+  if (target.status === "completed") {
+    return buildMutationResult(store, {
+      status: "reused",
+      operation,
+      affectedPaths: [],
+      waitingState: null,
+      nextAction: `Run ${WORKSTREAMS_COMMAND} create <name> to add a new workstream or ${WORKSTREAMS_COMMAND} resume ${target.slug} to reactivate this one.`,
+      reason: `Workstream ${target.name} is already completed.`,
+      statePatch: null
+    });
+  }
+  if (targetIsActive) {
+    const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+    if (snapshotResult.status === "blocked") {
+      return buildMissingCurrentStateSnapshotResult(
+        store,
+        operation,
+        projectRoot,
+        snapshotResult.reason
+      );
+    }
+    target.stateSnapshot = snapshotResult.snapshot;
+  }
+  target.status = "completed";
+  target.updatedAt = now;
+  target.completedAt = now;
+  workstreams.sort(compareWorkstreams);
+  const reloadedStore = {
+    ...store,
+    workstreams,
+    active: workstreams.find((entry) => entry.status === "active") ?? null
+  };
+  const affectedPaths = await persistWorkstreamState(projectRoot, workstreams, [target.slug]);
+  return buildMutationResult(reloadedStore, {
+    status: "updated",
+    operation,
+    affectedPaths,
+    waitingState: null,
+    nextAction: reloadedStore.active !== null ? `Run ${WORKSTREAMS_COMMAND} resume ${reloadedStore.active.slug} or ${PROGRESS_COMMAND} to continue the remaining active workstream.` : `Run ${WORKSTREAMS_COMMAND} create <name> to start a new workstream or ${PROGRESS_COMMAND} to inspect the repo state.`,
+    reason: null,
+    statePatch: null
+  });
+}
 async function blueprintPatchList(args = {}) {
   const registryPath = expandHomePath(resolveBlueprintRuntimeHost().patchRegistryPath);
   const registry2 = await readPatchRegistryDocument(registryPath);
@@ -29551,7 +30335,7 @@ async function blueprintPatchReapply(args = {}) {
     targetHead
   };
 }
-var execFileAsync, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
+var execFileAsync, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
@@ -29573,6 +30357,14 @@ var init_workspace = __esm({
     WORKSPACE_REGISTRY_LOCK_STALE_MS = 6e4;
     WORKSPACE_REGISTRY_LOCK_OWNER_FILE = "owner";
     WORKSPACE_REGISTRY_LOCK_LEASE_FILE = "lease";
+    WORKSTREAMS_ROOT_PATH = `${BLUEPRINT_DIR}/workstreams`;
+    WORKSTREAMS_INDEX_PATH = `${WORKSTREAMS_ROOT_PATH}/WORKSTREAMS.md`;
+    WORKSTREAM_STATE_FILENAME = "state.json";
+    WORKSTREAM_STATE_VERSION = 1;
+    WORKSTREAM_STATUSES = ["active", "paused", "completed"];
+    WORKSTREAM_OPERATIONS = ["create", "switch", "resume", "complete"];
+    WORKSTREAMS_COMMAND = "/blu-workstreams";
+    PROGRESS_COMMAND = "/blu-progress";
     workspaceRegistryGetInputSchema = {
       cwd: string2().optional()
     };
@@ -29588,6 +30380,14 @@ var init_workspace = __esm({
       cwd: string2().optional(),
       name: string2().trim().min(1),
       path: string2().trim().min(1).optional()
+    };
+    workstreamListInputSchema = {
+      cwd: string2().optional()
+    };
+    workstreamMutateInputSchema = {
+      cwd: string2().optional(),
+      operation: _enum(WORKSTREAM_OPERATIONS),
+      workstream: string2().trim().min(1)
     };
     patchListInputSchema = {
       cwd: string2().optional(),
@@ -29637,6 +30437,18 @@ var init_workspace = __esm({
         description: "Remove a Blueprint workspace after exact registry verification, clean-repo preflight checks, and safe worktree or clone teardown.",
         inputSchema: workspaceRemoveInputSchema,
         handler: async (args) => blueprintWorkspaceRemove(args)
+      },
+      {
+        name: "blueprint_workstream_list",
+        description: "Read the project-local Blueprint workstream index plus per-workstream state and report the active stream summary.",
+        inputSchema: workstreamListInputSchema,
+        handler: async (args) => blueprintWorkstreamList(args)
+      },
+      {
+        name: "blueprint_workstream_mutate",
+        description: "Create, switch, resume, or complete project-local Blueprint workstreams while keeping WORKSTREAMS.md aligned with canonical per-stream state.",
+        inputSchema: workstreamMutateInputSchema,
+        handler: async (args) => blueprintWorkstreamMutate(args)
       },
       {
         name: "blueprint_patch_list",
@@ -30076,7 +30888,7 @@ function buildBootstrapStatus(diagnostics) {
     recommendedNextAction: diagnostics.brownfield.recommendedNextAction
   };
 }
-function extractMarkdownSection4(markdown, heading) {
+function extractMarkdownSection5(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -30084,11 +30896,11 @@ function extractMarkdownSection4(markdown, heading) {
   return match?.[1] ?? "";
 }
 function parseRequiredTools(markdown) {
-  const section = extractMarkdownSection4(markdown, "Required MCP Tools");
+  const section = extractMarkdownSection5(markdown, "Required MCP Tools");
   return [...section.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
 }
 function parseOptionalAgents(markdown, primarySkill) {
-  const section = extractMarkdownSection4(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
   const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
   return values.filter((value) => value !== primarySkill);
 }
@@ -40434,7 +41246,7 @@ async function readBundledFile(relativePath) {
     return null;
   }
 }
-function extractMarkdownSection5(markdown, heading) {
+function extractMarkdownSection6(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -40448,11 +41260,11 @@ function collapseMarkdownText(markdown) {
 function parseRequiredTools2(markdown) {
   return [...markdown.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
 }
-function parseBulletSection2(markdown) {
+function parseBulletSection3(markdown) {
   return markdown.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 function parseOptionalSubagents(markdown) {
-  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
   const match = section.match(/- Optional subagents:\s*(.+)/);
   if (!match || /\bnone\b/i.test(match[1])) {
     return [];
@@ -40460,7 +41272,7 @@ function parseOptionalSubagents(markdown) {
   return [...match[1].matchAll(/`([a-z0-9-]+)`/g)].map((result) => result[1]);
 }
 function parsePrimarySkill(markdown) {
-  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
   const match = section.match(/- Primary skill:\s*`([^`]+)`/);
   return match?.[1] ?? null;
 }
@@ -40477,13 +41289,13 @@ function parseCommandSpec(markdown, specPath) {
     family: familyMatch?.[1] ?? null,
     executionProfile: executionProfileMatch?.[1] ?? null,
     rootRoutable: rootRoutableMatch ? rootRoutableMatch[1].trim().toLowerCase().startsWith("yes") : null,
-    purpose: collapseMarkdownText(extractMarkdownSection5(markdown, "Purpose")),
-    requiredTools: parseRequiredTools2(extractMarkdownSection5(markdown, "Required MCP Tools")),
+    purpose: collapseMarkdownText(extractMarkdownSection6(markdown, "Purpose")),
+    requiredTools: parseRequiredTools2(extractMarkdownSection6(markdown, "Required MCP Tools")),
     primarySkill: parsePrimarySkill(markdown),
     optionalSubagents: parseOptionalSubagents(markdown),
-    reads: parseBulletSection2(extractMarkdownSection5(markdown, "Blueprint And Global State Reads")),
-    writes: parseBulletSection2(
-      extractMarkdownSection5(markdown, "Blueprint And Global State Writes")
+    reads: parseBulletSection3(extractMarkdownSection6(markdown, "Blueprint And Global State Reads")),
+    writes: parseBulletSection3(
+      extractMarkdownSection6(markdown, "Blueprint And Global State Writes")
     )
   };
 }
@@ -40705,6 +41517,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_review_record",
   "blueprint_workspace_create",
   "blueprint_workspace_remove",
+  "blueprint_workstream_mutate",
   "blueprint_patch_record",
   "blueprint_patch_reapply"
 ]);
@@ -40742,6 +41555,7 @@ var SUMMARY_PATH_KEYS = [
   "reportPath",
   "configPath",
   "statePath",
+  "indexPath",
   "roadmapPath",
   "linkedPlanPath",
   "sourcePath",
@@ -40779,7 +41593,8 @@ var SUMMARY_COUNT_KEYS = [
   ["summaryPaths", "summary links"],
   ["warnings", "warnings"],
   ["issues", "issues"],
-  ["suggestedRepairs", "repairs"]
+  ["suggestedRepairs", "repairs"],
+  ["workstreams", "workstreams"]
 ];
 function getString(result, key) {
   const value = result[key];
@@ -40851,6 +41666,12 @@ function buildSubject(toolName, result) {
   }
   if (toolName === "blueprint_review_scope") {
     return "review scope";
+  }
+  if (toolName === "blueprint_workstream_list") {
+    return "workstreams";
+  }
+  if (toolName === "blueprint_workstream_mutate") {
+    return "workstream state";
   }
   return humanizeIdentifier(toolName.replace(/^blueprint_/, ""));
 }
@@ -40927,6 +41748,15 @@ function summarizeMutationOutcome(toolName, result) {
   }
   if (toolName.endsWith("_delete") && deleted === false && status === "invalid") {
     return "Did not delete";
+  }
+  if (toolName === "blueprint_workstream_mutate") {
+    if (status === "reused") {
+      return "Reused existing";
+    }
+    if (status === "blocked" || status === "invalid" || status === "project_missing") {
+      return "Did not update";
+    }
+    return "Updated";
   }
   return null;
 }

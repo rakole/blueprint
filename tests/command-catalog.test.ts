@@ -67,6 +67,7 @@ const IMPLEMENTED_COMMANDS = [
   "undo",
   "new-workspace",
   "remove-workspace",
+  "workstreams",
   "cleanup",
   "reapply-patches"
 ] as const;
@@ -340,6 +341,26 @@ test("new-workspace is implemented once manifest, skill, and workspace MCP tools
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("workstreams is implemented once manifest, skill, and project-local workstream MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands.workstreams;
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("workstreams"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_state_update",
+    "blueprint_workstream_list",
+    "blueprint_workstream_mutate"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
 test("remove-workspace is implemented once manifest, skill, and workspace removal MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["remove-workspace"];
@@ -359,17 +380,14 @@ test("remove-workspace is implemented once manifest, skill, and workspace remova
   assert.deepEqual(entry.blockedBy, []);
 });
 
-test("workstreams and update remain non-implemented while their MCP substrates are still missing", async () => {
+test("update remains non-implemented while its MCP substrate is still missing", async () => {
   const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands.update;
 
-  for (const commandName of ["workstreams", "update"] as const) {
-    const entry = catalog.commands[commandName];
-
-    assert.equal(entry.declaredStatus, "planned");
-    assert.equal(entry.implemented, false);
-    assert.equal(entry.requiredToolsSatisfied, false);
-    assert.ok(entry.blockedBy.length > 0);
-  }
+  assert.equal(entry.declaredStatus, "planned");
+  assert.equal(entry.implemented, false);
+  assert.equal(entry.requiredToolsSatisfied, false);
+  assert.ok(entry.blockedBy.length > 0);
 });
 
 test("review-backlog is implemented once manifest, skill, and backlog-promotion MCP tools exist", async () => {
