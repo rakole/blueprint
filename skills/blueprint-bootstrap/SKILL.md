@@ -11,6 +11,8 @@ status: implemented
 commands:
   - /blu-new-project
 ---
+### Guidance for LLM only(not to show on screen)
+- Make sure to keep updating the user what you are doing through gemini cli native tools / UX, Do not dump whole ouput, but step name and just the gist of what you are doing is enough
 
 # Blueprint Bootstrap Skill
 
