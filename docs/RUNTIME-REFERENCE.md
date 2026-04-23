@@ -29,9 +29,9 @@ These labels define the shared command-facing contract for Blueprint docs and ru
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 
-## Planned Read-Only MCP Resource Contract
+## Read-Only MCP Resource Contract
 
-Blueprint now documents one explicit read-only MCP resource contract, but the resources themselves are not registered today. `S8.4`, `S8.5`, and `S8.6` own implementation; `S8.7` owns command adoption and fallback coverage.
+Blueprint now exposes the read-only command resource contract and keeps the remaining resource views documented for later rollout. `blueprint://commands/catalog` and the implemented-only `blueprint://commands/<command>/runtime-contract` resource are live today, while the phase, codebase, and reports resource views below remain planned. `review` stays an explicit current exception and is not exposed on the runtime-contract path.
 
 Locked resource URIs:
 
@@ -44,10 +44,11 @@ Locked resource URIs:
 Runtime rules:
 
 - These resources are read-only context surfaces for discovery and grounding. They do not own persistence, confirmation, routing, or write semantics.
-- Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists.
-- Once implemented, `list_mcp_resources` and `read_mcp_resource` become the preferred read path for these views, with fallback to the existing direct docs/tool reads when resources are unavailable.
+- `list_mcp_resources` and `read_mcp_resource` are the preferred read path for the live command resources today, with fallback to the existing direct docs/tool reads when a resource is unavailable.
+- Router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly for the resource paths that are still planned.
+- Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists for the still-planned phase, codebase, and reports views.
 - `blueprint://commands/catalog` may mirror the full retained catalog metadata, but `/blu`, `help`, `progress`, and `next` must still recommend only commands whose catalog entry is `implemented`.
-- `blueprint://commands/<command>/runtime-contract` must mirror live command-catalog metadata plus the locked command spec and runtime-reference row for that command; it does not become a second command-status authority.
+- `blueprint://commands/<command>/runtime-contract` is exposed only for commands whose catalog entry is `implemented`, and it must mirror live command-catalog metadata plus the locked command spec and runtime-reference row for that command; it does not become a second command-status authority.
 - `blueprint://phases/<phase>/bundle` must mirror saved `.blueprint/` phase-grounding inputs and the resolved phase artifact set, with fallback to `blueprint_phase_context`, direct artifact reads, roadmap/state reads, and local docs until the resource exists.
 - `blueprint://codebase/bundle` must mirror the saved seven-document `.blueprint/codebase/` bundle plus artifact-contract truth, with fallback to `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and local files until the resource exists.
 - `blueprint://reports/latest` is an index-only surface over saved reports. Report authoring and overwrites remain on `blueprint_artifact_report_write`.

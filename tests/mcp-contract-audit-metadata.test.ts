@@ -35,7 +35,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   );
 });
 
-test("planned MCP resource docs keep the read-only contract, backing truth, and fallback path explicit", async () => {
+test("MCP resource docs keep the read-only contract, live command resources, and fallback path explicit", async () => {
   const [mcpToolsDoc, artifactSchema, runtimeReference] = await Promise.all([
     readRepoFile("docs/MCP-TOOLS.md"),
     readRepoFile("docs/ARTIFACT-SCHEMA.md"),
@@ -58,15 +58,15 @@ test("planned MCP resource docs keep the read-only contract, backing truth, and 
 
   assert.match(
     mcpToolsDoc,
-    /These Blueprint MCP resources are part of the documented future contract for read-heavy grounding, but they are not registered today/i
+    /Blueprint now exposes the live read-only command resources and keeps the remaining resource contract documented for later grounding surfaces/i
   );
   assert.match(
     mcpToolsDoc,
-    /\| `blueprint:\/\/commands\/catalog` \| Read the retained runtime command catalog as one resource view \| live `blueprint_command_catalog` truth \| read-only; never a write target \| call `blueprint_command_catalog` directly \|/i
+    /\| `blueprint:\/\/commands\/catalog` \| Read the retained runtime command catalog as one resource view \| live `blueprint_command_catalog` truth \| read-only; never a write target \| call `blueprint_command_catalog` directly if the resource is unavailable \|/i
   );
   assert.match(
     mcpToolsDoc,
-    /\| `blueprint:\/\/commands\/<command>\/runtime-contract` \| Read the runtime contract for one retained command \| live command-catalog metadata plus the locked command spec and runtime-reference row for that command \| read-only; never a write target \| read the command spec, runtime reference, and current tool docs directly \|/i
+    /\| `blueprint:\/\/commands\/<command>\/runtime-contract` \| Read the runtime contract for one retained implemented command; `review` is the current explicit exception \| live command-catalog metadata plus the locked command spec and runtime-reference row for that implemented command \| read-only; never a write target \| read the command spec, runtime reference, and current tool docs directly when the resource is unavailable or intentionally excluded \|/i
   );
   assert.match(
     mcpToolsDoc,
@@ -95,7 +95,7 @@ test("planned MCP resource docs keep the read-only contract, backing truth, and 
   );
   assert.match(
     artifactSchema,
-    /`blueprint:\/\/commands\/<command>\/runtime-contract` is a read-only projection of one command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row/i
+    /`blueprint:\/\/commands\/<command>\/runtime-contract` is a read-only projection of one implemented command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row; `review` remains an explicit current exception and is not exposed on this resource path today/i
   );
   assert.match(
     artifactSchema,
@@ -114,18 +114,22 @@ test("planned MCP resource docs keep the read-only contract, backing truth, and 
     /Resource views are for discovery and grounding only\. Writes remain on the existing MCP tool surface for config, roadmap, phase, report, review, and capture persistence/i
   );
 
-  assert.match(runtimeReference, /## Planned Read-Only MCP Resource Contract/);
+  assert.match(runtimeReference, /## Read-Only MCP Resource Contract/);
   assert.match(
     runtimeReference,
     /These resources are read-only context surfaces for discovery and grounding\. They do not own persistence, confirmation, routing, or write semantics/i
   );
   assert.match(
     runtimeReference,
-    /Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists/i
+    /`list_mcp_resources` and `read_mcp_resource` are the preferred read path for the live command resources today, with fallback to the existing direct docs\/tool reads when a resource is unavailable/i
   );
   assert.match(
     runtimeReference,
-    /Once implemented, `list_mcp_resources` and `read_mcp_resource` become the preferred read path for these views, with fallback to the existing direct docs\/tool reads when resources are unavailable/i
+    /Router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly for the resource paths that are still planned/i
+  );
+  assert.match(
+    runtimeReference,
+    /Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists for the still-planned phase, codebase, and reports views/i
   );
   assert.match(
     runtimeReference,
@@ -133,7 +137,7 @@ test("planned MCP resource docs keep the read-only contract, backing truth, and 
   );
   assert.match(
     runtimeReference,
-    /`blueprint:\/\/commands\/<command>\/runtime-contract` must mirror live command-catalog metadata plus the locked command spec and runtime-reference row for that command; it does not become a second command-status authority/i
+    /`blueprint:\/\/commands\/<command>\/runtime-contract` is exposed only for commands whose catalog entry is `implemented`, and it must mirror live command-catalog metadata plus the locked command spec and runtime-reference row for that command; it does not become a second command-status authority/i
   );
   assert.match(
     runtimeReference,

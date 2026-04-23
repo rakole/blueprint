@@ -168,14 +168,14 @@ test("phase 2.2 drift fixes stay locked for the known ownership mismatches", asy
   }
 });
 
-test("resource contract docs keep resource adoption future-only and read-only", async () => {
+test("resource contract docs keep live command exposure scoped and read-only", async () => {
   const [mcpToolsDoc, artifactSchema, runtimeReference] = await Promise.all([
     readRepoFile("docs/MCP-TOOLS.md"),
     readRepoFile("docs/ARTIFACT-SCHEMA.md"),
     readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
-  assert.match(mcpToolsDoc, /## Planned Read-Only MCP Resource Surface/);
+  assert.match(mcpToolsDoc, /## Read-Only MCP Resource Contract/);
   assert.match(
     mcpToolsDoc,
     /Router, progress, and discovery-style reads may adopt these resources later, but implemented-only command exposure must stay unchanged/i
@@ -195,10 +195,10 @@ test("resource contract docs keep resource adoption future-only and read-only", 
     /Resource views are for discovery and grounding only\. Writes remain on the existing MCP tool surface for config, roadmap, phase, report, review, and capture persistence/i
   );
 
-  assert.match(runtimeReference, /## Planned Read-Only MCP Resource Contract/);
+  assert.match(runtimeReference, /## Read-Only MCP Resource Contract/);
   assert.match(
     runtimeReference,
-    /Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists/i
+    /Router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly for the resource paths that are still planned/i
   );
   assert.match(
     runtimeReference,
