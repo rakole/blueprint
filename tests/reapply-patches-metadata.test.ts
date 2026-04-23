@@ -101,8 +101,14 @@ test("repo-facing status docs treat reapply-patches as a shipped command", async
       readRepoFile("GEMINI.md")
     ]);
 
-  assert.match(architectureFile, /shipped Wave 5 maintenance commands, `new-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i);
-  assert.match(handoffFile, /shipped Wave 5 maintenance commands `new-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i);
+  assert.match(
+    architectureFile,
+    /shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
+  );
+  assert.match(
+    handoffFile,
+    /shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
+  );
   assert.match(
     progressFile,
     /\| [0-9]+ \| `reapply-patches` \| ✅ \| `implemented` \| 5 \| `Workspace And Maintenance` \| High \|/

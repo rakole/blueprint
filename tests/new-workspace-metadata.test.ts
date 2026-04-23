@@ -93,8 +93,14 @@ test("repo-facing status docs treat new-workspace as a shipped Wave 5 command", 
       readRepoFile("docs/MCP-TOOLS.md")
     ]);
 
-  assert.match(architectureFile, /shipped Wave 5 maintenance commands, `new-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i);
-  assert.match(handoffFile, /shipped Wave 5 maintenance commands `new-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i);
+  assert.match(
+    architectureFile,
+    /shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
+  );
+  assert.match(
+    handoffFile,
+    /shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
+  );
   assert.match(
     progressFile,
     /\| [0-9]+ \| `new-workspace` \| ✅ \| `implemented` \| 5 \| `Workspace And Maintenance` \| High \|/

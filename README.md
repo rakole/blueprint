@@ -229,6 +229,8 @@ The review-branch command `/blu-pr-branch` is now shipped.
 - `/blu-pr-branch`: prepare a clean review branch
 - `/blu-ship`: prepare a confirmation-gated shipping run with PR guidance
 - `/blu-undo`: preview and run a safe revert flow with an explicit report first
+- `/blu-new-workspace`: create an isolated workspace under the configured workspace root after confirmation
+- `/blu-remove-workspace`: preview and remove a recorded workspace after confirmation
 - `/blu-cleanup`: archive completed phase directories after confirmation
 - `/blu-reapply-patches`: preview and replay a recorded host-global patch set after confirmation
 
@@ -276,7 +278,7 @@ Blueprint is opinionated about safety:
 
 - It prefers durable artifacts over relying on temporary chat context.
 - It keeps `/blu`, `/blu-help`, and `/blu-progress` limited to implemented commands.
-- High-risk actions such as roadmap mutation, branch preparation, shipping, undo, cleanup, and patch replay are confirmation-gated.
+- High-risk actions such as roadmap mutation, workspace creation or removal, branch preparation, shipping, undo, cleanup, and patch replay are confirmation-gated.
 - It keeps project state in `.blueprint/` instead of scattering workflow state across ad-hoc files.
 
 ## Commands Not Public Yet
@@ -284,8 +286,6 @@ Blueprint is opinionated about safety:
 These retained commands are still not public in the current runtime and should not be treated as available today:
 
 - `/blu-do`
-- `/blu-new-workspace`
-- `/blu-remove-workspace`
 - `/blu-workstreams`
 - `/blu-update`
 

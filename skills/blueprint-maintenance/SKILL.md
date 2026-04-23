@@ -66,6 +66,7 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_config_get`
 - `blueprint_workspace_registry_get`
 - `blueprint_workspace_create`
+- `blueprint_workspace_remove`
 - `blueprint_workstream_list`
 - `blueprint_workstream_mutate`
 - `blueprint_patch_list`
@@ -123,6 +124,22 @@ Shared rule for all maintenance flows:
 6. Require one explicit confirmation that includes the resolved workspace name and path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan before calling `blueprint_workspace_create`. Keep the pending gate explicit as `new-workspace-confirmation` until the user approves.
 7. Persist the workspace only through `blueprint_workspace_create`, and treat its returned `workspacePath`, `manifestPath`, `registryPath`, `registryEntry`, and `repoMembers` as authoritative. Keep host-global state under `~/.<host>/blueprint/`; never invent a project-local workspace registry.
 8. Keep failure handling honest: if creation fails, stop and surface the blocker clearly. Never claim success when the workspace manifest or registry entry was not written, and never leave a partial registry entry behind.
+
+### `remove-workspace`
+
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `remove-workspace-confirmation` visible until the user approves, and keep any `workspace-not-found`, `workspace-path-ambiguity`, `dirty-working-tree`, `registry-drift`, `malformed-workspace-registry`, or `ask-user-unavailable` waiting state explicit with the next safe action while the run is blocked.
+
+1. Read `blueprint_workspace_registry_get` first. Treat the returned `registryPath` and `workspaces` as authoritative host-global workspace state, and stop on malformed registry state instead of guessing.
+2. Resolve the exact workspace target before mutation. Prefer the user-named workspace plus the exact confirmed workspace path when one is available. If the workspace is missing, keep the blocker explicit as `workspace-not-found`. If the name maps to multiple entries, keep the blocker explicit as `workspace-path-ambiguity`. If the confirmed path no longer matches the registry entry, keep the blocker explicit as `registry-drift`.
+3. Resolve the full removal plan before mutation: workspace name, canonical workspace path, registry path, repo members with their strategies, workspace manifest path, and the exact teardown plan. Keep that resolved scope visible throughout the run.
+4. Inspect every recorded repo member before mutation. A dirty working tree is a hard stop for workspace removal. Missing member paths, missing workspace paths, missing manifests, invalid git repos, or mismatched registry-versus-manifest data are hard stops that must stay visible as `dirty-working-tree` or `registry-drift`.
+5. Require one explicit confirmation that includes the resolved workspace name and path, registry path, repo members with strategies, manifest path, and the exact teardown plan before calling `blueprint_workspace_remove`. Keep the pending gate explicit as `remove-workspace-confirmation` until the user approves.
+6. When structured confirmation cannot run in the current host, stop honestly with `ask-user-unavailable` and report that removal is blocked pending explicit confirmation.
+7. Persist the removal only through `blueprint_workspace_remove`, and treat its returned `removedPath`, `manifestPath`, `registryPath`, `removedEntry`, `removedMembers`, and `skippedMembers` as authoritative. Keep host-global state under `~/.<host>/blueprint/`; never invent a project-local workspace registry.
+8. Keep failure handling honest: if removal fails, stop and surface the blocker clearly. Never claim success when the workspace directory or registry entry still exists.
 
 ### `pr-branch`
 
@@ -225,7 +242,7 @@ Shared in-flight contract for `cleanup`:
 
 ## Planned Later Command Guardrail
 
-- `remove-workspace` and `update` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `update` remains a documented maintenance command, but it is not routable until its manifest, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -234,6 +251,7 @@ Shared in-flight contract for `cleanup`:
 - For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
+- For `remove-workspace`, report the resolved workspace path, manifest path, registry path, removed repo members, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
 - For `workstreams`, report the active workstream, the selected target, any affected paths, any active pending gate or waiting state, whether a resume state patch was returned, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
 - For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.

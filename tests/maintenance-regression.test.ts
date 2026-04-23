@@ -10,8 +10,9 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("maintenance manifests keep dirty-tree stops and report-before-mutate gates explicit", async () => {
-  const [newWorkspace, workstreams, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
+  const [newWorkspace, removeWorkspace, workstreams, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
     readRepoFile("commands/blu-new-workspace.toml"),
+    readRepoFile("commands/blu-remove-workspace.toml"),
     readRepoFile("commands/blu-workstreams.toml"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("commands/blu-ship.toml"),
@@ -27,6 +28,15 @@ test("maintenance manifests keep dirty-tree stops and report-before-mutate gates
   assert.match(newWorkspace, /new-workspace-confirmation/);
   assert.match(newWorkspace, /do not silently switch to `clone`/i);
   assert.match(newWorkspace, /next safe action/i);
+
+  assert.match(removeWorkspace, /mcp_blueprint_blueprint_workspace_registry_get/);
+  assert.match(removeWorkspace, /mcp_blueprint_blueprint_workspace_remove/);
+  assert.match(removeWorkspace, /workspace-not-found/);
+  assert.match(removeWorkspace, /workspace-path-ambiguity/);
+  assert.match(removeWorkspace, /registry-drift/);
+  assert.match(removeWorkspace, /remove-workspace-confirmation/);
+  assert.match(removeWorkspace, /repo members with their strategies/i);
+  assert.match(removeWorkspace, /next safe action/i);
 
   assert.match(workstreams, /mcp_blueprint_blueprint_workstream_list/);
   assert.match(workstreams, /mcp_blueprint_blueprint_workstream_mutate/);
@@ -80,9 +90,12 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow/i);
   assert.match(skill, /`blueprint_workspace_registry_get`/);
   assert.match(skill, /`blueprint_workspace_create`/);
+  assert.match(skill, /`blueprint_workspace_remove`/);
   assert.match(skill, /`blueprint_workstream_list`/);
   assert.match(skill, /`blueprint_workstream_mutate`/);
   assert.match(skill, /`new-workspace-confirmation`/);
+  assert.match(skill, /`remove-workspace-confirmation`/);
+  assert.match(skill, /`workspace-not-found`, `workspace-path-ambiguity`, `dirty-working-tree`, `registry-drift`, `malformed-workspace-registry`, or `ask-user-unavailable`/);
   assert.match(skill, /`workstream-switch-confirmation`/);
   assert.match(skill, /`workstream-archive-confirmation`/);
   assert.match(skill, /`missing-resume-snapshot`/);
@@ -127,6 +140,11 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`new-workspace`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(runtimeReference, /`new-workspace`[\s\S]*workspace name, path, repo members, strategy, branch, manifest path, and registry mutation plan/i);
   assert.match(runtimeReference, /`new-workspace`[\s\S]*transactional/i);
+
+  assert.match(runtimeReference, /`remove-workspace`[\s\S]*High-risk-maintenance profile for confirmation-gated workspace teardown/i);
+  assert.match(runtimeReference, /`remove-workspace`[\s\S]*`workspace-not-found`, `workspace-path-ambiguity`, `dirty-working-tree`, `registry-drift`, `malformed-workspace-registry`, `ask-user-unavailable`, and `remove-workspace-confirmation` explicit/i);
+  assert.match(runtimeReference, /`remove-workspace`[\s\S]*workspace manifest, workspace root, and matching host-global registry entry/i);
+  assert.match(runtimeReference, /`remove-workspace`[\s\S]*next safe action visible/i);
 
   assert.match(runtimeReference, /`workstreams`[\s\S]*Interactive-read profile for project-local workstream switching/i);
   assert.match(runtimeReference, /`workstreams`[\s\S]*Gemini-native `ask_user`/i);
