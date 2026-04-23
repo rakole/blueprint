@@ -29,6 +29,10 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Blueprint now supports Gemini CLI and Tabnine CLI as two hosts for one shared runtime; host identity is injected at extension launch time and the MCP layer derives host-global Blueprint paths from that runtime context
 - Commands own UX and routing
 - Skills own orchestration
+- `/blu-new-project` now uses a thin manifest envelope while the
+  `blueprint-bootstrap` skill package carries the self-sufficient runtime
+  contract and local bootstrap references under
+  `skills/blueprint-bootstrap/references/`
 - Agents own bounded deep work
 - Hooks remain advisory rather than state-owning
 - Scripts are not the primary persistence layer

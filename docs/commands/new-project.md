@@ -112,9 +112,21 @@
 - `blueprint-project-researcher`
 - `blueprint-roadmapper`
 
+## Runtime Packaging
+
+- The direct command manifest is intentionally thin and should stay focused on
+  host-entrypoint and runtime-guardrail instructions.
+- The runtime-heavy bootstrap workflow now lives in the self-sufficient
+  `blueprint-bootstrap` skill package under `skills/blueprint-bootstrap/`.
+- `docs/commands/new-project.md` and `docs/RUNTIME-REFERENCE.md` remain the
+  canonical external truth for humans and parity review, but live runtime
+  execution must not require those docs.
+
 ## Local Bootstrap References
 
 - `skills/blueprint-bootstrap/references/questioning.md`
+- `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`
+- `skills/blueprint-bootstrap/references/runtime-guardrails.md`
 
 ## Dependencies
 
