@@ -6,3 +6,15 @@ node_modules/
 /docs/build/TEMP.md
 /dilution-report/
 .plan/
+
+# Keep these historical or planning-only docs local, but do not track them in Git.
+/docs/GOLIVE.MD
+/docs/archive/README-pre-go-live-2026-04-18.md
+/docs/build/EXTERNAL-REVIEW-PROMPT-DECK.md
+/docs/future-looking/gemini-cli-tooling/blueprint-gemini-first-effectiveness-spine-slice-execution-pattern.md
+/docs/future-looking/gemini-cli-tooling/blueprint-gemini-first-effectiveness-spine-slice-index.md
+/docs/future-looking/gemini-cli-tooling/blueprint-gemini-first-effectiveness-spine-slice-plan.md
+/docs/future-looking/gemini-cli-tooling/blueprint-gemini-tools-playbook.md
+/docs/future-looking/locked-for-now/blu-direct-command-dash-migration.md
+/docs/research/new-project-parity-report.md
+/docs/research/research-phase-parity-gap-plan.md
