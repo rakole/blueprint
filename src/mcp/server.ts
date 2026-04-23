@@ -14,6 +14,7 @@ import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
 import { reviewToolDefinitions } from "./tools/review.js";
 import { stateToolDefinitions } from "./tools/state.js";
+import { updateToolDefinitions } from "./tools/update.js";
 import { workspaceToolDefinitions } from "./tools/workspace.js";
 
 type ToolResult = Record<string, unknown>;
@@ -31,6 +32,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...phaseToolDefinitions,
   ...reviewToolDefinitions,
   ...artifactToolDefinitions,
+  ...updateToolDefinitions,
   ...workspaceToolDefinitions
 ];
 
@@ -72,6 +74,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
+  "blueprint_update_plan",
   "blueprint_workspace_create",
   "blueprint_workspace_remove",
   "blueprint_workstream_mutate",
@@ -118,12 +121,13 @@ const SUMMARY_PATH_KEYS = [
   "reportPath",
   "configPath",
   "statePath",
-  "indexPath",
   "roadmapPath",
   "linkedPlanPath",
   "sourcePath",
   "targetPath",
-  "phaseDir"
+  "phaseDir",
+  "metadataPath",
+  "checklistPath"
 ] as const;
 
 const SUMMARY_COUNT_KEYS = [
@@ -137,6 +141,8 @@ const SUMMARY_COUNT_KEYS = [
   ["artifacts", "artifacts"],
   ["reports", "reports"],
   ["files", "files"],
+  ["steps", "steps"],
+  ["notes", "notes"],
   ["findings", "findings"],
   ["followUps", "follow-ups"],
   ["entries", "entries"],
@@ -157,8 +163,7 @@ const SUMMARY_COUNT_KEYS = [
   ["summaryPaths", "summary links"],
   ["warnings", "warnings"],
   ["issues", "issues"],
-  ["suggestedRepairs", "repairs"],
-  ["workstreams", "workstreams"]
+  ["suggestedRepairs", "repairs"]
 ] as const satisfies ReadonlyArray<readonly [string, string]>;
 
 function getString(result: ToolResult, key: string): string | null {
@@ -257,6 +262,14 @@ function buildSubject(toolName: string, result: ToolResult): string {
     return "review scope";
   }
 
+  if (toolName === "blueprint_update_check") {
+    return "Blueprint update status";
+  }
+
+  if (toolName === "blueprint_update_plan") {
+    return "Blueprint update plan";
+  }
+
   if (toolName === "blueprint_workstream_list") {
     return "workstreams";
   }
@@ -326,6 +339,14 @@ function getOperationVerb(toolName: string): string {
     return "Checked";
   }
 
+  if (toolName.endsWith("_check")) {
+    return "Checked";
+  }
+
+  if (toolName.endsWith("_plan")) {
+    return "Prepared";
+  }
+
   return "Completed";
 }
 
@@ -361,18 +382,6 @@ function summarizeMutationOutcome(toolName: string, result: ToolResult): string 
 
   if (toolName.endsWith("_delete") && deleted === false && status === "invalid") {
     return "Did not delete";
-  }
-
-  if (toolName === "blueprint_workstream_mutate") {
-    if (status === "reused") {
-      return "Reused existing";
-    }
-
-    if (status === "blocked" || status === "invalid" || status === "project_missing") {
-      return "Did not update";
-    }
-
-    return "Updated";
   }
 
   return null;

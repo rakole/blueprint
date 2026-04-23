@@ -109,6 +109,33 @@ test("reused write results report preservation instead of a fresh save", () => {
   );
 });
 
+test("update summaries stay concise for advisory check and checklist persistence", () => {
+  const checkSummary = summarizeToolResult("blueprint_update_check", {
+    host: "gemini",
+    extensionPath: "/Users/example/.gemini/extensions/blueprint",
+    installedVersion: "0.1.0",
+    latestVersionLookupStatus: "manual_only",
+    updateAvailable: null,
+    warnings: ["Blueprint update inspection could not find a git remote for the installed extension; use the manual update checklist."]
+  });
+  const planSummary = summarizeToolResult("blueprint_update_plan", {
+    mode: "manual",
+    metadataPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.json",
+    checklistPath: "/Users/example/.gemini/blueprint/updates/update-plan-latest.md",
+    status: "created",
+    steps: Array.from({ length: 7 }, () => "step"),
+    notes: ["note 1", "note 2"],
+    warnings: ["Latest version lookup unavailable."],
+    requiresRestart: true
+  });
+
+  assert.equal(checkSummary, "Checked Blueprint update status (1 warnings).");
+  assert.equal(
+    planSummary,
+    "Prepared Blueprint update plan at `/Users/example/.gemini/blueprint/updates/update-plan-latest.json` status: created (7 steps, 2 notes)."
+  );
+});
+
 test("server exposes read-only command resources without changing tool summaries", async () => {
   const server = createBlueprintServer();
   const client = new Client(

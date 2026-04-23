@@ -586,7 +586,10 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     readRepoFile("docs/commands/health.md")
   ]);
 
-  assert.match(debugCommand, /Execution profile: `long-running-mutation`/i);
+  assert.match(
+    debugCommand,
+    /Execution profile: start in `interactive-read`[\s\S]*escalate to `long-running-mutation` only when the investigation becomes non-trivial/i
+  );
   assert.match(debugCommand, /resolved scope, active stage, pending gate, execution mode, and next safe implemented action/i);
   assert.match(debugCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/i);
   assert.match(debugCommand, /session-local visibility tools only/i);

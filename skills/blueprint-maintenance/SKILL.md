@@ -67,6 +67,8 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_workspace_registry_get`
 - `blueprint_workspace_create`
 - `blueprint_workspace_remove`
+- `blueprint_update_check`
+- `blueprint_update_plan`
 - `blueprint_workstream_list`
 - `blueprint_workstream_mutate`
 - `blueprint_patch_list`
@@ -89,6 +91,7 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 Shared rule for all maintenance flows:
 
 - run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow when the command owns a durable maintenance report
+- use `update_topic` tool and keep a compact shipping checklist with `write_todos` only for non-trivial shipping or review-branch work; tracker-eligible only for session-local coordination, never as a second persistence layer
 
 ### `workstreams`
 
@@ -139,7 +142,21 @@ Shared rule for all maintenance flows:
 5. Require one explicit confirmation that includes the resolved workspace name and path, registry path, repo members with strategies, manifest path, and the exact teardown plan before calling `blueprint_workspace_remove`. Keep the pending gate explicit as `remove-workspace-confirmation` until the user approves.
 6. When structured confirmation cannot run in the current host, stop honestly with `ask-user-unavailable` and report that removal is blocked pending explicit confirmation.
 7. Persist the removal only through `blueprint_workspace_remove`, and treat its returned `removedPath`, `manifestPath`, `registryPath`, `removedEntry`, `removedMembers`, and `skippedMembers` as authoritative. Keep host-global state under `~/.<host>/blueprint/`; never invent a project-local workspace registry.
-8. Keep failure handling honest: if removal fails, stop and surface the blocker clearly. Never claim success when the workspace directory or registry entry still exists.
+8. Keep failure handling honest: if removal fails, stop and surface the blocker clearly. Never claim success when the registry entry or workspace manifest was not removed, and never smooth past partial teardown state.
+
+### `update`
+
+- Execution profile: `interactive-read`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `update-mode-gate` visible until the user chooses saved-checklist versus manual-fallback mode.
+
+1. Read `blueprint_update_check` first. Treat its returned host, extension path, installed version, install provenance, latest-version lookup status, and update availability as authoritative.
+2. Keep extension-path handling read-only. Never write into the installed extension directory and never imply an in-session self-update path.
+3. Use Gemini-native `ask_user` only for the saved-checklist versus manual-fallback mode gate when the host can ask interactively.
+4. Keep all Blueprint-owned update persistence under `~/.<host>/blueprint/updates/`.
+5. Persist saved checklist output only through `blueprint_update_plan`, treat its returned `savedPaths` as authoritative, and keep manual fallback explicit when saved persistence is skipped.
+6. End every run with restart guidance and the next safe out-of-band update action.
 
 ### `pr-branch`
 
@@ -242,7 +259,7 @@ Shared in-flight contract for `cleanup`:
 
 ## Planned Later Command Guardrail
 
-- `update` remains a documented maintenance command, but it is not routable until its manifest, primary-skill contract, and required MCP substrates all exist together.
+- Later documented maintenance commands remain non-routable until their manifest, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -254,4 +271,5 @@ Shared in-flight contract for `cleanup`:
 - For `remove-workspace`, report the resolved workspace path, manifest path, registry path, removed repo members, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
 - For `workstreams`, report the active workstream, the selected target, any affected paths, any active pending gate or waiting state, whether a resume state patch was returned, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
+- For `update`, report the resolved host, extension path, installed version, latest-version lookup status, whether an update appears available, any active pending gate or waiting state, the saved checklist status when applicable, and the restart-focused next safe action.
 - For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.

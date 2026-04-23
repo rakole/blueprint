@@ -101,7 +101,9 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm active or completed status changes before writing them unless the user's intent is already unmistakably explicit. Prefer Gemini CLI `ask_user` when a structured choice helps, otherwise keep the same gate explicit in prose.
+- Confirm active or completed status changes before writing them.
+- Confirm active or completed status changes before writing them unless the user's intent is already unmistakably explicit.
+- If the user's intent is already unmistakably explicit, the command may proceed without re-asking. Prefer Gemini CLI `ask_user` when a structured choice helps, otherwise keep the same gate explicit in prose.
 
 
 ## Edge Cases

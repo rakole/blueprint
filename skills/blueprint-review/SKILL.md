@@ -158,6 +158,7 @@ non-routable until their extra MCP substrate lands.
    selection step for a narrow, high-confidence saved finding set, but it does
    not authorize any auto-fixer behavior, automatic commits, branch creation,
    or hidden iterative re-review loops.
+   It does not authorize automatic commits, branch creation, or iterative re-review loops.
 7. Require explicit confirmation of the selected findings unless the user
    clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
 8. Keep repo mutation tightly bounded to the selected review findings and the
@@ -342,28 +343,29 @@ non-routable until their extra MCP substrate lands.
 2. Read the saved plan set through `blueprint_phase_plan_index` and
    `blueprint_phase_plan_read`; do not guess the review scope from unstaged repo
    drift, chat memory, or unrelated files.
-3. If there are no saved `XX-YY-PLAN.md` artifacts for the phase, route to
+3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS.md`, then use the returned template as the baseline for the persisted artifact.
+4. If there are no saved `XX-YY-PLAN.md` artifacts for the phase, route to
    `/blu-plan-phase <phase>` instead of bluffing through a planless peer review.
-4. Inspect any existing `XX-REVIEWS.md` before proposing replacement and
+5. Inspect any existing `XX-REVIEWS.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update.
-5. Use Gemini CLI's `ask_user` tool for overwrite confirmation and any
+6. Use Gemini CLI's `ask_user` tool for overwrite confirmation and any
    structured reviewer-availability confirmation when requested reviewers are
    unavailable or unauthenticated.
-6. Confirm which reviewer CLIs are actually available and authenticated before
+7. Confirm which reviewer CLIs are actually available and authenticated before
    launch. Honor explicit reviewer flags, but never claim an unavailable
    reviewer ran successfully.
-7. Preserve disagreement between reviewers instead of flattening it into a fake
+8. Preserve disagreement between reviewers instead of flattening it into a fake
    consensus, and record partial reviewer availability honestly when only some
    requested reviewers ran.
-8. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+9. Keep the active stage visible as the run moves through `Resolve`, `Read`,
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, active stage, pending gate, execution mode, and next safe
    action legible throughout the run.
-9. For non-trivial review runs, prefer update_topic plus `write_todos` so
+10. For non-trivial review runs, prefer update_topic plus `write_todos` so
    saved-plan review, reviewer-availability confirmation, bounded peer-review
    execution, artifact persistence, and routing stay visible without becoming
    persistence.
-10. Report the resolved phase, requested reviewers, completed and unavailable
+11. Report the resolved phase, requested reviewers, completed and unavailable
     reviewer coverage, reviewer disagreement status, artifact reuse or revision
     status, pending gate, execution mode, and next safe action while work is in
     flight. Keep pending gates limited to overwrite confirmation,
@@ -371,12 +373,12 @@ non-routable until their extra MCP substrate lands.
     `reviewer-availability` waiting state. Let execution mode reflect explicit
     reviewer flags versus `--all` fan-out plus whether the run is still inline
     or waiting on reviewer availability.
-11. Persist the finished peer-review artifact through `blueprint_review_record`
+12. Persist the finished peer-review artifact through `blueprint_review_record`
    with the `peer-review` artifact.
-12. If none of the requested reviewers are available, stop with the waiting
+13. If none of the requested reviewers are available, stop with the waiting
     state explicit as `reviewer-availability` and keep the next safe action on
     `/blu-review <phase>` until reviewer selection or authentication changes.
-13. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+14. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-plan-phase <phase>` when meaningful plan revisions remain,
    `/blu-execute-phase <phase>` when the review passes and execution has not
    started, `/blu-code-review <phase>` when execution exists but code review is

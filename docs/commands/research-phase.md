@@ -89,7 +89,7 @@
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
 - `blueprint_state_update` -> `{updatedFields, statePath, warnings}`
 
-## Research Evidence And Persistence Contract
+## Research Persistence Contract
 
 - Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"3"` or `3`.
 - Use `blueprint_artifact_scaffold` only with the repo-relative Blueprint research artifact path for the selected phase. Bare names such as `RESEARCH` and absolute paths are invalid.

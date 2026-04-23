@@ -18,7 +18,10 @@ test("debug manifest references the debug skill, debugger agent, and report-back
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_report_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_mutate_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
-  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
+  assert.match(
+    commandFile,
+    /Execution profile: start in `interactive-read`[\s\S]*escalate to `long-running-mutation` only when the investigation becomes non-trivial/i
+  );
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe implemented action/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);

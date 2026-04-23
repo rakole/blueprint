@@ -104,14 +104,15 @@ host-native boundaries:
    route to `/blu-quick`, route to `/blu-plan-phase`, route to
    `/blu-validate-phase`, or defer to `/blu-progress` when multiple
    implemented next steps remain viable.
-10. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
+10. Stop on an explicit follow-up gate after the diagnosis: keep the short menu visible as report-only, capture a todo, route to `/blu-quick`, route to `/blu-plan-phase`, or defer to `/blu-progress` when the saved-verification branch is not needed.
+11. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
    capture after the user asks to capture it or confirms that the diagnosis or
    saved report should become a persisted todo. Do not silently turn every
    finding into a todo, and do not confuse visible `write_todos` checklists
    with persisted Blueprint follow-up capture.
-11. After persistence, update `STATE.md` through `blueprint_state_update` so
+12. After persistence, update `STATE.md` through `blueprint_state_update` so
     the next safe implemented action is explicit.
-12. Keep follow-up routing inside implemented commands only. Prefer
+13. Keep follow-up routing inside implemented commands only. Prefer
     `/blu-progress` when the investigation ends with multiple viable next
     steps.
 

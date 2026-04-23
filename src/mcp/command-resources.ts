@@ -208,6 +208,8 @@ function buildCommandRuntimeContractUri(commandName: string): string {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
 
+const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS = new Set(["review"]);
+
 async function readBlueprintRuntimeReferenceRows(): Promise<
   Map<string, BlueprintRuntimeReferenceRowResource>
 > {
@@ -239,6 +241,10 @@ export async function listBlueprintCommandRuntimeContractCommands(): Promise<str
   const runtimeReferenceRows = await readBlueprintRuntimeReferenceRows();
   const commands = await Promise.all(
     Object.entries(catalog.commands).map(async ([commandName, entry]) => {
+      if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
+        return null;
+      }
+
       const spec = await readBundledCommandSpec(entry);
 
       return spec && runtimeReferenceRows.has(commandName) ? commandName : null;
@@ -258,6 +264,10 @@ export async function buildBlueprintCommandRuntimeContractResource(
 
   if (!entry) {
     throw new Error(`Unknown Blueprint command: ${commandName}`);
+  }
+
+  if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
+    throw new Error(`Missing runtime reference row for Blueprint command: ${commandName}`);
   }
 
   const [spec, runtimeReferenceRows] = await Promise.all([
