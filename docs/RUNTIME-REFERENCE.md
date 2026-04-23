@@ -15,6 +15,9 @@ It exists so Blueprint contracts can be understood and maintained without consul
 ## Current Snapshot
 
 - `/blu`, `help`, and `progress` remain implementation-aware and may only recommend commands whose catalog entry is `implemented`.
+- Checkpoint: Phase 2.2 future-contract drift repair.
+- State: closed on 2026-04-11.
+- This runtime reference carries forward the closed baseline and repairs discovery parity gaps while active closeout continues.
 - The retained runtime is Blueprint-native: `.blueprint/` owns project state, MCP tools own durable state changes, skills own orchestration, and hooks stay advisory.
 - The implemented Blueprint runtime now uses dedicated plan index/read/write MCP tools for persisted phase plans.
 - Execution now honors normalized parallelization, worktree, and branching config through dedicated plan read and summary persistence tools.

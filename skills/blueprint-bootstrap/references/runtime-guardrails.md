@@ -17,6 +17,9 @@ about what Blueprint can and cannot do at runtime.
 - If a required Blueprint MCP tool is unavailable, stop and report that the
   Blueprint MCP server is disconnected or undiscovered instead of improvising a
   shell fallback.
+- Do not reintroduce `.planning/` as Blueprint runtime state.
+- Do not promise GSD shell choreography.
+- Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`.
 
 ## Gemini-Native Coordination Helpers
 

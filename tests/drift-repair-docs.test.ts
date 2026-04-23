@@ -10,14 +10,13 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("control-plane docs describe the shipped lifecycle runtime and active closeout state", async () => {
-  const [agents, readme, gemini, handoff, memory, drift, migration, hooks] =
+  const [agents, readme, gemini, handoff, memory, runtimeReference, hooks] =
     await Promise.all([
       readRepoFile("AGENTS.md"),
       readRepoFile("README.md"),
       readRepoFile("GEMINI.md"),
       readRepoFile("docs/HANDOFF.md"),
       readRepoFile("MEMORY.md"),
-      readRepoFile("docs/DRIFT.MD"),
       readRepoFile("docs/RUNTIME-REFERENCE.md"),
       readRepoFile("docs/HOOKS-POLICIES.md")
     ]);
@@ -46,19 +45,19 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
     memory,
     /Current milestone: post-shipment lifecycle and roadmap-admin closeout/i
   );
-  assert.match(drift, /Checkpoint: Phase 2\.2 future-contract drift repair/);
-  assert.match(drift, /State: closed on 2026-04-11/);
-  assert.match(drift, /repairs discovery parity gaps/i);
+  assert.match(runtimeReference, /Checkpoint: Phase 2\.2 future-contract drift repair/);
+  assert.match(runtimeReference, /State: closed on 2026-04-11/);
+  assert.match(runtimeReference, /repairs discovery parity gaps/i);
   assert.match(
-    migration,
+    runtimeReference,
     /Wave 2 roadmap administration, Wave 3 capture plus lightweight execution, Wave 4 docs and review, and the shipped Wave 5 maintenance surfaces including `new-workspace`, `cleanup`, and `update` all remain locked to their documented command contracts/i
   );
   assert.match(
-    migration,
+    runtimeReference,
     /The implemented Blueprint runtime now uses dedicated plan index\/read\/write MCP tools/i
   );
   assert.match(
-    migration,
+    runtimeReference,
     /Execution now honors normalized parallelization, worktree, and branching config through dedicated plan read and summary persistence tools/i
   );
   assert.doesNotMatch(hooks, /No hook code ships/);
@@ -66,14 +65,16 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
-  const [catalog, artifactSchema, drift, skills, progress, readme] = await Promise.all([
-    readRepoFile("docs/COMMAND-CATALOG.md"),
-    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
-    readRepoFile("docs/DRIFT.MD"),
-    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("PROGRESS.md"),
-    readRepoFile("README.md")
-  ]);
+  const [catalog, artifactSchema, runtimeReference, skills, progress, readme, agents] =
+    await Promise.all([
+      readRepoFile("docs/COMMAND-CATALOG.md"),
+      readRepoFile("docs/ARTIFACT-SCHEMA.md"),
+      readRepoFile("docs/RUNTIME-REFERENCE.md"),
+      readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+      readRepoFile("PROGRESS.md"),
+      readRepoFile("README.md"),
+      readRepoFile("AGENTS.md")
+    ]);
 
   assert.match(catalog, /\| Command \| Wave \| Family \| Primary Skill \| Status \| Key Writes \| Risk \|/);
   assert.match(catalog, /`map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented`/);
@@ -107,8 +108,12 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(skills, /`blueprint-roadmap-admin` .* `milestone-summary`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `new-milestone`/);
   assert.match(skills, /`blueprint-phase-execution` .* `execute-phase`, `quick`, `fast`/);
-  assert.match(drift, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
-  assert.match(drift, /`DRIFT-01` through `DRIFT-07`/);
+  assert.match(agents, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
+  assert.match(
+    runtimeReference,
+    /Wave 2 roadmap administration, Wave 3 capture plus lightweight execution, Wave 4 docs and review, and the shipped Wave 5 maintenance surfaces including `new-workspace`, `cleanup`, and `update` all remain locked to their documented command contracts/i
+  );
+  await assert.rejects(() => readRepoFile("docs/DRIFT.MD"), /ENOENT/);
 });
 
 test("runtime docs keep .planning and hook control out of Blueprint runtime ownership", async () => {
