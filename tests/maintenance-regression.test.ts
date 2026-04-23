@@ -9,9 +9,10 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("maintenance manifests keep dirty-tree stops and report-before-mutate gates explicit", async () => {
-  const [newWorkspace, prBranch, ship, undo, cleanup] = await Promise.all([
+test("maintenance manifests keep dirty-tree stops, advisory mode gates, and report-before-mutate gates explicit", async () => {
+  const [newWorkspace, updateCommand, prBranch, ship, undo, cleanup] = await Promise.all([
     readRepoFile("commands/blu-new-workspace.toml"),
+    readRepoFile("commands/blu-update.toml"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("commands/blu-ship.toml"),
     readRepoFile("commands/blu-undo.toml"),
@@ -25,6 +26,14 @@ test("maintenance manifests keep dirty-tree stops and report-before-mutate gates
   assert.match(newWorkspace, /new-workspace-confirmation/);
   assert.match(newWorkspace, /do not silently switch to `clone`/i);
   assert.match(newWorkspace, /next safe action/i);
+
+  assert.match(updateCommand, /mcp_blueprint_blueprint_update_check/);
+  assert.match(updateCommand, /mcp_blueprint_blueprint_update_plan/);
+  assert.match(updateCommand, /update-mode-gate/);
+  assert.match(updateCommand, /manual fallback/i);
+  assert.match(updateCommand, /~\/.<host>\/blueprint\/updates\//);
+  assert.match(updateCommand, /Never write into the installed extension directory/i);
+  assert.match(updateCommand, /restart guidance/i);
 
   assert.match(prBranch, /If the repo has uncommitted changes, stop/i);
   assert.match(prBranch, /pending gate `clean-working-tree`/);
@@ -59,7 +68,11 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow/i);
   assert.match(skill, /`blueprint_workspace_registry_get`/);
   assert.match(skill, /`blueprint_workspace_create`/);
+  assert.match(skill, /`blueprint_update_check`/);
+  assert.match(skill, /`blueprint_update_plan`/);
   assert.match(skill, /`new-workspace-confirmation`/);
+  assert.match(skill, /`update-mode-gate`/);
+  assert.match(skill, /manual fallback/i);
   assert.match(skill, /dirty working tree/i);
   assert.match(skill, /pending gate `clean-working-tree`/);
   assert.match(skill, /`review-branch-confirmation`/);
@@ -96,6 +109,14 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`new-workspace`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(runtimeReference, /`new-workspace`[\s\S]*workspace name, path, repo members, strategy, branch, manifest path, and registry mutation plan/i);
   assert.match(runtimeReference, /`new-workspace`[\s\S]*transactional/i);
+
+  assert.match(runtimeReference, /`update`[\s\S]*Interactive-read advisory profile/i);
+  assert.match(
+    runtimeReference,
+    /`update`[\s\S]*(`ask_user` only for the saved-checklist versus manual-fallback mode gate|update-mode-gate)/i
+  );
+  assert.match(runtimeReference, /`update`[\s\S]*~\/.<host>\/blueprint\/updates\//i);
+  assert.match(runtimeReference, /`update`[\s\S]*restart guidance/i);
 
   assert.match(runtimeReference, /`cleanup`[\s\S]*High-risk-maintenance profile for protected-scope phase-directory archival/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/i);

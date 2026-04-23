@@ -14,6 +14,7 @@ import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
 import { reviewToolDefinitions } from "./tools/review.js";
 import { stateToolDefinitions } from "./tools/state.js";
+import { updateToolDefinitions } from "./tools/update.js";
 import { workspaceToolDefinitions } from "./tools/workspace.js";
 
 type ToolResult = Record<string, unknown>;
@@ -31,6 +32,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...phaseToolDefinitions,
   ...reviewToolDefinitions,
   ...artifactToolDefinitions,
+  ...updateToolDefinitions,
   ...workspaceToolDefinitions
 ];
 
@@ -72,6 +74,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
+  "blueprint_update_plan",
   "blueprint_workspace_create"
 ]);
 const MUTATION_FAILURE_STATUSES = new Set([
@@ -118,7 +121,9 @@ const SUMMARY_PATH_KEYS = [
   "linkedPlanPath",
   "sourcePath",
   "targetPath",
-  "phaseDir"
+  "phaseDir",
+  "metadataPath",
+  "checklistPath"
 ] as const;
 
 const SUMMARY_COUNT_KEYS = [
@@ -132,6 +137,8 @@ const SUMMARY_COUNT_KEYS = [
   ["artifacts", "artifacts"],
   ["reports", "reports"],
   ["files", "files"],
+  ["steps", "steps"],
+  ["notes", "notes"],
   ["findings", "findings"],
   ["followUps", "follow-ups"],
   ["entries", "entries"],
@@ -251,6 +258,14 @@ function buildSubject(toolName: string, result: ToolResult): string {
     return "review scope";
   }
 
+  if (toolName === "blueprint_update_check") {
+    return "Blueprint update status";
+  }
+
+  if (toolName === "blueprint_update_plan") {
+    return "Blueprint update plan";
+  }
+
   return humanizeIdentifier(toolName.replace(/^blueprint_/, ""));
 }
 
@@ -310,6 +325,14 @@ function getOperationVerb(toolName: string): string {
 
   if (toolName.endsWith("_status")) {
     return "Checked";
+  }
+
+  if (toolName.endsWith("_check")) {
+    return "Checked";
+  }
+
+  if (toolName.endsWith("_plan")) {
+    return "Prepared";
   }
 
   return "Completed";

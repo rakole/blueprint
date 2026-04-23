@@ -51,7 +51,7 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
   assert.match(drift, /repairs discovery parity gaps/i);
   assert.match(
     migration,
-    /Wave 2 roadmap administration, Wave 3 capture and lightweight execution, and the shipped Wave 4 review plus maintenance surfaces all remain locked to their documented command contracts/i
+    /Wave 2 roadmap administration, Wave 3 capture plus lightweight execution, Wave 4 docs and review, and the shipped Wave 5 maintenance surfaces including `new-workspace`, `cleanup`, and `update` all remain locked to their documented command contracts/i
   );
   assert.match(
     migration,

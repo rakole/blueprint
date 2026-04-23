@@ -66,7 +66,8 @@ const IMPLEMENTED_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
-  "cleanup"
+  "cleanup",
+  "update"
 ] as const;
 
 const BLOCKED_COMMANDS = ["do"] as const;
@@ -236,10 +237,19 @@ test("command runtime contract resource stays anchored to live catalog, command 
     "needs-behavior-audit"
   ]);
 
-  await assert.rejects(
-    buildBlueprintCommandRuntimeContractResource("review"),
-    /Missing runtime reference row for Blueprint command: review/
-  );
+  const reviewContract = await buildBlueprintCommandRuntimeContractResource("review");
+
+  assert.equal(reviewContract.command, "review");
+  assert.ok(reviewContract.runtimeReference);
+  assert.equal(reviewContract.runtimeReference.command, "review");
+  assert.equal(reviewContract.runtimeReference.primarySkill, "blueprint-review");
+  assert.deepEqual(reviewContract.runtimeReference.exactMcpDestination, [
+    "blueprint_phase_locate",
+    "blueprint_artifact_list",
+    "blueprint_phase_plan_index",
+    "blueprint_phase_plan_read",
+    "blueprint_review_record"
+  ]);
 });
 
 test("command path helpers centralize canonical, alias, and manifest forms", () => {
@@ -1126,6 +1136,25 @@ test("cleanup is implemented once manifest, skill, and archival report MCP tools
     "blueprint_project_status",
     "blueprint_roadmap_read",
     "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("update is implemented once manifest, skill, and advisory update MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["update"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("update"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_update_check",
+    "blueprint_update_plan"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

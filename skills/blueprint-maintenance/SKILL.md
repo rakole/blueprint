@@ -64,6 +64,8 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_project_status`
 - `blueprint_phase_locate`
 - `blueprint_config_get`
+- `blueprint_update_check`
+- `blueprint_update_plan`
 - `blueprint_workspace_registry_get`
 - `blueprint_workspace_create`
 - `blueprint_roadmap_read`
@@ -99,6 +101,22 @@ Shared rule for all maintenance flows:
 6. Require one explicit confirmation that includes the resolved workspace name and path, repo members, strategy, branch, workspace manifest path, and host-global registry mutation plan before calling `blueprint_workspace_create`. Keep the pending gate explicit as `new-workspace-confirmation` until the user approves.
 7. Persist the workspace only through `blueprint_workspace_create`, and treat its returned `workspacePath`, `manifestPath`, `registryPath`, `registryEntry`, and `repoMembers` as authoritative. Keep host-global state under `~/.<host>/blueprint/`; never invent a project-local workspace registry.
 8. Keep failure handling honest: if creation fails, stop and surface the blocker clearly. Never claim success when the workspace manifest or registry entry was not written, and never leave a partial registry entry behind.
+
+### `update`
+
+- Execution profile: `interactive-read`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `update-mode-gate` visible until the user chooses the saved checklist versus the manual fallback view when the intent is not already explicit.
+
+1. Read `blueprint_update_check` first and treat the returned host, extension path, installed version, install provenance, latest-version lookup status, update availability, and warnings as authoritative runtime discovery.
+2. Keep extension-path handling read-only. `/blu-update` must never write into the installed extension directory or mutate the running extension bundle in-session.
+3. Resolve the advisory scope explicitly before persistence: host, resolved extension path, installed version, install provenance, latest-version lookup status, and whether an update appears available.
+4. Prefer Gemini CLI `ask_user` for the saved-checklist versus manual-fallback mode gate when a structured choice helps. When that helper is unavailable, keep the same gate explicit in prose instead of implying tool parity.
+5. If the user wants a saved checklist, persist it only through `blueprint_update_plan`, and treat the returned `savedPaths.updatesDir`, `savedPaths.metadataPath`, and `savedPaths.checklistPath` as authoritative.
+6. Keep all Blueprint-owned update persistence under `~/.<host>/blueprint/updates/`. Do not write project-local update artifacts under `.blueprint/`.
+7. Keep failure handling honest: if latest-version lookup is unavailable, surface the manual fallback path clearly instead of bluffing a remote version. If checklist persistence fails, report the blocker and still return the manual update steps without pretending the checklist was saved.
+8. Always end the flow with restart guidance. The next safe action after the manual update is to restart Gemini CLI or Tabnine CLI and rerun `/blu-update` if the user wants post-update verification.
 
 ### `pr-branch`
 
@@ -184,7 +202,7 @@ Shared in-flight contract for `cleanup`:
 
 ## Planned Later Command Guardrail
 
-- `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `remove-workspace`, `workstreams`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -194,3 +212,4 @@ Shared in-flight contract for `cleanup`:
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
+- For `update`, report the resolved host, extension path, installed version, latest-version lookup status, whether an update appears available, any active pending gate or waiting state, the saved checklist status when applicable, and the restart-focused next safe action.

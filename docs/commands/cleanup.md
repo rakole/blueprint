@@ -125,13 +125,15 @@
 - The command should emit a durable cleanup report before deleting, compacting, or relocating planning artifacts.
 - Milestone-level cleanup must respect later reports that still reference earlier phase files.
 - Cleanup should not invent a new archive destination inside `.blueprint/` without explicit approval when no existing destination already exists.
-- Cleanup should show the resolved phase-directory set, protected exclusions, final archive destination, and report-before-mutate posture before any filesystem mutation proceeds.
+- Cleanup should show the resolved phase-directory set, protected exclusions, and final archive destination before any filesystem mutation proceeds.
+- Keep the report-before-mutate posture explicit before any filesystem mutation proceeds.
 
 
 ## User Prompts And Confirmation Gates
 
 
-- Require explicit confirmation before moving or deleting accumulated phase directories, and keep the destructive approval gate visible as `cleanup-confirmation` until the user approves.
+- Require confirmation before moving or deleting accumulated phase directories.
+- Keep the destructive approval gate visible as `cleanup-confirmation` until the user approves, and keep the confirmation explicit before any filesystem mutation begins.
 - Confirm report replacement before overwriting `.blueprint/reports/cleanup-latest.md`, keep the report-overwrite waiting state visible as `report-overwrite-confirmation` while blocked, and name the next safe action before resuming.
 - Confirm the resolved archive destination when no existing cleanup destination is already present, keep that waiting state visible as `archive-destination-confirmation` while blocked, and name the next safe action before resuming.
 

@@ -77,6 +77,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `new-workspace` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps workspace creation confirmation-gated, and routes host-global registry plus workspace bootstrap writes through the dedicated workspace MCP tools.
+- `update` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps extension-path handling read-only, and routes host-global advisory checklist persistence through the dedicated update MCP tools.
 - `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
 - `ui-review` uses `blueprint-ui-auditor`.
 - `secure-phase` uses `blueprint-security-auditor`.

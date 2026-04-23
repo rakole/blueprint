@@ -688,6 +688,32 @@ test("maintenance skill and cleanup docs keep the archival contract explicit", a
   );
 });
 
+test("maintenance skill and update docs keep the advisory update contract explicit", async () => {
+  const [updateDoc, mcpToolsDoc, runtimeReference] = await Promise.all([
+    readRepoFile("docs/commands/update.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
+  ]);
+
+  assert.match(updateDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(updateDoc, /\| Execution profile \| `interactive-read` \|/);
+  assert.match(updateDoc, /`blueprint_update_check`/);
+  assert.match(updateDoc, /`blueprint_update_plan`/);
+  assert.match(updateDoc, /`ask_user`/);
+  assert.match(updateDoc, /manual fallback/i);
+  assert.match(updateDoc, /update-plan-latest\.json/);
+  assert.match(updateDoc, /update-plan-latest\.md/);
+  assert.match(updateDoc, /restart guidance/i);
+  assert.match(
+    mcpToolsDoc,
+    /`update` uses `blueprint_update_check` and `blueprint_update_plan` to keep extension-path handling read-only/i
+  );
+  assert.match(
+    runtimeReference,
+    /\| `update` \| `docs\/commands\/update\.md` \| `blueprint-maintenance` \| `blueprint_update_check`<br>`blueprint_update_plan` \|/
+  );
+});
+
 test("maintenance skill and undo docs keep the safe-revert contract explicit", async () => {
   const [undoDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/undo.md"),

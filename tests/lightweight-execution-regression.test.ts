@@ -73,7 +73,10 @@ test("lightweight execution keeps debug investigative with its own report and fo
     readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
-  assert.match(debugToml, /Execution profile: `interactive-read`/);
+  assert.match(
+    debugToml,
+    /Execution profile: start in `interactive-read`[\s\S]*escalate to `long-running-mutation` only when the investigation becomes non-trivial/i
+  );
   assert.match(debugToml, /debug-latest/);
   assert.match(debugToml, /report-only, capture a todo, route to `\/blu-quick`, route to `\/blu-plan-phase`, or defer to `\/blu-progress`/);
   assert.match(debugToml, /must not silently create a todo/i);

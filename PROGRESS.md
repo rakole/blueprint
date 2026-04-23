@@ -6,7 +6,7 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 5
+Total: 4
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -14,7 +14,6 @@ Total: 5
 | 2 | `reapply-patches` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
 | 3 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
 | 4 | `workstreams` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Medium |
-| 5 | `update` | ❌ | `planned` | 5 | `Workspace And Maintenance` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -22,8 +21,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `reapply-patches` | `update` | `none` | `new-workspace`, `undo`, and `cleanup` are now shipped; the remaining maintenance work is the patch and advisory-update surface. |
-| 2 | `remove-workspace` | `workstreams` | `none` | The remaining workspace set is no longer a full three-command batch. |
+| 1 | `reapply-patches` | `remove-workspace` | `workstreams` | `update`, `new-workspace`, `undo`, and `cleanup` are now shipped; the remaining maintenance work is patch replay plus the deferred workspace surfaces. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
@@ -33,7 +31,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 48
+Total: 49
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -85,3 +83,4 @@ Total: 48
 | 46 | `undo` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 47 | `new-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
 | 48 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 49 | `update` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Low |
