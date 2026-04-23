@@ -23,10 +23,6 @@ primitives without reducing the flow to raw scaffolding.
 
 This skill package is the runtime source of truth for `/blu-new-project`.
 
-- Do not require `docs/commands/new-project.md`, `docs/RUNTIME-REFERENCE.md`,
-  `docs/DRIFT.MD`, or `docs/GEMINI-CONSTRAINTS.md` to execute the command.
-- Those docs remain canonical external references for repo documentation,
-  parity review, and architectural maintenance.
 - Runtime behavior must stay executable from this skill plus its local
   references alone.
 
