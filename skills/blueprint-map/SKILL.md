@@ -54,7 +54,6 @@ Blueprint deltas:
 - `docs/commands/map-codebase.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/RUNTIME-REFERENCE.md`
-- `docs/DRIFT.MD`
 
 ## Required MCP Tools
 

@@ -49,7 +49,6 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 - `docs/commands/next.md`
 - `docs/commands/do.md`
 - `docs/RUNTIME-REFERENCE.md`
-- `docs/DRIFT.MD`
 
 ## Required MCP Tools
 

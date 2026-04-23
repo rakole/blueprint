@@ -96,7 +96,6 @@ Gather repo and product context during bootstrap or milestone-definition work.
 
 - Do not mutate repo files directly unless a caller explicitly grants write
   ownership.
-- Preserve Blueprint deltas from `docs/DECISIONS.md`.
 - Do not draft or rewrite roadmap, requirements, or `.blueprint/` artifacts
   directly from this agent.
 - Do not invent web research, outside reviewers, or manual persistence paths.

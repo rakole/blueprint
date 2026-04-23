@@ -60,7 +60,6 @@ Carry forward the useful `execute-phase`, `quick`, and later `fast` intent while
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/DRIFT.MD`
 
 ## Required MCP Tools
 

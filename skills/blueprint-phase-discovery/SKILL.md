@@ -61,7 +61,6 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `docs/commands/ui-phase.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/DRIFT.MD`
 
 ## Required MCP Tools
 

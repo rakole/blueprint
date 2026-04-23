@@ -41,8 +41,6 @@ Stay close to the locked governance contracts for settings, profile selection, a
 - `docs/commands/health.md`
 - `docs/commands/pause-work.md`
 - `docs/commands/resume-work.md`
-- `docs/DECISIONS.md`
-- `docs/DRIFT.MD`
 
 ## Required MCP Tools
 

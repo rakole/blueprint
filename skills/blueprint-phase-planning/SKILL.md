@@ -48,7 +48,6 @@ Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
-- `docs/DRIFT.MD`
 
 ## Required MCP Tools
 
