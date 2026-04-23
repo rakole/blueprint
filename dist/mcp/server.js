@@ -28230,6 +28230,19 @@ function normalizeWorkstreamStateDocument(value, expectedSlug) {
   if (!WORKSTREAM_STATUSES.includes(document.status)) {
     throw new Error(`Workstream state has unsupported status for ${expectedSlug}.`);
   }
+  if (document.createdAt.trim().length === 0 || document.updatedAt.trim().length === 0) {
+    throw new Error(`Workstream state has malformed timestamps for ${expectedSlug}.`);
+  }
+  const optionalTimestampField = (field) => {
+    const currentValue = document[field];
+    if (currentValue === void 0 || currentValue === null) {
+      return null;
+    }
+    if (typeof currentValue !== "string" || currentValue.trim().length === 0) {
+      throw new Error(`Workstream state has malformed timestamps for ${expectedSlug}.`);
+    }
+    return currentValue;
+  };
   return {
     version: document.version,
     name: normalizeWorkstreamName(document.name),
@@ -28237,8 +28250,8 @@ function normalizeWorkstreamStateDocument(value, expectedSlug) {
     status: document.status,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
-    activatedAt: typeof document.activatedAt === "string" ? document.activatedAt : null,
-    completedAt: typeof document.completedAt === "string" ? document.completedAt : null,
+    activatedAt: optionalTimestampField("activatedAt"),
+    completedAt: optionalTimestampField("completedAt"),
     stateSnapshot: normalizeStateSnapshot(document.stateSnapshot, slug)
   };
 }
