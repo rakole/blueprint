@@ -285,7 +285,7 @@ Blueprint is opinionated about safety:
 
 These retained commands are still not public in the current runtime and should not be treated as available today:
 
-- `/blu-do`
+- `/blu-do` (planned next; its routing contract is documented, but the manifest is not shipped yet)
 - `/blu-workstreams`
 - `/blu-update`
 

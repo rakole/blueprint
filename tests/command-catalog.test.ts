@@ -73,7 +73,7 @@ const IMPLEMENTED_COMMANDS = [
   "update"
 ] as const;
 
-const BLOCKED_COMMANDS = ["do"] as const;
+const PLANNED_COMMANDS = ["do"] as const;
 const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.toml";
 
 async function pathExists(relativePath: string): Promise<boolean> {
@@ -624,15 +624,21 @@ test("runtime command catalog only advertises metadata-valid optional agents", a
   }
 });
 
-test("blocked lifecycle and roadmap commands stay unroutable until substrate exists", async () => {
+test("planned commands stay non-routable until their dedicated manifest exists", async () => {
   const catalog = await blueprintCommandCatalog();
 
-  for (const command of BLOCKED_COMMANDS) {
+  for (const command of PLANNED_COMMANDS) {
     const entry = catalog.commands[command];
 
+    assert.equal(entry.declaredStatus, "planned");
     assert.equal(entry.implemented, false);
-    assert.notEqual(entry.status, "implemented");
+    assert.equal(entry.status, "repairing");
+    assert.equal(entry.manifestPath, null);
     assert.ok(entry.blockedBy.length > 0);
+    assert.match(
+      entry.blockedBy.join("\n"),
+      /Missing command manifest: commands\/blu-do\.toml/
+    );
   }
 });
 

@@ -10,7 +10,7 @@ Total: 1
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
-| 1 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
+| 1 | `do` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -18,13 +18,11 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `—` | `—` | `—` | The Wave 5 workspace and maintenance slice is now shipped; only `do` remains blocked and unschedulable until the freeform routing runtime substrate exists. |
+| 1 | `do` | `none` | `none` | The `/blu-do` blocker-removal slice is now defined; it is the next planned control-plane slice, but it remains non-routable until its dedicated manifest and prompt land. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
-| Command | Status | Depends On |
-|---|---|---|
-| `do` | `blocked` | `freeform routing runtime substrate` |
+None. `/blu-do` is now planned next rather than blocked, but it still lacks the dedicated manifest and prompt that would make it routable.
 
 ## Completed Commands (Bubbled Down)
 

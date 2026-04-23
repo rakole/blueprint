@@ -5,9 +5,9 @@ description: >
   skill when `/blu`, `help`, `progress`, `next`, or `do`-style requests need
   safe command selection inside the implemented runtime surface. Example
   scenarios: choosing between `/blu-help` and `/blu-progress`, explaining why a
-  documented command is blocked, routing a root `/blu` request to the safest
-  implemented command, surfacing the current waiting state for root `/blu`
-  requests, and recommending the next action for a partial repo.
+  documented command is blocked or still planned, routing a root `/blu` request
+  to the safest implemented command, surfacing the current waiting state for
+  root `/blu` requests, and recommending the next action for a partial repo.
 status: implemented
 commands:
   - /blu
@@ -47,6 +47,7 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 - `docs/commands/help.md`
 - `docs/commands/progress.md`
 - `docs/commands/next.md`
+- `docs/commands/do.md`
 - `docs/RUNTIME-REFERENCE.md`
 - `docs/DRIFT.MD`
 
@@ -69,6 +70,20 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 7. If repo state is partial, prefer `/blu-health`.
 8. Surface config warnings only when they materially change the next safe action.
 9. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a missing artifact or blocked substrate.
+
+## Planned `/blu-do` Contract
+
+- `/blu-do` remains a planned direct freeform router contract until its own manifest ships. Do not present it as runnable while `blueprint_command_catalog` keeps it non-implemented.
+- When implementing or auditing `/blu-do`, use this intent taxonomy:
+  - Repo or status guidance -> `help`, `progress`, `next`
+  - Lightweight capture -> `note`, `add-todo`, `add-backlog`, `review-backlog`
+  - Idea shaping -> `explore`
+  - Small execution -> `fast`
+  - Bounded execution -> `quick`
+  - Planning or lifecycle escalation -> `discuss-phase`, `plan-phase`
+  - Ambiguous, oversized, risky, or unsupported asks -> clarify or recommend the safest implemented direct command
+- `/blu-do` routes only to retained Blueprint commands, never writes directly, never widens routing to planned or blocked commands, and never hides high-risk maintenance behavior behind vague prose.
+- `/blu` is the front door, `/blu-explore` is ideation with confirmation-gated persistence, and `/blu-do` is the future direct freeform router.
 
 ## Output Style
 

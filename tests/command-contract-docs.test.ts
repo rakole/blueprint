@@ -274,6 +274,67 @@ test("capture skill and shipped note, backlog, and explore docs are marked imple
   );
 });
 
+test("do docs and router skill keep the planned freeform-routing contract explicit", async () => {
+  const [catalogMarkdown, doDoc, routerSkill, readme] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/commands/do.md"),
+    readRepoFile("skills/blueprint-router/SKILL.md"),
+    readRepoFile("README.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `planned` \| `none` \| `Low: routing only\.` \|/
+  );
+  assert.match(doDoc, /\| Execution profile \| `router` \|/);
+  assert.match(
+    doDoc,
+    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+  );
+  assert.match(
+    doDoc,
+    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  );
+  assert.match(doDoc, /Repo or status guidance routes to `help`, `progress`, or `next`\./);
+  assert.match(
+    doDoc,
+    /Lightweight capture routes to `note`, `add-todo`, `add-backlog`, or `review-backlog`\./
+  );
+  assert.match(doDoc, /Idea shaping routes to `explore`\./);
+  assert.match(doDoc, /Small execution routes to `fast`\./);
+  assert.match(doDoc, /Bounded execution routes to `quick`\./);
+  assert.match(
+    doDoc,
+    /Planning or lifecycle escalation routes to `discuss-phase` or `plan-phase`\./
+  );
+  assert.match(
+    doDoc,
+    /Never hide high-risk maintenance, git, workspace, shipping, cleanup, undo, or patch behavior behind vague freeform intent\./
+  );
+  assert.match(doDoc, /Never routes to planned, blocked, or repairing commands\./);
+  assert.match(routerSkill, /## Planned `\/blu-do` Contract/);
+  assert.match(
+    routerSkill,
+    /`\/blu-do` remains a planned direct freeform router contract until its own manifest ships\./
+  );
+  assert.match(routerSkill, /Repo or status guidance -> `help`, `progress`, `next`/);
+  assert.match(
+    routerSkill,
+    /Lightweight capture -> `note`, `add-todo`, `add-backlog`, `review-backlog`/
+  );
+  assert.match(routerSkill, /Idea shaping -> `explore`/);
+  assert.match(routerSkill, /Small execution -> `fast`/);
+  assert.match(routerSkill, /Bounded execution -> `quick`/);
+  assert.match(routerSkill, /Planning or lifecycle escalation -> `discuss-phase`, `plan-phase`/);
+  assert.match(
+    routerSkill,
+    /`\/blu` is the front door, `\/blu-explore` is ideation with confirmation-gated persistence, and `\/blu-do` is the future direct freeform router\./
+  );
+  assert.match(readme, /## Commands Not Public Yet/);
+  assert.match(readme, /\/blu-do/);
+  assert.match(readme, /planned next; its routing contract is documented, but the manifest is not shipped yet/i);
+});
+
 test("map-codebase docs keep the repaired brownfield mapping contract explicit", async () => {
   const [catalogMarkdown, commandDoc, skillDoc, runtimeReference, mcpToolsDoc] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
