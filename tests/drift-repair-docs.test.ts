@@ -66,11 +66,13 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
-  const [catalog, artifactSchema, drift, skills] = await Promise.all([
+  const [catalog, artifactSchema, drift, skills, progress, readme] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/ARTIFACT-SCHEMA.md"),
     readRepoFile("docs/DRIFT.MD"),
-    readRepoFile("docs/SKILLS-AND-AGENTS.md")
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("PROGRESS.md"),
+    readRepoFile("README.md")
   ]);
 
   assert.match(catalog, /\| Command \| Wave \| Family \| Primary Skill \| Status \| Key Writes \| Risk \|/);
@@ -83,10 +85,14 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(catalog, /`complete-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(catalog, /`milestone-summary` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(catalog, /`new-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `blocked`/);
+  assert.match(catalog, /`do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `planned`/);
   assert.match(catalog, /`pause-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
   assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
   assert.match(catalog, /`plan-milestone-gaps` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
+  assert.match(progress, /\| 1 \| `do` \| .* \| `planned` \| 3 \| `Capture And Lightweight Execution` \| Low \|/);
+  assert.match(readme, /## Commands Not Public Yet/);
+  assert.match(readme, /\/blu-do/);
+  assert.match(readme, /planned next; its routing contract is documented, but the manifest is not shipped yet/i);
   assert.match(catalog, /STRUCTURE\.md/);
   assert.match(artifactSchema, /`STRUCTURE\.md`/);
   assert.match(artifactSchema, /`reports\/milestone-complete-<version>\.md`/);
