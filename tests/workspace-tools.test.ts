@@ -9,7 +9,8 @@ import { promisify } from "node:util";
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
 import {
   blueprintWorkspaceCreate,
-  blueprintWorkspaceRegistryGet
+  blueprintWorkspaceRegistryGet,
+  blueprintWorkspaceRemove
 } from "../src/mcp/tools/workspace.js";
 
 const execFileAsync = promisify(execFile);
@@ -116,6 +117,10 @@ test("workspace tools register registry and create MCP entries", () => {
     blueprintToolNames.includes("blueprint_workspace_create"),
     "blueprint_workspace_create should be registered"
   );
+  assert.ok(
+    blueprintToolNames.includes("blueprint_workspace_remove"),
+    "blueprint_workspace_remove should be registered"
+  );
   assert.equal(
     blueprintToolRegistry.blueprint_workspace_create.inputSchema.strategy.safeParse("worktree")
       .success,
@@ -126,6 +131,404 @@ test("workspace tools register registry and create MCP entries", () => {
       .success,
     true
   );
+});
+
+test("blueprint_workspace_remove removes a clean worktree-backed workspace and updates the host-global registry", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-worktree-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-remove");
+  const created = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-remove",
+      path: workspacePath
+    })
+  );
+
+  const removed = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceRemove({
+      name: "feature-remove",
+      path: workspacePath
+    })
+  );
+
+  assert.equal(removed.removedPath, created.workspacePath);
+  assert.equal(removed.manifestPath, created.manifestPath);
+  assert.equal(removed.registryPath, created.registryPath);
+  assert.equal(removed.removedEntry.name, "feature-remove");
+  assert.equal(removed.removedMembers.length, 1);
+  assert.deepEqual(removed.skippedMembers, []);
+  await assert.rejects(fs.access(created.workspacePath));
+  await assert.rejects(fs.access(created.manifestPath));
+  assert.doesNotMatch(
+    await runGit(["worktree", "list", "--porcelain"], repoPath),
+    /feature-remove/
+  );
+  assert.deepEqual((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces, []);
+});
+
+test("blueprint_workspace_remove removes a clean clone-backed workspace and preserves sibling registry entries", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-clone-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const siblingPath = path.join(tempRoot, "workspaces", "feature-sibling");
+  const clonePath = path.join(tempRoot, "workspaces", "feature-clone");
+
+  await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-sibling",
+      path: siblingPath
+    })
+  );
+  const cloneWorkspace = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-clone",
+      path: clonePath,
+      strategy: "clone"
+    })
+  );
+
+  const removed = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceRemove({
+      name: "feature-clone",
+      path: clonePath
+    })
+  );
+
+  assert.equal(removed.removedEntry.strategy, "clone");
+  await assert.rejects(fs.access(cloneWorkspace.workspacePath));
+  const listed = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+  assert.deepEqual(listed.workspaces.map((workspace) => workspace.name), ["feature-sibling"]);
+});
+
+test("blueprint_workspace_remove rolls workspace state back when the final registry write fails", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-recover-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-recover");
+  const created = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-recover",
+      path: workspacePath
+    })
+  );
+
+  await assert.rejects(
+    withEnvironment(
+      {
+        BLUEPRINT_TEST_FAIL_WORKSPACE_REGISTRY_WRITE_ONCE: created.registryPath
+      },
+      () =>
+        withGlobalHome(globalHome, () =>
+          blueprintWorkspaceRemove({
+            name: "feature-recover",
+            path: workspacePath
+          })
+        )
+    ),
+    /Injected workspace registry write failure/
+  );
+
+  await fs.access(created.workspacePath);
+  await fs.access(created.manifestPath);
+  assert.match(await runGit(["worktree", "list", "--porcelain"], repoPath), /feature-recover/);
+
+  const persistedRegistry = JSON.parse(await fs.readFile(created.registryPath, "utf8")) as {
+    workspaces: Array<{ name: string }>;
+  };
+  assert.deepEqual(persistedRegistry.workspaces.map((workspace) => workspace.name), [
+    "feature-recover"
+  ]);
+
+  const listed = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+  assert.deepEqual(listed.workspaces.map((workspace) => workspace.name), ["feature-recover"]);
+});
+
+test("blueprint_workspace_remove blocks when a recorded workspace member repo is dirty", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-dirty-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-dirty");
+  const created = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-dirty",
+      path: workspacePath
+    })
+  );
+
+  await fs.writeFile(path.join(created.repoMembers[0]!.path, "DIRTY.txt"), "dirty\n", "utf8");
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceRemove({
+        name: "feature-dirty",
+        path: workspacePath
+      })
+    ),
+    /Workspace repo member has uncommitted changes/
+  );
+
+  await fs.access(created.workspacePath);
+  assert.equal((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces.length, 1);
+});
+
+test("blueprint_workspace_remove blocks when a recorded worktree repo member is no longer linked to its source repo", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-linkage-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-linkage");
+  const created = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-linkage",
+      path: workspacePath
+    })
+  );
+  const memberPath = created.repoMembers[0]!.path;
+
+  await runGit(["-C", repoPath, "worktree", "remove", memberPath]);
+  await runGit(["clone", repoPath, memberPath]);
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceRemove({
+        name: "feature-linkage",
+        path: workspacePath
+      })
+    ),
+    /recorded worktree repo member is no longer registered with its source repo/
+  );
+
+  await fs.access(created.workspacePath);
+  assert.equal((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces.length, 1);
+});
+
+test("blueprint_workspace_remove blocks when the recorded manifest is missing", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-drift-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-drift");
+  const created = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-drift",
+      path: workspacePath
+    })
+  );
+
+  await fs.rm(created.manifestPath, { force: true });
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceRemove({
+        name: "feature-drift",
+        path: workspacePath
+      })
+    ),
+    /workspace manifest is missing on disk/
+  );
+
+  await fs.access(created.workspacePath);
+  assert.equal((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces.length, 1);
+});
+
+test("blueprint_workspace_remove blocks on ambiguous registry matches without an exact confirmed path", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-ambiguous-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryPath = path.join(globalHome, "workspaces.json");
+  const duplicateName = "feature-ambiguous";
+  const firstPath = path.join(tempRoot, "workspaces", "feature-ambiguous-a");
+  const secondPath = path.join(tempRoot, "workspaces", "feature-ambiguous-b");
+
+  const document = {
+    version: 1,
+    workspaces: [
+      {
+        name: duplicateName,
+        path: firstPath,
+        manifestPath: path.join(firstPath, ".blueprint-workspace.json"),
+        strategy: "worktree",
+        branch: null,
+        createdAt: "2026-04-23T00:00:00.000Z",
+        repos: []
+      },
+      {
+        name: duplicateName,
+        path: secondPath,
+        manifestPath: path.join(secondPath, ".blueprint-workspace.json"),
+        strategy: "clone",
+        branch: null,
+        createdAt: "2026-04-23T00:00:01.000Z",
+        repos: []
+      }
+    ]
+  };
+
+  await fs.mkdir(globalHome, { recursive: true });
+  await fs.writeFile(registryPath, `${JSON.stringify(document, null, 2)}\n`, "utf8");
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceRemove({
+        name: duplicateName
+      })
+    ),
+    /Workspace path ambiguity detected/
+  );
+});
+
+test("blueprint_workspace_remove surfaces malformed registry blockers without create-specific remediation", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-malformed-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryPath = path.join(globalHome, "workspaces.json");
+
+  await fs.mkdir(globalHome, { recursive: true });
+  await fs.writeFile(registryPath, "{\n", "utf8");
+
+  let error: Error | null = null;
+
+  try {
+    await withGlobalHome(globalHome, () =>
+      blueprintWorkspaceRemove({
+        name: "feature-malformed"
+      })
+    );
+    assert.fail("Expected malformed workspace registry to block removal.");
+  } catch (caughtError) {
+    error = caughtError as Error;
+  }
+
+  assert.ok(error);
+  assert.match(error.message, /repair or remove it before continuing/);
+  assert.doesNotMatch(error.message, /creating a new workspace/);
+});
+
+test("blueprint_workspace_remove waits for the registry lock before mutating workspace state", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-lock-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-remove-lock");
+  const created = await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-remove-lock",
+      path: workspacePath
+    })
+  );
+  const registryLockPath = path.join(globalHome, "workspaces.json.lock");
+
+  await fs.mkdir(registryLockPath, { recursive: true });
+
+  const removePromise = withGlobalHome(globalHome, () =>
+    blueprintWorkspaceRemove({
+      name: "feature-remove-lock",
+      path: workspacePath
+    })
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await fs.access(created.workspacePath);
+
+  await fs.rm(registryLockPath, { recursive: true, force: true });
+  await removePromise;
+
+  await assert.rejects(fs.access(created.workspacePath));
+  assert.deepEqual((await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet())).workspaces, []);
+});
+
+test("blueprint_workspace_remove refreshes the registry lock lease until teardown completes", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-lock-lease-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createGitRepo(tempRoot, "repo");
+  const globalHome = path.join(tempRoot, "global-home");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-remove-lease");
+  const nextWorkspacePath = path.join(tempRoot, "workspaces", "feature-after-lease");
+
+  await withGlobalHome(globalHome, () =>
+    blueprintWorkspaceCreate({
+      cwd: repoPath,
+      name: "feature-remove-lease",
+      path: workspacePath
+    })
+  );
+
+  await withEnvironment(
+    {
+      BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_STALE_MS: "120",
+      BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_HEARTBEAT_MS: "30",
+      BLUEPRINT_TEST_WORKSPACE_REMOVE_DELAY_MS: "450"
+    },
+    () =>
+      withGlobalHome(globalHome, async () => {
+        const removePromise = blueprintWorkspaceRemove({
+          name: "feature-remove-lease",
+          path: workspacePath
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 180));
+
+        const createPromise = blueprintWorkspaceCreate({
+          cwd: repoPath,
+          name: "feature-after-lease",
+          path: nextWorkspacePath
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 160));
+        await assert.rejects(fs.access(nextWorkspacePath));
+
+        await removePromise;
+        const createdAfter = await createPromise;
+
+        assert.equal(createdAfter.workspacePath, nextWorkspacePath);
+      })
+  );
+
+  const listed = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
+  assert.deepEqual(listed.workspaces.map((workspace) => workspace.name), ["feature-after-lease"]);
 });
 
 test("blueprint_workspace_registry_get returns an empty host-global registry when missing", async (t) => {
@@ -481,7 +884,7 @@ test("blueprint_workspace_create refuses installed extension repos and installed
   assert.deepEqual(registryResult.workspaces, []);
 });
 
-test("blueprint_workspace_registry_get recovers from the newest backup when the primary registry file is missing", async (t) => {
+test("blueprint_workspace_registry_get stays read-only when the primary registry file is missing", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-registry-recover-"));
   t.after(async () => {
     await fs.rm(tempRoot, { recursive: true, force: true });
@@ -525,9 +928,51 @@ test("blueprint_workspace_registry_get recovers from the newest backup when the 
 
   const result = await withGlobalHome(globalHome, () => blueprintWorkspaceRegistryGet());
 
-  assert.equal(result.workspaces.length, 1);
-  assert.equal(result.workspaces[0]?.name, "feature-recovered");
-  assert.deepEqual(JSON.parse(await fs.readFile(registryPath, "utf8")), recoveredDocument);
+  assert.deepEqual(result.workspaces, []);
+  await assert.rejects(fs.access(registryPath));
+  assert.deepEqual(JSON.parse(await fs.readFile(backupPath, "utf8")), recoveredDocument);
+});
+
+test("blueprint_workspace_remove uses the same empty registry view when the primary registry file is missing, even if backups exist", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workspace-remove-missing-primary-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const globalHome = path.join(tempRoot, "global-home");
+  const registryPath = path.join(globalHome, "workspaces.json");
+  const backupPath = path.join(globalHome, "workspaces.json.bak-1234-5678");
+  const workspacePath = path.join(tempRoot, "workspaces", "feature-from-backup");
+  const recoveredDocument = {
+    version: 1,
+    workspaces: [
+      {
+        name: "feature-from-backup",
+        path: workspacePath,
+        manifestPath: path.join(workspacePath, ".blueprint-workspace.json"),
+        strategy: "worktree",
+        branch: null,
+        createdAt: "2026-04-23T00:00:00.000Z",
+        repos: []
+      }
+    ]
+  };
+
+  await fs.mkdir(globalHome, { recursive: true });
+  await fs.writeFile(backupPath, `${JSON.stringify(recoveredDocument, null, 2)}\n`, "utf8");
+
+  await assert.rejects(
+    withGlobalHome(globalHome, () =>
+      blueprintWorkspaceRemove({
+        name: "feature-from-backup",
+        path: workspacePath
+      })
+    ),
+    /Workspace not found in the host-global registry/
+  );
+
+  await assert.rejects(fs.access(registryPath));
+  assert.deepEqual(JSON.parse(await fs.readFile(backupPath, "utf8")), recoveredDocument);
 });
 
 test("blueprint_workspace_create waits for the registry lock before mutating workspace state", async (t) => {

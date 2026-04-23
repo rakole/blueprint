@@ -101,7 +101,7 @@ test("repo-facing status docs treat update as a shipped Wave 5 command", async (
   );
   assert.match(
     progressFile,
-    /\| 49 \| `update` \| ✅ \| `implemented` \| 5 \| `Workspace And Maintenance` \| Low \|/
+    /\| [0-9]+ \| `update` \| ✅ \| `implemented` \| 5 \| `Workspace And Maintenance` \| Low \|/
   );
   assert.doesNotMatch(
     progressFile,

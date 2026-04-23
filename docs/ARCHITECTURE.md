@@ -17,11 +17,12 @@ The live runtime currently ships:
 - the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, and `ui-review`
 - the shipped Wave 4 docs command, `docs-update`
 - the shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`
-- the shipped Wave 5 maintenance commands, `new-workspace`, `workstreams`, `cleanup`, and `reapply-patches`
+- the shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`
 - the shipped Wave 5 advisory maintenance command, `update`
 
-This includes the shipped Wave 5 maintenance commands `cleanup`, `reapply-patches`, and `workstreams`, together with the newly shipped `new-workspace` flow and the advisory `update` flow.
+This includes the shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`, together with the advisory `update` flow.
 The shipped Wave 5 maintenance commands, `new-workspace`, `cleanup`, and `update` remain part of the locked maintenance surface.
+The shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches` remain part of that locked maintenance surface.
 The shipped Wave 5 maintenance command, `cleanup`, remains part of that locked maintenance surface.
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
@@ -63,7 +64,6 @@ Generated at build and release time:
 
 Planned later runtime surfaces, not registered today:
 
-- extra MCP families for workspace removal
 - extra skill families for planned-only commands
 - extra agent contracts for review, docs, debugging, UI audit, and security audit
 
@@ -95,9 +95,9 @@ Planned later runtime surfaces, not registered today:
 
 - The MCP server is the deterministic state engine.
 - It currently registers project/catalog, config, state/pause-handoff, phase/roadmap including backlog promotion, capture-index, artifact, review, workspace, workstream, update, and patch tool families.
-- It owns `.blueprint/` reads and writes, config normalization, capture index persistence, phase artifact persistence, summary and validation persistence, milestone audit report writes, state synchronization, the host-global workspace registry plus workspace bootstrap writes, host-global advisory update metadata writes, and host-global patch registry plus audit writes.
+- It owns `.blueprint/` reads and writes, config normalization, capture index persistence, phase artifact persistence, summary and validation persistence, milestone audit report writes, state synchronization, the host-global workspace registry plus workspace bootstrap and teardown writes, host-global advisory update metadata writes, and host-global patch registry plus audit writes.
 - It also owns the hard security boundary for persistence through the shared security layer in `src/shared/security.ts`, including shared path containment, safe parsing, prompt-boundary checks, and identifier validation.
-- Planned tool families for workspace removal remain future contracts until they are registered.
+- Planned tool families now concern only later planned commands outside the shipped Wave 5 maintenance surface.
 
 ### 5. Hooks
 

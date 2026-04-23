@@ -96,6 +96,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_workspace_registry_get` | Read the host-global Blueprint workspace registry from `~/.<host>/blueprint/workspaces.json` without mutating it | `{registryPath, workspaces}` |
 | `blueprint_workspace_create` | Create a workspace directory plus `<workspace>/.blueprint-workspace.json` and append the matching host-global registry entry transactionally | `{workspacePath, manifestPath, registryPath, registryEntry, repoMembers}` |
+| `blueprint_workspace_remove` | Remove one confirmed workspace by tearing down the matching workspace manifest, workspace root, and host-global registry entry transactionally | `{removedPath, manifestPath, registryPath, removedEntry, removedMembers, skippedMembers}` |
 | `blueprint_workstream_list` | Read the project-local workstream index plus canonical per-stream state, validate drift, and report the active workstream summary | `{status, rootPath, indexPath, active, workstreams, summary, waitingState, reason}` |
 | `blueprint_workstream_mutate` | Create, switch, resume, or complete project-local workstreams while regenerating `WORKSTREAMS.md` from canonical per-stream state | `{status, operation, rootPath, indexPath, active, workstreams, affectedPaths, waitingState, nextAction, statePatch}` |
 | `blueprint_patch_list` | Read host-global patch manifests from `~/.<host>/blueprint/patches/` and report compatibility against the current repo when available | `{registryPath, patches}` |
@@ -111,11 +112,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 ## Planned Later Tool Families
 
-These tool names are part of the documented future contract, but they are not registered today.
-
-### Future Workspace Removal Tools
-
-- `blueprint_workspace_remove`
+These tool names are part of the documented future contract for later planned commands, but no additional Wave 5 workspace or advisory-update tool families remain outside the live runtime.
 
 ## Planned Read-Only MCP Resource Surface
 
@@ -176,8 +173,9 @@ Resource-adoption guardrails:
 - `undo` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep revert previews evidence-backed, report-backed before git mutation, explicit about dependency impact, and aligned with safe `git revert` style execution instead of destructive history rewrites; its maintenance flow should continue to apply the shared dirty-tree, resolved-target, and report-before-mutate preflight checks.
 - `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection; its maintenance flow should continue to apply the shared dirty-tree, protected-scope, and report-before-mutate preflight checks.
 - `new-workspace` uses `blueprint_config_get`, `blueprint_workspace_registry_get`, and `blueprint_workspace_create` to keep default workspace-root selection aligned with normalized effective config, keep host-global registry writes bounded to `~/.<host>/blueprint/workspaces.json`, and keep workspace-directory plus registry mutation transactional instead of prompt-only.
+- `remove-workspace` uses `blueprint_workspace_registry_get` and `blueprint_workspace_remove` to keep exact workspace resolution anchored to the host-global registry, block teardown on dirty or drifted repo members, and remove the matching workspace manifest, workspace root, and registry entry without inventing a project-local workspace index.
 - `update` uses `blueprint_update_check` and `blueprint_update_plan` to keep extension-path handling read-only, keep latest-version lookup and install provenance explicit, persist only host-global advisory metadata under `~/.<host>/blueprint/updates/`, and keep restart plus manual-fallback guidance explicit without mutating the installed extension.
-- `workstreams` uses `blueprint_workstream_list`, `blueprint_workstream_mutate`, and `blueprint_state_update` to keep project-local workstream state under `.blueprint/workstreams/`, regenerate `WORKSTREAMS.md` from canonical per-stream state, block dirty-tree active-stream transitions, and restore only the saved `STATE.md` subset during `resume`.
+- `workstreams` uses `blueprint_workstream_list`, `blueprint_workstream_mutate`, and `blueprint_state_update` to keep project-local workstream state under `.blueprint/workstreams/`, regenerate `WORKSTREAMS.md` from canonical per-stream state, reject malformed canonical timestamps or snapshot content through the existing corrupt/blocker paths, block dirty-tree active-stream transitions, and restore only the saved `STATE.md` subset during `resume`.
 - `reapply-patches` uses `blueprint_patch_list`, `blueprint_patch_reapply`, and `blueprint_patch_record` to keep patch replay preview-backed, confirmation-gated, blocked on dirty or incompatible targets, and audited only under `~/.<host>/blueprint/patches/` instead of `.blueprint/reports/`.
 
 ## Planned Command Notes

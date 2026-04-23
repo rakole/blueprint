@@ -34,6 +34,7 @@
 - Exactly one workstream may be active at a time.
 - `switch`, `resume`, and completing the current active workstream must stop on a dirty working tree.
 - `resume` requires a previously saved `STATE.md` snapshot for the selected workstream.
+- `create` should read the current `STATE.md` snapshot only when the new workstream would become active; paused-stream creation must not fail just because the current active stream has no snapshot to capture.
 
 ## Outputs
 
@@ -64,7 +65,9 @@
 
 - Treat `.blueprint/workstreams/WORKSTREAMS.md` as the human-readable index only; it must stay aligned with the canonical per-workstream state files.
 - Persist each workstream at `.blueprint/workstreams/<slug>/state.json` with `version`, `name`, `slug`, `status`, `createdAt`, `updatedAt`, optional `activatedAt` and `completedAt`, and an optional saved `STATE.md` snapshot subset.
+- Treat canonical timestamp fields as strict contract data: `createdAt` and `updatedAt` must be non-empty strings, while `activatedAt` and `completedAt` must be absent, `null`, or non-empty strings. Malformed timestamp values are corrupt canonical state and must not be normalized away.
 - The workstream MCP tools own index validation and regeneration. If `WORKSTREAMS.md` drifts from the canonical per-stream state files, the command must stop with the waiting state `corrupt-workstream-index` instead of guessing.
+- The workstream MCP tools must also reject malformed canonical `state.json` content, including malformed timestamps, slug drift, or invalid snapshot content, through the same `corrupt-workstream-index` posture instead of guessing a repaired value.
 - `resume` must restore only the saved `STATE.md` subset returned by `blueprint_workstream_mutate`; it must not invent a second persistence path or widen into `/blu-resume-work`.
 
 ## In-Flight Progress Contract
@@ -121,10 +124,11 @@
 - A target workstream has no saved `STATE.md` snapshot to resume.
 - The repo has uncommitted changes while the command is trying to change the active workstream.
 - `WORKSTREAMS.md` is stale relative to the canonical per-stream state files.
+- A canonical `.blueprint/workstreams/<slug>/state.json` file is malformed, including truncated timestamps or malformed saved snapshot content.
 
 ## Failure Modes And Recovery
 
-- Stop on dirty trees, missing workstreams, missing resume snapshots, or corrupted workstream index state with a specific remediation checklist.
+- Stop on dirty trees, missing workstreams, missing or malformed resume snapshots, or corrupted workstream index state with a specific remediation checklist.
 - Do not mutate the installed extension directory.
 - Leave `.blueprint/STATE.md`, roadmap artifacts, and global Blueprint state unchanged when a preflight or confirmation gate blocks the run.
 - Keep workstream index regeneration and per-stream state writes aligned so partial workstream updates do not leave the index stale.
@@ -148,4 +152,5 @@
 - Dirty-tree switch blocker fixture.
 - Missing-resume-snapshot blocker fixture.
 - Corrupt-index fixture.
+- Malformed canonical timestamp fixture.
 - Resume-from-saved-snapshot fixture.

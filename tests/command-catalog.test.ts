@@ -66,6 +66,7 @@ const IMPLEMENTED_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
+  "remove-workspace",
   "workstreams",
   "cleanup",
   "reapply-patches",
@@ -356,6 +357,41 @@ test("workstreams is implemented once manifest, skill, and project-local workstr
     "blueprint_state_update",
     "blueprint_workstream_list",
     "blueprint_workstream_mutate"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("remove-workspace is implemented once manifest, skill, and workspace removal MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["remove-workspace"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("remove-workspace"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_workspace_registry_get",
+    "blueprint_workspace_remove"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("update is implemented once manifest, skill, and advisory MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands.update;
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_update_check",
+    "blueprint_update_plan"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);

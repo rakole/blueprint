@@ -28837,6 +28837,13 @@ async function pathExists5(targetPath) {
     return false;
   }
 }
+async function canonicalizePath(candidatePath) {
+  try {
+    return await fs7.realpath(candidatePath);
+  } catch {
+    return path8.resolve(candidatePath);
+  }
+}
 function normalizeTextForComparison(value) {
   return value.replace(/\r\n/g, "\n").trimEnd();
 }
@@ -29345,6 +29352,42 @@ async function runGit2(args, options = {}) {
     throw error2;
   }
 }
+function maybeFailWorkspaceRegistryWrite(registryPath) {
+  const injectedFailure = process.env.BLUEPRINT_TEST_FAIL_WORKSPACE_REGISTRY_WRITE_ONCE;
+  if (!injectedFailure) {
+    return;
+  }
+  const matchesRegistry = injectedFailure === "1" || path8.resolve(injectedFailure) === path8.resolve(registryPath);
+  if (!matchesRegistry) {
+    return;
+  }
+  delete process.env.BLUEPRINT_TEST_FAIL_WORKSPACE_REGISTRY_WRITE_ONCE;
+  throw new Error(`Injected workspace registry write failure for ${registryPath}`);
+}
+function parsePositiveIntegerEnv(name) {
+  const raw = process.env[name];
+  if (!raw) {
+    return null;
+  }
+  const value = Number.parseInt(raw, 10);
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+function workspaceRegistryLockRetryMs() {
+  return parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_RETRY_MS") ?? WORKSPACE_REGISTRY_LOCK_RETRY_MS;
+}
+function workspaceRegistryLockStaleMs() {
+  return parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_STALE_MS") ?? WORKSPACE_REGISTRY_LOCK_STALE_MS;
+}
+function workspaceRegistryLockHeartbeatMs() {
+  return parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REGISTRY_LOCK_HEARTBEAT_MS") ?? Math.max(25, Math.floor(workspaceRegistryLockStaleMs() / 4));
+}
+async function maybeDelayWorkspaceRemoveForTest() {
+  const delayMs = parsePositiveIntegerEnv("BLUEPRINT_TEST_WORKSPACE_REMOVE_DELAY_MS");
+  if (!delayMs) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 async function resolveGitRepoRoot(candidatePath) {
   const result = await runGit2(["-C", candidatePath, "rev-parse", "--show-toplevel"], {
     allowFailure: true
@@ -29409,12 +29452,20 @@ async function remoteBranchExists(repoPath, branch) {
   return result.success && result.stdout.length > 0;
 }
 function parseWorkspaceRegistryDocument(raw, registryPath) {
-  const parsed = safeJsonParseObject(raw, {
-    label: registryPath
-  });
+  let parsed;
+  try {
+    parsed = safeJsonParseObject(raw, {
+      label: registryPath
+    });
+  } catch (error2) {
+    const reason = error2 instanceof Error ? error2.message : "workspace registry is unreadable";
+    throw new Error(
+      `Workspace registry is malformed at ${registryPath}; repair or remove it before continuing. ${reason}`
+    );
+  }
   if (typeof parsed !== "object" || parsed === null || !("workspaces" in parsed) || !Array.isArray(parsed.workspaces)) {
     throw new Error(
-      `Workspace registry is malformed at ${registryPath}; repair or remove it before creating a new workspace.`
+      `Workspace registry is malformed at ${registryPath}; repair or remove it before continuing.`
     );
   }
   const workspaces = (parsed.workspaces ?? []).map(
@@ -29437,64 +29488,8 @@ function parseWorkspaceRegistryDocument(raw, registryPath) {
     workspaces
   };
 }
-async function listWorkspaceRegistryBackups(registryPath) {
-  const directory = path8.dirname(registryPath);
-  const backupPrefix = `${path8.basename(registryPath)}.bak-`;
-  let entries;
-  try {
-    entries = await fs7.readdir(directory, {
-      encoding: "utf8",
-      withFileTypes: true
-    });
-  } catch (error2) {
-    if (error2.code === "ENOENT") {
-      return [];
-    }
-    throw error2;
-  }
-  const backupCandidates = entries.filter((entry) => entry.isFile() && entry.name.startsWith(backupPrefix)).map((entry) => path8.join(directory, entry.name));
-  const backupsWithStats = await Promise.all(
-    backupCandidates.map(async (backupPath) => {
-      try {
-        const stats = await fs7.stat(backupPath);
-        return {
-          backupPath,
-          mtimeMs: stats.mtimeMs
-        };
-      } catch {
-        return null;
-      }
-    })
-  );
-  return backupsWithStats.filter((entry) => entry !== null).sort((left, right) => right.mtimeMs - left.mtimeMs).map((entry) => entry.backupPath);
-}
-async function recoverWorkspaceRegistryDocument(registryPath) {
-  const backupPaths = await listWorkspaceRegistryBackups(registryPath);
-  let lastError = null;
-  for (const backupPath of backupPaths) {
-    try {
-      const raw = await fs7.readFile(backupPath, "utf8");
-      const document = parseWorkspaceRegistryDocument(raw, backupPath);
-      await fs7.mkdir(path8.dirname(registryPath), { recursive: true });
-      await fs7.copyFile(backupPath, registryPath).catch(() => void 0);
-      return document;
-    } catch (error2) {
-      lastError = error2 instanceof Error ? error2 : new Error("Workspace registry backup recovery failed.");
-    }
-  }
-  if (lastError) {
-    throw new Error(
-      `Workspace registry recovery failed at ${registryPath}: ${lastError.message}`
-    );
-  }
-  return null;
-}
 async function readWorkspaceRegistryDocument(registryPath) {
   if (!await pathExists5(registryPath)) {
-    const recovered = await recoverWorkspaceRegistryDocument(registryPath);
-    if (recovered) {
-      return recovered;
-    }
     return {
       version: WORKSPACE_REGISTRY_VERSION,
       workspaces: []
@@ -29556,6 +29551,12 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   await fs7.mkdir(directory, { recursive: true });
   await fs7.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
 `, "utf8");
+  try {
+    maybeFailWorkspaceRegistryWrite(registryPath);
+  } catch (error2) {
+    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
+    throw error2;
+  }
   if (!await pathExists5(registryPath)) {
     await fs7.rename(tempPath, registryPath);
     return;
@@ -29582,20 +29583,85 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   }
   await fs7.rm(backupPath, { force: true }).catch(() => void 0);
 }
+function workspaceRegistryLockOwnerPath(lockPath) {
+  return path8.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+}
+function workspaceRegistryLockLeasePath(lockPath) {
+  return path8.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+}
+async function writeWorkspaceRegistryLockFile(filePath, contents) {
+  await fs7.writeFile(filePath, `${contents}
+`, "utf8");
+}
+async function readWorkspaceRegistryLockOwner(lockHandle) {
+  try {
+    return (await fs7.readFile(lockHandle.ownerPath, "utf8")).trim();
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function refreshWorkspaceRegistryLockLease(lockHandle) {
+  const ownerToken = await readWorkspaceRegistryLockOwner(lockHandle);
+  if (ownerToken !== lockHandle.token) {
+    return false;
+  }
+  await writeWorkspaceRegistryLockFile(lockHandle.leasePath, lockHandle.token);
+  return true;
+}
+async function getWorkspaceRegistryLockAgeMs(lockPath) {
+  const leasePath = workspaceRegistryLockLeasePath(lockPath);
+  try {
+    const stats = await fs7.stat(leasePath);
+    return Date.now() - stats.mtimeMs;
+  } catch (error2) {
+    if (error2.code !== "ENOENT") {
+      throw error2;
+    }
+  }
+  try {
+    const stats = await fs7.stat(lockPath);
+    return Date.now() - stats.mtimeMs;
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return null;
+    }
+    throw error2;
+  }
+}
+async function createWorkspaceRegistryLockHandle(lockPath) {
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const lockHandle = {
+    lockPath,
+    ownerPath: workspaceRegistryLockOwnerPath(lockPath),
+    leasePath: workspaceRegistryLockLeasePath(lockPath),
+    token
+  };
+  try {
+    await writeWorkspaceRegistryLockFile(lockHandle.ownerPath, token);
+    await writeWorkspaceRegistryLockFile(lockHandle.leasePath, token);
+  } catch (error2) {
+    await fs7.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    throw error2;
+  }
+  return lockHandle;
+}
 async function acquireWorkspaceRegistryLock(lockPath) {
   await fs7.mkdir(path8.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
       await fs7.mkdir(lockPath);
-      return;
+      return createWorkspaceRegistryLockHandle(lockPath);
     } catch (error2) {
       const lockError = error2;
       if (lockError.code !== "EEXIST") {
         throw error2;
       }
       try {
-        const stats = await fs7.stat(lockPath);
-        if (Date.now() - stats.mtimeMs > WORKSPACE_REGISTRY_LOCK_STALE_MS) {
+        const ageMs = await getWorkspaceRegistryLockAgeMs(lockPath);
+        if (ageMs !== null && ageMs > workspaceRegistryLockStaleMs()) {
           await fs7.rm(lockPath, { recursive: true, force: true });
           continue;
         }
@@ -29604,17 +29670,41 @@ async function acquireWorkspaceRegistryLock(lockPath) {
           continue;
         }
       }
-      await new Promise((resolve) => setTimeout(resolve, WORKSPACE_REGISTRY_LOCK_RETRY_MS));
+      await new Promise((resolve) => setTimeout(resolve, workspaceRegistryLockRetryMs()));
     }
   }
 }
+function startWorkspaceRegistryLockHeartbeat(lockHandle) {
+  const timer = setInterval(() => {
+    void refreshWorkspaceRegistryLockLease(lockHandle).then((refreshed) => {
+      if (!refreshed) {
+        clearInterval(timer);
+      }
+    }).catch(() => {
+      clearInterval(timer);
+    });
+  }, workspaceRegistryLockHeartbeatMs());
+  timer.unref?.();
+  return () => {
+    clearInterval(timer);
+  };
+}
+async function releaseWorkspaceRegistryLock(lockHandle) {
+  const ownerToken = await readWorkspaceRegistryLockOwner(lockHandle);
+  if (ownerToken !== lockHandle.token) {
+    return;
+  }
+  await fs7.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
+}
 async function withWorkspaceRegistryLock(registryPath, callback) {
   const lockPath = `${registryPath}.lock`;
-  await acquireWorkspaceRegistryLock(lockPath);
+  const lockHandle = await acquireWorkspaceRegistryLock(lockPath);
+  const stopHeartbeat = startWorkspaceRegistryLockHeartbeat(lockHandle);
   try {
     return await callback();
   } finally {
-    await fs7.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    stopHeartbeat();
+    await releaseWorkspaceRegistryLock(lockHandle);
   }
 }
 function normalizePatchId(value) {
@@ -29946,6 +30036,10 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
     throw new Error(`Workspace path already exists: ${workspacePath}`);
   }
 }
+function resolveWorkspaceTargetPath(value, cwd) {
+  assertNoNullBytes(value, "Workspace path");
+  return path8.resolve(cwd ?? process.cwd(), expandHomePath2(value));
+}
 function buildWorkspaceManifestPath(workspacePath) {
   return path8.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
@@ -30099,6 +30193,242 @@ async function rollbackCreatedMembers(createdMembers) {
     await fs7.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
+function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
+  const nameMatches = workspaces.filter((workspace) => workspace.name === name);
+  if (nameMatches.length === 0) {
+    throw new Error(`Workspace not found in the host-global registry: ${name}`);
+  }
+  if (workspacePath) {
+    const exactMatches = nameMatches.filter(
+      (workspace) => path8.resolve(workspace.path) === workspacePath
+    );
+    if (exactMatches.length > 1) {
+      throw new Error(
+        `Workspace registry drift detected for ${name}; multiple entries share the confirmed path ${workspacePath}. Repair the host-global registry before removal.`
+      );
+    }
+    if (exactMatches.length === 1) {
+      return exactMatches[0];
+    }
+    if (exactMatches.length === 0) {
+      throw new Error(
+        `Workspace registry drift detected for ${name}; the confirmed path no longer matches the host-global registry: ${workspacePath}`
+      );
+    }
+  }
+  if (nameMatches.length > 1) {
+    throw new Error(
+      `Workspace path ambiguity detected for ${name}; rerun removal with the exact confirmed workspace path.`
+    );
+  }
+  return nameMatches[0];
+}
+async function ensurePathRemoved(targetPath, label) {
+  if (await pathExists5(targetPath)) {
+    throw new Error(`${label} still exists after removal: ${targetPath}`);
+  }
+}
+function workspaceEntriesMatch(registryEntry, manifestEntry) {
+  if (registryEntry.name !== manifestEntry.name || path8.resolve(registryEntry.path) !== path8.resolve(manifestEntry.path) || path8.resolve(registryEntry.manifestPath) !== path8.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+    return false;
+  }
+  return registryEntry.repos.every((member, index) => {
+    const manifestMember = manifestEntry.repos[index];
+    return manifestMember !== void 0 && member.name === manifestMember.name && path8.resolve(member.sourcePath) === path8.resolve(manifestMember.sourcePath) && path8.resolve(member.path) === path8.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+  });
+}
+async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
+  try {
+    const raw = await fs7.readFile(manifestPath, "utf8");
+    const parsed = safeJsonParseObject(raw, {
+      label: manifestPath
+    });
+    return normalizeRegistryEntry(parsed);
+  } catch (error2) {
+    const reason = error2 instanceof Error ? error2.message : "manifest is unreadable";
+    throw new Error(
+      `Workspace registry drift detected for ${workspaceName}; manifest is missing or malformed at ${manifestPath}. Repair ${registryPath} before removal. ${reason}`
+    );
+  }
+}
+async function verifyWorkspaceRemovalEntry(entry, registryPath) {
+  const workspacePath = path8.resolve(entry.path);
+  const manifestPath = path8.resolve(entry.manifestPath);
+  const expectedManifestPath = path8.resolve(buildWorkspaceManifestPath(workspacePath));
+  assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
+  if (manifestPath !== expectedManifestPath) {
+    throw new Error(
+      `Workspace registry drift detected for ${entry.name}; manifest path no longer matches the workspace root. Repair ${registryPath} before removal.`
+    );
+  }
+  if (!await pathExists5(workspacePath)) {
+    throw new Error(
+      `Workspace registry drift detected for ${entry.name}; workspace path is missing on disk: ${workspacePath}`
+    );
+  }
+  if (!await pathExists5(manifestPath)) {
+    throw new Error(
+      `Workspace registry drift detected for ${entry.name}; workspace manifest is missing on disk: ${manifestPath}`
+    );
+  }
+  const manifestEntry = await readWorkspaceManifestEntry(manifestPath, entry.name, registryPath);
+  if (!workspaceEntriesMatch(entry, manifestEntry)) {
+    throw new Error(
+      `Workspace registry drift detected for ${entry.name}; registry and manifest no longer match. Repair ${registryPath} before removal.`
+    );
+  }
+  for (const member of entry.repos) {
+    const memberPath = path8.resolve(member.path);
+    ensurePathWithinRootSync(workspacePath, memberPath, {
+      label: "Workspace repo member"
+    });
+    if (!await pathExists5(memberPath)) {
+      throw new Error(
+        `Workspace registry drift detected for ${entry.name}; recorded repo member is missing on disk: ${memberPath}`
+      );
+    }
+    try {
+      await resolveGitRepoRoot(memberPath);
+    } catch {
+      throw new Error(
+        `Workspace registry drift detected for ${entry.name}; recorded repo member is not a valid git repository: ${memberPath}`
+      );
+    }
+    if (!await gitWorkingTreeClean(memberPath)) {
+      throw new Error(
+        `Workspace repo member has uncommitted changes and must be clean before removal: ${memberPath}`
+      );
+    }
+    if (member.strategy === "worktree") {
+      assertNotInstalledExtensionPath(member.sourcePath, "Workspace worktree source repo");
+      let sourceRepoRoot;
+      try {
+        sourceRepoRoot = await resolveGitRepoRoot(member.sourcePath);
+      } catch {
+        throw new Error(
+          `Workspace registry drift detected for ${entry.name}; recorded worktree source repo is missing or invalid: ${member.sourcePath}`
+        );
+      }
+      const registeredWorktreePaths = await listGitWorktreePaths(sourceRepoRoot);
+      const recordedMemberPath = await canonicalizePath(memberPath);
+      if (!registeredWorktreePaths.includes(recordedMemberPath)) {
+        throw new Error(
+          `Workspace registry drift detected for ${entry.name}; recorded worktree repo member is no longer registered with its source repo: ${memberPath}. Repair ${registryPath} before removal.`
+        );
+      }
+    }
+  }
+}
+async function removeWorkspaceMember(member) {
+  if (member.strategy === "worktree") {
+    const removal = await runGit2(
+      ["-C", member.sourcePath, "worktree", "remove", member.path],
+      {
+        allowFailure: true
+      }
+    );
+    if (!removal.success) {
+      throw new Error(
+        `Unable to remove recorded worktree ${member.path} from ${member.sourcePath}: ${removal.stderr || removal.stdout || "git worktree remove failed"}`
+      );
+    }
+  }
+  await fs7.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+  await ensurePathRemoved(member.path, "Workspace repo member");
+}
+async function listGitWorktreePaths(repoPath) {
+  const result = await runGit2(["-C", repoPath, "worktree", "list", "--porcelain"], {
+    allowFailure: true
+  });
+  if (!result.success) {
+    throw new Error(
+      `Unable to inspect recorded worktrees for workspace source repo: ${repoPath}`
+    );
+  }
+  const recordedPaths = result.stdout.split("\n").filter((line) => line.startsWith("worktree ")).map((line) => line.slice("worktree ".length).trim());
+  return Promise.all(recordedPaths.map((recordedPath) => canonicalizePath(recordedPath)));
+}
+function workspaceRemovalRollbackPath(workspacePath) {
+  return `${workspacePath}.remove-rollback-${process.pid}-${Date.now()}`;
+}
+async function captureWorkspaceRemovalWorktreeSnapshot(member) {
+  return {
+    member,
+    branch: await gitCurrentBranch(member.path),
+    head: await gitHeadSha(member.path)
+  };
+}
+async function restoreWorkspaceRemovalWorktree(snapshot) {
+  if (await pathExists5(snapshot.member.path)) {
+    return;
+  }
+  const sourceRepoRoot = await resolveGitRepoRoot(snapshot.member.sourcePath);
+  if (snapshot.branch) {
+    const branchExists = await localBranchExists(sourceRepoRoot, snapshot.branch);
+    if (!branchExists) {
+      throw new Error(
+        `Unable to restore recorded worktree ${snapshot.member.path}; branch ${snapshot.branch} no longer exists in ${sourceRepoRoot}.`
+      );
+    }
+    await runGit2([
+      "-C",
+      sourceRepoRoot,
+      "worktree",
+      "add",
+      snapshot.member.path,
+      snapshot.branch
+    ]);
+  } else {
+    await runGit2([
+      "-C",
+      sourceRepoRoot,
+      "worktree",
+      "add",
+      "--detach",
+      snapshot.member.path,
+      snapshot.head
+    ]);
+  }
+  const restoredHead = await gitHeadSha(snapshot.member.path);
+  if (restoredHead !== snapshot.head) {
+    throw new Error(
+      `Unable to restore recorded worktree ${snapshot.member.path}; expected HEAD ${snapshot.head}, found ${restoredHead}.`
+    );
+  }
+}
+async function rollbackWorkspaceRemoval({
+  entry,
+  rollbackWorkspacePath,
+  registryPath,
+  registryDocument,
+  worktreeSnapshots
+}) {
+  const rollbackErrors = [];
+  if (rollbackWorkspacePath && await pathExists5(rollbackWorkspacePath) && !await pathExists5(entry.path)) {
+    await fs7.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
+      const reason = error2 instanceof Error ? error2.message : String(error2);
+      rollbackErrors.push(
+        `unable to restore workspace root ${entry.path} from ${rollbackWorkspacePath}: ${reason}`
+      );
+    });
+  }
+  for (const snapshot of worktreeSnapshots) {
+    try {
+      await restoreWorkspaceRemovalWorktree(snapshot);
+    } catch (error2) {
+      rollbackErrors.push(error2 instanceof Error ? error2.message : String(error2));
+    }
+  }
+  try {
+    await writeWorkspaceRegistryDocument(registryPath, registryDocument);
+  } catch (error2) {
+    const reason = error2 instanceof Error ? error2.message : String(error2);
+    rollbackErrors.push(`unable to restore workspace registry ${registryPath}: ${reason}`);
+  }
+  if (rollbackErrors.length > 0) {
+    throw new Error(rollbackErrors.join(" "));
+  }
+}
 async function blueprintWorkspaceRegistryGet(_args = {}) {
   const registryPath = expandHomePath2(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
@@ -30185,6 +30515,68 @@ async function blueprintWorkspaceCreate(args) {
       if (error2 instanceof Error) {
         throw error2;
       }
+      throw error2;
+    }
+  });
+}
+async function blueprintWorkspaceRemove(args) {
+  const normalizedName = normalizeWorkspaceName(args.name);
+  const requestedWorkspacePath = args.path ? resolveWorkspaceTargetPath(args.path, args.cwd) : null;
+  const registryPath = expandHomePath2(
+    resolveBlueprintRuntimeHost().workspaceRegistryPath
+  );
+  return withWorkspaceRegistryLock(registryPath, async () => {
+    const registry2 = await readWorkspaceRegistryDocument(registryPath);
+    const entry = resolveWorkspaceRemovalEntry(
+      registry2.workspaces,
+      normalizedName,
+      requestedWorkspacePath
+    );
+    const nextRegistryDocument = {
+      version: registry2.version,
+      workspaces: registry2.workspaces.filter((workspace) => workspace !== entry)
+    };
+    await verifyWorkspaceRemovalEntry(entry, registryPath);
+    const worktreeSnapshots = await Promise.all(
+      entry.repos.filter((member) => member.strategy === "worktree").map((member) => captureWorkspaceRemovalWorktreeSnapshot(member))
+    );
+    let rollbackWorkspacePath = null;
+    try {
+      for (const member of [...entry.repos].reverse()) {
+        if (member.strategy !== "worktree") {
+          continue;
+        }
+        await removeWorkspaceMember(member);
+      }
+      rollbackWorkspacePath = workspaceRemovalRollbackPath(entry.path);
+      await fs7.rename(entry.path, rollbackWorkspacePath);
+      await maybeDelayWorkspaceRemoveForTest();
+      await ensurePathRemoved(entry.path, "Workspace root");
+      await writeWorkspaceRegistryDocument(registryPath, nextRegistryDocument);
+      await fs7.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
+      await ensurePathRemoved(rollbackWorkspacePath, "Workspace removal rollback root");
+      return {
+        removedPath: entry.path,
+        manifestPath: entry.manifestPath,
+        registryPath,
+        removedEntry: entry,
+        removedMembers: entry.repos,
+        skippedMembers: []
+      };
+    } catch (error2) {
+      await rollbackWorkspaceRemoval({
+        entry,
+        rollbackWorkspacePath,
+        registryPath,
+        registryDocument: registry2,
+        worktreeSnapshots
+      }).catch((rollbackError) => {
+        const originalMessage = error2 instanceof Error ? error2.message : String(error2);
+        const rollbackMessage = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+        throw new Error(
+          `Workspace removal failed for ${entry.name}: ${originalMessage}. Rollback also failed: ${rollbackMessage}`
+        );
+      });
       throw error2;
     }
   });
@@ -30676,7 +31068,7 @@ async function blueprintPatchReapply(args = {}) {
     targetHead
   };
 }
-var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
+var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
@@ -30696,6 +31088,8 @@ var init_workspace = __esm({
     PATCH_OUTCOMES = ["recorded", "applied", "conflict", "blocked"];
     WORKSPACE_REGISTRY_LOCK_RETRY_MS = 50;
     WORKSPACE_REGISTRY_LOCK_STALE_MS = 6e4;
+    WORKSPACE_REGISTRY_LOCK_OWNER_FILE = "owner";
+    WORKSPACE_REGISTRY_LOCK_LEASE_FILE = "lease";
     WORKSTREAMS_ROOT_PATH = `${BLUEPRINT_DIR}/workstreams`;
     WORKSTREAMS_INDEX_PATH = `${WORKSTREAMS_ROOT_PATH}/WORKSTREAMS.md`;
     WORKSTREAM_STATE_FILENAME = "state.json";
@@ -30714,6 +31108,11 @@ var init_workspace = __esm({
       path: string2().trim().min(1).optional(),
       strategy: _enum(WORKSPACE_STRATEGIES).optional(),
       branch: string2().trim().min(1).optional()
+    };
+    workspaceRemoveInputSchema = {
+      cwd: string2().optional(),
+      name: string2().trim().min(1),
+      path: string2().trim().min(1).optional()
     };
     workstreamListInputSchema = {
       cwd: string2().optional()
@@ -30765,6 +31164,12 @@ var init_workspace = __esm({
         description: "Create a Blueprint workspace on disk and record it in the host-global registry transactionally.",
         inputSchema: workspaceCreateInputSchema,
         handler: async (args) => blueprintWorkspaceCreate(args)
+      },
+      {
+        name: "blueprint_workspace_remove",
+        description: "Remove a Blueprint workspace after exact registry verification, clean-repo preflight checks, and safe worktree or clone teardown.",
+        inputSchema: workspaceRemoveInputSchema,
+        handler: async (args) => blueprintWorkspaceRemove(args)
       },
       {
         name: "blueprint_workstream_list",
@@ -41856,6 +42261,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_review_record",
   "blueprint_update_plan",
   "blueprint_workspace_create",
+  "blueprint_workspace_remove",
   "blueprint_workstream_mutate",
   "blueprint_patch_record",
   "blueprint_patch_reapply"

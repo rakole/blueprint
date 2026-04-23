@@ -6,12 +6,11 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 2
+Total: 1
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
 | 1 | `do` | ❌ | `blocked` | 3 | `Capture And Lightweight Execution` | Low |
-| 2 | `remove-workspace` | ❌ | `planned` | 5 | `Workspace And Maintenance` | High |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -19,7 +18,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `remove-workspace` | none | none | `update`, `reapply-patches`, `new-workspace`, `workstreams`, `undo`, and `cleanup` are now shipped; the remaining maintenance work is the deferred workspace-removal surface. |
+| 1 | `—` | `—` | `—` | The Wave 5 workspace and maintenance slice is now shipped; only `do` remains blocked and unschedulable until the freeform routing runtime substrate exists. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
@@ -29,7 +28,7 @@ Blocked commands (not schedulable until substrate/status changes):
 
 ## Completed Commands (Bubbled Down)
 
-Total: 51
+Total: 52
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -80,7 +79,8 @@ Total: 51
 | 45 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 46 | `undo` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 47 | `new-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 48 | `workstreams` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Medium |
-| 49 | `update` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Low |
-| 50 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 51 | `reapply-patches` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 48 | `remove-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 49 | `workstreams` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Medium |
+| 50 | `update` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Low |
+| 51 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 52 | `reapply-patches` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |

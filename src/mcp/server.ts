@@ -76,6 +76,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_review_record",
   "blueprint_update_plan",
   "blueprint_workspace_create",
+  "blueprint_workspace_remove",
   "blueprint_workstream_mutate",
   "blueprint_patch_record",
   "blueprint_patch_reapply"
