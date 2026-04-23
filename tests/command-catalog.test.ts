@@ -75,6 +75,7 @@ const IMPLEMENTED_COMMANDS = [
 
 const PLANNED_COMMANDS = ["do"] as const;
 const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.toml";
+const RUNTIME_CONTRACT_EXCLUDED_COMMANDS = new Set(["review"]);
 
 async function pathExists(relativePath: string): Promise<boolean> {
   try {
@@ -185,10 +186,22 @@ test("runtime command catalog marks shipped commands as implemented once manifes
 test("command runtime contract resource stays anchored to live catalog, command spec, and runtime reference truth", async () => {
   const catalog = await blueprintCommandCatalog();
   const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+  const expectedAdvertisedCommands = Object.entries(catalog.commands)
+    .filter(
+      ([commandName, entry]) =>
+        entry.status === "implemented" &&
+        entry.implemented === true &&
+        !RUNTIME_CONTRACT_EXCLUDED_COMMANDS.has(commandName)
+    )
+    .map(([commandName]) => commandName)
+    .sort();
   const contract = await buildBlueprintCommandRuntimeContractResource("help");
   const entry = catalog.commands.help;
 
+  assert.deepEqual(advertisedCommands, expectedAdvertisedCommands);
   assert.ok(advertisedCommands.includes("help"));
+  assert.ok(!advertisedCommands.includes("do"));
+  assert.ok(!advertisedCommands.includes("review"));
 
   for (const commandName of advertisedCommands) {
     const advertisedContract = await buildBlueprintCommandRuntimeContractResource(
@@ -196,7 +209,11 @@ test("command runtime contract resource stays anchored to live catalog, command 
     );
     const advertisedEntry = catalog.commands[commandName];
 
+    assert.equal(advertisedEntry.status, "implemented");
+    assert.equal(advertisedEntry.implemented, true);
     assert.deepEqual(advertisedContract.catalog, advertisedEntry);
+    assert.equal(advertisedContract.catalog.status, "implemented");
+    assert.equal(advertisedContract.catalog.implemented, true);
     assert.ok(advertisedContract.spec);
     assert.equal(advertisedContract.spec.path, advertisedEntry.specPath);
     assert.ok(advertisedContract.runtimeReference);
@@ -210,6 +227,8 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.equal(contract.command, "help");
   assert.equal(contract.uri, "blueprint://commands/help/runtime-contract");
   assert.deepEqual(contract.catalog, entry);
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(contract.catalog.implemented, true);
 
   assert.ok(contract.spec);
   assert.equal(contract.spec.path, "docs/commands/help.md");
@@ -242,7 +261,12 @@ test("command runtime contract resource stays anchored to live catalog, command 
 
   await assert.rejects(
     buildBlueprintCommandRuntimeContractResource("review"),
-    /Missing runtime reference row for Blueprint command: review/
+    /Blueprint runtime-contract resources intentionally exclude this command today: review/
+  );
+
+  await assert.rejects(
+    buildBlueprintCommandRuntimeContractResource("do"),
+    /Blueprint runtime-contract resources are available only for implemented commands: do/
   );
 });
 

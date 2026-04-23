@@ -42081,6 +42081,16 @@ function buildCommandRuntimeContractUri(commandName) {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
 var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS = /* @__PURE__ */ new Set(["review"]);
+var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_DESCRIPTION = "Read-only projection of one implemented Blueprint command's catalog metadata, command spec, and runtime-reference row; `review` is intentionally excluded.";
+function buildNonImplementedRuntimeContractErrorMessage(commandName) {
+  return `Blueprint runtime-contract resources are available only for implemented commands: ${commandName}`;
+}
+function buildExcludedRuntimeContractErrorMessage(commandName) {
+  return `Blueprint runtime-contract resources intentionally exclude this command today: ${commandName}`;
+}
+function isExposedRuntimeContractCatalogEntry(entry) {
+  return entry.status === "implemented" && entry.implemented;
+}
 async function readBlueprintRuntimeReferenceRows() {
   const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
   return runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
@@ -42103,6 +42113,9 @@ async function listBlueprintCommandRuntimeContractCommands() {
       if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
         return null;
       }
+      if (!isExposedRuntimeContractCatalogEntry(entry)) {
+        return null;
+      }
       const spec = await readBundledCommandSpec(entry);
       return spec && runtimeReferenceRows.has(commandName) ? commandName : null;
     })
@@ -42116,7 +42129,10 @@ async function buildBlueprintCommandRuntimeContractResource(commandName) {
     throw new Error(`Unknown Blueprint command: ${commandName}`);
   }
   if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
-    throw new Error(`Missing runtime reference row for Blueprint command: ${commandName}`);
+    throw new Error(buildExcludedRuntimeContractErrorMessage(commandName));
+  }
+  if (!isExposedRuntimeContractCatalogEntry(entry)) {
+    throw new Error(buildNonImplementedRuntimeContractErrorMessage(commandName));
   }
   const [spec, runtimeReferenceRows] = await Promise.all([
     readBundledCommandSpec(entry),
@@ -42173,7 +42189,7 @@ function registerBlueprintCommandResources(server) {
             uri: buildCommandRuntimeContractUri(command),
             name: `blueprint-${command}-runtime-contract`,
             title: `${command} runtime contract`,
-            description: "Read-only projection of one Blueprint command's catalog metadata, command spec, and runtime-reference row.",
+            description: BLUEPRINT_COMMAND_RUNTIME_CONTRACT_DESCRIPTION,
             mimeType: "application/json"
           }))
         };
@@ -42187,7 +42203,7 @@ function registerBlueprintCommandResources(server) {
     }),
     {
       title: "Blueprint Command Runtime Contract",
-      description: "Read-only projection of one Blueprint command's catalog metadata, command spec, and runtime-reference row.",
+      description: BLUEPRINT_COMMAND_RUNTIME_CONTRACT_DESCRIPTION,
       mimeType: "application/json"
     },
     async (uri, variables) => {

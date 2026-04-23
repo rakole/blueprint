@@ -114,23 +114,23 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 These tool names are part of the documented future contract for later planned commands, but no additional Wave 5 workspace or advisory-update tool families remain outside the live runtime.
 
-## Planned Read-Only MCP Resource Surface
+## Read-Only MCP Resource Contract
 
-These Blueprint MCP resources are part of the documented future contract for read-heavy grounding, but they are not registered today. `S8.4` through `S8.7` still own implementation and adoption. Until then, commands must keep using the existing local docs plus read-oriented MCP tools directly.
+Blueprint now exposes the live read-only command resources and keeps the remaining resource contract documented for later grounding surfaces. `blueprint://commands/catalog` is live today. `blueprint://commands/<command>/runtime-contract` is also live today, but only for commands whose catalog entry is `implemented`; `review` remains an explicit current exception and is not exposed on that path. The phase, codebase, and reports resource views below are still planned, so commands must keep using the existing local docs plus read-oriented MCP tools directly when a resource is unavailable.
 
 Blueprint resources are read-only discovery surfaces. They do not accept write inputs, they do not become a second persistence layer, and they must not move writes off the existing MCP tool surface.
 
-| Resource URI | Purpose | Backing truth | Write policy | Fallback before registration |
+| Resource URI | Purpose | Backing truth | Write policy | Fallback when unavailable |
 |---|---|---|---|---|
-| `blueprint://commands/catalog` | Read the retained runtime command catalog as one resource view | live `blueprint_command_catalog` truth | read-only; never a write target | call `blueprint_command_catalog` directly |
-| `blueprint://commands/<command>/runtime-contract` | Read the runtime contract for one retained command | live command-catalog metadata plus the locked command spec and runtime-reference row for that command | read-only; never a write target | read the command spec, runtime reference, and current tool docs directly |
+| `blueprint://commands/catalog` | Read the retained runtime command catalog as one resource view | live `blueprint_command_catalog` truth | read-only; never a write target | call `blueprint_command_catalog` directly if the resource is unavailable |
+| `blueprint://commands/<command>/runtime-contract` | Read the runtime contract for one retained implemented command; `review` is the current explicit exception | live command-catalog metadata plus the locked command spec and runtime-reference row for that implemented command | read-only; never a write target | read the command spec, runtime reference, and current tool docs directly when the resource is unavailable or intentionally excluded |
 | `blueprint://phases/<phase>/bundle` | Read a phase-grounding bundle for discovery-style workflows | saved `.blueprint/` core docs plus the resolved phase artifact set | read-only; never a write target | use `blueprint_phase_context`, artifact reads, roadmap/state reads, and local docs directly |
 | `blueprint://codebase/bundle` | Read the saved seven-document codebase mapping bundle as one resource view | `.blueprint/codebase/*.md` plus existing artifact-contract truth | read-only; never a write target | use `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and local files directly |
 | `blueprint://reports/latest` | Read the latest-report index for durable Blueprint reports | `.blueprint/reports/` inventory and existing report metadata | read-only; never a write target | use `blueprint_artifact_list` and direct report reads |
 
 Resource-adoption guardrails:
 
-- Prefer `list_mcp_resources` and `read_mcp_resource` only after the matching Blueprint resources exist.
+- Prefer `list_mcp_resources` and `read_mcp_resource` for the live command resources today, and for the remaining resource views only after those resources exist.
 - Router, progress, and discovery-style reads may adopt these resources later, but implemented-only command exposure must stay unchanged.
 - Resource views must mirror existing command/tool truth; they do not get to invent new routing, status, or persistence semantics.
 

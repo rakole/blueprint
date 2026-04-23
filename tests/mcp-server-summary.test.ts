@@ -165,6 +165,30 @@ test("server exposes read-only command resources without changing tool summaries
           resourceTemplate.uriTemplate === BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE
       )
     );
+    const runtimeContractTemplate = templates.resourceTemplates.find(
+      (resourceTemplate) =>
+        resourceTemplate.uriTemplate === BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE
+    );
+    const helpRuntimeContractResource = resources.resources.find(
+      (resource) => resource.uri === "blueprint://commands/help/runtime-contract"
+    );
+
+    assert.match(
+      runtimeContractTemplate?.description ?? "",
+      /implemented Blueprint command/i
+    );
+    assert.match(
+      runtimeContractTemplate?.description ?? "",
+      /review.*excluded|excluded.*review/i
+    );
+    assert.match(
+      helpRuntimeContractResource?.description ?? "",
+      /implemented Blueprint command/i
+    );
+    assert.match(
+      helpRuntimeContractResource?.description ?? "",
+      /review.*excluded|excluded.*review/i
+    );
 
     const runtimeContractResources = resources.resources
       .map((resource) => resource.uri)
@@ -176,10 +200,30 @@ test("server exposes read-only command resources without changing tool summaries
       [...expectedRuntimeContractUris].sort((left, right) => left.localeCompare(right))
     );
     assert.ok(runtimeContractResources.includes("blueprint://commands/help/runtime-contract"));
+    assert.ok(!runtimeContractResources.includes("blueprint://commands/do/runtime-contract"));
+    assert.ok(!runtimeContractResources.includes("blueprint://commands/review/runtime-contract"));
 
     const catalogPayload = JSON.parse(catalogRead.contents[0].text);
     assert.equal(catalogPayload.commands.help.status, "implemented");
     assert.equal(catalogPayload.commands.help.implemented, true);
+
+    const helpContractRead = await client.readResource({
+      uri: "blueprint://commands/help/runtime-contract"
+    });
+    const helpContractPayload = JSON.parse(helpContractRead.contents[0].text);
+
+    assert.equal(helpContractPayload.command, "help");
+    assert.equal(helpContractPayload.catalog.status, "implemented");
+    assert.equal(helpContractPayload.catalog.implemented, true);
+
+    await assert.rejects(
+      client.readResource({ uri: "blueprint://commands/do/runtime-contract" }),
+      /Blueprint runtime-contract resources are available only for implemented commands: do/
+    );
+    await assert.rejects(
+      client.readResource({ uri: "blueprint://commands/review/runtime-contract" }),
+      /Blueprint runtime-contract resources intentionally exclude this command today: review/
+    );
 
     const contractReads = await Promise.all(
       runtimeContractResources.map((uri) => client.readResource({ uri }))
@@ -192,6 +236,8 @@ test("server exposes read-only command resources without changing tool summaries
         contractPayload.uri,
         `blueprint://commands/${encodeURIComponent(contractPayload.command)}/runtime-contract`
       );
+      assert.equal(contractPayload.catalog.status, "implemented");
+      assert.equal(contractPayload.catalog.implemented, true);
       assert.ok(contractPayload.spec);
       assert.equal(contractPayload.spec.path, contractPayload.catalog.specPath);
       assert.ok(contractPayload.runtimeReference);
