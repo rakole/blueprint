@@ -249,6 +249,33 @@ test("workstream list reports corrupt-workstream-index when WORKSTREAMS.md drift
   assert.match(listed.reason ?? "", /stale|corrupt/i);
 });
 
+test("workstream list reports corrupt-workstream-index when canonical state.json has malformed timestamps", async (t) => {
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "blueprint-workstreams-corrupt-timestamps-")
+  );
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+
+  const statePath = path.join(repoPath, ".blueprint/workstreams/alpha-stream/state.json");
+  const stateDocument = JSON.parse(await fs.readFile(statePath, "utf8")) as Record<string, unknown>;
+  stateDocument.completedAt = 123;
+  await fs.writeFile(statePath, `${JSON.stringify(stateDocument, null, 2)}\n`, "utf8");
+
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(listed.status, "invalid");
+  assert.equal(listed.waitingState, "corrupt-workstream-index");
+  assert.match(listed.reason ?? "", /malformed timestamps|stale|corrupt/i);
+});
+
 test("failed workstream writes roll back newly created directories before the store is reloaded", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workstreams-rollback-"));
   t.after(async () => {
