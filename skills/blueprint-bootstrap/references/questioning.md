@@ -145,6 +145,19 @@ exploring.
 If the user wants to keep exploring, probe the missing edge or uncertainty
 instead of repeating the whole questioning cycle.
 
+## Discovery Boundaries
+
+Keep the questioning loop in service of authored bootstrap quality.
+
+- Gather enough signal to classify the repo as greenfield, scaffold-only, or
+  brownfield before the first write.
+- Gather enough signal to explain whether the first roadmap is
+  greenfield-ready or brownfield-provisional.
+- Surface workflow preferences only when they materially affect bootstrap
+  quality; do not turn the conversation into a settings form too early.
+- Hand off detailed persistence, validation, revision-loop, and routing rules
+  to `bootstrap-runtime-contract.md` instead of re-explaining them ad hoc.
+
 ## Anti-Patterns
 
 - checklist walking regardless of what the user said

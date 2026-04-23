@@ -493,10 +493,15 @@ test("new-project runtime summaries surface the live next action for fresh and b
 });
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {
-  const [commandFile, commandDoc, runtimeReference] = await Promise.all([
+  const [commandFile, commandDoc, runtimeReference, skillFile, contractRef] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
     readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"),
+      "utf8"
+    )
   ]);
   const requiredTools = [
     "blueprint_project_init",
@@ -520,11 +525,12 @@ test("command contract references the same Phase 1 tool names as the MCP server"
   assert.match(commandFile, /mcp_blueprint_blueprint_project_init/);
   assert.match(commandFile, /Blueprint MCP server is disconnected or undiscovered/i);
   assert.match(commandFile, /Never try to invoke Blueprint MCP tools through shell commands/i);
-  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(commandDoc, /## Shared Runtime Contract/);
   assert.match(commandDoc, /resolved scope:/i);
   assert.match(commandDoc, /next safe action:/i);
+  assert.match(skillFile, /Execution profile: `long-running-mutation`/);
+  assert.match(contractRef, /Execution profile: `long-running-mutation`/);
   assert.match(runtimeReference, /Long-running-mutation profile for Gemini-native bootstrap/i);
 });
 

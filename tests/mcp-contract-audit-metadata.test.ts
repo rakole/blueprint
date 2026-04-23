@@ -516,7 +516,9 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
     newProjectCommand,
     newProjectDoc,
     governanceSkill,
-    bootstrapSkill
+    bootstrapSkill,
+    bootstrapContract,
+    bootstrapGuardrails
   ] = await Promise.all([
     readRepoFile("commands/blu-settings.toml"),
     readRepoFile("docs/commands/settings.md"),
@@ -527,7 +529,9 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
     readRepoFile("commands/blu-new-project.toml"),
     readRepoFile("docs/commands/new-project.md"),
     readRepoFile("skills/blueprint-governance/SKILL.md"),
-    readRepoFile("skills/blueprint-bootstrap/SKILL.md")
+    readRepoFile("skills/blueprint-bootstrap/SKILL.md"),
+    readRepoFile("skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"),
+    readRepoFile("skills/blueprint-bootstrap/references/runtime-guardrails.md")
   ]);
 
   assert.match(settingsCommand, /Pass a JSON-object `patch` only/i);
@@ -543,12 +547,21 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
   assert.match(pauseDoc, /## Pause Handoff Contract/);
   assert.match(governanceSkill, /`blueprint_pause_handoff_write`: `currentState` is required/i);
 
-  assert.match(newProjectCommand, /returned `createdPaths`, `configPath`, and `nextAction` as authoritative/i);
-  assert.match(newProjectCommand, /supported repo-relative Blueprint artifact paths/i);
-  assert.match(newProjectCommand, /Pass a JSON-object `patch` only/i);
+  assert.match(newProjectCommand, /thin command envelope/i);
+  assert.match(newProjectCommand, /references\/bootstrap-runtime-contract\.md/);
+  assert.match(newProjectCommand, /references\/runtime-guardrails\.md/);
+  assert.match(newProjectCommand, /Do not require `docs\/commands\/new-project\.md`/i);
   assert.match(newProjectDoc, /## Bootstrap Contract/);
+  assert.match(newProjectDoc, /## Runtime Packaging/);
   assert.match(newProjectDoc, /Treat scaffold output as seeding, not final authored persistence/i);
   assert.match(bootstrapSkill, /first persistent bootstrap write/i);
+  assert.match(bootstrapContract, /`bootstrapSeed`/);
+  assert.match(bootstrapContract, /returned `createdPaths`, `configPath`, and `nextAction` as authoritative/i);
+  assert.match(bootstrapContract, /`overwrite: true`/i);
+  assert.match(bootstrapContract, /supported repo-relative Blueprint artifact paths/i);
+  assert.match(bootstrapContract, /JSON-object `patch`/i);
+  assert.match(bootstrapContract, /written bootstrap artifacts/i);
+  assert.match(bootstrapGuardrails, /host CLI slash command, not a shell executable/i);
 });
 
 test("report-backed and digest-backed commands stay explicit about repo-relative inputs and tool-owned paths", async () => {
