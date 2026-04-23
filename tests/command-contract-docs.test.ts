@@ -633,6 +633,31 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
   );
 });
 
+test("maintenance skill and workstreams docs keep the project-local workstream contract explicit", async () => {
+  const [workstreamsDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+    readRepoFile("docs/commands/workstreams.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md")
+  ]);
+
+  assert.match(workstreamsDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(workstreamsDoc, /`blueprint_workstream_list`/);
+  assert.match(workstreamsDoc, /`blueprint_workstream_mutate`/);
+  assert.match(workstreamsDoc, /`blueprint_state_update`/);
+  assert.match(workstreamsDoc, /`ask_user`/);
+  assert.match(workstreamsDoc, /workstream-switch-confirmation/);
+  assert.match(workstreamsDoc, /missing-resume-snapshot/);
+  assert.match(workstreamsDoc, /\.blueprint\/workstreams\/<slug>\/state\.json/);
+  assert.match(
+    mcpToolsDoc,
+    /`workstreams` uses `blueprint_workstream_list`, `blueprint_workstream_mutate`, and `blueprint_state_update`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `workstreams` \| `docs\/commands\/workstreams\.md` \| `blueprint-maintenance` \| `blueprint_workstream_list`<br>`blueprint_workstream_mutate`<br>`blueprint_state_update` \|/
+  );
+});
+
 test("maintenance skill and ship docs keep the shipping contract explicit", async () => {
   const [shipDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/ship.md"),

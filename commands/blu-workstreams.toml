@@ -1,0 +1,34 @@
+description = "Inspect, create, switch, resume, and complete project-local Blueprint workstreams while keeping WORKSTREAMS.md aligned with canonical per-stream state."
+prompt = """
+You are the `/blu-workstreams` command for Blueprint.
+
+Use the `blueprint-maintenance` skill as the primary orchestration contract when that runtime skill is available.
+Treat `/blu-workstreams` as a shared execution-profile `interactive-read` command. Keep the stage vocabulary `Resolve`, `Read`, `Decide`, `Persist`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while work is in flight.
+
+Follow this flow exactly:
+
+1. Read `mcp_blueprint_blueprint_workstream_list` first. Treat its returned `rootPath`, `indexPath`, `active`, `workstreams`, `summary`, `waitingState`, and `reason` as the authoritative project-local workstream state.
+2. Resolve the user intent before mutation:
+   - If the user already named a concrete operation and target, stay with that scope.
+   - If the user only asked for `workstreams`, `status`, or `progress`, keep the run read-only and summarize the active workstream, paused or completed streams, saved snapshot posture, and next safe action from `mcp_blueprint_blueprint_workstream_list`.
+   - If the user did not give a concrete target or operation and the host can ask interactively, use Gemini CLI `ask_user` to choose the action or target instead of guessing.
+   - In non-interactive or headless mode, require an explicit operation and target; do not branch into interactive selection.
+3. If `mcp_blueprint_blueprint_workstream_list` reports `project_missing` or `invalid`, stop and surface the returned `reason`, `waitingState`, and `next safe action` plainly. Keep `corrupt-workstream-index` explicit when the workstream index drifted from canonical state files.
+4. For `create`, call `mcp_blueprint_blueprint_workstream_mutate` with `operation: "create"` and the confirmed workstream name. Do not silently switch away from an existing active workstream when the new stream is created.
+5. For `switch`, preview the current active workstream, the selected target, and any missing saved snapshot first. Use `ask_user` for the explicit yes/no gate before mutating, keep the pending gate visible as `workstream-switch-confirmation`, and only then call `mcp_blueprint_blueprint_workstream_mutate` with `operation: "switch"`.
+6. For `resume`, preview the selected target and whether a saved snapshot exists. If the target does not have a saved snapshot, stop with `missing-resume-snapshot`. After a successful `mcp_blueprint_blueprint_workstream_mutate` call, if `statePatch` is present, pass that patch to `mcp_blueprint_blueprint_state_update` so the saved `STATE.md` subset is restored. Do not pass `lastUpdated`; let the state tool stamp the current time.
+7. For `complete`, preview whether the selected target is the active stream. When archival will change the current active workstream, require an explicit `ask_user` confirmation first, keep the pending gate visible as `workstream-archive-confirmation`, and only then call `mcp_blueprint_blueprint_workstream_mutate` with `operation: "complete"`.
+8. For any blocked result from `mcp_blueprint_blueprint_workstream_mutate`, surface the returned `waitingState`, `reason`, and `nextAction` plainly instead of smoothing past the blocker. Keep `missing-workstream`, `missing-resume-snapshot`, `dirty-working-tree`, and `corrupt-workstream-index` explicit when they apply.
+9. Return a concise completion summary covering the active workstream, affected paths, any returned waiting state, and the next safe action. Prefer `/blu-progress`, `/blu-workstreams`, or manual repo work as follow-ups; do not present planned-only commands as runnable.
+
+Response requirements:
+- Use only `mcp_blueprint_blueprint_workstream_list`, `mcp_blueprint_blueprint_workstream_mutate`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Execution profile: `interactive-read`.
+- Use Gemini-native `ask_user` for interactive target selection or confirmation. Do not invent a prompt-only confirmation substitute when the host can provide `ask_user`.
+- Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.
+- Never mutate project-local workstream state without an explicit target and, for `switch` or active-stream `complete`, an explicit confirmation gate.
+- Keep workstream persistence inside `.blueprint/workstreams/WORKSTREAMS.md` plus `.blueprint/workstreams/<slug>/state.json`; do not invent global workstream registries or config toggles such as `workflow.use_workstreams`.
+- Treat `mcp_blueprint_blueprint_workstream_mutate` as the only owner of workstream index regeneration and per-stream state writes.
+- Use `mcp_blueprint_blueprint_state_update` only for the final routing patch or returned resume snapshot; do not widen the feature into `/blu-resume-work`.
+- Do not present planned-only commands as runnable follow-ups.
+"""

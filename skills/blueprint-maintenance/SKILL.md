@@ -64,10 +64,15 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_project_status`
 - `blueprint_phase_locate`
 - `blueprint_config_get`
-- `blueprint_update_check`
-- `blueprint_update_plan`
 - `blueprint_workspace_registry_get`
 - `blueprint_workspace_create`
+- `blueprint_update_check`
+- `blueprint_update_plan`
+- `blueprint_workstream_list`
+- `blueprint_workstream_mutate`
+- `blueprint_patch_list`
+- `blueprint_patch_reapply`
+- `blueprint_patch_record`
 - `blueprint_roadmap_read`
 - `blueprint_artifact_list`
 - `blueprint_artifact_summary_digest`
@@ -85,6 +90,26 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 Shared rule for all maintenance flows:
 
 - run the same integrity preflight first: confirm the resolved target, stop on dirty or drifted state, verify the intended evidence scope, and prefer a report-before-mutate flow when the command owns a durable maintenance report
+- use `update_topic` tool and keep a compact shipping checklist with `write_todos` only for non-trivial shipping or review-branch work; tracker-eligible only for session-local coordination, never as a second persistence layer
+
+### `workstreams`
+
+- Execution profile: `interactive-read`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Persist`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `workstream-switch-confirmation` and `workstream-archive-confirmation` visible until the user clears them, and keep any `missing-workstream`, `missing-resume-snapshot`, `dirty-working-tree`, or `corrupt-workstream-index` waiting state explicit with the next safe action while the flow is blocked.
+
+1. Read `blueprint_workstream_list` first. Treat its returned `rootPath`, `indexPath`, `active`, `workstreams`, `summary`, `waitingState`, and `reason` as the authoritative project-local workstream state. Do not invent a second workstream registry outside `.blueprint/workstreams/`.
+2. Resolve the exact operation before mutation. If the user did not already provide a concrete operation or target and the host can ask interactively, use Gemini-native `ask_user` to select the workstream action or target instead of guessing.
+3. Keep read-only requests read-only. For `workstreams`, `list`, `status`, or `progress`, stay on `blueprint_workstream_list` and summarize the active workstream, paused or completed streams, snapshot availability, and the next safe action without mutating state.
+4. Keep the resolved target explicit before mutation: name the current active workstream, the selected target, whether a saved snapshot exists, and whether the run is read-only, confirmation-gated, or resume-ready.
+5. Treat dirty active-stream transitions as hard stops. `switch`, `resume`, and completing the current active workstream must stop on a dirty tree and keep that waiting state visible as `dirty-working-tree` with the next safe action.
+6. Require explicit confirmation through `ask_user` before switching away from an active workstream, and keep the pending gate explicit as `workstream-switch-confirmation` until the user approves.
+7. Require explicit confirmation through `ask_user` before completing the current active workstream, and keep the pending gate explicit as `workstream-archive-confirmation` until the user approves.
+8. Persist workstream state only through `blueprint_workstream_mutate`, and treat its returned `active`, `workstreams`, `affectedPaths`, `waitingState`, `nextAction`, and `statePatch` as authoritative. The mutate tool owns `WORKSTREAMS.md` regeneration plus per-stream `state.json` writes.
+9. Keep failure handling honest: stop on `missing-workstream`, `missing-resume-snapshot`, or `corrupt-workstream-index` instead of inventing fallback state. Do not smooth past a missing snapshot or a stale workstream index.
+10. For `resume`, apply only the returned `statePatch` through `blueprint_state_update`, let the state tool stamp `lastUpdated`, and keep the change bounded to the saved `STATE.md` subset. Do not widen the flow into `/blu-resume-work`.
+11. Keep workstream state project-local. Never reintroduce `workflow.use_workstreams`, a host-global workstream registry, or `.planning/` ownership for this feature.
 
 ### `new-workspace`
 
@@ -107,16 +132,14 @@ Shared rule for all maintenance flows:
 - Execution profile: `interactive-read`
 - Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- Keep `update-mode-gate` visible until the user chooses the saved checklist versus the manual fallback view when the intent is not already explicit.
+- Keep `update-mode-gate` visible until the user chooses saved-checklist versus manual-fallback mode.
 
-1. Read `blueprint_update_check` first and treat the returned host, extension path, installed version, install provenance, latest-version lookup status, update availability, and warnings as authoritative runtime discovery.
-2. Keep extension-path handling read-only. `/blu-update` must never write into the installed extension directory or mutate the running extension bundle in-session.
-3. Resolve the advisory scope explicitly before persistence: host, resolved extension path, installed version, install provenance, latest-version lookup status, and whether an update appears available.
-4. Prefer Gemini CLI `ask_user` for the saved-checklist versus manual-fallback mode gate when a structured choice helps. When that helper is unavailable, keep the same gate explicit in prose instead of implying tool parity.
-5. If the user wants a saved checklist, persist it only through `blueprint_update_plan`, and treat the returned `savedPaths.updatesDir`, `savedPaths.metadataPath`, and `savedPaths.checklistPath` as authoritative.
-6. Keep all Blueprint-owned update persistence under `~/.<host>/blueprint/updates/`. Do not write project-local update artifacts under `.blueprint/`.
-7. Keep failure handling honest: if latest-version lookup is unavailable, surface the manual fallback path clearly instead of bluffing a remote version. If checklist persistence fails, report the blocker and still return the manual update steps without pretending the checklist was saved.
-8. Always end the flow with restart guidance. The next safe action after the manual update is to restart Gemini CLI or Tabnine CLI and rerun `/blu-update` if the user wants post-update verification.
+1. Read `blueprint_update_check` first. Treat its returned host, extension path, installed version, install provenance, latest-version lookup status, and update availability as authoritative.
+2. Keep extension-path handling read-only. Never write into the installed extension directory and never imply an in-session self-update path.
+3. Use Gemini-native `ask_user` only for the saved-checklist versus manual-fallback mode gate when the host can ask interactively.
+4. Keep all Blueprint-owned update persistence under `~/.<host>/blueprint/updates/`.
+5. Persist saved checklist output only through `blueprint_update_plan`, treat its returned `savedPaths` as authoritative, and keep manual fallback explicit when saved persistence is skipped.
+6. End every run with restart guidance and the next safe out-of-band update action.
 
 ### `pr-branch`
 
@@ -200,9 +223,26 @@ Shared in-flight contract for `cleanup`:
 10. Run only the approved filesystem operations, and if a copy path is used, delete originals only after the archive copy succeeds.
 11. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and filesystem work succeeds.
 
+### `reapply-patches`
+
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Keep `reapply-patches-confirmation` visible until the user approves, and keep any `dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target` waiting state explicit with the next safe action while the run is blocked.
+
+1. Read `blueprint_patch_list` first. Treat the returned `registryPath`, patch ids, manifest paths, patch paths, tracked files, compatibility notes, and audit paths as authoritative host-global patch state.
+2. Resolve the replay scope explicitly before mutation. Prefer the user-named patch ids; otherwise keep the candidate replay set bounded to the recorded registry entries that are compatible with the current repo instead of guessing across unrelated repos.
+3. Inspect git status and the resolved target before mutation. A dirty working tree, malformed patch registry, missing patch target, compatibility mismatch, or installed-extension target is a hard stop for replay. Keep that waiting state explicit as the pending gate `dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`, and keep the next safe action explicit before rerunning.
+4. Build the preview through `blueprint_patch_reapply` with `dryRun: true`. Treat its returned conflicts and target head as the authoritative preflight result for replay safety. Stop cleanly instead of mutating when the preview reports conflicts.
+5. Make the resolved target explicit before mutation: name the selected patch ids, registry path, tracked files, compatibility notes, preview result, and audit destination.
+6. Require explicit confirmation that includes the exact patch ids to replay, the tracked files, any compatibility notes, and the preview result. Keep the destructive approval gate visible as `reapply-patches-confirmation` until the user approves.
+7. After approval, replay only the confirmed patch set through `blueprint_patch_reapply` with `dryRun: false`. Never widen the replay scope after preview and confirmation.
+8. Persist the replay audit through `blueprint_patch_record` after the previewed replay path completes or reports a clean blocker. Keep host-global patch state under `~/.<host>/blueprint/patches/`; never create project-local `.blueprint/` runtime ownership for patch replay, and preserve the flow `preflight -> preview -> confirm -> replay -> record`.
+9. Keep failure handling honest: if replay is blocked by conflicts or compatibility drift, stop and surface the blocker clearly. Never claim success when repo mutation did not happen, and never mutate the installed extension directory.
+
 ## Planned Later Command Guardrail
 
-- `remove-workspace`, `workstreams`, and `reapply-patches` remain documented maintenance commands, but they are not routable until their manifests, primary-skill contract, and required MCP substrates all exist together.
+- `remove-workspace` remains a documented maintenance command, but it is not routable until its manifest, primary-skill contract, and required MCP substrates all exist together.
 - Do not let the presence of this shared maintenance skill make later commands appear implemented by implication.
 
 ## Output Style
@@ -211,5 +251,7 @@ Shared in-flight contract for `cleanup`:
 - For `ship`, report the selected scope, the active stage reached, the branch plus PR outcome, whether push or `gh` steps were executed or skipped, the durable report status, any active fallback or pending gate, and the safest implemented follow-up or manual next step.
 - For `undo`, report the resolved revert scope, the active stage reached, any active pending gate or waiting state, the revert outcome, any stale-evidence or conflict warnings, the durable report status, and the safest implemented follow-up or manual next step.
 - For `new-workspace`, report the resolved workspace path, manifest path, registry path, repo members, chosen strategy, branch, any active pending gate or waiting state, and the safest implemented follow-up or manual next step.
+- For `workstreams`, report the active workstream, the selected target, any affected paths, any active pending gate or waiting state, whether a resume state patch was returned, and the safest implemented follow-up or manual next step.
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
 - For `update`, report the resolved host, extension path, installed version, latest-version lookup status, whether an update appears available, any active pending gate or waiting state, the saved checklist status when applicable, and the restart-focused next safe action.
+- For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.

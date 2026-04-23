@@ -75,7 +75,10 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_report_write",
   "blueprint_review_record",
   "blueprint_update_plan",
-  "blueprint_workspace_create"
+  "blueprint_workspace_create",
+  "blueprint_workstream_mutate",
+  "blueprint_patch_record",
+  "blueprint_patch_reapply"
 ]);
 const MUTATION_FAILURE_STATUSES = new Set([
   "invalid",
@@ -264,6 +267,14 @@ function buildSubject(toolName: string, result: ToolResult): string {
 
   if (toolName === "blueprint_update_plan") {
     return "Blueprint update plan";
+  }
+
+  if (toolName === "blueprint_workstream_list") {
+    return "workstreams";
+  }
+
+  if (toolName === "blueprint_workstream_mutate") {
+    return "workstream state";
   }
 
   return humanizeIdentifier(toolName.replace(/^blueprint_/, ""));

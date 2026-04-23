@@ -96,29 +96,26 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 |---|---|---|
 | `blueprint_workspace_registry_get` | Read the host-global Blueprint workspace registry from `~/.<host>/blueprint/workspaces.json` without mutating it | `{registryPath, workspaces}` |
 | `blueprint_workspace_create` | Create a workspace directory plus `<workspace>/.blueprint-workspace.json` and append the matching host-global registry entry transactionally | `{workspacePath, manifestPath, registryPath, registryEntry, repoMembers}` |
+| `blueprint_workstream_list` | Read the project-local workstream index plus canonical per-stream state, validate drift, and report the active workstream summary | `{status, rootPath, indexPath, active, workstreams, summary, waitingState, reason}` |
+| `blueprint_workstream_mutate` | Create, switch, resume, or complete project-local workstreams while regenerating `WORKSTREAMS.md` from canonical per-stream state | `{status, operation, rootPath, indexPath, active, workstreams, affectedPaths, waitingState, nextAction, statePatch}` |
+| `blueprint_patch_list` | Read host-global patch manifests from `~/.<host>/blueprint/patches/` and report compatibility against the current repo when available | `{registryPath, patches}` |
+| `blueprint_patch_record` | Persist or refresh a host-global patch manifest and append an audit entry under `~/.<host>/blueprint/patches/` | `{patchId, registryPath, manifestPath, patchPath, auditPath, trackedFiles, updated}` |
+| `blueprint_patch_reapply` | Preview or replay one recorded patch set against a clean repo while enforcing compatibility and installed-extension guards | `{registryPath, appliedPatches, skippedPatches, conflicts, preview, targetHead}` |
 
 ### Maintenance
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_update_check` | Inspect the installed Blueprint extension, install provenance, latest-version lookup status, and update availability without mutating the install | `{host, extensionPath, extensionManifestPath, installedVersion, installProvenance, latestVersionLookupStatus, latestVersion, latestVersionSource, updateAvailable, warnings}` |
-| `blueprint_update_plan` | Persist an advisory update checklist plus metadata under `~/.<host>/blueprint/updates/` without writing into the installed extension | `{mode, steps, notes, requiresRestart, savedPaths, status}` |
+| `blueprint_update_check` | Read advisory update status, installed-version provenance, and environment-specific upgrade guidance without mutating the installed extension | `{status, installedVersion, latestVersion, installSource, extensionPath, warnings}` |
+| `blueprint_update_plan` | Persist the advisory update checklist and manual fallback under `~/.<host>/blueprint/updates/` while keeping the installed extension read-only | `{status, jsonPath, markdownPath, mode, warnings}` |
 
 ## Planned Later Tool Families
 
 These tool names are part of the documented future contract, but they are not registered today.
 
-### Future Workspace Removal and Workstream Tools
+### Future Workspace Removal Tools
 
 - `blueprint_workspace_remove`
-- `blueprint_workstream_list`
-- `blueprint_workstream_mutate`
-
-### Future Review and Maintenance Tools
-
-- `blueprint_patch_record`
-- `blueprint_patch_list`
-- `blueprint_patch_reapply`
 
 ## Planned Read-Only MCP Resource Surface
 
@@ -173,12 +170,15 @@ Resource-adoption guardrails:
 - `secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_artifact_contract_read`, and `blueprint_review_record` to read the canonical `review.security` contract before drafting `XX-SECURITY.md`, parse the saved phase threat model from executed plan evidence, keep the audit threat-model-bound instead of broad-scan-driven, and persist phase-scoped security evidence as `XX-SECURITY.md`, with the shared security layer enforcing prompt-boundary checks before the artifact is written.
 - `review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_review_record` to read the saved phase plan set, keep reviewer availability explicit, and persist `XX-REVIEWS.md`.
 - `ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, and `blueprint_review_record` to persist phase-scoped UI audit evidence as `XX-UI-REVIEW.md`.
+- `docs-update` uses `blueprint_project_status`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to keep selected docs, supporting repo truth, and digest-backed Blueprint evidence explicit while broad refreshes stay confirmation-gated and route evidence-light sweeps to `/blu-map-codebase`.
 - `pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write` to keep review-branch preparation evidence-backed, report-backed, and explicit about `.blueprint/` filtering before any git mutation; its maintenance flow should continue to apply the shared dirty-tree and resolved-target preflight checks before branch mutation.
 - `ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep shipping evidence-backed, report-backed, explicit about push or PR mutation, and honest about the next safe follow-up when `gh` is unavailable; its maintenance flow should continue to apply the shared dirty-tree, scope, and report-before-mutate preflight checks.
 - `undo` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep revert previews evidence-backed, report-backed before git mutation, explicit about dependency impact, and aligned with safe `git revert` style execution instead of destructive history rewrites; its maintenance flow should continue to apply the shared dirty-tree, resolved-target, and report-before-mutate preflight checks.
 - `cleanup` uses `blueprint_project_status`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update` to keep phase-directory archival evidence-backed, report-backed before filesystem mutation, and explicit about active-phase protection plus archive destination selection; its maintenance flow should continue to apply the shared dirty-tree, protected-scope, and report-before-mutate preflight checks.
 - `new-workspace` uses `blueprint_config_get`, `blueprint_workspace_registry_get`, and `blueprint_workspace_create` to keep default workspace-root selection aligned with normalized effective config, keep host-global registry writes bounded to `~/.<host>/blueprint/workspaces.json`, and keep workspace-directory plus registry mutation transactional instead of prompt-only.
 - `update` uses `blueprint_update_check` and `blueprint_update_plan` to keep extension-path handling read-only, keep latest-version lookup and install provenance explicit, persist only host-global advisory metadata under `~/.<host>/blueprint/updates/`, and keep restart plus manual-fallback guidance explicit without mutating the installed extension.
+- `workstreams` uses `blueprint_workstream_list`, `blueprint_workstream_mutate`, and `blueprint_state_update` to keep project-local workstream state under `.blueprint/workstreams/`, regenerate `WORKSTREAMS.md` from canonical per-stream state, block dirty-tree active-stream transitions, and restore only the saved `STATE.md` subset during `resume`.
+- `reapply-patches` uses `blueprint_patch_list`, `blueprint_patch_reapply`, and `blueprint_patch_record` to keep patch replay preview-backed, confirmation-gated, blocked on dirty or incompatible targets, and audited only under `~/.<host>/blueprint/patches/` instead of `.blueprint/reports/`.
 
 ## Planned Command Notes
 
@@ -264,13 +264,6 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_project_init` is the first persistent bootstrap write. `overwrite` requires explicit confirmation, and a structured `bootstrapSeed` is the supported way to pass authored startup context.
 - `blueprint_pause_handoff_write` requires `currentState`. Other list fields are optional and normalized, and omitting `nextAction` lets the tool derive the safest current next action.
 - Treat returned `configPath`, `updatedKeys`, `createdPaths`, `nextAction`, `path`, and `handoff` as authoritative.
-
-### Update Planning
-
-- `blueprint_update_check` is the authoritative read-only discovery path for host identity, extension path, installed version, install provenance, latest-version lookup status, and update availability. Do not invent version or provenance details in prompt logic once the tool returned them.
-- `blueprint_update_plan` accepts only the optional `mode` gate (`ask_user` or `manual`) plus optional `cwd`, and it owns every Blueprint write for `/blu-update`.
-- Keep all Blueprint-owned update persistence under `~/.<host>/blueprint/updates/`; do not create repo-local update artifacts under `.blueprint/`.
-- Treat returned `savedPaths.updatesDir`, `savedPaths.metadataPath`, `savedPaths.checklistPath`, `requiresRestart`, `steps`, and `notes` as authoritative. Do not invent alternate checklist locations or claim an in-session self-update path.
 
 ### Digests And Reports
 

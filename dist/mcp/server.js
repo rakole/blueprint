@@ -16850,6 +16850,14 @@ function ensurePathWithinRootSync(rootPath, candidatePath, options = {}) {
   }
   return path.resolve(candidatePath);
 }
+function isPathWithinRootSync(rootPath, candidatePath) {
+  try {
+    ensurePathWithinRootSync(rootPath, candidatePath, { label: "Path" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 function resolveRepoRelativeInputPathSync(rootPath, candidatePath, options = {}) {
   const label = options.label ?? "Path";
   assertNoNullBytes(candidatePath, label);
@@ -28781,6 +28789,7 @@ var init_update = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile as execFile2 } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promises as fs7 } from "node:fs";
 import os2 from "node:os";
 import path8 from "node:path";
@@ -28800,6 +28809,22 @@ function normalizeWorkspaceName(value) {
   validateFieldNameSegment(trimmed, "Workspace name");
   return trimmed;
 }
+function normalizeWorkstreamName(value) {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  assertNoNullBytes(normalized, "Workstream name");
+  if (normalized.length === 0) {
+    throw new Error("Workstream name is required.");
+  }
+  return normalized;
+}
+function slugifyWorkstreamName(value) {
+  const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
+  if (slug.length === 0) {
+    throw new Error(`Workstream name must include letters or numbers: ${value}`);
+  }
+  validateFieldNameSegment(slug, "Workstream slug");
+  return slug;
+}
 function slugifyRepoName(value) {
   const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
   return slug.length > 0 ? slug : "repo";
@@ -28811,6 +28836,488 @@ async function pathExists5(targetPath) {
   } catch {
     return false;
   }
+}
+function normalizeTextForComparison(value) {
+  return value.replace(/\r\n/g, "\n").trimEnd();
+}
+function extractMarkdownSection4(markdown, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+  return match?.[1]?.trim() ?? "";
+}
+function parseBulletSection2(markdown, heading) {
+  return extractMarkdownSection4(markdown, heading).split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
+}
+function parseStateSnapshot(raw) {
+  const getLineValue = (label) => {
+    const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
+    return match ? match[1].trim() : null;
+  };
+  const getRequiredLineValue = (label) => {
+    const value = getLineValue(label);
+    if (!value) {
+      throw new Error(`STATE.md is malformed; missing required field "${label}".`);
+    }
+    return value;
+  };
+  return {
+    projectStatus: getRequiredLineValue("Project status"),
+    currentMilestone: getRequiredLineValue("Current milestone"),
+    currentPhase: getRequiredLineValue("Current phase"),
+    activeCommand: getRequiredLineValue("Active command"),
+    nextAction: getRequiredLineValue("Next action"),
+    lastUpdated: getRequiredLineValue("Last updated"),
+    blockers: parseBulletSection2(raw, "Blockers"),
+    roadmapEvolutionNotes: parseBulletSection2(raw, "Roadmap Evolution Notes")
+  };
+}
+async function readCurrentStateSnapshot(projectRoot) {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  if (!await pathExists5(statePath)) {
+    return null;
+  }
+  const raw = await fs7.readFile(statePath, "utf8");
+  return parseStateSnapshot(raw);
+}
+async function readRequiredCurrentStateSnapshot(projectRoot) {
+  const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
+  const stateRelativePath = toRepoRelativePath(projectRoot, statePath);
+  try {
+    const snapshot = await readCurrentStateSnapshot(projectRoot);
+    if (!snapshot) {
+      return {
+        status: "blocked",
+        reason: `Cannot capture the current active workstream because ${stateRelativePath} is missing.`
+      };
+    }
+    return {
+      status: "ready",
+      snapshot
+    };
+  } catch (error2) {
+    return {
+      status: "blocked",
+      reason: error2 instanceof Error ? `Cannot capture the current active workstream because ${stateRelativePath} could not be read: ${error2.message}` : `Cannot capture the current active workstream because ${stateRelativePath} could not be read.`
+    };
+  }
+}
+function normalizeStateSnapshot(value, slug) {
+  if (value === null || value === void 0) {
+    return null;
+  }
+  if (typeof value !== "object") {
+    throw new Error(`Workstream snapshot is malformed for ${slug}.`);
+  }
+  const snapshot = value;
+  const stringField = (field) => {
+    const currentValue = snapshot[field];
+    if (typeof currentValue !== "string" || currentValue.trim().length === 0) {
+      throw new Error(`Workstream snapshot field ${field} is malformed for ${slug}.`);
+    }
+    return currentValue;
+  };
+  const arrayField = (field) => {
+    const currentValue = snapshot[field];
+    if (!Array.isArray(currentValue)) {
+      throw new Error(`Workstream snapshot field ${field} is malformed for ${slug}.`);
+    }
+    return currentValue.map((entry) => {
+      if (typeof entry !== "string" || entry.trim().length === 0) {
+        throw new Error(`Workstream snapshot field ${field} is malformed for ${slug}.`);
+      }
+      return entry;
+    });
+  };
+  return {
+    projectStatus: stringField("projectStatus"),
+    currentMilestone: stringField("currentMilestone"),
+    currentPhase: stringField("currentPhase"),
+    activeCommand: stringField("activeCommand"),
+    nextAction: stringField("nextAction"),
+    lastUpdated: stringField("lastUpdated"),
+    blockers: arrayField("blockers"),
+    roadmapEvolutionNotes: arrayField("roadmapEvolutionNotes")
+  };
+}
+function normalizeWorkstreamStateDocument(value, expectedSlug) {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`Workstream state is malformed for ${expectedSlug}.`);
+  }
+  const document = value;
+  if (typeof document.version !== "number" || typeof document.name !== "string" || typeof document.slug !== "string" || typeof document.status !== "string" || typeof document.createdAt !== "string" || typeof document.updatedAt !== "string") {
+    throw new Error(`Workstream state is missing required fields for ${expectedSlug}.`);
+  }
+  if (document.version !== WORKSTREAM_STATE_VERSION) {
+    throw new Error(
+      `Workstream state version is unsupported for ${expectedSlug}: ${document.version}.`
+    );
+  }
+  const slug = slugifyWorkstreamName(document.slug);
+  if (slug !== expectedSlug) {
+    throw new Error(
+      `Workstream state slug mismatch for ${expectedSlug}; recorded slug is ${document.slug}.`
+    );
+  }
+  if (!WORKSTREAM_STATUSES.includes(document.status)) {
+    throw new Error(`Workstream state has unsupported status for ${expectedSlug}.`);
+  }
+  if (document.createdAt.trim().length === 0 || document.updatedAt.trim().length === 0) {
+    throw new Error(`Workstream state has malformed timestamps for ${expectedSlug}.`);
+  }
+  const optionalTimestampField = (field) => {
+    const currentValue = document[field];
+    if (currentValue === void 0 || currentValue === null) {
+      return null;
+    }
+    if (typeof currentValue !== "string" || currentValue.trim().length === 0) {
+      throw new Error(`Workstream state has malformed timestamps for ${expectedSlug}.`);
+    }
+    return currentValue;
+  };
+  return {
+    version: document.version,
+    name: normalizeWorkstreamName(document.name),
+    slug,
+    status: document.status,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+    activatedAt: optionalTimestampField("activatedAt"),
+    completedAt: optionalTimestampField("completedAt"),
+    stateSnapshot: normalizeStateSnapshot(document.stateSnapshot, slug)
+  };
+}
+function compareWorkstreams(left, right) {
+  const statusOrder = {
+    active: 0,
+    paused: 1,
+    completed: 2
+  };
+  const statusComparison = statusOrder[left.status] - statusOrder[right.status];
+  if (statusComparison !== 0) {
+    return statusComparison;
+  }
+  const createdComparison = left.createdAt.localeCompare(right.createdAt);
+  if (createdComparison !== 0) {
+    return createdComparison;
+  }
+  return left.name.localeCompare(right.name);
+}
+function summarizeSnapshot(snapshot) {
+  if (!snapshot) {
+    return "none";
+  }
+  return `Phase ${snapshot.currentPhase}; ${snapshot.activeCommand}`;
+}
+function summarizeCounts(workstreams) {
+  const counts = {
+    active: workstreams.filter((entry) => entry.status === "active").length,
+    paused: workstreams.filter((entry) => entry.status === "paused").length,
+    completed: workstreams.filter((entry) => entry.status === "completed").length
+  };
+  return `${counts.active} active, ${counts.paused} paused, ${counts.completed} completed`;
+}
+function renderWorkstreamsIndex(workstreams) {
+  const ordered = [...workstreams].sort(compareWorkstreams);
+  const active = ordered.find((entry) => entry.status === "active") ?? null;
+  const rows = ordered.length === 0 ? "| none | none | none | none | none |\n" : ordered.map(
+    (entry) => `| \`${entry.name}\` | \`${entry.slug}\` | \`${entry.status}\` | \`${summarizeSnapshot(entry.stateSnapshot)}\` | \`${entry.updatedAt}\` |`
+  ).join("\n");
+  return [
+    "# Blueprint Workstreams",
+    "",
+    `- Active workstream: ${active ? `\`${active.name}\`` : "none"}`,
+    `- Workstream counts: ${summarizeCounts(ordered)}`,
+    "",
+    "| Name | Slug | Status | Snapshot | Updated |",
+    "|---|---|---|---|---|",
+    rows,
+    ""
+  ].join("\n");
+}
+async function writeFileAtomically(filePath, content) {
+  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fs7.mkdir(path8.dirname(filePath), { recursive: true });
+  await fs7.writeFile(tempPath, content, "utf8");
+  await fs7.rename(tempPath, filePath);
+}
+async function writeJsonAtomically(filePath, value) {
+  await writeFileAtomically(filePath, `${JSON.stringify(value, null, 2)}
+`);
+}
+async function snapshotFiles(paths) {
+  return Promise.all(
+    [...new Set(paths)].map(async (targetPath) => {
+      if (!await pathExists5(targetPath)) {
+        return {
+          path: targetPath,
+          existed: false,
+          content: null
+        };
+      }
+      return {
+        path: targetPath,
+        existed: true,
+        content: await fs7.readFile(targetPath, "utf8")
+      };
+    })
+  );
+}
+async function snapshotDirectories(paths) {
+  return Promise.all(
+    [...new Set(paths)].map(async (targetPath) => ({
+      path: targetPath,
+      existed: await pathExists5(targetPath)
+    }))
+  );
+}
+async function restoreFileSnapshots(snapshots) {
+  for (const snapshot of snapshots) {
+    if (!snapshot.existed) {
+      await fs7.rm(snapshot.path, { force: true }).catch(() => void 0);
+      continue;
+    }
+    await fs7.mkdir(path8.dirname(snapshot.path), { recursive: true });
+    await fs7.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
+  }
+}
+async function restoreDirectorySnapshots(snapshots) {
+  const missingDirectories = snapshots.filter((snapshot) => !snapshot.existed).sort((left, right) => right.path.length - left.path.length);
+  for (const snapshot of missingDirectories) {
+    await fs7.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function workstreamsRootAbsolute(projectRoot) {
+  return resolveBlueprintPath(projectRoot, WORKSTREAMS_ROOT_PATH);
+}
+function workstreamsIndexAbsolute(projectRoot) {
+  return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
+}
+function workstreamStateAbsolute(projectRoot, slug) {
+  return path8.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+}
+function workstreamSummary(projectRoot, entry) {
+  return {
+    ...entry,
+    statePath: toRepoRelativePath(projectRoot, workstreamStateAbsolute(projectRoot, entry.slug))
+  };
+}
+function workstreamNextAction(workstreams) {
+  if (workstreams.length === 0) {
+    return `Run ${WORKSTREAMS_COMMAND} create <name> to add the first project-local workstream`;
+  }
+  const active = workstreams.find((entry) => entry.status === "active");
+  if (active) {
+    return `Run ${PROGRESS_COMMAND} or ${WORKSTREAMS_COMMAND} resume ${active.slug} to continue the active workstream`;
+  }
+  const resumable = workstreams.find((entry) => entry.stateSnapshot !== null);
+  if (resumable) {
+    return `Run ${WORKSTREAMS_COMMAND} resume ${resumable.slug} to restore saved state for that workstream`;
+  }
+  const paused = workstreams.find((entry) => entry.status === "paused");
+  if (paused) {
+    return `Run ${WORKSTREAMS_COMMAND} switch ${paused.slug} to make that paused workstream active`;
+  }
+  return `Run ${WORKSTREAMS_COMMAND} create <name> to add another workstream`;
+}
+function buildResumeStatePatch(snapshot) {
+  if (!snapshot) {
+    return null;
+  }
+  return {
+    projectStatus: snapshot.projectStatus,
+    currentMilestone: snapshot.currentMilestone,
+    currentPhase: snapshot.currentPhase,
+    activeCommand: snapshot.activeCommand,
+    nextAction: snapshot.nextAction,
+    blockers: snapshot.blockers,
+    roadmapEvolutionNotes: snapshot.roadmapEvolutionNotes
+  };
+}
+async function loadWorkstreamStore(projectRoot) {
+  const blueprintRoot = path8.join(projectRoot, BLUEPRINT_DIR);
+  const rootPath = workstreamsRootAbsolute(projectRoot);
+  const indexPath = workstreamsIndexAbsolute(projectRoot);
+  if (!await pathExists5(blueprintRoot)) {
+    return {
+      status: "project_missing",
+      projectRoot,
+      rootPath,
+      indexPath,
+      workstreams: [],
+      active: null,
+      warnings: [],
+      waitingState: null,
+      reason: "Blueprint project state is missing; initialize the repo before managing workstreams."
+    };
+  }
+  let entries;
+  try {
+    entries = await fs7.readdir(rootPath, {
+      encoding: "utf8",
+      withFileTypes: true
+    });
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return {
+        status: "ready",
+        projectRoot,
+        rootPath,
+        indexPath,
+        workstreams: [],
+        active: null,
+        warnings: []
+      };
+    }
+    throw error2;
+  }
+  try {
+    const workstreams = [];
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        continue;
+      }
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const statePath = path8.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      if (!await pathExists5(statePath)) {
+        throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
+      }
+      const raw = await fs7.readFile(statePath, "utf8");
+      const parsed = safeJsonParseObject(raw, {
+        label: statePath
+      });
+      workstreams.push(normalizeWorkstreamStateDocument(parsed, entry.name));
+    }
+    workstreams.sort(compareWorkstreams);
+    const activeWorkstreams = workstreams.filter((entry) => entry.status === "active");
+    if (activeWorkstreams.length > 1) {
+      throw new Error("More than one active workstream is recorded on disk.");
+    }
+    const expectedIndex = renderWorkstreamsIndex(workstreams);
+    const indexExists = await pathExists5(indexPath);
+    if (workstreams.length > 0 && !indexExists) {
+      throw new Error("The workstream index is missing while workstream state files exist.");
+    }
+    if (indexExists) {
+      const actualIndex = await fs7.readFile(indexPath, "utf8");
+      if (normalizeTextForComparison(actualIndex) !== normalizeTextForComparison(expectedIndex)) {
+        throw new Error("The workstream index is stale relative to the canonical state files.");
+      }
+    }
+    return {
+      status: "ready",
+      projectRoot,
+      rootPath,
+      indexPath,
+      workstreams,
+      active: activeWorkstreams[0] ?? null,
+      warnings: []
+    };
+  } catch (error2) {
+    return {
+      status: "invalid",
+      projectRoot,
+      rootPath,
+      indexPath,
+      workstreams: [],
+      active: null,
+      warnings: [],
+      waitingState: "corrupt-workstream-index",
+      reason: error2 instanceof Error ? `Workstream state is corrupt: ${error2.message}` : "Workstream state is corrupt."
+    };
+  }
+}
+function buildWorkstreamListResult(store) {
+  const summaries = store.status === "ready" ? store.workstreams.map((entry) => workstreamSummary(store.projectRoot, entry)) : [];
+  return {
+    status: store.status,
+    rootPath: toRepoRelativePath(store.projectRoot, store.rootPath),
+    indexPath: toRepoRelativePath(store.projectRoot, store.indexPath),
+    active: store.status === "ready" && store.active ? workstreamSummary(store.projectRoot, store.active) : null,
+    workstreams: summaries,
+    summary: {
+      total: summaries.length,
+      active: summaries.filter((entry) => entry.status === "active").length,
+      paused: summaries.filter((entry) => entry.status === "paused").length,
+      completed: summaries.filter((entry) => entry.status === "completed").length,
+      nextAction: store.status === "ready" ? workstreamNextAction(store.workstreams) : null
+    },
+    warnings: store.warnings,
+    waitingState: store.status === "ready" ? null : store.waitingState,
+    reason: store.status === "ready" ? null : store.reason
+  };
+}
+function buildMutationResult(store, base) {
+  return {
+    ...base,
+    rootPath: toRepoRelativePath(store.projectRoot, store.rootPath),
+    indexPath: toRepoRelativePath(store.projectRoot, store.indexPath),
+    active: store.status === "ready" && store.active ? workstreamSummary(store.projectRoot, store.active) : null,
+    workstreams: store.status === "ready" ? store.workstreams.map((entry) => workstreamSummary(store.projectRoot, entry)) : [],
+    warnings: store.warnings
+  };
+}
+function buildMissingCurrentStateSnapshotResult(store, operation, projectRoot, reason) {
+  const statePath = toRepoRelativePath(
+    projectRoot,
+    resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH)
+  );
+  return buildMutationResult(store, {
+    status: "blocked",
+    operation,
+    affectedPaths: [],
+    waitingState: "missing-resume-snapshot",
+    nextAction: `Run ${PROGRESS_COMMAND} to regenerate ${statePath} before retrying the requested workstream change.`,
+    reason,
+    statePatch: null
+  });
+}
+function findWorkstreamEntry(workstreams, requested) {
+  const normalizedName = requested.trim().toLowerCase();
+  let requestedSlug = null;
+  try {
+    requestedSlug = slugifyWorkstreamName(requested);
+  } catch {
+    requestedSlug = null;
+  }
+  return workstreams.find((entry) => entry.slug === requested) ?? workstreams.find((entry) => entry.name.toLowerCase() === normalizedName) ?? (requestedSlug ? workstreams.find((entry) => entry.slug === requestedSlug) ?? null : null);
+}
+async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
+  const indexPath = workstreamsIndexAbsolute(projectRoot);
+  const indexRelativePath = toRepoRelativePath(projectRoot, indexPath);
+  const uniqueSlugs = [...new Set(affectedSlugs)];
+  const statePaths = uniqueSlugs.map((slug) => workstreamStateAbsolute(projectRoot, slug));
+  const snapshots = await snapshotFiles([indexPath, ...statePaths]);
+  const directorySnapshots = await snapshotDirectories([
+    workstreamsRootAbsolute(projectRoot),
+    ...uniqueSlugs.map((slug) => path8.dirname(workstreamStateAbsolute(projectRoot, slug)))
+  ]);
+  try {
+    for (const slug of uniqueSlugs) {
+      const entry = workstreams.find((candidate) => candidate.slug === slug);
+      if (!entry) {
+        continue;
+      }
+      await writeJsonAtomically(
+        workstreamStateAbsolute(projectRoot, slug),
+        entry
+      );
+    }
+    await writeFileAtomically(indexPath, renderWorkstreamsIndex(workstreams));
+  } catch (error2) {
+    await restoreFileSnapshots(snapshots);
+    await restoreDirectorySnapshots(directorySnapshots);
+    throw error2;
+  }
+  return [
+    ...uniqueSlugs.map(
+      (slug) => toRepoRelativePath(projectRoot, workstreamStateAbsolute(projectRoot, slug))
+    ),
+    indexRelativePath
+  ];
 }
 async function runGit2(args, options = {}) {
   try {
@@ -28868,6 +29375,25 @@ async function gitWorkingTreeClean(repoPath) {
   });
   return result.success && result.stdout.length === 0;
 }
+async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
+  const result = await runGit2(
+    [
+      "-C",
+      repoPath,
+      "status",
+      "--short",
+      "--untracked-files=all",
+      "--",
+      ".",
+      `:(exclude)${WORKSTREAMS_ROOT_PATH}/**`,
+      `:(exclude)${BLUEPRINT_STATE_PATH}`
+    ],
+    {
+      allowFailure: true
+    }
+  );
+  return result.success && result.stdout.length === 0;
+}
 async function localBranchExists(repoPath, branch) {
   const result = await runGit2(
     ["-C", repoPath, "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`],
@@ -28882,14 +29408,7 @@ async function remoteBranchExists(repoPath, branch) {
   );
   return result.success && result.stdout.length > 0;
 }
-async function readWorkspaceRegistryDocument(registryPath) {
-  if (!await pathExists5(registryPath)) {
-    return {
-      version: WORKSPACE_REGISTRY_VERSION,
-      workspaces: []
-    };
-  }
-  const raw = await fs7.readFile(registryPath, "utf8");
+function parseWorkspaceRegistryDocument(raw, registryPath) {
   const parsed = safeJsonParseObject(raw, {
     label: registryPath
   });
@@ -28902,10 +29421,87 @@ async function readWorkspaceRegistryDocument(registryPath) {
     normalizeRegistryEntry
   );
   const parsedRecord = parsed;
+  const version2 = parsedRecord.version;
+  if (typeof version2 !== "number" || !Number.isInteger(version2)) {
+    throw new Error(
+      `Workspace registry is malformed at ${registryPath}; version must be ${WORKSPACE_REGISTRY_VERSION}.`
+    );
+  }
+  if (version2 !== WORKSPACE_REGISTRY_VERSION) {
+    throw new Error(
+      `Workspace registry version is unsupported at ${registryPath}: ${version2}.`
+    );
+  }
   return {
-    version: typeof parsedRecord.version === "number" ? parsedRecord.version : WORKSPACE_REGISTRY_VERSION,
+    version: version2,
     workspaces
   };
+}
+async function listWorkspaceRegistryBackups(registryPath) {
+  const directory = path8.dirname(registryPath);
+  const backupPrefix = `${path8.basename(registryPath)}.bak-`;
+  let entries;
+  try {
+    entries = await fs7.readdir(directory, {
+      encoding: "utf8",
+      withFileTypes: true
+    });
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      return [];
+    }
+    throw error2;
+  }
+  const backupCandidates = entries.filter((entry) => entry.isFile() && entry.name.startsWith(backupPrefix)).map((entry) => path8.join(directory, entry.name));
+  const backupsWithStats = await Promise.all(
+    backupCandidates.map(async (backupPath) => {
+      try {
+        const stats = await fs7.stat(backupPath);
+        return {
+          backupPath,
+          mtimeMs: stats.mtimeMs
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return backupsWithStats.filter((entry) => entry !== null).sort((left, right) => right.mtimeMs - left.mtimeMs).map((entry) => entry.backupPath);
+}
+async function recoverWorkspaceRegistryDocument(registryPath) {
+  const backupPaths = await listWorkspaceRegistryBackups(registryPath);
+  let lastError = null;
+  for (const backupPath of backupPaths) {
+    try {
+      const raw = await fs7.readFile(backupPath, "utf8");
+      const document = parseWorkspaceRegistryDocument(raw, backupPath);
+      await fs7.mkdir(path8.dirname(registryPath), { recursive: true });
+      await fs7.copyFile(backupPath, registryPath).catch(() => void 0);
+      return document;
+    } catch (error2) {
+      lastError = error2 instanceof Error ? error2 : new Error("Workspace registry backup recovery failed.");
+    }
+  }
+  if (lastError) {
+    throw new Error(
+      `Workspace registry recovery failed at ${registryPath}: ${lastError.message}`
+    );
+  }
+  return null;
+}
+async function readWorkspaceRegistryDocument(registryPath) {
+  if (!await pathExists5(registryPath)) {
+    const recovered = await recoverWorkspaceRegistryDocument(registryPath);
+    if (recovered) {
+      return recovered;
+    }
+    return {
+      version: WORKSPACE_REGISTRY_VERSION,
+      workspaces: []
+    };
+  }
+  const raw = await fs7.readFile(registryPath, "utf8");
+  return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 function normalizeRegistryEntry(value) {
   if (typeof value !== "object" || value === null) {
@@ -28970,12 +29566,12 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   );
   let restoredOriginal = false;
   try {
-    await fs7.rename(registryPath, backupPath);
+    await fs7.copyFile(registryPath, backupPath);
     await fs7.rename(tempPath, registryPath);
   } catch (error2) {
     await fs7.rm(tempPath, { force: true }).catch(() => void 0);
     if (!await pathExists5(registryPath) && await pathExists5(backupPath)) {
-      await fs7.rename(backupPath, registryPath).then(() => {
+      await fs7.copyFile(backupPath, registryPath).then(() => {
         restoredOriginal = true;
       }).catch(() => void 0);
     }
@@ -28985,6 +29581,287 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     throw error2;
   }
   await fs7.rm(backupPath, { force: true }).catch(() => void 0);
+}
+async function acquireWorkspaceRegistryLock(lockPath) {
+  await fs7.mkdir(path8.dirname(lockPath), { recursive: true });
+  for (; ; ) {
+    try {
+      await fs7.mkdir(lockPath);
+      return;
+    } catch (error2) {
+      const lockError = error2;
+      if (lockError.code !== "EEXIST") {
+        throw error2;
+      }
+      try {
+        const stats = await fs7.stat(lockPath);
+        if (Date.now() - stats.mtimeMs > WORKSPACE_REGISTRY_LOCK_STALE_MS) {
+          await fs7.rm(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch (statError) {
+        if (statError.code === "ENOENT") {
+          continue;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, WORKSPACE_REGISTRY_LOCK_RETRY_MS));
+    }
+  }
+}
+async function withWorkspaceRegistryLock(registryPath, callback) {
+  const lockPath = `${registryPath}.lock`;
+  await acquireWorkspaceRegistryLock(lockPath);
+  try {
+    return await callback();
+  } finally {
+    await fs7.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function normalizePatchId(value) {
+  const trimmed = value.trim();
+  validateFieldNameSegment(trimmed, "Patch id");
+  return trimmed;
+}
+function normalizeRecordedPatchId(value, indexPath) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(
+      `Patch registry is malformed at ${indexPath}; patch ids must be non-empty strings.`
+    );
+  }
+  try {
+    return normalizePatchId(value);
+  } catch {
+    throw new Error(
+      `Patch registry is malformed at ${indexPath}; patch id is not file-safe: ${value}`
+    );
+  }
+}
+function patchIndexPath(registryPath) {
+  return path8.join(registryPath, "index.json");
+}
+function patchManifestPath(registryPath, patchId) {
+  return path8.join(registryPath, `${patchId}.json`);
+}
+function patchContentPath(registryPath, patchId) {
+  return path8.join(registryPath, `${patchId}.patch`);
+}
+function patchAuditPath(registryPath, patchId) {
+  return path8.join(registryPath, `${patchId}.audit.ndjson`);
+}
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+function normalizeTrackedFiles(repoRoot, trackedFiles) {
+  const normalized = /* @__PURE__ */ new Set();
+  for (const trackedFile of trackedFiles) {
+    assertNoNullBytes(trackedFile, "Patch tracked file");
+    const candidatePath = path8.isAbsolute(trackedFile) ? path8.resolve(trackedFile) : path8.resolve(repoRoot, trackedFile);
+    ensurePathWithinRootSync(repoRoot, candidatePath, {
+      label: "Patch tracked file"
+    });
+    const relativePath = path8.relative(repoRoot, candidatePath).replaceAll(path8.sep, "/");
+    if (!relativePath || relativePath === ".") {
+      throw new Error("Patch tracked file must resolve to a file path inside the repo.");
+    }
+    normalized.add(relativePath);
+  }
+  return [...normalized];
+}
+async function gitRemoteUrl(repoPath) {
+  const result = await runGit2(["-C", repoPath, "remote", "get-url", "origin"], {
+    allowFailure: true
+  });
+  return result.success && result.stdout.length > 0 ? result.stdout : null;
+}
+function normalizePatchManifest(value, patchId) {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`Patch manifest is malformed for ${patchId}.`);
+  }
+  const manifest = value;
+  if (typeof manifest.version !== "number" || typeof manifest.patchId !== "string" || typeof manifest.createdAt !== "string" || typeof manifest.patchFile !== "string" || typeof manifest.patchHash !== "string" || typeof manifest.repoRootName !== "string" || !Array.isArray(manifest.trackedFiles) || typeof manifest.compatibility !== "object" || manifest.compatibility === null) {
+    throw new Error(`Patch manifest is missing required fields for ${patchId}.`);
+  }
+  const compatibility = manifest.compatibility;
+  if (typeof compatibility.repoRootName !== "string") {
+    throw new Error(`Patch compatibility is malformed for ${patchId}.`);
+  }
+  let manifestPatchId;
+  try {
+    manifestPatchId = normalizePatchId(manifest.patchId);
+  } catch {
+    throw new Error(`Patch manifest is malformed for ${patchId}.`);
+  }
+  if (manifestPatchId !== patchId) {
+    throw new Error(
+      `Patch registry is malformed for ${patchId}; recorded manifest patch id does not match its registry entry.`
+    );
+  }
+  const trackedFiles = manifest.trackedFiles.map((trackedFile) => {
+    if (typeof trackedFile !== "string" || trackedFile.trim().length === 0) {
+      throw new Error(`Patch tracked files are malformed for ${patchId}.`);
+    }
+    return trackedFile;
+  });
+  const lastOutcome = typeof manifest.lastOutcome === "string" && PATCH_OUTCOMES.includes(manifest.lastOutcome) ? manifest.lastOutcome : null;
+  return {
+    version: manifest.version,
+    patchId: manifestPatchId,
+    label: typeof manifest.label === "string" ? manifest.label : null,
+    createdAt: manifest.createdAt,
+    sourceVersion: typeof manifest.sourceVersion === "string" ? manifest.sourceVersion : null,
+    repoRootName: manifest.repoRootName,
+    repoRemote: typeof manifest.repoRemote === "string" ? manifest.repoRemote : null,
+    patchFile: manifest.patchFile,
+    patchHash: manifest.patchHash,
+    trackedFiles,
+    compatibility: {
+      host: typeof compatibility.host === "string" ? compatibility.host : null,
+      repoRootName: compatibility.repoRootName,
+      remoteUrl: typeof compatibility.remoteUrl === "string" ? compatibility.remoteUrl : null
+    },
+    lastAppliedAt: typeof manifest.lastAppliedAt === "string" ? manifest.lastAppliedAt : null,
+    lastOutcome
+  };
+}
+async function readPatchRegistryDocument(registryPath) {
+  const indexPath = patchIndexPath(registryPath);
+  if (!await pathExists5(indexPath)) {
+    return {
+      version: PATCH_REGISTRY_VERSION,
+      patches: []
+    };
+  }
+  const raw = await fs7.readFile(indexPath, "utf8");
+  const parsed = safeJsonParseObject(raw, {
+    label: indexPath
+  });
+  if (typeof parsed !== "object" || parsed === null || !("patches" in parsed) || !Array.isArray(parsed.patches)) {
+    throw new Error(
+      `Patch registry is malformed at ${indexPath}; repair or remove it before replaying patches.`
+    );
+  }
+  const patchIds = (parsed.patches ?? []).map(
+    (patchId) => normalizeRecordedPatchId(patchId, indexPath)
+  );
+  return {
+    version: typeof parsed.version === "number" ? parsed.version : PATCH_REGISTRY_VERSION,
+    patches: [...new Set(patchIds)]
+  };
+}
+async function writePatchRegistryDocument(registryPath, document) {
+  await fs7.mkdir(registryPath, { recursive: true });
+  await writeJsonFile(patchIndexPath(registryPath), document);
+}
+async function readPatchManifest(registryPath, patchId) {
+  const manifestPath = patchManifestPath(registryPath, patchId);
+  if (!await pathExists5(manifestPath)) {
+    throw new Error(`Patch target is missing from the registry: ${patchId}`);
+  }
+  const raw = await fs7.readFile(manifestPath, "utf8");
+  const parsed = safeJsonParseObject(raw, {
+    label: manifestPath
+  });
+  return normalizePatchManifest(parsed, patchId);
+}
+async function appendPatchAuditEntry(registryPath, patchId, entry) {
+  await fs7.mkdir(registryPath, { recursive: true });
+  await fs7.appendFile(
+    patchAuditPath(registryPath, patchId),
+    `${JSON.stringify(entry)}
+`,
+    "utf8"
+  );
+}
+async function loadPatchContent(registryPath, patchId, manifest) {
+  if (manifest.patchId !== patchId) {
+    throw new Error(
+      `Patch registry is malformed for ${patchId}; recorded manifest patch id does not match its registry entry.`
+    );
+  }
+  const contentPath = patchContentPath(registryPath, patchId);
+  if (!await pathExists5(contentPath)) {
+    throw new Error(`Patch target is missing from the registry: ${patchId}`);
+  }
+  const patch = await fs7.readFile(contentPath, "utf8");
+  if (sha256(patch) !== manifest.patchHash) {
+    throw new Error(
+      `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
+    );
+  }
+  return patch;
+}
+function assertNotInstalledExtensionTarget(repoRoot) {
+  const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
+  if (!extensionPath) {
+    return;
+  }
+  const resolvedRepoRoot = path8.resolve(repoRoot);
+  const resolvedExtensionPath = path8.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path8.sep}`)) {
+    throw new Error(
+      `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
+    );
+  }
+}
+async function resolvePatchReplayTarget(cwd) {
+  const repoRoot = await resolveGitRepoRoot(cwd ?? process.cwd());
+  assertNotInstalledExtensionTarget(repoRoot);
+  return repoRoot;
+}
+async function buildPatchCompatibilityStatus(manifest, repoRoot) {
+  if (!repoRoot) {
+    return {
+      status: "unknown",
+      reasons: []
+    };
+  }
+  const runtimeHost = resolveBlueprintRuntimeHost();
+  const reasons = [];
+  const repoName = path8.basename(repoRoot);
+  if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
+    reasons.push(
+      `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
+    );
+  }
+  if (manifest.compatibility.repoRootName !== repoName) {
+    reasons.push(
+      `Recorded for repo ${manifest.compatibility.repoRootName}, but current repo is ${repoName}.`
+    );
+  }
+  const currentRemote = await gitRemoteUrl(repoRoot);
+  if (manifest.compatibility.remoteUrl && manifest.compatibility.remoteUrl !== currentRemote) {
+    reasons.push("Recorded origin remote does not match the current repo origin.");
+  }
+  return {
+    status: reasons.length === 0 ? "compatible" : "mismatch",
+    reasons
+  };
+}
+function selectedPatchIds(registry2, requestedPatchIds) {
+  if (!requestedPatchIds || requestedPatchIds.length === 0) {
+    return registry2.patches;
+  }
+  const normalized = requestedPatchIds.map((patchId) => normalizePatchId(patchId));
+  const known = new Set(registry2.patches);
+  for (const patchId of normalized) {
+    if (!known.has(patchId)) {
+      throw new Error(`Patch target is missing from the registry: ${patchId}`);
+    }
+  }
+  return normalized;
+}
+async function selectedPatchIdsForReplay(registryPath, registry2, repoRoot, requestedPatchIds) {
+  if (requestedPatchIds && requestedPatchIds.length > 0) {
+    return selectedPatchIds(registry2, requestedPatchIds);
+  }
+  const compatiblePatchIds = await Promise.all(
+    registry2.patches.map(async (patchId) => {
+      const manifest = await readPatchManifest(registryPath, patchId);
+      const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
+      return compatibility.status === "compatible" ? patchId : null;
+    })
+  );
+  return compatiblePatchIds.filter((patchId) => patchId !== null);
 }
 async function resolveDefaultWorkspaceRoot(cwd) {
   try {
@@ -28996,7 +29873,10 @@ async function resolveDefaultWorkspaceRoot(cwd) {
     if (configuredRoot) {
       return expandHomePath2(configuredRoot);
     }
-  } catch {
+  } catch (error2) {
+    if (!(error2 instanceof Error && error2.message === "Blueprint commands must run from the repository root; no .git entry was found in the current directory.")) {
+      throw error2;
+    }
   }
   return path8.join(os2.homedir(), "blueprint-workspaces");
 }
@@ -29055,19 +29935,10 @@ async function resolveSourceRepos(repoInputs, cwd) {
   return resolved;
 }
 function ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos) {
-  const containmentEscapePrefix = "Workspace path escapes the allowed root:";
   for (const sourceRepo of sourceRepos) {
-    try {
-      ensurePathWithinRootSync(sourceRepo.sourcePath, workspacePath, {
-        label: "Workspace path"
-      });
-    } catch (error2) {
-      if (error2 instanceof Error && error2.message.startsWith(containmentEscapePrefix)) {
-        continue;
-      }
-      throw error2;
+    if (isPathWithinRootSync(sourceRepo.sourcePath, workspacePath)) {
+      throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
     }
-    throw new Error(`Workspace path must not be inside the source repo root: ${workspacePath}`);
   }
 }
 async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
@@ -29078,9 +29949,35 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 function buildWorkspaceManifestPath(workspacePath) {
   return path8.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
+function assertNotInstalledExtensionPath(candidatePath, label) {
+  const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
+  if (!extensionPath) {
+    return;
+  }
+  if (isPathWithinRootSync(extensionPath, candidatePath)) {
+    throw new Error(
+      `${label} must not target the installed extension directory: ${path8.resolve(extensionPath)}`
+    );
+  }
+}
+async function rollbackPartialWorktreeAdd(sourceRepoPath, memberPath, createdSourceBranch) {
+  await runGit2(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
+    allowFailure: true
+  });
+  await fs7.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
+  if (createdSourceBranch) {
+    await runGit2(
+      ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
+      {
+        allowFailure: true
+      }
+    );
+  }
+}
 async function createWorkspaceMember(workspacePath, sourceRepo, strategy, requestedBranch, usedTargetNames) {
   let candidateName = sourceRepo.name;
   let duplicateIndex = 2;
+  let createdSourceBranch = null;
   while (usedTargetNames.has(candidateName)) {
     candidateName = `${sourceRepo.name}-${duplicateIndex}`;
     duplicateIndex += 1;
@@ -29088,43 +29985,68 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
   usedTargetNames.add(candidateName);
   const memberPath = path8.join(workspacePath, candidateName);
   if (strategy === "worktree") {
+    const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
+    const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
     if (requestedBranch) {
-      if (await localBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-        await runGit2(["-C", sourceRepo.sourcePath, "worktree", "add", memberPath, requestedBranch]);
-      } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-        await runGit2([
-          "-C",
+      try {
+        if (localBranchAlreadyExists) {
+          await runGit2([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            memberPath,
+            requestedBranch
+          ]);
+        } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
+          await runGit2([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            "--track",
+            "-b",
+            requestedBranch,
+            memberPath,
+            `origin/${requestedBranch}`
+          ]);
+          createdSourceBranch = requestedBranch;
+        } else {
+          await runGit2([
+            "-C",
+            sourceRepo.sourcePath,
+            "worktree",
+            "add",
+            "-b",
+            requestedBranch,
+            memberPath,
+            "HEAD"
+          ]);
+          createdSourceBranch = requestedBranch;
+        }
+      } catch (error2) {
+        await rollbackPartialWorktreeAdd(
           sourceRepo.sourcePath,
-          "worktree",
-          "add",
-          "--track",
-          "-b",
-          requestedBranch,
           memberPath,
-          `origin/${requestedBranch}`
-        ]);
-      } else {
+          partialCreatedBranch
+        );
+        throw error2;
+      }
+    } else {
+      try {
         await runGit2([
           "-C",
           sourceRepo.sourcePath,
           "worktree",
           "add",
-          "-b",
-          requestedBranch,
+          "--detach",
           memberPath,
           "HEAD"
         ]);
+      } catch (error2) {
+        await rollbackPartialWorktreeAdd(sourceRepo.sourcePath, memberPath, null);
+        throw error2;
       }
-    } else {
-      await runGit2([
-        "-C",
-        sourceRepo.sourcePath,
-        "worktree",
-        "add",
-        "--detach",
-        memberPath,
-        "HEAD"
-      ]);
     }
   } else {
     await runGit2(["clone", sourceRepo.sourcePath, memberPath]);
@@ -29152,7 +30074,8 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     branch: await gitCurrentBranch(memberPath) ?? requestedBranch ?? null,
     head: await gitHeadSha(memberPath),
     blueprintProject: sourceRepo.blueprintProject,
-    rollbackStrategy: strategy
+    rollbackStrategy: strategy,
+    createdSourceBranch
   };
 }
 async function rollbackCreatedMembers(createdMembers) {
@@ -29162,6 +30085,14 @@ async function rollbackCreatedMembers(createdMembers) {
         await runGit2(["-C", member.sourcePath, "worktree", "remove", "--force", member.path], {
           allowFailure: true
         });
+      }
+      if (member.createdSourceBranch) {
+        await runGit2(
+          ["-C", member.sourcePath, "branch", "--delete", "--force", member.createdSourceBranch],
+          {
+            allowFailure: true
+          }
+        );
       }
     } catch {
     }
@@ -29190,71 +30121,562 @@ async function blueprintWorkspaceCreate(args) {
     name: normalizedName
   });
   const sourceRepos = await resolveSourceRepos(resolveRequestedRepos(args), args.cwd);
-  const registry2 = await readWorkspaceRegistryDocument(registryPath);
   const manifestPath = buildWorkspaceManifestPath(workspacePath);
+  assertNotInstalledExtensionPath(workspacePath, "Workspace path");
   ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos);
   await ensureWorkspaceTargetDoesNotExist(workspacePath);
   for (const sourceRepo of sourceRepos) {
+    assertNotInstalledExtensionPath(sourceRepo.sourcePath, "Workspace source repo");
     if (!await gitWorkingTreeClean(sourceRepo.sourcePath)) {
       throw new Error(
         `Workspace source repo has uncommitted changes and must be clean before workspace creation: ${sourceRepo.sourcePath}`
       );
     }
   }
-  if (registry2.workspaces.some(
-    (workspace) => workspace.name === normalizedName || path8.resolve(workspace.path) === path8.resolve(workspacePath)
-  )) {
-    throw new Error(
-      `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
-    );
-  }
-  const createdMembers = [];
-  const usedTargetNames = /* @__PURE__ */ new Set();
-  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
-  try {
-    await fs7.mkdir(path8.dirname(workspacePath), { recursive: true });
-    await fs7.mkdir(workspacePath, { recursive: false });
-    for (const sourceRepo of sourceRepos) {
-      const createdMember = await createWorkspaceMember(
-        workspacePath,
-        sourceRepo,
-        strategy,
-        requestedBranch,
-        usedTargetNames
+  return withWorkspaceRegistryLock(registryPath, async () => {
+    const registry2 = await readWorkspaceRegistryDocument(registryPath);
+    if (registry2.workspaces.some(
+      (workspace) => workspace.name === normalizedName || path8.resolve(workspace.path) === path8.resolve(workspacePath)
+    )) {
+      throw new Error(
+        `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
       );
-      createdMembers.push(createdMember);
     }
-    const registryEntry = {
-      name: normalizedName,
-      path: workspacePath,
-      manifestPath,
-      strategy,
-      branch: requestedBranch,
-      createdAt,
-      repos: createdMembers.map(({ rollbackStrategy: _rollbackStrategy, ...member }) => member)
-    };
-    await writeJsonFile(manifestPath, registryEntry);
-    await writeWorkspaceRegistryDocument(registryPath, {
-      version: registry2.version || WORKSPACE_REGISTRY_VERSION,
-      workspaces: [...registry2.workspaces, registryEntry]
-    });
-    return {
-      workspacePath,
-      manifestPath,
-      registryPath,
-      registryEntry,
-      repoMembers: registryEntry.repos
-    };
-  } catch (error2) {
-    await rollbackCreatedMembers(createdMembers);
-    await fs7.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
-    if (error2 instanceof Error) {
+    const createdMembers = [];
+    const usedTargetNames = /* @__PURE__ */ new Set();
+    const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+    try {
+      await fs7.mkdir(path8.dirname(workspacePath), { recursive: true });
+      await fs7.mkdir(workspacePath, { recursive: false });
+      for (const sourceRepo of sourceRepos) {
+        const createdMember = await createWorkspaceMember(
+          workspacePath,
+          sourceRepo,
+          strategy,
+          requestedBranch,
+          usedTargetNames
+        );
+        createdMembers.push(createdMember);
+      }
+      const registryEntry = {
+        name: normalizedName,
+        path: workspacePath,
+        manifestPath,
+        strategy,
+        branch: requestedBranch,
+        createdAt,
+        repos: createdMembers.map(({ rollbackStrategy: _rollbackStrategy, ...member }) => member)
+      };
+      await writeJsonFile(manifestPath, registryEntry);
+      await writeWorkspaceRegistryDocument(registryPath, {
+        version: WORKSPACE_REGISTRY_VERSION,
+        workspaces: [...registry2.workspaces, registryEntry]
+      });
+      return {
+        workspacePath,
+        manifestPath,
+        registryPath,
+        registryEntry,
+        repoMembers: registryEntry.repos
+      };
+    } catch (error2) {
+      await rollbackCreatedMembers(createdMembers);
+      await fs7.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+      if (error2 instanceof Error) {
+        throw error2;
+      }
       throw error2;
     }
-    throw error2;
-  }
+  });
 }
-var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceToolDefinitions;
+async function blueprintWorkstreamList(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const store = await loadWorkstreamStore(projectRoot);
+  return buildWorkstreamListResult(store);
+}
+async function blueprintWorkstreamMutate(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const store = await loadWorkstreamStore(projectRoot);
+  if (store.status !== "ready") {
+    return buildMutationResult(store, {
+      status: store.status,
+      operation: args.operation,
+      affectedPaths: [],
+      waitingState: store.waitingState,
+      nextAction: store.status === "project_missing" ? "Initialize Blueprint project state before creating workstreams." : `Repair ${toRepoRelativePath(projectRoot, store.indexPath)} before mutating workstreams.`,
+      reason: store.reason,
+      statePatch: null
+    });
+  }
+  const operation = args.operation;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const workstreams = store.workstreams.map((entry) => ({ ...entry }));
+  if (operation === "create") {
+    const name = normalizeWorkstreamName(args.workstream);
+    const slug = slugifyWorkstreamName(name);
+    const existing = findWorkstreamEntry(workstreams, slug);
+    if (existing) {
+      return buildMutationResult(store, {
+        status: "reused",
+        operation,
+        affectedPaths: [],
+        waitingState: null,
+        nextAction: existing.status === "active" ? `Continue the active workstream ${existing.slug} or inspect progress with ${PROGRESS_COMMAND}.` : `Run ${WORKSTREAMS_COMMAND} switch ${existing.slug} or ${WORKSTREAMS_COMMAND} resume ${existing.slug} when you want to return to it.`,
+        reason: `Workstream ${existing.name} already exists.`,
+        statePatch: null
+      });
+    }
+    let currentSnapshot = null;
+    if (!store.active) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
+    const newEntry = {
+      version: WORKSTREAM_STATE_VERSION,
+      name,
+      slug,
+      status: store.active ? "paused" : "active",
+      createdAt: now,
+      updatedAt: now,
+      activatedAt: store.active ? null : now,
+      completedAt: null,
+      stateSnapshot: store.active ? null : currentSnapshot
+    };
+    workstreams.push(newEntry);
+    workstreams.sort(compareWorkstreams);
+    const reloadedStore2 = {
+      ...store,
+      workstreams,
+      active: workstreams.find((entry) => entry.status === "active") ?? null
+    };
+    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [slug]);
+    return buildMutationResult(reloadedStore2, {
+      status: "updated",
+      operation,
+      affectedPaths: affectedPaths2,
+      waitingState: null,
+      nextAction: newEntry.status === "active" ? `Continue the active workstream ${slug} or inspect repo status with ${PROGRESS_COMMAND}.` : `Run ${WORKSTREAMS_COMMAND} switch ${slug} when you want to make the new workstream active.`,
+      reason: null,
+      statePatch: null
+    });
+  }
+  const target = findWorkstreamEntry(workstreams, args.workstream);
+  if (!target) {
+    return buildMutationResult(store, {
+      status: "blocked",
+      operation,
+      affectedPaths: [],
+      waitingState: "missing-workstream",
+      nextAction: `Run ${WORKSTREAMS_COMMAND} create <name> to add a new workstream first.`,
+      reason: `No workstream matched ${args.workstream}.`,
+      statePatch: null
+    });
+  }
+  const currentActive = workstreams.find((entry) => entry.status === "active") ?? null;
+  const targetIsActive = currentActive?.slug === target.slug;
+  const requiresCleanTree = operation === "switch" ? !targetIsActive : operation === "resume" ? true : targetIsActive;
+  if (requiresCleanTree && !await gitWorkingTreeCleanForWorkstreamTransition(projectRoot)) {
+    return buildMutationResult(store, {
+      status: "blocked",
+      operation,
+      affectedPaths: [],
+      waitingState: "dirty-working-tree",
+      nextAction: "Clean or stash the working tree before retrying the workstream transition.",
+      reason: "Workstream transitions that change the active stream require a clean working tree.",
+      statePatch: null
+    });
+  }
+  if (operation === "switch") {
+    if (target.status === "completed") {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: "missing-workstream",
+        nextAction: `Run ${WORKSTREAMS_COMMAND} resume ${target.slug} to reactivate that completed workstream from its saved snapshot.`,
+        reason: `Completed workstream ${target.name} must be resumed instead of switched.`,
+        statePatch: null
+      });
+    }
+    if (targetIsActive) {
+      return buildMutationResult(store, {
+        status: "reused",
+        operation,
+        affectedPaths: [],
+        waitingState: null,
+        nextAction: `Run ${PROGRESS_COMMAND} to inspect the current active workstream.`,
+        reason: `Workstream ${target.name} is already active.`,
+        statePatch: null
+      });
+    }
+    let currentSnapshot = null;
+    if (currentActive) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
+    if (currentActive) {
+      currentActive.status = "paused";
+      currentActive.updatedAt = now;
+      currentActive.stateSnapshot = currentSnapshot;
+    }
+    target.status = "active";
+    target.updatedAt = now;
+    target.activatedAt = now;
+    target.completedAt = null;
+    workstreams.sort(compareWorkstreams);
+    const reloadedStore2 = {
+      ...store,
+      workstreams,
+      active: target
+    };
+    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [
+      ...currentActive ? [currentActive.slug] : [],
+      target.slug
+    ]);
+    return buildMutationResult(reloadedStore2, {
+      status: "updated",
+      operation,
+      affectedPaths: affectedPaths2,
+      waitingState: null,
+      nextAction: target.stateSnapshot === null ? `Run ${PROGRESS_COMMAND} to continue from the current repo state, then switch away later to capture a resumable snapshot for ${target.slug}.` : `Run ${WORKSTREAMS_COMMAND} resume ${target.slug} to restore its saved state snapshot.`,
+      reason: null,
+      statePatch: null
+    });
+  }
+  if (operation === "resume") {
+    if (target.stateSnapshot === null) {
+      return buildMutationResult(store, {
+        status: "blocked",
+        operation,
+        affectedPaths: [],
+        waitingState: "missing-resume-snapshot",
+        nextAction: `Switch to ${target.slug}, do the work, and switch away later to capture a saved snapshot before trying to resume it.`,
+        reason: `Workstream ${target.name} does not have a saved STATE.md snapshot to restore.`,
+        statePatch: null
+      });
+    }
+    let currentSnapshot = null;
+    if (currentActive && currentActive.slug !== target.slug) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
+    if (currentActive && currentActive.slug !== target.slug) {
+      currentActive.status = "paused";
+      currentActive.updatedAt = now;
+      currentActive.stateSnapshot = currentSnapshot;
+    }
+    target.status = "active";
+    target.updatedAt = now;
+    target.activatedAt = now;
+    target.completedAt = null;
+    workstreams.sort(compareWorkstreams);
+    const reloadedStore2 = {
+      ...store,
+      workstreams,
+      active: target
+    };
+    const affectedPaths2 = await persistWorkstreamState(projectRoot, workstreams, [
+      ...currentActive && currentActive.slug !== target.slug ? [currentActive.slug] : [],
+      target.slug
+    ]);
+    return buildMutationResult(reloadedStore2, {
+      status: targetIsActive ? "reused" : "updated",
+      operation,
+      affectedPaths: affectedPaths2,
+      waitingState: null,
+      nextAction: `Apply the returned state patch through blueprint_state_update, then continue work on ${target.slug}.`,
+      reason: null,
+      statePatch: buildResumeStatePatch(target.stateSnapshot)
+    });
+  }
+  if (target.status === "completed") {
+    return buildMutationResult(store, {
+      status: "reused",
+      operation,
+      affectedPaths: [],
+      waitingState: null,
+      nextAction: `Run ${WORKSTREAMS_COMMAND} create <name> to add a new workstream or ${WORKSTREAMS_COMMAND} resume ${target.slug} to reactivate this one.`,
+      reason: `Workstream ${target.name} is already completed.`,
+      statePatch: null
+    });
+  }
+  if (targetIsActive) {
+    const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+    if (snapshotResult.status === "blocked") {
+      return buildMissingCurrentStateSnapshotResult(
+        store,
+        operation,
+        projectRoot,
+        snapshotResult.reason
+      );
+    }
+    target.stateSnapshot = snapshotResult.snapshot;
+  }
+  target.status = "completed";
+  target.updatedAt = now;
+  target.completedAt = now;
+  workstreams.sort(compareWorkstreams);
+  const reloadedStore = {
+    ...store,
+    workstreams,
+    active: workstreams.find((entry) => entry.status === "active") ?? null
+  };
+  const affectedPaths = await persistWorkstreamState(projectRoot, workstreams, [target.slug]);
+  return buildMutationResult(reloadedStore, {
+    status: "updated",
+    operation,
+    affectedPaths,
+    waitingState: null,
+    nextAction: reloadedStore.active !== null ? `Run ${WORKSTREAMS_COMMAND} resume ${reloadedStore.active.slug} or ${PROGRESS_COMMAND} to continue the remaining active workstream.` : `Run ${WORKSTREAMS_COMMAND} create <name> to start a new workstream or ${PROGRESS_COMMAND} to inspect the repo state.`,
+    reason: null,
+    statePatch: null
+  });
+}
+async function blueprintPatchList(args = {}) {
+  const registryPath = expandHomePath2(resolveBlueprintRuntimeHost().patchRegistryPath);
+  const registry2 = await readPatchRegistryDocument(registryPath);
+  const repoRoot = args.cwd ? await resolveGitRepoRoot(args.cwd) : null;
+  const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
+  const patchIds = selectedPatchIds(registry2, requestedPatchIds);
+  const patches = await Promise.all(
+    patchIds.map(async (patchId) => {
+      const manifest = await readPatchManifest(registryPath, patchId);
+      await loadPatchContent(registryPath, patchId, manifest);
+      return {
+        patchId,
+        label: manifest.label,
+        createdAt: manifest.createdAt,
+        sourceVersion: manifest.sourceVersion,
+        trackedFiles: manifest.trackedFiles,
+        manifestPath: patchManifestPath(registryPath, patchId),
+        patchPath: patchContentPath(registryPath, patchId),
+        auditPath: patchAuditPath(registryPath, patchId),
+        lastAppliedAt: manifest.lastAppliedAt,
+        lastOutcome: manifest.lastOutcome,
+        compatibility: await buildPatchCompatibilityStatus(manifest, repoRoot)
+      };
+    })
+  );
+  return {
+    registryPath,
+    patches
+  };
+}
+async function blueprintPatchRecord(args) {
+  const repoRoot = await resolvePatchReplayTarget(args.cwd);
+  const runtimeHost = resolveBlueprintRuntimeHost();
+  const registryPath = expandHomePath2(runtimeHost.patchRegistryPath);
+  const patchId = normalizePatchId(args.patchId);
+  const trackedFiles = normalizeTrackedFiles(repoRoot, args.trackedFiles);
+  const registry2 = await readPatchRegistryDocument(registryPath);
+  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+  const patchPath = patchContentPath(registryPath, patchId);
+  const manifestPath = patchManifestPath(registryPath, patchId);
+  const auditPath = patchAuditPath(registryPath, patchId);
+  const existingManifest = await pathExists5(manifestPath) ? await readPatchManifest(registryPath, patchId) : null;
+  const updatingStoredPatch = existingManifest !== null;
+  const hasNewPatchContent = typeof args.patch === "string" && args.patch.length > 0;
+  const patch = hasNewPatchContent ? args.patch : existingManifest ? await loadPatchContent(registryPath, patchId, existingManifest) : null;
+  if (!patch) {
+    throw new Error(`Patch content is required when creating a new registry entry: ${patchId}`);
+  }
+  assertNoNullBytes(patch, "Patch content");
+  const normalizedPatch = patch.endsWith("\n") ? patch : `${patch}
+`;
+  const patchHash = sha256(normalizedPatch);
+  let repoRemote;
+  let sourceVersion;
+  let compatibility;
+  if (updatingStoredPatch && !hasNewPatchContent && existingManifest) {
+    repoRemote = existingManifest.repoRemote;
+    sourceVersion = existingManifest.sourceVersion;
+    compatibility = existingManifest.compatibility;
+  } else {
+    repoRemote = await gitRemoteUrl(repoRoot);
+    sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
+    compatibility = {
+      host: args.compatibility?.host ?? runtimeHost.host,
+      repoRootName: args.compatibility?.repoRootName ?? path8.basename(repoRoot),
+      remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
+    };
+  }
+  const manifest = {
+    version: PATCH_MANIFEST_VERSION,
+    patchId,
+    label: args.label?.trim() || null,
+    createdAt: existingManifest?.createdAt ?? createdAt,
+    sourceVersion,
+    repoRootName: path8.basename(repoRoot),
+    repoRemote,
+    patchFile: path8.basename(patchPath),
+    patchHash,
+    trackedFiles,
+    compatibility,
+    lastAppliedAt: args.audit?.outcome === "applied" ? createdAt : existingManifest?.lastAppliedAt ?? null,
+    lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
+  };
+  await fs7.mkdir(registryPath, { recursive: true });
+  await fs7.writeFile(patchPath, normalizedPatch, "utf8");
+  await writeJsonFile(manifestPath, manifest);
+  if (!registry2.patches.includes(patchId)) {
+    await writePatchRegistryDocument(registryPath, {
+      version: registry2.version || PATCH_REGISTRY_VERSION,
+      patches: [...registry2.patches, patchId]
+    });
+  }
+  const auditEntry = {
+    version: PATCH_AUDIT_VERSION,
+    timestamp: createdAt,
+    action: args.audit?.action ?? "record",
+    outcome: args.audit?.outcome ?? "recorded",
+    cwd: path8.resolve(args.cwd ?? process.cwd()),
+    repoRoot,
+    targetHead: args.audit?.targetHead ?? sourceVersion,
+    trackedFiles,
+    conflicts: args.audit?.conflicts ?? [],
+    warnings: args.audit?.warnings ?? [],
+    dryRun: args.audit?.dryRun ?? false
+  };
+  await appendPatchAuditEntry(registryPath, patchId, auditEntry);
+  return {
+    patchId,
+    registryPath,
+    manifestPath,
+    patchPath,
+    auditPath,
+    trackedFiles,
+    updated: existingManifest !== null
+  };
+}
+async function blueprintPatchReapply(args = {}) {
+  const repoRoot = await resolvePatchReplayTarget(args.cwd);
+  const registryPath = expandHomePath2(resolveBlueprintRuntimeHost().patchRegistryPath);
+  const registry2 = await readPatchRegistryDocument(registryPath);
+  const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
+  const patchIds = await selectedPatchIdsForReplay(
+    registryPath,
+    registry2,
+    repoRoot,
+    requestedPatchIds
+  );
+  const dirtyTree = !await gitWorkingTreeClean(repoRoot);
+  const targetHead = await gitHeadSha(repoRoot);
+  if (patchIds.length === 0) {
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: [],
+      conflicts: [],
+      preview: args.dryRun ?? false,
+      targetHead
+    };
+  }
+  if (dirtyTree) {
+    throw new Error(`Patch replay requires a clean working tree: ${repoRoot}`);
+  }
+  const conflicts = [];
+  const patchFiles = [];
+  for (const patchId of patchIds) {
+    const manifest = await readPatchManifest(registryPath, patchId);
+    const compatibility = await buildPatchCompatibilityStatus(manifest, repoRoot);
+    if (compatibility.status === "mismatch") {
+      throw new Error(
+        `Patch compatibility mismatch for ${patchId}: ${compatibility.reasons.join(" ")}`
+      );
+    }
+    await loadPatchContent(registryPath, patchId, manifest);
+    patchFiles.push(patchContentPath(registryPath, patchId));
+  }
+  const checkResult = await runGit2(
+    ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
+    { allowFailure: true }
+  );
+  if (!checkResult.success) {
+    for (const patchId of patchIds) {
+      const patchFile = patchContentPath(registryPath, patchId);
+      const patchCheck = await runGit2(
+        ["-C", repoRoot, "apply", "--check", "--verbose", patchFile],
+        { allowFailure: true }
+      );
+      if (!patchCheck.success) {
+        conflicts.push({
+          patchId,
+          message: patchCheck.stderr || patchCheck.stdout || "Patch did not apply cleanly."
+        });
+      }
+    }
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: patchIds,
+      conflicts,
+      preview: args.dryRun ?? false,
+      targetHead
+    };
+  }
+  if (args.dryRun) {
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: [],
+      conflicts: [],
+      preview: true,
+      targetHead
+    };
+  }
+  const applyResult = await runGit2(
+    ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
+    { allowFailure: true }
+  );
+  if (!applyResult.success) {
+    return {
+      registryPath,
+      appliedPatches: [],
+      skippedPatches: patchIds,
+      conflicts: [
+        {
+          patchId: patchIds.join(","),
+          message: applyResult.stderr || applyResult.stdout || "Patch replay failed."
+        }
+      ],
+      preview: false,
+      targetHead
+    };
+  }
+  return {
+    registryPath,
+    appliedPatches: patchIds,
+    skippedPatches: [],
+    conflicts: [],
+    preview: false,
+    targetHead
+  };
+}
+var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
@@ -29267,6 +30689,21 @@ var init_workspace = __esm({
     WORKSPACE_MANIFEST_FILE = ".blueprint-workspace.json";
     WORKSPACE_REGISTRY_VERSION = 1;
     WORKSPACE_STRATEGIES = ["worktree", "clone"];
+    PATCH_REGISTRY_VERSION = 1;
+    PATCH_MANIFEST_VERSION = 1;
+    PATCH_AUDIT_VERSION = 1;
+    PATCH_AUDIT_ACTIONS = ["record", "preview", "reapply"];
+    PATCH_OUTCOMES = ["recorded", "applied", "conflict", "blocked"];
+    WORKSPACE_REGISTRY_LOCK_RETRY_MS = 50;
+    WORKSPACE_REGISTRY_LOCK_STALE_MS = 6e4;
+    WORKSTREAMS_ROOT_PATH = `${BLUEPRINT_DIR}/workstreams`;
+    WORKSTREAMS_INDEX_PATH = `${WORKSTREAMS_ROOT_PATH}/WORKSTREAMS.md`;
+    WORKSTREAM_STATE_FILENAME = "state.json";
+    WORKSTREAM_STATE_VERSION = 1;
+    WORKSTREAM_STATUSES = ["active", "paused", "completed"];
+    WORKSTREAM_OPERATIONS = ["create", "switch", "resume", "complete"];
+    WORKSTREAMS_COMMAND = "/blu-workstreams";
+    PROGRESS_COMMAND = "/blu-progress";
     workspaceRegistryGetInputSchema = {
       cwd: string2().optional()
     };
@@ -29277,6 +30714,44 @@ var init_workspace = __esm({
       path: string2().trim().min(1).optional(),
       strategy: _enum(WORKSPACE_STRATEGIES).optional(),
       branch: string2().trim().min(1).optional()
+    };
+    workstreamListInputSchema = {
+      cwd: string2().optional()
+    };
+    workstreamMutateInputSchema = {
+      cwd: string2().optional(),
+      operation: _enum(WORKSTREAM_OPERATIONS),
+      workstream: string2().trim().min(1)
+    };
+    patchListInputSchema = {
+      cwd: string2().optional(),
+      patchIds: array(string2().trim().min(1)).optional()
+    };
+    patchRecordInputSchema = {
+      cwd: string2().optional(),
+      patchId: string2().trim().min(1),
+      patch: string2().min(1).optional(),
+      trackedFiles: array(string2().trim().min(1)).min(1),
+      label: string2().trim().min(1).optional(),
+      sourceVersion: string2().trim().min(1).optional(),
+      compatibility: object2({
+        host: string2().trim().min(1).nullable().optional(),
+        repoRootName: string2().trim().min(1).optional(),
+        remoteUrl: string2().trim().min(1).nullable().optional()
+      }).optional(),
+      audit: object2({
+        action: _enum(PATCH_AUDIT_ACTIONS).optional(),
+        outcome: _enum(PATCH_OUTCOMES).optional(),
+        conflicts: array(string2()).optional(),
+        warnings: array(string2()).optional(),
+        dryRun: boolean2().optional(),
+        targetHead: string2().trim().min(1).nullable().optional()
+      }).optional()
+    };
+    patchReapplyInputSchema = {
+      cwd: string2().optional(),
+      patchIds: array(string2().trim().min(1)).optional(),
+      dryRun: boolean2().optional()
     };
     workspaceToolDefinitions = [
       {
@@ -29290,6 +30765,36 @@ var init_workspace = __esm({
         description: "Create a Blueprint workspace on disk and record it in the host-global registry transactionally.",
         inputSchema: workspaceCreateInputSchema,
         handler: async (args) => blueprintWorkspaceCreate(args)
+      },
+      {
+        name: "blueprint_workstream_list",
+        description: "Read the project-local Blueprint workstream index plus per-workstream state and report the active stream summary.",
+        inputSchema: workstreamListInputSchema,
+        handler: async (args) => blueprintWorkstreamList(args)
+      },
+      {
+        name: "blueprint_workstream_mutate",
+        description: "Create, switch, resume, or complete project-local Blueprint workstreams while keeping WORKSTREAMS.md aligned with canonical per-stream state.",
+        inputSchema: workstreamMutateInputSchema,
+        handler: async (args) => blueprintWorkstreamMutate(args)
+      },
+      {
+        name: "blueprint_patch_list",
+        description: "List recorded Blueprint patch manifests from the host-global patch registry and report repo compatibility.",
+        inputSchema: patchListInputSchema,
+        handler: async (args) => blueprintPatchList(args)
+      },
+      {
+        name: "blueprint_patch_record",
+        description: "Persist a patch manifest plus audit entry in the host-global Blueprint patch registry.",
+        inputSchema: patchRecordInputSchema,
+        handler: async (args) => blueprintPatchRecord(args)
+      },
+      {
+        name: "blueprint_patch_reapply",
+        description: "Preview or replay recorded patches against a clean repo while enforcing host-global registry and compatibility guards.",
+        inputSchema: patchReapplyInputSchema,
+        handler: async (args) => blueprintPatchReapply(args)
       }
     ];
   }
@@ -29711,7 +31216,7 @@ function buildBootstrapStatus(diagnostics) {
     recommendedNextAction: diagnostics.brownfield.recommendedNextAction
   };
 }
-function extractMarkdownSection4(markdown, heading) {
+function extractMarkdownSection5(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -29719,11 +31224,11 @@ function extractMarkdownSection4(markdown, heading) {
   return match?.[1] ?? "";
 }
 function parseRequiredTools(markdown) {
-  const section = extractMarkdownSection4(markdown, "Required MCP Tools");
+  const section = extractMarkdownSection5(markdown, "Required MCP Tools");
   return [...section.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
 }
 function parseOptionalAgents(markdown, primarySkill) {
-  const section = extractMarkdownSection4(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
   const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
   return values.filter((value) => value !== primarySkill);
 }
@@ -40071,7 +41576,7 @@ async function readBundledFile(relativePath) {
     return null;
   }
 }
-function extractMarkdownSection5(markdown, heading) {
+function extractMarkdownSection6(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -40085,11 +41590,11 @@ function collapseMarkdownText(markdown) {
 function parseRequiredTools2(markdown) {
   return [...markdown.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
 }
-function parseBulletSection2(markdown) {
+function parseBulletSection3(markdown) {
   return markdown.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 function parseOptionalSubagents(markdown) {
-  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
   const match = section.match(/- Optional subagents:\s*(.+)/);
   if (!match || /\bnone\b/i.test(match[1])) {
     return [];
@@ -40097,7 +41602,7 @@ function parseOptionalSubagents(markdown) {
   return [...match[1].matchAll(/`([a-z0-9-]+)`/g)].map((result) => result[1]);
 }
 function parsePrimarySkill(markdown) {
-  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
   const match = section.match(/- Primary skill:\s*`([^`]+)`/);
   return match?.[1] ?? null;
 }
@@ -40114,13 +41619,13 @@ function parseCommandSpec(markdown, specPath) {
     family: familyMatch?.[1] ?? null,
     executionProfile: executionProfileMatch?.[1] ?? null,
     rootRoutable: rootRoutableMatch ? rootRoutableMatch[1].trim().toLowerCase().startsWith("yes") : null,
-    purpose: collapseMarkdownText(extractMarkdownSection5(markdown, "Purpose")),
-    requiredTools: parseRequiredTools2(extractMarkdownSection5(markdown, "Required MCP Tools")),
+    purpose: collapseMarkdownText(extractMarkdownSection6(markdown, "Purpose")),
+    requiredTools: parseRequiredTools2(extractMarkdownSection6(markdown, "Required MCP Tools")),
     primarySkill: parsePrimarySkill(markdown),
     optionalSubagents: parseOptionalSubagents(markdown),
-    reads: parseBulletSection2(extractMarkdownSection5(markdown, "Blueprint And Global State Reads")),
-    writes: parseBulletSection2(
-      extractMarkdownSection5(markdown, "Blueprint And Global State Writes")
+    reads: parseBulletSection3(extractMarkdownSection6(markdown, "Blueprint And Global State Reads")),
+    writes: parseBulletSection3(
+      extractMarkdownSection6(markdown, "Blueprint And Global State Writes")
     )
   };
 }
@@ -40170,6 +41675,7 @@ function parseRuntimeReferenceRows(markdown) {
 function buildCommandRuntimeContractUri(commandName) {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
+var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS = /* @__PURE__ */ new Set(["review"]);
 async function readBlueprintRuntimeReferenceRows() {
   const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
   return runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
@@ -40189,6 +41695,9 @@ async function listBlueprintCommandRuntimeContractCommands() {
   const runtimeReferenceRows = await readBlueprintRuntimeReferenceRows();
   const commands = await Promise.all(
     Object.entries(catalog.commands).map(async ([commandName, entry]) => {
+      if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
+        return null;
+      }
       const spec = await readBundledCommandSpec(entry);
       return spec && runtimeReferenceRows.has(commandName) ? commandName : null;
     })
@@ -40200,6 +41709,9 @@ async function buildBlueprintCommandRuntimeContractResource(commandName) {
   const entry = catalog.commands[commandName];
   if (!entry) {
     throw new Error(`Unknown Blueprint command: ${commandName}`);
+  }
+  if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
+    throw new Error(`Missing runtime reference row for Blueprint command: ${commandName}`);
   }
   const [spec, runtimeReferenceRows] = await Promise.all([
     readBundledCommandSpec(entry),
@@ -40343,7 +41855,10 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_artifact_report_write",
   "blueprint_review_record",
   "blueprint_update_plan",
-  "blueprint_workspace_create"
+  "blueprint_workspace_create",
+  "blueprint_workstream_mutate",
+  "blueprint_patch_record",
+  "blueprint_patch_reapply"
 ]);
 var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
   "invalid",
@@ -40498,6 +42013,12 @@ function buildSubject(toolName, result) {
   }
   if (toolName === "blueprint_update_plan") {
     return "Blueprint update plan";
+  }
+  if (toolName === "blueprint_workstream_list") {
+    return "workstreams";
+  }
+  if (toolName === "blueprint_workstream_mutate") {
+    return "workstream state";
   }
   return humanizeIdentifier(toolName.replace(/^blueprint_/, ""));
 }

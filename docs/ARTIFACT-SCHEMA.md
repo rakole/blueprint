@@ -831,9 +831,59 @@ Contract notes:
 
 ### `workstreams/`
 
-Planned contents:
+Purpose:
+- project-local parallel-work tracking for `/blu-workstreams`
+- human-readable index plus canonical per-workstream mini-state
+
+Canonical contents:
 - `WORKSTREAMS.md`
-- one subdirectory per workstream, with its own mini-state
+- one subdirectory per workstream, each with `state.json`
+
+Canonical `WORKSTREAMS.md` shape:
+
+```md
+# Blueprint Workstreams
+
+- Active workstream: `backend-api`
+- Workstream counts: 1 active, 1 paused, 0 completed
+
+| Name | Slug | Status | Snapshot | Updated |
+|---|---|---|---|---|
+| `Backend API` | `backend-api` | `active` | `Phase 3; /blu-plan-phase` | `2026-04-23T09:15:00.000Z` |
+| `Docs Sweep` | `docs-sweep` | `paused` | `none` | `2026-04-23T08:10:00.000Z` |
+```
+
+Canonical `.blueprint/workstreams/<slug>/state.json` shape:
+
+```json
+{
+  "version": 1,
+  "name": "Backend API",
+  "slug": "backend-api",
+  "status": "active",
+  "createdAt": "2026-04-23T08:00:00.000Z",
+  "updatedAt": "2026-04-23T09:15:00.000Z",
+  "activatedAt": "2026-04-23T09:15:00.000Z",
+  "completedAt": null,
+  "stateSnapshot": {
+    "projectStatus": "active",
+    "currentMilestone": "v1",
+    "currentPhase": "3",
+    "activeCommand": "/blu-plan-phase",
+    "nextAction": "Run /blu-execute-phase 3",
+    "blockers": [],
+    "roadmapEvolutionNotes": [],
+    "lastUpdated": "2026-04-23T09:14:00.000Z"
+  }
+}
+```
+
+Contract notes:
+- `status` accepts only `active`, `paused`, or `completed`.
+- At most one workstream may be `active`.
+- `WORKSTREAMS.md` is the human index; the per-workstream `state.json` files are the canonical mini-state that the MCP tool validates and mirrors into the index.
+- `stateSnapshot` stores the saved `STATE.md` subset used by `resume`; it must stay project-local and must not be mirrored into host-global config or registries.
+- A stale or missing `WORKSTREAMS.md` relative to the canonical state files is corrupt workstream state and should block mutation until repaired.
 
 ## Global State Tree
 
@@ -852,6 +902,98 @@ Purpose:
 - workspace registry
 - update metadata and last-known version info
 - patch manifests for `reapply-patches`
+
+### `patches/index.json`
+
+Purpose:
+- authoritative host-global patch registry index for `reapply-patches`
+
+Canonical shape:
+
+```json
+{
+  "version": 1,
+  "patches": [
+    "theme-fix",
+    "lint-cleanup"
+  ]
+}
+```
+
+Contract notes:
+- patch ids are file-safe identifiers that map directly to `<patch-id>.json`, `<patch-id>.patch`, and `<patch-id>.audit.ndjson`
+- malformed or partial index entries are a hard stop for patch replay
+- this registry stays host-global under `~/.<host>/blueprint/patches/`; Blueprint must not mirror it into `.blueprint/`
+
+### `patches/<patch-id>.json`
+
+Purpose:
+- durable patch manifest for one replayable patch entry
+
+Canonical shape:
+
+```json
+{
+  "version": 1,
+  "patchId": "theme-fix",
+  "label": "Theme compatibility fix",
+  "createdAt": "2026-04-22T10:15:00.000Z",
+  "sourceVersion": "abc1234",
+  "repoRootName": "blueprint",
+  "repoRemote": "https://github.com/rakole/blueprint.git",
+  "patchFile": "theme-fix.patch",
+  "patchHash": "<sha256>",
+  "trackedFiles": [
+    "src/theme.ts",
+    "tests/theme.test.ts"
+  ],
+  "compatibility": {
+    "host": "gemini",
+    "repoRootName": "blueprint",
+    "remoteUrl": "https://github.com/rakole/blueprint.git"
+  },
+  "lastAppliedAt": "2026-04-22T10:20:00.000Z",
+  "lastOutcome": "applied"
+}
+```
+
+Contract notes:
+- the manifest points at the sibling patch payload file `<patch-id>.patch`
+- `patchHash` must match the on-disk patch payload; a mismatch is malformed-registry state
+- compatibility checks are host-global guardrails, not advisory hints; a mismatch is a hard stop before replay
+- `lastAppliedAt` and `lastOutcome` are replay metadata, not project-local evidence
+
+### `patches/<patch-id>.audit.ndjson`
+
+Purpose:
+- append-only replay audit history for one patch entry
+
+Canonical shape:
+
+```json
+{
+  "version": 1,
+  "timestamp": "2026-04-22T10:20:00.000Z",
+  "action": "reapply",
+  "outcome": "applied",
+  "cwd": "/path/to/repo",
+  "repoRoot": "/path/to/repo",
+  "targetHead": "def5678",
+  "trackedFiles": [
+    "src/theme.ts",
+    "tests/theme.test.ts"
+  ],
+  "conflicts": [],
+  "warnings": [],
+  "dryRun": false
+}
+```
+
+Contract notes:
+- audits are newline-delimited JSON entries appended by the patch MCP tools
+- preview runs should record `action: "preview"` with `dryRun: true`
+- replay runs should record `action: "reapply"` after preview completes and the approved replay step finishes or reports a clean blocker
+- patch audit lives only under `~/.<host>/blueprint/patches/`; do not create `.blueprint/reports/` runtime ownership for this flow
 
 ## Commit Expectations
 

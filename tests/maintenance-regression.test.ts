@@ -10,13 +10,15 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("maintenance manifests keep dirty-tree stops, advisory mode gates, and report-before-mutate gates explicit", async () => {
-  const [newWorkspace, updateCommand, prBranch, ship, undo, cleanup] = await Promise.all([
+  const [newWorkspace, workstreams, updateCommand, prBranch, ship, undo, cleanup, reapplyPatches] = await Promise.all([
     readRepoFile("commands/blu-new-workspace.toml"),
+    readRepoFile("commands/blu-workstreams.toml"),
     readRepoFile("commands/blu-update.toml"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("commands/blu-ship.toml"),
     readRepoFile("commands/blu-undo.toml"),
-    readRepoFile("commands/blu-cleanup.toml")
+    readRepoFile("commands/blu-cleanup.toml"),
+    readRepoFile("commands/blu-reapply-patches.toml")
   ]);
 
   assert.match(newWorkspace, /maintenance\.workspace_root/);
@@ -26,6 +28,17 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
   assert.match(newWorkspace, /new-workspace-confirmation/);
   assert.match(newWorkspace, /do not silently switch to `clone`/i);
   assert.match(newWorkspace, /next safe action/i);
+
+  assert.match(workstreams, /mcp_blueprint_blueprint_workstream_list/);
+  assert.match(workstreams, /mcp_blueprint_blueprint_workstream_mutate/);
+  assert.match(workstreams, /mcp_blueprint_blueprint_state_update/);
+  assert.match(workstreams, /ask_user/);
+  assert.match(workstreams, /workstream-switch-confirmation/);
+  assert.match(workstreams, /workstream-archive-confirmation/);
+  assert.match(workstreams, /missing-resume-snapshot/);
+  assert.match(workstreams, /dirty-working-tree/);
+  assert.match(workstreams, /corrupt-workstream-index/);
+  assert.match(workstreams, /next safe action/i);
 
   assert.match(updateCommand, /mcp_blueprint_blueprint_update_check/);
   assert.match(updateCommand, /mcp_blueprint_blueprint_update_plan/);
@@ -60,6 +73,14 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
   assert.match(cleanup, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
   assert.match(cleanup, /approved cleanup (plan|scope)[\s\S]*before filesystem mutation begins/i);
   assert.match(cleanup, /next safe action/i);
+
+  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_list/);
+  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_reapply/);
+  assert.match(reapplyPatches, /mcp_blueprint_blueprint_patch_record/);
+  assert.match(reapplyPatches, /dirty working tree, malformed patch registry, missing patch target, compatibility mismatch, or installed-extension target is a hard stop/i);
+  assert.match(reapplyPatches, /reapply-patches-confirmation/);
+  assert.match(reapplyPatches, /preflight -> preview -> confirm -> replay -> record/i);
+  assert.match(reapplyPatches, /next safe action/i);
 });
 
 test("maintenance skill keeps family-wide preflight, pending-gate, and report-before-mutate boundaries aligned", async () => {
@@ -70,9 +91,15 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /`blueprint_workspace_create`/);
   assert.match(skill, /`blueprint_update_check`/);
   assert.match(skill, /`blueprint_update_plan`/);
+  assert.match(skill, /`blueprint_workstream_list`/);
+  assert.match(skill, /`blueprint_workstream_mutate`/);
   assert.match(skill, /`new-workspace-confirmation`/);
   assert.match(skill, /`update-mode-gate`/);
   assert.match(skill, /manual fallback/i);
+  assert.match(skill, /`workstream-switch-confirmation`/);
+  assert.match(skill, /`workstream-archive-confirmation`/);
+  assert.match(skill, /`missing-resume-snapshot`/);
+  assert.match(skill, /`corrupt-workstream-index`/);
   assert.match(skill, /dirty working tree/i);
   assert.match(skill, /pending gate `clean-working-tree`/);
   assert.match(skill, /`review-branch-confirmation`/);
@@ -84,6 +111,10 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /`cleanup-confirmation`/);
   assert.match(skill, /`archive-destination-confirmation`/);
   assert.match(skill, /before filesystem mutation begins/i);
+  assert.match(skill, /\/blu-reapply-patches/);
+  assert.match(skill, /`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/);
+  assert.match(skill, /`reapply-patches-confirmation`/);
+  assert.match(skill, /`preflight -> preview -> confirm -> replay -> record`/);
   assert.match(skill, /next safe action/i);
 });
 
@@ -118,8 +149,18 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`update`[\s\S]*~\/.<host>\/blueprint\/updates\//i);
   assert.match(runtimeReference, /`update`[\s\S]*restart guidance/i);
 
+  assert.match(runtimeReference, /`workstreams`[\s\S]*Interactive-read profile for project-local workstream switching/i);
+  assert.match(runtimeReference, /`workstreams`[\s\S]*Gemini-native `ask_user`/i);
+  assert.match(runtimeReference, /`workstreams`[\s\S]*`workstream-switch-confirmation`, `workstream-archive-confirmation`, `missing-workstream`, `missing-resume-snapshot`, and `corrupt-workstream-index`/i);
+  assert.match(runtimeReference, /`workstreams`[\s\S]*blueprint_state_update` only for the final routing patch or returned resume snapshot/i);
+
   assert.match(runtimeReference, /`cleanup`[\s\S]*High-risk-maintenance profile for protected-scope phase-directory archival/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*`cleanup-confirmation`, `archive-destination-confirmation`, and `report-overwrite-confirmation` visible/i);
   assert.match(runtimeReference, /`cleanup`[\s\S]*next safe action visible/i);
+
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*High-risk-maintenance profile for confirmation-gated patch replay/i);
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/i);
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*`preflight -> preview -> confirm -> replay -> record`/i);
+  assert.match(runtimeReference, /`reapply-patches`[\s\S]*next safe action visible/i);
 });

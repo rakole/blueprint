@@ -2072,6 +2072,7 @@ test("runtime-facing docs mention shipped command coverage instead of a docs-onl
   assert.match(readmeFile, /commands\/blu-map-codebase\.toml/);
   assert.match(readmeFile, /commands\/blu-debug\.toml/);
   assert.match(readmeFile, /commands\/blu-docs-update\.toml/);
+  assert.match(readmeFile, /\/blu-workstreams/);
   assert.match(readmeFile, /commands\/blu-review\.toml/);
   assert.match(readmeFile, /commands\/blu-code-review\.toml/);
   assert.match(readmeFile, /commands\/blu-code-review-fix\.toml/);

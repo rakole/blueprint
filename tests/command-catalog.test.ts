@@ -66,7 +66,9 @@ const IMPLEMENTED_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
+  "workstreams",
   "cleanup",
+  "reapply-patches",
   "update"
 ] as const;
 
@@ -237,19 +239,10 @@ test("command runtime contract resource stays anchored to live catalog, command 
     "needs-behavior-audit"
   ]);
 
-  const reviewContract = await buildBlueprintCommandRuntimeContractResource("review");
-
-  assert.equal(reviewContract.command, "review");
-  assert.ok(reviewContract.runtimeReference);
-  assert.equal(reviewContract.runtimeReference.command, "review");
-  assert.equal(reviewContract.runtimeReference.primarySkill, "blueprint-review");
-  assert.deepEqual(reviewContract.runtimeReference.exactMcpDestination, [
-    "blueprint_phase_locate",
-    "blueprint_artifact_list",
-    "blueprint_phase_plan_index",
-    "blueprint_phase_plan_read",
-    "blueprint_review_record"
-  ]);
+  await assert.rejects(
+    buildBlueprintCommandRuntimeContractResource("review"),
+    /Missing runtime reference row for Blueprint command: review/
+  );
 });
 
 test("command path helpers centralize canonical, alias, and manifest forms", () => {
@@ -343,6 +336,26 @@ test("new-workspace is implemented once manifest, skill, and workspace MCP tools
     "blueprint_config_get",
     "blueprint_workspace_create",
     "blueprint_workspace_registry_get"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("workstreams is implemented once manifest, skill, and project-local workstream MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands.workstreams;
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("workstreams"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_state_update",
+    "blueprint_workstream_list",
+    "blueprint_workstream_mutate"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
@@ -1141,25 +1154,6 @@ test("cleanup is implemented once manifest, skill, and archival report MCP tools
   assert.deepEqual(entry.blockedBy, []);
 });
 
-test("update is implemented once manifest, skill, and advisory update MCP tools exist", async () => {
-  const catalog = await blueprintCommandCatalog();
-  const entry = catalog.commands["update"];
-
-  assert.equal(entry.declaredStatus, "implemented");
-  assert.equal(entry.status, "implemented");
-  assert.equal(entry.implemented, true);
-  assert.equal(entry.requiredToolsSatisfied, true);
-  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("update"));
-  assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
-  assert.deepEqual(entry.requiredTools, [
-    "blueprint_update_check",
-    "blueprint_update_plan"
-  ]);
-  assert.deepEqual(entry.availableOptionalAgents, []);
-  assert.deepEqual(entry.blockedBy, []);
-});
-
 test("undo is implemented once manifest, skill, and report-backed revert MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["undo"];
@@ -1178,6 +1172,26 @@ test("undo is implemented once manifest, skill, and report-backed revert MCP too
     "blueprint_phase_locate",
     "blueprint_project_status",
     "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("reapply-patches is implemented once manifest, skill, and patch replay MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["reapply-patches"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("reapply-patches"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_patch_list",
+    "blueprint_patch_reapply",
+    "blueprint_patch_record"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
