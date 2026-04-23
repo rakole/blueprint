@@ -45,6 +45,19 @@ type WorkspaceCreateResult = {
     registryEntry: WorkspaceRegistryEntry;
     repoMembers: WorkspaceRepoMember[];
 };
+type WorkspaceRemoveArgs = {
+    cwd?: string;
+    name: string;
+    path?: string;
+};
+type WorkspaceRemoveResult = {
+    removedPath: string;
+    manifestPath: string;
+    registryPath: string;
+    removedEntry: WorkspaceRegistryEntry;
+    removedMembers: WorkspaceRepoMember[];
+    skippedMembers: string[];
+};
 type PatchCompatibility = {
     host: string | null;
     repoRootName: string;
@@ -118,6 +131,7 @@ type PatchReapplyResult = {
 };
 export declare function blueprintWorkspaceRegistryGet(_args?: WorkspaceRegistryGetArgs): Promise<WorkspaceRegistryGetResult>;
 export declare function blueprintWorkspaceCreate(args: WorkspaceCreateArgs): Promise<WorkspaceCreateResult>;
+export declare function blueprintWorkspaceRemove(args: WorkspaceRemoveArgs): Promise<WorkspaceRemoveResult>;
 export declare function blueprintPatchList(args?: PatchListArgs): Promise<PatchListResult>;
 export declare function blueprintPatchRecord(args: PatchRecordArgs): Promise<PatchRecordResult>;
 export declare function blueprintPatchReapply(args?: PatchReapplyArgs): Promise<PatchReapplyResult>;
@@ -143,6 +157,15 @@ export declare const workspaceToolDefinitions: ({
         branch: z.ZodOptional<z.ZodString>;
     };
     handler: (args: Record<string, unknown>) => Promise<WorkspaceCreateResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        name: z.ZodString;
+        path: z.ZodOptional<z.ZodString>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<WorkspaceRemoveResult>;
 } | {
     name: string;
     description: string;

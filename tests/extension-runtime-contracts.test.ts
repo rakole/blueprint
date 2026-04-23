@@ -27,7 +27,7 @@ const execFileAsync = promisify(execFile);
 // shipped note/add-todo/check-todos/add-backlog/review-backlog/explore capture
 // slice, the debug slice, and the shipped code-review, code-review-fix,
 // audit-fix, secure-phase, review, ui-review, add-tests, pr-branch, ship, undo,
-// new-workspace, cleanup, and reapply-patches slices.
+// new-workspace, remove-workspace, cleanup, and reapply-patches slices.
 const REPAIRED_DIRECT_COMMANDS = [
   "help",
   "progress",
@@ -74,6 +74,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
+  "remove-workspace",
   "cleanup",
   "reapply-patches"
 ] as const;

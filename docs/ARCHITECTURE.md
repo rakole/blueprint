@@ -17,9 +17,9 @@ The live runtime currently ships:
 - the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, and `ui-review`
 - the shipped Wave 4 docs command, `docs-update`
 - the shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`
-- the shipped Wave 5 maintenance commands, `new-workspace`, `cleanup`, and `reapply-patches`
+- the shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `cleanup`, and `reapply-patches`
 
-This includes the shipped Wave 5 maintenance commands `cleanup` and `reapply-patches`, together with the newly shipped `new-workspace` flow.
+This includes the shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `cleanup`, and `reapply-patches`.
 
 Planned commands stay documented, but they are not routable until their manifest, primary skill, and required MCP tools all exist.
 
@@ -60,7 +60,7 @@ Generated at build and release time:
 
 Planned later runtime surfaces, not registered today:
 
-- extra MCP families for workspace removal, workstreams, and update flows
+- extra MCP families for workstreams and update flows
 - extra skill families for planned-only commands
 - extra agent contracts for review, docs, debugging, UI audit, and security audit
 

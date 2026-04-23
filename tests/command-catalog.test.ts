@@ -66,6 +66,7 @@ const IMPLEMENTED_COMMANDS = [
   "ship",
   "undo",
   "new-workspace",
+  "remove-workspace",
   "cleanup",
   "reapply-patches"
 ] as const;
@@ -337,6 +338,38 @@ test("new-workspace is implemented once manifest, skill, and workspace MCP tools
   ]);
   assert.deepEqual(entry.availableOptionalAgents, []);
   assert.deepEqual(entry.blockedBy, []);
+});
+
+test("remove-workspace is implemented once manifest, skill, and workspace removal MCP tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["remove-workspace"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("remove-workspace"));
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_workspace_registry_get",
+    "blueprint_workspace_remove"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
+test("workstreams and update remain non-implemented while their MCP substrates are still missing", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const commandName of ["workstreams", "update"] as const) {
+    const entry = catalog.commands[commandName];
+
+    assert.equal(entry.declaredStatus, "planned");
+    assert.equal(entry.implemented, false);
+    assert.equal(entry.requiredToolsSatisfied, false);
+    assert.ok(entry.blockedBy.length > 0);
+  }
 });
 
 test("review-backlog is implemented once manifest, skill, and backlog-promotion MCP tools exist", async () => {

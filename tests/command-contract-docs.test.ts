@@ -688,6 +688,35 @@ test("maintenance skill and cleanup docs keep the archival contract explicit", a
   );
 });
 
+test("maintenance skill and remove-workspace docs keep the workspace-teardown contract explicit", async () => {
+  const [removeWorkspaceDoc, mcpToolsDoc, migrationMarkdown, skillDoc] = await Promise.all([
+    readRepoFile("docs/commands/remove-workspace.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    readRepoFile("skills/blueprint-maintenance/SKILL.md")
+  ]);
+
+  assert.match(removeWorkspaceDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(removeWorkspaceDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
+  assert.match(removeWorkspaceDoc, /## Shared Runtime Contract/);
+  assert.match(removeWorkspaceDoc, /`blueprint_workspace_registry_get`/);
+  assert.match(removeWorkspaceDoc, /`blueprint_workspace_remove`/);
+  assert.match(removeWorkspaceDoc, /remove-workspace-confirmation/);
+  assert.match(removeWorkspaceDoc, /workspace-path-ambiguity/);
+  assert.match(removeWorkspaceDoc, /registry-drift/);
+  assert.match(removeWorkspaceDoc, /\.blueprint-workspace\.json/);
+  assert.match(skillDoc, /### `remove-workspace`/);
+  assert.match(skillDoc, /`blueprint_workspace_remove`/);
+  assert.match(
+    mcpToolsDoc,
+    /`remove-workspace` uses `blueprint_workspace_registry_get` and `blueprint_workspace_remove`/
+  );
+  assert.match(
+    migrationMarkdown,
+    /\| `remove-workspace` \| `docs\/commands\/remove-workspace\.md` \| `blueprint-maintenance` \| `blueprint_workspace_registry_get`<br>`blueprint_workspace_remove` \|/
+  );
+});
+
 test("maintenance skill and undo docs keep the safe-revert contract explicit", async () => {
   const [undoDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/commands/undo.md"),
