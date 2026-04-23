@@ -337,6 +337,96 @@ test("switching away from an active workstream blocks when the current STATE.md 
   );
 });
 
+test("creating the first active workstream blocks cleanly when STATE.md is truncated", async (t) => {
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "blueprint-workstreams-create-truncated-state-")
+  );
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await fs.writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    "# Blueprint State\n\n- Project status: active\n",
+    "utf8"
+  );
+
+  const blocked = await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.waitingState, "missing-resume-snapshot");
+  assert.equal(blocked.active, null);
+  assert.match(blocked.reason ?? "", /missing required field "Current milestone"/i);
+  assert.match(blocked.nextAction ?? "", /blu-progress/i);
+  assert.equal(listed.active, null);
+  assert.equal(listed.summary.total, 0);
+  assert.deepEqual(listed.workstreams, []);
+});
+
+test("creating a paused workstream skips STATE.md capture when another workstream is already active", async (t) => {
+  const tempRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "blueprint-workstreams-create-paused-state-")
+  );
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+
+  const mutableFs = fs as typeof fs & {
+    readFile: typeof fs.readFile;
+  };
+  const originalReadFile = mutableFs.readFile;
+
+  mutableFs.readFile = (async (...args: Parameters<typeof originalReadFile>) => {
+    if (String(args[0]).endsWith(path.join(".blueprint", "STATE.md"))) {
+      const error = new Error("permission denied") as Error & { code?: string };
+      error.code = "EACCES";
+      throw error;
+    }
+
+    return originalReadFile(...args);
+  }) as typeof fs.readFile;
+
+  t.after(() => {
+    mutableFs.readFile = originalReadFile;
+  });
+
+  const created = await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Beta Stream"
+  });
+
+  mutableFs.readFile = originalReadFile;
+
+  const listed = await blueprintWorkstreamList({ cwd: repoPath });
+
+  assert.equal(created.status, "updated");
+  assert.equal(created.active?.slug, "alpha-stream");
+  assert.equal(listed.active?.slug, "alpha-stream");
+  assert.equal(listed.summary.total, 2);
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "alpha-stream")?.status,
+    "active"
+  );
+  assert.equal(
+    listed.workstreams.find((entry) => entry.slug === "beta-stream")?.status,
+    "paused"
+  );
+});
+
 test("switching away from an active workstream blocks when the current STATE.md snapshot is truncated", async (t) => {
   const tempRoot = await fs.mkdtemp(
     path.join(os.tmpdir(), "blueprint-workstreams-truncated-state-")

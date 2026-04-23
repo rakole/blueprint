@@ -29480,7 +29480,19 @@ async function blueprintWorkstreamMutate(args) {
         statePatch: null
       });
     }
-    const currentSnapshot = await readCurrentStateSnapshot(projectRoot);
+    let currentSnapshot = null;
+    if (!store.active) {
+      const snapshotResult = await readRequiredCurrentStateSnapshot(projectRoot);
+      if (snapshotResult.status === "blocked") {
+        return buildMissingCurrentStateSnapshotResult(
+          store,
+          operation,
+          projectRoot,
+          snapshotResult.reason
+        );
+      }
+      currentSnapshot = snapshotResult.snapshot;
+    }
     const newEntry = {
       version: WORKSTREAM_STATE_VERSION,
       name,
