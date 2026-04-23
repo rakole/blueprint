@@ -45,15 +45,3 @@ about what Blueprint can and cannot do at runtime.
   recaps and explicit status summaries instead of inventing hidden capability.
 - Keep the shared stage labels and in-flight status fields legible even when a
   helper fallback is necessary.
-
-## Anti-GSD And Anti-Legacy Guardrails
-
-- Do not reintroduce `.planning/` as runtime state.
-- Do not promise GSD shell choreography, commit-per-stage behavior, or hidden
-  slash-command chaining.
-- Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`
-  unless Blueprint ships a dedicated runtime substrate for them.
-- Do not claim later lifecycle commands are runnable unless the command catalog
-  marks them implemented.
-- Keep Blueprint bootstrap Gemini-native and MCP-owned rather than reviving
-  omitted legacy orchestration layers.
