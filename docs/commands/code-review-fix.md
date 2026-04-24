@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `code-review-fix` uses the shared long-running-mutation posture: resolve the target phase, read saved findings plus the canonical review-fix contract, decide the bounded remediation set and any overwrite or finding-selection gate, execute only the selected fixes, persist the durable remediation artifact through MCP, validate the bounded fix outcome, and route to the next safe implemented follow-up.
 - Keep the remediation posture explicit throughout the run: resolved scope must stay tied to the saved findings baseline plus the repo files implicated by those findings, pending gates stay limited to overwrite confirmation or finding-selection confirmation when those gates are triggered, execution mode should reflect whether the run stays inline or uses the reviewer subagent and whether the fix set came from explicit selection, `--all`, or bounded `--auto`, and live remediation plus verification status should come from the actual work instead of being invented after the fact.
+- Detailed runtime reference: `skills/blueprint-review/references/code-review-fix-runtime-contract.md`. The command manifest should stay thin enough to point at the `blueprint-review` skill and this local reference while still naming the required MCP tools.
 
 ## Purpose
 
@@ -76,12 +77,16 @@
 - Treat finding selection as an explicit gate before repo mutation unless the user already made the exact fix set explicit through `--all`, `--auto`, or a comparably narrow instruction.
 - Keep repo mutation bounded to the selected findings and the repo files directly implicated by the saved review evidence; route broader remediation to another implemented command instead of widening this command in place.
 - Treat `--auto` as bounded finding selection only. It may skip manual selection for a narrow, high-confidence saved finding set, but it does not authorize auto-fixer behavior, implicit commits, hidden iterative re-review, or an unbounded fixer loop.
+- When `blueprint-reviewer` is available and the saved review is broad or ambiguous, use it only for read-only reclassification of saved findings into fix/defer/skip recommendations. Browser, web, or search-only agents are not substitutes for codebase analysis.
+- When no suitable subagent is available, use the explicit single-agent fallback from the runtime contract: work one selected finding at a time, reread implicated source files, apply the minimal scoped change, verify the changed surface, record fixed/skipped/deferred evidence, and compress carry-forward context before moving to the next finding.
+- If `blueprint_review_record` rejects the review-fix body or reports missing required headings, repair against the canonical `review.review-fix` authoring template and retry once. If the retry still fails, stop with the MCP failure reason rather than writing `XX-REVIEW-FIX.md` by hand.
 
 
 ## Skills And Subagents
 
 
 - Primary skill: `blueprint-review`
+- Local runtime contract: `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
 - Optional subagents:
 - `blueprint-reviewer`
 
@@ -137,6 +142,7 @@
 - Preserve generated reports when verification or shell checks fail.
 - Fall back to `/blu-code-review <phase>` when the saved review baseline is missing or too weak.
 - Fall back to `/blu-progress` instead of guessing through an unclear remediation scope.
+- Preserve the drafted artifact body in the user-visible response when MCP write validation still fails after one template repair retry.
 
 
 ## Acceptance Criteria
@@ -152,6 +158,8 @@
 - Leaves unrelated repo files untouched.
 - Keeps the finding-selection gate explicit and bounded to the saved review evidence.
 - Keeps `--auto` bounded to finding selection instead of implying hidden git automation, auto-fixer behavior, implicit branches or commits, or iterative re-review.
+- Has a capability-gated read-only subagent path and an explicit one-finding-at-a-time fallback when no suitable subagent is available.
+- Repairs invalid review-fix artifact content against the canonical template once before stopping.
 
 
 ## Test Cases

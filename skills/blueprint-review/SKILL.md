@@ -60,6 +60,7 @@ non-routable until their extra MCP substrate lands.
 - `docs/RUNTIME-REFERENCE.md`
 - `docs/PHASE-LIFECYCLE.md`
 - `skills/blueprint-review/references/code-review-runtime-contract.md`
+- `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
 - saved phase artifacts for the target phase, especially execution summaries
 
 ## Required MCP Tools
@@ -162,43 +163,59 @@ non-routable until their extra MCP substrate lands.
 3. Read the canonical review-fix contract through
    `blueprint_artifact_contract_read` before drafting `XX-REVIEW-FIX.md`, then
    use the returned template as the baseline for the persisted artifact.
-4. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
+4. Load `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
+   for the detailed stage mapping, required MCP call controls, artifact
+   authoring rules, capability-gated subagent path, no-subagent fallback,
+   retry/repair behavior, output quality criteria, and completion criteria.
+5. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
    route back to `/blu-code-review <phase>` or `/blu-progress` instead of
    bluffing.
-5. Use Gemini CLI's `ask_user` tool for overwrite confirmation and for any
+6. Use Gemini CLI's `ask_user` tool for overwrite confirmation and for any
    structured confirmation of which findings Blueprint is about to fix.
-6. Treat `--auto` as bounded finding selection only. It may skip the manual
+7. Treat `--auto` as bounded finding selection only. It may skip the manual
    selection step for a narrow, high-confidence saved finding set, but it does
    not authorize any auto-fixer behavior, automatic commits, branch creation,
    or hidden iterative re-review loops.
    It does not authorize automatic commits, branch creation, or iterative re-review loops.
-7. Require explicit confirmation of the selected findings unless the user
+8. Require explicit confirmation of the selected findings unless the user
    clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
-8. Keep repo mutation tightly bounded to the selected review findings and the
+9. Keep repo mutation tightly bounded to the selected review findings and the
    implicated repo files.
-9. Use `blueprint-reviewer` for bounded reclassification when the saved review
-   is broad or ambiguous.
-10. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+10. Use `blueprint-reviewer` for bounded reclassification when the saved review
+   is broad or ambiguous. The subagent stays read-only: it may sort,
+   reclassify, or recommend selected/deferred findings, but it must not apply
+   fixes, persist artifacts, create commits, or act as a browser/web/search-only
+   substitute for codebase analysis.
+11. When the subagent is unavailable or unnecessary, use the no-subagent
+   fallback from the runtime contract: process one selected finding at a time,
+   reread implicated files, apply the minimal scoped change, verify the changed
+   surface, record fixed/skipped/deferred evidence, and compress carry-forward
+   context before moving to the next finding.
+12. Keep the active stage visible as the run moves through `Resolve`, `Read`,
     `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
     resolved scope, active stage, pending gate, execution mode, and next safe
     action legible throughout the run.
-11. For non-trivial code-review-fix runs, prefer update_topic plus
+13. For non-trivial code-review-fix runs, prefer update_topic plus
     `write_todos` so saved-findings review, finding-selection confirmation,
     bounded remediation, artifact persistence, verification, and routing stay
     visible without becoming persistence.
-12. Report the resolved phase, resolved scope, selected finding ids,
+14. Report the resolved phase, resolved scope, selected finding ids,
     remediation progress, and verification progress while work is in flight,
     not only in the closing summary. Keep pending gates limited to overwrite confirmation or
     finding-selection confirmation, and let execution mode reflect whether the
     run stays inline, uses the reviewer subagent, or is following an explicit
     versus bounded `--auto` selection path.
-13. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
+15. Persist the durable remediation artifact as `XX-REVIEW-FIX.md` through
    `blueprint_review_record` with the `review-fix` artifact.
-14. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
+16. If `blueprint_review_record` rejects the artifact or reports missing
+   required headings, repair against the `review.review-fix` authoring template
+   and retry once. If the retry still fails, stop with the MCP reason and do not
+   write the artifact by hand.
+17. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
    inside implemented commands. Prefer `/blu-validate-phase <phase>` when
    behavior changed, `/blu-add-tests <phase>` when missing tests are the main
    remaining gap, and `/blu-progress` otherwise.
-15. No auto-fixer behavior is shipped. Do not invent a `blueprint-fixer`,
+18. No auto-fixer behavior is shipped. Do not invent a `blueprint-fixer`,
     implicit branch or commit flow, or hidden iterative re-review pass.
 
 ### `secure-phase`
