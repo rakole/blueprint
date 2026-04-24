@@ -416,6 +416,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(reviewContract.authoringTemplate, /## Severity Summary/);
   assert.match(securityContract.authoringTemplate, /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/);
   assert.match(securityContract.authoringTemplate, /## Threat Register/);
+  assert.match(
+    securityContract.authoringTemplate,
+    /\| Threat ID \| Category \| Component \| Disposition \| Mitigation \| Status \| Evidence \/ Note \|/
+  );
   assert.match(securityContract.authoringTemplate, /## Accepted Risks/);
   assert.match(securityContract.authoringTemplate, /## Security Audit Trail/);
   assert.deepEqual(

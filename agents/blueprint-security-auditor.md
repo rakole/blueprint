@@ -90,6 +90,11 @@ guessing threat coverage, mitigations, or residual risk.
   reviewed repo paths, and supplied evidence.
 - If there are no material gaps, say so plainly and explain why the reviewed
   evidence is sufficient.
+- Prefer retained secure-phase result labels when returning to the parent:
+  `SECURED` when all declared threats are closed or accepted, `OPEN_THREATS`
+  when declared threats remain open, and `ESCALATE` when evidence is too
+  contradictory or incomplete to verify safely. Map those labels to artifact
+  posture as `PASS`, `FOLLOW_UP`, or `BLOCKED` inside the draft.
 
 ## Boundaries
 
@@ -99,3 +104,6 @@ guessing threat coverage, mitigations, or residual risk.
   persistence paths.
 - Do not widen into unrelated feature work or prompt-only speculation.
 - Do not reintroduce `.planning` or legacy slash-command flows.
+- Do not scan for unrelated vulnerabilities outside the parent-supplied threat
+  register. Summary `## Threat Flags` may be reported as unregistered flags, but
+  they do not authorize inventing new saved-plan threats.

@@ -306,6 +306,8 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
   const seenSummaries = new Set<string>();
 
   for (const section of extractMarkdownSectionContent(content, /^Threat Register$/i)) {
+    let headers: string[] | null = null;
+
     for (const line of section.split("\n")) {
       const trimmed = line.trim();
 
@@ -322,19 +324,77 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
         continue;
       }
 
-      const [threatId, disposition, status, evidence] = cells;
+      if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) {
+        continue;
+      }
+
+      const normalizedCells = cells.map((cell) =>
+        cell.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+      );
+
+      if (
+        headers === null &&
+        normalizedCells.some((cell) => cell === "threat id")
+      ) {
+        headers = normalizedCells;
+        continue;
+      }
+
+      const findHeaderIndex = (patterns: RegExp[]): number =>
+        headers?.findIndex((header) => patterns.some((pattern) => pattern.test(header))) ?? -1;
+
+      const threatIdIndex = findHeaderIndex([/^threat id$/]);
+      const dispositionIndex = findHeaderIndex([/^disposition$/]);
+      const mitigationIndex = findHeaderIndex([/^mitigation$/]);
+      const statusIndex = findHeaderIndex([/^status$/]);
+      const evidenceIndex = findHeaderIndex([/^evidence(?: note)?$/, /^evidence .* note$/]);
+      const hasRichFallbackShape = cells.length >= 7;
+
+      const threatId = cells[threatIdIndex >= 0 ? threatIdIndex : 0] ?? "";
+      const disposition =
+        cells[
+          dispositionIndex >= 0
+            ? dispositionIndex
+            : hasRichFallbackShape
+              ? 3
+              : 1
+        ] ?? "";
+      const mitigation =
+        cells[
+          mitigationIndex >= 0
+            ? mitigationIndex
+            : hasRichFallbackShape
+              ? 4
+              : -1
+        ] ?? "";
+      const status =
+        cells[
+          statusIndex >= 0
+            ? statusIndex
+            : hasRichFallbackShape
+              ? 5
+              : 2
+        ] ?? "";
+      const evidence =
+        cells[
+          evidenceIndex >= 0
+            ? evidenceIndex
+            : hasRichFallbackShape
+              ? 6
+              : 3
+        ] ?? "";
 
       if (
         threatId.length === 0 ||
         threatId === "Threat ID" ||
-        threatId === "---" ||
         !/\bopen\b/i.test(status)
       ) {
         continue;
       }
 
+      const evidenceNote = evidence.length > 0 ? evidence : mitigation;
       const summary = normalizeFindingSummary(
-        `Open threat ${threatId}: ${evidence.length > 0 ? evidence : `${disposition} ${status}`}`
+        `Open threat ${threatId}: ${evidenceNote.length > 0 ? evidenceNote : `${disposition} ${status}`}`
       );
 
       if (summary.length === 0 || seenSummaries.has(summary)) {

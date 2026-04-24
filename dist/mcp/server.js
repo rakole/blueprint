@@ -15227,9 +15227,9 @@ function renderSecurityTemplate(context) {
 
 ## Threat Register
 
-| Threat ID | Disposition | Status | Evidence / Note |
-|-----------|-------------|--------|-----------------|
-| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |
+| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
+|-----------|----------|-----------|-------------|------------|--------|-----------------|
+| T-01 | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. |
 
 ## Accepted Risks
 
@@ -16520,14 +16520,14 @@ var init_artifact_contracts = __esm({
           "PASS|FOLLOW_UP|BLOCKED",
           "Concise security posture grounded in saved evidence.",
           "Saved phase artifacts, repo paths, or cited references reviewed.",
-          "| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |",
+          "| T-01 | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. |",
           "Accepted threat reference plus rationale, or `none`.",
           "Open threat, missing control, or risk decision that needs explicit attention, or `none`.",
           "Explicit hardening step, validation gap, or `none`.",
           "Audit date, threat counts, and verifier note."
         ],
         notes: [
-          "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
+          "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/category/component/mitigation/status/evidence coverage, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
         ],
         renderScaffoldTemplate: renderSecurityTemplate,
         renderAuthoringTemplate: renderSecurityTemplate
@@ -27546,6 +27546,7 @@ function parseSecurityThreatRegisterFindings(content) {
   const findings = [];
   const seenSummaries = /* @__PURE__ */ new Set();
   for (const section of extractMarkdownSectionContent(content, /^Threat Register$/i)) {
+    let headers = null;
     for (const line of section.split("\n")) {
       const trimmed = line.trim();
       if (!trimmed.startsWith("|")) {
@@ -27555,12 +27556,34 @@ function parseSecurityThreatRegisterFindings(content) {
       if (cells.length < 4) {
         continue;
       }
-      const [threatId, disposition, status, evidence] = cells;
-      if (threatId.length === 0 || threatId === "Threat ID" || threatId === "---" || !/\bopen\b/i.test(status)) {
+      if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) {
         continue;
       }
+      const normalizedCells = cells.map(
+        (cell) => cell.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+      );
+      if (headers === null && normalizedCells.some((cell) => cell === "threat id")) {
+        headers = normalizedCells;
+        continue;
+      }
+      const findHeaderIndex = (patterns) => headers?.findIndex((header) => patterns.some((pattern) => pattern.test(header))) ?? -1;
+      const threatIdIndex = findHeaderIndex([/^threat id$/]);
+      const dispositionIndex = findHeaderIndex([/^disposition$/]);
+      const mitigationIndex = findHeaderIndex([/^mitigation$/]);
+      const statusIndex = findHeaderIndex([/^status$/]);
+      const evidenceIndex = findHeaderIndex([/^evidence(?: note)?$/, /^evidence .* note$/]);
+      const hasRichFallbackShape = cells.length >= 7;
+      const threatId = cells[threatIdIndex >= 0 ? threatIdIndex : 0] ?? "";
+      const disposition = cells[dispositionIndex >= 0 ? dispositionIndex : hasRichFallbackShape ? 3 : 1] ?? "";
+      const mitigation = cells[mitigationIndex >= 0 ? mitigationIndex : hasRichFallbackShape ? 4 : -1] ?? "";
+      const status = cells[statusIndex >= 0 ? statusIndex : hasRichFallbackShape ? 5 : 2] ?? "";
+      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : hasRichFallbackShape ? 6 : 3] ?? "";
+      if (threatId.length === 0 || threatId === "Threat ID" || !/\bopen\b/i.test(status)) {
+        continue;
+      }
+      const evidenceNote = evidence.length > 0 ? evidence : mitigation;
       const summary = normalizeFindingSummary(
-        `Open threat ${threatId}: ${evidence.length > 0 ? evidence : `${disposition} ${status}`}`
+        `Open threat ${threatId}: ${evidenceNote.length > 0 ? evidenceNote : `${disposition} ${status}`}`
       );
       if (summary.length === 0 || seenSummaries.has(summary)) {
         continue;

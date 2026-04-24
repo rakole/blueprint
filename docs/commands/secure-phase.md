@@ -10,6 +10,7 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Runtime contract reference: `skills/blueprint-review/references/secure-phase-runtime-contract.md` owns the State A/B/C input model, saved threat-model parsing, summary threat-flag handling, bounded auditor path, no-subagent fallback, retry/repair behavior, and threat-count consistency pass.
 - `secure-phase` uses the shared long-running-mutation posture: resolve the target phase, read saved execution plus plan evidence, decide the overwrite or open-threat gate, execute a threat-model-bounded audit, persist the durable security artifact through MCP, validate the saved result against the security contract, and route to the next safe implemented follow-up only when threats no longer remain open.
 - Keep the threat-review posture explicit throughout the run: resolved scope must stay tied to the saved plan evidence and declared threat register, pending gates stay limited to overwrite confirmation, the verify-versus-accept decision, or the visible `pending-open-threat` waiting state, execution mode should reflect inline versus `blueprint-security-auditor`-assisted review, and next safe action must stay blocked until every threat is closed or explicitly accepted.
 
@@ -18,6 +19,8 @@
 
 
 `secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native threat-verification command: it reads saved phase evidence, loads the canonical `review.security` contract before drafting, uses the phase plan index and plan reader to parse the saved phase threat model from plan evidence, builds a threat register, and keeps the audit bounded to the declared threats and mitigations instead of running a generic security scan.
+
+The detailed behavior lives in `skills/blueprint-review/references/secure-phase-runtime-contract.md`. The command manifest should stay thin enough to point at the `blueprint-review` skill and this local reference while still naming the required MCP tools and visible gates.
 
 
 ## Command Path And Examples
@@ -69,6 +72,8 @@
 - Read the canonical `review.security` contract through `blueprint_artifact_contract_read` before drafting or revising `XX-SECURITY.md`, and use the returned template and required headings as the baseline instead of a copied prompt-local variant.
 - Use `blueprint_phase_plan_index` and `blueprint_phase_plan_read` to parse the saved phase threat model from the executed plan evidence before building the threat register.
 - Keep the threat-model-bounded behavior explicit: use saved plan evidence only to define the declared threats and mitigations, then audit against that register instead of widening into a generic security scan.
+- Incorporate execution-summary `## Threat Flags` when present. Map them to declared threats when possible, and record unregistered flags separately instead of converting them into invented plan threats.
+- Keep one threat-register row per declared saved-plan threat with threat id, category, component, disposition, mitigation, status, and evidence or note.
 - Keep the returned template's threat register, accepted risks, and audit-trail structure explicit even when the final audit concludes there are no open threats.
 - Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`.
 - Do not compute a next action until all threats are closed or explicitly accepted.
@@ -80,6 +85,12 @@
 - Primary skill: `blueprint-review`
 - Optional subagents:
 - `blueprint-security-auditor`
+
+## Subagent And Fallback Contract
+
+- Use `blueprint-security-auditor` only for bounded mitigation verification over the declared threat register. It may compare saved plans, summaries, prior security evidence, and implicated repo files, but it must remain read-only and cannot persist artifacts, mutate repo files, invent threats, or route the user.
+- If the auditor is unavailable or unnecessary, use the sequential fallback from `skills/blueprint-review/references/secure-phase-runtime-contract.md`: read saved plans, summaries, prior security artifact if any, and implicated repo files; verify one declared threat at a time; compress carry-forward context to remaining threat ids and unresolved evidence; then run a final threat-count consistency pass.
+- The fallback must still distinguish confirmed mitigations, open threats, accepted risks, suspicious artifact content, unregistered summary threat flags, and follow-up hardening work.
 
 
 ## Dependencies
@@ -112,6 +123,7 @@
 - Use Gemini CLI's `ask_user` tool for overwrite confirmation before replacing an existing `XX-SECURITY.md`.
 - Use Gemini CLI's `ask_user` tool for the structured verify-versus-accept decision when open threats remain.
 - Present the user with the choice to verify open threats or explicitly accept them. If threats remain open, block advancement and do not emit a next-step route.
+- Accepted risks require an explicit user decision and a saved accepted-risk row; do not infer acceptance from silence.
 
 
 ## In-Flight Progress Contract
@@ -137,6 +149,7 @@
 - Preserve generated security artifacts when the audit needs revision or external context is incomplete.
 - Fall back to explicit evidence gaps and the safest implemented next step instead of guessing missing mitigations.
 - Keep prompt-boundary or suspicious-content concerns explicit in the saved artifact instead of silently trusting compromised evidence.
+- If `blueprint_review_record` rejects the artifact or reports missing headings, repair once against the canonical `review.security` authoring template and retry through MCP. If the retry fails, stop with the MCP reason and do not write `XX-SECURITY.md` by hand.
 
 
 ## Acceptance Criteria
