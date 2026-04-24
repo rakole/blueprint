@@ -15665,19 +15665,22 @@ function renderAuditFixTemplate(context) {
 
 ## Evidence Used
 
-- Saved review, verification, UAT, or security evidence reviewed for phase ${phasePrefix(context)}.
+- Saved review, verification, UAT, or security artifacts selected for phase ${phasePrefix(context)}.
+- Scoped repo files reviewed: <repo-relative files or none>.
+- Pre-fix HEAD: <sha or unknown>.
 
 ## Fix Scope
 
-- Repo files or findings selected for remediation.
+- Source/severity/max/dry-run settings.
+- Classification table with finding id, evidence source, severity, classification, reason, implicated files, and narrow verification.
 
 ## Changes Applied
 
-- Fixes applied or \`none\`.
+- Applied fixes, failed attempts, dry-run-only plans, verification checks, commit SHA(s), rollback status, or \`none\`.
 
 ## Remaining Gaps
 
-- Remaining high-confidence gap or \`none\`.
+- Manual-only findings, skipped findings, unattempted candidates, stale evidence, todo decisions, stop reason, or \`none\`.
 
 ## Next Safe Action
 

@@ -935,6 +935,9 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   assert.match(auditFixDoc, /stop on first failed fix attempt or failed required verification/i);
   assert.match(auditFixDoc, /commit traceability/i);
   assert.match(auditFixDoc, /planned inventory and is not a required runtime path/i);
+  assert.match(auditFixDoc, /audit-fix-runtime-contract\.md/);
+  assert.match(auditFixDoc, /classification table before mutation/i);
+  assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(auditFixDoc, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
   assert.match(
     mcpToolsDoc,
@@ -947,6 +950,14 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   assert.match(
     migrationMarkdown,
     /ask_user confirmation for non-trivial mutation and todo capture/
+  );
+  assert.match(
+    migrationMarkdown,
+    /classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/
+  );
+  assert.match(
+    migrationMarkdown,
+    /repair invalid `report\.audit-fix` writes once against canonical headings/
   );
   assert.match(
     migrationMarkdown,

@@ -32,6 +32,14 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   assert.match(auditFixDoc, /## Shared Runtime Contract/);
   assert.match(auditFixDoc, /ask_user/);
   assert.match(auditFixDoc, /## In-Flight Progress Contract/);
+  assert.match(
+    auditFixDoc,
+    /skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md/
+  );
+  assert.match(auditFixDoc, /classification table before mutation/i);
+  assert.match(auditFixDoc, /`auto-fixable`, `manual-only`, or `skip`/);
+  assert.match(auditFixDoc, /repair the report against the canonical `report\.audit-fix` headings and retry once through MCP/i);
+  assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(auditFixDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
   assert.match(auditFixDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/i);
   assert.match(auditFixDoc, /report overwrite confirmation/i);
@@ -44,8 +52,28 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   assert.match(runtimeReference, /`audit-fix`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(runtimeReference, /`audit-fix`[\s\S]*`update_topic` and `write_todos` for non-trivial audit-fix runs/i);
   assert.match(runtimeReference, /`audit-fix`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*report overwrite, or todo capture explicit/i);
+  assert.match(runtimeReference, /`audit-fix`[\s\S]*report overwrite or todo capture explicit/i);
   assert.match(runtimeReference, /`audit-fix`[\s\S]*verification progress, report status, and early-stop state explicit/i);
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*load `skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md`/i
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/i
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*preserve the single-agent no-subagent fallback that processes one finding at a time with carry-forward compression/i
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*reject browser\/web-search\/shell-only or generic agents as substitutes/i
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*repair invalid `report\.audit-fix` writes once against canonical headings/i
+  );
 });
 
 test("audit-fix is exposed as an implemented remediation command with the registered tools", async () => {

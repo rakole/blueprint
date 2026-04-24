@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `audit-fix` uses the shared long-running-mutation posture: resolve the target phase, read saved evidence plus the deterministic remediation scope, decide the bounded candidate set and any non-trivial mutation or overwrite gate, execute only the capped fixes, persist the durable remediation report through MCP, validate the bounded remediation outcome, and route to the next safe implemented follow-up.
 - Keep the remediation posture explicit throughout the run: resolved scope must stay tied to the `--source`-selected saved evidence plus the repo files returned by `blueprint_review_scope`, pending gates stay limited to non-trivial mutation confirmation, report overwrite confirmation, and todo-capture confirmation when those gates are triggered, execution mode should reflect `--dry-run` versus mutation plus inline versus reviewer/verifier-assisted remediation, and live remediation progress, verification progress, report status, and early-stop state should come from the actual work instead of being invented after the fact.
+- Detailed behavior lives in `skills/blueprint-review/references/audit-fix-runtime-contract.md`. The command manifest should load that local contract through the `blueprint-review` skill before classification.
 
 ## Purpose
 
@@ -82,8 +83,11 @@
 - When explicit files are needed, pass only repo-relative file paths. Directories, wildcards, `.blueprint/**`, and absolute paths are invalid review-scope inputs.
 - Omit `files` to let Blueprint derive scope from executed plans and summaries, then treat the returned `files` list as authoritative instead of widening scope from git drift or chat memory.
 - Classify candidate fixes from the `--source`-selected saved artifacts plus direct inspection of those scoped files. Do not classify from unstaged drift or prompt memory alone.
+- Produce the audit-fix classification table before mutation: finding id, evidence source, severity, classification (`auto-fixable`, `manual-only`, or `skip`), reason, implicated files, and narrow verification.
 - Apply `--severity` and `--max` after classification, keep remediation bounded to that capped candidate set, and stop on first failed fix attempt or failed required verification.
 - Persist the durable remediation report through `blueprint_artifact_report_write` with the bare report name `audit-fix-<phase>`, not a `.blueprint/reports/...` path, and treat the returned `path` as authoritative.
+- Author the report against `report.audit-fix`: `Evidence Used`, `Fix Scope`, `Changes Applied`, `Remaining Gaps`, and `Next Safe Action`. Include saved evidence, source/severity/max/dry-run settings, the classification table, attempted-fix statuses, verification results, stop-on-first-failure state, unattempted candidates, manual-only findings, todo decisions, and commit traceability.
+- If `blueprint_artifact_report_write` rejects the report body or reports missing required headings, repair the report against the canonical `report.audit-fix` headings and retry once through MCP. If the retry still fails, stop without hand-editing `.blueprint/`.
 - Include commit traceability in the report: pre-fix HEAD reference, any commit SHA(s) created during the run, or `none` when no commit was created.
 - When capturing a todo follow-up, append through `blueprint_artifact_mutate_index` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
 
@@ -97,6 +101,10 @@
 - `blueprint-verifier`
 - Planned-only, not shipped:
 - `blueprint-fixer` remains planned inventory and is not a required runtime path for `/blu-audit-fix`.
+- Use the reviewer subagent only for read-only classification when saved evidence is broad or ambiguous.
+- Use the verifier subagent only for bounded post-fix verification when targeted checks need a second pass against saved evidence.
+- If suitable subagents are unavailable, follow the single-agent fallback from the runtime contract: classify saved evidence, process one finding at a time, reread implicated scoped files, apply the minimal fix, run narrow verification, record fixed/skipped/deferred evidence, compress carry-forward context, then continue.
+- Browser-only, web-search-only, shell-only, or generic agents are not substitutes for Blueprint audit-fix classification or verification.
 
 
 ## Dependencies
