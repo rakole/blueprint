@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+import { loadBlueprintSkillInputs, type BlueprintSkillResolvedInputs } from "./skill-metadata.js";
 import { blueprintCommandCatalog } from "./tools/project.js";
 
 export const BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI =
@@ -47,6 +48,7 @@ export type BlueprintCommandRuntimeContractResource = {
   catalog: CommandCatalogEntry;
   spec: BlueprintCommandSpecResource | null;
   runtimeReference: BlueprintRuntimeReferenceRowResource | null;
+  skillInputs: BlueprintSkillResolvedInputs;
 };
 
 function bundledUrl(relativePath: string): URL {
@@ -297,6 +299,12 @@ export async function buildBlueprintCommandRuntimeContractResource(
     readBlueprintRuntimeReferenceRows()
   ]);
   const runtimeReference = runtimeReferenceRows.get(commandName);
+  const skillInputs = await loadBlueprintSkillInputs(
+    entry.primarySkill,
+    entry.command,
+    readBundledFile,
+    entry.skillPath
+  );
 
   if (!spec || !entry.specPath) {
     throw new Error(`Missing locked command spec for Blueprint command: ${commandName}`);
@@ -311,7 +319,8 @@ export async function buildBlueprintCommandRuntimeContractResource(
     uri: buildCommandRuntimeContractUri(commandName),
     catalog: entry,
     spec,
-    runtimeReference
+    runtimeReference,
+    skillInputs
   };
 }
 

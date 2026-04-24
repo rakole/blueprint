@@ -11,6 +11,19 @@ commands:
   - /blu-research-phase
   - /blu-ui-phase
   - /blu-list-phase-assumptions
+input_bundles:
+  shared:
+    - docs/ARTIFACT-SCHEMA.md
+    - docs/MCP-TOOLS.md
+  commands:
+    "/blu-discuss-phase":
+      - docs/commands/discuss-phase.md
+    "/blu-research-phase":
+      - docs/commands/research-phase.md
+    "/blu-ui-phase":
+      - docs/commands/ui-phase.md
+    "/blu-list-phase-assumptions":
+      - docs/commands/list-phase-assumptions.md
 ---
 
 # Blueprint Phase Discovery Skill
@@ -55,12 +68,10 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 ## Required Inputs
 
-- `docs/commands/discuss-phase.md`
-- `docs/commands/list-phase-assumptions.md`
-- `docs/commands/research-phase.md`
-- `docs/commands/ui-phase.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
+
+Command-specific inputs are resolved from the structured `input_bundles` frontmatter for the invoking discovery command.
 
 ## Required MCP Tools
 

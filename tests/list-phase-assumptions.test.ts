@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -72,6 +73,29 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or task tracker tools for `\/blu-list-phase-assumptions`/);
   assert.match(skillFile, /Treat `\/blu-list-phase-assumptions` as an `interactive-read` summary/i);
   assert.match(skillFile, /waiting-state posture with an explicit next safe action/i);
+  const contract = await buildBlueprintCommandRuntimeContractResource("list-phase-assumptions");
+
+  assert.deepEqual(contract.skillInputs.shared, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "docs/commands/list-phase-assumptions.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md",
+    "docs/commands/list-phase-assumptions.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
+    false
+  );
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
+    false
+  );
+  assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
 });
 
 test("list-phase-assumptions remains implemented in the live command catalog", async () => {

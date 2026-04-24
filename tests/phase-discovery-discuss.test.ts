@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
@@ -171,6 +172,27 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, /progress recaps/i);
   assert.match(skillFile, /checkpoint-per-area/i);
   assert.match(skillFile, /end-of-run `STATE\.md` updates/i);
+  const contract = await buildBlueprintCommandRuntimeContractResource("discuss-phase");
+
+  assert.deepEqual(contract.skillInputs.shared, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, ["docs/commands/discuss-phase.md"]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md",
+    "docs/commands/discuss-phase.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
+    false
+  );
+  assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
+    false
+  );
 
   assert.match(docFile, /not a claim of full GSD parity/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);

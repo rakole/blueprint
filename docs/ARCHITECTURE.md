@@ -80,6 +80,8 @@ Planned later runtime surfaces, not registered today:
 
 - Skills hold orchestration rules for command families.
 - The active host CLI discovers shipped skills from `skills/<name>/SKILL.md`.
+- Multi-command skills should separate shared grounding inputs from command-specific inputs in skill frontmatter instead of forcing every sibling command doc to load on every invocation.
+- Loaders should resolve only the effective input bundle for the invoking command, not the full union of every command owned by the skill.
 - Legacy flat `skills/*.md` mirrors may remain in the repo during repair, but they are not runtime handles and must not be referenced as activation paths.
 - The currently shipped skill files are `blueprint-router`, `blueprint-bootstrap`, `blueprint-governance`, `blueprint-map`, `blueprint-capture`, `blueprint-phase-discovery`, `blueprint-phase-planning`, `blueprint-phase-execution`, `blueprint-phase-validation`, `blueprint-debug`, `blueprint-docs`, `blueprint-review`, `blueprint-roadmap-admin`, and `blueprint-maintenance`.
 - Planned skill families stay documented but non-routable until their commands actually ship.

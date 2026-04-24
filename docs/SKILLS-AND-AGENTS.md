@@ -2,6 +2,8 @@
 
 Implemented Blueprint skills are host-discoverable bundles at `skills/<name>/SKILL.md`. Legacy flat `skills/*.md` mirrors may remain as repo-local compatibility docs during repair, but they are not runtime activation handles. Implemented Blueprint agents are host subagent definition files under `agents/*.md`.
 
+When one skill owns multiple commands, its bundle metadata should keep shared inputs separate from command-specific inputs. Loaders and runtime-contract consumers should resolve only the effective bundle for the invoking command rather than loading every sibling command doc by default.
+
 ## Shipped Skills
 
 Primary command lists are canonical ownership metadata and must stay consistent with `docs/COMMAND-CATALOG.md` and `docs/commands/*.md`. The `Status` column here is skill-family/file rollout metadata; command-level availability remains canonical in `docs/COMMAND-CATALOG.md` and the live `blueprint_command_catalog`.
