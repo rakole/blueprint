@@ -611,6 +611,7 @@ Review-fix expectations:
 - should summarize only the selected remediation pass instead of restating every open issue in the phase
 - should capture concrete verification evidence for applied changes and keep unresolved work explicit
 - Blueprint-native review-fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
+- invalid or incomplete review-fix content should be repaired against the canonical `review.review-fix` authoring template and retried once through `blueprint_review_record`; the command must not bypass MCP by writing the artifact directly
 
 Exact persistence template:
 
