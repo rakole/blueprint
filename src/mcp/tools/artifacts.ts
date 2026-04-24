@@ -4265,6 +4265,22 @@ export function extractSummaryPlanReference(content: string): string | null {
   return match ? normalizeSummaryPlanReference(match[1]) : null;
 }
 
+export function extractSummaryStatus(content: string): "COMPLETED" | "PARTIAL" | "BLOCKED" | null {
+  const match = content.match(/^\*\*Status:\*\*\s*(.+)$/m);
+
+  if (!match) {
+    return null;
+  }
+
+  const status = match[1].trim().toUpperCase();
+
+  if (status === "COMPLETED" || status === "PARTIAL" || status === "BLOCKED") {
+    return status;
+  }
+
+  return null;
+}
+
 export function validateSummaryArtifactContent(
   content: string,
 ): {
@@ -4295,6 +4311,13 @@ export function validateSummaryArtifactContent(
       .filter((signal) => signal.length > 0 && normalizedContent.includes(signal))
       .map((signal) => `Summary artifact still contains placeholder scaffold text: ${signal}.`)
   );
+
+  const statusLine = normalizedContent.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1]?.trim();
+  if (statusLine && !extractSummaryStatus(normalizedContent)) {
+    issues.push(
+      "Summary artifact **Status:** marker must be one of COMPLETED, PARTIAL, or BLOCKED."
+    );
+  }
 
   return {
     valid: issues.length === 0,

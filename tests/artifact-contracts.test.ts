@@ -121,6 +121,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const researchContract = readArtifactContract("phase.research");
   const contextContract = readArtifactContract("phase.context");
   const uiContract = readArtifactContract("phase.ui-spec");
+  const summaryContract = readArtifactContract("phase.summary");
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
   const securityContract = readArtifactContract("review.security");
@@ -238,6 +239,8 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(uiContract.authoringTemplate, /Registry and design-system safety:/);
   assert.match(uiContract.notes.join("\n"), /spacing, typography, color, copy\/content/i);
   assert.match(uiContract.notes.join("\n"), /optional `## Rationale` branch/i);
+  assert.match(summaryContract.notes.join("\n"), /`COMPLETED` is the only status that closes execution debt/);
+  assert.match(summaryContract.notes.join("\n"), /`PARTIAL` and `BLOCKED` are truthful carry-forward evidence/);
   assert.ok(
     uiContract.placeholderSignals.includes(
       "Spacing and layout: <grid, rhythm, or layout constraints>"

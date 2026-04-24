@@ -19,6 +19,7 @@ import {
   validatePlanArtifactContent,
   validateResearchArtifactContent,
   extractSummaryPlanReference,
+  extractSummaryStatus,
   validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
@@ -562,6 +563,7 @@ type PhaseSummaryRecord = {
   planId: string;
   path: string;
   linkedPlanPath: string | null;
+  status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
   title: string | null;
   summary: string | null;
 };
@@ -2751,11 +2753,13 @@ function toPhaseSummaryRecord(
   linkedPlanPath: string | null
 ): PhaseSummaryRecord {
   const metadata = summarizeMarkdownContent(content);
+  const status = extractSummaryStatus(content);
 
   return {
     planId,
     path: pathValue,
     linkedPlanPath,
+    status,
     title: metadata.title,
     summary: metadata.summary
   };
@@ -4738,8 +4742,14 @@ export async function blueprintPhaseSummaryIndex(
 
     summaries.push(toPhaseSummaryRecord(planId, summaryPath, content, linkedPlanPath));
 
-    if (validation.valid) {
+    const summaryStatus = extractSummaryStatus(content);
+
+    if (validation.valid && summaryStatus === "COMPLETED") {
       completedPlans.add(planId);
+    } else if (validation.valid && summaryStatus) {
+      warnings.push(
+        `${summaryPath}: summary status is ${summaryStatus}, so it remains pending execution debt.`
+      );
     } else {
       warnings.push(
         `${summaryPath}: summary artifact is invalid and does not count as completed execution evidence.`
@@ -4835,6 +4845,7 @@ export async function blueprintPhaseSummaryRead(
     content,
     metadata: {
       linkedPlanPath,
+      status: extractSummaryStatus(content),
       title: metadata.title,
       summary: metadata.summary
     },
@@ -4858,6 +4869,28 @@ export async function blueprintPhaseSummaryWrite(
     throw new Error(
       `${plan.path ?? planPathFor(resolved, planId)} does not exist yet. Create the matching plan before writing a summary.`
     );
+  }
+
+  if (!plan.validation?.valid) {
+    const planIssues = plan.validation?.issues.length
+      ? plan.validation.issues
+      : ["Linked plan artifact is invalid and must be repaired before execution can be summarized."];
+
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: summaryPathFor(resolved, planId),
+      linkedPlanPath: plan.path,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues: planIssues.map((issue) => `${plan.path}: ${issue}`),
+      warnings: plan.validation?.warnings ?? []
+    };
   }
 
   const pathValue = summaryPathFor(resolved, planId);

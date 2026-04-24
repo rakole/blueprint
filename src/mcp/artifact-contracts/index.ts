@@ -2071,6 +2071,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Summary artifacts stay linked to a saved plan and should remain grounded in completed work.",
       "The locked `Plan` and `Status` markers remain required, but scaffold placeholder values are rejected by write validation.",
+      "`COMPLETED` is the only status that closes execution debt; `PARTIAL` and `BLOCKED` are truthful carry-forward evidence and remain pending.",
       "Untouched scaffold prose in Changes Made, Verification, Follow-Ups, and Evidence is also rejected."
     ],
     renderScaffoldTemplate: renderSummaryTemplate,

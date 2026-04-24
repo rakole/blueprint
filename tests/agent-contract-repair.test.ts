@@ -19,6 +19,11 @@ test("blueprint-executor encodes bounded per-plan execution, progress checkpoint
   assert.match(executor, /saved `XX-YY-PLAN\.md` artifact/i);
   assert.match(executor, /## Execution Protocol/);
   assert.match(executor, /one plan at a time/i);
+  assert.match(executor, /Require explicit write ownership/i);
+  assert.match(executor, /write surfaces this agent owns/i);
+  assert.match(executor, /bounded repair loop/i);
+  assert.match(executor, /partial` or `blocked`/i);
+  assert.match(executor, /parallel or worktree-isolated/i);
   assert.match(executor, /## Progress Checkpoint Contract/);
   assert.match(executor, /when scope is resolved/i);
   assert.match(executor, /after each assigned plan or major task group/i);
@@ -41,6 +46,8 @@ test("blueprint-executor encodes bounded per-plan execution, progress checkpoint
   assert.match(executor, /STATE\.md/);
   assert.match(executor, /## Summary Contract/);
   assert.match(executor, /`XX-YY-SUMMARY\.md`/);
+  assert.match(executor, /The `## Summary Draft` status must match `## Plan Outcome`/);
+  assert.match(executor, /Never ask the\s+parent to persist `COMPLETED` while tests failed/i);
   assert.match(executor, /## Deviation And Partial-Run Rules/);
   assert.match(executor, /partial runs honest/i);
   assert.match(executor, /Never claim the whole phase is complete/i);
