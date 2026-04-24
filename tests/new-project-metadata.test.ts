@@ -32,6 +32,9 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(commandFile, /visible structured approval packet/i);
   assert.match(commandFile, /`blueprint-project-researcher`/);
   assert.match(commandFile, /`blueprint-roadmapper`/);
+  assert.match(commandFile, /capability-gated project research and roadmapping paths/i);
+  assert.match(commandFile, /sequential no-subagent fallback/i);
+  assert.match(commandFile, /browser, web-search, or shell-only helpers/i);
   assert.match(commandFile, /Blueprint MCP server is disconnected or undiscovered/i);
   assert.match(commandFile, /project instruction files such as `CLAUDE\.md` or `AGENTS\.md`/);
   assert.match(commandFile, /invented auto-advance chaining|slash-command self-invocation/i);
@@ -44,6 +47,11 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(docFile, /The final pre-write decision gate must be preceded by a visible approval packet/i);
   assert.match(docFile, /must not ask the user to approve content that appeared only in shell output/i);
   assert.match(docFile, /Interactive bootstrap shows the reviewable project brief and roadmap preview/i);
+  assert.match(docFile, /## Research, Requirements, And Roadmap Quality/);
+  assert.match(docFile, /stack, features, architecture, and pitfalls/i);
+  assert.match(docFile, /sequential one-topic-at-a-time work/i);
+  assert.match(docFile, /map every committed requirement exactly once/i);
+  assert.match(docFile, /repair and retry through MCP/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docFile, /## Shared Runtime Contract/);
   assert.match(docFile, /## Runtime Packaging/);
@@ -141,6 +149,11 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /blueprint_config_set/);
   assert.match(skillFile, /blueprint-project-researcher/);
   assert.match(skillFile, /blueprint-roadmapper/);
+  assert.match(skillFile, /Browser,\s+web-search, shell-only, or generic helpers are not substitutes/i);
+  assert.match(skillFile, /no-subagent\s+fallback/i);
+  assert.match(skillFile, /contract\.authoringTemplate/);
+  assert.match(skillFile, /specific, user-centered, atomic, grouped, and traceable/i);
+  assert.match(skillFile, /cover every committed requirement exactly once/i);
   assert.match(skillFile, /next safe implemented command/i);
 
   assert.ok(
@@ -173,6 +186,19 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /`mcp_blueprint_blueprint_config_set`/);
   assert.match(contractRef, /`mcp_blueprint_blueprint_project_status`/);
   assert.match(contractRef, /returned `createdPaths`, `configPath`, and `nextAction` as authoritative/i);
+  assert.match(contractRef, /contract\.authoringTemplate/);
+  assert.match(contractRef, /specific, user-centered, atomic, grouped, and\s+traceable/i);
+  assert.match(contractRef, /## Capability-Gated Research And Roadmapping/);
+  assert.match(contractRef, /`Stack`, `Features`, `Architecture`, `Pitfalls`/);
+  assert.match(contractRef, /Do not replace them with browser, web-search, shell-only,\s+or generic helpers/i);
+  assert.match(contractRef, /map every committed requirement to exactly one phase/i);
+  assert.match(contractRef, /2-5 observable\s+success criteria per phase/i);
+  assert.match(contractRef, /## No-Subagent Fallback/);
+  assert.match(contractRef, /compress carry-forward context/i);
+  assert.match(contractRef, /every committed requirement appears in exactly one phase/i);
+  assert.match(contractRef, /## Output Quality Criteria/);
+  assert.match(contractRef, /## Completion Criteria/);
+  assert.match(contractRef, /retry the MCP write only after the user approves any material scope change/i);
   assert.match(contractRef, /`overwrite: true`/);
   assert.match(contractRef, /supported repo-relative Blueprint artifact paths/i);
   assert.match(contractRef, /JSON-object `patch`/i);
@@ -218,5 +244,11 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(runtimeReference, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
   assert.match(runtimeReference, /Gemini-native topic and todo coordination/i);
   assert.match(runtimeReference, /`get_internal_docs` self-correction/i);
+  assert.match(runtimeReference, /contract\.authoringTemplate/);
+  assert.match(runtimeReference, /capability-gated through `blueprint-project-researcher` and `blueprint-roadmapper`/i);
+  assert.match(runtimeReference, /browser, web-search, shell-only, or generic helpers are not substitutes/i);
+  assert.match(runtimeReference, /no-subagent fallback sequentially across stack\/features\/architecture\/pitfalls/i);
+  assert.match(runtimeReference, /every committed requirement to map exactly once/i);
+  assert.match(runtimeReference, /repair the seed and retry through MCP/i);
   assert.match(runtimeReference, /manifest stays thin while the self-sufficient runtime contract lives under `skills\/blueprint-bootstrap\/references\/`/i);
 });

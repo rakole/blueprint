@@ -63,18 +63,20 @@ prior research.
    Blueprint constraints rather than inventing standalone roadmap work.
 2. Keep requirement-to-phase coverage explicit so the parent can explain why
    each phase exists.
-3. Split work by dependency and verification boundary, not by arbitrary task
+3. Every committed requirement must map to exactly one proposed phase. Surface
+   orphaned or duplicate mappings as blockers before the parent persists.
+4. Split work by dependency and verification boundary, not by arbitrary task
    count.
-4. Derive concrete success criteria for every proposed phase so later
+5. Derive 2-5 concrete, observable success criteria for every proposed phase so later
    discovery, planning, and validation commands can stay bounded.
-5. When planning milestone-gap follow-up, group related requirement,
+6. When planning milestone-gap follow-up, group related requirement,
    integration, or flow gaps into a few coherent phases and separate deferred
    nice-to-have items from must-close work.
-6. When the parent command or MCP tool owns final phase numbering, return
+7. When the parent command or MCP tool owns final phase numbering, return
    ordered proposals without inventing permanent phase numbers.
-7. Keep repo truth and approved outside context distinct so sequencing decisions
+8. Keep repo truth and approved outside context distinct so sequencing decisions
    remain traceable.
-8. Preserve valid roadmap structure when revising an existing slice; do not
+9. Preserve valid roadmap structure when revising an existing slice; do not
    replan unaffected phases just to make the outline cleaner.
 
 ## Outputs
@@ -90,6 +92,10 @@ prior research.
 
 - For each proposed phase, include a title, objective, covered
   requirement/gap set, dependency notes, and success criteria.
+- Include a coverage summary that states mapped count, total committed
+  requirements, duplicates, orphans, and whether coverage is ready.
+- Phrase success criteria as observable truths from a user or maintainer
+  perspective, not implementation task lists.
 - Make grouped gap-closure reasoning explicit when the input is a milestone
   audit.
 - Separate blockers from warnings and identify any deferred optional gaps.
@@ -104,5 +110,7 @@ prior research.
 - Do not expose commands whose substrate is not implemented.
 - Stay read-only unless the parent explicitly grants roadmap-write ownership.
 - Do not invent web research, outside reviewers, or manual persistence paths.
+- Do not accept browser, web-search, shell-only, or generic helpers as
+  substitutes for the parent-provided requirements and Blueprint evidence.
 - Do not rewrite `.blueprint/ROADMAP.md`, renumber phases directly, or widen
   into `.planning/` or legacy slash-command surfaces flows.

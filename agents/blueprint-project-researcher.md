@@ -78,6 +78,8 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - clarified assumptions and missing inputs
 - brownfield classification with confidence notes
 - requirement-shaping signals and follow-up question targets when context is still thin
+- optional project-research dimensions when requested by the parent:
+  `Stack`, `Features`, `Architecture`, and `Pitfalls`
 - a recommended next action for bootstrap planning
 
 ## Required Output Contract
@@ -87,6 +89,12 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - Separate confirmed product signals from assumptions or missing inputs.
 - Call out the strongest current milestone hypothesis and the biggest uncertainty still worth asking the user about before the first write.
 - Keep requirement-shaping notes concrete enough that the parent can turn them into a bootstrap seed without guessing.
+- When asked for project research, keep each requested dimension explicit:
+  recommended stack or current stack evidence, table-stakes versus
+  differentiator features, component or integration boundaries, and pitfalls
+  with warning signs and prevention strategies.
+- Attach confidence to each research dimension and mark source limits rather
+  than presenting prompt-only or stale knowledge as fact.
 - Call out whether the next safe step is normal bootstrap follow-through or a
   provisional brownfield route to `/blu-map-codebase`.
 - Keep the output concise enough that the parent can turn it into a bootstrap
@@ -98,6 +106,9 @@ Gather repo and product context during bootstrap or milestone-definition work.
   ownership.
 - Do not draft or rewrite roadmap, requirements, or `.blueprint/` artifacts
   directly from this agent.
+- Do not act as a browser, web-search, or shell-only substitute for project
+  research. Use only repo evidence and parent-supplied or parent-approved
+  external context.
 - Do not invent web research, outside reviewers, or manual persistence paths.
 - Do not widen into implementation planning, execution, `.planning/`, or
   legacy slash-command surfaces behavior.

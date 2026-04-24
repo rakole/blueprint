@@ -97,6 +97,14 @@ This skill package is the runtime source of truth for `/blu-new-project`.
 - `blueprint-project-researcher`
 - `blueprint-roadmapper`
 
+Use optional agents only when their bundled definitions are available and the
+current bootstrap question benefits from bounded read-only synthesis. Browser,
+web-search, shell-only, or generic helpers are not substitutes for these
+Blueprint agents. When the agents are unavailable, follow the no-subagent
+fallback in `references/bootstrap-runtime-contract.md`: handle one research
+dimension, requirement group, or roadmap area at a time, compress the
+carry-forward evidence, then continue.
+
 ## Shared Bootstrap Posture
 
 - Execution profile: `long-running-mutation`.
@@ -106,6 +114,14 @@ This skill package is the runtime source of truth for `/blu-new-project`.
   bootstrap content, persist the first substantive write through
   `mcp_blueprint_blueprint_project_init`, and validate the result with
   `mcp_blueprint_blueprint_artifact_validate`.
+- Treat `contract.authoringTemplate` from `mcp_blueprint_blueprint_artifact_contract_read`
+  as the heading and schema authority for authored `PROJECT.md`,
+  `REQUIREMENTS.md`, and `ROADMAP.md` content. Richness comes from the
+  bootstrap seed and visible approval packet, not from weakening validation.
+- Requirements must be specific, user-centered, atomic, grouped, and traceable.
+  Roadmap phases must cover every committed requirement exactly once and carry
+  observable success criteria suitable for later discovery, planning, and
+  validation.
 - `mcp_blueprint_blueprint_project_init` remains the first persistent bootstrap write, with the detailed mutation contract preserved in `references/bootstrap-runtime-contract.md`.
 - Workflow preference capture still covers mode, granularity, parallelization posture, planning-doc git preference, and key workflow toggles through the local runtime references.
 - Preserve brownfield classification, saved-default handling, workflow

@@ -65,6 +65,15 @@
 6. `Validate`: validate the authored bootstrap, surface warnings or provisional roadmap confidence honestly, and keep the revision loop available before or after the first draft when the command contract calls for it.
 7. `Route`: end with the next safe implemented command, routing brownfield repos to `map-codebase` when roadmap confidence is still provisional.
 
+## Research, Requirements, And Roadmap Quality
+
+- Optional `blueprint-project-researcher` and `blueprint-roadmapper` use is capability-gated. Browser, web-search, shell-only, or generic helpers are not substitutes for Blueprint code/workflow analysis agents.
+- When project research is useful, the bootstrap contract uses the GSD-inspired dimensions that are relevant to the repo: stack, features, architecture, and pitfalls. These are synthesis inputs, not a `.planning/research/` runtime dependency.
+- When subagents are unavailable, the parent command falls back to sequential one-topic-at-a-time work: classify repo shape, handle stack/features/architecture/pitfalls as needed, scope one requirement group at a time, compress carry-forward evidence, then perform a final coverage pass.
+- Requirements must be specific, user-centered, atomic, grouped, and traceable.
+- Roadmap phases must map every committed requirement exactly once, include dependency notes, and carry 2-5 observable success criteria per phase.
+- Validation or MCP write failures caused by thin content, missing headings, placeholders, missing success criteria, or traceability gaps trigger seed repair and retry through MCP. The command must not hand-edit `.blueprint/` artifacts around the MCP owner.
+
 ## Blueprint And Global State Reads
 
 - `~/.<host>/blueprint/defaults.json` when present
@@ -211,3 +220,5 @@
 - Brownfield fixture that rejects `new-project` before writes and routes to `map-codebase`.
 - Mapped-only brownfield fixture that bootstraps with an explicit seed and preserves `.blueprint/codebase/*.md`.
 - Bootstrap seed fixture that verifies authored requirements and roadmap traceability.
+- Subagent contract fixture that verifies capability-gated project research/roadmapping and the no-subagent fallback.
+- Validation-retry fixture that verifies thin or invalid authored bootstrap content routes back through seed repair rather than manual artifact edits.
