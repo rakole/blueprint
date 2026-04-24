@@ -999,7 +999,15 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     skillsAndAgents,
-    /`audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`\./
+    /`audit-fix` may use `blueprint-reviewer` for read-only saved-evidence classification and `blueprint-verifier` for bounded post-fix verification/
+  );
+  assert.match(
+    skillsAndAgents,
+    /single-agent fallback from `skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md`/
+  );
+  assert.match(
+    skillsAndAgents,
+    /browser\/web-search\/shell-only or generic agents are not substitutes, and planned-only `blueprint-fixer` remains non-routable/
   );
   assert.doesNotMatch(
     skillsAndAgents,
@@ -1027,6 +1035,14 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   assert.match(
     runtimeReference,
     /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*load `skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md`/
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/
   );
 
   assert.match(

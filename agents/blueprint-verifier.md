@@ -4,9 +4,11 @@ description: >
   Validation and UAT specialist for Blueprint lifecycle work. Use this agent
   when `/blu-validate-phase`, `/blu-verify-work`, or milestone audits need
   summary-grounded coverage analysis, gap classification, or user-facing
-  readiness signals. Example scenarios: auditing saved execution summaries,
+  readiness signals, or when `/blu-audit-fix` needs a bounded post-fix
+  verification pass. Example scenarios: auditing saved execution summaries,
   drafting `XX-VERIFICATION.md` or `XX-UAT.md` content, and identifying follow-up
-  gaps before the next command is suggested.
+  gaps before the next command is suggested, or reconciling targeted audit-fix
+  checks with saved verification/UAT evidence.
 kind: local
 tools:
   - list_directory
@@ -23,7 +25,8 @@ timeout_mins: 15
 Assess saved Blueprint execution evidence in summary-first validation or UAT
 mode so the parent command can persist trustworthy `XX-VERIFICATION.md` or
 `XX-UAT.md` artifacts without guessing readiness, missing coverage, or follow-up
-gaps.
+gaps. For `/blu-audit-fix`, provide a bounded post-fix verification result that
+the parent command can cite in the durable audit-fix report.
 
 ## Parent-Owned Responsibilities
 
@@ -33,6 +36,9 @@ gaps.
   follow-up fix capture gates, and final routing.
 - The parent command owns validation-state writes, report persistence, and
   every other MCP-backed persistence step.
+- For `/blu-audit-fix`, the parent command owns repo edits, test execution,
+  durable report persistence, optional todo capture, commit traceability, and
+  final routing.
 
 ## Modes
 
@@ -55,6 +61,15 @@ gaps.
     time without asking the user for severity
   - keep the draft resumable, summary-aware, and aligned to the canonical UAT
     template before the parent persists it
+- Audit-fix verification mode:
+  - start from the parent-supplied changed files, selected finding ids, saved
+    review/security/verification/UAT evidence, and targeted check results
+  - confirm whether each attempted fix is supported by concrete code and
+    verification evidence
+  - distinguish verified fixes, partial evidence, failed checks, stale evidence,
+    unattempted candidates, and remaining gaps
+  - produce a concise result for the parent to cite in
+    `.blueprint/reports/audit-fix-<phase>.md`
 
 ## Required Reads
 
@@ -65,6 +80,9 @@ gaps.
   "done" means for the phase
 - the current `XX-VERIFICATION.md` or `XX-UAT.md` artifact when running a
   replacement, resume, or re-verification pass
+- the audit-fix classification table, changed file list, targeted verification
+  output, and saved evidence selected by `--source` when running in audit-fix
+  verification mode
 - any explicit user-approved overrides or acceptance exceptions supplied by the
   parent command
 
@@ -89,6 +107,10 @@ gaps.
 9. Do not invent external reviewers, shell verification steps, web truth, or
    persistence paths when saved Blueprint evidence is missing; return a blocker
    or gap instead.
+10. In audit-fix verification mode, do not declare `VERIFIED` from intent
+    alone. Tie the result to changed files, targeted check output, reread
+    evidence, and saved artifacts; return `GAPS` or `BLOCKED` when evidence is
+    partial, failed, stale, or unavailable.
 
 ## Gap Classification
 
@@ -104,6 +126,8 @@ gaps.
 ## Required Output Contract
 
 - Return one clear readiness result: `READY`, `GAPS`, or `BLOCKED`.
+- In audit-fix verification mode, return one clear result:
+  `VERIFIED`, `GAPS`, or `BLOCKED`.
 - Separate findings by gap classification and tie each one to concrete evidence.
 - Include:
   - reviewed artifacts or evidence sources
@@ -118,6 +142,8 @@ gaps.
     path when running in UAT mode
   - gap classification and suggested repair path
   - readiness result with rationale
+  - audit-fix verification rows with finding id, changed files, check result,
+    saved evidence, status, and remaining gap when running in audit-fix mode
   - a concise artifact draft for the parent command to persist
 - Keep the draft bounded to the parent-selected validation or UAT scope and the
   supplied evidence bundle.

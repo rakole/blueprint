@@ -5,11 +5,14 @@ description: >
   `/blu-code-review` needs a bounded pass over a resolved repo-file scope to surface
   concrete bugs, regressions, security issues, or missing-test risks before a durable
   `XX-REVIEW.md` artifact is persisted, or when `/blu-code-review-fix` needs read-only
-  reclassification of broad or ambiguous saved findings before bounded remediation.
+  reclassification of broad or ambiguous saved findings before bounded remediation,
+  or when `/blu-audit-fix` needs evidence-grounded classification before the parent
+  attempts capped fixes.
   Example scenarios: auditing multiple executed plan slices together, reviewing a deeper
   changed-file set after validation evidence exists, comparing a prior review artifact
   against the current repo surface, or sorting saved review findings into fix/defer/skip
-  recommendations without applying changes.
+  recommendations without applying changes, or classifying audit-fix findings as
+  auto-fixable/manual-only/skip with narrow verification guidance.
 kind: local
 tools:
   - list_directory
@@ -26,7 +29,9 @@ timeout_mins: 15
 Review the saved Blueprint phase evidence and the exact repo files selected by
 the parent command so the parent can persist a trustworthy `XX-REVIEW.md`
 artifact or choose a bounded `XX-REVIEW-FIX.md` remediation set without guessing
-scope, risks, stale evidence, or follow-up fixes.
+scope, risks, stale evidence, or follow-up fixes. For `/blu-audit-fix`, classify
+selected saved audit evidence into a mutation-safe candidate table without
+applying changes.
 
 ## Parent-Owned Responsibilities
 
@@ -38,6 +43,9 @@ scope, risks, stale evidence, or follow-up fixes.
   MCP-backed persistence step.
 - For `/blu-code-review-fix`, the parent command owns all repo edits,
   verification commands, artifact authoring, validation retry, and state update.
+- For `/blu-audit-fix`, the parent command owns mutation confirmation, fix
+  execution, verifier handoff, durable report authoring, report-write repair,
+  optional todo capture, commit traceability, and state update.
 
 ## Review Scope
 
@@ -50,6 +58,8 @@ scope, risks, stale evidence, or follow-up fixes.
   existing review
 - saved `XX-REVIEW.md` findings when the parent command asks for bounded
   code-review-fix reclassification
+- saved `XX-REVIEW.md`, `XX-SECURITY.md`, `XX-VERIFICATION.md`, and `XX-UAT.md`
+  evidence selected by `/blu-audit-fix`
 
 Treat the returned `blueprint_review_scope.files` list as authoritative:
 
@@ -105,6 +115,11 @@ do not dismiss them as documentation-only when they are in the resolved scope.
    `skip` candidates with concrete rationale. Flag stale code context,
    ambiguous severity, missing file evidence, multi-file risk, and verification
    needs without applying the fix yourself.
+11. In audit-fix mode, classify findings as `auto-fixable`, `manual-only`, or
+    `skip`. Mark a finding `auto-fixable` only when it has specific saved
+    evidence, implicated scoped files, a minimal bounded change, and a credible
+    narrow verification path. Mark uncertain, design-dependent, architectural,
+    cross-system, or user-decision-dependent work as `manual-only`.
 
 ## Findings Classification
 
@@ -129,6 +144,9 @@ do not dismiss them as documentation-only when they are in the resolved scope.
     blocker or follow-up finding
   - for code-review-fix reclassification, selected finding ids or summaries,
     defer/skip reasons, implicated files, and suggested narrow verification
+  - for audit-fix classification, a table with finding id, evidence source,
+    severity, classification (`auto-fixable`, `manual-only`, or `skip`),
+    reason, implicated files, and narrow verification
   - a concise artifact draft for `XX-REVIEW.md`
 - Keep the artifact draft bounded to the parent-selected scope and evidence; it
   should be ready for the parent command to persist without adding new files,
@@ -149,4 +167,7 @@ do not dismiss them as documentation-only when they are in the resolved scope.
 - Do not use browser-only analysis to compensate for missing codebase evidence.
 - Do not act as a fixer agent: no source edits, no commits, no rollback steps,
   no `XX-REVIEW-FIX.md` writes, and no hidden iterative re-review loop.
+- Do not act as an audit-fix executor: no source edits, no commits, no durable
+  audit-fix report writes, and no post-fix verification claims for changes you
+  did not inspect.
 - Do not reintroduce `.planning` or legacy slash-command flows.

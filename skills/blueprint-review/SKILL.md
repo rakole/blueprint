@@ -61,6 +61,7 @@ non-routable until their extra MCP substrate lands.
 - `docs/PHASE-LIFECYCLE.md`
 - `skills/blueprint-review/references/code-review-runtime-contract.md`
 - `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
+- `skills/blueprint-review/references/audit-fix-runtime-contract.md`
 - saved phase artifacts for the target phase, especially execution summaries
 
 ## Required MCP Tools
@@ -301,67 +302,93 @@ non-routable until their extra MCP substrate lands.
 
 ### `audit-fix`
 
-1. Resolve the target phase and read the current Blueprint artifact inventory
+1. Load `skills/blueprint-review/references/audit-fix-runtime-contract.md`
+   before classification. That local reference owns the retained audit-to-fix
+   quality contract: stage mapping, required MCP call controls, report
+   authoring richness, capability-gated reviewer/verifier paths, no-subagent
+   fallback, retry/repair behavior, stop-on-first-failure semantics, dry-run
+   behavior, commit traceability, output quality criteria, and completion
+   criteria.
+2. Resolve the target phase and read the current Blueprint artifact inventory
    before proposing changes.
-2. Use `blueprint_review_scope` to derive the deterministic remediation scope
+3. Use `blueprint_review_scope` to derive the deterministic remediation scope
    from executed plan metadata or explicit repo files; do not guess from git
    diff alone.
-3. Treat `--source` as a strict saved-evidence selector for classification:
+4. Treat `--source` as a strict saved-evidence selector for classification:
    `review`, `security`, `verification`, `uat`, or `all` (default).
-4. Read the selected saved evidence first. Prefer an existing `XX-REVIEW.md`,
+5. Read the selected saved evidence first. Prefer an existing `XX-REVIEW.md`,
    and also inspect `XX-SECURITY.md`, `XX-VERIFICATION.md`, and `XX-UAT.md`
    when selected and present. If selected evidence is missing or weak, stop and
    route to `/blu-code-review <phase>` or `/blu-verify-work <phase>`.
-5. Classify candidate findings from selected saved evidence plus direct
+6. Classify candidate findings from selected saved evidence plus direct
    inspection of scoped files only. Do not classify from unstaged drift or chat
    memory alone.
-6. Apply `--severity` before mutation candidate selection: `high` means
+7. Produce a classification table before mutation with finding id, evidence
+   source, severity, classification (`auto-fixable`, `manual-only`, or `skip`),
+   reason, implicated files, and narrow verification. Prefer `manual-only` when
+   scope, design intent, architecture impact, or user choice is unclear.
+8. Apply `--severity` before mutation candidate selection: `high` means
    critical/high, `medium` means critical/high/medium, and `all` means every
    severity.
-7. Apply `--max` as a hard cap on mutation attempts after severity filtering,
+9. Apply `--max` as a hard cap on mutation attempts after severity filtering,
    with highest-severity-first ordering.
-8. Treat `--dry-run` as analysis-only mode. Dry runs may still write the
+10. Treat `--dry-run` as analysis-only mode. Dry runs may still write the
    durable `audit-fix-<phase>` report, but they must not apply repo mutations.
-9. In mutation mode, use Gemini CLI `ask_user` for explicit confirmation before
+11. In mutation mode, use Gemini CLI `ask_user` for explicit confirmation before
    non-trivial remediation (for example: multiple findings, multi-file scope,
    or medium/high severity changes).
-10. For non-trivial audit-fix runs, prefer update_topic plus `write_todos` so
+12. For non-trivial audit-fix runs, prefer update_topic plus `write_todos` so
     saved-evidence review, candidate confirmation, bounded remediation,
     verification, report overwrite handling, todo capture, and routing stay
     visible without becoming persistence.
-11. Branchy audit-fix remediation is tracker-eligible when scoped findings or
+13. Branchy audit-fix remediation is tracker-eligible when scoped findings or
     targeted verification follow-through split into real dependency branches.
     Treat tracker state as session-local coordination only, pair it with
     visible `write_todos`, and fall back to linear prose when tracker support
     is unavailable.
-12. Keep repo mutation tightly bounded to the resolved review scope and capped
+14. Keep repo mutation tightly bounded to the resolved review scope and capped
     candidate list.
-13. Use `blueprint-reviewer` for bounded classification when evidence is broad,
+15. Use `blueprint-reviewer` for bounded classification when evidence is broad,
     and `blueprint-verifier` for bounded post-fix verification when targeted
     checks need a second pass. The planned `blueprint-fixer` is not a shipped
     runtime path for `audit-fix`.
-14. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+16. Reject browser-only, web-search-only, shell-only, or generic agents as
+    substitutes for audit-fix classification or verification. If suitable
+    subagents are unavailable, use the no-subagent fallback from the runtime
+    contract: classify saved evidence, process one finding at a time, reread
+    implicated scoped files, apply the minimal fix, run narrow verification,
+    record fixed/skipped/deferred evidence, compress carry-forward context, and
+    continue until the cap is reached or the loop stops.
+17. Keep the active stage visible as the run moves through `Resolve`, `Read`,
     `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
     resolved scope, active stage, pending gate, execution mode, and next safe
     action legible throughout the run.
-15. Report in-flight progress, including phase, source/severity/max/dry-run
+18. Report in-flight progress, including phase, source/severity/max/dry-run
     settings, candidate count, attempt index (`i/N`), remediation progress,
     verification progress, report status, and whether the loop stopped early.
     Keep pending gates limited to non-trivial mutation confirmation, report
     overwrite confirmation, or todo capture confirmation, and let execution
     mode reflect dry-run versus mutation plus inline versus
     reviewer/verifier-assisted remediation.
-16. Enforce stop-on-first-failure behavior in mutation mode: stop the loop on
+19. Enforce stop-on-first-failure behavior in mutation mode: stop the loop on
     the first failed fix or failed required verification and record remaining
     candidates as unattempted.
-17. Persist the durable remediation report through
+20. Persist the durable remediation report through
     `blueprint_artifact_report_write` using the bare canonical report name
     `audit-fix-<phase>`, not a `.blueprint/reports/...` path. Capture commit
     traceability in the report (pre-fix HEAD, any created commit SHA(s), or
-    `none`).
-18. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
+    `none`). Use the canonical `report.audit-fix` headings and include concrete
+    evidence in `Evidence Used`, source/severity/max/dry-run settings plus the
+    classification table in `Fix Scope`, attempted changes and verification in
+    `Changes Applied`, manual-only/unattempted/stale-context gaps in
+    `Remaining Gaps`, and exactly one implemented command in `Next Safe Action`.
+21. If `blueprint_artifact_report_write` rejects the report body or returns
+    missing-heading validation warnings, repair the body against the canonical
+    `report.audit-fix` headings and retry once through MCP. If the retry still
+    fails, stop with the MCP reason and do not write `.blueprint/` by hand.
+22. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
     explicit user confirmation via `ask_user`.
-19. Update `STATE.md` through `blueprint_state_update` so the next safe action
+23. Update `STATE.md` through `blueprint_state_update` so the next safe action
     points at `/blu-validate-phase <phase>`, `/blu-add-tests <phase>`, or
     `/blu-progress` based on the remaining evidence gap.
 
@@ -422,6 +449,8 @@ non-routable until their extra MCP substrate lands.
   documented.
 - Do not treat the planned `blueprint-fixer` as an implemented dependency for
   `code-review-fix` or `audit-fix`.
+- Do not use browser, web-search-only, shell-only, or generic agents as
+  substitutes for the bounded Blueprint reviewer/verifier paths.
 - Do not guess review scope from unstaged repo drift when saved phase evidence
   is missing.
 - Keep the artifact explicit about pass signals, findings, and follow-up risk.

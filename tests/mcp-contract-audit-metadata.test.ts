@@ -457,6 +457,7 @@ test("review contracts stay explicit across code-review, remediation, and review
     codeReviewFixDoc,
     auditFixCommand,
     auditFixDoc,
+    auditFixContract,
     reviewCommand,
     reviewDoc,
     reviewSkill,
@@ -468,6 +469,7 @@ test("review contracts stay explicit across code-review, remediation, and review
     readRepoFile("docs/commands/code-review-fix.md"),
     readRepoFile("commands/blu-audit-fix.toml"),
     readRepoFile("docs/commands/audit-fix.md"),
+    readRepoFile("skills/blueprint-review/references/audit-fix-runtime-contract.md"),
     readRepoFile("commands/blu-review.toml"),
     readRepoFile("docs/commands/review.md"),
     readRepoFile("skills/blueprint-review/SKILL.md"),
@@ -511,8 +513,17 @@ test("review contracts stay explicit across code-review, remediation, and review
 
   assert.match(auditFixCommand, /bare canonical report name `audit-fix-<phase>`/i);
   assert.match(auditFixCommand, /returned `createdEntryIds` as authoritative/i);
+  assert.match(auditFixCommand, /audit-fix-runtime-contract\.md/i);
+  assert.match(auditFixCommand, /classification \(`auto-fixable`, `manual-only`, or `skip`\)/i);
   assert.match(auditFixDoc, /## Remediation Scope And Report Contract/);
   assert.match(auditFixDoc, /returned `createdEntryIds` as authoritative/i);
+  assert.match(auditFixDoc, /classification table before mutation/i);
+  assert.match(auditFixDoc, /repair the report against the canonical `report\.audit-fix` headings and retry once through MCP/i);
+  assert.match(auditFixContract, /## No-Subagent Fallback/i);
+  assert.match(auditFixContract, /Use `blueprint-reviewer` only as a bounded read-only classification helper/i);
+  assert.match(auditFixContract, /Use `blueprint-verifier` only after a fix or dry-run plan/i);
+  assert.match(auditFixContract, /No browser\/web\/search-only or generic agent was used as a substitute/i);
+  assert.match(auditFixContract, /`blueprint-fixer` remained planned-only and non-routable/i);
 
   assert.match(reviewCommand, /artifact: "peer-review"/i);
   assert.match(reviewCommand, /returned `reportPath` as authoritative/i);

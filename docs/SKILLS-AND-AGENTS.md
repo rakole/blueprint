@@ -74,8 +74,8 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.
 - `code-review-fix` may use `blueprint-reviewer`.
-- `audit-fix` may use `blueprint-reviewer` and `blueprint-verifier`.
-- `audit-fix` keeps mutation confirmation-gated and report-backed; non-trivial fixes and todo capture should use Gemini CLI `ask_user` confirmation before persistence.
+- `audit-fix` may use `blueprint-reviewer` for read-only saved-evidence classification and `blueprint-verifier` for bounded post-fix verification; it must preserve the single-agent fallback from `skills/blueprint-review/references/audit-fix-runtime-contract.md` when suitable subagents are unavailable.
+- `audit-fix` keeps mutation confirmation-gated and report-backed; non-trivial fixes and todo capture should use Gemini CLI `ask_user` confirmation before persistence, browser/web-search/shell-only or generic agents are not substitutes, and planned-only `blueprint-fixer` remains non-routable.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `new-workspace` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps workspace creation confirmation-gated, and routes host-global registry plus workspace bootstrap writes through the dedicated workspace MCP tools.

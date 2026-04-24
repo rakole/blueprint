@@ -781,9 +781,12 @@ Minimum locked sections:
 Audit-fix report expectations:
 - must stay evidence-first and cite saved review, security, verification, or UAT artifacts selected by `--source`
 - should record `--severity`, `--max`, and `--dry-run` settings used for this run
+- should include the pre-mutation classification table with finding id, evidence source, severity, classification (`auto-fixable`, `manual-only`, or `skip`), reason, implicated files, and narrow verification
 - should capture stop-on-first-failure behavior when the capped mutation loop halts early
+- should distinguish applied fixes, failed attempts, dry-run-only candidates, skipped findings, manual-only findings, and unattempted candidates
 - should include verification outcome and commit traceability (`pre-fix HEAD`, created commit SHA(s), or `none`)
 - should keep follow-up todo capture explicit when requested
+- should document invalid-write repair or retry outcomes if `blueprint_artifact_report_write` rejects the first body
 
 Exact persistence template:
 
@@ -792,19 +795,19 @@ Exact persistence template:
 
 ## Evidence Used
 
-- Saved evidence reviewed for this run.
+- Saved artifacts selected by `--source`, scoped repo files, pre-fix HEAD, and unavailable expected evidence.
 
 ## Fix Scope
 
-- Selected source, severity, cap, and candidate scope.
+- Source/severity/max/dry-run settings, authoritative `blueprint_review_scope.files`, confirmation gates, and classification table.
 
 ## Changes Applied
 
-- Applied fixes, dry-run classification output, or `none`.
+- Applied fixes, failed attempts, dry-run classification output, verification checks, commit SHA(s), rollback status, or `none`.
 
 ## Remaining Gaps
 
-- Remaining gap, stop reason, or `none`.
+- Manual-only findings, skipped findings, unattempted candidates, verification gaps, todo decisions, stop reason, or `none`.
 
 ## Next Safe Action
 

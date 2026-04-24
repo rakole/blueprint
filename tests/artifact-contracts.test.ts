@@ -657,6 +657,10 @@ test("review and report contracts validate canonical sections while keeping extr
 - /blu-progress
 `;
   const securityContract = readArtifactContract("review.security");
+  const auditFixContract = readArtifactContract("report.audit-fix", {
+    phaseNumber: "04",
+    phasePrefix: "04"
+  });
   const milestoneAuditContract = readArtifactContract("report.milestone-audit");
   const securityScaffoldValidation = validateReviewArtifactContent(
     securityContract.authoringTemplate,
@@ -1124,6 +1128,18 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.match(
     securityContract.authoringTemplate,
     /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/
+  );
+  assert.deepEqual(auditFixContract.requiredHeadings, [
+    "Evidence Used",
+    "Fix Scope",
+    "Changes Applied",
+    "Remaining Gaps",
+    "Next Safe Action"
+  ]);
+  assert.match(auditFixContract.authoringTemplate, /Classification table with finding id/);
+  assert.match(
+    auditFixContract.authoringTemplate,
+    /Manual-only findings, skipped findings, unattempted candidates/
   );
   assert.equal(securityScaffoldValidation.valid, false);
   assert.match(securityScaffoldValidation.issues.join("\n"), /placeholder scaffold text/i);
