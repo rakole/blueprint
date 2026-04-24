@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
@@ -127,6 +128,30 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(skillFile, /checker-requested revision/i);
   assert.match(skillFile, /\/blu-plan-phase <phase>/);
   assert.match(skillFile, /\/blu-progress/);
+  const contract = await buildBlueprintCommandRuntimeContractResource("ui-phase");
+
+  assert.deepEqual(contract.skillInputs.shared, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, ["docs/commands/ui-phase.md"]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md",
+    "docs/commands/ui-phase.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
+    false
+  );
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
+    false
+  );
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
+    false
+  );
 
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(

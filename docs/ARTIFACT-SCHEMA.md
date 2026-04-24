@@ -39,6 +39,7 @@ Contract notes:
 
 - `blueprint://commands/catalog` is a read-only projection of the retained command registry and its runtime availability metadata; it does not widen implemented-only exposure rules.
 - `blueprint://commands/<command>/runtime-contract` is a read-only projection of one implemented command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row; `review` remains an explicit current exception and is not exposed on this resource path today.
+- The same runtime-contract payload now also exposes the resolved `skillInputs` bundle for the invoking command as `{skill, shared, commandSpecific, effective}` so loaders can ground only the current command's inputs.
 - `blueprint://phases/<phase>/bundle` is a read-only projection over saved Blueprint phase-grounding inputs such as `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, and the resolved phase artifact set for the requested phase.
 - `blueprint://codebase/bundle` is a read-only projection over the saved seven-document `.blueprint/codebase/` bundle and its artifact-contract metadata.
 - `blueprint://reports/latest` is a read-only projection over durable report inventory in `.blueprint/reports/`; it is an index view, not a report authoring path.

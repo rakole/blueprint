@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { type BlueprintSkillResolvedInputs } from "./skill-metadata.js";
 import { blueprintCommandCatalog } from "./tools/project.js";
 export declare const BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI = "blueprint://commands/catalog";
 export declare const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE = "blueprint://commands/{command}/runtime-contract";
@@ -37,6 +38,7 @@ export type BlueprintCommandRuntimeContractResource = {
     catalog: CommandCatalogEntry;
     spec: BlueprintCommandSpecResource | null;
     runtimeReference: BlueprintRuntimeReferenceRowResource | null;
+    skillInputs: BlueprintSkillResolvedInputs;
 };
 export declare function buildBlueprintCommandCatalogResource(): Promise<CommandCatalogResult>;
 export declare function listBlueprintCommandRuntimeContractCommands(): Promise<string[]>;

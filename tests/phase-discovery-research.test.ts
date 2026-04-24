@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
@@ -250,6 +251,27 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /write_todos/);
   assert.match(skillFile, /official docs or explicitly supplied external references/i);
   assert.match(skillFile, /repo-derived evidence distinct from external or web-derived evidence/i);
+  const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
+
+  assert.deepEqual(contract.skillInputs.shared, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, ["docs/commands/research-phase.md"]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md",
+    "docs/commands/research-phase.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
+    false
+  );
+  assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
+  assert.equal(
+    contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
+    false
+  );
 
   assert.match(researcherAgent, /comparing repo evidence against official docs with clear provenance/i);
   assert.match(researcherAgent, /repo-root `AGENTS\.md`/i);

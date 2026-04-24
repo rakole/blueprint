@@ -2721,13 +2721,13 @@ var init_schemas = __esm({
         }
         return propValues;
       });
-      const isObject2 = isObject;
+      const isObject3 = isObject;
       const catchall = def.catchall;
       let value;
       inst._zod.parse = (payload, ctx) => {
         value ?? (value = _normalized.value);
         const input = payload.value;
-        if (!isObject2(input)) {
+        if (!isObject3(input)) {
           payload.issues.push({
             expected: "object",
             code: "invalid_type",
@@ -2825,7 +2825,7 @@ var init_schemas = __esm({
         return (payload, ctx) => fn(shape, payload, ctx);
       };
       let fastpass;
-      const isObject2 = isObject;
+      const isObject3 = isObject;
       const jit = !globalConfig.jitless;
       const allowsEval2 = allowsEval;
       const fastEnabled = jit && allowsEval2.value;
@@ -2834,7 +2834,7 @@ var init_schemas = __esm({
       inst._zod.parse = (payload, ctx) => {
         value ?? (value = _normalized.value);
         const input = payload.value;
-        if (!isObject2(input)) {
+        if (!isObject3(input)) {
           payload.issues.push({
             expected: "object",
             code: "invalid_type",
@@ -22361,6 +22361,52 @@ var init_artifacts = __esm({
   }
 });
 
+// src/mcp/runtime-vocabulary.ts
+function blueprintDiscoverableSkillPath(skillName) {
+  return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}/${BLUEPRINT_SKILL_ENTRY_FILE}`;
+}
+function blueprintLegacySkillPath(skillName) {
+  return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}.md`;
+}
+function blueprintAgentDefinitionPath(agentName) {
+  return `${BLUEPRINT_AGENTS_DIRECTORY}/${agentName}.md`;
+}
+async function resolveBlueprintSkillPath(skillName, hasPath) {
+  const canonicalPath = blueprintDiscoverableSkillPath(skillName);
+  if (await hasPath(canonicalPath)) {
+    return {
+      canonicalPath,
+      legacyPath: blueprintLegacySkillPath(skillName),
+      resolvedPath: canonicalPath,
+      resolution: "discoverable"
+    };
+  }
+  const legacyPath = blueprintLegacySkillPath(skillName);
+  if (await hasPath(legacyPath)) {
+    return {
+      canonicalPath,
+      legacyPath,
+      resolvedPath: legacyPath,
+      resolution: "legacy"
+    };
+  }
+  return {
+    canonicalPath,
+    legacyPath,
+    resolvedPath: null,
+    resolution: "missing"
+  };
+}
+var BLUEPRINT_SKILLS_DIRECTORY, BLUEPRINT_SKILL_ENTRY_FILE, BLUEPRINT_AGENTS_DIRECTORY;
+var init_runtime_vocabulary = __esm({
+  "src/mcp/runtime-vocabulary.ts"() {
+    "use strict";
+    BLUEPRINT_SKILLS_DIRECTORY = "skills";
+    BLUEPRINT_SKILL_ENTRY_FILE = "SKILL.md";
+    BLUEPRINT_AGENTS_DIRECTORY = "agents";
+  }
+});
+
 // src/mcp/command-paths.ts
 function blueprintRootCommand() {
   return BLUEPRINT_ROOT_COMMAND;
@@ -22425,7 +22471,7 @@ function normalizeParagraph(value, fallback = "None recorded.") {
   const normalized = value?.trim().replace(/\r\n/g, "\n");
   return normalized && normalized.length > 0 ? normalized : fallback;
 }
-function parseFrontmatter(raw) {
+function parseFrontmatter2(raw) {
   const match = raw.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!match) {
     return {};
@@ -22437,7 +22483,7 @@ function parseFrontmatter(raw) {
     })
   );
 }
-function extractMarkdownSection2(markdown, heading) {
+function extractMarkdownSection3(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -22445,7 +22491,7 @@ function extractMarkdownSection2(markdown, heading) {
   return match?.[1]?.trim() ?? "";
 }
 function parseBulletSection(markdown, heading) {
-  const section = extractMarkdownSection2(markdown, heading);
+  const section = extractMarkdownSection3(markdown, heading);
   return section.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 function renderBulletSection(title, values) {
@@ -22508,8 +22554,8 @@ function parseSnapshotLine(section, label) {
   return value === "none" ? [] : value.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
 }
 function parsePauseHandoff(raw) {
-  const frontmatter = parseFrontmatter(raw);
-  const snapshot = extractMarkdownSection2(raw, PAUSE_BLUEPRINT_SNAPSHOT_HEADING);
+  const frontmatter = parseFrontmatter2(raw);
+  const snapshot = extractMarkdownSection3(raw, PAUSE_BLUEPRINT_SNAPSHOT_HEADING);
   return {
     reportType: "pause-work",
     schemaVersion: 1,
@@ -22519,15 +22565,15 @@ function parsePauseHandoff(raw) {
     currentMilestone: frontmatter.current_milestone && frontmatter.current_milestone !== "none" ? frontmatter.current_milestone : null,
     currentPhase: frontmatter.current_phase && frontmatter.current_phase !== "none" ? frontmatter.current_phase : null,
     activeCommand: frontmatter.active_command ?? PAUSE_WORK_COMMAND,
-    currentState: normalizeParagraph(extractMarkdownSection2(raw, PAUSE_CURRENT_STATE_HEADING)),
+    currentState: normalizeParagraph(extractMarkdownSection3(raw, PAUSE_CURRENT_STATE_HEADING)),
     completedWork: parseBulletSection(raw, PAUSE_COMPLETED_WORK_HEADING),
     remainingWork: parseBulletSection(raw, PAUSE_REMAINING_WORK_HEADING),
     decisions: parseBulletSection(raw, PAUSE_DECISIONS_HEADING),
     blockers: parseBulletSection(raw, PAUSE_BLOCKERS_HEADING),
     humanActionsPending: parseBulletSection(raw, PAUSE_HUMAN_ACTIONS_HEADING),
     modifiedFiles: parseBulletSection(raw, PAUSE_MODIFIED_FILES_HEADING),
-    nextAction: normalizeParagraph(extractMarkdownSection2(raw, PAUSE_NEXT_ACTION_HEADING)),
-    contextNotes: normalizeParagraph(extractMarkdownSection2(raw, PAUSE_CONTEXT_NOTES_HEADING)),
+    nextAction: normalizeParagraph(extractMarkdownSection3(raw, PAUSE_NEXT_ACTION_HEADING)),
+    contextNotes: normalizeParagraph(extractMarkdownSection3(raw, PAUSE_CONTEXT_NOTES_HEADING)),
     artifactSnapshot: {
       core: parseSnapshotLine(snapshot, "Core artifacts"),
       phaseArtifacts: parseSnapshotLine(snapshot, "Phase artifacts"),
@@ -22617,8 +22663,8 @@ function parseStateDocument(raw) {
     const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
     return match ? match[1].trim() : null;
   };
-  const blockersSection = extractMarkdownSection2(raw, "Blockers");
-  const roadmapEvolutionNotesSection = extractMarkdownSection2(raw, "Roadmap Evolution Notes");
+  const blockersSection = extractMarkdownSection3(raw, "Blockers");
+  const roadmapEvolutionNotesSection = extractMarkdownSection3(raw, "Roadmap Evolution Notes");
   const blockers = blockersSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line && line !== "none");
   const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line !== "none");
   return {
@@ -23160,14 +23206,14 @@ async function inspectMilestoneAuditReportStatus(args) {
     const raw = await fs3.readFile(resolveBlueprintPath(args.projectRoot, reportPath), "utf8");
     const auditVerdictLines = extractMarkdownSectionLines(raw, "Audit Verdict");
     const requirementGapRows = parseMilestoneAuditGapSection(
-      extractMarkdownSection2(raw, "Requirement Gaps")
+      extractMarkdownSection3(raw, "Requirement Gaps")
     );
     const integrationGapRows = parseMilestoneAuditGapSection(
-      extractMarkdownSection2(raw, "Integration Gaps")
+      extractMarkdownSection3(raw, "Integration Gaps")
     );
-    const flowGapRows = parseMilestoneAuditGapSection(extractMarkdownSection2(raw, "Flow Gaps"));
+    const flowGapRows = parseMilestoneAuditGapSection(extractMarkdownSection3(raw, "Flow Gaps"));
     const optionalGapRows = parseMilestoneAuditGapSection(
-      extractMarkdownSection2(raw, "Optional Gaps")
+      extractMarkdownSection3(raw, "Optional Gaps")
     );
     const gapsFound = extractMarkdownSectionLines(raw, "Gaps Found");
     const archivalBlockers = extractMarkdownSectionLines(raw, "Archival Blockers");
@@ -24509,7 +24555,7 @@ function summarizeSavedArtifact(raw) {
     summary: bodyLine ?? "Artifact content is present and available for review."
   };
 }
-function extractMarkdownSection3(markdown, heading) {
+function extractMarkdownSection4(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -24557,21 +24603,21 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase) {
   const projectWarnings = [];
   const requirementsWarnings = [];
   const workflowWarnings = [];
-  const vision = projectContent ? sectionToList(extractMarkdownSection3(projectContent, "Vision")) : [];
-  const audience = projectContent ? sectionToList(extractMarkdownSection3(projectContent, "Audience")) : [];
-  const constraints = projectContent ? sectionToList(extractMarkdownSection3(projectContent, "Constraints")) : [];
-  const nonGoals = projectContent ? sectionToList(extractMarkdownSection3(projectContent, "Non-Goals")) : [];
-  const currentMilestone = projectContent ? extractMarkdownSection3(projectContent, "Current Milestone") || null : null;
+  const vision = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Vision")) : [];
+  const audience = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Audience")) : [];
+  const constraints = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Constraints")) : [];
+  const nonGoals = projectContent ? sectionToList(extractMarkdownSection4(projectContent, "Non-Goals")) : [];
+  const currentMilestone = projectContent ? extractMarkdownSection4(projectContent, "Current Milestone") || null : null;
   const projectTitle = projectContent ? extractMarkdownHeading(projectContent) : null;
   if (!projectContent) {
     projectWarnings.push(`${projectPath} is missing, so the project brief is unavailable.`);
   } else if (vision.length === 0 && audience.length === 0 && constraints.length === 0 && nonGoals.length === 0) {
     projectWarnings.push(`${projectPath} is present but does not yet contain a substantive brief.`);
   }
-  const requirementsTable = requirementsContent ? extractMarkdownSection3(requirementsContent, "Requirements Table") : "";
-  const traceabilityNotes = requirementsContent ? sectionToList(extractMarkdownSection3(requirementsContent, "Traceability Notes")) : [];
-  const acceptanceNotes = requirementsContent ? sectionToList(extractMarkdownSection3(requirementsContent, "Acceptance Notes")) : [];
-  const deferredItems = requirementsContent ? sectionToList(extractMarkdownSection3(requirementsContent, "Deferred Items")) : [];
+  const requirementsTable = requirementsContent ? extractMarkdownSection4(requirementsContent, "Requirements Table") : "";
+  const traceabilityNotes = requirementsContent ? sectionToList(extractMarkdownSection4(requirementsContent, "Traceability Notes")) : [];
+  const acceptanceNotes = requirementsContent ? sectionToList(extractMarkdownSection4(requirementsContent, "Acceptance Notes")) : [];
+  const deferredItems = requirementsContent ? sectionToList(extractMarkdownSection4(requirementsContent, "Deferred Items")) : [];
   const canonicalRequirementIds = requirementsContent ? extractRequirementIdsFromRequirementsTable(requirementsTable) : [];
   const roadmapRequirementIds = matchedPhase?.requirements ?? [];
   if (!requirementsContent) {
@@ -28847,7 +28893,7 @@ async function canonicalizePath(candidatePath) {
 function normalizeTextForComparison(value) {
   return value.replace(/\r\n/g, "\n").trimEnd();
 }
-function extractMarkdownSection4(markdown, heading) {
+function extractMarkdownSection5(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -28855,7 +28901,7 @@ function extractMarkdownSection4(markdown, heading) {
   return match?.[1]?.trim() ?? "";
 }
 function parseBulletSection2(markdown, heading) {
-  return extractMarkdownSection4(markdown, heading).split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
+  return extractMarkdownSection5(markdown, heading).split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 function parseStateSnapshot(raw) {
   const getLineValue = (label) => {
@@ -31205,54 +31251,8 @@ var init_workspace = __esm({
   }
 });
 
-// src/mcp/runtime-vocabulary.ts
-function blueprintDiscoverableSkillPath(skillName) {
-  return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}/${BLUEPRINT_SKILL_ENTRY_FILE}`;
-}
-function blueprintLegacySkillPath(skillName) {
-  return `${BLUEPRINT_SKILLS_DIRECTORY}/${skillName}.md`;
-}
-function blueprintAgentDefinitionPath(agentName) {
-  return `${BLUEPRINT_AGENTS_DIRECTORY}/${agentName}.md`;
-}
-async function resolveBlueprintSkillPath(skillName, hasPath) {
-  const canonicalPath = blueprintDiscoverableSkillPath(skillName);
-  if (await hasPath(canonicalPath)) {
-    return {
-      canonicalPath,
-      legacyPath: blueprintLegacySkillPath(skillName),
-      resolvedPath: canonicalPath,
-      resolution: "discoverable"
-    };
-  }
-  const legacyPath = blueprintLegacySkillPath(skillName);
-  if (await hasPath(legacyPath)) {
-    return {
-      canonicalPath,
-      legacyPath,
-      resolvedPath: legacyPath,
-      resolution: "legacy"
-    };
-  }
-  return {
-    canonicalPath,
-    legacyPath,
-    resolvedPath: null,
-    resolution: "missing"
-  };
-}
-var BLUEPRINT_SKILLS_DIRECTORY, BLUEPRINT_SKILL_ENTRY_FILE, BLUEPRINT_AGENTS_DIRECTORY;
-var init_runtime_vocabulary = __esm({
-  "src/mcp/runtime-vocabulary.ts"() {
-    "use strict";
-    BLUEPRINT_SKILLS_DIRECTORY = "skills";
-    BLUEPRINT_SKILL_ENTRY_FILE = "SKILL.md";
-    BLUEPRINT_AGENTS_DIRECTORY = "agents";
-  }
-});
-
 // src/mcp/agent-definition.ts
-function extractFrontmatterBlock(content) {
+function extractFrontmatterBlock2(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) {
     return null;
@@ -31262,7 +31262,7 @@ function extractFrontmatterBlock(content) {
     body: match[2]
   };
 }
-function parseFrontmatter2(frontmatter) {
+function parseFrontmatter3(frontmatter) {
   const result = {};
   const issues = [];
   const lines = frontmatter.split("\n");
@@ -31314,7 +31314,7 @@ function parseFrontmatter2(frontmatter) {
 }
 function validateBlueprintAgentDefinitionContent(expectedAgentName, content, relativePath = blueprintAgentDefinitionPath(expectedAgentName)) {
   const issues = [];
-  const extracted = extractFrontmatterBlock(content);
+  const extracted = extractFrontmatterBlock2(content);
   if (!extracted) {
     return {
       agentName: expectedAgentName,
@@ -31324,7 +31324,7 @@ function validateBlueprintAgentDefinitionContent(expectedAgentName, content, rel
       issues: [`Missing YAML frontmatter block in ${relativePath}`]
     };
   }
-  const parsed = parseFrontmatter2(extracted.frontmatter);
+  const parsed = parseFrontmatter3(extracted.frontmatter);
   const frontmatter = parsed.frontmatter;
   issues.push(...parsed.issues);
   if (typeof frontmatter.name !== "string" || frontmatter.name.length === 0) {
@@ -31621,7 +31621,7 @@ function buildBootstrapStatus(diagnostics) {
     recommendedNextAction: diagnostics.brownfield.recommendedNextAction
   };
 }
-function extractMarkdownSection5(markdown, heading) {
+function extractMarkdownSection6(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -31629,11 +31629,11 @@ function extractMarkdownSection5(markdown, heading) {
   return match?.[1] ?? "";
 }
 function parseRequiredTools(markdown) {
-  const section = extractMarkdownSection5(markdown, "Required MCP Tools");
+  const section = extractMarkdownSection6(markdown, "Required MCP Tools");
   return [...section.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
 }
 function parseOptionalAgents(markdown, primarySkill) {
-  const section = extractMarkdownSection5(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
   const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
   return values.filter((value) => value !== primarySkill);
 }
@@ -41968,6 +41968,227 @@ async function logThrownMutationError(toolName, args, error2) {
 
 // src/mcp/command-resources.ts
 import { promises as fs9 } from "node:fs";
+
+// src/mcp/skill-metadata.ts
+init_runtime_vocabulary();
+function extractFrontmatterBlock(content) {
+  const match = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    frontmatter: match[1],
+    body: match[2]
+  };
+}
+function countLeadingSpaces(line) {
+  const match = line.match(/^ */);
+  return match?.[0]?.length ?? 0;
+}
+function normalizeFrontmatterKey(rawKey) {
+  const trimmed = rawKey.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+function collapseBlockLines(lines) {
+  return lines.map((line) => line.trim()).join(" ").replace(/\s+/g, " ").trim();
+}
+function findNextMeaningfulLine(lines, startIndex) {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    if (lines[index].trim().length > 0) {
+      return index;
+    }
+  }
+  return -1;
+}
+function parseArray(lines, startIndex, indent) {
+  const value = [];
+  let index = startIndex;
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const trimmed = rawLine.trim();
+    if (trimmed.length === 0) {
+      index += 1;
+      continue;
+    }
+    const lineIndent = countLeadingSpaces(rawLine);
+    if (lineIndent < indent || lineIndent !== indent || !trimmed.startsWith("- ")) {
+      break;
+    }
+    value.push(normalizeFrontmatterKey(trimmed.slice(2).trim()));
+    index += 1;
+  }
+  return {
+    value,
+    nextIndex: index
+  };
+}
+function parseObject(lines, startIndex, indent) {
+  const value = {};
+  let index = startIndex;
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const trimmed = rawLine.trim();
+    if (trimmed.length === 0) {
+      index += 1;
+      continue;
+    }
+    const lineIndent = countLeadingSpaces(rawLine);
+    if (lineIndent < indent) {
+      break;
+    }
+    if (lineIndent > indent) {
+      index += 1;
+      continue;
+    }
+    const match = trimmed.match(/^(.+?):\s*(.*)$/);
+    if (!match) {
+      index += 1;
+      continue;
+    }
+    const key = normalizeFrontmatterKey(match[1]);
+    const rawValue = match[2].trim();
+    if (rawValue === ">" || rawValue === "|") {
+      const blockLines = [];
+      let blockIndent = null;
+      index += 1;
+      while (index < lines.length) {
+        const blockLine = lines[index];
+        const blockTrimmed = blockLine.trim();
+        if (blockTrimmed.length === 0) {
+          blockLines.push("");
+          index += 1;
+          continue;
+        }
+        const blockLineIndent = countLeadingSpaces(blockLine);
+        if (blockLineIndent <= lineIndent) {
+          break;
+        }
+        blockIndent ??= blockLineIndent;
+        blockLines.push(blockLine.slice(blockIndent));
+        index += 1;
+      }
+      value[key] = rawValue === ">" ? collapseBlockLines(blockLines) : blockLines.join("\n").trim();
+      continue;
+    }
+    if (rawValue.length > 0) {
+      value[key] = normalizeFrontmatterKey(rawValue);
+      index += 1;
+      continue;
+    }
+    const nextIndex = findNextMeaningfulLine(lines, index + 1);
+    if (nextIndex === -1) {
+      value[key] = "";
+      index += 1;
+      continue;
+    }
+    const nextLine = lines[nextIndex];
+    const nextIndent = countLeadingSpaces(nextLine);
+    const nextTrimmed = nextLine.trim();
+    if (nextIndent <= lineIndent) {
+      value[key] = "";
+      index = nextIndex;
+      continue;
+    }
+    if (nextTrimmed.startsWith("- ")) {
+      const parsedArray = parseArray(lines, nextIndex, nextIndent);
+      value[key] = parsedArray.value;
+      index = parsedArray.nextIndex;
+      continue;
+    }
+    const parsedObject = parseObject(lines, nextIndex, nextIndent);
+    value[key] = parsedObject.value;
+    index = parsedObject.nextIndex;
+  }
+  return {
+    value,
+    nextIndex: index
+  };
+}
+function parseFrontmatter(frontmatter) {
+  return parseObject(frontmatter.split("\n"), 0, 0).value;
+}
+function extractMarkdownSection2(markdown, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
+  );
+  return match?.[1]?.trim() ?? "";
+}
+function unique(values) {
+  return [...new Set(values)];
+}
+function parseLegacyRequiredInputs(content) {
+  return unique(
+    extractMarkdownSection2(content, "Required Inputs").split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).map((line) => line.replace(/^`(.+)`$/, "$1")).filter((line) => line.length > 0)
+  );
+}
+function asStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return unique(value.filter((item) => typeof item === "string"));
+}
+function isObject2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function resolveBlueprintSkillInputsFromContent(skillName, commandPath, content) {
+  const extracted = extractFrontmatterBlock(content);
+  if (!extracted) {
+    const legacyInputs2 = parseLegacyRequiredInputs(content);
+    return {
+      skill: skillName,
+      shared: legacyInputs2,
+      commandSpecific: [],
+      effective: legacyInputs2
+    };
+  }
+  const frontmatter = parseFrontmatter(extracted.frontmatter);
+  const rawBundles = frontmatter.input_bundles;
+  if (isObject2(rawBundles)) {
+    const shared = asStringArray(rawBundles.shared);
+    const rawCommands = isObject2(rawBundles.commands) ? rawBundles.commands : {};
+    const commandSpecific = asStringArray(rawCommands[commandPath]);
+    return {
+      skill: skillName,
+      shared,
+      commandSpecific,
+      effective: unique([...shared, ...commandSpecific])
+    };
+  }
+  const legacyInputs = parseLegacyRequiredInputs(content);
+  return {
+    skill: skillName,
+    shared: legacyInputs,
+    commandSpecific: [],
+    effective: legacyInputs
+  };
+}
+async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath, preferredPath) {
+  const candidatePaths = unique(
+    [
+      preferredPath ?? null,
+      blueprintDiscoverableSkillPath(skillName),
+      blueprintLegacySkillPath(skillName)
+    ].filter((path10) => typeof path10 === "string" && path10.length > 0)
+  );
+  for (const candidatePath of candidatePaths) {
+    const content = await readRelativePath(candidatePath);
+    if (content !== null) {
+      return resolveBlueprintSkillInputsFromContent(skillName, commandPath, content);
+    }
+  }
+  return {
+    skill: skillName,
+    shared: [],
+    commandSpecific: [],
+    effective: []
+  };
+}
+
+// src/mcp/command-resources.ts
 init_project();
 var BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI = "blueprint://commands/catalog";
 var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE = "blueprint://commands/{command}/runtime-contract";
@@ -41981,7 +42202,7 @@ async function readBundledFile(relativePath) {
     return null;
   }
 }
-function extractMarkdownSection6(markdown, heading) {
+function extractMarkdownSection7(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = markdown.match(
     new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
@@ -41999,7 +42220,7 @@ function parseBulletSection3(markdown) {
   return markdown.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 function parseOptionalSubagents(markdown) {
-  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection7(markdown, "Skills And Subagents");
   const match = section.match(/- Optional subagents:\s*(.+)/);
   if (!match || /\bnone\b/i.test(match[1])) {
     return [];
@@ -42007,7 +42228,7 @@ function parseOptionalSubagents(markdown) {
   return [...match[1].matchAll(/`([a-z0-9-]+)`/g)].map((result) => result[1]);
 }
 function parsePrimarySkill(markdown) {
-  const section = extractMarkdownSection6(markdown, "Skills And Subagents");
+  const section = extractMarkdownSection7(markdown, "Skills And Subagents");
   const match = section.match(/- Primary skill:\s*`([^`]+)`/);
   return match?.[1] ?? null;
 }
@@ -42024,13 +42245,13 @@ function parseCommandSpec(markdown, specPath) {
     family: familyMatch?.[1] ?? null,
     executionProfile: executionProfileMatch?.[1] ?? null,
     rootRoutable: rootRoutableMatch ? rootRoutableMatch[1].trim().toLowerCase().startsWith("yes") : null,
-    purpose: collapseMarkdownText(extractMarkdownSection6(markdown, "Purpose")),
-    requiredTools: parseRequiredTools2(extractMarkdownSection6(markdown, "Required MCP Tools")),
+    purpose: collapseMarkdownText(extractMarkdownSection7(markdown, "Purpose")),
+    requiredTools: parseRequiredTools2(extractMarkdownSection7(markdown, "Required MCP Tools")),
     primarySkill: parsePrimarySkill(markdown),
     optionalSubagents: parseOptionalSubagents(markdown),
-    reads: parseBulletSection3(extractMarkdownSection6(markdown, "Blueprint And Global State Reads")),
+    reads: parseBulletSection3(extractMarkdownSection7(markdown, "Blueprint And Global State Reads")),
     writes: parseBulletSection3(
-      extractMarkdownSection6(markdown, "Blueprint And Global State Writes")
+      extractMarkdownSection7(markdown, "Blueprint And Global State Writes")
     )
   };
 }
@@ -42139,6 +42360,12 @@ async function buildBlueprintCommandRuntimeContractResource(commandName) {
     readBlueprintRuntimeReferenceRows()
   ]);
   const runtimeReference = runtimeReferenceRows.get(commandName);
+  const skillInputs = await loadBlueprintSkillInputs(
+    entry.primarySkill,
+    entry.command,
+    readBundledFile,
+    entry.skillPath
+  );
   if (!spec || !entry.specPath) {
     throw new Error(`Missing locked command spec for Blueprint command: ${commandName}`);
   }
@@ -42150,7 +42377,8 @@ async function buildBlueprintCommandRuntimeContractResource(commandName) {
     uri: buildCommandRuntimeContractUri(commandName),
     catalog: entry,
     spec,
-    runtimeReference
+    runtimeReference,
+    skillInputs
   };
 }
 function buildJsonResourceContents(uri, payload) {

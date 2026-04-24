@@ -241,6 +241,26 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.deepEqual(contract.spec.optionalSubagents, []);
   assert.match(contract.spec.purpose ?? "", /showing available Blueprint commands/i);
   assert.deepEqual(contract.spec.writes, []);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-router",
+    shared: [
+      "docs/commands/root-router.md",
+      "docs/commands/help.md",
+      "docs/commands/progress.md",
+      "docs/commands/next.md",
+      "docs/commands/do.md",
+      "docs/RUNTIME-REFERENCE.md"
+    ],
+    commandSpecific: [],
+    effective: [
+      "docs/commands/root-router.md",
+      "docs/commands/help.md",
+      "docs/commands/progress.md",
+      "docs/commands/next.md",
+      "docs/commands/do.md",
+      "docs/RUNTIME-REFERENCE.md"
+    ]
+  });
 
   assert.ok(contract.runtimeReference);
   assert.equal(contract.runtimeReference.path, "docs/RUNTIME-REFERENCE.md");
@@ -268,6 +288,60 @@ test("command runtime contract resource stays anchored to live catalog, command 
     buildBlueprintCommandRuntimeContractResource("do"),
     /Blueprint runtime-contract resources are available only for implemented commands: do/
   );
+});
+
+test("discovery runtime contracts expose command-scoped effective skill inputs", async () => {
+  const sharedInputs = ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"];
+  const expectations = [
+    {
+      command: "discuss-phase",
+      ownDoc: "docs/commands/discuss-phase.md",
+      siblingDocs: [
+        "docs/commands/research-phase.md",
+        "docs/commands/ui-phase.md",
+        "docs/commands/list-phase-assumptions.md"
+      ]
+    },
+    {
+      command: "research-phase",
+      ownDoc: "docs/commands/research-phase.md",
+      siblingDocs: [
+        "docs/commands/discuss-phase.md",
+        "docs/commands/ui-phase.md",
+        "docs/commands/list-phase-assumptions.md"
+      ]
+    },
+    {
+      command: "ui-phase",
+      ownDoc: "docs/commands/ui-phase.md",
+      siblingDocs: [
+        "docs/commands/discuss-phase.md",
+        "docs/commands/research-phase.md",
+        "docs/commands/list-phase-assumptions.md"
+      ]
+    },
+    {
+      command: "list-phase-assumptions",
+      ownDoc: "docs/commands/list-phase-assumptions.md",
+      siblingDocs: [
+        "docs/commands/discuss-phase.md",
+        "docs/commands/research-phase.md",
+        "docs/commands/ui-phase.md"
+      ]
+    }
+  ] as const;
+
+  for (const expectation of expectations) {
+    const contract = await buildBlueprintCommandRuntimeContractResource(expectation.command);
+
+    assert.deepEqual(contract.skillInputs.shared, sharedInputs);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [expectation.ownDoc]);
+    assert.deepEqual(contract.skillInputs.effective, [...sharedInputs, expectation.ownDoc]);
+
+    for (const siblingDoc of expectation.siblingDocs) {
+      assert.equal(contract.skillInputs.effective.includes(siblingDoc), false);
+    }
+  }
 });
 
 test("command path helpers centralize canonical, alias, and manifest forms", () => {
