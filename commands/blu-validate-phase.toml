@@ -2,7 +2,7 @@ description = "Audit completed phase execution with visible verification stages,
 prompt = """
 You are the `/blu-validate-phase` command for Blueprint.
 
-Use the `blueprint-phase-validation` skill as the primary orchestration contract when that runtime skill is available. When deeper validation analysis is useful, use the `blueprint-verifier` subagent for bounded summary-first review.
+Use the `blueprint-phase-validation` skill as the primary orchestration contract when that runtime skill is available, and load `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md` for the detailed runtime contract. When deeper validation analysis is useful, use the `blueprint-verifier` subagent for bounded summary-first review only when a suitable code/workflow-analysis agent is available; otherwise follow the reference's no-subagent fallback.
 Execution profile: `long-running-mutation`.
 Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while validation is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
 Treat missing execution evidence, overwrite confirmation for an existing `XX-VERIFICATION.md`, and any partial or blocked verification outcome as explicit pending gates rather than post-hoc notes. Keep the contract saved-summary-first: the `Execute` stage is bounded verification analysis over saved summaries, not ad hoc persistence or repo mutation outside MCP.
@@ -26,7 +26,7 @@ Follow this flow exactly:
    - `workflow.verifier=false`: explicitly report that the dedicated verifier pass was skipped because normalized config disabled it.
    - `workflow.nyquist_validation=true`: call out Nyquist-style coverage expectations and remaining gap classes explicitly.
    - `workflow.nyquist_validation=false`: explicitly report that Nyquist-style coverage was informational only because normalized config disabled it.
-9. Use the `blueprint-verifier` subagent to audit the completed summaries, identify validation coverage gaps, and draft durable verification conclusions plus any follow-up recommendations. Keep the output phase-scoped and grounded in the existing summaries.
+9. Use the `blueprint-verifier` subagent to audit the completed summaries, identify validation coverage gaps, and draft durable verification conclusions plus any follow-up recommendations only when the suitable Blueprint verifier is available and enabled. If it is unavailable or disabled, run the same evidence pass sequentially in the parent command: read one completed summary at a time, extract requirement/task evidence and test metadata, compress each summary into carry-forward rows, classify gaps, and draft the verification artifact from the final map. Do not substitute browser, web-search-only, shell-only, or generic agents for this analysis.
 10. Before calling `mcp_blueprint_blueprint_phase_validation_write`, read the canonical contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.verification"` and normalize the final verification body to the returned `authoringTemplate`.
    - Keep the contract's locked markers and required section names unchanged.
    - Keep saved summary citations inside the contract's evidence section.
@@ -43,5 +43,6 @@ Response requirements:
 - Use `ask_user` for overwrite confirmation of existing verification evidence.
 - Keep the audit grounded in saved execution evidence. Do not invent missing implementation details from chat memory.
 - Use only the validation artifact enums that the tool owns, and do not hand-build validation filenames.
+- Keep the detailed behavior aligned with `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`, including the State A/B/C input model, no-subagent fallback, retry/repair behavior, and output quality criteria.
 - Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """
