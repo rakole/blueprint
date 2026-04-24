@@ -3,6 +3,7 @@ prompt = """
 You are the `/blu-code-review` command for Blueprint.
 
 Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. When the review spans multiple plans, multiple files, or a deep pass, use the `blueprint-reviewer` subagent for bounded findings analysis.
+Load `skills/blueprint-review/references/code-review-runtime-contract.md` as the local runtime contract for depth semantics, artifact authoring quality, capability-gated subagent use, no-subagent fallback, and MCP retry/repair behavior.
 
 Execution profile: `long-running-mutation`.
 Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while the review is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
@@ -25,9 +26,9 @@ Follow this flow exactly:
 8. If explicit files were supplied, treat the returned `files` list as the exact user-selected scope and never add siblings, generated artifacts, or drift-based files. If no explicit files were supplied, treat the returned repo file list as the deterministic review scope and do not widen it from chat memory or unstaged changes.
 9. If the resolved scope is broad, multi-plan, or deep enough that the user should confirm proceeding, pause for an `ask_user` scope confirmation before any write. Keep the question focused on the exact scope and depth Blueprint is about to review.
 10. If a `XX-REVIEW.md` artifact already exists, treat it as the review baseline. Read it before replacement, default to reuse, and require explicit overwrite confirmation before changing it. Prefer `ask_user` for that confirmation path.
-11. Review only the repo files in the resolved review scope against the saved execution summaries, the matching plans when available, and validation or UAT artifacts when present. Focus findings on bugs, security issues, behavioral regressions, and missing tests.
+11. Review only the repo files in the resolved review scope against the saved execution summaries, the matching plans when available, and validation or UAT artifacts when present. Follow the local runtime contract's `quick`, `standard`, and `deep` depth semantics. Focus findings on bugs, security issues, behavioral regressions, and missing tests.
 12. Report in-flight progress while code review is running. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. At minimum surface the resolved phase, scope source, file count, selected review depth, pending gate, execution mode, rolling finding counts or severity buckets, whether the review artifact is being reused or revised, and the next safe implemented action.
-13. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`.
+13. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`. If that subagent is unavailable or unnecessary, use the local runtime contract's no-subagent fallback: read saved evidence first, review one file group at a time, compress carry-forward context after each group, and run a final severity-count consistency pass.
 14. Persist the finished review through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
 15. End with a concise summary covering the resolved phase, scope source, depth, whether the artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
@@ -41,6 +42,7 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the review grounded in saved artifacts and the concrete repo files returned by the review-scope tool.
+- Use `skills/blueprint-review/references/code-review-runtime-contract.md` as the output-quality contract for line-backed findings, concrete fix or verification guidance, subagent gating, no-subagent fallback, and invalid-write repair.
 - Keep the shared review posture explicit while the run is live: resolved scope, active stage, pending gate, execution mode, and next safe action should stay legible as progress changes.
 - Report the resolved phase, depth, scope source, and rolling finding counts or severity buckets while the review is in flight, not only in the closing summary.
 - Do not invent or widen review scope after `mcp_blueprint_blueprint_review_scope` returns; its `files` list is authoritative.

@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `code-review` uses the shared long-running-mutation posture: resolve the target phase, read saved review settings plus phase evidence, decide the deterministic review scope and any scope or overwrite gate, execute bounded findings analysis, persist the durable review artifact through MCP, validate the saved review posture, and route to the next safe implemented follow-up.
 - Keep the review posture explicit throughout the run: resolved scope must stay tied to the scope source (`explicit-files` or saved phase evidence), pending gates stay limited to scope confirmation or overwrite confirmation when those gates are triggered, execution mode should reflect the effective review depth and whether the pass stays inline or uses the reviewer subagent, and rolling finding counts plus artifact status should come from the live review work instead of being invented after the fact.
+- Runtime contract reference: `skills/blueprint-review/references/code-review-runtime-contract.md` owns depth-specific review semantics, artifact richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior.
 
 
 ## Purpose
@@ -67,6 +68,7 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
+- `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, notes}`
 - `blueprint_review_scope` -> `{status, phase, files, reviewMode, artifacts, reason, warnings}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
@@ -81,13 +83,27 @@
 - If the derived scope is broad, multi-plan, or deep enough that the user should explicitly approve it, pause for a structured confirmation before any replacement write.
 - Persist the final review through `blueprint_review_record` with `artifact: "code-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`.
 
+## Depth And Output Quality Contract
+
+- `quick` reviews scan the resolved files for high-signal correctness, security, unsafe API, debug-artifact, and obvious test-gap patterns. They must not claim deep cross-file confidence.
+- `standard` reviews read every resolved file and apply behavior, security, error-handling, language-aware, and test-coverage checks in context.
+- `deep` reviews add import/export, call-chain, boundary-type, error-propagation, and shared-state consistency checks across the resolved file set. If the scope is too broad for a credible deep pass, ask for scope confirmation or recommend narrowing instead of saving a thin review.
+- Every material finding must include severity, disposition, repo-relative file path and line or line range, evidence, impact, and a concrete fix or verification suggestion.
+- The saved artifact must list every reviewed file in `Scope Reviewed`, every saved artifact that influenced the result in `Evidence Reviewed`, matching critical/high/medium/low/unknown counts in `Severity Summary`, and only implemented commands in `Next Safe Action`.
+
+## Subagent And Fallback Contract
+
+- Use `blueprint-reviewer` only when a suitable code-analysis subagent is available and the scope spans multiple plans, many files, risky surfaces, a prior review revision, or `--depth=deep`.
+- Do not substitute browser, web-search-only, shell-only, or generic page-inspection helpers for `blueprint-reviewer`.
+- If the reviewer subagent is unavailable or unnecessary, use the sequential no-subagent fallback from `skills/blueprint-review/references/code-review-runtime-contract.md`: read saved evidence first, review one file group at a time, compress carry-forward context after each group, and run a final severity-count consistency pass before persistence.
+
 
 ## Skills And Subagents
 
 
 - Primary skill: `blueprint-review`
 - Optional subagents:
-- `blueprint-reviewer`
+  - `blueprint-reviewer`
 
 
 ## Dependencies
@@ -134,6 +150,7 @@
 
 - Preserve generated reports when git or external CLI steps fail.
 - Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- If `blueprint_review_record` returns `status: "invalid"`, repair the authored markdown against the canonical `authoringTemplate` and returned warnings, retry once through MCP, and stop with the invalid reasons if the retry still fails.
 
 
 ## Acceptance Criteria

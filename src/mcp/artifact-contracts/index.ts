@@ -984,19 +984,19 @@ function renderCodeReviewTemplate(context?: ArtifactTemplateContext): string {
 
 ## Review Summary
 
-- Concise synthesis of the review outcome, including a severity summary such as critical/high/medium/low/unknown counts.
+- Phase, effective depth, scope source, file count, verdict rationale, and severity counts.
 
 ## Scope Reviewed
 
-- Repo-relative file path or saved plan-derived scope.
+- Repo-relative file path reviewed, one per bullet or table row.
 
 ## Evidence Reviewed
 
-- Saved phase artifacts, repo files, or cited references reviewed.
+- Saved summaries, plans, validation, UAT, security, existing review, or repo-file evidence that influenced the result.
 
 ## Positive Signals
 
-- Confirmed passes, mitigations, or coverage strengths.
+- Concrete pass evidence, safeguards, tests, or coverage strengths; use \`none\` only when no positive signal was checked.
 
 ## Severity Summary
 
@@ -1008,11 +1008,11 @@ function renderCodeReviewTemplate(context?: ArtifactTemplateContext): string {
 
 ## Findings
 
-- [high] Example issue with evidence and impact.
+- [high][follow-up] \`path/to/file.ts:42\` - Evidence, impact, and concrete fix or verification guidance.
 
 ## Follow-Ups
 
-- Explicit next fix, validation step, or \`none\`.
+- Actionable fix, test gap, validation step, or \`none\`.
 
 ## Next Safe Action
 
@@ -2214,7 +2214,8 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
     notes: [
       "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
-      "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable."
+      "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
+      "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance."
     ],
     renderScaffoldTemplate: renderCodeReviewTemplate,
     renderAuthoringTemplate: renderCodeReviewTemplate

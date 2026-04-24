@@ -232,6 +232,13 @@ test("code-review docs and catalog metadata promote the review scope slice to im
   assert.match(commandDoc, /## In-Flight Progress Contract/);
   assert.match(
     commandDoc,
+    /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/
+  );
+  assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
+  assert.match(commandDoc, /## Depth And Output Quality Contract/);
+  assert.match(commandDoc, /## Subagent And Fallback Contract/);
+  assert.match(
+    commandDoc,
     /resolved scope, active stage, pending gate, execution mode, rolling finding counts or severity buckets, artifact status, and next safe action/i
   );
   assert.match(commandDoc, /`update_topic` tool and keep a compact review checklist with `write_todos`/);
@@ -398,6 +405,7 @@ test("code-review is exposed as an implemented review command with the scope too
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_config_get",
+    "blueprint_artifact_contract_read",
     "blueprint_review_scope",
     "blueprint_review_record",
     "blueprint_artifact_list"
