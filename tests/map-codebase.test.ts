@@ -576,10 +576,11 @@ test("map-codebase scaffold rejects guessed artifact formats with corrective gui
 });
 
 test("map-codebase command file uses runtime FQNs and explicit repo-relative artifact paths", async () => {
-  const commandFile = await readFile(
-    path.join(repoRoot, "commands/blu-map-codebase.toml"),
-    "utf8"
-  );
+  const [commandFile, skillFile, agentFile] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-map-codebase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-map/SKILL.md"), "utf8"),
+    readFile(path.join(repoRoot, "agents/blueprint-mapper.md"), "utf8")
+  ]);
   const requiredTools = [
     "mcp_blueprint_blueprint_project_status",
     "mcp_blueprint_blueprint_artifact_contract_read",
@@ -627,4 +628,66 @@ test("map-codebase command file uses runtime FQNs and explicit repo-relative art
   assert.match(commandFile, /heavily edited/i);
   assert.match(commandFile, /Existing codebase docs should be reused by default\./i);
   assert.match(commandFile, /replace/);
+  assert.match(commandFile, /skills\/blueprint-map\/references\/map-runtime-contract\.md/);
+  assert.match(commandFile, /contract\.authoringTemplate/);
+  assert.match(commandFile, /evidence-density/i);
+  assert.match(commandFile, /suitable code-analysis subagent or task mechanism/i);
+  assert.match(commandFile, /browser, web, generic page-inspection, or search-only agents/i);
+  assert.match(commandFile, /one-document-at-a-time main-agent fallback/i);
+  assert.match(
+    commandFile,
+    /`STACK\.md`, `STRUCTURE\.md`, `ARCHITECTURE\.md`, `CONVENTIONS\.md`, `TESTING\.md`, `INTEGRATIONS\.md`, `CONCERNS\.md`/
+  );
+  assert.match(commandFile, /compact carry-forward note: file path, write status, key evidence roots, and any unresolved warnings/i);
+  assert.match(commandFile, /status: "invalid"/);
+  assert.match(commandFile, /repair that same draft using the returned `issues` and the canonical `contract\.authoringTemplate`/);
+  assert.match(skillFile, /references\/map-runtime-contract\.md/);
+  assert.match(skillFile, /contract\.authoringTemplate/);
+  assert.match(skillFile, /one artifact at a time/i);
+  assert.match(skillFile, /compact\s+carry-forward note/i);
+  assert.match(skillFile, /status: "invalid"/);
+  assert.match(agentFile, /map-runtime-contract\.md/);
+  assert.match(agentFile, /concise evidence paths and concrete repo signals/i);
+  assert.match(agentFile, /Do not use browser, web, generic page-inspection, or search-only agents/i);
+});
+
+test("map-codebase runtime reference defines rich canonical templates and fallback behavior", async () => {
+  const reference = await readFile(
+    path.join(repoRoot, "skills/blueprint-map/references/map-runtime-contract.md"),
+    "utf8"
+  );
+  const artifactNames = [
+    "STACK.md",
+    "STRUCTURE.md",
+    "ARCHITECTURE.md",
+    "CONVENTIONS.md",
+    "TESTING.md",
+    "INTEGRATIONS.md",
+    "CONCERNS.md"
+  ];
+
+  assert.match(reference, /contract\.authoringTemplate/);
+  assert.match(reference, /richness and evidence authority/i);
+  assert.match(reference, /capability-gated/i);
+  assert.match(reference, /Browser, web,\s+generic page-inspection, or search-only agents are not acceptable substitutes/i);
+  assert.match(reference, /When code-analysis subagents are unavailable, the main agent must author exactly\s+one artifact at a time/i);
+  assert.match(
+    reference,
+    /1\. `STACK\.md`[\s\S]*2\. `STRUCTURE\.md`[\s\S]*3\. `ARCHITECTURE\.md`[\s\S]*4\. `CONVENTIONS\.md`[\s\S]*5\. `TESTING\.md`[\s\S]*6\. `INTEGRATIONS\.md`[\s\S]*7\. `CONCERNS\.md`/
+  );
+  assert.match(reference, /compact carry-forward note: artifact path, write status, key\s+evidence roots, and unresolved warnings/i);
+  assert.match(reference, /status: "invalid"/);
+  assert.match(reference, /repair the same draft from returned\s+`issues`/i);
+
+  for (const artifactName of artifactNames) {
+    assert.match(reference, new RegExp(`### \`${artifactName.replace(".", "\\.")}\``));
+    assert.match(
+      reference,
+      new RegExp(`### \`${artifactName.replace(".", "\\.")}\`[\\s\\S]*?(concrete repo paths|Cite paths|Cite files|file paths)`, "i"),
+      `${artifactName} should require concrete repo path evidence`
+    );
+  }
+
+  assert.doesNotMatch(reference, /\.planning\//);
+  assert.doesNotMatch(reference, /SCAN\.md|INTEL\.md/);
 });
