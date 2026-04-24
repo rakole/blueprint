@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `plan-phase` uses the shared long-running-mutation posture: resolve the target phase, read live planning inputs, decide the reuse/revise/replace gate, execute bounded drafting, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
 - When saved plans already exist, keep the pending gate explicit and require a structured `reuse`, `revise`, or `replace` gate before any overwrite path.
+- The rich local runtime contract lives at `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md`; it defines the detailed stage mapping, MCP call control flow, anti-shallow plan authoring rules, capability-gated subagent path, no-subagent fallback, validation repair behavior, output quality criteria, and completion criteria.
 
 
 ## Purpose
@@ -86,7 +87,12 @@ Interactive planning UX rules:
 - Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone.
 - Before finalization, map every declared phase requirement and must-have to explicit plan coverage or a named blocker. If the phase is too broad for one coherent plan, split/prioritize it into smaller dependency-aware waves before writing.
+- Author plans at execution-prompt quality, not outline quality: concrete repo-relative `Read First` entries, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, goal-backward must-haves with observable truths/artifacts/key links, and full-fidelity coverage of locked context decisions.
+- Do not silently reduce scope with `v1`, placeholder, static-for-now, future-wiring, stub, or "will be wired later" language. If full fidelity does not fit, split, prioritize with user confirmation, or block.
+- Use `blueprint-planner` and `blueprint-checker` only when suitable planning/workflow analysis agents are available; otherwise follow the runtime contract's sequential no-subagent fallback, drafting and validating one plan or topic at a time with compressed carry-forward context.
+- Do not use browser, web-search-only, or generic browsing agents as substitutes for codebase or workflow planning agents.
 - If planner/checker revisions keep failing after a bounded number of passes, stop the loop, preserve the best coherent draft, and report the exact unresolved requirement or split point instead of looping indefinitely.
+- If `blueprint_phase_plan_write` or final artifact validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
@@ -167,6 +173,7 @@ Interactive planning UX rules:
 - Derives research, plan-check, Nyquist, UI-gate, and planning-confirmation behavior from normalized effective config instead of re-deriving defaults inside the command.
 - Keeps the planner/checker loop bounded, requirements-aware, and split-friendly when the phase is too broad for a single coherent plan.
 - Reads the live `phase.plan` contract before writing instead of copying local template text.
+- Loads the local plan-phase runtime contract and applies its anti-shallow output criteria, no-subagent fallback, and validation repair loop.
 
 
 ## Test Cases

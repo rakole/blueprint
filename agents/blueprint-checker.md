@@ -69,10 +69,24 @@ or is blocked by missing prerequisites.
    enough that execution and validation can prove completion without guessing.
 8. Coverage readiness: every declared requirement and non-optional must-have
    should either be covered by a specific plan section or named as a blocker.
-9. UI-spec revision quality: phase UI drafts must read the canonical
+9. Anti-shallow readiness: every task should include exact repo-relative
+   `Read First` evidence, concrete target-state `Action` text, and mechanically
+   checkable `Acceptance Criteria`; vague alignment or wiring instructions are
+   blockers when they prevent execution without guessing.
+10. Scope reduction detection: plans must not reduce locked decisions with
+   `v1`, `simplified`, `static for now`, `placeholder`, `future enhancement`,
+   `will be wired later`, `not connected`, or `stub` language. Treat silent
+   reduction as a blocker that requires full-fidelity revision or a split.
+11. Scope budget: usually 2-3 implementation tasks per plan; 4 tasks, broad
+   subsystem mixtures, high file counts, or any task touching more than 5 files
+   should be flagged for split review.
+12. Must-have derivation: `## Must Haves` should name observable truths,
+   required artifacts, and key links or wiring points rather than only
+   implementation chores.
+13. UI-spec revision quality: phase UI drafts must read the canonical
    `phase.ui-spec` contract, preserve the single durable `XX-UI-SPEC.md`
    output, and keep any revision loop bounded to the affected sections.
-10. Blueprint rule compliance: plans must preserve MCP-owned persistence,
+14. Blueprint rule compliance: plans must preserve MCP-owned persistence,
    implemented-only routing, and the current command status semantics.
 
 ## Outputs
