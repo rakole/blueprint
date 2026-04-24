@@ -172,6 +172,13 @@ test("research-phase command references only registered tool names and safe rout
     path.join(repoRoot, "agents/blueprint-researcher.md"),
     "utf8"
   );
+  const runtimeContract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
   const requiredTools = [
     "blueprint_command_catalog",
     "blueprint_phase_locate",
@@ -193,6 +200,7 @@ test("research-phase command references only registered tool names and safe rout
   }
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
+  assert.match(commandFile, /research-phase-runtime-contract\.md/);
   assert.match(commandFile, /`blueprint-researcher` subagent/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /`ask_user`/);
@@ -214,6 +222,8 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /Keep repo truth explicit/i);
   assert.match(commandFile, /official docs or explicitly supplied external references/i);
   assert.match(commandFile, /distinct from repo-derived evidence/i);
+  assert.match(commandFile, /single-agent fallback/i);
+  assert.match(commandFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(commandFile, /PROJECT\.md/);
   assert.match(commandFile, /REQUIREMENTS\.md/);
   assert.match(commandFile, /STATE\.md/);
@@ -245,23 +255,34 @@ test("research-phase command references only registered tool names and safe rout
     mcpToolsDoc,
     /`research-phase` uses phase location\/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
   );
+  assert.match(mcpToolsDoc, /research-phase-runtime-contract\.md/);
+  assert.match(mcpToolsDoc, /single-agent topic-strand fallback/i);
+  assert.match(mcpToolsDoc, /reject browser\/web-search\/shell-only or generic agents/i);
 
   assert.match(skillFile, /Execution profile for `\/blu-research-phase`: `long-running-mutation`/);
+  assert.match(skillFile, /research-phase-runtime-contract\.md/);
   assert.match(skillFile, /update_topic/);
   assert.match(skillFile, /write_todos/);
   assert.match(skillFile, /official docs or explicitly supplied external references/i);
   assert.match(skillFile, /repo-derived evidence distinct from external or web-derived evidence/i);
+  assert.match(skillFile, /single-agent fallback/i);
+  assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
+  assert.match(skillFile, /repair the same normalized draft/i);
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
 
   assert.deepEqual(contract.skillInputs.shared, [
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md"
   ]);
-  assert.deepEqual(contract.skillInputs.commandSpecific, ["docs/commands/research-phase.md"]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "docs/commands/research-phase.md",
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+  ]);
   assert.deepEqual(contract.skillInputs.effective, [
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md",
-    "docs/commands/research-phase.md"
+    "docs/commands/research-phase.md",
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
@@ -279,6 +300,24 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(researcherAgent, /provenance\s+captured at the claim level/i);
   assert.match(researcherAgent, /comparison\s+notes when official docs are part of the evidence set/i);
   assert.match(researcherAgent, /Keep citations, provenance, and repo-path evidence in `## Sources`/i);
+  assert.match(researcherAgent, /Output Quality Expectations/);
+  assert.match(researcherAgent, /what does `\/blu-plan-phase` need to know/i);
+  assert.match(researcherAgent, /Repo evidence/);
+  assert.match(researcherAgent, /Official\s+reference/);
+  assert.match(researcherAgent, /Inference/);
+  assert.match(researcherAgent, /Do not substitute browser-only, web-search-only, shell-only, or generic-agent/i);
+  assert.match(runtimeContract, /Shared Stage Mapping/);
+  assert.match(runtimeContract, /Required MCP Calls/);
+  assert.match(runtimeContract, /Artifact Authoring Rules/);
+  assert.match(runtimeContract, /Capability-Gated Subagent Path/);
+  assert.match(runtimeContract, /No-Subagent Fallback/);
+  assert.match(runtimeContract, /Retry And Repair Behavior/);
+  assert.match(runtimeContract, /Output Quality Criteria/);
+  assert.match(runtimeContract, /Completion Criteria/);
+  assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
+  assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
+  assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
 });
 
 test("research scaffold seeds the exact research template shape", async (t) => {
@@ -372,6 +411,8 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.equal(contract.artifactId, "phase.research");
   assert.match(contract.contract.authoringTemplate, /# Phase XX: <Phase Name> - Research/);
   assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
+  assert.match(contract.contract.notes.join("\n"), /planner-grade evidence density/i);
+  assert.match(contract.contract.notes.join("\n"), /repo-versus-external provenance/i);
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
   assert.equal(invalid.status, "invalid");

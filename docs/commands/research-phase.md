@@ -8,6 +8,7 @@
 
 ## Shared Runtime Contract
 
+- Rich behavior reference: `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `research-phase` uses the shared long-running-mutation posture for topic-strand phase research: keep `Resolve`/`Read`/`Decide`/`Execute`/`Persist`/`Validate`/`Route` narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native `update_topic` and `write_todos` for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming they ran.
@@ -109,12 +110,14 @@
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured checkpoint shape with `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. Keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`.
 - Delete the saved checkpoint through `blueprint_phase_checkpoint_delete` after a successful final research write so later runs do not resume stale continuation state.
 - Keep the section names unchanged and replace every angle-bracket placeholder before writing.
+- Use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the output-quality and recovery authority: it requires planner-consumed sections, repo-versus-external provenance, capability-gated `blueprint-researcher` use, a single-agent topic-strand fallback when subagents are unavailable, and validation repair/retry before completion.
 
 
 ## Skills And Subagents
 
 
 - Primary skill: `blueprint-phase-discovery`
+- Runtime reference: `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`
 - Optional subagents:
 - `blueprint-researcher`
 

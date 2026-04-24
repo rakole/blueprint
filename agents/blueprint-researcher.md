@@ -101,6 +101,27 @@ phase.
 - Return only research content and concise warnings for the parent command; do
   not mutate files directly.
 
+## Output Quality Expectations
+
+- Answer the planner-facing question: what does `/blu-plan-phase` need to know
+  to plan this phase well?
+- Keep `## Phase Requirements` mapped to concrete requirement IDs or explain
+  when the phase has no mapped IDs.
+- Preserve context-derived constraints in `## Locked Decisions From Context`
+  and `## User Constraints`; do not recommend approaches that contradict them.
+- Make `## Standard Stack`, `## Architecture Patterns`, `## Don't Hand-Roll`,
+  `## Common Pitfalls`, `## Code Examples`, and `## Recommendations`
+  prescriptive enough to become plan tasks or validation checks.
+- Use source labels near claims or in `## Sources`: `Repo evidence`, `Official
+  reference`, `Supplied reference`, or `Inference`. Never present inference or
+  stale training knowledge as verified fact.
+- Lower confidence and add `## Open Questions` entries when sources conflict,
+  evidence is missing, or an external claim was not verified.
+- Do not substitute browser-only, web-search-only, shell-only, or generic-agent
+  output for repo and workflow analysis. External references can support a
+  claim, but repo evidence and saved Blueprint artifacts control the phase
+  boundary.
+
 ## Revision Behavior
 
 - When existing research is still mostly valid, preserve strong sections and

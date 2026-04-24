@@ -16199,7 +16199,8 @@ var init_artifact_contracts = __esm({
         notes: [
           "Research writes validate in strict mode by default.",
           "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
-          "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step."
+          "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
+          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
