@@ -280,6 +280,8 @@ Validation expectations:
 - must start with an H1 title
 - must not persist scaffold placeholders such as `Goal:`, `Project brief:`, or `Question 1:`
 - must populate the full discuss-phase context contract sections from `Phase Boundary`, `Discovery Grounding`, `Implementation Decisions`, `Specific Ideas`, `Existing Code Insights`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`
+- implementation decisions should be evidence-backed enough for downstream research and planning: include rationale, repo or saved-artifact paths where applicable, options considered, consequences if assumptions are wrong, and full relative canonical references
+- `/blu-discuss-phase` must repair any returned write validation issues before treating the context capture as complete; if repair cannot finish, the checkpoint remains the continuation source
 - a context file with only `## Decisions`, or with just the older summary-style sections, no longer satisfies the contract
 
 ### `XX-DISCUSSION-LOG.md`

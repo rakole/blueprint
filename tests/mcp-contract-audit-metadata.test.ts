@@ -194,6 +194,12 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussCommand, /returned `path` as the authoritative saved filename/i);
   assert.match(discussCommand, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
   assert.match(discussCommand, /self-check the normalized body against the contract/i);
+  assert.match(discussCommand, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussCommand, /contract\.authoringTemplate[\s\S]*schema authority/i);
+  assert.match(discussCommand, /capability-gated subagents/i);
+  assert.match(discussCommand, /single-agent fallback/i);
+  assert.match(discussCommand, /compress carry-forward context/i);
+  assert.match(discussCommand, /status: "invalid"[\s\S]*repair/i);
   assert.match(discussCommand, /prior-context sweep/i);
   assert.match(discussCommand, /codebase scout/i);
   assert.match(discussCommand, /stronger assumptions-mode analysis/i);
@@ -209,6 +215,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussDoc, /`resumeMeta` with fields such as `mode`, `pendingTopics`/i);
   assert.match(discussDoc, /normalized to the canonical `authoringTemplate` before write/i);
   assert.match(discussDoc, /self-checked against that contract/i);
+  assert.match(discussDoc, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussDoc, /capability-gated[\s\S]*single-agent fallback/i);
+  assert.match(discussDoc, /repair.*validation issues/i);
   assert.match(
     discussDoc,
     /blueprint_phase_context[\s\S]*projectBrief[\s\S]*requirementsGrounding[\s\S]*workflowPosture[\s\S]*codebase[\s\S]*requirements[\s\S]*missingArtifacts[\s\S]*warnings/i
@@ -221,6 +230,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussDoc, /checkpoint-per-area/i);
   assert.match(discussDoc, /end-of-run `STATE\.md` update/i);
   assert.match(artifactSchema, /full discuss-phase context contract sections/i);
+  assert.match(artifactSchema, /evidence-backed enough for downstream research and planning/i);
+  assert.match(artifactSchema, /repair any returned write validation issues/i);
   assert.match(
     artifactSchema,
     /`Phase Boundary`, `Discovery Grounding`, `Implementation Decisions`, `Specific Ideas`, `Existing Code Insights`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`/i
@@ -237,6 +248,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussRuntimeReference, /progress recaps/i);
   assert.match(discussRuntimeReference, /checkpoint-per-area/i);
   assert.match(discussRuntimeReference, /end-of-run `STATE\.md` updates/i);
+  assert.match(discussRuntimeReference, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussRuntimeReference, /single-agent fallback/i);
+  assert.match(discussRuntimeReference, /returned artifact validation issues/i);
   assert.match(discussMigration, /prior-context sweeps/i);
   assert.match(discussMigration, /dedicated todo\/backlog file crawl/i);
   assert.match(discussMigration, /codebase summaries/i);
@@ -250,10 +264,14 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussMigration, /progress recaps/i);
   assert.match(discussMigration, /checkpoint-per-area/i);
   assert.match(discussMigration, /end-of-run `STATE\.md` updates/i);
+  assert.match(discussMigration, /single-agent fallback with carry-forward context compression/i);
+  assert.match(discussMigration, /returned-validation repair/i);
   assert.match(
     mcpToolsDoc,
     /`discuss-phase` uses phase location\/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`/i
   );
+  assert.match(mcpToolsDoc, /discuss-phase-runtime-contract\.md/i);
+  assert.match(mcpToolsDoc, /single-agent one-area-at-a-time fallback/i);
 
   assert.match(researchCommand, /default strict mode/i);
   assert.match(researchCommand, /returned `path` as authoritative/i);
@@ -275,6 +293,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(uiDoc, /single durable output/i);
 
   assert.match(discoverySkill, /structured discuss checkpoint shape/i);
+  assert.match(discoverySkill, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discoverySkill, /single-agent fallback/i);
   assert.match(
     discoverySkill,
     /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
