@@ -266,6 +266,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussMigration, /end-of-run `STATE\.md` updates/i);
   assert.match(discussMigration, /single-agent fallback with carry-forward context compression/i);
   assert.match(discussMigration, /returned-validation repair/i);
+  assert.match(discussMigration, /research-phase-runtime-contract\.md/i);
+  assert.match(discussMigration, /single-agent topic fallback/i);
+  assert.match(discussMigration, /validation repair/i);
   assert.match(
     mcpToolsDoc,
     /`discuss-phase` uses phase location\/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`/i
@@ -277,9 +280,14 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchCommand, /returned `path` as authoritative/i);
   assert.match(researchCommand, /artifactId: "phase\.research"/);
   assert.match(researchCommand, /authoringTemplate/);
+  assert.match(researchCommand, /research-phase-runtime-contract\.md/);
+  assert.match(researchCommand, /single-agent fallback/i);
+  assert.match(researchCommand, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(researchDoc, /## Research Persistence Contract/);
   assert.match(researchDoc, /artifactId: "phase\.research"/);
   assert.match(researchDoc, /Bare names such as `RESEARCH` and absolute paths are invalid/i);
+  assert.match(researchDoc, /research-phase-runtime-contract\.md/);
+  assert.match(researchDoc, /validation repair\/retry/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
   assert.match(uiCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
@@ -302,6 +310,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discoverySkill, /`resumeMeta` carries the resumability fields/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
   assert.match(discoverySkill, /Canonical Research Contract/);
+  assert.match(discoverySkill, /research-phase-runtime-contract\.md/);
+  assert.match(discoverySkill, /single-agent fallback/i);
+  assert.match(discoverySkill, /repair the same normalized draft/i);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);
   assert.match(discoverySkill, /artifactId: "phase\.ui-spec"/);
   assert.match(discoverySkill, /blueprint-checker/i);

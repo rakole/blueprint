@@ -21,6 +21,7 @@ input_bundles:
       - skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md
     "/blu-research-phase":
       - docs/commands/research-phase.md
+      - skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md
     "/blu-ui-phase":
       - docs/commands/ui-phase.md
     "/blu-list-phase-assumptions":
@@ -66,7 +67,9 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - MCP tools own state mutation
 - later chaining and power-mode variants stay deferred until the downstream lifecycle substrate exists
 - keep the GSD-inspired discovery staples Blueprint actually ships: prior-context sweeps, deferred-idea folding, methodology lenses, codebase-scout reuse, stronger assumptions-mode analysis, progress recaps, checkpoint-per-area persistence, and end-of-run `STATE.md` updates
-- use `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the rich behavior contract for `/blu-discuss-phase`, while treating `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts
+- use `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the rich behavior contract for `/blu-discuss-phase`
+- use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract for `/blu-research-phase`
+- treat `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts
 
 ## Required Inputs
 
@@ -148,6 +151,8 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 
 ### `research-phase`
 
+Before running the command flow, read `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`. It locks the retained research behavior that is easy to dilute: phase validation, existing research reuse/update gates, actual saved context reads, planner-consumed research sections, repo-versus-external provenance, capability-gated researcher use, a single-agent no-subagent fallback, checkpointed inconclusive strands, validation repair, and implemented-only routing.
+
 1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
 2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in the saved discovery context, not only status metadata.
 3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
@@ -167,6 +172,9 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 17. When a strand reaches a natural pause, write or refresh the phase checkpoint with the completed topics, remaining topics, open questions, and a resume hint that stays inside the implemented Blueprint surface. Treat the checkpoint as the continuation point for the next run.
 18. If evidence stays incomplete or conflicts remain unresolved after a reasonable pass, mark the result as inconclusive rather than stretching the draft. Summarize what was verified, what remains unknown, and the next safe action within the implemented surface, such as continuing research, revisiting context, or moving to `/blu-progress` when planning is no longer appropriate.
 19. Do not imply auto-chaining or power-mode continuation. Any continuation path must be explicit, checkpointed, and resumable through the shipped discovery workflow.
+20. If no suitable Blueprint research or code-analysis subagent is available, use the runtime contract's single-agent fallback: handle one topic strand at a time, compress carry-forward evidence before moving on, normalize the draft section-by-section to the canonical template, and checkpoint pauses or inconclusive evidence without lowering output richness.
+21. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for codebase and workflow analysis. External references may support claims, but they do not replace repo evidence or the saved Blueprint artifacts.
+22. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-research-phase` as complete. If repair cannot finish safely, leave or refresh the checkpoint and report the blocker.
 
 ### `list-phase-assumptions`
 
