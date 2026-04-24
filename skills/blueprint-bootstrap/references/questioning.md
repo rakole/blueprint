@@ -142,6 +142,11 @@ Once you could author a clear bootstrap brief, summarize your understanding and
 ask whether you should create the Blueprint bootstrap artifacts now or keep
 exploring.
 
+Show that summary as normal Gemini CLI conversation content before opening any
+structured approval prompt. The approval prompt should point back to the visible
+project brief and roadmap preview; it should never rely on shell output,
+temporary files, or collapsed agent/tool panes for the content being approved.
+
 If the user wants to keep exploring, probe the missing edge or uncertainty
 instead of repeating the whole questioning cycle.
 

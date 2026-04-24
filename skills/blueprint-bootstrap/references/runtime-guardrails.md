@@ -26,6 +26,9 @@ about what Blueprint can and cannot do at runtime.
 - Prefer Gemini CLI's built-in `ask_user` tool for structured clarification,
   saved-default selection, workflow-preference capture, overwrite confirmation,
   and the bootstrap approval gate.
+- Before using `ask_user` for approval, render the project brief and roadmap
+  preview directly in the main Gemini CLI conversation. The user must be able
+  to review the proposal without expanding tool, shell, or subagent panes.
 - Use `update_topic` to keep the current bootstrap stage visible during long
   runs.
 - Use `write_todos` to maintain a compact visible checklist for multi-stage
@@ -48,3 +51,6 @@ about what Blueprint can and cannot do at runtime.
   recaps and explicit status summaries instead of inventing hidden capability.
 - Keep the shared stage labels and in-flight status fields legible even when a
   helper fallback is necessary.
+- Do not use shell commands such as `echo`, `cat`, `printf`, pagers, temporary
+  files, or terminal renderers as a workaround for presenting approval content.
+  Shell output is not a durable or reviewable Blueprint approval surface.

@@ -127,20 +127,31 @@ Map the bootstrap workflow to the shared stages like this:
    - first-milestone framing
    - explicit assumptions
    - grouped requirement candidates, including deferred and out-of-scope cuts
-2. Before the first persistent write in interactive mode, summarize your
-   understanding and get explicit ready-to-create approval. Prefer `ask_user`
-   for that approval gate.
-3. Draft requirements and roadmap structure before writing, then run a revision
+2. Before the first persistent write in interactive mode, render a visible
+   approval packet in the main Gemini CLI conversation. Do not display the
+   proposal through shell output, hidden tool output, temporary files, pagers,
+   terminal renderers, or collapsed subagent panes.
+3. The approval packet must be structured Markdown, and should include:
+   project brief, target users, requirement groups, roadmap phase table,
+   assumptions, deferred or out-of-scope items, defaults provenance, and any
+   brownfield confidence notes.
+4. Treat optional `blueprint-project-researcher` and `blueprint-roadmapper`
+   outputs as private synthesis inputs. Rewrite their conclusions into the
+   main conversation before asking for approval.
+5. After the visible approval packet, get explicit ready-to-create approval.
+   Prefer `ask_user` for that approval gate, and make the prompt refer to the
+   visible preview above.
+6. Draft requirements and roadmap structure before writing, then run a revision
    loop if the user wants adjustments.
-4. Interactive mode must call `mcp_blueprint_blueprint_project_init` with a
+7. Interactive mode must call `mcp_blueprint_blueprint_project_init` with a
    sufficient `bootstrapSeed`. If the seed is missing or too thin, keep
    questioning instead of asking the MCP layer to synthesize purpose,
    requirements, roadmap, state, config, or phases.
-5. `--auto` skips the extra confirmation loop only when the project brief is
+8. `--auto` skips the extra confirmation loop only when the project brief is
    already strong enough to synthesize a credible `bootstrapSeed`.
-6. If `--auto` lacks enough project context, stop and ask for the missing brief
+9. If `--auto` lacks enough project context, stop and ask for the missing brief
    instead of inventing a product.
-7. If `--auto` proceeds, make assumptions explicit in both the final summary and
+10. If `--auto` proceeds, make assumptions explicit in both the final summary and
    the written bootstrap artifacts rather than hiding them only in chat.
 
 ## Execute
