@@ -27,7 +27,12 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   assert.match(projectResearcher, /Confidence:/);
   assert.match(projectResearcher, /\/blu-map-codebase/);
   assert.match(projectResearcher, /requirement-shaping signals/i);
+  assert.match(projectResearcher, /`Stack`, `Features`, `Architecture`, and `Pitfalls`/);
+  assert.match(projectResearcher, /table-stakes versus\s+differentiator features/i);
+  assert.match(projectResearcher, /pitfalls\s+with warning signs and prevention strategies/i);
+  assert.match(projectResearcher, /Attach confidence to each research dimension/i);
   assert.match(projectResearcher, /biggest uncertainty still worth asking the user/i);
+  assert.match(projectResearcher, /browser, web-search, or shell-only substitute/i);
   assert.match(projectResearcher, /Do not invent web research, outside reviewers, or manual persistence paths/i);
   assert.match(
     projectResearcher,
@@ -45,7 +50,12 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   assert.match(roadmapper, /Keep repo truth and approved outside context distinct/i);
   assert.match(roadmapper, /## Required Reads/);
   assert.match(roadmapper, /requirement-to-phase coverage explicit/i);
+  assert.match(roadmapper, /Every committed requirement must map to exactly one proposed phase/i);
+  assert.match(roadmapper, /orphaned or duplicate mappings as blockers/i);
   assert.match(roadmapper, /success criteria/i);
+  assert.match(roadmapper, /2-5 concrete, observable success criteria/i);
+  assert.match(roadmapper, /coverage summary that states mapped count/i);
+  assert.match(roadmapper, /observable truths from a user or maintainer\s+perspective/i);
   assert.match(roadmapper, /group related requirement,\s+integration, or flow gaps/i);
   assert.match(roadmapper, /preserve unaffected phases/i);
   assert.match(roadmapper, /exactly what changed/i);
@@ -54,6 +64,7 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
     /return\s+ordered proposals without inventing permanent phase numbers/i
   );
   assert.match(roadmapper, /Do not invent web research, outside reviewers, or manual persistence paths/i);
+  assert.match(roadmapper, /browser, web-search, shell-only, or generic helpers/i);
   assert.match(roadmapper, /Do not rewrite `\.blueprint\/ROADMAP\.md`/);
 });
 

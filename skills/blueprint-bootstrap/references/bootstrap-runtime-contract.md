@@ -82,6 +82,10 @@ Map the bootstrap workflow to the shared stages like this:
    `mcp_blueprint_blueprint_artifact_contract_read` for `bootstrap.project`,
    `bootstrap.requirements`, and `bootstrap.roadmap` before shaping the first
    authored drafts.
+   - Treat each returned `contract.authoringTemplate` as the heading and schema
+     authority for the authored content.
+   - Do not use scaffold output as the finished artifact when the command has
+     enough context to author a substantive bootstrap seed.
 4. If any Gemini-native tool detail is unclear while you shape the flow, verify
    it with `get_internal_docs` before relying on it.
 
@@ -158,7 +162,11 @@ Map the bootstrap workflow to the shared stages like this:
 
 1. Convert the discovered context into a bootstrap brief with project vision,
    audience, constraints, milestone framing, non-goals, and assumptions.
-2. Requirements must be specific, user-centered, and traceable.
+2. Requirements must be specific, user-centered, atomic, grouped, and
+   traceable. Reject vague requirements before persistence:
+   - "Handle authentication" must become a testable user capability.
+   - "Support sharing" must name what can be shared, by whom, and how it is
+     observed.
 3. Distinguish committed v1 scope from deferred and explicitly out-of-scope
    work.
 4. Use `blueprint-roadmapper` when grouped phase proposals, requirement
@@ -166,6 +174,49 @@ Map the bootstrap workflow to the shared stages like this:
    synthesis.
 5. Keep any task-tracker graph honest as research, revision, or roadmap-shape
    decisions change.
+
+### Capability-Gated Research And Roadmapping
+
+Use bounded subagents only when the runtime reports suitable bundled Blueprint
+agents as available. Do not replace them with browser, web-search, shell-only,
+or generic helpers.
+
+1. Use `blueprint-project-researcher` when the project brief needs repo-shape
+   evidence, product-context recovery, or parent-approved outside context before
+   requirements are scoped.
+2. When project-level research is useful, ask for the GSD-inspired dimensions
+   that matter to the current repo instead of creating a mandatory research
+   directory: `Stack`, `Features`, `Architecture`, `Pitfalls`.
+3. Treat those research results as private synthesis inputs. Fold only
+   approved, relevant findings into the visible approval packet and
+   `bootstrapSeed`.
+4. Use `blueprint-roadmapper` when the roadmap needs requirement clustering,
+   dependency ordering, or goal-backward success criteria.
+5. Roadmapper output must map every committed requirement to exactly one phase,
+   identify duplicates or orphans before persistence, derive 2-5 observable
+   success criteria per phase, and flag brownfield uncertainty honestly.
+
+### No-Subagent Fallback
+
+If suitable subagents are unavailable, continue sequentially in the parent
+session instead of degrading to shallow synthesis.
+
+1. Classify repo shape and summarize repo evidence first.
+2. Handle one research dimension at a time in this order when relevant:
+   `Stack`, `Features`, `Architecture`, `Pitfalls`.
+3. After each dimension, compress carry-forward context into a short evidence
+   summary with confidence and open questions.
+4. Scope requirements one group at a time. Keep committed, deferred, and
+   out-of-scope items separate.
+5. Draft roadmap areas one at a time from the requirement groups, then run a
+   final coverage pass:
+   - every committed requirement appears in exactly one phase
+   - no phase lacks success criteria
+   - each success criterion is observable by a user or maintainer
+   - brownfield assumptions are marked provisional when mapping evidence is
+     missing
+6. Show the same visible approval packet and revision loop as the subagent path
+   before the first persistent write.
 
 ## Persist
 
@@ -178,6 +229,11 @@ Map the bootstrap workflow to the shared stages like this:
    `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, and
    `.blueprint/ROADMAP.md` land as authored drafts rather than placeholder
    shells.
+   - The seed should carry grouped committed requirements, deferred scope,
+     explicit out-of-scope cuts, roadmap phases, requirement IDs, phase
+     objectives, and success criteria.
+   - If any committed requirement lacks a durable ID or a roadmap phase, revise
+     before calling the MCP tool.
 3. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
 4. Require explicit overwrite confirmation before calling
    `mcp_blueprint_blueprint_project_init` with `overwrite: true`.
@@ -195,10 +251,31 @@ Map the bootstrap workflow to the shared stages like this:
    confirm the authored bootstrap artifacts satisfy the runtime contract.
 2. Do not silently accept a thin scaffold when validation shows missing
    substance, traceability, or contract violations.
-3. Surface warnings, defaults provenance, and brownfield-provisional confidence
+3. If validation or the `blueprint_project_init` response reports invalid,
+   placeholder, missing-heading, missing-success-criteria, or traceability
+   issues, repair the authored `bootstrapSeed` or approval-packet source and
+   retry the MCP write only after the user approves any material scope change.
+   Do not patch `.blueprint/` files by hand.
+4. Surface warnings, defaults provenance, and brownfield-provisional confidence
    honestly.
-4. If the user selected repo-level workflow preferences, confirm the persisted
+5. If the user selected repo-level workflow preferences, confirm the persisted
    config reflects them after initialization.
+
+## Output Quality Criteria
+
+- The project brief names the audience, core value, first milestone, non-goals,
+  constraints, assumptions, and any evidence limits.
+- Requirements are grouped, testable, atomic, and written from the user or
+  maintainer perspective.
+- The roadmap derives phases from requirement coverage and dependencies rather
+  than imposing a generic setup/core/polish template.
+- Each committed requirement is covered exactly once in the roadmap.
+- Each phase has a concrete objective and 2-5 observable success criteria.
+- Deferred and out-of-scope work is visible enough to prevent accidental
+  re-entry during later planning.
+- Brownfield output distinguishes mapped evidence from provisional assumptions.
+- The final response reports whether the artifacts were approved, revised, or
+  auto-synthesized.
 
 ## Route
 
@@ -232,3 +309,11 @@ Map the bootstrap workflow to the shared stages like this:
 - Call out any explicit assumptions that shaped the bootstrap draft.
 - End with the next safe action after initialization, using the project status
   response.
+
+## Completion Criteria
+
+Bootstrap is complete only when the repo has passed map-first gating, the
+approval or auto-mode sufficiency gate has completed, authored bootstrap content
+has been persisted through Blueprint MCP tools, validation has no unrepaired
+contract or traceability failures, config provenance is reported, and the final
+route comes from `mcp_blueprint_blueprint_project_status`.
