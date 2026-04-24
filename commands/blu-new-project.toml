@@ -29,6 +29,7 @@ Keep this manifest focused on host-entrypoint and runtime guardrails:
 - Never try to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts.
 - If a required Blueprint MCP tool is unavailable, stop and report that the Blueprint MCP server is disconnected or undiscovered instead of improvising a shell fallback.
 - Preserve honest Gemini-native coordination: prefer built-in helpers such as `ask_user`, `update_topic`, `write_todos`, task-tracker tools, and `get_internal_docs` when the skill contract calls for them, and state the fallback plainly when a helper is unavailable.
+- Never use shell output, hidden tool panes, or collapsed subagent results as the approval surface. Before any approval `ask_user` prompt, render the project brief and roadmap preview directly in the main Gemini CLI conversation as a structured Markdown response.
 
 Optional bounded subagents permitted by the skill contract:
 - `blueprint-project-researcher`
@@ -42,6 +43,7 @@ Remember that `bootstrapMode` behavior, brownfield map-first routing, saved-defa
 - In auto mode, synthesis is allowed only because the user requested it and only after brownfield map-first gating has passed.
 
 Response requirements:
+- For the approval gate, show a visible structured approval packet in the main Gemini CLI conversation before asking for approval: project brief, requirement groups, roadmap phase table, assumptions, deferred or out-of-scope items, and defaults provenance.
 - Summarize created `.blueprint/` paths, including `.blueprint/config.json`.
 - Summarize project direction, requirement scope, roadmap stance, defaults provenance, approval posture, explicit assumptions, and whether the result is greenfield-ready or brownfield-provisional.
 - End with the next safe action from project status.

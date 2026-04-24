@@ -53,6 +53,23 @@ This skill package is the runtime source of truth for `/blu-new-project`.
 - If you are unsure how a Gemini-native tool or host behavior works, use
   `get_internal_docs` instead of guessing.
 
+## Visible Approval Surface
+
+- The approval gate must be reviewable in the main Gemini CLI conversation, not
+  in shell output, hidden tool output, or a collapsed subagent pane.
+- Treat `blueprint-project-researcher` and `blueprint-roadmapper` results as
+  private synthesis inputs. After they return, rewrite the proposal into a
+  visible approval packet before asking the user to approve.
+- Never use shell commands such as `echo`, `cat`, `printf`, pagers, temporary
+  files, or terminal renderers to display the project brief or roadmap for
+  approval.
+- Immediately before the approval `ask_user` call, send a structured Markdown
+  preview in the normal assistant response with the project brief, requirement
+  groups, roadmap phases, assumptions, deferred or out-of-scope items, defaults
+  provenance, and any brownfield confidence notes.
+- The `ask_user` prompt should refer to the visible preview above; it must not
+  be the first place the user learns what they are approving.
+
 ## Local Runtime References
 
 - `skills/blueprint-bootstrap/references/questioning.md`

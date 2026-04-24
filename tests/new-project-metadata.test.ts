@@ -27,6 +27,9 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(commandFile, /`update_topic`/);
   assert.match(commandFile, /task-tracker tools/i);
   assert.match(commandFile, /`get_internal_docs`/);
+  assert.match(commandFile, /Never use shell output, hidden tool panes, or collapsed subagent results as the approval surface/i);
+  assert.match(commandFile, /render the project brief and roadmap preview directly in the main Gemini CLI conversation/i);
+  assert.match(commandFile, /visible structured approval packet/i);
   assert.match(commandFile, /`blueprint-project-researcher`/);
   assert.match(commandFile, /`blueprint-roadmapper`/);
   assert.match(commandFile, /Blueprint MCP server is disconnected or undiscovered/i);
@@ -36,6 +39,11 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(commandFile, /`--auto`/);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/i);
   assert.match(docFile, /## Gemini-Native Internal Tool Guidance/);
+  assert.match(docFile, /Approval must be reviewable in the main Gemini CLI conversation/i);
+  assert.match(docFile, /structured project brief and roadmap preview as normal assistant Markdown/i);
+  assert.match(docFile, /The final pre-write decision gate must be preceded by a visible approval packet/i);
+  assert.match(docFile, /must not ask the user to approve content that appeared only in shell output/i);
+  assert.match(docFile, /Interactive bootstrap shows the reviewable project brief and roadmap preview/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docFile, /## Shared Runtime Contract/);
   assert.match(docFile, /## Runtime Packaging/);
@@ -110,6 +118,11 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /`update_topic`/);
   assert.match(skillFile, /`tracker_create_task`/);
   assert.match(skillFile, /`get_internal_docs`/);
+  assert.match(skillFile, /## Visible Approval Surface/);
+  assert.match(skillFile, /reviewable in the main Gemini CLI conversation/i);
+  assert.match(skillFile, /not\s+in shell output, hidden tool output, or a collapsed subagent pane/i);
+  assert.match(skillFile, /private synthesis inputs/i);
+  assert.match(skillFile, /structured Markdown\s+preview/i);
   assert.match(skillFile, /Execution profile: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -147,6 +160,11 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /saved defaults and workflow preferences/i);
   assert.match(contractRef, /defaults provenance/i);
   assert.match(contractRef, /approval gate and revision loop/i);
+  assert.match(contractRef, /render a visible\s+approval packet in the main Gemini CLI conversation/i);
+  assert.match(contractRef, /Do not display the\s+proposal through shell output, hidden tool output, temporary files, pagers,\s*terminal renderers, or collapsed subagent panes/i);
+  assert.match(contractRef, /project brief, target users, requirement groups, roadmap phase table/i);
+  assert.match(contractRef, /Rewrite their conclusions into the\s+main conversation before asking for approval/i);
+  assert.match(contractRef, /make the prompt refer to the\s+visible preview above/i);
   assert.match(contractRef, /`--auto`/);
   assert.match(contractRef, /`bootstrapSeed`/);
   assert.match(contractRef, /`mcp_blueprint_blueprint_artifact_contract_read`/);
@@ -170,6 +188,9 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(guardrailsRef, /runtime FQNs such as\s+`mcp_blueprint_blueprint_project_init`/i);
   assert.match(guardrailsRef, /`mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts/i);
   assert.match(guardrailsRef, /`ask_user`/);
+  assert.match(guardrailsRef, /Before using `ask_user` for approval, render the project brief and roadmap\s+preview directly in the main Gemini CLI conversation/i);
+  assert.match(guardrailsRef, /without expanding tool, shell, or subagent panes/i);
+  assert.match(guardrailsRef, /Do not use shell commands such as `echo`, `cat`, `printf`, pagers, temporary\s+files, or terminal renderers as a workaround for presenting approval content/i);
   assert.match(guardrailsRef, /`update_topic`/);
   assert.match(guardrailsRef, /`write_todos`/);
   assert.match(guardrailsRef, /`tracker_create_task`/);
@@ -188,6 +209,8 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(questioningRef, /`update_topic`/);
   assert.match(questioningRef, /`write_todos`/);
   assert.match(questioningRef, /Decision Gate/);
+  assert.match(questioningRef, /normal Gemini CLI conversation content before opening any\s+structured approval prompt/i);
+  assert.match(questioningRef, /never rely on shell output,\s*temporary files, or collapsed agent\/tool panes/i);
   assert.match(questioningRef, /Discovery Boundaries/);
   assert.match(questioningRef, /Anti-Patterns/);
   assert.match(runtimeReference, /Long-running-mutation profile for Gemini-native bootstrap/i);
