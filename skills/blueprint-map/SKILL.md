@@ -19,6 +19,16 @@ commands:
 
 Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-default behavior and clear alignment with the locked Blueprint mapping contract.
 
+## Runtime Self-Sufficiency
+
+This skill package is the runtime source of truth for `/blu-map-codebase`.
+
+- Runtime behavior must stay executable from this skill plus its local
+  references alone.
+- Use `skills/blueprint-map/references/map-runtime-contract.md` as the
+  richness, evidence-density, capability-gated subagent, and one-document
+  fallback contract.
+
 ## Runtime Call Rules
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
@@ -29,9 +39,14 @@ Map a codebase into the stable Blueprint codebase bundle with strong reuse-by-de
 - Keep the in-flight status contract legible throughout the mapping pass: resolved scope, active stage, pending gate, execution mode, and next safe action.
 - Treat a user-supplied focus area as targeted deepening of the same seven-artifact bundle, not as a separate suffix-only mode.
 - Read the canonical codebase-bundle contract before deciding whether to seed or refresh existing artifacts, and validate the resulting bundle before concluding.
+- Draft through the returned `contract.authoringTemplate`; it is the heading
+  authority for every codebase artifact.
 - For `mcp_blueprint_blueprint_artifact_scaffold`, pass repo-relative artifact paths such as `.blueprint/codebase/STACK.md`; do not guess bare names like `STACK` and do not pass absolute filesystem paths.
 - For `mcp_blueprint_blueprint_artifact_summary_digest`, pass repo-relative evidence inputs only and treat the returned `inputsUsed` list as the authoritative digest scope.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
+- Use a suitable code-analysis subagent or task mechanism when the host exposes
+  one; never substitute browser, web, generic page-inspection, or search-only
+  agents for codebase mapping.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
@@ -51,11 +66,12 @@ Blueprint deltas:
 - preserve edited docs unless replace is explicitly confirmed
 - keep persistence in MCP tools
 
-## Required Inputs
+## Local Runtime References
 
-- `docs/commands/map-codebase.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/RUNTIME-REFERENCE.md`
+- `skills/blueprint-map/references/map-runtime-contract.md`
+  Rich authoring contract, evidence-density expectations, capability-gated
+  mapper delegation, one-document-at-a-time fallback, and per-artifact repair
+  loop.
 
 ## Required MCP Tools
 
@@ -89,7 +105,24 @@ Blueprint deltas:
 4. Reuse edited docs by default.
 5. Treat reuse-versus-refresh, replace confirmation, and validation blockers as explicit pending gates instead of post-hoc notes.
 6. Keep the execution mode explicit as full-bundle mapping versus focused deepening, plus reuse-default versus confirmed refresh.
-7. Persist substantive mapping content through `blueprint_codebase_artifact_write` instead of raw file edits once the digest-backed summaries are ready.
-8. Validate the resulting bundle before treating the mapping pass as complete.
-9. Mention created, reused, and blocked artifacts separately.
-10. End with the next implemented Blueprint action, not a planned-only command. A successful map-first brownfield run should leave `mapped-only` status and route to `/blu-new-project`.
+7. Produce rich canonical authoring drafts with concrete repo paths in every
+   artifact, using `map-runtime-contract.md` for evidence density and
+   `contract.authoringTemplate` for required headings.
+8. If a suitable code-analysis subagent or task mechanism is available, run
+   four bounded mapper lanes: tech, architecture, quality, and concerns.
+9. If subagents are unavailable, author exactly one artifact at a time in this
+   order: `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`,
+   `TESTING.md`, `INTEGRATIONS.md`, `CONCERNS.md`.
+10. In the no-subagent fallback, after each artifact write retain only a compact
+    carry-forward note: file path, write status, key evidence roots, and any
+    unresolved warnings. Do not re-read or restate prior completed artifact
+    bodies unless repair requires it.
+11. Persist substantive mapping content through `blueprint_codebase_artifact_write`
+    instead of raw file edits once the digest-backed summaries and rich drafts
+    are ready.
+12. When `blueprint_codebase_artifact_write` returns `status: "invalid"`,
+    repair that same artifact from the returned `issues`, re-check
+    `contract.authoringTemplate`, and retry before moving on.
+13. Validate the resulting bundle before treating the mapping pass as complete.
+14. Mention created, reused, repaired, and blocked artifacts separately.
+15. End with the next implemented Blueprint action, not a planned-only command. A successful map-first brownfield run should leave `mapped-only` status and route to `/blu-new-project`.
