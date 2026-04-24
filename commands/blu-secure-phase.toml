@@ -2,7 +2,7 @@ description = "Verify declared Blueprint phase threats, persist a durable XX-SEC
 prompt = """
 You are the `/blu-secure-phase` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. When deeper security analysis is useful, use the `blueprint-security-auditor` subagent for bounded threat-mitigation review.
+Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available, and load `skills/blueprint-review/references/secure-phase-runtime-contract.md` as the local runtime contract for threat-model parsing, summary threat-flag handling, bounded auditor use, no-subagent fallback, artifact authoring quality, and MCP retry/repair behavior. When deeper security analysis is useful, use the `blueprint-security-auditor` subagent for bounded threat-mitigation review.
 
 Execution profile: `long-running-mutation`. Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` visible for the stages this run actually reaches. Keep resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
 
@@ -22,13 +22,16 @@ Follow this flow exactly:
 5. Read `mcp_blueprint_blueprint_artifact_contract_read` for the canonical `review.security` contract before you draft, revise, or validate `XX-SECURITY.md`. Use the returned template and required headings as the baseline instead of a copied prompt-local structure.
 6. Require completed phase execution evidence before a security audit is persisted. If the resolved phase has no `XX-YY-SUMMARY.md` artifacts, stop and route to `/blu-execute-phase <phase>` first.
 7. If a `XX-SECURITY.md` artifact already exists, treat it as the audit baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it. Prefer `ask_user` for that confirmation path.
-8. Audit the phase against the threat register, saved execution evidence, validation/UAT artifacts when present, the canonical security contract, the phase goal, and any explicit security expectations already recorded in the repo. Keep the audit grounded in artifacts or code, not chat memory alone.
-9. If open threats remain after the initial audit, present the user with the choice to verify those threats or explicitly accept them. Use `ask_user` for that structured decision path. Do not silently accept risk and do not silently route onward.
-10. Report in-flight progress while the security audit is running. At minimum: resolved scope, active stage, plan and threat-register coverage, whether an existing `XX-SECURITY.md` artifact is being reused or revised, pending gate (`none`, overwrite confirmation, verify-versus-accept decision, or `pending-open-threat`), execution mode (`inline` versus `security-auditor-assisted`), current pending-open-threat status (`none`, `verifying`, `accepted`, or `still-open`), and the next safe action only when no threats remain open.
-11. Use the `blueprint-security-auditor` subagent for bounded threat verification when the phase spans multiple plans, touches risky surfaces, or already contains a prior security artifact that needs revision.
-12. Persist the actual security audit through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "security"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-SECURITY.md` directly.
-13. If any threat remains open after the verification-or-acceptance decision path is exhausted, stop with a blocked advancement result, keep the waiting state explicit as `pending-open-threat`, and do not emit next-step routing.
-14. End with a concise summary covering whether the security artifact was created, reused, or revised, the main security findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action only when no threats remain open.
+8. Incorporate executed phase evidence from `XX-YY-SUMMARY.md`, especially `## Threat Flags` when present. Map summary threat flags to declared plan threats when possible, and record unregistered flags separately instead of widening into a generic security scan.
+9. Audit the phase against the threat register, saved execution evidence, validation/UAT artifacts when present, the canonical security contract, the phase goal, and any explicit security expectations already recorded in the repo. Keep the audit grounded in artifacts or code, not chat memory alone.
+10. If open threats remain after the initial audit, present the user with the choice to verify those threats or explicitly accept them. Use `ask_user` for that structured decision path. Do not silently accept risk and do not silently route onward.
+11. Report in-flight progress while the security audit is running. At minimum: resolved scope, active stage, plan and threat-register coverage, whether an existing `XX-SECURITY.md` artifact is being reused or revised, pending gate (`none`, overwrite confirmation, verify-versus-accept decision, or `pending-open-threat`), execution mode (`inline` versus `security-auditor-assisted`), current pending-open-threat status (`none`, `verifying`, `accepted`, or `still-open`), and the next safe action only when no threats remain open.
+12. Use the `blueprint-security-auditor` subagent only for bounded threat verification when the phase spans multiple plans, touches risky surfaces, or already contains a prior security artifact that needs revision. The subagent must not persist artifacts, mutate repo files, invent threats, or route the user.
+13. If the security auditor is unavailable or unnecessary, follow the local runtime contract's no-subagent fallback: read saved plans, summaries, prior security artifact if any, and implicated repo files; verify one declared threat at a time; compress carry-forward context; then run a final threat-count consistency pass.
+14. Persist the actual security audit through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "security"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-SECURITY.md` directly.
+15. If `mcp_blueprint_blueprint_review_record` rejects the body or reports missing required headings, repair once against the canonical `review.security` contract and retry through MCP before stopping. Do not hand-write `XX-SECURITY.md`.
+16. If any threat remains open after the verification-or-acceptance decision path is exhausted, stop with a blocked advancement result, keep the waiting state explicit as `pending-open-threat`, and do not emit next-step routing.
+17. End with a concise summary covering whether the security artifact was created, reused, or revised, the main security findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action only when no threats remain open.
 
 Next-action rules:
  - Apply these only when all threats are closed or explicitly accepted.
@@ -46,6 +49,8 @@ Response requirements:
 - Keep threat-model-bounded behavior explicit: parse the declared threats and mitigations from saved plan evidence only, then audit against that saved threat register instead of broadening into a generic security scan.
 - Report progress during longer audits, including resolved scope, active stage, pending gate, execution mode, next safe action, threat-register status, and any `pending-open-threat` waiting state.
 - Treat `update_topic` and `write_todos` as session-local visibility only; they must not become a second persistence path.
+- Use `skills/blueprint-review/references/secure-phase-runtime-contract.md` as the detailed runtime contract for State A/B/C handling, bounded threat-register verification, summary threat flags, subagent gating, no-subagent fallback, and invalid-write repair.
+- The final `Threat Register` should represent every declared saved-plan threat exactly once with threat id, category, component, disposition, mitigation, status, and evidence or note.
 - Do not emit next-step routing when any threat remains open.
 - Do not present planned-only commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """

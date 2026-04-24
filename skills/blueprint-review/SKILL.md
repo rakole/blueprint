@@ -62,6 +62,7 @@ non-routable until their extra MCP substrate lands.
 - `skills/blueprint-review/references/code-review-runtime-contract.md`
 - `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
 - `skills/blueprint-review/references/audit-fix-runtime-contract.md`
+- `skills/blueprint-review/references/secure-phase-runtime-contract.md`
 - saved phase artifacts for the target phase, especially execution summaries
 
 ## Required MCP Tools
@@ -221,48 +222,72 @@ non-routable until their extra MCP substrate lands.
 
 ### `secure-phase`
 
-1. Resolve the target phase and require saved execution evidence before the
+1. Load `skills/blueprint-review/references/secure-phase-runtime-contract.md`
+   before analysis. That local reference owns the retained security behavior:
+   State A/B/C input handling, saved threat-model parsing, summary threat-flag
+   incorporation, bounded auditor use, no-subagent fallback, retry/repair,
+   threat-count consistency, and advancement blocking.
+2. Resolve the target phase and require saved execution evidence before the
    audit begins.
-2. Read the existing Blueprint artifact inventory first so the audit can cite
+3. Read the existing Blueprint artifact inventory first so the audit can cite
    summaries, validation, and UAT artifacts when they exist.
-3. Read the canonical `review.security` contract through
+4. Read the canonical `review.security` contract through
    `blueprint_artifact_contract_read` before drafting or revising
    `XX-SECURITY.md`, and use the returned template plus headings as the
    baseline instead of a copied prompt-local structure.
-4. Inspect any existing `XX-SECURITY.md` before proposing replacement and
+5. Inspect any existing `XX-SECURITY.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update. Use Gemini
    CLI's `ask_user` tool for overwrite confirmation before replacement.
-5. Read `blueprint_phase_plan_index` and `blueprint_phase_plan_read` so the
+6. Read `blueprint_phase_plan_index` and `blueprint_phase_plan_read` so the
    saved phase threat model can be parsed from executed plan evidence, then
-   build a threat register from the declared threats and mitigations.
-6. Keep the audit bounded to that declared security scope from saved plan
+   build a threat register from the declared threats and mitigations. Include
+   threat id, category, component, disposition, mitigation, status, and evidence
+   for each declared threat.
+7. Read executed summaries from the artifact inventory and incorporate
+   `## Threat Flags` when present. Map them to declared threats when possible,
+   and record unregistered flags separately instead of widening the audit into a
+   broad scan.
+8. Keep the audit bounded to that declared security scope from saved plan
    evidence only rather than a broad scan.
-7. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+9. Keep the active stage visible as the run moves through `Resolve`, `Read`,
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, active stage, pending gate, execution mode, and next safe
    action legible throughout the run.
-8. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
+10. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
    so saved-plan review, threat verification, overwrite gates, artifact
    persistence, post-write validation, and routing stay visible without
    becoming persistence.
-9. Report the resolved scope, threat-register coverage, whether the security
+11. Report the resolved scope, threat-register coverage, whether the security
    artifact is being reused or revised, and the current pending-open-threat
    status while work is in flight. Keep the verify-versus-accept decision
    explicit whenever threats remain open. Keep pending gates limited to
    overwrite confirmation, the verify-versus-accept decision, or
    `pending-open-threat`, and let execution mode reflect inline versus
    `blueprint-security-auditor`-assisted review.
-10. Distinguish confirmed mitigations, open threats, accepted risks, and
-   follow-up hardening work explicitly inside the saved security artifact.
-11. Present the user with the choice to verify open threats or explicitly accept
+12. Distinguish confirmed mitigations, open threats, accepted risks, suspicious
+   artifact content, and follow-up hardening work explicitly inside the saved
+   security artifact.
+13. Present the user with the choice to verify open threats or explicitly accept
    them, use Gemini CLI's `ask_user` for that structured decision, and block
    advancement when any threat remains open instead of always computing a next
    action.
-12. Use `blueprint-security-auditor` when the phase spans multiple plans,
-   touches risky surfaces, or needs a higher-confidence mitigation review.
-13. Persist finished security evidence through `blueprint_review_record` with
+14. Use `blueprint-security-auditor` only for bounded mitigation verification
+   when the phase spans multiple plans, touches risky surfaces, or needs a
+   higher-confidence review of declared threats. The auditor stays read-only and
+   cannot persist artifacts, mutate repo files, invent threats, or route the
+   user.
+15. If `blueprint-security-auditor` is unavailable or unnecessary, use the
+   no-subagent fallback from the local runtime contract: read saved plans,
+   summaries, prior security artifact if any, and implicated repo files; verify
+   one declared threat at a time; compress carry-forward context; then run a
+   final threat-count consistency pass before persistence.
+16. Persist finished security evidence through `blueprint_review_record` with
    the `security` artifact.
-14. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+17. If `blueprint_review_record` rejects the artifact or reports missing
+   required headings, repair against the `review.security` authoring template
+   and retry once. If the retry still fails, stop with the MCP reason and do not
+   write the artifact by hand.
+18. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>`, and
    otherwise `/blu-progress` only after all threats are closed or accepted.
    Do not emit next-step routing while threats remain open, and keep the

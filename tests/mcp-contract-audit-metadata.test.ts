@@ -33,6 +33,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
     mcpToolsDoc,
     /`secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_artifact_contract_read`, and `blueprint_review_record`/i
   );
+  assert.match(mcpToolsDoc, /secure-phase-runtime-contract\.md/i);
 });
 
 test("MCP resource docs keep the read-only contract, live command resources, and fallback path explicit", async () => {

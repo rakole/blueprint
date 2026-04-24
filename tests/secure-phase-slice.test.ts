@@ -96,6 +96,7 @@ test("secure-phase docs and catalog metadata keep the security review slice impl
   assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(commandDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
   assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /secure-phase-runtime-contract\.md/);
   assert.match(commandDoc, /## In-Flight Progress Contract/);
   assert.match(commandDoc, /`update_topic` tool and keep a compact threat-review checklist with `write_todos`/i);
   assert.match(commandDoc, /`pending-open-threat`/i);
@@ -125,6 +126,7 @@ test("secure-phase docs and catalog metadata keep the security review slice impl
     runtimeReference,
     /`secure-phase`[\s\S]*route only to implemented follow-up commands/i
   );
+  assert.match(runtimeReference, /`secure-phase`[\s\S]*secure-phase-runtime-contract\.md/i);
 });
 
 test("blueprint_review_record writes a phase-scoped security artifact with follow-up counts", async (t) => {
@@ -147,9 +149,9 @@ test("blueprint_review_record writes a phase-scoped security artifact with follo
 
 ## Threat Register
 
-| Threat ID | Disposition | Status | Evidence / Note |
-|-----------|-------------|--------|-----------------|
-| T-01 | mitigate | closed | Phase execution evidence shows the review substrate is persisted through MCP. |
+| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
+|-----------|----------|-----------|-------------|------------|--------|-----------------|
+| T-01 | Tampering | Review substrate | mitigate | Persist security evidence through MCP review record | closed | Phase execution evidence shows the review substrate is persisted through MCP. |
 
 ## Accepted Risks
 
@@ -227,9 +229,9 @@ test("blueprint_review_record counts open threat-register rows as security findi
 
 ## Threat Register
 
-| Threat ID | Disposition | Status | Evidence / Note |
-|-----------|-------------|--------|-----------------|
-| T-01 | mitigate | open | Missing saved plan-read evidence for threat parsing. |
+| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
+|-----------|----------|-----------|-------------|------------|--------|-----------------|
+| T-01 | Tampering | Plan evidence | mitigate | Parse the saved plan threat model before persistence | open | Missing saved plan-read evidence for threat parsing. |
 
 ## Accepted Risks
 
@@ -307,9 +309,9 @@ test("blueprint_review_record ignores placeholder none items in security review 
 
 ## Threat Register
 
-| Threat ID | Disposition | Status | Evidence / Note |
-|-----------|-------------|--------|-----------------|
-| T-01 | mitigate | closed | The threat register has no open entries. |
+| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
+|-----------|----------|-----------|-------------|------------|--------|-----------------|
+| T-01 | Tampering | Review substrate | mitigate | Persist security evidence through MCP review record | closed | The threat register has no open entries. |
 
 ## Accepted Risks
 

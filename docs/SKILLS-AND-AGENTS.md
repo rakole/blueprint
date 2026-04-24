@@ -83,7 +83,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `update` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps extension-path handling read-only, and routes host-global advisory checklist persistence through the dedicated update MCP tools.
 - `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
 - `ui-review` uses `blueprint-ui-auditor`.
-- `secure-phase` uses `blueprint-security-auditor`.
+- `secure-phase` uses `blueprint-security-auditor` only for bounded declared-threat mitigation verification and preserves the single-agent fallback from `skills/blueprint-review/references/secure-phase-runtime-contract.md` when suitable auditor support is unavailable.
 
 ## Non-Goals
 

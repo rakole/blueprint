@@ -208,9 +208,9 @@ test("review persistence sanitizes hidden control characters and records the war
 
 ## Threat Register
 
-| Threat ID | Disposition | Status | Evidence / Note |
-|-----------|-------------|--------|-----------------|
-| T-01 | mitigate | closed | Hidden control text was sanitized before persistence. |
+| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
+|-----------|----------|-----------|-------------|------------|--------|-----------------|
+| T-01 | Tampering | Review substrate | mitigate | Sanitize hidden control text before persistence | closed | Hidden control text was sanitized before persistence. |
 
 ## Accepted Risks
 

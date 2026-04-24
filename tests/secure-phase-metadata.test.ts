@@ -11,6 +11,10 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
+  assert.match(
+    commandFile,
+    /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/
+  );
   assert.match(commandFile, /`blueprint-security-auditor` subagent/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
@@ -50,6 +54,10 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   );
   assert.match(commandFile, /execution mode \(`inline` versus `security-auditor-assisted`\)/i);
   assert.match(commandFile, /threat-register coverage/i);
+  assert.match(commandFile, /Threat Register` should represent every declared saved-plan threat exactly once/i);
+  assert.match(commandFile, /no-subagent fallback/i);
+  assert.match(commandFile, /final threat-count consistency pass/i);
+  assert.match(commandFile, /repair once against the canonical `review\.security` contract/i);
   assert.match(
     commandFile,
     /pending-open-threat status \(`none`, `verifying`, `accepted`, or `still-open`\)/i
@@ -71,6 +79,10 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-secure-phase/);
   assert.match(skillFile, /blueprint-security-auditor/);
+  assert.match(
+    skillFile,
+    /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/
+  );
   assert.match(skillFile, /Execution profile for `secure-phase`: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -85,6 +97,7 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /blueprint_phase_plan_index/);
   assert.match(skillFile, /blueprint_phase_plan_read/);
   assert.match(skillFile, /build a threat\s+register/i);
+  assert.match(skillFile, /summary threat-flag\s+incorporation/i);
   assert.match(skillFile, /saved plan\s+evidence only/i);
   assert.match(skillFile, /update_topic plus `write_todos`/i);
   assert.match(skillFile, /verify open threats or explicitly accept\s+them/i);
@@ -93,6 +106,8 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /inline versus\s+`blueprint-security-auditor`-assisted review/i);
   assert.match(skillFile, /pending-open-threat/i);
   assert.match(skillFile, /block\s+advancement when any threat remains open/i);
+  assert.match(skillFile, /final threat-count consistency pass/i);
+  assert.match(skillFile, /repair against the `review\.security` authoring template\s+and retry once/i);
   assert.match(skillFile, /do not emit next-step\s+routing while threats remain open/i);
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-progress/);
@@ -150,4 +165,43 @@ test("secure-phase docs and runtime reference describe the long-running security
     runtimeReference,
     /`secure-phase`[\s\S]*block next-step routing while threats remain open/i
   );
+});
+
+test("secure-phase local runtime contract locks retained threat verification behavior", async () => {
+  const runtimeContract = await readFile(
+    path.join(repoRoot, "skills/blueprint-review/references/secure-phase-runtime-contract.md"),
+    "utf8"
+  );
+
+  for (const stage of ["Resolve", "Read", "Decide", "Execute", "Persist", "Validate", "Route"]) {
+    assert.match(runtimeContract, new RegExp(`### ${stage}`));
+  }
+
+  for (const tool of [
+    "mcp_blueprint_blueprint_phase_locate",
+    "mcp_blueprint_blueprint_artifact_list",
+    "mcp_blueprint_blueprint_phase_plan_index",
+    "mcp_blueprint_blueprint_phase_plan_read",
+    "mcp_blueprint_blueprint_artifact_contract_read",
+    "mcp_blueprint_blueprint_review_record"
+  ]) {
+    assert.match(runtimeContract, new RegExp(tool));
+  }
+
+  assert.match(runtimeContract, /State A: existing `XX-SECURITY\.md` exists/i);
+  assert.match(runtimeContract, /State B: no security artifact exists, but plans and summaries exist/i);
+  assert.match(runtimeContract, /State C: execution summaries are missing/i);
+  assert.match(runtimeContract, /Parse the saved threat model from plan evidence/i);
+  assert.match(runtimeContract, /`## Threat Flags`/);
+  assert.match(runtimeContract, /Build a bounded threat register from saved plan threats only/i);
+  assert.match(runtimeContract, /threat id, category, component, disposition, mitigation, current status,\s+and evidence/i);
+  assert.match(runtimeContract, /Use `blueprint-security-auditor` only as a bounded read-only mitigation\s+verifier/i);
+  assert.match(runtimeContract, /SECURED/);
+  assert.match(runtimeContract, /OPEN_THREATS/);
+  assert.match(runtimeContract, /ESCALATE/);
+  assert.match(runtimeContract, /## No-Subagent Fallback/);
+  assert.match(runtimeContract, /Verify one declared threat at a time/i);
+  assert.match(runtimeContract, /Run a final threat-count consistency pass before persistence/i);
+  assert.match(runtimeContract, /repair once against `review\.security` headings/i);
+  assert.match(runtimeContract, /Persistence happens only through `blueprint_review_record`/i);
 });

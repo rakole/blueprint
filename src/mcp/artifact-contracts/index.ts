@@ -1086,9 +1086,9 @@ function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
 
 ## Threat Register
 
-| Threat ID | Disposition | Status | Evidence / Note |
-|-----------|-------------|--------|-----------------|
-| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |
+| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
+|-----------|----------|-----------|-------------|------------|--------|-----------------|
+| T-01 | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. |
 
 ## Accepted Risks
 
@@ -2276,14 +2276,14 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "PASS|FOLLOW_UP|BLOCKED",
       "Concise security posture grounded in saved evidence.",
       "Saved phase artifacts, repo paths, or cited references reviewed.",
-      "| T-01 | mitigate / accept / transfer | closed / accepted / open | File, artifact, or rationale reference. |",
+      "| T-01 | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. |",
       "Accepted threat reference plus rationale, or `none`.",
       "Open threat, missing control, or risk decision that needs explicit attention, or `none`.",
       "Explicit hardening step, validation gap, or `none`.",
       "Audit date, threat counts, and verifier note."
     ],
     notes: [
-      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
+      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/category/component/mitigation/status/evidence coverage, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
     ],
     renderScaffoldTemplate: renderSecurityTemplate,
     renderAuthoringTemplate: renderSecurityTemplate
