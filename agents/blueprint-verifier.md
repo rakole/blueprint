@@ -39,6 +39,9 @@ gaps.
 - Validation mode:
   - audit saved execution summaries against phase goals, requirements,
     must-haves, and artifact wiring
+  - build a requirement/task coverage map with evidence source, coverage state,
+    and gap class before declaring readiness
+  - distinguish automated, manual-only, deferred, partial, and blocked coverage
   - produce verification-ready findings and a draft the parent command can
     persist as `XX-VERIFICATION.md`
 - UAT mode:
@@ -100,6 +103,10 @@ gaps.
 - Include:
   - reviewed artifacts or evidence sources
   - must-have coverage summary
+  - requirement/task coverage rows with evidence and coverage state
+  - test infrastructure or evidence metadata found in the saved summaries
+  - manual-only or deferred coverage with follow-up status
+  - gap classification and suggested repair path
   - readiness result with rationale
   - a concise artifact draft for the parent command to persist
 - Keep the draft bounded to the parent-selected validation or UAT scope and the
@@ -119,16 +126,48 @@ exact shape so it can be persisted without schema drift:
 ```md
 # Phase XX: <Phase Name> - Verification
 
-**Coverage:** Reviewed `<summary filename>` and any other saved phase summaries
-for validation evidence.
+**Coverage:** Reviewed `<summary filename>` and any other saved phase summaries for validation evidence.
+**Gate State:** PASS|PARTIAL|BLOCKED
+**Sign-off:** <verified owner or pending state>
 
 ## Validation Summary
 
 - Concise readiness result grounded in the saved summaries.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| REQ-... | Task/check id | `.blueprint/phases/.../XX-YY-SUMMARY.md` | PASS|MANUAL|DEFERRED|BLOCKED | Concrete coverage note. |
+
 ## Evidence Reviewed
 
 - `.blueprint/phases/<phase-dir>/<summary-file>.md`
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: <detected harness, saved command, or none found>
+- Commands: <commands cited by summaries or none found>
+- Evidence type: <automated test, manual evidence, summary-only, mixed>
+- Test infrastructure status: <ready, missing, deferred, unknown>
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| <item or none> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+
+## Gate State
+
+- Gate: PASS|PARTIAL|BLOCKED
+- Sign-off: <name or pending>
+- Readiness: <ready for UAT or not ready>
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| <gap class or none> | <scope> | <saved evidence> | <repair or none> |
 
 ## Gaps Found
 
@@ -143,9 +182,12 @@ for validation evidence.
 - `/blu-verify-work <phase>`
 ```
 
-Do not rename headings, replace the `**Coverage:**` label, or move summary
-citations out of `## Evidence Reviewed`. Any extra detail must stay inside the
-required sections.
+Do not rename headings, replace the `**Coverage:**`, `**Gate State:**`, or
+`**Sign-off:**` labels, or move summary citations out of
+`## Evidence Reviewed`. Keep the top gate marker aligned with the `## Gate
+State` section: `PASS` means `ready for UAT`, while `PARTIAL` or `BLOCKED`
+means `not ready for UAT`. Any extra detail must stay inside the required
+sections unless the parent-supplied contract explicitly allows more headings.
 
 ## UAT Draft Template
 
