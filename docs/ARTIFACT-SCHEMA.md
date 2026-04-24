@@ -489,9 +489,18 @@ Minimum expected structure:
 - `## Follow-Up Fixes`
 - `## Next Safe Action`
 
+Richer authoring template sections:
+- `## Current Test`
+- `## Test Matrix`
+- `## Result Summary`
+- `## Structured Gaps`
+
 UAT expectations:
 - must be grounded in the saved execution summaries for the phase
 - should preserve resumable conversational state rather than acting like a one-shot transcript
+- should preserve a concrete user-observable test queue with expected behavior, saved evidence, result state, and notes
+- should separate blocked prerequisites from code gaps, preserve verbatim issue reports, and infer severity without asking the user to classify it manually
+- should include structured gaps that can feed later explicit follow-up capture or repair planning
 - should be normalized to the canonical `phase.uat` authoring template before persistence
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
 - should be validated after write so schema drift or heading drift is caught before the next state update
@@ -527,6 +536,28 @@ Exact persistence template:
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 
+## Current Test
+
+- Number: <active test number or testing complete>
+- Name: <active user-observable test name or none>
+- Expected: <what the user should observe>
+- Awaiting: <user response, next checkpoint, or none>
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | <test name> | <observable expected behavior> | `.blueprint/phases/.../XX-YY-SUMMARY.md` | pending|pass|issue|skipped|blocked | <note> |
+
+## Result Summary
+
+- Total: <N>
+- Passed: <N>
+- Issues: <N>
+- Pending: <N>
+- Skipped: <N>
+- Blocked: <N>
+
 ## Questions Asked
 
 - Question asked during the UAT pass, or `none`.
@@ -538,6 +569,12 @@ Exact persistence template:
 ## Unresolved Gaps
 
 - Explicit blocker, follow-up, or `none`.
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| <test number or none> | <expected behavior> | failed|partial|blocked|none | blocker|major|minor|cosmetic|none | <verbatim report or blocked reason> | <repair or confirmation path> |
 
 ## Follow-Up Fixes
 
@@ -552,6 +589,7 @@ Contract notes:
 - Keep the `**Status:**`, `**Resume State:**`, and `**Checkpoint:**` markers exactly as written.
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
 - Reference at least one saved summary path or filename inside `## UAT Summary`, `## Session State`, or `## Observed Behavior`.
+- Fill the richer authoring sections when creating or updating UAT; existing artifacts without those sections remain validation-compatible, but new output should include current test state, the test matrix, result counts, and structured gaps.
 - Keep follow-up-fix captures explicit enough that the parent command can ask for confirmation before persistence.
 
 ### `XX-REVIEW-FIX.md`

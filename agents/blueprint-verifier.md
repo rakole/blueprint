@@ -46,8 +46,13 @@ gaps.
     persist as `XX-VERIFICATION.md`
 - UAT mode:
   - start from saved summaries plus the current verification artifact
-  - evaluate user-facing readiness, unresolved gaps, and explicit follow-up fix
-    capture for `XX-UAT.md`
+  - derive a queue of user-observable UAT tests with expected behavior,
+    evidence, result state, and notes
+  - evaluate user-facing readiness, blocked prerequisites, issue reports,
+    unresolved gaps, and explicit follow-up fix capture for `XX-UAT.md`
+  - preserve plain-language response classification rules for pass, skipped,
+    blocked, and issue outcomes so the parent command can run one test at a
+    time without asking the user for severity
   - keep the draft resumable, summary-aware, and aligned to the canonical UAT
     template before the parent persists it
 
@@ -106,6 +111,11 @@ gaps.
   - requirement/task coverage rows with evidence and coverage state
   - test infrastructure or evidence metadata found in the saved summaries
   - manual-only or deferred coverage with follow-up status
+  - UAT test queue rows with expected behavior, saved evidence, result, and
+    notes when running in UAT mode
+  - UAT result counts for total, passed, issues, pending, skipped, and blocked
+  - structured UAT gaps with verbatim user report, inferred severity, and repair
+    path when running in UAT mode
   - gap classification and suggested repair path
   - readiness result with rationale
   - a concise artifact draft for the parent command to persist
@@ -213,6 +223,28 @@ shape so it can be persisted without schema drift:
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 
+## Current Test
+
+- Number: <active test number or testing complete>
+- Name: <active user-observable test name or none>
+- Expected: <what the user should observe>
+- Awaiting: <user response, next checkpoint, or none>
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | <test name> | <observable expected behavior> | `.blueprint/phases/.../XX-YY-SUMMARY.md` | pending|pass|issue|skipped|blocked | <note> |
+
+## Result Summary
+
+- Total: <N>
+- Passed: <N>
+- Issues: <N>
+- Pending: <N>
+- Skipped: <N>
+- Blocked: <N>
+
 ## Questions Asked
 
 - Question asked during the UAT pass, or `none`.
@@ -224,6 +256,12 @@ shape so it can be persisted without schema drift:
 ## Unresolved Gaps
 
 - Explicit blocker, follow-up, or `none`.
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| <test number or none> | <expected behavior> | failed|partial|blocked|none | blocker|major|minor|cosmetic|none | <verbatim report or blocked reason> | <repair or confirmation path> |
 
 ## Follow-Up Fixes
 
@@ -238,8 +276,10 @@ shape so it can be persisted without schema drift:
 
 Do not rename headings, replace the `**Status:**`, `**Resume State:**`, or
 `**Checkpoint:**` labels, or move summary references out of `## UAT Summary`,
-`## Session State`, and `## Observed Behavior`. Any extra detail must stay
-inside the required sections.
+`## Session State`, and `## Observed Behavior`. The parent-supplied
+`phase.uat` contract currently allows additional top-level headings; keep the
+test matrix, result counts, and structured gaps in those allowed headings when
+the returned contract includes them.
 
 ## Outputs
 

@@ -13,6 +13,7 @@ test("verify-work manifest references the UAT template, validation tools, and sa
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, /verify-work-runtime-contract\.md/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
   assert.match(
@@ -44,10 +45,17 @@ test("verify-work manifest references the UAT template, validation tools, and sa
   assert.match(commandFile, /checkpointed,? created, or updated/i);
   assert.match(commandFile, /confirm any follow-up-fix capture/i);
   assert.match(commandFile, /locked markers and required section names unchanged/i);
+  assert.match(commandFile, /Build a concrete UAT test queue/i);
+  assert.match(commandFile, /Classify plain user responses as `pass`, `skipped`, `blocked`, or `issue`/i);
+  assert.match(commandFile, /no-subagent fallback/i);
+  assert.match(commandFile, /Do not substitute browser, web-search-only, shell-only, or generic agents/i);
+  assert.match(commandFile, /repair the draft against the canonical contract and retry once/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
   assert.match(docsFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docsFile, /## Shared Runtime Contract/);
   assert.match(docsFile, /## In-Flight Progress Contract/);
+  assert.match(docsFile, /verify-work-runtime-contract\.md/);
+  assert.match(docsFile, /## UAT Test Loop/);
   assert.match(docsFile, /shared long-running-mutation posture/i);
   assert.match(
     docsFile,
@@ -69,6 +77,7 @@ test("verify-work skill captures the canonical UAT contract and verifier usage r
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-verify-work/);
   assert.match(skillFile, /conversational UAT is resumable/i);
+  assert.match(skillFile, /verify-work-runtime-contract\.md/);
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
@@ -82,12 +91,18 @@ test("verify-work skill captures the canonical UAT contract and verifier usage r
   assert.match(skillFile, /next safe action on `\/blu-verify-work <phase>`/i);
   assert.match(skillFile, /confirm any follow-up-fix capture/i);
   assert.match(skillFile, /locked markers and required section names unchanged/i);
+  assert.match(skillFile, /concrete user-observable test queue/i);
+  assert.match(skillFile, /plain user responses as `pass`, `skipped`, `blocked`, or `issue`/i);
+  assert.match(skillFile, /no-subagent fallback/i);
+  assert.match(skillFile, /Never substitute browser, web-search-only, shell-only, or generic agents/i);
   assert.match(
     runtimeReference,
     /`verify-work`[\s\S]*Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
   );
-  assert.match(runtimeReference, /review\/skip\/stop checkpoints explicit/i);
-  assert.match(runtimeReference, /resumable `XX-UAT\.md` checkpoint state/i);
+  assert.match(runtimeReference, /verify-work-runtime-contract\.md/i);
+  assert.match(runtimeReference, /concrete user-observable UAT test queue/i);
+  assert.match(runtimeReference, /pass\/skipped\/blocked\/issue/i);
+  assert.match(runtimeReference, /current test, test matrix, result counts, structured gaps, checkpoint state/i);
 });
 
 test("verify-work docs and verifier agent describe the resumable UAT write-and-validate contract", async () => {
@@ -103,14 +118,99 @@ test("verify-work docs and verifier agent describe the resumable UAT write-and-v
   assert.match(commandDoc, /next safe action stays on `\/blu-verify-work <phase>`/i);
   assert.match(commandDoc, /`\*\*Resume State:\*\*`[\s\S]*`\*\*Checkpoint:\*\*`/i);
   assert.match(commandDoc, /confirm any follow-up-fix capture/i);
+  assert.match(commandDoc, /test matrix/i);
+  assert.match(commandDoc, /structured gaps/i);
+  assert.match(commandDoc, /inferred severity/i);
   assert.match(schemaDoc, /`\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED`/);
   assert.match(schemaDoc, /`\*\*Checkpoint:\*\* <saved checkpoint path or none>`/);
   assert.match(schemaDoc, /`## Session State`/);
+  assert.match(schemaDoc, /`## Test Matrix`/);
+  assert.match(schemaDoc, /`## Result Summary`/);
+  assert.match(schemaDoc, /`## Structured Gaps`/);
   assert.match(schemaDoc, /should be normalized to the canonical `phase\.uat` authoring template before persistence/i);
   assert.match(schemaDoc, /should be validated after write so schema drift or heading drift is caught before the next state update/i);
   assert.match(agentFile, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
   assert.match(agentFile, /\*\*Checkpoint:\*\* <saved checkpoint path or none>/);
   assert.match(agentFile, /## Session State/);
+  assert.match(agentFile, /## Test Matrix/);
+  assert.match(agentFile, /## Result Summary/);
+  assert.match(agentFile, /## Structured Gaps/);
   assert.match(agentFile, /keep the draft resumable, summary-aware, and aligned to the canonical UAT[\s\S]*template[\s\S]*before the parent persists it/i);
   assert.match(agentFile, /separate confirmation before persistence/i);
+});
+
+test("verify-work runtime contract locks GSD-grade UAT richness without changing persistence ownership", async () => {
+  const [
+    commandFile,
+    skillFile,
+    runtimeContract,
+    agentFile,
+    artifactContracts,
+    schemaDoc,
+    mcpToolsDoc,
+    runtimeReference
+  ] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    readFile(path.join(repoRoot, "agents/blueprint-verifier.md"), "utf8"),
+    readFile(path.join(repoRoot, "src/mcp/artifact-contracts/index.ts"), "utf8"),
+    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
+
+  assert.match(commandFile, /verify-work-runtime-contract\.md/);
+  assert.match(commandFile, /test queue[\s\S]*result counts[\s\S]*structured gaps/i);
+  assert.match(commandFile, /repair the draft against the canonical contract and retry once/i);
+
+  assert.match(skillFile, /Load `references\/verify-work-runtime-contract\.md`/);
+  assert.match(skillFile, /cold-start smoke test/i);
+  assert.match(skillFile, /structured gap rows/i);
+
+  for (const heading of [
+    "## Stage Mapping",
+    "## Required MCP Calls",
+    "## Test Queue Construction",
+    "## Conversational UAT Loop",
+    "## Artifact Authoring Rules",
+    "## Capability-Gated Subagent Path",
+    "## No-Subagent Fallback",
+    "## Retry And Repair Behavior",
+    "## Output Quality Criteria",
+    "## Completion Criteria"
+  ]) {
+    assert.match(runtimeContract, new RegExp(heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.match(runtimeContract, /blueprint_phase_validation_write` with `artifact: "uat"`/);
+  assert.match(runtimeContract, /plain and specific; do not interrogate the user for\s+severity/i);
+  assert.match(runtimeContract, /Blocked tests are prerequisite gates, not code gaps/i);
+  assert.match(runtimeContract, /Do not substitute browser, web-search-only, shell-only, or generic agents/i);
+  assert.match(runtimeContract, /read one completed summary at a time/i);
+  assert.match(runtimeContract, /compress each summary into carry-forward test rows/i);
+  assert.match(runtimeContract, /retry once/i);
+
+  assert.match(agentFile, /UAT test queue rows/i);
+  assert.match(agentFile, /result counts for total, passed, issues, pending, skipped, and blocked/i);
+  assert.match(agentFile, /structured UAT gaps with verbatim user report, inferred severity/i);
+
+  assert.match(artifactContracts, /## Current Test/);
+  assert.match(artifactContracts, /## Test Matrix/);
+  assert.match(artifactContracts, /## Result Summary/);
+  assert.match(artifactContracts, /## Structured Gaps/);
+  assert.match(artifactContracts, /older UAT artifacts remain validation-compatible/i);
+
+  assert.match(schemaDoc, /Richer authoring template sections/i);
+  assert.match(schemaDoc, /structured gaps that can feed later explicit follow-up capture/i);
+  assert.match(mcpToolsDoc, /verify-work-runtime-contract\.md/i);
+  assert.match(mcpToolsDoc, /current test state, test matrix, result counts/i);
+  assert.match(runtimeReference, /verify-work-runtime-contract\.md/i);
+  assert.match(runtimeReference, /sequential no-subagent fallback/i);
 });

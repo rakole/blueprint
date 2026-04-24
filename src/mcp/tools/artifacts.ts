@@ -3965,7 +3965,20 @@ const UAT_PLACEHOLDER_BODIES = [
   "Question asked during the UAT pass, or `none`.",
   "Observed behavior tied to saved summary evidence such as",
   "Explicit blocker, follow-up, or `none`.",
-  "Explicit follow-up fix, acceptance note, or `none`."
+  "Explicit follow-up fix, acceptance note, or `none`.",
+  "<active test number or testing complete>",
+  "<active user-observable test name or none>",
+  "<what the user should observe>",
+  "<user response, next checkpoint, or none>",
+  "<test name>",
+  "<observable expected behavior>",
+  "pending|pass|issue|skipped|blocked",
+  "<test number or none>",
+  "<expected behavior>",
+  "failed|partial|blocked|none",
+  "blocker|major|minor|cosmetic|none",
+  "<verbatim report or blocked reason>",
+  "<repair or confirmation path>"
 ] as const;
 
 export function validateUatArtifactContent(
