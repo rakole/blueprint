@@ -142,9 +142,9 @@ export declare const configToolDefinitions: ({
     description: string;
     inputSchema: {
         scope: z.ZodOptional<z.ZodEnum<{
+            effective: "effective";
             project: "project";
             defaults: "defaults";
-            effective: "effective";
         }>>;
         cwd: z.ZodOptional<z.ZodString>;
         defaultsPath: z.ZodOptional<z.ZodString>;
