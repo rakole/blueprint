@@ -15073,6 +15073,28 @@ function renderUatTemplate(context) {
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 
+## Current Test
+
+- Number: <active test number or testing complete>
+- Name: <active user-observable test name or none>
+- Expected: <what the user should observe>
+- Awaiting: <user response, next checkpoint, or none>
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | <test name> | <observable expected behavior> | ${summaryFile(context)} | pending|pass|issue|skipped|blocked | <note> |
+
+## Result Summary
+
+- Total: <N>
+- Passed: <N>
+- Issues: <N>
+- Pending: <N>
+- Skipped: <N>
+- Blocked: <N>
+
 ## Questions Asked
 
 - Question asked during the UAT pass, or \`none\`.
@@ -15084,6 +15106,12 @@ function renderUatTemplate(context) {
 ## Unresolved Gaps
 
 - Explicit blocker, follow-up, or \`none\`.
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| <test number or none> | <expected behavior> | failed|partial|blocked|none | blocker|major|minor|cosmetic|none | <verbatim report or blocked reason> | <repair or confirmation path> |
 
 ## Follow-Up Fixes
 
@@ -16383,11 +16411,27 @@ var init_artifact_contracts = __esm({
           "<saved checkpoint path or none>",
           "<saved summary path, checkpoint, or none>",
           "<what is being resumed now>",
-          "<what must remain stable between sessions>"
+          "<what must remain stable between sessions>",
+          "<active test number or testing complete>",
+          "<active user-observable test name or none>",
+          "<what the user should observe>",
+          "<user response, next checkpoint, or none>",
+          "<test name>",
+          "<observable expected behavior>",
+          "pending|pass|issue|skipped|blocked",
+          "<note>",
+          "<N>",
+          "<test number or none>",
+          "<expected behavior>",
+          "failed|partial|blocked|none",
+          "blocker|major|minor|cosmetic|none",
+          "<verbatim report or blocked reason>",
+          "<repair or confirmation path>"
         ],
         notes: [
           "UAT artifacts stay resumable across sessions and must reference saved summaries inside UAT Summary, Session State, or Observed Behavior.",
-          "Write validation keeps the resume checkpoint and current session state explicit so the artifact can be safely continued after a pause."
+          "Write validation keeps the resume checkpoint and current session state explicit so the artifact can be safely continued after a pause.",
+          "Authoring guidance expects a concrete user-observable test matrix, result counts, blocked-prerequisite separation, and structured gaps even though older UAT artifacts remain validation-compatible."
         ],
         renderScaffoldTemplate: renderUatTemplate,
         renderAuthoringTemplate: renderUatTemplate
@@ -22405,7 +22449,20 @@ var init_artifacts = __esm({
       "Question asked during the UAT pass, or `none`.",
       "Observed behavior tied to saved summary evidence such as",
       "Explicit blocker, follow-up, or `none`.",
-      "Explicit follow-up fix, acceptance note, or `none`."
+      "Explicit follow-up fix, acceptance note, or `none`.",
+      "<active test number or testing complete>",
+      "<active user-observable test name or none>",
+      "<what the user should observe>",
+      "<user response, next checkpoint, or none>",
+      "<test name>",
+      "<observable expected behavior>",
+      "pending|pass|issue|skipped|blocked",
+      "<test number or none>",
+      "<expected behavior>",
+      "failed|partial|blocked|none",
+      "blocker|major|minor|cosmetic|none",
+      "<verbatim report or blocked reason>",
+      "<repair or confirmation path>"
     ];
     artifactToolDefinitions = [
       {

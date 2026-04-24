@@ -12,6 +12,8 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `verify-work` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and validation evidence, decide whether the current UAT artifact is viewed, resumed, replaced, or newly created, execute bounded conversational UAT, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
 - Keep the saved-summary-first contract explicit throughout the run: execution summaries plus a ready-for-UAT verification artifact are the UAT baseline, overwrite confirmation and interactive `review` / `skip` / `stop` checkpoints are the pending gates while evidence is still being collected, and the next safe action stays on `/blu-verify-work <phase>` until the saved UAT checkpoint is either completed or a prerequisite routes elsewhere.
+- Detailed runtime reference: `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`.
+- The detailed contract owns the richer UAT loop: derive user-observable tests from saved summaries, present one expected behavior at a time, classify plain responses into pass/skipped/blocked/issue, preserve verbatim reports and inferred severity, separate blocked prerequisites from code gaps, and persist test matrix plus structured gaps in `XX-UAT.md`.
 
 
 ## Purpose
@@ -49,6 +51,19 @@
 - Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, and next safe action as the run moves from target resolution through saved-summary review, verifier analysis, checkpointed conversational UAT, persistence, post-write validation, and routing.
 - Interactive checkpoints should use explicit `review`, `skip`, and `stop` choices rather than flattening the entire UAT pass into one preflight approval.
 - Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
+
+## UAT Test Loop
+
+- Build a concrete test queue from saved summaries and ready verification evidence before asking the user anything.
+- Each row should include test name, expected user-observable behavior, saved evidence, result, and notes.
+- Skip internal-only implementation details unless they affect visible startup, command behavior, generated artifacts, routing, or errors.
+- Add a cold-start smoke test when saved evidence touches startup, server or CLI entrypoints, database, seed, migration, Docker, or first-run surfaces.
+- Present one expected behavior at a time and classify the user's plain response without asking them for severity:
+  - pass: empty response, `yes`, `y`, `ok`, `pass`, `next`, or `approved`
+  - skipped: `skip`, `can't test`, or `n/a`, preserving reason when given
+  - blocked: prerequisite language such as server, not running, physical device, release build, third-party setup, or prior phase
+  - issue: any other response, preserving the verbatim report and inferring blocker, major, minor, or cosmetic severity
+- Blocked tests are prerequisite gates, not code gaps. Issues become structured gap rows with truth, status, reason, severity, test number, artifacts, missing work, and follow-up status.
 
 
 ## Blueprint And Global State Reads
@@ -91,9 +106,11 @@
 - Self-check the normalized draft against the returned contract before writing so the final body matches the persisted shape.
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume without inventing a second checkpoint file.
+- New or updated UAT artifacts should also preserve the current test, test matrix, result counts, blocked prerequisites, structured gaps, and follow-up fix candidates from the canonical authoring template.
 - If the verification artifact is valid but not ready for UAT, route back to `/blu-validate-phase <phase>` for repair before attempting UAT persistence.
 - Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; confirm follow-up-fix capture before persistence and do not invent separate tool-owned artifacts.
 - Keep the next safe action on `/blu-verify-work <phase>` while the saved UAT artifact still reflects an in-progress or intentionally stopped checkpoint; route onward only when the saved evidence and current prerequisites support that follow-up.
+- If `blueprint_phase_validation_write` returns `status: "invalid"` or post-write `blueprint_artifact_validate` fails, repair the normalized draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
 
 ## Canonical UAT Contract
 
@@ -102,6 +119,7 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 - Do not rename the contract's required headings or replace the locked `**Status:**`, `**Resume State:**`, or `**Checkpoint:**` markers.
 - Keep summary references inside the contract-defined summary-aware sections so `blueprint_phase_validation_write` validation passes cleanly.
 - Keep the `**Resume State:**` and `**Checkpoint:**` markers current when the user chooses `review`, `skip`, or `stop`, so the checkpoint remains resumable and bounded instead of drifting into prompt-only state.
+- Fill the richer authoring sections for current test, test matrix, result summary, and structured gaps when creating or updating UAT output. Existing artifacts without those headings remain validation-compatible, but new output should not collapse the pass into a one-paragraph summary.
 - Allow extra top-level headings only when the returned contract policy says they are supported.
 - After writing, run artifact validation before updating state so schema drift is caught in the same command path.
 
@@ -109,8 +127,12 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 ## Skills And Subagents
 
 - Primary skill: `blueprint-phase-validation`
+- Runtime reference: `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`
 - Optional subagents:
 - `blueprint-verifier`
+- Use the verifier only when a suitable code or workflow analysis agent is available and `workflow.verifier=true`.
+- If the verifier is unavailable or disabled, use the no-subagent fallback: read one completed summary at a time, compress carry-forward test rows, build the queue, run one UAT prompt at a time, classify responses, and draft from the final queue, counts, gaps, and checkpoint state.
+- Browser, web-search-only, shell-only, and generic agents are not substitutes for the verifier.
 
 
 ## Dependencies
@@ -170,6 +192,9 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 - Persists UAT evidence through `blueprint_phase_validation_write` rather than direct file writes.
 - Marks the matching `ROADMAP.md` phase complete only after summary, verification, and UAT evidence all exist.
 - Keeps `XX-UAT.md` resumable and explicit about unresolved gaps or follow-up captures.
+- Produces a concrete user-observable test matrix with expected behavior, saved evidence, result counts, blocked-prerequisite separation, and structured gaps.
+- Preserves plain user issue reports with inferred severity rather than asking the user to classify implementation risk.
+- Uses the capability-gated verifier path or the no-subagent sequential fallback from the runtime contract.
 - Uses bounded `review`, `skip`, and `stop` checkpoints instead of collapsing multi-step UAT into a single approval gate.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
