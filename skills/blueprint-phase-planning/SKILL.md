@@ -23,6 +23,7 @@ Orchestrate Blueprint's phase-planning flow so the final plan is grounded in cur
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while planning.
 - Use a structured `reuse`, `revise`, or `replace` gate before any overwrite path when plans already exist.
+- Load `references/plan-phase-runtime-contract.md` as the detailed runtime contract for stage mapping, MCP call control flow, anti-shallow artifact authoring, capability-gated subagent use, no-subagent fallback, validation repair, output quality, and completion criteria.
 
 ## Runtime Call Rules
 
@@ -48,6 +49,7 @@ Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
+- `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md`
 
 ## Required MCP Tools
 
@@ -81,14 +83,23 @@ Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 8. Before finalizing, run a requirements-coverage check that maps every declared phase requirement and non-optional must-have to explicit plan coverage or a named blocker.
 9. If the phase is too broad for one coherent plan, split it into prioritized dependency-aware waves or a narrower phase slice before drafting the final write.
 10. Use `blueprint-planner` to draft one or more execution-ready plans with concrete frontmatter, dependency waves, repo paths, task-level `Read First`, task-level `Action`, and grep/test-verifiable `Acceptance Criteria`.
+    - Every `Read First` must cite exact repo-relative files, source-of-truth docs, schemas, tests, interfaces, or config needed for safe execution.
+    - Every `Action` must specify concrete target state such as function names, routes, schema fields, config keys, imports, command arguments, and decisions being implemented; avoid vague "align with" or "wire up" instructions without the exact target behavior.
+    - Every `Acceptance Criteria` entry must be grep/test/CLI/file-read verifiable with exact strings, commands, outputs, files, or patterns.
+    - Preserve locked context decisions at full fidelity and exclude deferred ideas; if the phase cannot fit without `v1`, placeholder, static-for-now, future-wiring, or stub language, split or block instead of silently reducing scope.
+    - Include goal-backward must-haves that name observable truths, required artifacts, and key links or wiring points.
+    - Keep each plan small enough for downstream execution quality: usually 2-3 implementation tasks, with split review for 4+ tasks, high file counts, broad subsystem mixtures, or avoidable file ownership conflicts.
 11. Persist finalized plan content through `blueprint_phase_plan_write`. Pass `phase` as the resolved phase number and `content` as the full plan body. Omit `planId` to auto-assign the next slot, or pass only the numeric plan id when targeting a specific plan; prefer zero-padded string values such as `"01"` so the request matches artifact naming, but numeric inputs such as `1` are accepted. Never pass `phaseDir`, `phasePrefix`, a scaffolded filename, a slug such as `02-invoice-ingestion`, a combined token like `02-01`, or a frontmatter key name like `plan_id`. Do not rely on scaffold text as the finished plan.
 12. The saved plan must keep the exact Blueprint contract: frontmatter keys `phase`, `plan_id`, `title`, `wave`, `status`, `objective`, `depends_on`, `requirements`, `files_modified`, `read_first`, `acceptance_criteria`, and `autonomous`; body sections `## Goal`, `## Scope`, `## Tasks`, `## Verification`, and `## Must Haves`; and per-task subsections `#### Read First`, `#### Action`, and `#### Acceptance Criteria`.
 13. Use `blueprint-checker` to review the saved plan set against phase evidence, locked Blueprint decisions, and the current discovery artifacts.
-14. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
-15. If planner/checker revisions keep failing after a bounded number of passes, stop the loop, preserve the best coherent draft, and report the unresolved requirement or split point instead of looping indefinitely.
-16. After persistence, prefer `blueprint_state_update` with `base: "synced"` so `STATE.md` recomputes the next safe action from the updated artifact inventory instead of leaving stale routing behind.
-17. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
-18. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
+14. If suitable planner/checker subagents are unavailable, use the no-subagent fallback from `references/plan-phase-runtime-contract.md`: compress carry-forward context, draft one plan or topic at a time, run the inline quality checklist, persist only passing plans, and repair blockers before proceeding to the next wave.
+15. Do not use browser, web-search-only, or generic browsing agents as substitutes for Blueprint planning, codebase, or workflow analysis agents.
+16. If the checker finds gaps, run a targeted revision loop instead of replanning unrelated files, then re-run the checker before accepting the plan.
+17. If planner/checker revisions keep failing after a bounded number of passes, stop the loop, preserve the best coherent draft, and report the unresolved requirement or split point instead of looping indefinitely.
+18. If `blueprint_phase_plan_write` or `blueprint_artifact_validate` reports invalid content, repair against the live contract and retry through MCP before presenting completion; never bypass validation with raw `.blueprint/` edits.
+19. After persistence, prefer `blueprint_state_update` with `base: "synced"` so `STATE.md` recomputes the next safe action from the updated artifact inventory instead of leaving stale routing behind.
+20. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+21. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
 
 ## Output Style
 

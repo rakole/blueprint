@@ -74,6 +74,17 @@ guessing plan structure or dependency order.
 9. If planner/checker revisions keep failing after a bounded number of passes,
    stop and return the best coherent draft plus the exact unresolved
    requirement or split point as a blocker.
+10. Preserve locked context decisions at full fidelity. Do not introduce
+    `v1`, `simplified`, `static for now`, `placeholder`, `future enhancement`,
+    `will be wired later`, `not connected`, or `stub` language to reduce what
+    the context says must be delivered; return a split recommendation or
+    blocker instead.
+11. Prefer vertical slices when independent work can run in parallel, and use
+    horizontal foundation plans only when shared interfaces, schema, or
+    ordering require them.
+12. Keep plans small enough for downstream execution quality: usually 2-3
+    implementation tasks per plan. Treat 4 tasks, broad subsystem mixtures,
+    high file counts, or any task touching more than 5 files as split signals.
 
 ## Outputs
 
@@ -122,11 +133,24 @@ guessing plan structure or dependency order.
   - `#### Read First`
   - `#### Action`
   - `#### Acceptance Criteria`
+- `#### Read First` must cite exact repo-relative paths for files being
+  modified plus source-of-truth docs, schemas, interfaces, tests, patterns, or
+  config that constrain the task.
+- `#### Action` must state the concrete target behavior and values: functions,
+  routes, schema fields, config keys, imports, command arguments, decision IDs,
+  and what to avoid when that matters.
+- `#### Acceptance Criteria` must be mechanically checkable through grep, file
+  read, test command, CLI output, or a tightly specified manual checkpoint, and
+  should include exact strings, commands, expected outputs, files, or patterns.
 - `files_modified` and `read_first` must use concrete repo-relative paths.
 - `acceptance_criteria` must be grep-able, test-verifiable, or otherwise
   objectively checkable.
 - Dependency waves and `depends_on` values must agree with each other and must
   not imply impossible ordering.
+- `## Must Haves` must be goal-backward and include observable truths, required
+  artifacts, and key links or wiring points. If the live authoring template is
+  prose-oriented, preserve the required heading while keeping those categories
+  explicit inside the section.
 
 ## Revision Behavior
 

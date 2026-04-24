@@ -69,7 +69,8 @@ test("legacy required-input sections remain the fallback for unmigrated skills",
     "docs/COMMAND-CATALOG.md",
     "docs/SKILLS-AND-AGENTS.md",
     "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md"
+    "docs/MCP-TOOLS.md",
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
   ]);
   assert.deepEqual(inputs.effective, inputs.shared);
 });

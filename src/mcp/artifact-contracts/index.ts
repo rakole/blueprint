@@ -2045,7 +2045,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Plan frontmatter keys and task subsections are locked for MCP parsing.",
       "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
-      "Additional top-level headings are allowed, but required plan sections must remain unchanged."
+      "Additional top-level headings are allowed, but required plan sections must remain unchanged.",
+      "Plan authoring should stay execution-ready: exact repo-relative `Read First` paths, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, and goal-backward must-haves with observable truths, required artifacts, and key links.",
+      "Do not silently reduce locked context decisions with `v1`, placeholder, static-for-now, future-wiring, or stub language; split or block when full fidelity does not fit."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderPlanTemplate(context)),
     renderAuthoringTemplate: renderPlanTemplate
