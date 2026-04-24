@@ -458,6 +458,7 @@ type PhaseSummaryRecord = {
     planId: string;
     path: string;
     linkedPlanPath: string | null;
+    status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
     title: string | null;
     summary: string | null;
 };

@@ -318,6 +318,7 @@ type SummaryValidationOptions = {
     requirePlanMarker?: boolean;
 };
 export declare function extractSummaryPlanReference(content: string): string | null;
+export declare function extractSummaryStatus(content: string): "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
 export declare function validateSummaryArtifactContent(content: string): {
     valid: boolean;
     issues: string[];

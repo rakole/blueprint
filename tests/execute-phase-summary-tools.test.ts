@@ -168,38 +168,21 @@ await blueprintPhaseSummaryWrite({ cwd: repoPath, phase: "3", planId: "01", cont
   );
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
-    `---
-phase: 3
-plan_id: "01"
-title: "Execution Plan 01"
-wave: 1
-status: planned
-objective: "Exercise summary indexing."
-depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
-autonomous: true
----
-
-# Phase 03: Phase Discovery - Plan 01
-
-## Goal
-
-Exercise summary indexing.
-`,
+    executionPlanContent("01", 1),
     "utf8"
   );
 
   return repoPath;
 }
 
-function validSummaryContent(planId = "01"): string {
+function validSummaryContent(
+  planId = "01",
+  status: "COMPLETED" | "PARTIAL" | "BLOCKED" = "COMPLETED"
+): string {
   return `# Phase 03: Phase Discovery - Summary ${planId}
 
 **Plan:** \`03-${planId}-PLAN.md\`
-**Status:** COMPLETED
+**Status:** ${status}
 
 ## Outcome
 
@@ -393,6 +376,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.deepEqual(index.pendingPlans, []);
   assert.equal(read.found, true);
   assert.equal(read.metadata?.linkedPlanPath, "03-01-PLAN.md");
+  assert.equal(read.metadata?.status, "COMPLETED");
   assert.equal(read.validation?.valid, true);
   assert.deepEqual(read.validation?.issues, []);
   assert.equal(reused.status, "reused");
@@ -613,6 +597,90 @@ test("phase summary writes reject summaries whose Plan marker does not match the
 
   assert.equal(rejected.status, "invalid");
   assert.match(rejected.issues.join("\n"), /does not match linked plan path/i);
+});
+
+test("partial and blocked summaries are valid evidence but do not close execution debt", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1),
+    "utf8"
+  );
+
+  const partial = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validSummaryContent("01", "PARTIAL")
+  });
+  const blocked = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validSummaryContent("02", "BLOCKED")
+  });
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+  const readPartial = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+
+  assert.equal(partial.status, "created");
+  assert.equal(blocked.status, "created");
+  assert.equal(readPartial.validation?.valid, true);
+  assert.equal(readPartial.metadata?.status, "PARTIAL");
+  assert.deepEqual(index.completedPlans, []);
+  assert.deepEqual(index.pendingPlans, ["01", "02"]);
+  assert.match(index.warnings.join("\n"), /status is PARTIAL, so it remains pending execution debt/);
+  assert.match(index.warnings.join("\n"), /status is BLOCKED, so it remains pending execution debt/);
+});
+
+test("phase summary writes reject invalid summary status markers", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validSummaryContent("01").replace("**Status:** COMPLETED", "**Status:** DONE"),
+    overwrite: true
+  });
+
+  assert.equal(rejected.status, "invalid");
+  assert.match(rejected.issues.join("\n"), /must be one of COMPLETED, PARTIAL, or BLOCKED/);
+});
+
+test("phase summary writes reject execution evidence for invalid saved plans", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1).replace("depends_on: []", "depends_on:\n  - not-a-plan"),
+    "utf8"
+  );
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validSummaryContent("02")
+  });
+
+  assert.equal(rejected.status, "invalid");
+  assert.equal(rejected.written, false);
+  assert.match(rejected.issues.join("\n"), /03-02-PLAN\.md/);
+  assert.match(rejected.issues.join("\n"), /invalid depends_on reference/i);
 });
 
 test("phase summary writes reject untouched scaffold prose in the summary sections", async (t) => {

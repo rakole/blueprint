@@ -16315,6 +16315,7 @@ var init_artifact_contracts = __esm({
         notes: [
           "Summary artifacts stay linked to a saved plan and should remain grounded in completed work.",
           "The locked `Plan` and `Status` markers remain required, but scaffold placeholder values are rejected by write validation.",
+          "`COMPLETED` is the only status that closes execution debt; `PARTIAL` and `BLOCKED` are truthful carry-forward evidence and remain pending.",
           "Untouched scaffold prose in Changes Made, Verification, Follow-Ups, and Evidence is also rejected."
         ],
         renderScaffoldTemplate: renderSummaryTemplate,
@@ -20257,6 +20258,17 @@ function extractSummaryPlanReference(content) {
   const match = content.match(/^\*\*Plan:\*\*\s*(.+)$/m);
   return match ? normalizeSummaryPlanReference(match[1]) : null;
 }
+function extractSummaryStatus(content) {
+  const match = content.match(/^\*\*Status:\*\*\s*(.+)$/m);
+  if (!match) {
+    return null;
+  }
+  const status = match[1].trim().toUpperCase();
+  if (status === "COMPLETED" || status === "PARTIAL" || status === "BLOCKED") {
+    return status;
+  }
+  return null;
+}
 function validateSummaryArtifactContent(content) {
   const contract = readArtifactContract("phase.summary");
   const issues = [];
@@ -20276,6 +20288,12 @@ function validateSummaryArtifactContent(content) {
   issues.push(
     ...contract.placeholderSignals.filter((signal) => signal.length > 0 && normalizedContent.includes(signal)).map((signal) => `Summary artifact still contains placeholder scaffold text: ${signal}.`)
   );
+  const statusLine = normalizedContent.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1]?.trim();
+  if (statusLine && !extractSummaryStatus(normalizedContent)) {
+    issues.push(
+      "Summary artifact **Status:** marker must be one of COMPLETED, PARTIAL, or BLOCKED."
+    );
+  }
   return {
     valid: issues.length === 0,
     issues,
@@ -25142,10 +25160,12 @@ function summarizeMarkdownContent(content) {
 }
 function toPhaseSummaryRecord(planId2, pathValue, content, linkedPlanPath) {
   const metadata = summarizeMarkdownContent(content);
+  const status = extractSummaryStatus(content);
   return {
     planId: planId2,
     path: pathValue,
     linkedPlanPath,
+    status,
     title: metadata.title,
     summary: metadata.summary
   };
@@ -26736,8 +26756,13 @@ async function blueprintPhaseSummaryIndex(args = {}) {
       linkedPlanPath: knownPlanPaths.get(planId2) ?? null
     });
     summaries.push(toPhaseSummaryRecord(planId2, summaryPath2, content, linkedPlanPath));
-    if (validation.valid) {
+    const summaryStatus = extractSummaryStatus(content);
+    if (validation.valid && summaryStatus === "COMPLETED") {
       completedPlans.add(planId2);
+    } else if (validation.valid && summaryStatus) {
+      warnings.push(
+        `${summaryPath2}: summary status is ${summaryStatus}, so it remains pending execution debt.`
+      );
     } else {
       warnings.push(
         `${summaryPath2}: summary artifact is invalid and does not count as completed execution evidence.`
@@ -26820,6 +26845,7 @@ async function blueprintPhaseSummaryRead(args) {
     content,
     metadata: {
       linkedPlanPath,
+      status: extractSummaryStatus(content),
       title: metadata.title,
       summary: metadata.summary
     },
@@ -26839,6 +26865,24 @@ async function blueprintPhaseSummaryWrite(args) {
     throw new Error(
       `${plan.path ?? planPathFor(resolved, planId2)} does not exist yet. Create the matching plan before writing a summary.`
     );
+  }
+  if (!plan.validation?.valid) {
+    const planIssues = plan.validation?.issues.length ? plan.validation.issues : ["Linked plan artifact is invalid and must be repaired before execution can be summarized."];
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: summaryPathFor(resolved, planId2),
+      linkedPlanPath: plan.path,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues: planIssues.map((issue2) => `${plan.path}: ${issue2}`),
+      warnings: plan.validation?.warnings ?? []
+    };
   }
   const pathValue = summaryPathFor(resolved, planId2);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);

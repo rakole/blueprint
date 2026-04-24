@@ -37,6 +37,9 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - The parent command owns `blueprint_phase_summary_write`, validation or report
   writes, `blueprint_state_update`, `STATE.md` updates, and other Blueprint
   persistence.
+- The parent command owns wave ordering and cross-plan dependency gates. This
+  agent must not execute a later-wave plan because it happens to have the files
+  open.
 
 ## Required Reads
 
@@ -56,27 +59,36 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
    acceptance. Do not widen into adjacent plans or unrelated cleanup.
 2. Execute one plan at a time unless the parent command explicitly assigns a
    bounded batch with shared ownership and per-plan checkpoints.
-3. Read the plan's `#### Read First` paths before changing code so execution
+3. Require explicit write ownership from the parent prompt. If the prompt does
+   not name the repo-relative files, directories, generated artifacts, or other
+   write surfaces this agent owns, stop and return a blocker instead of editing
+   opportunistically.
+4. Read the plan's `#### Read First` paths before changing code so execution
    stays grounded in the intended substrate.
-4. Keep edits inside the assigned write boundary and preserve unrelated user or
+5. Keep edits inside the assigned write boundary and preserve unrelated user or
    parallel-agent changes.
-5. For long-running or interactive execution, stop and report through the
+6. For long-running or interactive execution, stop and report through the
    checkpoint contract when scope is resolved, after each assigned plan or
    major task group, when a blocker or deviation appears, and after
    verification finishes.
-6. Use shell commands only for bounded repo-local inspection, verification, or
+7. Use shell commands only for bounded repo-local inspection, verification, or
    build/test support for the assigned plan.
-7. Shell must not own Blueprint persistence, MCP writes, approvals, routing,
+8. Shell must not own Blueprint persistence, MCP writes, approvals, routing,
    or phase-level orchestration.
-8. If the plan depends on missing substrate, hidden state, unavailable secrets,
+9. If the plan depends on missing substrate, hidden state, unavailable secrets,
    auth-gated systems, or unapproved destructive operations, stop and return a
    blocker instead of guessing.
-9. Apply the plan's tasks in dependency order unless the saved plan explicitly
+10. Apply the plan's tasks in dependency order unless the saved plan explicitly
    allows safe reordering.
-10. Re-run only the verification needed to prove the touched acceptance criteria;
+11. Re-run only the verification needed to prove the touched acceptance criteria;
    if broader failures appear, report them without claiming they were fixed.
-11. Keep partial runs honest. A plan is not complete just because code changed;
+12. Keep partial runs honest. A plan is not complete just because code changed;
     it is complete only when the required acceptance evidence exists.
+13. Use a bounded repair loop: repair only failures caused by the current plan's
+    changes, re-run the targeted check, and stop with `partial` or `blocked`
+    after repeated failure instead of widening scope or claiming completion.
+14. If the parent prompt says the run is parallel or worktree-isolated, avoid
+    shared global writes and do not mutate Blueprint state files directly.
 
 ## Progress Checkpoint Contract
 
@@ -110,6 +122,10 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
   - `## Summary Draft`
 - In `## Plan Outcome`, state whether the assigned plan is `completed`,
   `partial`, or `blocked`.
+- Use `completed` only when all assigned tasks and acceptance checks passed.
+  Use `partial` when some useful work landed but tasks, tests, or summaries are
+  incomplete. Use `blocked` when the next step requires missing substrate,
+  secrets, approval, a lower-wave prerequisite, or a plan repair.
 - In `## Files Changed`, list only repo-relative paths that were actually
   modified.
 - In `## Verification Evidence`, cite concrete commands, tests, or inspections
@@ -122,6 +138,10 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - In `## Summary Draft`, provide concise markdown the parent command can persist
   through `blueprint_phase_summary_write`, including delivered work, evidence,
   and unresolved gaps when the run is partial.
+- The `## Summary Draft` status must match `## Plan Outcome`: `COMPLETED` for
+  completed, `PARTIAL` for partial, and `BLOCKED` for blocked. Never ask the
+  parent to persist `COMPLETED` while tests failed, checkpoints remain open, or
+  acceptance evidence is missing.
 - Treat `blueprint_phase_summary_write` as phase-plus-plan keyed persistence:
   the parent command should pass the resolved numeric phase, the numeric
   `planId` for the matching saved plan, and the full summary body, then trust
