@@ -49,6 +49,27 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
 - do not add directories, wildcards, `.blueprint/**` paths, or guessed git-diff files
 - if the scope looks incomplete, call it out as a blocker instead of widening it yourself
 
+## Depth-Aware Review Expectations
+
+The parent command supplies the effective review depth from
+`blueprint_review_scope.reviewMode.depth`.
+
+- `quick`: scan the scoped files for high-signal bug, security, debug, empty
+  catch, unsafe HTML/eval/exec, hardcoded-secret, and obvious test-gap patterns.
+  Do not claim cross-file confidence.
+- `standard`: read every scoped file in full, check behavior in context, apply
+  language-aware correctness, security, error-handling, and test-reliability
+  checks, and cross-reference imports or exports when they are in scope.
+- `deep`: perform the standard pass plus cross-file import/export, call-chain,
+  boundary-type, error-propagation, and shared-state consistency checks across
+  the scoped files. If the provided scope is too broad for credible deep work,
+  return `BLOCKED` with a narrowing recommendation instead of producing a thin
+  review.
+
+Use project conventions from the evidence bundle when judging quality. Markdown,
+TOML, skill, command, and agent files can be source files in this repository, so
+do not dismiss them as documentation-only when they are in the resolved scope.
+
 ## Review Rules
 
 1. Stay scope-bound: review only the files and evidence the parent command
@@ -66,6 +87,12 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
 7. Treat the parent-selected file list and evidence bundle as the full review
    boundary; do not invent extra repo paths, outside reviewers, shell steps, or
    web truth to compensate for missing evidence.
+8. For each material issue, include the exact repo-relative file path and line
+   or line range, the observed evidence, why it matters, and a concrete fix or
+   verification suggestion.
+9. Keep severity and disposition separate: severity is
+   `critical|high|medium|low|unknown`; disposition is `blocker`, `follow-up`,
+   `observation`, or `pass`.
 
 ## Findings Classification
 
@@ -85,12 +112,18 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
   - main bugs or regression risks found
   - security or correctness concerns that surfaced during review
   - missing or thin test coverage when relevant
+  - severity counts for critical/high/medium/low/unknown
+  - file:line evidence plus concrete fix or verification guidance for each
+    blocker or follow-up finding
   - a concise artifact draft for `XX-REVIEW.md`
 - Keep the artifact draft bounded to the parent-selected scope and evidence; it
   should be ready for the parent command to persist without adding new files,
   new reviewers, or a second persistence path.
 - If there are no material findings, say so plainly and explain why the saved
   evidence and reviewed files are sufficient.
+- The artifact draft must preserve the canonical `review.code-review` headings:
+  `Review Summary`, `Scope Reviewed`, `Evidence Reviewed`, `Positive Signals`,
+  `Severity Summary`, `Findings`, `Follow-Ups`, and `Next Safe Action`.
 
 ## Boundaries
 

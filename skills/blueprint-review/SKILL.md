@@ -59,11 +59,13 @@ non-routable until their extra MCP substrate lands.
 - `docs/MCP-TOOLS.md`
 - `docs/RUNTIME-REFERENCE.md`
 - `docs/PHASE-LIFECYCLE.md`
+- `skills/blueprint-review/references/code-review-runtime-contract.md`
 - saved phase artifacts for the target phase, especially execution summaries
 
 ## Required MCP Tools
 
 - `blueprint_phase_locate`
+- `blueprint_config_get`
 - `blueprint_artifact_list`
 - `blueprint_review_scope`
 - `blueprint_review_load_findings`
@@ -108,34 +110,45 @@ non-routable until their extra MCP substrate lands.
 
 ### `code-review`
 
-1. Resolve the target phase first and read the current Blueprint artifact
+1. Load `skills/blueprint-review/references/code-review-runtime-contract.md`
+   before analysis. That local reference owns depth semantics, artifact
+   richness, capability-gated reviewer use, no-subagent fallback, and
+   invalid-write repair for `/blu-code-review`.
+2. Resolve the target phase first and read the current Blueprint artifact
    inventory before reviewing code.
-2. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW.md`, then use the returned template as the baseline for the persisted artifact.
-3. Use `blueprint_review_scope` to derive the deterministic repo file list from
+3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW.md`, then use the returned template as the baseline for the persisted artifact.
+4. Use `blueprint_review_scope` to derive the deterministic repo file list from
    executed plan metadata or explicit file arguments; do not guess from git
    diff alone.
-4. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+5. Keep the active stage visible as the run moves through `Resolve`, `Read`,
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, pending gate, execution mode, and next safe action legible
    throughout the run.
-5. For non-trivial code-review runs, prefer update_topic plus `write_todos` so
+6. For non-trivial code-review runs, prefer update_topic plus `write_todos` so
    evidence review, scope resolution, scope confirmation, bounded findings
    analysis, artifact persistence, and routing stay visible without becoming
    persistence.
-6. Require executed phase evidence unless the user supplied an explicit file
+7. Require executed phase evidence unless the user supplied an explicit file
    scope.
-7. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
+8. Inspect any existing `XX-REVIEW.md` before proposing replacement and default
    to reuse unless the user explicitly asks for an update.
-8. Keep findings grounded in the selected repo files plus saved execution,
+9. Keep findings grounded in the selected repo files plus saved execution,
    validation, or UAT artifacts.
-9. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
+10. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
    or a deep pass that benefits from a bounded second look.
-10. Keep the scope confirmation gate explicit for broad, multi-plan, or deep
+11. If `blueprint-reviewer` is unavailable or unnecessary, use the no-subagent
+    fallback from the local runtime contract: review saved evidence first,
+    handle one file group at a time, compress carry-forward context, and run a
+    final severity-count consistency pass.
+12. Keep the scope confirmation gate explicit for broad, multi-plan, or deep
     reviews, and keep rolling finding counts or severity buckets visible while
     the review is in flight.
-11. Persist the finished review through `blueprint_review_record` with the
+13. Persist the finished review through `blueprint_review_record` with the
    `code-review` artifact.
-12. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+14. If `blueprint_review_record` returns invalid, repair the markdown against
+   `contract.authoringTemplate` and the returned warnings, then retry once
+   through MCP. Do not hand-edit `.blueprint/`.
+15. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-secure-phase <phase>` when the phase still lacks a security artifact,
    `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
    otherwise `/blu-progress`.
