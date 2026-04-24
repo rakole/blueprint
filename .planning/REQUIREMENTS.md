@@ -30,6 +30,7 @@
 - [ ] **SAFE-02**: Command exposure follows implemented-only routing guarantees (`/blu`, `/blu-help`, `/blu-progress` only surface when implemented).
 - [ ] **SAFE-03**: Impact analysis runs through deterministic, schema-validated MCP tooling rather than prompt-only state.
 - [ ] **SAFE-04**: Report output has stable section schema so regressions can be fixture-tested.
+- [ ] **SAFE-05**: End-to-end analysis and report generation has fixture-backed quality checks and acceptable runtime for regular review use.
 
 ## v2 Requirements
 
@@ -71,10 +72,11 @@
 | SAFE-02 | Phase 1 | Pending |
 | SAFE-03 | Phase 1 | Pending |
 | SAFE-04 | Phase 4 | Pending |
+| SAFE-05 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 14 total
-- Mapped to phases: 14
+- v1 requirements: 15 total
+- Mapped to phases: 15
 - Unmapped: 0 ✓
 
 ---
