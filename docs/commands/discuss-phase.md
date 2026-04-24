@@ -22,7 +22,7 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gather phase context through adaptive questioning before planning. It is not a claim of full GSD parity; instead, the repaired Blueprint Phase 3 slice keeps the useful discovery intent while using Blueprint-specific replacements for the missing safeguards and must-haves: prior-context sweeps across saved phase artifacts and codebase scout summaries; answer validation and retry; stronger assumptions-mode analysis; methodology-shaped gray-area lenses; folding deferred ideas into the saved record; checkpoint-per-area behavior; progress recaps that keep the session legible; and a blocking anti-pattern check before save. The contract does not promise a dedicated todo/backlog file crawl; any follow-up references only carry forward when they are already present in the saved discovery record. It still reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and normalizes the final context and discussion drafts to the canonical `authoringTemplate` before write. It restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. The repaired Blueprint flow keeps the retained GSD thinking-partner behavior while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps across saved phase artifacts and codebase scout summaries; answer validation and retry; stronger assumptions-mode analysis; capability-gated sidecar research for one gray area when suitable agents are available; single-agent fallback that handles one discussion area at a time with compressed carry-forward context and checkpointing; methodology-shaped gray-area lenses; folding deferred ideas into the saved record; checkpoint-per-area behavior; progress recaps that keep the session legible; and a validation/repair loop before completion. The contract does not promise a dedicated todo/backlog file crawl; any follow-up references only carry forward when they are already present in the saved discovery record. It still reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and normalizes the final context and discussion drafts to the canonical `authoringTemplate` before write. It restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
 
 
 ## Command Path And Examples
@@ -45,6 +45,7 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
 - In-flight discovery should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible until the run concludes or stops on a checkpoint or overwrite decision.
+- The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved artifact schema remains the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`.
 
 
 ## Behavior Stages
@@ -52,9 +53,9 @@
 1. `Resolve`: resolve the target phase and stop early when the phase is ambiguous or Blueprint prerequisites are missing.
 2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory before asking for fresh detail.
 3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching.
-4. `Execute`: run one-question `ask_user` branching, capture decisions, canonical references, deferred ideas, and short progress recaps one area at a time.
+4. `Execute`: run one-question `ask_user` branching, optionally use capability-gated sidecar research for one gray area, capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
 5. `Persist`: scaffold only missing discovery artifacts, persist substantive context or discussion content, refresh checkpoints per area, and update `STATE.md` through MCP only.
-6. `Validate`: normalize drafts to the canonical `authoringTemplate`, run the blocking anti-pattern check, and keep plan-inventory warnings explicit before conclusion.
+6. `Validate`: normalize drafts to the canonical `authoringTemplate`, run the blocking anti-pattern check, repair any `blueprint_phase_artifact_write` validation issues, and keep plan-inventory warnings explicit before conclusion.
 7. `Route`: summarize reused versus replaced artifacts, checkpoint disposition, deferred follow-ups, and the next safe implemented action.
 
 
@@ -70,7 +71,7 @@
 - `optional phase XX-DISCUSSION-LOG.md`
 - `optional phase XX-DISCUSS-CHECKPOINT.json`
 - `.blueprint/STATE.md`
-- The final context and discussion bodies must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, or dropped deferred ideas are corrected before save.
+- The final context and discussion bodies must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, or dropped deferred ideas are corrected before save. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft from those returned issues and retry before treating the discussion as complete.
 
 
 ## Required MCP Tools
@@ -101,12 +102,14 @@
 - Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
 - Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
+- Rich context authoring should preserve evidence behind decisions: options considered, selected answer or assumption, rationale, repo paths or saved artifacts used as evidence, consequences if an assumption is wrong, canonical refs, and deferred ideas. This density is required even when the command falls back to a single main agent with no subagent support.
 
 
 ## Skills And Subagents
 
 
 - Primary skill: `blueprint-phase-discovery`
+- Required skill reference: `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`
 - Optional subagents:
 - `blueprint-researcher`
 
@@ -142,6 +145,7 @@
 - Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
 - When structured discovery choices help, prefer Gemini CLI's built-in `ask_user` dialog asked one focused question at a time instead of a plain-text questionnaire.
 - Identify gray areas from repo evidence first, let the user choose which area to discuss next, and support iterative `next area` or `more questions` loops.
+- Use `blueprint-researcher` only as a capability-gated, bounded, read-only sidecar for a single gray area or assumptions pass when the host exposes it and extra evidence would materially improve the choices. If no suitable subagent is available, the main agent must continue one area at a time, compress carry-forward context, checkpoint, and preserve the same artifact depth.
 - During non-trivial multi-area discovery runs on Gemini, keep the active stage and next safe action visible with `update_topic` and `write_todos` while leaving persistence to MCP artifacts, checkpoints, and `STATE.md`.
 - When those Gemini visibility helpers are unavailable, keep the same stage and next-safe-action visibility through normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
 - Inspect the saved plan inventory before rewriting context and warn that refreshed context does not rewrite existing plans unless the user re-runs `/blu-plan-phase`.
@@ -180,7 +184,8 @@
 - Warns clearly when refreshed discovery leaves existing saved plans unchanged until `/blu-plan-phase` is run again.
 - Captures canonical references plus deferred or scope-creep ideas when they surface during gray-area discussion.
 - Captures prior-context sweep findings, deferred ideas, codebase scout notes, and per-area checkpoint progress when they surface during gray-area discussion.
-- Blocks save-time drift when the normalized body still contains placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas.
+- Blocks save-time drift when the normalized body still contains placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas, and repairs any returned write validation issues before completion.
+- Supports capability-gated subagents for bounded one-area evidence work and an explicit single-agent fallback with carry-forward compression, checkpointing, and equally rich saved context.
 - Uses checkpoint persistence only as a resumability aid and deletes the checkpoint after successful completion.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

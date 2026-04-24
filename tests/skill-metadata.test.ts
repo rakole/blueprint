@@ -27,11 +27,15 @@ test("structured input bundles resolve command-specific discovery inputs", async
 
   assert.equal(inputs.skill, "blueprint-phase-discovery");
   assert.deepEqual(inputs.shared, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
-  assert.deepEqual(inputs.commandSpecific, ["docs/commands/discuss-phase.md"]);
+  assert.deepEqual(inputs.commandSpecific, [
+    "docs/commands/discuss-phase.md",
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+  ]);
   assert.deepEqual(inputs.effective, [
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md",
-    "docs/commands/discuss-phase.md"
+    "docs/commands/discuss-phase.md",
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
   ]);
 });
 

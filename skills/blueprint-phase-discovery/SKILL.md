@@ -18,6 +18,7 @@ input_bundles:
   commands:
     "/blu-discuss-phase":
       - docs/commands/discuss-phase.md
+      - skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md
     "/blu-research-phase":
       - docs/commands/research-phase.md
     "/blu-ui-phase":
@@ -65,6 +66,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - MCP tools own state mutation
 - later chaining and power-mode variants stay deferred until the downstream lifecycle substrate exists
 - keep the GSD-inspired discovery staples Blueprint actually ships: prior-context sweeps, deferred-idea folding, methodology lenses, codebase-scout reuse, stronger assumptions-mode analysis, progress recaps, checkpoint-per-area persistence, and end-of-run `STATE.md` updates
+- use `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the rich behavior contract for `/blu-discuss-phase`, while treating `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts
 
 ## Required Inputs
 
@@ -124,6 +126,8 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 ### `discuss-phase`
 
+Before running the command flow, read `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`. It locks the retained discuss-phase behavior that is easy to dilute: phase-specific gray-area discovery, evidence-backed assumptions, capability-gated sidecar research, single-agent fallback, rich context authoring, and validation/repair before completion.
+
 0. Keep the resolved scope explicit as the selected phase, prior-context bundle, artifact reuse-versus-replace posture, and current gray area.
 1. Resolve the phase through MCP tools before asking the user to confirm any write path.
 2. Ground the flow in actual repo context before questioning: read the substantive project brief, requirements, and workflow posture already surfaced through `blueprint_phase_context`, then read the current `XX-CONTEXT.md`, `XX-DISCUSSION-LOG.md`, and earlier phase context artifacts when they materially reduce duplicate questions.
@@ -135,10 +139,12 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 8. Keep execution mode explicit as interactive `workflow.discuss_mode="discuss"`, stronger assumptions-mode analysis, or repo-evidence-driven `workflow.skip_discuss=true`, plus fresh versus resumed checkpoint posture.
 9. During non-trivial multi-area discovery runs on Gemini, use `update_topic` and `write_todos` to keep the active stage and next safe action visible without turning either tool into persistence. When a host does not expose those helpers, keep the same visibility through normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
 10. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the structured discuss checkpoint shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology. Do not pretend power, chain, or auto modes are shipped.
-11. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
-12. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
-13. Require explicit overwrite confirmation before replacing existing context artifacts.
-14. End with a next safe action inside the implemented Blueprint surface and leave `STATE.md` legible about that next step.
+11. Use capability-gated subagents only when suitable Blueprint discovery or research agents are available and bounded evidence work materially improves a single gray area or assumptions pass. `blueprint-researcher` may return options, tradeoffs, rationale, complexity or impact surface, and cited evidence for one area, but the parent command owns synthesis, questions, persistence, and routing. If no suitable subagent is available, use the single-agent fallback from the runtime contract: handle one area at a time, compress carry-forward context, checkpoint it, then move on without reducing output richness.
+12. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
+13. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-discuss-phase` as complete. If repair cannot finish safely, leave the checkpoint intact and report the validation blocker.
+14. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
+15. Require explicit overwrite confirmation before replacing existing context artifacts.
+16. End with a next safe action inside the implemented Blueprint surface and leave `STATE.md` legible about that next step.
 
 ### `research-phase`
 

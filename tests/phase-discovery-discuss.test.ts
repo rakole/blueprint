@@ -81,6 +81,13 @@ test("discuss-phase command references only registered phase-discovery tool name
     path.join(repoRoot, "docs/commands/discuss-phase.md"),
     "utf8"
   );
+  const discussReference = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
   const runtimeReference = await readFile(
     path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
     "utf8"
@@ -132,10 +139,18 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /phase\.discussion-log/);
   assert.match(commandFile, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
   assert.match(commandFile, /blocking anti-pattern check/i);
+  assert.match(commandFile, /discuss-phase-runtime-contract\.md/);
+  assert.match(commandFile, /contract\.authoringTemplate.*schema authority/i);
   assert.match(commandFile, /prior-context sweep/i);
   assert.match(commandFile, /dedicated todo\/backlog file crawl/i);
   assert.match(commandFile, /codebase scout/i);
+  assert.match(commandFile, /capability-gated subagents/i);
+  assert.match(commandFile, /blueprint-researcher[\s\S]*one gray area|one gray area[\s\S]*blueprint-researcher/i);
+  assert.match(commandFile, /single-agent fallback/i);
+  assert.match(commandFile, /compress carry-forward context/i);
   assert.match(commandFile, /stronger assumptions-mode analysis/i);
+  assert.match(commandFile, /evidence-backed saved context/i);
+  assert.match(commandFile, /consequences if assumptions are wrong/i);
   assert.match(commandFile, /progress recap|session legibility/i);
   assert.match(commandFile, /checkpoint-per-area|checkpoint per area/i);
   assert.match(commandFile, /PROJECT\.md/);
@@ -153,6 +168,8 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
 
   assert.match(skillFile, /blocking anti-pattern check/i);
+  assert.match(skillFile, /discuss-phase-runtime-contract\.md/);
+  assert.match(skillFile, /contract\.authoringTemplate.*schema authority/i);
   assert.match(skillFile, /Execution profile for `\/blu-discuss-phase`: `long-running-mutation`\./);
   assert.match(skillFile, /shared stage vocabulary explicit during non-trivial `\/blu-discuss-phase` runs/i);
   assert.match(skillFile, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
@@ -162,6 +179,10 @@ test("discuss-phase command references only registered phase-discovery tool name
     /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
   );
   assert.match(skillFile, /focused follow-up or retry the question/i);
+  assert.match(skillFile, /capability-gated subagents/i);
+  assert.match(skillFile, /single-agent fallback/i);
+  assert.match(skillFile, /compress carry-forward context/i);
+  assert.match(skillFile, /validation issues[\s\S]*repair/i);
   assert.match(skillFile, /saved-artifact sweep, not a dedicated todo\/backlog file crawl/i);
   assert.match(skillFile, /Blueprint-friendly lenses/i);
   assert.match(skillFile, /prior-context sweep/i);
@@ -178,11 +199,15 @@ test("discuss-phase command references only registered phase-discovery tool name
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md"
   ]);
-  assert.deepEqual(contract.skillInputs.commandSpecific, ["docs/commands/discuss-phase.md"]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "docs/commands/discuss-phase.md",
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+  ]);
   assert.deepEqual(contract.skillInputs.effective, [
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md",
-    "docs/commands/discuss-phase.md"
+    "docs/commands/discuss-phase.md",
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
   ]);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
@@ -194,7 +219,7 @@ test("discuss-phase command references only registered phase-discovery tool name
     false
   );
 
-  assert.match(docFile, /not a claim of full GSD parity/i);
+  assert.match(docFile, /retained GSD thinking-partner behavior/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
   assert.match(docFile, /resolved scope, active stage, pending gate, execution mode, next safe action/);
@@ -205,9 +230,16 @@ test("discuss-phase command references only registered phase-discovery tool name
   );
   assert.match(docFile, /## Behavior Stages/);
   assert.match(docFile, /answer validation and retry/i);
+  assert.match(docFile, /discuss-phase-runtime-contract\.md/);
+  assert.match(docFile, /contract\.authoringTemplate/);
+  assert.match(docFile, /capability-gated sidecar research/i);
+  assert.match(docFile, /single-agent fallback/i);
+  assert.match(docFile, /compressed carry-forward context/i);
+  assert.match(docFile, /evidence behind decisions/i);
+  assert.match(docFile, /repair.*validation issues/i);
   assert.match(docFile, /prior-context sweeps across saved phase artifacts/i);
   assert.match(docFile, /methodology-shaped gray-area lenses/i);
-  assert.match(docFile, /blocking anti-pattern check before save/i);
+  assert.match(docFile, /blocking anti-pattern check/i);
   assert.match(docFile, /folding deferred ideas into the saved record/i);
   assert.match(docFile, /prior-context sweeps/i);
   assert.match(docFile, /dedicated todo\/backlog file crawl/i);
@@ -231,6 +263,22 @@ test("discuss-phase command references only registered phase-discovery tool name
     discussRuntimeRow,
     /The contract does not promise a dedicated todo\/backlog file crawl\./i
   );
+  assert.match(discussRuntimeRow, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussRuntimeRow, /contract\.authoringTemplate/i);
+  assert.match(discussRuntimeRow, /capability-gated `blueprint-researcher` sidecars/i);
+  assert.match(discussRuntimeRow, /single-agent fallback/i);
+  assert.match(discussRuntimeRow, /repair returned artifact validation issues/i);
+
+  assert.match(discussReference, /# Discuss Phase Runtime Contract/);
+  assert.match(discussReference, /schema authority/i);
+  assert.match(discussReference, /Capability-Gated Agent Use/);
+  assert.match(discussReference, /Single-Agent Fallback/);
+  assert.match(discussReference, /compress carry-forward context/i);
+  assert.match(discussReference, /Assumptions Mode/);
+  assert.match(discussReference, /consequence if the assumption is wrong/i);
+  assert.match(discussReference, /Artifact Authoring/);
+  assert.match(discussReference, /Validation And Repair/);
+  assert.match(discussReference, /status: "invalid"/);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {

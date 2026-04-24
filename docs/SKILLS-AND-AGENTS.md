@@ -59,7 +59,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `map-codebase` uses `blueprint-mapper`.
 - `next` and `do` remain router-owned and do not require dedicated subagents.
 - `pause-work` and `resume-work` remain governance-owned and do not require dedicated subagents.
-- `discuss-phase` may use `blueprint-researcher` selectively.
+- `discuss-phase` may use `blueprint-researcher` selectively for one gray area or assumptions pass, but must preserve the single-agent one-area-at-a-time fallback from `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
 - `research-phase` uses `blueprint-researcher`.
 - `ui-phase` uses `blueprint-ui-designer` for draft generation and `blueprint-checker` for bounded revision review before persistence.
 - `list-phase-assumptions` may use `blueprint-researcher`.

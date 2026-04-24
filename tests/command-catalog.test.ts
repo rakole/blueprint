@@ -296,6 +296,9 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
     {
       command: "discuss-phase",
       ownDoc: "docs/commands/discuss-phase.md",
+      extraInputs: [
+        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+      ],
       siblingDocs: [
         "docs/commands/research-phase.md",
         "docs/commands/ui-phase.md",
@@ -305,6 +308,7 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
     {
       command: "research-phase",
       ownDoc: "docs/commands/research-phase.md",
+      extraInputs: [],
       siblingDocs: [
         "docs/commands/discuss-phase.md",
         "docs/commands/ui-phase.md",
@@ -314,6 +318,7 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
     {
       command: "ui-phase",
       ownDoc: "docs/commands/ui-phase.md",
+      extraInputs: [],
       siblingDocs: [
         "docs/commands/discuss-phase.md",
         "docs/commands/research-phase.md",
@@ -323,6 +328,7 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
     {
       command: "list-phase-assumptions",
       ownDoc: "docs/commands/list-phase-assumptions.md",
+      extraInputs: [],
       siblingDocs: [
         "docs/commands/discuss-phase.md",
         "docs/commands/research-phase.md",
@@ -335,8 +341,15 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
     const contract = await buildBlueprintCommandRuntimeContractResource(expectation.command);
 
     assert.deepEqual(contract.skillInputs.shared, sharedInputs);
-    assert.deepEqual(contract.skillInputs.commandSpecific, [expectation.ownDoc]);
-    assert.deepEqual(contract.skillInputs.effective, [...sharedInputs, expectation.ownDoc]);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [
+      expectation.ownDoc,
+      ...expectation.extraInputs
+    ]);
+    assert.deepEqual(contract.skillInputs.effective, [
+      ...sharedInputs,
+      expectation.ownDoc,
+      ...expectation.extraInputs
+    ]);
 
     for (const siblingDoc of expectation.siblingDocs) {
       assert.equal(contract.skillInputs.effective.includes(siblingDoc), false);
