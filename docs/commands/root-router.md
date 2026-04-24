@@ -83,12 +83,13 @@
 ## Edge Cases
 
 - The user asks for an omitted command name that existed in earlier planning.
-- The project is partially initialized, so routing needs to prefer `health` or `new-project` instead of pretending everything is ready.
+- The project is partially initialized, so routing needs to prefer `health` instead of pretending everything is ready.
+- The repo is an unmapped brownfield or `mapping-incomplete`, so routing needs to prefer `map-codebase`; the repo is `mapped-only`, so routing needs to prefer `new-project`.
 - The next action is blocked by missing artifacts and the router needs to explain the correct prerequisite command.
 
 ## Failure Modes And Recovery
 
-- Fall back to `help` or `new-project` when Blueprint is not initialized.
+- Fall back to `map-codebase` when Blueprint is not initialized on a brownfield repo, to `new-project` for greenfield/scaffold-only uninitialized or `mapped-only` repos, and to `health` for broken partial core state.
 - Never hallucinate unsupported commands, hidden aliases, or undocumented maintenance behavior.
 - Never recommend a command whose catalog entry is not `implemented`.
 - Prefer a safe recommendation over a speculative dispatch when state inspection is incomplete.
@@ -106,4 +107,5 @@
 - Router help fixture.
 - Router recommendation fixture.
 - Router blocked-state fixture.
+- Router brownfield map-first fixture.
 - Router config-warning fixture.

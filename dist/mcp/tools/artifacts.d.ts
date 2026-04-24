@@ -19,7 +19,7 @@ declare const CODEBASE_ARTIFACT_CONTRACT_IDS: readonly ["codebase.stack", "codeb
 type CodebaseArtifactContractId = (typeof CODEBASE_ARTIFACT_CONTRACT_IDS)[number];
 export declare const SUPPORTED_SCAFFOLD_ARTIFACTS: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/", ".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"];
 export type SupportedScaffoldArtifact = (typeof SUPPORTED_SCAFFOLD_ARTIFACTS)[number];
-export type BlueprintReadiness = "uninitialized" | "partial" | "initialized";
+export type BlueprintReadiness = "uninitialized" | "mapping-incomplete" | "mapped-only" | "partial" | "initialized";
 export type BootstrapRepoShape = "greenfield" | "scaffold-only" | "brownfield";
 export type BootstrapRequirementScope = "committed" | "deferred" | "out_of_scope";
 export type BootstrapRequirementRow = {

@@ -27,7 +27,7 @@
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
-- A Blueprint project must already exist.
+- A Blueprint project may be uninitialized, codebase-only, partial, or initialized. Codebase-only states are intentional brownfield bootstrap states, not broken partial bootstrap.
 
 ## Outputs
 
@@ -92,7 +92,9 @@
 
 ## Failure Modes And Recovery
 
-- If the repo is uninitialized, route to `/blu-new-project`.
+- If the repo is uninitialized and brownfield, route to `/blu-map-codebase`; if it is uninitialized and greenfield or scaffold-only, route to `/blu-new-project`.
+- If the repo is `mapping-incomplete`, route to `/blu-map-codebase`.
+- If the repo is `mapped-only`, route to `/blu-new-project`.
 - If the repo is partial, route to `/blu-health`.
 - If the natural next command is blocked, explain the missing substrate and keep the recommendation inside the implemented Wave 0 surface.
 - If the repo is waiting on a missing artifact, verification debt, or blocked substrate, say so explicitly.
@@ -107,7 +109,9 @@
 
 ## Test Cases
 
-- Fresh repo fixture.
+- Greenfield/scaffold-only uninitialized repo fixture.
+- Brownfield uninitialized repo fixture.
+- Mapping-incomplete and mapped-only codebase fixtures.
 - Partially initialized Blueprint repo fixture.
 - Config-warning fixture.
 - Direct `progress` happy-path fixture.

@@ -21,6 +21,16 @@ Blueprint-managed repositories store project state here:
   workstreams/
 ```
 
+## Bootstrap Readiness States
+
+`blueprint_project_status` and related read tools use these project readiness states:
+
+- `uninitialized`: no `.blueprint/` tree exists. Brownfield repos in this state route to `/blu-map-codebase`; greenfield and scaffold-only repos route to `/blu-new-project`.
+- `mapping-incomplete`: `.blueprint/` contains only an interrupted, missing, or invalid `.blueprint/codebase/` mapping bundle. This is an intentional codebase-only state and routes to `/blu-map-codebase`, not `/blu-health`.
+- `mapped-only`: `.blueprint/` contains a valid seven-document `.blueprint/codebase/` bundle but no core project bootstrap artifacts. This is an intentional codebase-only state and routes to `/blu-new-project`; validation treats it as healthy.
+- `partial`: core project bootstrap artifacts are broken or incomplete. This routes to `/blu-health`.
+- `initialized`: core project bootstrap artifacts are present and normal workflow routing can continue.
+
 In shared docs, `~/.<host>/blueprint/` means `~/.gemini/blueprint/` on Gemini CLI and `~/.tabnine/blueprint/` on Tabnine CLI.
 
 ## Read-Only MCP Resource Views

@@ -32,6 +32,7 @@
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable, with waiting state called out when Blueprint is still uninitialized or partially initialized.
+- Codebase-only states are also called out: `mapping-incomplete` routes to `/blu-map-codebase`, while `mapped-only` routes to `/blu-new-project`.
 - Repo side effects: No durable artifact writes are planned.
 - Safe command recommendations must be limited to catalog entries whose `implemented` field is `true`, and blocked or planned commands must be described as not runnable.
 
@@ -84,14 +85,16 @@
 ## Edge Cases
 
 - The repo already contains a partial `.blueprint/` tree from an earlier attempt.
+- The repo contains a codebase-only `.blueprint/` tree from map-codebase. `mapping-incomplete` routes to `/blu-map-codebase`; `mapped-only` routes to `/blu-new-project`.
 - The user asks for a documented-but-blocked command.
 
 ## Failure Modes And Recovery
 
-- If Blueprint is not initialized, prefer `/blu-new-project`.
+- If Blueprint is not initialized on a brownfield repo, prefer `/blu-map-codebase`; for greenfield or scaffold-only uninitialized repos, prefer `/blu-new-project`.
+- If Blueprint is `mapping-incomplete`, prefer `/blu-map-codebase`; if it is `mapped-only`, prefer `/blu-new-project`.
 - If Blueprint is partial, prefer `/blu-health`.
 - If a requested command is blocked, explain the missing substrate instead of presenting it as runnable.
-- If the current state is waiting on a missing artifact, verification debt, or blocked substrate, say so plainly instead of masking it as a general recommendation.
+- If the current state is waiting on a mapping prerequisite, missing artifact, verification debt, or blocked substrate, say so plainly instead of masking it as a general recommendation.
 - Keep the next safe action explicit even when the current state is only a waiting state.
 
 ## Acceptance Criteria
@@ -105,5 +108,6 @@
 ## Test Cases
 
 - Fresh repo fixture.
+- Brownfield map-first fixture.
 - Partially initialized Blueprint repo fixture.
 - Direct `help` happy-path fixture.

@@ -34,7 +34,12 @@ Optional bounded subagents permitted by the skill contract:
 - `blueprint-project-researcher`
 - `blueprint-roadmapper`
 
-Remember that `--auto` behavior, brownfield routing, saved-default handling, workflow-preference capture, staged execution, validation, revision loops, and next-safe-action routing now live in the skill package references above.
+Remember that `bootstrapMode` behavior, brownfield map-first routing, saved-default handling, workflow-preference capture, staged execution, validation, revision loops, and next-safe-action routing now live in the skill package references above.
+- Call `mcp_blueprint_blueprint_project_status` before the first write. If status shows an unmapped brownfield repo or `mapping-incomplete`, route to `/blu-map-codebase` and do not call `mcp_blueprint_blueprint_project_init`.
+- If status is `mapped-only`, call `mcp_blueprint_blueprint_project_init` without treating the existing `.blueprint/codebase/*.md` bundle as an overwrite conflict; preserve those codebase docs.
+- Pass `bootstrapMode: "interactive"` unless the user explicitly requested automatic synthesis with `--auto`.
+- In interactive mode, call `mcp_blueprint_blueprint_project_init` only with a sufficient `bootstrapSeed`; do not ask the MCP tool to synthesize purpose, requirements, roadmap, state, config, or phases from a missing or thin seed.
+- In auto mode, synthesis is allowed only because the user requested it and only after brownfield map-first gating has passed.
 
 Response requirements:
 - Summarize created `.blueprint/` paths, including `.blueprint/config.json`.

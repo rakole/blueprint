@@ -17792,6 +17792,33 @@ var init_config = __esm({
 // src/mcp/tools/artifacts.ts
 import { promises as fs } from "node:fs";
 import path3 from "node:path";
+async function assessRootBootstrapShape(projectRoot) {
+  const entries = await fs.readdir(projectRoot, { withFileTypes: true });
+  const substantiveEntries = entries.filter(
+    (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
+  );
+  const hasSourceDirectories = substantiveEntries.some(
+    (entry) => entry.isDirectory() && BOOTSTRAP_SOURCE_DIRECTORIES.has(entry.name)
+  );
+  const hasBuildManifest = substantiveEntries.some(
+    (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
+  );
+  let repoShape = "greenfield";
+  const reasons = [];
+  if (hasSourceDirectories || hasBuildManifest && substantiveEntries.length >= 2 || substantiveEntries.length >= 4) {
+    repoShape = "brownfield";
+    reasons.push("Repo already contains substantive implementation or build structure.");
+  } else if (hasBuildManifest || substantiveEntries.length >= 2) {
+    repoShape = "scaffold-only";
+    reasons.push("Repo contains initial scaffolding but not enough evidence for a mapped brownfield flow.");
+  } else {
+    reasons.push("Repo shape still looks close to an empty or freshly created project.");
+  }
+  return {
+    repoShape,
+    reasons
+  };
+}
 function normalizeList(values, fallback) {
   const normalized = (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
   return normalized.length > 0 ? normalized : fallback;
@@ -18201,7 +18228,8 @@ function parseCaptureIndexDocument(content, target) {
   };
 }
 function buildDefaultBootstrapSeed(projectName, assessment, seed) {
-  const defaultVision = assessment.repoShape === "brownfield" ? `Bring ${projectName} under Blueprint with a trustworthy understanding of the existing repo, durable requirements, and a roadmap that stays provisional until the codebase is mapped.` : `Establish ${projectName} with a durable Blueprint bootstrap draft so later discovery, planning, and execution commands inherit clear project intent and requirement traceability.`;
+  const brownfieldNeedsMapping = assessment.repoShape === "brownfield" && !assessment.codebaseMapped;
+  const defaultVision = brownfieldNeedsMapping ? `Bring ${projectName} under Blueprint with a trustworthy understanding of the existing repo, durable requirements, and a roadmap that stays provisional until the codebase is mapped.` : assessment.repoShape === "brownfield" ? `Bring ${projectName} under Blueprint with the saved codebase map, durable requirements, and a roadmap grounded in current repo evidence.` : `Establish ${projectName} with a durable Blueprint bootstrap draft so later discovery, planning, and execution commands inherit clear project intent and requirement traceability.`;
   const defaultPrimaryAudience = assessment.repoShape === "brownfield" ? ["Maintainers aligning an existing codebase with Blueprint-managed planning."] : ["Maintainers shaping the first milestone and execution path for the repo."];
   const defaultSecondaryAudience = [
     "Future contributors who need durable project context before they plan or implement changes."
@@ -18215,7 +18243,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
   const defaultNonGoals = [
     "Hidden runtime conventions.",
     "Undocumented aliases.",
-    assessment.repoShape === "brownfield" ? "Treating the roadmap as fully durable before `/blu-map-codebase` captures the existing repo." : "Prompt-only bootstrap artifacts that skip requirement or roadmap traceability."
+    brownfieldNeedsMapping ? "Treating the roadmap as fully durable before `/blu-map-codebase` captures the existing repo." : assessment.repoShape === "brownfield" ? "Replacing or ignoring the saved `.blueprint/codebase/` mapping during bootstrap." : "Prompt-only bootstrap artifacts that skip requirement or roadmap traceability."
   ];
   const defaultRequirements = assessment.repoShape === "brownfield" ? [
     {
@@ -18236,11 +18264,11 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
     },
     {
       id: "RQ-03",
-      scope: "deferred",
-      group: "Codebase mapping follow-through",
-      requirement: "Map the existing codebase before treating later roadmap phases as durable execution commitments.",
+      scope: brownfieldNeedsMapping ? "deferred" : "committed",
+      group: brownfieldNeedsMapping ? "Codebase mapping follow-through" : "Mapped baseline",
+      requirement: brownfieldNeedsMapping ? "Map the existing codebase before treating later roadmap phases as durable execution commitments." : "Use the saved codebase mapping bundle as bootstrap evidence for requirements and roadmap scope.",
       status: "Pending",
-      notes: "Unmapped brownfield repos should route to `/blu-map-codebase`."
+      notes: brownfieldNeedsMapping ? "Unmapped brownfield repos should route to `/blu-map-codebase`." : "Map-first bootstrap has already produced the codebase bundle."
     },
     {
       id: "RQ-04",
@@ -18284,7 +18312,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       notes: "Keeps v1 bootstrap narrower than later work streams."
     }
   ];
-  const defaultRoadmapPhases = assessment.repoShape === "brownfield" ? [
+  const defaultRoadmapPhases = brownfieldNeedsMapping ? [
     {
       phase: "1",
       title: "Map Existing Codebase",
@@ -18309,6 +18337,27 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
         "Later execution planning can continue without losing requirement traceability."
       ]
     }
+  ] : assessment.repoShape === "brownfield" ? [
+    {
+      phase: "1",
+      title: "Align Requirements With Mapped Codebase",
+      objective: "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
+      requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
+      successCriteria: [
+        "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
+        "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
+      ]
+    },
+    {
+      phase: "2",
+      title: "Plan First Brownfield Delivery Slice",
+      objective: "Shape the first implementation slice from mapped repo constraints and durable requirements.",
+      requirementIds: ["RQ-02", "RQ-03"],
+      successCriteria: [
+        "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
+        "Requirement traceability stays intact as brownfield work moves toward execution."
+      ]
+    }
   ] : [
     {
       phase: "1",
@@ -18331,9 +18380,12 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       ]
     }
   ];
-  const defaultAssumptions = assessment.repoShape === "brownfield" ? [
+  const defaultAssumptions = brownfieldNeedsMapping ? [
     "The repo already contains implementation context that should be mapped before the roadmap is treated as durable.",
     "Bootstrap artifacts should stay explicit about which parts are draft assumptions."
+  ] : assessment.repoShape === "brownfield" ? [
+    "The saved codebase mapping is the baseline for bootstrap scope.",
+    "Bootstrap artifacts should preserve mapped evidence rather than replacing it."
   ] : [
     "The first milestone should stay small enough to validate Blueprint's workflow on this repo.",
     "Bootstrap artifacts can start as draft planning inputs as long as they are no longer placeholder-only shells."
@@ -18378,7 +18430,7 @@ function renderProjectArtifact(context) {
     const ids = (groupedRequirements.get(scope) ?? []).map((requirement) => requirement.id);
     return `- ${requirementScopeSummaryLabel(scope)}: ${ids.length > 0 ? ids.join(", ") : "none"}`;
   }).join("\n");
-  const bootstrapShapeLine = context.bootstrapAssessment.repoShape === "brownfield" ? "Brownfield bootstrap should stay provisional until `/blu-map-codebase` captures the current repo." : "Greenfield bootstrap can shape v1 directly, but deferred cuts still remain visible.";
+  const bootstrapShapeLine = context.bootstrapAssessment.repoShape === "brownfield" && !context.bootstrapAssessment.codebaseMapped ? "Brownfield bootstrap should stay provisional until `/blu-map-codebase` captures the current repo." : context.bootstrapAssessment.repoShape === "brownfield" ? "Brownfield bootstrap can use the saved `.blueprint/codebase/` map as durable baseline evidence." : "Greenfield bootstrap can shape v1 directly, but deferred cuts still remain visible.";
   return `# ${context.projectName}
 
 ## Vision
@@ -18476,7 +18528,7 @@ ${scopeSections}
 
 - Keep every requirement ID referenced from \`.blueprint/ROADMAP.md\` before execution planning begins.
 - Preserve requirement IDs across later phase artifacts instead of silently renumbering them.
-- ${context.bootstrapAssessment.repoShape === "brownfield" ? "Treat brownfield roadmap coverage as provisional until `/blu-map-codebase` has captured the existing repo." : "Use these requirements as the durable baseline for later discovery and planning."}
+- ${context.bootstrapAssessment.repoShape === "brownfield" && !context.bootstrapAssessment.codebaseMapped ? "Treat brownfield roadmap coverage as provisional until `/blu-map-codebase` has captured the existing repo." : context.bootstrapAssessment.repoShape === "brownfield" ? "Use the saved `.blueprint/codebase/` mapping as durable baseline evidence for later discovery and planning." : "Use these requirements as the durable baseline for later discovery and planning."}
 
 ## Open Questions
 
@@ -20406,6 +20458,8 @@ async function listImmediateDirectories(rootPath) {
 async function inspectBlueprintArtifacts(projectRoot) {
   const blueprintRoot = getBlueprintRoot(projectRoot);
   const blueprintRootExists = await pathExists(blueprintRoot);
+  const codebaseRootExists = await pathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_CODEBASE_PATH));
+  const rootShape = await assessRootBootstrapShape(projectRoot);
   const corePresent = [];
   const coreMissing = [];
   for (const artifact of CORE_PROJECT_ARTIFACTS) {
@@ -20451,7 +20505,16 @@ async function inspectBlueprintArtifacts(projectRoot) {
       codebaseMissing.push(artifact);
     }
   }
-  const readiness = !blueprintRootExists ? "uninitialized" : coreMissing.length === 0 ? "initialized" : "partial";
+  let readiness = "uninitialized";
+  if (!blueprintRootExists) {
+    readiness = "uninitialized";
+  } else if (coreMissing.length === 0) {
+    readiness = "initialized";
+  } else if (corePresent.length === 0 && (codebaseRootExists || rootShape.repoShape === "brownfield")) {
+    readiness = codebaseMissing.length === 0 && codebaseInvalid.length === 0 && codebasePresent.length > 0 ? "mapped-only" : "mapping-incomplete";
+  } else {
+    readiness = "partial";
+  }
   return {
     readiness,
     blueprintRootExists,
@@ -20472,30 +20535,12 @@ async function inspectBlueprintArtifacts(projectRoot) {
   };
 }
 async function assessBootstrapRepoShape(projectRoot, inspection) {
-  const entries = await fs.readdir(projectRoot, { withFileTypes: true });
-  const substantiveEntries = entries.filter(
-    (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
-  );
-  const hasSourceDirectories = substantiveEntries.some(
-    (entry) => entry.isDirectory() && BOOTSTRAP_SOURCE_DIRECTORIES.has(entry.name)
-  );
-  const hasBuildManifest = substantiveEntries.some(
-    (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
-  );
+  const rootShape = await assessRootBootstrapShape(projectRoot);
   const codebaseMapped = inspection?.codebase.mapped ?? false;
-  let repoShape = "greenfield";
-  const reasons = [];
-  if (hasSourceDirectories || hasBuildManifest && substantiveEntries.length >= 2 || substantiveEntries.length >= 4) {
-    repoShape = "brownfield";
-    reasons.push("Repo already contains substantive implementation or build structure.");
-  } else if (hasBuildManifest || substantiveEntries.length >= 2) {
-    repoShape = "scaffold-only";
-    reasons.push("Repo contains initial scaffolding but not enough evidence for a mapped brownfield flow.");
-  } else {
-    reasons.push("Repo shape still looks close to an empty or freshly created project.");
-  }
+  const repoShape = rootShape.repoShape;
+  const reasons = [...rootShape.reasons];
   const provisionalRoadmap = repoShape === "brownfield" && !codebaseMapped;
-  const recommendedNextAction = provisionalRoadmap ? "Run /blu-map-codebase" : "Run /blu-progress";
+  const recommendedNextAction = provisionalRoadmap || inspection?.readiness === "mapping-incomplete" ? "Run /blu-map-codebase" : inspection?.readiness === "mapped-only" ? "Run /blu-new-project" : "Run /blu-progress";
   if (provisionalRoadmap) {
     reasons.push("Brownfield repos should map the existing codebase before later roadmap phases are treated as durable.");
   }
@@ -20747,9 +20792,11 @@ async function blueprintArtifactScaffold(args = {}) {
 async function blueprintArtifactList(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const missing = [...inspection.core.missing];
+  const missing = inspection.readiness === "mapped-only" || inspection.readiness === "mapping-incomplete" ? [] : [...inspection.core.missing];
   const warnings = [];
-  if (inspection.codebase.present.length > 0 && inspection.codebase.missing.length > 0) {
+  if (inspection.readiness === "mapping-incomplete" && inspection.codebase.missing.length > 0) {
+    missing.push(...inspection.codebase.missing);
+  } else if (inspection.codebase.present.length > 0 && inspection.codebase.missing.length > 0) {
     missing.push(...inspection.codebase.missing);
   }
   if (inspection.codebase.invalid.length > 0) {
@@ -20784,6 +20831,14 @@ async function blueprintArtifactMutateIndex(args) {
     return {
       ...buildEmptyCaptureMutationResult(targetPath, "project_missing", [
         "Blueprint capture commands require an initialized project. Run /blu-new-project before writing capture artifacts."
+      ])
+    };
+  }
+  if (inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only") {
+    const nextAction = inspection.readiness === "mapping-incomplete" ? "Run /blu-map-codebase to finish the codebase mapping bundle before capture writes." : "Run /blu-new-project to bootstrap project artifacts before capture writes.";
+    return {
+      ...buildEmptyCaptureMutationResult(targetPath, "project_missing", [
+        `Blueprint capture commands require initialized core project artifacts. ${nextAction}`
       ])
     };
   }
@@ -21235,14 +21290,20 @@ async function blueprintArtifactValidate(args = {}) {
   const allowLegacyBootstrapShell = inspection.phases.some(
     (artifact) => /phase-discovery/i.test(artifact)
   );
+  const bootstrapAssessment = await assessBootstrapRepoShape(projectRoot, inspection);
   if (!inspection.blueprintRootExists) {
     issues.push(`Missing ${BLUEPRINT_DIR}/ directory.`);
-    suggestedRepairs.add("Run /blu-new-project to initialize Blueprint artifacts.");
+    suggestedRepairs.add(
+      bootstrapAssessment.repoShape === "brownfield" ? "Run /blu-map-codebase to create the seven-document codebase bundle before project bootstrap." : "Run /blu-new-project to initialize Blueprint artifacts."
+    );
   }
-  for (const artifact of inspection.core.missing) {
-    issues.push(`Missing core artifact: ${artifact}`);
+  const codebaseOnly = inspection.readiness === "mapped-only" || inspection.readiness === "mapping-incomplete";
+  if (!codebaseOnly) {
+    for (const artifact of inspection.core.missing) {
+      issues.push(`Missing core artifact: ${artifact}`);
+    }
   }
-  if (inspection.core.missing.length > 0) {
+  if (inspection.core.missing.length > 0 && !codebaseOnly) {
     suggestedRepairs.add("Run /blu-health to inspect partial Blueprint state.");
     suggestedRepairs.add("Use /blu-health --repair only after reviewing the proposed writes.");
   }
@@ -21282,6 +21343,10 @@ async function blueprintArtifactValidate(args = {}) {
     const invalidText = inspection.codebase.invalid.length > 0 ? ` invalid ${inspection.codebase.invalid.join(", ")}` : "";
     issues.push(`Codebase artifact bundle is incomplete or non-canonical:${missingText}${invalidText}`);
     suggestedRepairs.add("Re-run /blu-map-codebase to recreate the missing codebase artifacts.");
+  }
+  if (inspection.readiness === "mapping-incomplete" && inspection.codebase.present.length === 0) {
+    issues.push("Codebase mapping bundle has not been written yet.");
+    suggestedRepairs.add("Run /blu-map-codebase to create the seven-document codebase bundle.");
   }
   if (inspection.codebase.invalid.length > 0) {
     warnings.push(
@@ -21812,6 +21877,11 @@ async function blueprintArtifactReportWrite(args) {
       "Blueprint report writes require an initialized or partial Blueprint project with a .blueprint/ directory."
     );
   }
+  if (inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only") {
+    throw new Error(
+      "Blueprint report writes require initialized core project artifacts. Finish map-codebase/new-project bootstrap before writing reports."
+    );
+  }
   const pathValue = buildBlueprintReportPath(args.reportName);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const normalizedContent = args.content.endsWith("\n") ? args.content : `${args.content}
@@ -21881,8 +21951,16 @@ async function blueprintCodebaseArtifactWrite(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   if (inspection.readiness === "uninitialized") {
+    const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+    if (bootstrapDiagnostics.brownfield.repoShape !== "brownfield") {
+      throw new Error(
+        "Blueprint codebase writes before project bootstrap are only allowed for brownfield map-codebase runs. Run /blu-new-project first for greenfield or scaffold-only repos."
+      );
+    }
+  }
+  if (inspection.readiness === "partial") {
     throw new Error(
-      "Blueprint codebase writes require an initialized or partial Blueprint project with a .blueprint/ directory."
+      "Blueprint codebase writes cannot proceed while core .blueprint artifacts are partially initialized. Run /blu-health before writing codebase artifacts."
     );
   }
   const pathValue = resolveCodebaseArtifactPath(args.artifactId);
@@ -23247,7 +23325,13 @@ async function inspectMilestoneAuditReportStatus(args) {
 }
 async function deriveNextAction(args) {
   if (args.projectStatus === "uninitialized") {
-    return blueprintRunDirectCommand("new-project");
+    return args.bootstrapRouting.brownfieldDetected && !args.bootstrapRouting.codebaseMapped ? `${blueprintRunDirectCommand("map-codebase")} before ${blueprintDirectCommand("new-project")} so brownfield bootstrap starts from a mapped baseline` : blueprintRunDirectCommand("new-project");
+  }
+  if (args.projectStatus === "mapping-incomplete") {
+    return `${blueprintRunDirectCommand("map-codebase")} to finish the interrupted codebase-only mapping bundle`;
+  }
+  if (args.projectStatus === "mapped-only") {
+    return `${blueprintRunDirectCommand("new-project")} to bootstrap project artifacts while preserving the mapped codebase docs`;
   }
   if (args.projectStatus === "partial") {
     return `${blueprintRunDirectCommand("health")} to inspect the partial .blueprint state`;
@@ -23550,12 +23634,48 @@ async function loadBlueprintState(cwd) {
 async function blueprintStateLoad(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
-  const syncedState = inspection.readiness === "uninitialized" ? null : await buildSyncedState(projectRoot);
-  const state = inspection.readiness === "uninitialized" ? await loadBlueprintState(projectRoot) : syncedState.state;
-  const currentPhase2 = inspection.readiness === "uninitialized" ? null : state.currentPhase;
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  const bootstrapRouting = {
+    brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
+    codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
+  };
+  const readOnlyBootstrapState = inspection.readiness === "uninitialized" || inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only";
+  const syncedState = readOnlyBootstrapState ? null : await buildSyncedState(projectRoot);
+  const state = readOnlyBootstrapState ? {
+    ...await loadBlueprintState(projectRoot),
+    projectStatus: inspection.readiness,
+    currentPhase: "",
+    activeCommand: inspection.readiness === "mapping-incomplete" ? blueprintDirectCommand("map-codebase") : inspection.readiness === "mapped-only" ? blueprintDirectCommand("new-project") : DEFAULT_STATE.activeCommand,
+    nextAction: await deriveNextAction({
+      projectStatus: inspection.readiness,
+      blockers: [],
+      currentPhase: null,
+      currentMilestone: null,
+      allPhasesComplete: false,
+      milestoneAuditReport: emptyMilestoneAuditReportStatus(),
+      hasMilestoneCompletion: false,
+      hasMilestoneSummary: false,
+      phaseArtifacts: await inspectCurrentPhaseArtifacts(projectRoot, inspection.phases, null),
+      milestoneEvidence: {
+        missingVerificationPhases: [],
+        missingUatPhases: [],
+        verificationNotReadyPhases: [],
+        pendingSummaryCoveragePhases: [],
+        blockingPhase: null,
+        allCompletedPhasesReady: false,
+        warnings: []
+      },
+      bootstrapRouting,
+      workflow: {
+        researchEnabled: true,
+        uiPhaseEnabled: true
+      }
+    })
+  } : syncedState.state;
+  const currentPhase2 = readOnlyBootstrapState ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
-  const milestoneAuditReport = inspection.readiness === "uninitialized" ? emptyMilestoneAuditReportStatus() : syncedState.milestoneAuditReport;
+  const milestoneAuditReport = readOnlyBootstrapState ? emptyMilestoneAuditReportStatus() : syncedState.milestoneAuditReport;
   return {
     state,
     blockers,
@@ -31468,7 +31588,40 @@ function mergeBootstrapSeed(synthesized, explicit) {
     assumptions: explicit.assumptions ?? synthesized.assumptions
   };
 }
+function bootstrapSeedIsSufficient(seed) {
+  return Boolean(
+    seed?.vision?.trim() && seed.currentMilestone?.trim() && seed.requirements && seed.requirements.length > 0 && seed.roadmapPhases && seed.roadmapPhases.length > 0
+  );
+}
+function assertBootstrapCanWrite(args) {
+  if (args.inspection.readiness === "partial") {
+    throw new Error(
+      `Core .blueprint artifacts are partially initialized. Run ${blueprintRunDirectCommand("health")} to inspect and repair the partial bootstrap before running ${blueprintDirectCommand("new-project")}.`
+    );
+  }
+  if (args.inspection.readiness === "mapping-incomplete") {
+    throw new Error(
+      `Codebase mapping is incomplete or invalid. Run ${blueprintRunDirectCommand("map-codebase")} to finish the seven-document map before running ${blueprintDirectCommand("new-project")}.`
+    );
+  }
+  if (args.inspection.readiness === "initialized" && !args.overwrite) {
+    throw new Error(
+      "Blueprint artifacts already exist at .blueprint/. Re-run only after explicit overwrite confirmation."
+    );
+  }
+  if (args.bootstrapAssessment.repoShape === "brownfield" && !args.bootstrapAssessment.codebaseMapped) {
+    throw new Error(
+      `Brownfield repos must be mapped before project bootstrap writes. Run ${blueprintRunDirectCommand("map-codebase")} first, then re-run ${blueprintDirectCommand("new-project")}.`
+    );
+  }
+  if (args.bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
+    throw new Error(
+      'Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Provide the seed or use bootstrapMode: "auto" only when synthesis is explicitly requested.'
+    );
+  }
+}
 function buildBootstrapSeed(projectName, assessment, repoSummary) {
+  const brownfieldNeedsMapping = assessment.repoShape === "brownfield" && !assessment.codebaseMapped;
   const summarySentence = repoSummary && repoSummary.length > 0 ? repoSummary : `Bootstrap ${projectName} with durable planning artifacts and explicit next-step guidance.`;
   const currentMilestone = assessment.repoShape === "brownfield" ? "v1-existing-repo-alignment" : "v1";
   const requirements = assessment.repoShape === "brownfield" ? [
@@ -31490,11 +31643,11 @@ function buildBootstrapSeed(projectName, assessment, repoSummary) {
     },
     {
       id: "RQ-03",
-      scope: "deferred",
-      group: "Codebase mapping follow-through",
-      requirement: "Map the existing codebase before later roadmap phases are treated as durable implementation commitments.",
+      scope: brownfieldNeedsMapping ? "deferred" : "committed",
+      group: brownfieldNeedsMapping ? "Codebase mapping follow-through" : "Mapped baseline",
+      requirement: brownfieldNeedsMapping ? "Map the existing codebase before later roadmap phases are treated as durable implementation commitments." : "Use the saved codebase mapping bundle as bootstrap evidence for requirements and roadmap scope.",
       status: "Pending",
-      notes: `Routes brownfield repos to \`${blueprintDirectCommand("map-codebase")}\`.`
+      notes: brownfieldNeedsMapping ? `Routes brownfield repos to \`${blueprintDirectCommand("map-codebase")}\`.` : "Map-first bootstrap has already produced the codebase bundle."
     },
     {
       id: "RQ-04",
@@ -31538,7 +31691,7 @@ function buildBootstrapSeed(projectName, assessment, repoSummary) {
       notes: "Keeps the bootstrap narrower than later work streams."
     }
   ];
-  const roadmapPhases = assessment.repoShape === "brownfield" ? [
+  const roadmapPhases = brownfieldNeedsMapping ? [
     {
       phase: "1",
       title: "Map Existing Codebase",
@@ -31558,6 +31711,27 @@ function buildBootstrapSeed(projectName, assessment, repoSummary) {
       successCriteria: [
         "Requirement coverage and roadmap scope are aligned with mapped codebase evidence.",
         "Later execution planning can continue without losing requirement traceability."
+      ]
+    }
+  ] : assessment.repoShape === "brownfield" ? [
+    {
+      phase: "1",
+      title: "Align Requirements With Mapped Codebase",
+      objective: "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
+      requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
+      successCriteria: [
+        "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
+        "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
+      ]
+    },
+    {
+      phase: "2",
+      title: "Plan First Brownfield Delivery Slice",
+      objective: "Shape the first implementation slice from mapped repo constraints and durable requirements.",
+      requirementIds: ["RQ-02", "RQ-03"],
+      successCriteria: [
+        "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
+        "Requirement traceability stays intact as brownfield work moves toward execution."
       ]
     }
   ] : [
@@ -31601,13 +31775,13 @@ function buildBootstrapSeed(projectName, assessment, repoSummary) {
     nonGoals: [
       "Hidden runtime conventions.",
       "Undocumented aliases.",
-      assessment.repoShape === "brownfield" ? "Treating an unmapped brownfield roadmap as a final execution plan." : "Leaving the initial planning artifacts as placeholder shells."
+      brownfieldNeedsMapping ? "Treating an unmapped brownfield roadmap as a final execution plan." : assessment.repoShape === "brownfield" ? "Replacing or ignoring the saved `.blueprint/codebase/` mapping during bootstrap." : "Leaving the initial planning artifacts as placeholder shells."
     ],
     requirements,
     roadmapPhases,
     brownfieldMode: assessment.repoShape,
     assumptions: [
-      assessment.repoShape === "brownfield" ? `Later roadmap phases stay provisional until \`${blueprintDirectCommand("map-codebase")}\` captures the current codebase.` : "The first milestone should stay small enough to validate Blueprint's lifecycle on this repo."
+      brownfieldNeedsMapping ? `Later roadmap phases stay provisional until \`${blueprintDirectCommand("map-codebase")}\` captures the current codebase.` : assessment.repoShape === "brownfield" ? "The saved codebase mapping is the baseline for bootstrap scope." : "The first milestone should stay small enough to validate Blueprint's lifecycle on this repo."
     ]
   };
 }
@@ -31766,20 +31940,24 @@ async function blueprintCommandCatalog() {
 }
 async function blueprintProjectInit(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const blueprintRoot = getBlueprintRoot(projectRoot);
   const overwrite = args.overwrite ?? false;
-  if (await pathExists6(blueprintRoot) && !overwrite) {
-    throw new Error(
-      "Blueprint artifacts already exist at .blueprint/. Re-run only after explicit overwrite confirmation."
-    );
-  }
+  const bootstrapMode = args.bootstrapMode ?? "interactive";
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const initialBootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  assertBootstrapCanWrite({
+    inspection,
+    bootstrapAssessment: initialBootstrapDiagnostics.brownfield,
+    overwrite,
+    bootstrapMode,
+    bootstrapSeed: args.bootstrapSeed
+  });
   const projectName = await inferProjectName2(projectRoot, args.projectName);
-  const bootstrapAssessment = (await inspectBootstrapArtifacts(projectRoot)).brownfield;
+  const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
   const repoSummary = await readRepoSummary(projectRoot);
-  const bootstrapSeed = mergeBootstrapSeed(
+  const bootstrapSeed = bootstrapMode === "auto" ? mergeBootstrapSeed(
     buildBootstrapSeed(projectName, bootstrapAssessment, repoSummary),
     args.bootstrapSeed
-  );
+  ) : args.bootstrapSeed;
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
     overwrite,
@@ -31837,9 +32015,32 @@ async function blueprintProjectStatus(args = {}) {
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const bootstrap = buildBootstrapStatus(bootstrapDiagnostics);
   const initialized = inspection.readiness === "initialized";
-  const partial2 = inspection.readiness === "partial";
   if (!initialized) {
-    const nextAction = inspection.readiness === "uninitialized" ? blueprintRunDirectCommand("new-project") : `Re-run ${blueprintDirectCommand("new-project")} only after you decide how to handle the partial .blueprint state, or ${blueprintRunDirectCommand("health")} to inspect and repair it`;
+    let nextAction = blueprintRunDirectCommand("new-project");
+    let warnings = ["Blueprint has not been initialized yet."];
+    if (inspection.readiness === "uninitialized" && bootstrapDiagnostics.brownfield.repoShape === "brownfield" && !bootstrapDiagnostics.brownfield.codebaseMapped) {
+      nextAction = `${blueprintRunDirectCommand("map-codebase")} before ${blueprintDirectCommand("new-project")} so brownfield bootstrap starts from a mapped baseline`;
+      warnings = [
+        "Brownfield repo is unmapped; map-codebase is the first safe Blueprint write."
+      ];
+    } else if (inspection.readiness === "mapping-incomplete") {
+      nextAction = `${blueprintRunDirectCommand("map-codebase")} to finish the interrupted codebase-only mapping bundle`;
+      warnings = [
+        "Codebase-only Blueprint state is mapping-incomplete, not a core bootstrap.",
+        ...inspection.codebase.warnings
+      ];
+    } else if (inspection.readiness === "mapped-only") {
+      nextAction = `${blueprintRunDirectCommand("new-project")} to bootstrap project artifacts while preserving the mapped codebase docs`;
+      warnings = [
+        "Codebase mapping is complete and project bootstrap has not been written yet."
+      ];
+    } else if (inspection.readiness === "partial") {
+      nextAction = `${blueprintRunDirectCommand("health")} to inspect and repair the partial .blueprint state`;
+      warnings = [
+        "Blueprint is partially initialized.",
+        ...bootstrapDiagnostics.traceabilityWarnings
+      ];
+    }
     return {
       status: inspection.readiness,
       initialized: false,
@@ -31848,11 +32049,8 @@ async function blueprintProjectStatus(args = {}) {
       nextAction,
       bootstrap,
       health: {
-        missingArtifacts: inspection.core.missing,
-        warnings: partial2 ? [
-          "Blueprint is partially initialized.",
-          ...bootstrapDiagnostics.traceabilityWarnings
-        ] : ["Blueprint has not been initialized yet."]
+        missingArtifacts: inspection.readiness === "mapping-incomplete" || inspection.readiness === "mapped-only" ? [] : inspection.core.missing,
+        warnings
       }
     };
   }
@@ -31909,6 +32107,7 @@ var init_project = __esm({
       defaultsPath: string2().optional(),
       overwrite: boolean2().optional(),
       projectName: string2().optional(),
+      bootstrapMode: _enum(["interactive", "auto"]).optional(),
       bootstrapSeed: object2({
         vision: string2().optional(),
         audience: object2({

@@ -30,6 +30,7 @@ type ProjectInitArgs = {
     defaultsPath?: string;
     overwrite?: boolean;
     projectName?: string;
+    bootstrapMode?: "interactive" | "auto";
     bootstrapSeed?: BootstrapSeed;
 };
 type ProjectInitResult = {
@@ -56,7 +57,7 @@ type ProjectStatusArgs = {
     cwd?: string;
 };
 type ProjectStatusResult = {
-    status: "uninitialized" | "partial" | "initialized";
+    status: "uninitialized" | "mapping-incomplete" | "mapped-only" | "partial" | "initialized";
     initialized: boolean;
     currentPhase: string | null;
     currentMilestone: string | null;
@@ -90,6 +91,10 @@ export declare const projectToolDefinitions: ({
         defaultsPath: z.ZodOptional<z.ZodString>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         projectName: z.ZodOptional<z.ZodString>;
+        bootstrapMode: z.ZodOptional<z.ZodEnum<{
+            auto: "auto";
+            interactive: "interactive";
+        }>>;
         bootstrapSeed: z.ZodOptional<z.ZodObject<{
             vision: z.ZodOptional<z.ZodString>;
             audience: z.ZodOptional<z.ZodObject<{

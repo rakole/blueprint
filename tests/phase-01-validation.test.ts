@@ -115,7 +115,7 @@ test("config_set persists normalized project patches and rejects reserved repo k
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
+  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
   const result = await blueprintConfigSet({
     cwd: repoPath,
     patch: {
@@ -157,7 +157,7 @@ test("state_update patches STATE.md deterministically and reports updated fields
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
+  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
   const result = await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
@@ -183,7 +183,7 @@ test("state_update preserves roadmap evolution notes for urgent decimal insertio
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
+  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
   const result = await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
@@ -213,7 +213,7 @@ test("legacy STATE.md files without roadmap evolution notes still parse cleanly"
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
+  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
   await writeFile(
     path.join(repoPath, ".blueprint/STATE.md"),
     `# Blueprint State
@@ -277,7 +277,7 @@ test("project status flags partial Blueprint state instead of pretending the rep
 
   assert.equal(status.initialized, false);
   assert.equal(status.currentPhase, null);
-  assert.match(status.nextAction, /Re-run \/blu-new-project only after you decide/);
+  assert.match(status.nextAction, /\/blu-health/);
   assert.ok(status.health.missingArtifacts.includes(".blueprint/STATE.md"));
   assert.match(status.health.warnings.join("\n"), /partially initialized/i);
 });

@@ -22,8 +22,8 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | Tool | Purpose | Returns |
 |---|---|---|
 | `blueprint_command_catalog` | Return the retained command registry plus runtime availability metadata | `{commands, waves, aliases}` with per-command `declaredStatus`, `status`, `implemented`, `blockedBy`, `manifestPath`, `skillPath`, `specPath`, `requiredTools`, `requiredToolsSatisfied`, `optionalAgents`, and `availableOptionalAgents` |
-| `blueprint_project_init` | Create the initial `.blueprint/` scaffold, seed normalized repo config, and derive bootstrap routing signals | `{projectRoot, createdPaths, seededState, configPath, configProvenance, brownfield, bootstrapDiagnostics, nextAction, warnings}` |
-| `blueprint_project_status` | Summarize project readiness, current state, bootstrap routing signals, and next action | `{status, initialized, currentPhase, currentMilestone, nextAction, bootstrap, health}` |
+| `blueprint_project_init` | Create the initial `.blueprint/` scaffold, seed normalized repo config, and derive bootstrap routing signals. Accepts `bootstrapMode: "interactive" \| "auto"` with `interactive` as the default; interactive mode requires a sufficient `bootstrapSeed`, and brownfield repos must pass map-first gating before any bootstrap write. | `{projectRoot, createdPaths, seededState, configPath, configProvenance, brownfield, bootstrapDiagnostics, nextAction, warnings}` |
+| `blueprint_project_status` | Summarize project readiness, current state, bootstrap routing signals, and next action. Status may be `uninitialized`, `mapping-incomplete`, `mapped-only`, `partial`, or `initialized`; codebase-only states are intentional and do not imply broken core bootstrap. | `{status, initialized, currentPhase, currentMilestone, nextAction, bootstrap, health}` |
 
 ### Config
 
@@ -259,7 +259,10 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - `blueprint_config_set` defaults `scope` to `project`, and `patch` must be a JSON object.
 - Use `blueprint_config_set` with `scope: "defaults"` only when the user explicitly wants saved-default changes.
 - Use `blueprint_config_set_profile` instead of a generic config patch when the only intended mutation is `model_profile`.
-- `blueprint_project_init` is the first persistent bootstrap write. `overwrite` requires explicit confirmation, and a structured `bootstrapSeed` is the supported way to pass authored startup context.
+- `blueprint_project_init` is the first persistent bootstrap write for core project artifacts. `overwrite` requires explicit confirmation, and a structured `bootstrapSeed` is the supported way to pass authored startup context.
+- `bootstrapMode` defaults to `interactive`. Interactive mode rejects missing or insufficient `bootstrapSeed` before any write. `auto` mode may synthesize bootstrap artifacts only when explicitly requested and only after brownfield map-first gating passes.
+- Brownfield repos without a valid seven-document codebase bundle route to `/blu-map-codebase` before project bootstrap. `mapped-only` codebase state is healthy and lets `blueprint_project_init` add core bootstrap artifacts while preserving `.blueprint/codebase/*.md`.
+- `blueprint_codebase_artifact_write` may be the first write in an unmapped brownfield repo, and that path may create only the seven `.blueprint/codebase/*.md` artifacts.
 - `blueprint_pause_handoff_write` requires `currentState`. Other list fields are optional and normalized, and omitting `nextAction` lets the tool derive the safest current next action.
 - Treat returned `configPath`, `updatedKeys`, `createdPaths`, `nextAction`, `path`, and `handoff` as authoritative.
 

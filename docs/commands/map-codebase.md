@@ -32,7 +32,9 @@
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
-- Default path: run after `new-project` so output is written into `.blueprint/codebase/`.
+- Default brownfield path: run before `new-project` when the repo already contains substantive implementation or build structure and no valid codebase map exists.
+- In that map-first path, `map-codebase` may be the first Blueprint write and may create only the seven `.blueprint/codebase/*.md` artifacts.
+- Greenfield and scaffold-only uninitialized repos should route to `new-project` instead.
 - Brownfield intent should still be explicit: do not silently replace existing codebase docs and do not hide the mapping step behind another command.
 - Prefer Gemini CLI's built-in `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate.
 
@@ -45,13 +47,13 @@
 
 ## Behavior Stages
 
-1. `Resolve`: confirm the repo root, detect an optional focus area, and stop early when Blueprint is uninitialized or partial.
+1. `Resolve`: confirm the repo root, detect an optional focus area, allow brownfield map-codebase to be the first `.blueprint/` write, and stop early only for greenfield/scaffold-only uninitialized repos or broken partial core state.
 2. `Read`: inspect project status, the canonical codebase-bundle contract, any existing codebase artifacts, and deterministic repo evidence inputs before any overwrite decision.
 3. `Decide`: keep reuse-versus-refresh posture explicit, default to reuse, and require `ask_user` confirmation for replace or refresh behavior when existing docs are heavily edited.
 4. `Execute`: collect repo evidence and produce digest-backed mapping summaries for the same seven-artifact bundle whether the run is full-repo or focus-area deepening.
 5. `Persist`: create or reuse scaffolds and persist substantive authored content through `blueprint_codebase_artifact_write` only.
 6. `Validate`: run `blueprint_artifact_validate` against the resulting bundle and surface warnings honestly.
-7. `Route`: summarize created versus reused artifacts and end on the next safe implemented follow-up.
+7. `Route`: summarize created versus reused artifacts and end on the next safe implemented follow-up. A successful map-first brownfield pass leaves the repo `mapped-only` and routes to `/blu-new-project`.
 
 ## Blueprint And Global State Reads
 
@@ -134,9 +136,11 @@
 - Leaves unrelated repo files untouched.
 - Creates or updates only the declared artifacts for this command.
 - Produces the seven-document codebase bundle, including `STRUCTURE.md`.
+- On uninitialized brownfield repos, creates no core bootstrap artifacts and leaves the repo in `mapped-only` when validation passes.
 
 ## Test Cases
 
-- Fresh repo fixture.
+- Uninitialized brownfield fixture.
+- Interrupted or invalid codebase-only fixture.
 - Partially initialized Blueprint repo fixture.
 - Direct `map-codebase` happy-path fixture.
