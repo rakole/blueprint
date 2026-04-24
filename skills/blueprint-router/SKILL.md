@@ -7,7 +7,8 @@ description: >
   scenarios: choosing between `/blu-help` and `/blu-progress`, explaining why a
   documented command is blocked or still planned, routing a root `/blu` request
   to the safest implemented command, surfacing the current waiting state for
-  root `/blu` requests, and recommending the next action for a partial repo.
+  root `/blu` requests, and recommending the next action for partial or
+  codebase-only bootstrap state.
 status: implemented
 commands:
   - /blu
@@ -65,10 +66,13 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 3. Never route to commands whose status is `planned`, `blocked`, or `repairing`.
 4. If the user asks for a blocked or planned command, explain the `blockedBy` reasons and recommend the nearest implemented prerequisite.
 5. Prefer read-only guidance for ambiguous requests.
-6. If repo state is uninitialized, prefer `/blu-new-project`.
-7. If repo state is partial, prefer `/blu-health`.
-8. Surface config warnings only when they materially change the next safe action.
-9. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a missing artifact or blocked substrate.
+6. If repo state is uninitialized and brownfield, prefer `/blu-map-codebase`.
+7. If repo state is uninitialized and greenfield or scaffold-only, prefer `/blu-new-project`.
+8. If repo state is `mapping-incomplete`, prefer `/blu-map-codebase`.
+9. If repo state is `mapped-only`, prefer `/blu-new-project`.
+10. If repo state is partial, prefer `/blu-health`.
+11. Surface config warnings only when they materially change the next safe action.
+12. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a mapping prerequisite, missing artifact, or blocked substrate.
 
 ## Planned `/blu-do` Contract
 

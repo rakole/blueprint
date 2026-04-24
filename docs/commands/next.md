@@ -25,8 +25,12 @@
 
 
 - None, but Blueprint context improves routing.
-- Uninitialized repos must fall back to `/blu-new-project`.
+- Uninitialized repos must fall back to `/blu-new-project` unless brownfield map-first gating requires `/blu-map-codebase`.
+- Uninitialized brownfield repos must fall back to `/blu-map-codebase`; uninitialized greenfield and scaffold-only repos must fall back to `/blu-new-project`.
+- `mapping-incomplete` codebase-only repos must fall back to `/blu-map-codebase`.
+- `mapped-only` repos must fall back to `/blu-new-project`.
 - Partial repos must fall back to `/blu-health`.
+- Partial core bootstrap repos must fall back to `/blu-health`.
 
 
 ## Outputs
@@ -135,8 +139,10 @@
 ## Test Cases
 
 
-- Uninitialized repo routes to `/blu-new-project`.
-- Partial Blueprint repo routes to `/blu-health`.
+- Brownfield uninitialized repo routes to `/blu-map-codebase`.
+- Greenfield/scaffold-only uninitialized repo routes to `/blu-new-project`.
+- Mapping-incomplete codebase-only repo routes to `/blu-map-codebase`.
+- Mapped-only repo routes to `/blu-new-project`.
+- Partial core Blueprint repo routes to `/blu-health`.
 - Initialized repo reuses the next implemented discovery command or falls back to `/blu-progress` safely, while naming any waiting state that explains the choice.
 - Direct `next` command contract uses only registered read-oriented MCP tools.
-

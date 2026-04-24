@@ -50,11 +50,13 @@
 - When structured choices help, interactive bootstrap should prefer Gemini CLI's built-in `ask_user` dialog, asked one focused question at a time with labeled options plus a typed custom-answer path.
 - When the bootstrap spans multiple stages, use Gemini CLI's internal `update_topic` and `write_todos` tools to keep the session legible instead of relying on repeated prose-only progress recaps.
 - In interactive mode, the command should summarize its understanding and secure explicit approval before the first persistent bootstrap write.
-- `--auto` may skip that approval loop only when the supplied brief is strong enough to synthesize a credible bootstrap seed.
+- `bootstrapMode` defaults to `interactive`; `--auto` is the command-facing way to request `bootstrapMode: "auto"`.
+- Interactive mode must pass a sufficient `bootstrapSeed` into `blueprint_project_init`. If the seed is missing or too thin, the tool rejects before writing and the command should keep asking rather than asking the MCP layer to invent purpose, requirements, roadmap, state, config, or phases.
+- `--auto` may synthesize bootstrap artifacts only because the user explicitly requested it, only when the supplied or repo-derived brief is strong enough, and only after brownfield map-first gating has passed.
 
 ## Behavior Stages
 
-1. `Resolve`: confirm repo root, detect `--auto`, classify repo shape, and require explicit overwrite confirmation when `.blueprint/` already exists.
+1. `Resolve`: confirm repo root, detect `--auto`, classify repo shape, and require explicit overwrite confirmation when initialized core `.blueprint/` artifacts already exist.
 2. `Read`: inspect saved defaults, effective warnings, repo evidence, and canonical bootstrap artifact contracts before the first persistent write.
 3. `Decide`: initialize Gemini-native session coordination, gather or synthesize the bootstrap brief, offer saved defaults first, and run approval or revision gates when interactive shaping needs a decision.
 4. `Execute`: draft specific, user-centered, traceable requirements and grouped roadmap phases with success criteria, using optional bounded research or roadmapping help only when it materially improves the bootstrap.
@@ -77,7 +79,7 @@
 
 ## Required MCP Tools
 
-- `blueprint_project_init` -> `{projectRoot, createdPaths, seededState, configPath, configProvenance}`
+- `blueprint_project_init` -> `{projectRoot, createdPaths, seededState, configPath, configProvenance}` with `bootstrapMode: "interactive" | "auto"` and default `interactive`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_config_set` -> `{scope, updatedKeys, config, provenance, configPath, warnings}`
@@ -98,7 +100,9 @@
 ## Bootstrap Contract
 
 - Read the canonical bootstrap artifact contracts for `bootstrap.project`, `bootstrap.requirements`, and `bootstrap.roadmap` before shaping the first authored drafts.
-- `blueprint_project_init` is the first persistent bootstrap write. Require explicit overwrite confirmation before calling it with `overwrite: true`.
+- `blueprint_project_init` is the first persistent core bootstrap write. Require explicit overwrite confirmation before calling it with `overwrite: true`.
+- Brownfield map-first gating happens before this write: unmapped brownfield repos and `mapping-incomplete` codebase-only bundles must route to `/blu-map-codebase`.
+- `mapped-only` is not an overwrite conflict; call `blueprint_project_init` with an explicit seed and preserve existing `.blueprint/codebase/*.md`.
 - Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
 - Use `blueprint_artifact_scaffold` only for deliberate extra Blueprint artifacts, with supported repo-relative Blueprint artifact paths only. Bare names and absolute paths are invalid.
 - Treat scaffold output as seeding, not final authored persistence.
@@ -162,9 +166,9 @@
 - update task-tracker state when optional research, revision, or validation branches appear
 - close the loop before finishing so the visible topic and task state match the actual bootstrap outcome
 - For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
-- if the repo is unmapped, route to `map-codebase`
-- if bootstrap artifacts are generated before mapping, mark the roadmap as provisional until mapping is complete
-- if `.blueprint/codebase/` already exists, allow normal bootstrap follow-through
+- if the repo is unmapped, hard-stop before writing and route to `map-codebase`
+- if `.blueprint/codebase/` is interrupted, invalid, or incomplete, route to `map-codebase`
+- if `.blueprint/codebase/` is valid and core bootstrap artifacts are absent, treat the repo as `mapped-only` and allow bootstrap follow-through without replacing codebase docs
 
 ## Edge Cases
 
@@ -200,5 +204,6 @@
 - Partially initialized Blueprint repo fixture.
 - New-project fixture with saved defaults present.
 - Direct `new-project` happy-path fixture.
-- Brownfield fixture that routes to `map-codebase`.
+- Brownfield fixture that rejects `new-project` before writes and routes to `map-codebase`.
+- Mapped-only brownfield fixture that bootstraps with an explicit seed and preserves `.blueprint/codebase/*.md`.
 - Bootstrap seed fixture that verifies authored requirements and roadmap traceability.

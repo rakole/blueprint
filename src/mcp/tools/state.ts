@@ -1398,7 +1398,17 @@ async function deriveNextAction(args: {
   workflow: WorkflowRoutingSignals;
 }): Promise<string> {
   if (args.projectStatus === "uninitialized") {
-    return blueprintRunDirectCommand("new-project");
+    return args.bootstrapRouting.brownfieldDetected && !args.bootstrapRouting.codebaseMapped
+      ? `${blueprintRunDirectCommand("map-codebase")} before ${blueprintDirectCommand("new-project")} so brownfield bootstrap starts from a mapped baseline`
+      : blueprintRunDirectCommand("new-project");
+  }
+
+  if (args.projectStatus === "mapping-incomplete") {
+    return `${blueprintRunDirectCommand("map-codebase")} to finish the interrupted codebase-only mapping bundle`;
+  }
+
+  if (args.projectStatus === "mapped-only") {
+    return `${blueprintRunDirectCommand("new-project")} to bootstrap project artifacts while preserving the mapped codebase docs`;
   }
 
   if (args.projectStatus === "partial") {
@@ -1907,19 +1917,63 @@ export async function blueprintStateLoad(
 ): Promise<StateLoadResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
+  const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
+  const bootstrapRouting: BootstrapRoutingSignals = {
+    brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
+    codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
+  };
+  const readOnlyBootstrapState =
+    inspection.readiness === "uninitialized" ||
+    inspection.readiness === "mapping-incomplete" ||
+    inspection.readiness === "mapped-only";
   const syncedState =
-    inspection.readiness === "uninitialized"
+    readOnlyBootstrapState
       ? null
       : await buildSyncedState(projectRoot);
   const state =
-    inspection.readiness === "uninitialized"
-      ? await loadBlueprintState(projectRoot)
+    readOnlyBootstrapState
+      ? {
+          ...(await loadBlueprintState(projectRoot)),
+          projectStatus: inspection.readiness,
+          currentPhase: "",
+          activeCommand:
+            inspection.readiness === "mapping-incomplete"
+              ? blueprintDirectCommand("map-codebase")
+              : inspection.readiness === "mapped-only"
+                ? blueprintDirectCommand("new-project")
+                : DEFAULT_STATE.activeCommand,
+          nextAction: await deriveNextAction({
+            projectStatus: inspection.readiness,
+            blockers: [],
+            currentPhase: null,
+            currentMilestone: null,
+            allPhasesComplete: false,
+            milestoneAuditReport: emptyMilestoneAuditReportStatus(),
+            hasMilestoneCompletion: false,
+            hasMilestoneSummary: false,
+            phaseArtifacts: await inspectCurrentPhaseArtifacts(projectRoot, inspection.phases, null),
+            milestoneEvidence: {
+              missingVerificationPhases: [],
+              missingUatPhases: [],
+              verificationNotReadyPhases: [],
+              pendingSummaryCoveragePhases: [],
+              blockingPhase: null,
+              allCompletedPhasesReady: false,
+              warnings: []
+            },
+            bootstrapRouting,
+            workflow: {
+              researchEnabled: true,
+              uiPhaseEnabled: true
+            }
+          })
+        }
       : syncedState!.state;
-  const currentPhase = inspection.readiness === "uninitialized" ? null : state.currentPhase;
+  const currentPhase = readOnlyBootstrapState ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
   const milestoneAuditReport =
-    inspection.readiness === "uninitialized"
+    readOnlyBootstrapState
       ? emptyMilestoneAuditReportStatus()
       : syncedState!.milestoneAuditReport;
 

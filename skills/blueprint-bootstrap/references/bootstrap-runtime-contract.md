@@ -27,12 +27,13 @@ Keep the richer bootstrap language grounded in that shared contract:
 - execution mode: interactive bootstrap, `--auto`, and whether optional bounded
   research or roadmap synthesis is active
 - next safe action: the authoritative follow-up from project status, including
-  `/blu-map-codebase` when brownfield mapping is still required
+  `/blu-map-codebase` when brownfield mapping is still required and
+  `/blu-new-project` when a valid map-only bundle is waiting for bootstrap
 
 Map the bootstrap workflow to the shared stages like this:
 
-1. `Resolve`: confirm repo root, detect `--auto`, classify repo shape, and
-   surface overwrite risk.
+1. `Resolve`: confirm repo root, detect `--auto`, classify repo shape, enforce
+   brownfield map-first gating, and surface overwrite risk.
 2. `Read`: inspect saved defaults, warnings, repo evidence, canonical bootstrap
    artifact contracts, and any needed Gemini host-tool documentation.
 3. `Decide`: run discovery, saved-default selection, workflow-preference
@@ -50,12 +51,19 @@ Map the bootstrap workflow to the shared stages like this:
 
 1. Confirm the command is running from the target repository root. If not, stop
    with the precise repo-root error instead of guessing.
-2. Detect whether the user passed `--auto`.
+2. Detect whether the user passed `--auto`; this maps to
+   `bootstrapMode: "auto"`. Otherwise pass `bootstrapMode: "interactive"`.
 3. Classify the repo as greenfield, scaffold-only, or brownfield before the
    first persistent write.
-4. If `.blueprint/` already exists, require explicit overwrite confirmation
-   before continuing.
-5. If repo evidence, product intent, or overwrite risk is fuzzy, use
+4. If a brownfield repo has no valid codebase map, stop before any write and
+   route to `/blu-map-codebase`.
+5. If `.blueprint/` is `mapping-incomplete`, stop before any core bootstrap
+   write and route to `/blu-map-codebase`.
+6. If `.blueprint/` is `mapped-only`, continue without treating the existing
+   `.blueprint/codebase/*.md` bundle as an overwrite conflict.
+7. If initialized core `.blueprint/` artifacts already exist, require explicit
+   overwrite confirmation before continuing.
+8. If repo evidence, product intent, or overwrite risk is fuzzy, use
    `blueprint-project-researcher` for bounded read-only synthesis before the
    first write.
 
@@ -124,11 +132,15 @@ Map the bootstrap workflow to the shared stages like this:
    for that approval gate.
 3. Draft requirements and roadmap structure before writing, then run a revision
    loop if the user wants adjustments.
-4. `--auto` skips the extra confirmation loop only when the project brief is
+4. Interactive mode must call `mcp_blueprint_blueprint_project_init` with a
+   sufficient `bootstrapSeed`. If the seed is missing or too thin, keep
+   questioning instead of asking the MCP layer to synthesize purpose,
+   requirements, roadmap, state, config, or phases.
+5. `--auto` skips the extra confirmation loop only when the project brief is
    already strong enough to synthesize a credible `bootstrapSeed`.
-5. If `--auto` lacks enough project context, stop and ask for the missing brief
+6. If `--auto` lacks enough project context, stop and ask for the missing brief
    instead of inventing a product.
-6. If `--auto` proceeds, make assumptions explicit in both the final summary and
+7. If `--auto` proceeds, make assumptions explicit in both the final summary and
    the written bootstrap artifacts rather than hiding them only in chat.
 
 ## Execute
@@ -148,6 +160,9 @@ Map the bootstrap workflow to the shared stages like this:
 
 1. Use `mcp_blueprint_blueprint_project_init` for the first persistent
    bootstrap write.
+   - Pass `bootstrapMode: "interactive"` by default.
+   - Pass `bootstrapMode: "auto"` only when the user explicitly requested
+     automatic synthesis.
 2. Pass the strongest available `bootstrapSeed` so
    `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, and
    `.blueprint/ROADMAP.md` land as authored drafts rather than placeholder
@@ -179,8 +194,9 @@ Map the bootstrap workflow to the shared stages like this:
 1. Call `mcp_blueprint_blueprint_project_status` after initialization so the
    user gets the authoritative next safe action.
 2. For brownfield repos, make the next step explicit: if the codebase is not
-   mapped yet, route to `/blu-map-codebase` and treat the roadmap as provisional
-   until mapping is complete.
+   mapped yet, route to `/blu-map-codebase` before writing project bootstrap
+   artifacts. If a valid codebase-only bundle exists, route through
+   `/blu-new-project` and preserve the mapped docs.
 3. Close the loop on session-local coordination before finishing:
    - mark the active `write_todos` item completed and leave the checklist
      reflecting the final state

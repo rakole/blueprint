@@ -19,12 +19,14 @@ import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   CODEBASE_ARTIFACTS,
   blueprintArtifactList,
+  blueprintArtifactMutateIndex,
+  blueprintArtifactReportWrite,
   blueprintArtifactScaffold,
   blueprintArtifactSummaryDigest,
   blueprintCodebaseArtifactWrite,
   blueprintArtifactValidate
 } from "../src/mcp/tools/artifacts.js";
-import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
+import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/map-codebase");
@@ -325,12 +327,12 @@ test("map-codebase scaffolds the stable codebase bundle and builds deterministic
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
   const scaffold = await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [...CODEBASE_ARTIFACTS]
   });
   const artifacts = await blueprintArtifactList({ cwd: repoPath });
+  const blueprintFiles = await listRelativeFiles(path.join(repoPath, ".blueprint"), repoPath);
   const evidence = await collectRepoEvidence(repoPath);
   const digest = await blueprintArtifactSummaryDigest({
     cwd: repoPath,
@@ -344,6 +346,7 @@ test("map-codebase scaffolds the stable codebase bundle and builds deterministic
   });
 
   assert.deepEqual(scaffold.createdFiles, [...CODEBASE_ARTIFACTS]);
+  assert.deepEqual(blueprintFiles, [...CODEBASE_ARTIFACTS].sort());
 
   for (const artifact of CODEBASE_ARTIFACTS) {
     assert.equal(
@@ -376,7 +379,6 @@ test("map-codebase keeps scaffold-only bundles provisional and authored bundles 
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
   await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [...CODEBASE_ARTIFACTS]
@@ -384,6 +386,7 @@ test("map-codebase keeps scaffold-only bundles provisional and authored bundles 
 
   const scaffoldStatus = await blueprintProjectStatus({ cwd: repoPath });
 
+  assert.equal(scaffoldStatus.status, "mapping-incomplete");
   assert.equal(scaffoldStatus.bootstrap.repoShape, "brownfield");
   assert.equal(scaffoldStatus.bootstrap.brownfieldDetected, true);
   assert.equal(scaffoldStatus.bootstrap.codebaseMapped, false);
@@ -394,32 +397,70 @@ test("map-codebase keeps scaffold-only bundles provisional and authored bundles 
     /provisional until `\/blu-map-codebase` captures the existing codebase/i
   );
 
+  const scaffoldCapture = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "note",
+    action: "append",
+    description: "This note must wait until core bootstrap exists."
+  });
+
+  assert.equal(scaffoldCapture.status, "project_missing");
+  assert.match(scaffoldCapture.warnings.join("\n"), /\/blu-map-codebase/);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/notes/NOTES.md")), false);
+  await assert.rejects(
+    blueprintArtifactReportWrite({
+      cwd: repoPath,
+      reportName: "pre-bootstrap-report",
+      content: "# Pre Bootstrap Report\n\nThis report must wait until core bootstrap exists.\n"
+    }),
+    /initialized core project artifacts/i
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/reports/pre-bootstrap-report.md")),
+    false
+  );
+
   await writeAuthoredCodebaseBundle(repoPath);
 
   const authoredStatus = await blueprintProjectStatus({ cwd: repoPath });
 
   assert.equal(authoredStatus.bootstrap.repoShape, "brownfield");
+  assert.equal(authoredStatus.status, "mapped-only");
   assert.equal(authoredStatus.bootstrap.brownfieldDetected, true);
   assert.equal(authoredStatus.bootstrap.codebaseMapped, true);
-  assert.match(authoredStatus.bootstrap.recommendedNextAction, /\/blu-progress/);
-  assert.match(authoredStatus.nextAction, /\/blu-progress/);
+  assert.match(authoredStatus.bootstrap.recommendedNextAction, /\/blu-new-project/);
+  assert.match(authoredStatus.nextAction, /\/blu-new-project/);
   assert.doesNotMatch(
     authoredStatus.bootstrap.traceabilityWarnings.join("\n"),
     /provisional until `\/blu-map-codebase` captures the existing codebase/i
   );
+
+  const authoredCapture = await blueprintArtifactMutateIndex({
+    cwd: repoPath,
+    target: "todo",
+    action: "append",
+    description: "This todo must wait until core bootstrap exists."
+  });
+
+  assert.equal(authoredCapture.status, "project_missing");
+  assert.match(authoredCapture.warnings.join("\n"), /\/blu-new-project/);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/todos/TODO.md")), false);
 });
 
-test("artifact validation does not require an absent codebase bundle", async (t) => {
+test("successful mapping produces mapped-only healthy validation and routes to new-project", async (t) => {
   const repoPath = await createRepoFromFixture("brownfield-repo");
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
+  await writeAuthoredCodebaseBundle(repoPath);
 
   const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
 
   assert.equal(validation.valid, true);
+  assert.equal(status.status, "mapped-only");
+  assert.match(status.nextAction, /\/blu-new-project/);
   assert.doesNotMatch(
     validation.issues.join("\n"),
     /Codebase artifact bundle is incomplete or non-canonical/i
@@ -432,7 +473,6 @@ test("artifact summary digest combines saved artifact summaries with live repo e
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
   await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [...CODEBASE_ARTIFACTS]
@@ -478,7 +518,6 @@ test("map-codebase reuses edited codebase docs by default and warns before repla
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath });
   await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [...CODEBASE_ARTIFACTS]
@@ -516,8 +555,6 @@ test("map-codebase scaffold rejects guessed artifact formats with corrective gui
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
-
-  await blueprintProjectInit({ cwd: repoPath });
 
   await assert.rejects(
     () =>

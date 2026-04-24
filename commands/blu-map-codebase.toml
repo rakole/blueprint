@@ -11,7 +11,7 @@ Shared execution profile and status contract:
 - Normalize visible progress to the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`.
 - Keep the in-flight status contract legible during non-trivial mapping runs: resolved scope, active stage, pending gate, execution mode, and next safe action.
 - Map the mapping flow onto the shared stages like this:
-  - `Resolve`: confirm repo root, detect the optional focus area, and stop early when Blueprint is uninitialized or partial.
+  - `Resolve`: confirm repo root, detect the optional focus area, allow brownfield map-codebase to be the first `.blueprint/` write, and stop early only for greenfield/scaffold-only uninitialized repos or broken partial core state.
   - `Read`: inspect project status, the canonical codebase-bundle contract, existing codebase artifacts, and deterministic repo evidence.
   - `Decide`: default to reuse, surface reuse-versus-refresh posture explicitly, and require `ask_user` confirmation before any replace or refresh path.
   - `Execute`: collect repo evidence and produce digest-backed summaries for the same seven-artifact bundle whether the run is full-repo or focus-area deepening.
@@ -22,7 +22,7 @@ Shared execution profile and status contract:
 Follow this flow exactly:
 
 1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`. Treat it as targeted deepening of that subsystem, not as a generic suffix.
-2. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized or partial, stop and direct the user to `/blu-new-project` or `/blu-health` instead of guessing.
+2. Read `mcp_blueprint_blueprint_project_status` first. If status is uninitialized and the repo is brownfield, continue because `/blu-map-codebase` may create only `.blueprint/codebase/*.md` as the first Blueprint write. If status is uninitialized for greenfield or scaffold-only, stop and direct the user to `/blu-new-project`. If status is partial, stop and direct the user to `/blu-health`. If status is `mapping-incomplete`, continue to finish or repair the codebase-only bundle. If status is `mapped-only`, reuse the existing valid bundle by default and route to `/blu-new-project`.
 3. Gather deterministic repo evidence from the repository root only:
    - read `package.json` when present
    - inspect source directories with `rg --files src app lib commands`
@@ -40,7 +40,7 @@ Follow this flow exactly:
 9. Persist substantive authored bundle content through `mcp_blueprint_blueprint_codebase_artifact_write`. Use the canonical codebase artifact ids (`codebase.stack`, `codebase.architecture`, `codebase.structure`, `codebase.conventions`, `codebase.testing`, `codebase.integrations`, `codebase.concerns`) instead of raw filesystem writes, and only pass `overwrite: true` after explicit refresh or replace confirmation.
 10. Validate the resulting bundle with `mcp_blueprint_blueprint_artifact_validate` before you conclude.
 11. Summarize which files were created, which were reused, and which warnings matter.
-12. End with the next logical Blueprint action, usually discovery or planning, based on the mapped repo state.
+12. End with the next logical Blueprint action. A successful first brownfield mapping should leave status `mapped-only` and route to `/blu-new-project`; an initialized project usually routes to `/blu-progress` or the appropriate documented discovery/planning flow.
 
 Response requirements:
 - Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_codebase_artifact_write`, and `mcp_blueprint_blueprint_artifact_validate`.
@@ -50,5 +50,5 @@ Response requirements:
 - Explain when you are reusing existing docs versus replacing them.
 - Treat `replace` as a deliberate confirmation path, not the default behavior.
 - Keep focused mapping language explicit: the requested focus area deepens the same seven-artifact bundle instead of creating a separate suffix-driven flow.
-- Recommend a next step such as `/blu-progress` or the appropriate documented discovery/planning flow when the mapping is complete.
+- Recommend `/blu-new-project` when mapping completes before project bootstrap, or `/blu-progress` or the appropriate documented discovery/planning flow when the project is already initialized.
 """

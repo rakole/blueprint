@@ -17,6 +17,7 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
+  CODEBASE_ARTIFACTS,
   blueprintArtifactList,
   blueprintArtifactReportWrite,
   blueprintArtifactValidate
@@ -29,6 +30,7 @@ import {
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/help-progress-health");
+const CODEBASE_ARTIFACTS_SORTED = [...CODEBASE_ARTIFACTS].sort();
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -1153,6 +1155,67 @@ test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
   assert.equal(validation.valid, false);
   assert.match(validation.issues.join("\n"), /Missing \.blueprint\/ directory/);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+});
+
+test("read-path tools route unmapped brownfield repos to map-codebase before bootstrap", async (t) => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-brownfield-status-"));
+  const repoPath = path.join(tempRoot, "repo");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "brownfield-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.initialized, false);
+  assert.equal(status.bootstrap.repoShape, "brownfield");
+  assert.match(status.nextAction, /\/blu-map-codebase/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.equal(state.derivedStatus.currentPhase, null);
+  assert.match(state.derivedStatus.nextAction, /\/blu-map-codebase/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+});
+
+test("read-path tools route interrupted empty brownfield Blueprint roots to map-codebase", async (t) => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-brownfield-empty-root-"));
+  const repoPath = path.join(tempRoot, "repo");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "brownfield-empty-root", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const artifacts = await blueprintArtifactList({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "mapping-incomplete");
+  assert.equal(status.initialized, false);
+  assert.match(status.nextAction, /\/blu-map-codebase/);
+  assert.equal(state.derivedStatus.projectStatus, "mapping-incomplete");
+  assert.equal(state.derivedStatus.currentPhase, null);
+  assert.match(state.derivedStatus.nextAction, /\/blu-map-codebase/);
+  assert.deepEqual(artifacts.missing.sort(), CODEBASE_ARTIFACTS_SORTED);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
 });
 
 test("read-path tools distinguish partial Blueprint repos and expose repair blockers", async (t) => {

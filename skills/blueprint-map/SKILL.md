@@ -46,6 +46,8 @@ Carry forward the mapper-oriented flow:
 Blueprint deltas:
 
 - write to `.blueprint/codebase/`
+- may be the first Blueprint write for brownfield repos, creating only the
+  seven `.blueprint/codebase/*.md` artifacts
 - preserve edited docs unless replace is explicitly confirmed
 - keep persistence in MCP tools
 
@@ -81,7 +83,7 @@ Blueprint deltas:
 
 ## Workflow Rules
 
-1. Stop early if Blueprint is uninitialized or partial.
+1. Read `blueprint_project_status` first. Continue when an uninitialized repo is brownfield, when status is `mapping-incomplete`, or when an initialized project needs a map refresh. Stop early for greenfield/scaffold-only uninitialized repos and for broken partial core state.
 2. Inspect the existing codebase bundle before writing.
 3. Keep the resolved scope explicit as the repo root, requested focus area if any, and the same seven-artifact bundle target.
 4. Reuse edited docs by default.
@@ -90,4 +92,4 @@ Blueprint deltas:
 7. Persist substantive mapping content through `blueprint_codebase_artifact_write` instead of raw file edits once the digest-backed summaries are ready.
 8. Validate the resulting bundle before treating the mapping pass as complete.
 9. Mention created, reused, and blocked artifacts separately.
-10. End with the next implemented Blueprint action, not a planned-only command.
+10. End with the next implemented Blueprint action, not a planned-only command. A successful map-first brownfield run should leave `mapped-only` status and route to `/blu-new-project`.
