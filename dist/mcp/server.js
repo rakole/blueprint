@@ -28488,13 +28488,6 @@ function stableStringify(value) {
   }
   return JSON.stringify(value);
 }
-function placeholderConfidence(reason) {
-  return {
-    score: 0.1,
-    level: "low",
-    reasons: [reason]
-  };
-}
 function placeholderImpactId(seed) {
   return `impact-${stableHash(seed)}`;
 }
@@ -28536,6 +28529,237 @@ function getBuiltInImpactConfig() {
 function isPlainObject6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+function compareImpactSurfaces(left, right) {
+  return IMPACT_SURFACE_PRIORITY[left] - IMPACT_SURFACE_PRIORITY[right];
+}
+function normalizeRepoPathForClassification(filePath) {
+  return filePath.trim().replaceAll("\\", "/").replace(/^\.\//u, "");
+}
+function addSurfaceRule(rules, surface, reason) {
+  if (!rules.some((rule) => rule.surface === surface)) {
+    rules.push({ surface, reason });
+  }
+}
+function hasPathSegment(filePath, segment) {
+  return filePath === segment || filePath.startsWith(`${segment}/`);
+}
+function hasConfigName(filePath) {
+  const basename = path7.posix.basename(filePath);
+  return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
+}
+function isGeneratedPath(filePath) {
+  return GENERATED_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+}
+function isTestPath(filePath) {
+  return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+}
+function isDocsPath(filePath) {
+  const extension = path7.posix.extname(filePath).toLowerCase();
+  return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
+}
+function areaForSurface(surface) {
+  if ([
+    "command-catalog",
+    "command-manifest",
+    "command-doc",
+    "mcp-server",
+    "mcp-tool",
+    "mcp-resource",
+    "artifact-contract",
+    "skill",
+    "agent",
+    "extension-manifest",
+    "hook",
+    "package-runtime",
+    "build-config"
+  ].includes(surface)) {
+    return "blueprint-runtime";
+  }
+  if (surface === "secret-sensitive" || surface === "env-config") {
+    return "sensitive-config";
+  }
+  if (surface === "test") {
+    return "tests";
+  }
+  if (surface === "docs") {
+    return "docs";
+  }
+  if (surface === "generated") {
+    return "generated";
+  }
+  if (surface === "config") {
+    return "config";
+  }
+  if (surface === "source") {
+    return "source";
+  }
+  if (surface === "repo-root") {
+    return "repo-root";
+  }
+  return "unknown";
+}
+function classifyImpactFile(filePath) {
+  const normalizedPath = normalizeRepoPathForClassification(filePath);
+  const basename = path7.posix.basename(normalizedPath);
+  const extension = path7.posix.extname(normalizedPath).toLowerCase();
+  const rules = [];
+  if (SECRET_PATH_PATTERN.test(normalizedPath)) {
+    addSurfaceRule(
+      rules,
+      "secret-sensitive",
+      "Path name indicates secret, token, or credential sensitivity."
+    );
+  }
+  if (basename === ".env" || basename.startsWith(".env.")) {
+    addSurfaceRule(rules, "env-config", "Environment file path matched .env*.");
+  }
+  if (normalizedPath === "docs/COMMAND-CATALOG.md") {
+    addSurfaceRule(rules, "command-catalog", "Command catalog documentation changed.");
+    addSurfaceRule(rules, "docs", "Command catalog is a documentation surface.");
+  }
+  if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
+    addSurfaceRule(rules, "command-manifest", "Command manifest TOML changed.");
+    addSurfaceRule(rules, "config", "Command manifests are TOML configuration.");
+  }
+  if (hasPathSegment(normalizedPath, "docs/commands")) {
+    addSurfaceRule(rules, "command-doc", "Command specification documentation changed.");
+    addSurfaceRule(rules, "docs", "Command specifications are documentation surfaces.");
+  }
+  if (normalizedPath === "src/mcp/server.ts") {
+    addSurfaceRule(rules, "mcp-server", "MCP server registration surface changed.");
+    addSurfaceRule(rules, "source", "MCP server is TypeScript source.");
+  }
+  if (hasPathSegment(normalizedPath, "src/mcp/tools")) {
+    addSurfaceRule(rules, "mcp-tool", "MCP tool implementation surface changed.");
+    addSurfaceRule(rules, "source", "MCP tools are TypeScript source.");
+  }
+  if (normalizedPath === "src/mcp/command-resources.ts") {
+    addSurfaceRule(rules, "mcp-resource", "MCP command resource projection changed.");
+    addSurfaceRule(rules, "source", "MCP resources are TypeScript source.");
+  }
+  if (hasPathSegment(normalizedPath, "src/mcp/artifact-contracts")) {
+    addSurfaceRule(rules, "artifact-contract", "Artifact contract registry changed.");
+    addSurfaceRule(rules, "source", "Artifact contracts are TypeScript source.");
+  }
+  if (hasPathSegment(normalizedPath, "skills")) {
+    addSurfaceRule(rules, "skill", "Blueprint skill contract changed.");
+    if (isDocsPath(normalizedPath)) {
+      addSurfaceRule(rules, "docs", "Markdown skill files are documentation surfaces.");
+    }
+  }
+  if (hasPathSegment(normalizedPath, "agents")) {
+    addSurfaceRule(rules, "agent", "Blueprint agent contract changed.");
+    if (isDocsPath(normalizedPath)) {
+      addSurfaceRule(rules, "docs", "Markdown agent files are documentation surfaces.");
+    }
+  }
+  if (normalizedPath === "gemini-extension.json" || normalizedPath === "tabnine-extension.json") {
+    addSurfaceRule(rules, "extension-manifest", "Extension host manifest changed.");
+    addSurfaceRule(rules, "config", "Extension manifests are JSON configuration.");
+  }
+  if (hasPathSegment(normalizedPath, "hooks") || hasPathSegment(normalizedPath, "src/hooks")) {
+    addSurfaceRule(rules, "hook", "Blueprint advisory hook surface changed.");
+    if (hasPathSegment(normalizedPath, "src/hooks")) {
+      addSurfaceRule(rules, "source", "Hook runtime implementation is source code.");
+    }
+  }
+  if (normalizedPath === "package.json" || normalizedPath === "package-lock.json") {
+    addSurfaceRule(rules, "package-runtime", "Node package runtime metadata changed.");
+    addSurfaceRule(rules, "config", "Package metadata is JSON configuration.");
+  }
+  if (normalizedPath === "tsconfig.json" || normalizedPath === "scripts/build.mjs") {
+    addSurfaceRule(rules, "build-config", "Build configuration changed.");
+    addSurfaceRule(rules, "config", "Build configuration is runtime configuration.");
+  }
+  if (isTestPath(normalizedPath)) {
+    addSurfaceRule(rules, "test", "Path matched tests directory or test file suffix.");
+  }
+  if (isDocsPath(normalizedPath)) {
+    addSurfaceRule(rules, "docs", "Path matched docs directory or documentation file extension.");
+  }
+  if (isGeneratedPath(normalizedPath)) {
+    addSurfaceRule(rules, "generated", "Path matched generated output directory or suffix.");
+  }
+  if (CONFIG_FILE_EXTENSIONS.has(extension) || hasConfigName(normalizedPath)) {
+    addSurfaceRule(rules, "config", "Path matched configuration extension or naming convention.");
+  }
+  if (hasPathSegment(normalizedPath, "src") && SOURCE_FILE_EXTENSIONS.has(extension)) {
+    addSurfaceRule(rules, "source", "Path matched source tree and code extension.");
+  }
+  if (!normalizedPath.includes("/")) {
+    addSurfaceRule(rules, "repo-root", "Path is at the repository root.");
+  }
+  if (rules.length === 0) {
+    addSurfaceRule(rules, "unknown", "No Phase 4 surface rule matched this path.");
+  }
+  const sortedRules = rules.sort(
+    (left, right) => compareImpactSurfaces(left.surface, right.surface)
+  );
+  const surfaces = sortedRules.map((rule) => rule.surface);
+  const primarySurface = surfaces[0] ?? "unknown";
+  return {
+    path: normalizedPath,
+    surfaces,
+    primarySurface,
+    area: areaForSurface(primarySurface),
+    reasons: sortedRules.map((rule) => rule.reason)
+  };
+}
+function summarizeSurfaceRecords(records, selector, sortNames = (left, right) => left.localeCompare(right)) {
+  const summary = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    const key = selector(record2);
+    const files = summary.get(key) ?? /* @__PURE__ */ new Set();
+    files.add(record2.path);
+    summary.set(key, files);
+  }
+  return [...summary.entries()].sort(([left], [right]) => sortNames(left, right)).map(([name, files]) => {
+    const sortedFiles = [...files].sort();
+    return {
+      name,
+      files: sortedFiles,
+      count: sortedFiles.length
+    };
+  });
+}
+function buildAreaSummary(records) {
+  const areaOrder = [
+    "sensitive-config",
+    "blueprint-runtime",
+    "tests",
+    "docs",
+    "generated",
+    "config",
+    "source",
+    "repo-root",
+    "unknown"
+  ];
+  return summarizeSurfaceRecords(records, (record2) => record2.area, (left, right) => {
+    const leftIndex = areaOrder.indexOf(left);
+    const rightIndex = areaOrder.indexOf(right);
+    const normalizedLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+    const normalizedRightIndex = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+    return normalizedLeftIndex - normalizedRightIndex || left.localeCompare(right);
+  });
+}
+function buildSurfaceSummary(records) {
+  const surfaceFiles = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    for (const surface of record2.surfaces) {
+      const files = surfaceFiles.get(surface) ?? /* @__PURE__ */ new Set();
+      files.add(record2.path);
+      surfaceFiles.set(surface, files);
+    }
+  }
+  return [...surfaceFiles.entries()].sort(([left], [right]) => compareImpactSurfaces(left, right)).map(([name, files]) => {
+    const sortedFiles = [...files].sort();
+    return {
+      name,
+      files: sortedFiles,
+      count: sortedFiles.length
+    };
+  });
+}
 function cloneConfig2(config2) {
   return JSON.parse(JSON.stringify(config2));
 }
@@ -28568,6 +28792,53 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
   const absolutePath = resolveContainedInputPath(projectRoot, inputPath, label);
   return toRepoRelativePath(projectRoot, absolutePath);
+}
+function extractStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item) => typeof item === "string");
+}
+function collectAnalyzeFileSources(args) {
+  return [
+    {
+      label: "changedFiles",
+      files: extractStringArray(args.changedFiles)
+    },
+    {
+      label: "files",
+      files: extractStringArray(args.files)
+    },
+    {
+      label: "scope.files",
+      files: extractStringArray(args.scope?.files)
+    },
+    {
+      label: "scope.changedFiles",
+      files: extractStringArray(args.scope?.changedFiles)
+    }
+  ].filter((source) => source.files.length > 0);
+}
+function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
+  const normalizedBySource = sources.map((source) => ({
+    label: source.label,
+    files: [
+      ...new Set(
+        source.files.map(
+          (file2) => toRepoRelativeInputPath(projectRoot, file2, `Impact analyze ${source.label} file`)
+        )
+      )
+    ].sort()
+  }));
+  const sourceFingerprints = [
+    ...new Set(normalizedBySource.map((source) => source.files.join("\n")))
+  ];
+  if (sourceFingerprints.length > 1) {
+    warnings.push(
+      `Impact analyze file inputs differed across ${normalizedBySource.map((source) => source.label).join(", ")}; using deterministic union.`
+    );
+  }
+  return [...new Set(normalizedBySource.flatMap((source) => source.files))].sort();
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
@@ -29421,72 +29692,409 @@ async function blueprintImpactScopeResolve(args = {}) {
   }
   return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
 }
-async function blueprintImpactContextLoad(args = {}) {
-  await ensureRepoRoot(args.cwd);
+async function readPackageMetadata(projectRoot) {
+  const packageJsonPath = path7.join(projectRoot, "package.json");
+  if (!await pathExists4(packageJsonPath)) {
+    return {
+      loaded: false,
+      name: null,
+      version: null,
+      scripts: [],
+      packageManager: null,
+      warnings: ["No package.json found; package runtime hints are unavailable."],
+      partial: false
+    };
+  }
+  try {
+    const parsed = safeJsonParseObject(await fs6.readFile(packageJsonPath, "utf8"), {
+      label: "package.json"
+    });
+    const scripts = isPlainObject6(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
+    return {
+      loaded: true,
+      name: typeof parsed.name === "string" ? parsed.name : null,
+      version: typeof parsed.version === "string" ? parsed.version : null,
+      scripts,
+      packageManager: typeof parsed.packageManager === "string" ? parsed.packageManager : null,
+      warnings: [],
+      partial: false
+    };
+  } catch (error2) {
+    return {
+      loaded: false,
+      name: null,
+      version: null,
+      scripts: [],
+      packageManager: null,
+      warnings: [
+        `Could not parse package.json for impact repo hints: ${error2 instanceof Error ? error2.message : String(error2)}`
+      ],
+      partial: true
+    };
+  }
+}
+async function listExistingTopLevelPaths(projectRoot, candidates) {
+  const existing = [];
+  for (const candidate of candidates) {
+    if (await pathExists4(path7.join(projectRoot, candidate))) {
+      existing.push(candidate);
+    }
+  }
+  return existing.sort();
+}
+async function loadRepoHints(projectRoot, artifactContractsLoaded) {
+  const packageMetadata = await readPackageMetadata(projectRoot);
+  const testPaths = await listExistingTopLevelPaths(projectRoot, [
+    "tests",
+    "test",
+    "src/__tests__"
+  ]);
+  const docsPaths = await listExistingTopLevelPaths(projectRoot, [
+    "docs",
+    "README.md",
+    "CHANGELOG.md"
+  ]);
+  const sourceRoots = await listExistingTopLevelPaths(projectRoot, [
+    "src",
+    "lib",
+    "packages",
+    "apps"
+  ]);
   return {
-    status: "placeholder",
-    project: null,
-    config: null,
-    roadmap: null,
-    phases: [],
-    catalog: null,
-    runtime: {
-      registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      includeRuntime: args.includeRuntime ?? true,
-      includeCatalog: args.includeCatalog ?? true,
-      includeArtifacts: args.includeArtifacts ?? true
-    },
     repoHints: {
       cwdAccepted: true,
-      packageMetadataLoaded: false,
-      artifactContractsLoaded: false
+      packageMetadataLoaded: packageMetadata.loaded,
+      packageJsonPath: packageMetadata.loaded ? "package.json" : null,
+      packageName: packageMetadata.name,
+      packageVersion: packageMetadata.version,
+      packageScripts: packageMetadata.scripts,
+      packageManager: packageMetadata.packageManager,
+      testPaths,
+      docsPaths,
+      sourceRoots,
+      artifactContractsLoaded
     },
-    warnings: [
-      IMPACT_PLACEHOLDER_WARNING,
-      "Blueprint context, roadmap, catalog, runtime metadata, and repo hints are not loaded until Phase 4."
-    ]
+    warnings: packageMetadata.warnings,
+    partial: packageMetadata.partial
+  };
+}
+function normalizeRoadmapItem(value) {
+  return String(value).trim().toLowerCase();
+}
+function getRoadmapPhases(roadmap) {
+  return (roadmap?.phases ?? []).map((phase) => ({
+    phaseNumber: phase.phaseNumber,
+    phaseName: phase.phaseName,
+    requirements: phase.requirements
+  }));
+}
+function matchRoadmapItem(roadmap, roadmapItem) {
+  const normalizedItem = normalizeRoadmapItem(roadmapItem);
+  return getRoadmapPhases(roadmap).filter((phase) => {
+    if (normalizeRoadmapItem(phase.phaseNumber) === normalizedItem) {
+      return true;
+    }
+    if (normalizeRoadmapItem(phase.phaseName) === normalizedItem) {
+      return true;
+    }
+    return phase.requirements.some(
+      (requirement) => normalizeRoadmapItem(requirement) === normalizedItem
+    );
+  });
+}
+function comparePhaseNumbers3(left, right) {
+  const leftNumber = Number.parseFloat(left);
+  const rightNumber = Number.parseFloat(right);
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) {
+    return leftNumber - rightNumber;
+  }
+  return left.localeCompare(right, void 0, { numeric: true });
+}
+function mergePhaseContextEntry(entries, context, requestedBy) {
+  if (!context.phase) {
+    return;
+  }
+  const existing = entries.get(context.phase.phaseNumber);
+  if (existing) {
+    existing.requestedBy = [.../* @__PURE__ */ new Set([...existing.requestedBy, requestedBy])].sort();
+    existing.warnings = [.../* @__PURE__ */ new Set([...existing.warnings, ...context.warnings])].sort();
+    return;
+  }
+  entries.set(context.phase.phaseNumber, {
+    phaseNumber: context.phase.phaseNumber,
+    phaseName: context.phase.phaseName,
+    requestedBy: [requestedBy],
+    context,
+    warnings: [...new Set(context.warnings)].sort()
+  });
+}
+async function loadRequestedPhaseContexts(projectRoot, args, roadmap, warnings) {
+  const entries = /* @__PURE__ */ new Map();
+  let partial2 = false;
+  if (args.phase !== void 0) {
+    try {
+      const context = await blueprintPhaseContext({ cwd: projectRoot, phase: args.phase });
+      if (context.phase) {
+        mergePhaseContextEntry(entries, context, "phase");
+      } else {
+        partial2 = true;
+        warnings.push(
+          `Requested impact phase target could not be resolved: ${String(args.phase)}.`
+        );
+        warnings.push(...context.warnings);
+      }
+    } catch (error2) {
+      partial2 = true;
+      warnings.push(
+        `Requested impact phase target could not be loaded: ${String(args.phase)} (${error2 instanceof Error ? error2.message : String(error2)}).`
+      );
+    }
+  }
+  if (args.roadmapItem !== void 0) {
+    const matches = matchRoadmapItem(roadmap, args.roadmapItem);
+    if (matches.length === 0) {
+      partial2 = true;
+      warnings.push(
+        `Requested impact roadmapItem could not be resolved from phase number, phase name, or requirement id: ${args.roadmapItem}.`
+      );
+    }
+    for (const match of matches) {
+      try {
+        const context = await blueprintPhaseContext({
+          cwd: projectRoot,
+          phase: match.phaseNumber
+        });
+        if (context.phase) {
+          mergePhaseContextEntry(entries, context, "roadmapItem");
+        } else {
+          partial2 = true;
+          warnings.push(
+            `Requested impact roadmapItem matched phase ${match.phaseNumber}, but phase context could not be loaded.`
+          );
+          warnings.push(...context.warnings);
+        }
+      } catch (error2) {
+        partial2 = true;
+        warnings.push(
+          `Requested impact roadmapItem matched phase ${match.phaseNumber}, but phase context failed to load (${error2 instanceof Error ? error2.message : String(error2)}).`
+        );
+      }
+    }
+  }
+  return {
+    phases: [...entries.values()].sort(
+      (left, right) => comparePhaseNumbers3(left.phaseNumber, right.phaseNumber)
+    ),
+    partial: partial2
+  };
+}
+function buildCommandAssets(catalog) {
+  const commands = catalog.commands ?? {};
+  const entries = Object.entries(commands);
+  const manifestPaths = entries.map(([, entry]) => entry.manifestPath).filter((value) => typeof value === "string").sort();
+  const specPaths = entries.map(([, entry]) => entry.specPath).filter((value) => typeof value === "string").sort();
+  const skillPaths = entries.map(([, entry]) => entry.skillPath).filter((value) => typeof value === "string").sort();
+  const implementedCommands = entries.filter(([, entry]) => entry.implemented === true).map(([command]) => command).sort();
+  const nonRoutableCommands = entries.filter(([, entry]) => entry.implemented !== true).map(([command]) => command).sort();
+  const missingAssetCount = entries.reduce(
+    (count, [, entry]) => count + (entry.blockedBy ?? []).filter((blockedBy) => blockedBy.startsWith("Missing ")).length,
+    0
+  );
+  return {
+    commandCount: entries.length,
+    implementedCommands,
+    nonRoutableCommands,
+    manifestPaths,
+    specPaths,
+    skillPaths,
+    missingAssetCount,
+    impact: commands.impact ?? null
+  };
+}
+async function loadProjectStatus(projectRoot) {
+  const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+  return projectModule.blueprintProjectStatus({ cwd: projectRoot });
+}
+async function loadCommandCatalog() {
+  const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+  return projectModule.blueprintCommandCatalog();
+}
+async function blueprintImpactContextLoad(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const includeRuntime = args.includeRuntime ?? true;
+  const includeCatalog = args.includeCatalog ?? true;
+  const includeArtifacts = args.includeArtifacts ?? true;
+  const warnings = [];
+  let partial2 = false;
+  let project = null;
+  let config2 = null;
+  let roadmap = null;
+  let catalog;
+  let commandAssets;
+  let artifactContracts;
+  let runtime;
+  try {
+    project = await loadProjectStatus(projectRoot);
+  } catch (error2) {
+    partial2 = true;
+    warnings.push(
+      `Blueprint project status could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+    );
+  }
+  try {
+    config2 = await blueprintConfigGet({ cwd: projectRoot, scope: "effective" });
+    warnings.push(...config2.warnings);
+  } catch (error2) {
+    partial2 = true;
+    warnings.push(
+      `Blueprint config could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+    );
+  }
+  try {
+    roadmap = await blueprintRoadmapRead({ cwd: projectRoot });
+    warnings.push(...roadmap.warnings);
+  } catch (error2) {
+    partial2 = true;
+    warnings.push(
+      `Blueprint roadmap could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+    );
+  }
+  if (includeCatalog) {
+    try {
+      catalog = await loadCommandCatalog();
+      commandAssets = buildCommandAssets(catalog);
+    } catch (error2) {
+      partial2 = true;
+      warnings.push(
+        `Blueprint command catalog could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+  } else {
+    warnings.push(
+      "includeCatalog=false; command catalog and command asset context omitted by request."
+    );
+  }
+  if (includeArtifacts) {
+    try {
+      artifactContracts = listArtifactContracts();
+    } catch (error2) {
+      partial2 = true;
+      warnings.push(
+        `Blueprint artifact contracts could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+  } else {
+    warnings.push("includeArtifacts=false; artifact contract context omitted by request.");
+  }
+  if (includeRuntime) {
+    runtime = {
+      registeredImpactTools: [...IMPACT_TOOL_NAMES],
+      implementationPhase: 4,
+      readOnly: true,
+      includeRuntime,
+      includeCatalog,
+      includeArtifacts
+    };
+  } else {
+    warnings.push("includeRuntime=false; runtime metadata omitted by request.");
+  }
+  const requestedPhases = await loadRequestedPhaseContexts(
+    projectRoot,
+    args,
+    roadmap,
+    warnings
+  );
+  partial2 ||= requestedPhases.partial;
+  const repoHintsResult = await loadRepoHints(projectRoot, artifactContracts !== void 0);
+  partial2 ||= repoHintsResult.partial;
+  warnings.push(...repoHintsResult.warnings);
+  return {
+    status: partial2 ? "partial" : "loaded",
+    project,
+    config: config2,
+    roadmap,
+    phases: requestedPhases.phases,
+    ...catalog !== void 0 ? { catalog } : {},
+    ...commandAssets !== void 0 ? { commandAssets } : {},
+    ...artifactContracts !== void 0 ? { artifactContracts } : {},
+    ...runtime !== void 0 ? { runtime } : {},
+    repoHints: repoHintsResult.repoHints,
+    warnings: [...new Set(warnings)].sort()
   };
 }
 async function blueprintImpactAnalyze(args = {}) {
-  await ensureRepoRoot(args.cwd);
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const warnings = [];
+  const sources = collectAnalyzeFileSources(args);
+  const files = normalizeAnalyzeFileSources(projectRoot, sources, warnings);
+  const surfaces = files.map((file2) => classifyImpactFile(file2));
+  const areaSummary = buildAreaSummary(surfaces);
+  const surfaceSummary = buildSurfaceSummary(surfaces);
   const impactId = placeholderImpactId({
-    scope: args.scope ?? null,
-    context: args.context ?? null,
-    config: args.config ?? null
+    files,
+    surfaces: surfaces.map((surface) => ({
+      path: surface.path,
+      surfaces: surface.surfaces
+    }))
   });
+  if (sources.length === 0) {
+    warnings.push(
+      "No changed files were provided to impact analysis; Phase 4 classification has no file-backed surfaces."
+    );
+  }
   return {
-    phaseStatus: "placeholder",
+    phaseStatus: "classified",
     impactId,
     status: "WARN",
     impactStatus: "WARN",
     risk: {
       level: "unknown",
       reasons: [
-        "Impact analysis has not classified changed surfaces, ownership, dependencies, contracts, or obligations yet."
+        "Phase 4 classifies changed surfaces, but ownership, dependency, contract, and scoring checks are deferred."
       ]
     },
-    confidence: placeholderConfidence(
-      "Phase 2 only proves the typed MCP seam exists; analysis scoring arrives in later phases."
-    ),
-    surfaces: [],
+    confidence: {
+      score: files.length > 0 ? 0.58 : 0.25,
+      level: files.length > 0 ? "medium" : "low",
+      reasons: files.length > 0 ? [
+        "Changed files were normalized and classified deterministically.",
+        "Confidence remains capped until ownership, dependency, contract, and scoring phases land."
+      ] : [
+        "No file-backed scope was available for deterministic surface classification.",
+        "Confidence remains low until a scope resolver supplies changed files."
+      ]
+    },
+    surfaces,
+    areaSummary,
+    surfaceSummary,
     findings: [],
     obligations: [],
     unknowns: [
-      "unknown.impactAnalysisNotImplemented",
       "unknown.ownershipNotLoaded",
-      "unknown.dependencyGraphNotLoaded"
+      "unknown.dependencyGraphNotLoaded",
+      "unknown.contractChecksDeferred",
+      "unknown.obligationChecksDeferred",
+      "unknown.riskScoringDeferred"
     ],
     evidence: [],
     report: {
       schemaVersion: "blueprint.impact.report.v1",
       impactId,
       status: "WARN",
-      summary: "Impact analysis is registered but not implemented; treat this as an advisory placeholder only."
+      summary: "Impact analysis classified changed file surfaces; later phases still own ownership, dependency, contract, obligation, and scoring conclusions.",
+      files,
+      surfaces,
+      areaSummary,
+      surfaceSummary,
+      unknowns: [
+        "unknown.ownershipNotLoaded",
+        "unknown.dependencyGraphNotLoaded",
+        "unknown.contractChecksDeferred",
+        "unknown.obligationChecksDeferred",
+        "unknown.riskScoringDeferred"
+      ]
     },
-    warnings: [
-      IMPACT_PLACEHOLDER_WARNING,
-      "Analysis returns WARN with low confidence until surface classification, ownership, dependency, and scoring phases land."
-    ]
+    warnings: [...new Set(warnings)].sort()
   };
 }
 async function blueprintImpactReportWrite(args = {}) {
@@ -29539,12 +30147,15 @@ ${IMPACT_PLACEHOLDER_WARNING}`;
     ]
   };
 }
-var IMPACT_TOOL_NAMES, IMPACT_PLACEHOLDER_WARNING, IMPACT_SCHEMA_VERSION, PLACEHOLDER_IMPACT_ID, IMPACT_PROJECT_CONFIG_PATH, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, impactToolDefinitions;
+var IMPACT_TOOL_NAMES, IMPACT_PLACEHOLDER_WARNING, IMPACT_SCHEMA_VERSION, PLACEHOLDER_IMPACT_ID, IMPACT_PROJECT_CONFIG_PATH, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
     init_v4();
     init_artifacts();
+    init_config();
+    init_phase();
+    init_artifact_contracts();
     init_runtime_host();
     init_security();
     IMPACT_TOOL_NAMES = [
@@ -29555,9 +30166,9 @@ var init_impact = __esm({
       "blueprint_impact_report_write",
       "blueprint_impact_output_render"
     ];
-    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 2 MCP skeleton is registered; deterministic implementation continues in later impact phases.";
+    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 4 config, scope, context, and surface classification are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
     IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
-    PLACEHOLDER_IMPACT_ID = "impact-phase-2-placeholder";
+    PLACEHOLDER_IMPACT_ID = "impact-phase-4-placeholder";
     IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
     IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
     GIT_COMMAND_TIMEOUT_MS = 15e3;
@@ -29572,6 +30183,55 @@ var init_impact = __esm({
     ];
     BUILT_IN_BASE_BRANCHES = ["main", "master"];
     execFileAsync = promisify(execFile);
+    IMPACT_SURFACE_PRIORITY = {
+      "secret-sensitive": 1,
+      "env-config": 2,
+      "command-catalog": 3,
+      "command-manifest": 4,
+      "command-doc": 5,
+      "mcp-server": 6,
+      "mcp-tool": 7,
+      "mcp-resource": 8,
+      "artifact-contract": 9,
+      skill: 10,
+      agent: 11,
+      "extension-manifest": 12,
+      hook: 13,
+      "package-runtime": 14,
+      "build-config": 15,
+      test: 16,
+      docs: 17,
+      generated: 18,
+      config: 19,
+      source: 20,
+      "repo-root": 21,
+      unknown: 22
+    };
+    SOURCE_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
+      ".cjs",
+      ".cts",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".mts",
+      ".ts",
+      ".tsx"
+    ]);
+    CONFIG_FILE_EXTENSIONS = /* @__PURE__ */ new Set([".json", ".jsonc", ".toml", ".yaml", ".yml"]);
+    DOC_FILE_EXTENSIONS = /* @__PURE__ */ new Set([".md", ".mdx", ".markdown", ".rst", ".txt"]);
+    TEST_FILE_PATTERNS = [
+      /\.test\.[^.]+$/u,
+      /\.spec\.[^.]+$/u,
+      /(^|\/)__tests__\//u,
+      /(^|\/)tests?\//u
+    ];
+    GENERATED_FILE_PATTERNS = [
+      /(^|\/)dist\//u,
+      /\.generated\./u,
+      /\.gen\./u,
+      /\.d\.ts$/u
+    ];
+    SECRET_PATH_PATTERN = /(^|\/)(secrets?|credentials?|tokens?)(\/|$)|(^|[-_.])(secret|credential|token)([-_.]|$)/iu;
     nonEmptyStringSchema = string2().trim().min(1);
     impactModeSchema = _enum([
       "auto",
@@ -29616,6 +30276,8 @@ var init_impact = __esm({
     };
     impactAnalyzeInputSchema = {
       cwd: string2().optional(),
+      changedFiles: array(nonEmptyStringSchema).optional(),
+      files: array(nonEmptyStringSchema).optional(),
       scope: record(string2(), unknown()).optional(),
       context: record(string2(), unknown()).optional(),
       config: record(string2(), unknown()).optional()
