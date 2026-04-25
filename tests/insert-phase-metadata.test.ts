@@ -12,6 +12,7 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   );
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
+  assert.match(commandFile, /insert-phase-runtime-contract\.md/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
@@ -36,6 +37,7 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   );
 
   assert.match(skillFile, /\/blu-insert-phase/);
+  assert.match(skillFile, /insert-phase-runtime-contract\.md/);
   assert.match(skillFile, /blueprint_roadmap_insert_phase/);
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /roadmap-driven/i);
@@ -46,6 +48,47 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
+  assert.match(skillFile, /There is no insert-phase subagent path/);
+  assert.match(skillFile, /phase\.context/);
+});
+
+test("insert-phase runtime contract locks stage mapping, fallback, repair, and completion behavior", async () => {
+  const contract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
+
+  for (const heading of [
+    "### Resolve",
+    "### Read",
+    "### Decide",
+    "### Execute",
+    "### Persist",
+    "### Validate",
+    "### Route"
+  ]) {
+    assert.match(contract, new RegExp(heading));
+  }
+
+  assert.match(contract, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(contract, /mcp_blueprint_blueprint_roadmap_insert_phase/);
+  assert.match(contract, /mcp_blueprint_blueprint_artifact_scaffold/);
+  assert.match(contract, /mcp_blueprint_blueprint_state_update/);
+  assert.match(contract, /phase-insert-confirmation/);
+  assert.match(contract, /invalid-insertion-anchor/);
+  assert.match(contract, /conflicting-decimal-directory/);
+  assert.match(contract, /phase\.context/);
+  assert.match(contract, /starter scaffold only/);
+  assert.match(contract, /No-Subagent Fallback/);
+  assert.match(contract, /Do not use `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only,\s*shell-only, or generic agents as substitutes/);
+  assert.match(contract, /Retry And Repair Behavior/);
+  assert.match(contract, /State update failure/);
+  assert.match(contract, /Output Quality Criteria/);
+  assert.match(contract, /Completion Criteria/);
+  assert.match(contract, /No public command surface, catalog status semantics, hook ownership,\s*installed-extension files, or `\.planning\/` runtime dependency changed/);
 });
 
 test("insert-phase docs and MCP reference use numeric after anchors and phasePrefix-backed scaffolding", async () => {
@@ -64,6 +107,7 @@ test("insert-phase docs and MCP reference use numeric after anchors and phasePre
   );
 
   assert.match(commandDoc, /<afterPhaseNumber> <description>/);
+  assert.match(commandDoc, /insert-phase-runtime-contract\.md/);
   assert.match(commandDoc, /\| Execution profile \| `interactive-read` \|/);
   assert.match(commandDoc, /shared interactive-read classification/i);
   assert.match(commandDoc, /phase-insert-confirmation/);
@@ -71,13 +115,44 @@ test("insert-phase docs and MCP reference use numeric after anchors and phasePre
   assert.match(commandDoc, /phasePrefix/);
   assert.match(commandDoc, /roadmapEvolutionNotes/);
   assert.match(commandDoc, /Inserted: yes/);
+  assert.match(commandDoc, /Subagent fallback/);
+  assert.match(commandDoc, /do not use Blueprint roadmapper, Blueprint verifier, browser, web-search-only, shell-only, or generic agents as substitutes/);
+  assert.match(commandDoc, /phase\.context/);
   assert.match(schemaDoc, /optional inserted marker/);
   assert.match(schemaDoc, /Inserted: yes/);
   assert.doesNotMatch(commandDoc, /may also mutate code or git state/i);
   assert.match(mcpDocs, /`blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`/);
   assert.match(mcpDocs, /`afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir`/);
+  assert.match(mcpDocs, /insert-phase-runtime-contract\.md/);
+  assert.match(mcpDocs, /canonical `phase\.context` contract/);
   assert.match(runtimeDocs, /Interactive-read profile for bounded roadmap insertion:/);
+  assert.match(runtimeDocs, /insert-phase-runtime-contract\.md/);
   assert.match(runtimeDocs, /returned `phasePrefix`/);
+  assert.match(runtimeDocs, /starter `phase\.context` content/);
+  assert.match(runtimeDocs, /no-subagent fallback/);
   assert.match(runtimeDocs, /roadmapEvolutionNotes/);
   assert.doesNotMatch(runtimeDocs, /roadmap-evolution marker/i);
+});
+
+test("roadmap-admin agent guidance keeps insert-phase skill-led while agent contracts retain output-quality expectations", async () => {
+  const skillsDoc = await readFile(
+    path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"),
+    "utf8"
+  );
+  const roadmapperAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-roadmapper.md"),
+    "utf8"
+  );
+  const verifierAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-verifier.md"),
+    "utf8"
+  );
+
+  assert.match(skillsDoc, /`insert-phase` keeps its richer runtime behavior in `skills\/blueprint-roadmap-admin\/references\/insert-phase-runtime-contract\.md`/);
+  assert.match(skillsDoc, /Browser, web-search-only, shell-only, or generic agents are not substitutes/);
+  assert.match(roadmapperAgent, /## Required Output Contract/);
+  assert.match(roadmapperAgent, /dependency warnings/);
+  assert.match(roadmapperAgent, /Do not rewrite `\.blueprint\/ROADMAP\.md`/);
+  assert.match(verifierAgent, /## Required Output Contract/);
+  assert.match(verifierAgent, /Separate findings by gap classification and tie each one to concrete evidence/);
 });

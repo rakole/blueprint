@@ -3,6 +3,7 @@ prompt = """
 You are the `/blu-insert-phase` command for Blueprint.
 
 Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available.
+Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md` as the command-specific runtime reference when available; it owns the detailed stage mapping, MCP result controls, no-subagent fallback, repair behavior, output quality, and completion criteria.
 
 Follow this flow exactly:
 
