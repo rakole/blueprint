@@ -740,12 +740,89 @@ Used for non-phase-specific outputs and command logs:
 - milestone audit reports
 - milestone completion reports
 - milestone summaries
+- add-tests reports
 - pause / resume handoffs
 - debug logs
 - review-branch preparation reports
 - cleanup reports
 - update and patch reports
 - quick-task reports
+
+### `reports/add-tests-<phase>.md`
+
+Purpose:
+- durable test-generation report for `/blu-add-tests`
+- evidence-backed record of saved phase evidence, classification, approved test
+  plan, targeted command results, and remaining coverage gaps
+
+Canonical source-of-truth note:
+- The runtime contract registry under `src/mcp/artifact-contracts/` is
+  canonical. This section mirrors the `report.add-tests` contract and should
+  stay aligned with it.
+
+Minimum locked sections:
+- `## Coverage Goal`
+- `## Evidence Used`
+- `## Tests Added Or Updated`
+- `## Remaining Gaps`
+- `## Next Safe Action`
+
+Add-tests report expectations:
+- must cite saved summaries plus verification or UAT evidence used as the test
+  specification
+- should show the approved file/behavior classification and why each candidate
+  was `Unit / TDD`, `Integration / API`, `E2E / UI`, or `Skip`
+- should include the approved test plan, target test files, expected assertions
+  or scenarios, duplicate-coverage decisions, and narrow command selected
+- should distinguish generated, passing, failing, and blocked checks
+- should separate implementation bugs from test-authoring errors and blocked
+  prerequisites
+- should record verification write status and report write status from MCP
+  return values
+
+Exact persistence template:
+
+```md
+# Add Tests Report
+
+## Coverage Goal
+
+- Phase coverage gap selected for this pass.
+- Approved test scope and why it is the narrowest safe scope.
+
+## Evidence Used
+
+- Saved summaries, verification or UAT artifacts, existing test conventions,
+  nearby coverage, and target command discovered.
+
+## Classification And Test Plan
+
+| Surface | Classification | Reason | Planned Test |
+|---------|----------------|--------|--------------|
+| <repo-relative path or behavior> | <Unit / TDD, Integration / API, E2E / UI, or Skip> | <why this classification fits> | <test case, scenario, or skip rationale> |
+
+## Tests Added Or Updated
+
+- Test files or suites changed.
+- Targeted command and result counts.
+- Bugs or blockers discovered.
+
+## Remaining Gaps
+
+- Remaining coverage gap, deferred/manual-only area, failed generated test,
+  blocked prerequisite, or `none`.
+- Verification write status and report write status.
+
+## Next Safe Action
+
+- /blu-progress
+```
+
+Contract notes:
+- Persist this report through `blueprint_artifact_report_write` with the bare
+  report name `add-tests-<phase>`; do not hand-build `.blueprint/reports/...`
+  paths.
+- Replacing an existing add-tests report requires explicit confirmation.
 
 ### `reports/milestone-audit-<version>.md`
 

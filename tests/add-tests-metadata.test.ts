@@ -14,9 +14,21 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   );
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
+  assert.match(
+    commandFile,
+    /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/
+  );
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(commandFile, /classification approval/i);
+  assert.match(commandFile, /test-plan approval/i);
+  assert.match(commandFile, /Build a classification table before writing/i);
+  assert.match(commandFile, /Unit \/ TDD/);
+  assert.match(commandFile, /Integration \/ API/);
+  assert.match(commandFile, /E2E \/ UI/);
+  assert.match(commandFile, /Present a concrete test plan before mutation/i);
+  assert.match(commandFile, /Distinguish generated tests that pass/i);
   assert.match(commandFile, /targeted test command or result/i);
   assert.match(commandFile, /current verification status/i);
   assert.match(commandFile, /report status/i);
@@ -42,9 +54,11 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   }
 
   assert.match(commandFile, /XX-VERIFICATION\.md/);
+  assert.match(commandFile, /artifactId: "report\.add-tests"/);
   assert.match(commandFile, /add-tests-<phase>/);
   assert.match(commandFile, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
   assert.match(commandFile, /`path`, `written`, and `status` as authoritative/i);
+  assert.match(commandFile, /repair the draft against the returned canonical contract and retry once/i);
   assert.match(commandFile, /\/blu-execute-phase <phase>/);
   assert.match(commandFile, /\/blu-validate-phase <phase>/);
   assert.match(commandFile, /\/blu-code-review <phase>/);
@@ -64,6 +78,12 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-add-tests/);
   assert.match(skillFile, /### `add-tests`/);
+  assert.match(skillFile, /references\/add-tests-runtime-contract\.md/);
+  assert.match(skillFile, /classification gates, test-plan approval/i);
+  assert.match(skillFile, /Build a file-by-file classification table before writing/i);
+  assert.match(skillFile, /Unit \/ TDD/);
+  assert.match(skillFile, /Integration \/ API/);
+  assert.match(skillFile, /E2E \/ UI/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-executor/);
@@ -71,26 +91,126 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /selected test scope, targeted test command or result, verification status, report status/i);
   assert.match(skillFile, /verification status/i);
   assert.match(skillFile, /update_topic plus `write_todos`/i);
-  assert.match(skillFile, /Use `ask_user` for structured scope or breadth decisions/i);
+  assert.match(skillFile, /Use `ask_user` for structured classification, scope, test-plan, or breadth decisions/i);
+  assert.match(skillFile, /one summary and candidate area at a time/i);
+  assert.match(skillFile, /Never substitute browser, web-search-only, shell-only, or generic agents/i);
+  assert.match(skillFile, /report\.add-tests/);
+  assert.match(skillFile, /generated\/passing\/failing\/blocked counts/i);
   assert.match(skillFile, /reported report status aligned with the tool-owned `written` and `status` result/i);
+  assert.match(skillFile, /repair the draft against the canonical contract and retry once/i);
   assert.match(skillFile, /add-tests-<phase>/);
   assert.match(skillFile, /\/blu-code-review <phase>/);
 });
 
+test("add-tests runtime contract preserves GSD-inspired richness without script-owned persistence", async () => {
+  const runtimeContract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+    ),
+    "utf8"
+  );
+
+  for (const stage of ["Resolve", "Read", "Decide", "Execute", "Persist", "Validate", "Route"]) {
+    assert.match(runtimeContract, new RegExp(`\\| ${stage} \\|`));
+  }
+
+  for (const toolName of [
+    "blueprint_phase_locate",
+    "blueprint_phase_summary_index",
+    "blueprint_phase_summary_read",
+    "blueprint_phase_validation_read",
+    "blueprint_phase_validation_write",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_list",
+    "blueprint_artifact_validate",
+    "blueprint_artifact_report_write",
+    "blueprint_state_load",
+    "blueprint_state_update"
+  ] as const) {
+    assert.match(runtimeContract, new RegExp(toolName));
+  }
+
+  assert.match(runtimeContract, /artifactId: "phase\.verification"/);
+  assert.match(runtimeContract, /artifactId: "report\.add-tests"/);
+  assert.match(runtimeContract, /Classification And Scope Decision/);
+  assert.match(runtimeContract, /Unit \/ TDD/);
+  assert.match(runtimeContract, /Integration \/ API/);
+  assert.match(runtimeContract, /E2E \/ UI/);
+  assert.match(runtimeContract, /do not classify by filename\s+alone/i);
+  assert.match(runtimeContract, /Present a concrete test plan/i);
+  assert.match(runtimeContract, /generated\/passing\/failing\/\s*blocked counts/i);
+  assert.match(runtimeContract, /implementation bug/i);
+  assert.match(runtimeContract, /blueprint-executor/);
+  assert.match(runtimeContract, /blueprint-verifier/);
+  assert.match(runtimeContract, /Do not substitute browser, web-search-only, shell-only, or generic agents/i);
+  assert.match(runtimeContract, /No-Subagent Fallback/);
+  assert.match(runtimeContract, /one approved test file or scenario group at a time/i);
+  assert.match(runtimeContract, /repair the report draft against\s+the `report\.add-tests` authoring template and retry once/i);
+});
+
 test("add-tests doc and runtime reference keep bounded visibility explicit", async () => {
-  const [commandDoc, runtimeReference] = await Promise.all([
+  const [commandDoc, runtimeReference, mcpTools] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/add-tests.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
+    readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8")
   ]);
 
   assert.match(commandDoc, /## Shared Runtime Contract/);
+  assert.match(commandDoc, /Detailed runtime reference: `skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md`/);
   assert.match(commandDoc, /## In-Flight Progress Contract/);
+  assert.match(commandDoc, /## Classification And Test Plan/);
+  assert.match(commandDoc, /Unit \/ TDD/);
+  assert.match(commandDoc, /Integration \/ API/);
+  assert.match(commandDoc, /E2E \/ UI/);
   assert.match(commandDoc, /targeted test result, verification status, report status, and next safe action/i);
   assert.match(commandDoc, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
   assert.match(commandDoc, /returned report `path`, `written`, and `status` as authoritative/i);
+  assert.match(commandDoc, /artifactId: "report\.add-tests"/);
+  assert.match(commandDoc, /generated\/passing\/failing\/blocked counts/i);
+  assert.match(commandDoc, /implementation bugs, test-authoring errors, and blocked checks/i);
   assert.match(commandDoc, /Reports verification and report persistence outcomes from MCP return values/i);
   assert.match(
     runtimeReference,
-    /`add-tests`[\s\S]*selected scope, pending gates, targeted test result, verification status, and report status explicit/i
+    /`add-tests`[\s\S]*load `skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md`[\s\S]*classify candidate files after reading them[\s\S]*test plans with `ask_user`[\s\S]*repair invalid writes once/i
   );
+  assert.match(
+    mcpTools,
+    /`add-tests`[\s\S]*classification table before mutation[\s\S]*test plan[\s\S]*blueprint-executor[\s\S]*blueprint-verifier[\s\S]*one-candidate-at-a-time no-subagent fallback/i
+  );
+});
+
+test("add-tests agents and report contract include output-quality expectations", async () => {
+  const [executor, verifier, contractSource, artifactSchema] = await Promise.all([
+    readFile(path.join(repoRoot, "agents/blueprint-executor.md"), "utf8"),
+    readFile(path.join(repoRoot, "agents/blueprint-verifier.md"), "utf8"),
+    readFile(path.join(repoRoot, "src/mcp/artifact-contracts/index.ts"), "utf8"),
+    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8")
+  ]);
+
+  assert.match(executor, /\/blu-add-tests/);
+  assert.match(executor, /approved classification table/);
+  assert.match(executor, /Test Plan Executed/);
+  assert.match(executor, /Targeted Test Evidence/);
+  assert.match(executor, /generated\/passing\/\s*failing\/blocked counts/i);
+  assert.match(executor, /do not mutate product implementation to make tests\s+pass/i);
+
+  assert.match(verifier, /Add-tests coverage review mode/);
+  assert.match(verifier, /approved classification table/);
+  assert.match(verifier, /changed test files/);
+  assert.match(verifier, /targeted command output/);
+  assert.match(verifier, /do not declare `READY` from the existence\s+of test files alone/i);
+  assert.match(verifier, /generated, passing, failing, blocked, and\s+skipped\/manual-only coverage/i);
+
+  assert.match(contractSource, /function renderAddTestsTemplate/);
+  assert.match(contractSource, /## Classification And Test Plan/);
+  assert.match(contractSource, /Result counts: generated <N>, passing <N>, failing <N>, blocked <N>/);
+  assert.match(contractSource, /Verification write status/);
+  assert.match(contractSource, /Report write status/);
+  assert.match(contractSource, /report\.add-tests/);
+
+  assert.match(artifactSchema, /### `reports\/add-tests-<phase>\.md`/);
+  assert.match(artifactSchema, /Classification And Test Plan/);
+  assert.match(artifactSchema, /Unit \/ TDD/);
+  assert.match(artifactSchema, /generated, passing, failing, and blocked checks/i);
 });

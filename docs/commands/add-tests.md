@@ -10,8 +10,9 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Detailed runtime reference: `skills/blueprint-phase-validation/references/add-tests-runtime-contract.md`
 - `add-tests` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and validation evidence, decide the narrowest safe test scope, execute bounded test generation, persist verification notes and the durable report through MCP, validate the saved artifact state, and route to the next safe implemented follow-up.
-- Keep the evidence-backed mutation contract explicit throughout the run: execution summaries plus saved verification or UAT artifacts remain the grounding source, the selected test scope is part of the resolved scope, scope confirmation or a broader-suite choice is the pending gate when the request would widen beyond targeted tests, and targeted test results plus verification and report status must stay aligned with tool-owned results instead of being inferred from prompt progress alone.
+- Keep the evidence-backed mutation contract explicit throughout the run: execution summaries plus saved verification or UAT artifacts remain the grounding source, the selected test scope is part of the resolved scope, classification approval, test-plan approval, scope confirmation, or a broader-suite choice are pending gates when the request would widen beyond targeted tests, and targeted test results plus verification and report status must stay aligned with tool-owned results instead of being inferred from prompt progress alone.
 
 ## Purpose
 
@@ -45,8 +46,16 @@
 ## In-Flight Progress Contract
 
 - For non-trivial add-tests runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact test-generation checklist with `write_todos`.
-- Keep that visible progress aligned to the selected scope, current stage, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action as the run moves from evidence review through scope confirmation, bounded test implementation, targeted test execution, verification persistence, report persistence, post-write validation, and routing.
+- Keep that visible progress aligned to the selected scope, current stage, classification status, test-plan status, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action as the run moves from evidence review through classification, scope confirmation, bounded test implementation, targeted test execution, verification persistence, report persistence, post-write validation, and routing.
 - Treat `update_topic` and `write_todos` as session-local coordination only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
+
+## Classification And Test Plan
+
+- Build a file-by-file classification table before writing tests. Read each candidate file, nearby tests, and runner configuration before classifying it as `Unit / TDD`, `Integration / API`, `E2E / UI`, or `Skip`.
+- Present classification decisions with concrete reasons when the run is broad, ambiguous, or user-visible. Apply user adjustments and re-present changed classifications before planning.
+- Discover existing test directories, naming conventions, duplicate coverage, and narrow test commands before drafting the plan.
+- Present a concrete test plan before non-trivial mutation: target test paths, test cases or scenarios, expected assertions, command to run, and blocked prerequisites.
+- During execution, distinguish passing generated tests, tests that reveal implementation bugs, test-authoring errors that should be repaired in this command, and blocked tests that cannot run.
 
 
 ## Blueprint And Global State Reads
@@ -55,6 +64,7 @@
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing verification and UAT artifacts through `blueprint_phase_validation_read`
 - canonical verification contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`
+- canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"`
 - current Blueprint artifact inventory through `blueprint_artifact_list`
 - current state routing through `blueprint_state_load`
 
@@ -90,8 +100,11 @@
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
 - Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, and self-check the normalized verification draft against the returned contract before writing.
 - Keep the reported verification status aligned with the returned `written` and `status` fields instead of claiming a save from command progress alone.
+- Read the canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` before final report authoring.
+- Normalize the durable report to the returned `authoringTemplate` and include the approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification write status, report write status, remaining gaps, and next safe action.
 - Persist the durable add-tests report through `blueprint_artifact_report_write` with the bare report name `add-tests-<phase>`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path`, `written`, and `status` as authoritative, and keep the reported report status explicit even when targeted test execution or verification persistence fails.
+- If validation or report persistence is rejected, repair the authored markdown against the returned canonical contract and retry once before stopping with explicit issues and suggested repairs.
 
 
 ## Skills And Subagents
@@ -131,6 +144,7 @@
 
 
 - Use Gemini CLI `ask_user` when the request is broad and the test scope needs a structured choice.
+- Use Gemini CLI `ask_user` when classification or the concrete test plan needs approval before mutation.
 - Confirm before widening from a focused targeted test pass to a broader suite-wide run.
 
 
@@ -147,6 +161,7 @@
 
 - Preserve the durable add-tests report even when test execution fails.
 - Route to `/blu-validate-phase <phase>` when validation evidence is missing instead of generating tests from chat memory.
+- Keep implementation bugs discovered by generated tests as reported bugs or blockers; do not silently fix product code from this command.
 - Fall back to explicit file selection or `/blu-progress` instead of guessing through an unclear test harness.
 
 
@@ -154,11 +169,14 @@
 
 
 - Reads execution summaries plus existing verification or UAT evidence before generating tests.
+- Builds an evidence-backed classification table and approved test plan before non-trivial mutation.
+- Discovers repo test conventions and duplicate coverage before writing tests.
 - Keeps repo mutation scoped to the selected tests and any minimal supporting helpers.
 - Keeps test-generation stages, pending gates, targeted test results, verification status, report status, and the next safe action explicit while add-tests is in flight.
 - Persists updated verification notes through `blueprint_phase_validation_write` rather than direct file edits.
-- Persists the durable report through `blueprint_artifact_report_write`.
+- Persists the durable report through `blueprint_artifact_report_write` after normalizing it to the `report.add-tests` authoring template.
 - Reports verification and report persistence outcomes from MCP return values instead of assuming they succeeded.
+- Distinguishes passing tests, implementation bugs, test-authoring errors, and blocked checks in the final report.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Uses only documented MCP tools for Blueprint-owned persistent state changes.
 - Leaves unrelated repo files untouched.
