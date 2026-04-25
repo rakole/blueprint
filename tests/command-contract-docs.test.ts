@@ -926,11 +926,11 @@ test("review docs and migration notes keep the peer-review contract explicit", a
   assert.match(reviewDoc, /preserve disagreement/i);
   assert.match(
     mcpToolsDoc,
-    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_review_record`/
+    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_review_record`/
   );
   assert.match(
     migrationMarkdown,
-    /\| `review` \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_review_record` \|/
+    /\| `review` \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
   );
 });
 

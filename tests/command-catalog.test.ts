@@ -683,6 +683,9 @@ test("implemented commands expose their declared optional agent contracts when s
   assert.deepEqual(catalog.commands["ui-review"].availableOptionalAgents, [
     "blueprint-ui-auditor"
   ]);
+  assert.deepEqual(catalog.commands["review"].availableOptionalAgents, [
+    "blueprint-reviewer"
+  ]);
   assert.deepEqual(catalog.commands["plan-milestone-gaps"].availableOptionalAgents, [
     "blueprint-roadmapper"
   ]);
@@ -920,11 +923,12 @@ test("review is implemented once manifest, review skill, and plan-backed peer-re
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
     "blueprint_review_record"
   ]);
-  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
   assert.deepEqual(entry.blockedBy, []);
 });
 

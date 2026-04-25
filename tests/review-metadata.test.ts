@@ -11,6 +11,10 @@ test("review manifest references plan-backed peer-review tools and safe routing 
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
+  assert.match(
+    commandFile,
+    /Load `skills\/blueprint-review\/references\/review-runtime-contract\.md`/
+  );
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
     commandFile,
@@ -27,11 +31,17 @@ test("review manifest references plan-backed peer-review tools and safe routing 
   assert.match(commandFile, /one focused question per `ask_user` call/i);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, /artifact: "peer-review"/);
   assert.match(commandFile, /XX-REVIEWS\.md/);
+  assert.match(commandFile, /review\.peer-review/);
+  assert.match(commandFile, /contract\.authoringTemplate/);
+  assert.match(commandFile, /blueprint-reviewer/);
+  assert.match(commandFile, /no-subagent fallback/i);
+  assert.match(commandFile, /Reject browser-only, web-search-only, shell-only, or generic helpers/i);
   assert.match(commandFile, /reviewer-availability/i);
   assert.match(commandFile, /requested reviewers/i);
   assert.match(commandFile, /reviewer disagreement status/i);
@@ -45,13 +55,18 @@ test("review manifest references plan-backed peer-review tools and safe routing 
 });
 
 test("blueprint-review skill captures MCP-owned peer-review rules", async () => {
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-review/SKILL.md"),
-    "utf8"
-  );
+  const [skillFile, runtimeContract, agentFile] = await Promise.all([
+    readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/review-runtime-contract.md"),
+      "utf8"
+    ),
+    readFile(path.join(repoRoot, "agents/blueprint-reviewer.md"), "utf8")
+  ]);
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-review/);
+  assert.match(skillFile, /skills\/blueprint-review\/references\/review-runtime-contract\.md/);
   assert.match(skillFile, /Execution profile for `review`: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -60,7 +75,13 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
   assert.match(skillFile, /### `review`/);
   assert.match(skillFile, /blueprint_phase_plan_index/);
   assert.match(skillFile, /blueprint_phase_plan_read/);
+  assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_review_record/);
+  assert.match(skillFile, /review\.peer-review/);
+  assert.match(skillFile, /contract\.authoringTemplate/);
+  assert.match(skillFile, /blueprint-reviewer/);
+  assert.match(skillFile, /no-subagent\s+fallback/i);
+  assert.match(skillFile, /Reject browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /XX-REVIEWS\.md/);
   assert.match(skillFile, /ask_user/);
   assert.match(skillFile, /update_topic plus `write_todos`/i);
@@ -70,6 +91,25 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
   assert.match(skillFile, /\/blu-plan-phase <phase>/);
   assert.match(skillFile, /\/blu-execute-phase <phase>/);
   assert.match(skillFile, /\/blu-code-review <phase>/);
+
+  assert.match(runtimeContract, /## Stage Mapping/);
+  assert.match(runtimeContract, /## Required MCP Calls/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /review\.peer-review/);
+  assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /## Artifact Authoring Rules/);
+  assert.match(runtimeContract, /Reviewer Coverage/);
+  assert.match(runtimeContract, /Consensus Summary/);
+  assert.match(runtimeContract, /Disagreements/);
+  assert.match(runtimeContract, /## Capability-Gated Subagent Path/);
+  assert.match(runtimeContract, /blueprint-reviewer/);
+  assert.match(runtimeContract, /## No-Subagent Fallback/);
+  assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or generic helpers/i);
+  assert.match(runtimeContract, /Invalid peer-review write/i);
+
+  assert.match(agentFile, /peer-review packet or synthesis mode/i);
+  assert.match(agentFile, /reviewer coverage gaps/i);
+  assert.match(agentFile, /Do not invoke external reviewer CLIs/i);
 });
 
 test("review docs and runtime reference describe the long-running peer-review spine", async () => {
@@ -88,6 +128,12 @@ test("review docs and runtime reference describe the long-running peer-review sp
     /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
   );
   assert.match(docFile, /shared long-running-mutation posture/i);
+  assert.match(docFile, /skills\/blueprint-review\/references\/review-runtime-contract\.md/);
+  assert.match(docFile, /blueprint_artifact_contract_read/);
+  assert.match(docFile, /review\.peer-review/);
+  assert.match(docFile, /contract\.authoringTemplate/);
+  assert.match(docFile, /Optional subagents: `blueprint-reviewer`/);
+  assert.match(docFile, /no-subagent sequential fallback/i);
   assert.match(docFile, /requested reviewer set, reviewer availability, disagreement posture/i);
   assert.match(docFile, /`update_topic` tool and keep a compact peer-review checklist with `write_todos`/i);
   assert.match(docFile, /session-local visibility only/i);
@@ -117,5 +163,17 @@ test("review docs and runtime reference describe the long-running peer-review sp
   assert.match(
     runtimeReference,
     /`review`[\s\S]*explicit reviewer flags versus `--all` fan-out/i
+  );
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*blueprint_artifact_contract_read/i
+  );
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*skills\/blueprint-review\/references\/review-runtime-contract\.md/i
+  );
+  assert.match(
+    runtimeReference,
+    /`review`[\s\S]*`blueprint-reviewer` only for read-only packet completeness or consensus\/disagreement synthesis/i
   );
 });

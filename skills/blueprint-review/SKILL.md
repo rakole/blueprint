@@ -62,6 +62,7 @@ non-routable until their extra MCP substrate lands.
 - `skills/blueprint-review/references/code-review-runtime-contract.md`
 - `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
 - `skills/blueprint-review/references/audit-fix-runtime-contract.md`
+- `skills/blueprint-review/references/review-runtime-contract.md`
 - `skills/blueprint-review/references/secure-phase-runtime-contract.md`
 - `skills/blueprint-review/references/ui-review-runtime-contract.md`
 - saved phase artifacts for the target phase, especially execution summaries
@@ -109,6 +110,8 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
+- Do not guess review scope from unstaged repo drift when saved phase evidence is the authoritative baseline.
+- Keep repo mutation tightly bounded to the resolved review scope and capped candidate set.
 
 ## Workflow Rules
 
@@ -377,6 +380,8 @@ non-routable until their extra MCP substrate lands.
 6. Classify candidate findings from selected saved evidence plus direct
    inspection of scoped files only. Do not classify from unstaged drift or chat
    memory alone.
+   Keep repo mutation tightly bounded to the resolved review scope and capped
+   candidate set.
 7. Produce a classification table before mutation with finding id, evidence
    source, severity, classification (`auto-fixable`, `manual-only`, or `skip`),
    reason, implicated files, and narrow verification. Prefer `manual-only` when
@@ -448,63 +453,65 @@ non-routable until their extra MCP substrate lands.
 
 ### `review`
 
-1. Resolve the target phase and read the current Blueprint artifact inventory
-   before launching peer review so plan, execution, or prior review evidence is
-   visible.
-2. Read the saved plan set through `blueprint_phase_plan_index` and
-   `blueprint_phase_plan_read`; do not guess the review scope from unstaged repo
-   drift, chat memory, or unrelated files.
-3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS.md`, then use the returned template as the baseline for the persisted artifact.
-4. If there are no saved `XX-YY-PLAN.md` artifacts for the phase, route to
-   `/blu-plan-phase <phase>` instead of bluffing through a planless peer review.
-5. Inspect any existing `XX-REVIEWS.md` before proposing replacement and
-   default to reuse unless the user explicitly asks for an update.
-6. Use Gemini CLI's `ask_user` tool for overwrite confirmation and any
-   structured reviewer-availability confirmation when requested reviewers are
-   unavailable or unauthenticated.
-7. Confirm which reviewer CLIs are actually available and authenticated before
-   launch. Honor explicit reviewer flags, but never claim an unavailable
-   reviewer ran successfully.
-8. Preserve disagreement between reviewers instead of flattening it into a fake
-   consensus, and record partial reviewer availability honestly when only some
-   requested reviewers ran.
-9. Keep the active stage visible as the run moves through `Resolve`, `Read`,
-   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
-   resolved scope, active stage, pending gate, execution mode, and next safe
-   action legible throughout the run.
-10. For non-trivial review runs, prefer update_topic plus `write_todos` so
-   saved-plan review, reviewer-availability confirmation, bounded peer-review
-   execution, artifact persistence, and routing stay visible without becoming
-   persistence.
-11. Report the resolved phase, requested reviewers, completed and unavailable
-    reviewer coverage, reviewer disagreement status, artifact reuse or revision
-    status, pending gate, execution mode, and next safe action while work is in
-    flight. Keep pending gates limited to overwrite confirmation,
-    reviewer-availability confirmation, or the explicit
-    `reviewer-availability` waiting state. Let execution mode reflect explicit
-    reviewer flags versus `--all` fan-out plus whether the run is still inline
-    or waiting on reviewer availability.
-12. Persist the finished peer-review artifact through `blueprint_review_record`
-   with the `peer-review` artifact.
-13. If none of the requested reviewers are available, stop with the waiting
-    state explicit as `reviewer-availability` and keep the next safe action on
-    `/blu-review <phase>` until reviewer selection or authentication changes.
-14. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu-plan-phase <phase>` when meaningful plan revisions remain,
-   `/blu-execute-phase <phase>` when the review passes and execution has not
-   started, `/blu-code-review <phase>` when execution exists but code review is
-   still missing, and otherwise `/blu-progress`.
-
-## Non-Negotiables
-
-- All persistent writes must go through MCP tools only.
-- Do not mutate arbitrary repo files from review commands.
-- Do not present planned-only review commands as runnable just because they are
-  documented.
-- Do not treat the planned `blueprint-fixer` as an implemented dependency for
-  `code-review-fix` or `audit-fix`.
-- Do not use browser, web-search-only, shell-only, or generic agents as
-  substitutes for the bounded Blueprint reviewer/verifier paths.
-- Do not guess review scope from unstaged repo drift when saved phase evidence
-  is missing.
-- Keep the artifact explicit about pass signals, findings, and follow-up risk.
+1. Load `skills/blueprint-review/references/review-runtime-contract.md`
+   before analysis. That local reference owns peer-review packet depth,
+   canonical artifact authoring, capability-gated `blueprint-reviewer` use,
+   no-subagent fallback, reviewer-availability truth, disagreement handling,
+   retry/repair behavior, output quality criteria, and completion criteria.
+2. Resolve the target phase first and read the current Blueprint artifact
+   inventory before assembling reviewer prompts.
+3. Read the canonical `review.peer-review` contract through
+   `blueprint_artifact_contract_read` before drafting, revising, or repairing
+   `XX-REVIEWS.md`. Use `contract.authoringTemplate`, required headings, and
+   locked markers as the heading/schema authority.
+4. Read `blueprint_phase_plan_index` and then each selected plan through
+   `blueprint_phase_plan_read`. If no saved plan exists, stop and route to
+   `/blu-plan-phase <phase>` instead of reviewing chat memory.
+   Use `blueprint_phase_plan_read`; do not guess the review scope from unstaged repo
+   drift, unrelated files, or chat memory. Do not guess review scope from unstaged
+   repo drift when saved phase evidence is the authoritative baseline.
+5. Build the reviewer packet from saved Blueprint evidence: selected plans,
+   phase goal or roadmap intent, available requirements/context/research
+   evidence, and directly related prior phase artifacts. State unavailable
+   evidence plainly instead of inventing content.
+6. Confirm reviewer CLI availability before launch. Honor explicit reviewer
+   flags and `--all`, but record unavailable or unauthenticated reviewers
+   honestly. If no requested reviewer can run, stop with pending gate
+   `reviewer-availability` and keep the next safe action on
+   `/blu-review <phase>`.
+7. Preserve partial reviewer output when at least one selected reviewer
+   completed, and keep material disagreement visible instead of flattening it
+   into false consensus.
+8. Use `blueprint-reviewer` only for read-only packet-completeness or
+   consensus/disagreement synthesis when the saved plan set is broad, multiple
+   plans are involved, prior peer-review evidence exists, or reviewer outputs
+   materially disagree. The subagent must not invoke external reviewer CLIs,
+   replace unavailable reviewers, persist artifacts, mutate files, or route the
+   command.
+9. If `blueprint-reviewer` is unavailable or unnecessary, use the no-subagent
+   fallback from the local runtime contract: assemble one evidence group at a
+   time, run selected available reviewers sequentially, compress each reviewer
+   result into strengths, severity-tagged concerns, suggestions, risk, and
+   uncertainty, then synthesize consensus and divergence.
+10. Reject browser-only, web-search-only, shell-only, or generic agents as
+    substitutes for `blueprint-reviewer` or for external reviewer CLIs.
+11. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep resolved
+    scope, active stage, pending gate, execution mode, and next safe action
+    legible throughout the run.
+12. For non-trivial review runs, prefer update_topic plus `write_todos` so
+    saved-plan review, reviewer-packet assembly, reviewer availability,
+    external-review execution, synthesis, artifact persistence, and routing stay
+    visible without becoming persistence, including reviewer disagreement status.
+13. Persist the finished peer review through `blueprint_review_record` with
+    the `peer-review` artifact. Treat returned `reportPath`, `counts`,
+    `followUps`, `status`, and `warnings` as authoritative.
+14. If `blueprint_review_record` rejects the artifact or reports missing
+    headings, repair once against the `review.peer-review` authoring template
+    and the local runtime contract, then retry through MCP. If the retry still
+    fails, stop with the MCP reason and do not write the artifact by hand.
+15. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+    `/blu-plan-phase <phase>` when plan revisions are needed,
+    `/blu-execute-phase <phase>` when execution evidence is missing,
+    `/blu-code-review <phase>` when code review is missing, and
+    `/blu-progress` otherwise.
