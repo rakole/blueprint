@@ -10,6 +10,7 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+- Rich behavior contract: `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md`
 - `ui-phase` uses the shared long-running-mutation posture for bounded UI-contract drafting: keep `Resolve`/`Read`/`Decide`/`Execute`/`Persist`/`Validate`/`Route` narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible while the run is live.
 - Keep the in-flight UI posture honest while the run is live:
   - resolved scope: the selected phase, research readiness, current artifact reuse-versus-replace posture, and whether config currently points toward a real UI contract or an explicit skip rationale
@@ -51,9 +52,9 @@
 ## Behavior Stages
 
 1. `Resolve`: resolve the target phase, current research posture, and any config or runtime state that changes whether a UI contract or skip rationale is appropriate.
-2. `Read`: inspect effective config, phase research status, the canonical `phase.ui-spec` contract, and any existing `XX-UI-SPEC.md` before branching.
+2. `Read`: inspect effective config, phase research status, the canonical `phase.ui-spec` contract, any existing `XX-UI-SPEC.md`, and the actual saved context/research bodies when status reports them before branching.
 3. `Decide`: keep contract-versus-skip posture, `workflow.ui_safety_gate` rationale requirements, overwrite posture, and checker review posture explicit before drafting.
-4. `Execute`: draft one bounded `XX-UI-SPEC.md` outcome, using `blueprint-ui-designer` only when deeper UI guidance is useful and keeping checker revisions scoped to the affected sections.
+4. `Execute`: draft one bounded `XX-UI-SPEC.md` outcome, using `blueprint-ui-designer` only when deeper UI guidance is useful, falling back to the no-subagent section-by-section path when suitable subagents are unavailable, and keeping checker revisions scoped to the affected sections.
 5. `Persist`: scaffold only a missing UI artifact, then persist the final markdown plus `STATE.md` through MCP only.
 6. `Validate`: normalize the draft to the canonical `authoringTemplate`, enforce the single-artifact `XX-UI-SPEC.md` contract, and block on placeholder output, missing rationale, or checker-requested revisions.
 7. `Route`: summarize whether the artifact was reused, created, or revised, surface any warnings, and end on the next safe implemented action.
@@ -88,11 +89,21 @@
 
 - Pass `phase` to `blueprint_phase_artifact_write` as the resolved numeric phase reference only, for example `"2"` or `2`.
 - Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting or revising `XX-UI-SPEC.md`, and normalize the final draft to the returned `authoringTemplate`.
+- Treat `contract.authoringTemplate` as the heading and schema authority while `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` supplies output richness, evidence density, fallback, and repair behavior.
+- When `blueprint_phase_research_status` reports saved context or research, read the actual `XX-CONTEXT.md` and `XX-RESEARCH.md` bodies through `blueprint_phase_artifact_read` before drafting so the UI spec is grounded in saved decisions rather than only status metadata.
 - Read any existing `XX-UI-SPEC.md` through `blueprint_phase_artifact_read` before proposing replacement so overwrite confirmation stays explicit and reuse remains the default.
 - Use `blueprint_artifact_scaffold` only with the repo-relative UI-spec artifact path for the selected phase. Bare names such as `UI-SPEC` and absolute filesystem paths are invalid.
 - Use `blueprint-ui-designer` to draft the phase-scoped UI guidance when deeper design work is useful, then use `blueprint-checker` to review the draft against the phase requirements, locked Blueprint decisions, and discovery artifacts before any persistence step. If the checker requests revisions, update only the affected sections, re-normalize the draft to the same `authoringTemplate`, and re-run the checker before saving.
+- When no suitable Blueprint UI design, code-analysis, or workflow-analysis subagent is available, use the explicit no-subagent fallback: compress carry-forward evidence, draft one canonical section at a time, self-check the six UI dimensions, repair blockers, and then persist through MCP.
+- Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for Blueprint UI design, codebase, or workflow analysis.
 - Persist the real final markdown through `blueprint_phase_artifact_write` with `artifact: "ui-spec"` and treat the returned `path` as authoritative instead of rebuilding filenames manually.
 - `XX-UI-SPEC.md` is the single durable output whether the phase gets a real UI contract or an explicit skip rationale. Do not invent a second skip artifact.
+
+## UI Quality Contract
+
+- UI contract mode should include design-system evidence, concrete spacing and layout rhythm, typography sizes/weights/line heights, color hierarchy with accent reserved-for list, copywriting for CTAs/empty/error/destructive states, screen and responsive state coverage, component reuse or new-component justification, accessibility/content hierarchy, and registry/design-system safety evidence.
+- Checker review should evaluate six dimensions before persistence: copywriting, visual hierarchy, color, typography, spacing, and registry/design-system safety.
+- Explicit skip mode should populate `## Outcome Mode` and `## Rationale`, including why UI work is out of scope, which safety gate was considered, and what scope change should trigger a revisit.
 
 
 ## Skills And Subagents
@@ -157,6 +168,8 @@
 
 - Explain exactly which phase artifact is missing and which command creates it.
 - Write follow-up state back into `.blueprint/` instead of dropping context on failure.
+- If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry through MCP once before declaring the run blocked.
+- If the checker returns `BLOCK` or asks for revision, revise only the affected sections, re-normalize to the same `authoringTemplate`, and rerun the checker or no-subagent six-dimension self-check before persistence.
 
 
 ## Acceptance Criteria
@@ -171,6 +184,9 @@
 - Persists substantive UI guidance or skip rationale into `XX-UI-SPEC.md`, not only scaffold placeholders.
 - Reads the canonical `phase.ui-spec` contract before drafting or revising the artifact.
 - Uses a checker-reviewed revision loop before persistence.
+- Provides a capability-gated `blueprint-ui-designer` and `blueprint-checker` path plus a single-agent no-subagent fallback that does not lower output quality.
+- Rejects browser-only, web-search-only, shell-only, or generic agents as substitutes for UI design or codebase analysis.
+- Repairs invalid write or validation failures through MCP retry before completion.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 

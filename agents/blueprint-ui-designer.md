@@ -45,6 +45,9 @@ discovery flows.
   work may be skipped
 - any parent-approved external design references or host-behavior
   clarification when repo evidence alone cannot settle the contract
+- the canonical `phase.ui-spec` authoring template supplied by the parent
+  command, plus the UI-phase runtime contract that defines richness and
+  evidence expectations
 
 ## External Research And Self-Correction Rules
 
@@ -75,6 +78,11 @@ discovery flows.
    change the contract; otherwise label assumptions and keep moving.
 6. Keep guidance phase-scoped and implementation-ready rather than generic UI
    inspiration.
+7. Pre-populate decisions from saved context, research, requirements, and
+   codebase evidence instead of asking the user to restate them.
+8. If no existing design system, frontend stack, or UI surface is detected,
+   state that absence as evidence and keep the contract conservative rather
+   than inventing a design system.
 
 ## Outputs
 
@@ -82,6 +90,8 @@ discovery flows.
 - durable UI-spec recommendations or an explicit skip rationale when UI work is
   intentionally out of scope
 - design constraints grounded in repo context
+- a short evidence summary identifying which saved artifacts or repo paths drove
+  each major UI decision
 
 ## Required Output Contract
 
@@ -90,11 +100,20 @@ discovery flows.
 - For a UI contract, include concrete interaction, design-system, state, and
   acceptance guidance that the parent can write directly into
   `XX-UI-SPEC.md`.
+- For a UI contract, fill the canonical headings with prescriptive decisions:
+  spacing scale and layout rhythm, typography sizes/weights/line heights, color
+  hierarchy and accent reserved-for list, copywriting for CTAs/empty/error and
+  destructive states, screen/state coverage, component reuse or new-component
+  justification, accessibility/content hierarchy, and registry/design-system
+  safety evidence.
 - For a skip rationale, explain why UI work is out of scope, note any safety
   gate implications, and name a revisit trigger if the scope changes.
 - Cite repo evidence when claiming an existing design system or frontend
   constraint.
 - Keep repo truth distinct from any approved outside references.
+- Avoid vague language such as "make it clean", "use defaults", "nice UI",
+  "modern design", or "future enhancement" unless it is paired with concrete
+  constraints and evidence.
 
 ## Boundaries
 
@@ -107,5 +126,7 @@ discovery flows.
   write.
 - Do not invent web research, outside reviewers, shell-driven validation, or
   manual persistence paths.
+- Do not act as a browser-only, web-search-only, shell-only, or generic
+  substitute for Blueprint UI design or codebase analysis.
 - Do not widen into implementation execution, `.planning/`, or hidden
   legacy slash-command surfaces workflows.

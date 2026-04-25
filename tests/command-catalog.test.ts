@@ -320,7 +320,9 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
     {
       command: "ui-phase",
       ownDoc: "docs/commands/ui-phase.md",
-      extraInputs: [],
+      extraInputs: [
+        "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
+      ],
       siblingDocs: [
         "docs/commands/discuss-phase.md",
         "docs/commands/research-phase.md",

@@ -730,20 +730,26 @@ function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
 
 - Goal 1: <primary UX objective for this phase>
 - Primary user outcome: <the user-facing outcome this phase must improve>
+- Evidence sources: <requirements, context, research, roadmap, or codebase paths used>
 
 ## Visual Design Decisions
 
+- Design-system evidence: <existing components, tokens, styles, or \`none\`, with repo paths when known>
 - Spacing and layout: <grid, rhythm, or layout constraints>
 - Typography: <type scale, emphasis, or readability decisions>
 - Color and contrast: <palette, semantic color, and contrast rules>
 - Motion and feedback: <loading, hover, or transition guidance>
 - Copy and content: <voice, terminology, and label constraints>
+- Typography limits: <3-4 sizes, no more than 2 weights, and line-height rules>
+- Color hierarchy: <60/30/10 role split or repo-derived equivalent plus accent reserved-for list>
+- Copywriting contract: <primary CTA, empty state, error state, destructive confirmation>
 
 ## Screens And States
 
 - Screen/state 1: <named screen or state in scope>
 - Loading, empty, error, and success states: <required state behavior>
 - Responsive behavior: <desktop, tablet, and mobile expectations>
+- Visual hierarchy and focal point: <what draws attention first and why>
 
 ## Components And Constraints
 
@@ -751,6 +757,7 @@ function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
 - Existing design-system or registry primitives to reuse: <existing primitives or \`none\`>
 - New component or token justification: <new primitives needed or \`none\`>
 - Density and interaction constraints: <layout density, touch targets, or gesture rules>
+- Component inventory evidence: <repo paths, registry entries, or \`none\`>
 
 ## Accessibility And Content
 
@@ -763,6 +770,16 @@ function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
 - Registry and design-system safety: <how the draft avoids forking the registry or design system>
 - Token and theming compatibility: <token, theme, or brand-system compatibility notes>
 - Revisit trigger if the scope changes: <when this contract must be revisited>
+- Third-party registry safety evidence: <view passed, developer-approved after review, blocked, or not applicable>
+
+## Checker Review
+
+- Copywriting: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>
+- Visual hierarchy: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>
+- Color: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>
+- Typography: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>
+- Spacing: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>
+- Registry and design-system safety: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>
 
 ## Next Safe Action
 
@@ -2016,30 +2033,46 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "- For Explicit skip rationale, explain why UI work is out of scope, note any safety-gate implications, and name a revisit trigger. Delete this section for UI contract mode.",
       "Goal 1: <primary UX objective for this phase>",
       "Primary user outcome: <the user-facing outcome this phase must improve>",
+      "Evidence sources: <requirements, context, research, roadmap, or codebase paths used>",
+      "Design-system evidence: <existing components, tokens, styles, or `none`, with repo paths when known>",
       "Spacing and layout: <grid, rhythm, or layout constraints>",
       "Typography: <type scale, emphasis, or readability decisions>",
       "Color and contrast: <palette, semantic color, and contrast rules>",
       "Motion and feedback: <loading, hover, or transition guidance>",
       "Copy and content: <voice, terminology, and label constraints>",
+      "Typography limits: <3-4 sizes, no more than 2 weights, and line-height rules>",
+      "Color hierarchy: <60/30/10 role split or repo-derived equivalent plus accent reserved-for list>",
+      "Copywriting contract: <primary CTA, empty state, error state, destructive confirmation>",
       "Screen/state 1: <named screen or state in scope>",
       "Loading, empty, error, and success states: <required state behavior>",
       "Responsive behavior: <desktop, tablet, and mobile expectations>",
+      "Visual hierarchy and focal point: <what draws attention first and why>",
       "Component 1: <component, pattern, or surface in scope>",
       "Existing design-system or registry primitives to reuse: <existing primitives or `none`>",
       "New component or token justification: <new primitives needed or `none`>",
       "Density and interaction constraints: <layout density, touch targets, or gesture rules>",
+      "Component inventory evidence: <repo paths, registry entries, or `none`>",
       "Accessibility note 1: <keyboard, focus, contrast, or assistive-tech guidance>",
       "Content hierarchy and empty-state guidance: <content hierarchy and empty-state behavior>",
       "Localization or content safety notes: <localization, moderation, or terminology notes>",
       "Registry and design-system safety: <how the draft avoids forking the registry or design system>",
       "Token and theming compatibility: <token, theme, or brand-system compatibility notes>",
-      "Revisit trigger if the scope changes: <when this contract must be revisited>"
+      "Revisit trigger if the scope changes: <when this contract must be revisited>",
+      "Third-party registry safety evidence: <view passed, developer-approved after review, blocked, or not applicable>",
+      "Copywriting: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>",
+      "Visual hierarchy: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>",
+      "Color: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>",
+      "Typography: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>",
+      "Spacing: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>",
+      "Registry and design-system safety: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>"
     ],
     notes: [
       "The same durable artifact covers both a real UI contract and an explicit skip rationale.",
       "Write validation requires an H1 title and Outcome Mode; explicit skip rationale may use a populated `## Rationale` section instead of the full UI contract.",
       "The canonical authoring template includes an optional `## Rationale` branch for skip mode; remove it when the artifact stays in full UI-contract mode.",
-      "A real UI contract must lock concrete visual and UX decisions before planning, including spacing, typography, color, copy/content, state behavior, and registry or design-system safety."
+      "A real UI contract must lock concrete visual and UX decisions before planning, including spacing, typography, color, copy/content, state behavior, and registry or design-system safety.",
+      "The authoring template is the heading authority; `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` is the richness, evidence, fallback, and retry authority.",
+      "Checker review should cover the six UI dimensions: copywriting, visual hierarchy, color, typography, spacing, and registry or design-system safety."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderUiSpecTemplate(context)),
     renderAuthoringTemplate: renderUiSpecTemplate

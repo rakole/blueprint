@@ -304,6 +304,7 @@ Validation expectations:
 - UI contract mode may use the full canonical section set from the runtime contract registry
 - explicit skip mode must include a populated `## Rationale`
 - scaffold placeholders such as `Goal 1:` or `Component 1:` are rejected on write
+- `/blu-ui-phase` treats the canonical authoring template as heading/schema authority and `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` as the richness authority for design-system evidence, spacing, typography, color, copy, screen states, accessibility, registry safety, six-dimension checker review, and retry/repair behavior
 
 ### `XX-YY-SUMMARY.md`
 

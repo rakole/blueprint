@@ -72,6 +72,21 @@ test("ui-phase command references registered tools and single-artifact UI handli
     path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
     "utf8"
   );
+  const runtimeContract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
+  const designerAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-ui-designer.md"),
+    "utf8"
+  );
+  const checkerAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-checker.md"),
+    "utf8"
+  );
   const requiredTools = [
     "blueprint_phase_locate",
     "blueprint_phase_research_status",
@@ -103,6 +118,12 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /artifactId: "phase\.ui-spec"/);
   assert.match(commandFile, /authoringTemplate/);
+  assert.match(commandFile, /ui-phase-runtime-contract\.md/);
+  assert.match(commandFile, /six-dimension UI quality criteria/i);
+  assert.match(commandFile, /artifact: "context"/);
+  assert.match(commandFile, /artifact: "research"/);
+  assert.match(commandFile, /no-subagent fallback/i);
+  assert.match(commandFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /contract-versus-skip posture/i);
@@ -114,6 +135,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-ui-designer\.md/);
 
   assert.match(skillFile, /Execution profile for `\/blu-ui-phase`: `long-running-mutation`\./);
+  assert.match(skillFile, /ui-phase-runtime-contract\.md/);
+  assert.match(skillFile, /saved context or research/i);
   assert.match(
     skillFile,
     /shared stage vocabulary explicit during non-trivial `\/blu-ui-phase` runs/i
@@ -126,6 +149,10 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(skillFile, /`workflow\.ui_safety_gate` rationale confirmation/);
   assert.match(skillFile, /## Optional Agents[\s\S]*`blueprint-checker`/);
   assert.match(skillFile, /checker-requested revision/i);
+  assert.match(skillFile, /six UI dimensions/i);
+  assert.match(skillFile, /no-subagent fallback/i);
+  assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
+  assert.match(skillFile, /repair the same normalized draft/i);
   assert.match(skillFile, /\/blu-plan-phase <phase>/);
   assert.match(skillFile, /\/blu-progress/);
   const contract = await buildBlueprintCommandRuntimeContractResource("ui-phase");
@@ -134,11 +161,15 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md"
   ]);
-  assert.deepEqual(contract.skillInputs.commandSpecific, ["docs/commands/ui-phase.md"]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "docs/commands/ui-phase.md",
+    "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
+  ]);
   assert.deepEqual(contract.skillInputs.effective, [
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md",
-    "docs/commands/ui-phase.md"
+    "docs/commands/ui-phase.md",
+    "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
   ]);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
@@ -163,9 +194,16 @@ test("ui-phase command references registered tools and single-artifact UI handli
     /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
   );
   assert.match(docFile, /## Behavior Stages/);
+  assert.match(docFile, /ui-phase-runtime-contract\.md/);
   assert.match(docFile, /contract-versus-skip posture/i);
   assert.match(docFile, /`workflow\.ui_safety_gate` rationale requirements/i);
   assert.match(docFile, /checker revision gate/i);
+  assert.match(docFile, /## UI Quality Contract/);
+  assert.match(docFile, /saved context or research/i);
+  assert.match(docFile, /six dimensions/i);
+  assert.match(docFile, /no-subagent fallback/i);
+  assert.match(docFile, /browser-only, web-search-only, shell-only, or generic agents/i);
+  assert.match(docFile, /retry through MCP once/i);
   assert.match(docFile, /\/blu-plan-phase <phase>/);
   assert.match(docFile, /\/blu-progress/);
 
@@ -178,6 +216,28 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(uiRuntimeRow, /contract-versus-skip posture/i);
   assert.match(uiRuntimeRow, /`workflow\.ui_safety_gate` rationale confirmation/);
   assert.match(uiRuntimeRow, /checker-requested revision/i);
+  assert.match(uiRuntimeRow, /ui-phase-runtime-contract\.md/i);
+  assert.match(uiRuntimeRow, /read actual saved context and research bodies/i);
+  assert.match(uiRuntimeRow, /no-subagent section-by-section fallback/i);
+  assert.match(uiRuntimeRow, /browser\/web-search\/shell-only or generic substitute agents/i);
+  assert.match(uiRuntimeRow, /repair invalid writes/i);
+  assert.match(runtimeContract, /## Shared Stage Mapping/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /XX-CONTEXT\.md/);
+  assert.match(runtimeContract, /XX-RESEARCH\.md/);
+  assert.match(runtimeContract, /six UI\s+dimensions/i);
+  assert.match(runtimeContract, /## No-Subagent Fallback/);
+  assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or generic agents/i);
+  assert.match(runtimeContract, /status: "invalid"/);
+  assert.match(runtimeContract, /retry through MCP once/i);
+  assert.match(designerAgent, /spacing scale and layout rhythm/i);
+  assert.match(designerAgent, /typography sizes\/weights\/line heights/i);
+  assert.match(designerAgent, /copywriting for CTAs\/empty\/error and\s+destructive states/i);
+  assert.match(checkerAgent, /## UI-Spec Six-Dimension Gate/);
+  assert.match(checkerAgent, /Copywriting: CTA labels/i);
+  assert.match(checkerAgent, /Registry and design-system safety/i);
 });
 
 test("ui-phase keeps UI output in a single reusable file for either contract or skip rationale", async (t) => {
