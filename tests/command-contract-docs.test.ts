@@ -700,17 +700,18 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
   assert.match(prBranchDoc, /blueprint_project_status/);
   assert.match(prBranchDoc, /blueprint_config_get/);
   assert.match(prBranchDoc, /blueprint_artifact_summary_digest/);
+  assert.match(prBranchDoc, /blueprint_artifact_contract_read/);
   assert.match(prBranchDoc, /blueprint_artifact_report_write/);
   assert.match(prBranchDoc, /pr-branch-latest\.md/);
   assert.match(prBranchDoc, /Preserves the source branch/i);
   assert.match(prBranchDoc, /planning\.commit_docs/);
   assert.match(
     mcpToolsDoc,
-    /`pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write`/
+    /`pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, `blueprint_artifact_contract_read`, and `blueprint_artifact_report_write`/
   );
   assert.match(
     migrationMarkdown,
-    /\| `pr-branch` \| `docs\/commands\/pr-branch\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write` \|/
+    /\| `pr-branch` \| `docs\/commands\/pr-branch\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_write` \|/
   );
 });
 

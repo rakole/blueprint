@@ -15567,23 +15567,41 @@ function renderPrBranchTemplate() {
 
 ## Source Branch
 
-- Original working branch and status.
+- Base branch: <base branch>
+- Source branch: <source branch>
+- Source HEAD: <commit sha>
+- Config used: git.base_branch=<value>; git.branching_strategy=<value>; planning.commit_docs=<true|false>
 
 ## Review Branch
 
-- Created review branch and resulting branch name.
+- Candidate branch: <candidate review branch>
+- Created branch: <created review branch or not created>
+- Current branch after run: <current branch after validation>
+- Execution mode: <preview-only|confirmed-replay|blocked>
+- Git commands approved: <commands or none>
 
 ## Filtered Scope
 
-- Scope retained for review or \`none\`.
+- .blueprint policy: <excluded|included> because <reason>
+- Digest inputs used: <inputsUsed from blueprint_artifact_summary_digest>
+- Included paths: <repo-relative paths or none>
+- Excluded paths: <repo-relative paths or none>
+
+| Commit | Subject | Classification | Action | Filtered paths | Reason |
+|---|---|---|---|---|---|
+| <sha> | <subject> | <code-only|blueprint-only|mixed|empty-after-filter> | <include|exclude|skip> | <paths or none> | <reason> |
 
 ## Verification
 
-- Commands or checks used to confirm the branch state.
+- Clean review branch status: <command and result>
+- Excluded .blueprint file count in review diff: <count>
+- Total files in review diff: <count>
+- Review branch commits ahead of base: <count>
+- Recovery or blocker: <none or blocker>
 
 ## Next Safe Action
 
-- /blu-progress`;
+- <manual push/PR guidance or /blu-progress>`;
 }
 function renderShipTemplate() {
   return `# Ship Report
@@ -16779,8 +16797,35 @@ var init_artifact_contracts = __esm({
         freehandPolicy: "additional-top-level-headings",
         requiredHeadings: ["Source Branch", "Review Branch", "Filtered Scope", "Verification", "Next Safe Action"],
         lockedMarkers: [],
-        placeholderSignals: [],
-        notes: ["Pr-branch should preserve the source branch while recording the review branch."],
+        placeholderSignals: [
+          "<base branch>",
+          "<source branch>",
+          "<commit sha>",
+          "<value>",
+          "<true|false>",
+          "<candidate review branch>",
+          "<created review branch or not created>",
+          "<current branch after validation>",
+          "<preview-only|confirmed-replay|blocked>",
+          "<commands or none>",
+          "<excluded|included>",
+          "<reason>",
+          "<inputsUsed from blueprint_artifact_summary_digest>",
+          "<repo-relative paths or none>",
+          "<sha>",
+          "<subject>",
+          "<code-only|blueprint-only|mixed|empty-after-filter>",
+          "<include|exclude|skip>",
+          "<paths or none>",
+          "<command and result>",
+          "<count>",
+          "<none or blocker>",
+          "<manual push/PR guidance or /blu-progress>"
+        ],
+        notes: [
+          "Pr-branch should preserve the source branch while recording the review branch.",
+          "The report should include a commit classification ledger, digest inputs, included/excluded paths, and post-create verification counts."
+        ],
         renderScaffoldTemplate: renderPrBranchTemplate,
         renderAuthoringTemplate: renderPrBranchTemplate
       },

@@ -81,7 +81,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `new-workspace` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps workspace creation confirmation-gated, and routes host-global registry plus workspace bootstrap writes through the dedicated workspace MCP tools.
 - `remove-workspace` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps workspace teardown confirmation-gated, and routes host-global registry plus workspace removal writes through the dedicated workspace MCP tools.
 - `update` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps extension-path handling read-only, and routes host-global advisory checklist persistence through the dedicated update MCP tools.
-- `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, and keeps git mutation confirmation-gated plus report-backed.
+- `pr-branch` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps git mutation confirmation-gated plus report-backed, and uses `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md` for commit classification, replay verification, canonical report authoring, and the no-subagent fallback. Browser, web-search-only, shell-only, or generic agents are not substitutes.
 - `ui-review` uses `blueprint-ui-auditor`.
 - `secure-phase` uses `blueprint-security-auditor` only for bounded declared-threat mitigation verification and preserves the single-agent fallback from `skills/blueprint-review/references/secure-phase-runtime-contract.md` when suitable auditor support is unavailable.
 
