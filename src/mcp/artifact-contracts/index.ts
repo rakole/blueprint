@@ -1568,19 +1568,35 @@ function renderAddTestsTemplate(context?: ArtifactTemplateContext): string {
 
 ## Coverage Goal
 
-- Coverage gap selected for this pass in phase ${phasePrefix(context)}.
+- Phase ${phasePrefix(context)} coverage gap selected for this pass.
+- Approved test scope and why it is the narrowest safe scope.
 
 ## Evidence Used
 
-- Saved summaries, verification, or UAT evidence reviewed.
+- Saved summaries reviewed.
+- Verification or UAT artifacts reviewed.
+- Existing test conventions, nearby coverage, and target command discovered.
+
+## Classification And Test Plan
+
+| Surface | Classification | Reason | Planned Test |
+|---------|----------------|--------|--------------|
+| <repo-relative path or behavior> | <Unit / TDD, Integration / API, E2E / UI, or Skip> | <why this classification fits> | <test case, scenario, or skip rationale> |
+
+- Approval status: <approved, adjusted, inferred from explicit user scope, or blocked>.
 
 ## Tests Added Or Updated
 
 - Test files or suites changed.
+- Targeted command: <command run or blocked prerequisite>.
+- Result counts: generated <N>, passing <N>, failing <N>, blocked <N>.
+- Bugs or blockers discovered: <implementation bug, test-authoring issue repaired, blocked prerequisite, or none>.
 
 ## Remaining Gaps
 
-- Explicit remaining gap or \`none\`.
+- Explicit remaining coverage gap, deferred/manual-only area, failed generated test, blocked prerequisite, or \`none\`.
+- Verification write status: <created, updated, reused, invalid, or blocked>.
+- Report write status: <created, updated, reused, invalid, or blocked>.
 
 ## Next Safe Action
 
@@ -2662,7 +2678,10 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     requiredHeadings: ["Coverage Goal", "Evidence Used", "Tests Added Or Updated", "Remaining Gaps", "Next Safe Action"],
     lockedMarkers: [],
     placeholderSignals: [],
-    notes: ["Add-tests reports stay phase-scoped even though they live under reports/."],
+    notes: [
+      "Add-tests reports stay phase-scoped even though they live under reports/.",
+      "Authoring guidance expects the approved classification, test plan, targeted command result, generated/passing/failing/blocked counts, bugs or blockers, verification write status, and report write status to stay visible under the canonical headings."
+    ],
     renderScaffoldTemplate: renderAddTestsTemplate,
     renderAuthoringTemplate: renderAddTestsTemplate
   },

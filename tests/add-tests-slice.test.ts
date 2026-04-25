@@ -18,8 +18,15 @@ test("add-tests docs and runtime summaries mark the test-generation slice as shi
 
   assert.match(commandDoc, /Blueprint ships it as an evidence-backed test-generation command/i);
   assert.match(commandDoc, /Primary skill: `blueprint-phase-validation`/);
+  assert.match(
+    commandDoc,
+    /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/
+  );
   assert.match(commandDoc, /blueprint_artifact_contract_read/);
   assert.match(commandDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
+  assert.match(commandDoc, /artifactId: "report\.add-tests"/);
+  assert.match(commandDoc, /Normalize the durable report to the returned `authoringTemplate`/i);
+  assert.match(commandDoc, /classification table and approved test plan/i);
   assert.match(commandDoc, /blueprint_phase_validation_write/);
   assert.match(commandDoc, /blueprint_artifact_report_write/);
   assert.match(commandDoc, /add-tests-<phase>\.md/);

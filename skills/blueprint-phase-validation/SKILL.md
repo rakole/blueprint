@@ -50,6 +50,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 - `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`
 - `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`
+- `skills/blueprint-phase-validation/references/add-tests-runtime-contract.md`
 - `docs/commands/validate-phase.md`
 - `docs/commands/verify-work.md`
 - `docs/commands/add-tests.md`
@@ -93,6 +94,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 - For `XX-VERIFICATION.md`, use `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` and normalize the final draft to the returned `authoringTemplate`.
 - For `XX-UAT.md`, use `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` and normalize the final draft to the returned `authoringTemplate`.
+- For `.blueprint/reports/add-tests-<phase>.md`, use `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` and normalize the final report draft to the returned `authoringTemplate`.
 - Keep each contract's locked markers and required section names unchanged.
 - Keep summary references in the contract-defined evidence sections.
 - Allow extra top-level headings only when the contract policy says they are supported.
@@ -144,18 +146,24 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 1. Resolve the target phase and require saved execution summaries before generating or updating tests.
 2. Read summary artifacts plus any existing `XX-VERIFICATION.md` or `XX-UAT.md` so test generation is grounded in saved implementation evidence and explicit gaps.
 3. Require at least one validation or UAT artifact before proceeding. Route to `/blu-validate-phase` when both are missing.
-4. Keep repo mutation narrow: honor explicit user scope first, otherwise derive a focused test scope from completed summaries, saved gaps, and existing repo test conventions.
-5. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, selected test scope, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action legible throughout the run.
-6. Treat broad test-scope confirmation, any broader-suite request, unclear repo test conventions, and verification or report persistence outcomes as explicit pending gates rather than post-hoc notes.
-7. For non-trivial add-tests runs, prefer update_topic plus `write_todos` so evidence review, scope confirmation, bounded implementation, targeted test execution, verification-note persistence, report persistence, post-write validation, and routing stay visible without becoming persistence.
-8. Use `ask_user` for structured scope or breadth decisions instead of burying those gates in prose.
-9. Inspect the relevant repo code, existing tests, and test-runner configuration before writing. Prefer extending nearby tests over duplicating the same coverage in a second suite.
-10. Use `blueprint-executor` for bounded multi-file test implementation when the harness or write scope is non-trivial.
-11. Use `blueprint-verifier` to review whether the proposed tests cover the saved execution behavior and any explicit validation or UAT gaps.
-12. Read `blueprint_artifact_contract_read` for `phase.verification`, normalize the final verification draft to `contract.authoringTemplate`, and self-check the normalized verification draft against the returned contract before persisting verification notes.
-13. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists. Keep the reported verification status aligned with the tool-owned `written` and `status` result.
-14. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path. Keep the reported report status aligned with the tool-owned `written` and `status` result.
-15. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
+4. Load `references/add-tests-runtime-contract.md` and follow it for stage mapping, classification gates, test-plan approval, RED/GREEN-style execution behavior, artifact authoring, subagent use, no-subagent fallback, retry behavior, and output quality.
+5. Keep repo mutation narrow: honor explicit user scope first, otherwise derive a focused test scope from completed summaries, saved gaps, and existing repo test conventions.
+6. Build a file-by-file classification table before writing. Read each candidate file and classify it as `Unit / TDD`, `Integration / API`, `E2E / UI`, or `Skip` with concrete reasons; do not classify from filename alone.
+7. Discover existing test structure, naming conventions, nearby coverage, and narrow test commands before presenting the test plan. Stop instead of inventing a framework when no convention is discoverable.
+8. Use `ask_user` for structured classification, scope, test-plan, or breadth decisions instead of burying those gates in prose. Re-present adjusted classifications or plans before mutation.
+9. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, selected test scope, classification status, test-plan status, pending gate, execution mode, targeted test command or result, verification status, report status, and next safe action legible throughout the run.
+10. Treat broad test-scope confirmation, classification approval, test-plan approval, any broader-suite request, unclear repo test conventions, and verification or report persistence outcomes as explicit pending gates rather than post-hoc notes.
+11. For non-trivial add-tests runs, prefer update_topic plus `write_todos` so evidence review, classification, scope confirmation, bounded implementation, targeted test execution, verification-note persistence, report persistence, post-write validation, and routing stay visible without becoming persistence.
+12. Use `blueprint-executor` for bounded multi-file test implementation when the harness or write scope is non-trivial.
+13. Use `blueprint-verifier` to review whether the generated tests cover the saved execution behavior and any explicit validation or UAT gaps.
+14. When suitable subagents are unavailable or unnecessary, use the no-subagent fallback from the runtime contract: process one summary and candidate area at a time, compress carry-forward classification and execution rows, then draft from the final table.
+15. Never substitute browser, web-search-only, shell-only, or generic agents for Blueprint code/workflow analysis agents.
+16. Read `blueprint_artifact_contract_read` for `phase.verification`, normalize the final verification draft to `contract.authoringTemplate`, and self-check the normalized verification draft against the returned contract before persisting verification notes.
+17. Read `blueprint_artifact_contract_read` for `report.add-tests`, normalize the durable report to `contract.authoringTemplate`, and include approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification status, report status, remaining gaps, and next safe action.
+18. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists. Keep the reported verification status aligned with the tool-owned `written` and `status` result.
+19. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path. Keep the reported report status aligned with the tool-owned `written` and `status` result.
+20. If validation or report writes are rejected, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
+21. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
 
 ## Non-Negotiables
 

@@ -5,8 +5,9 @@ description: >
   agent when `/blu-execute-phase` needs targeted per-plan code changes, repo
   verification, and summary-ready execution notes without widening scope across
   the whole phase. Example scenarios: implementing one selected plan, updating
-  files within the assigned write boundary, and reporting deviations or partial
-  completion honestly.
+  files within the assigned write boundary, generating approved `/blu-add-tests`
+  test coverage inside an explicit test write boundary, and reporting deviations
+  or partial completion honestly.
 kind: local
 tools:
   - list_directory
@@ -25,7 +26,9 @@ timeout_mins: 20
 
 Execute one assigned Blueprint plan or tightly related plan slice with bounded
 write ownership so `/blu-execute-phase` can turn real repo work into one honest,
-summary-ready `XX-YY-SUMMARY.md` result per completed plan.
+summary-ready `XX-YY-SUMMARY.md` result per completed plan. In `/blu-add-tests`
+mode, implement only the parent-approved test plan and return report-ready test
+evidence without owning Blueprint persistence.
 
 ## Parent-Owned Responsibilities
 
@@ -40,6 +43,10 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - The parent command owns wave ordering and cross-plan dependency gates. This
   agent must not execute a later-wave plan because it happens to have the files
   open.
+- For `/blu-add-tests`, the parent owns phase resolution, classification and
+  test-plan approval, verification-note persistence, report persistence,
+  artifact validation, and routing. This agent owns only the assigned repo test
+  files or minimal helpers.
 
 ## Required Reads
 
@@ -52,6 +59,10 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
   on them
 - existing implementation state in the assigned write boundary so the agent
   adapts to the live repo rather than rewriting from memory
+- when assigned `/blu-add-tests`: the completed summary evidence, existing
+  verification or UAT evidence, approved classification table, approved test
+  plan, nearby tests, test runner configuration, and explicit test write
+  boundary supplied by the parent command
 
 ## Execution Protocol
 
@@ -89,6 +100,17 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
     after repeated failure instead of widening scope or claiming completion.
 14. If the parent prompt says the run is parallel or worktree-isolated, avoid
     shared global writes and do not mutate Blueprint state files directly.
+15. In `/blu-add-tests` mode, generate or update only tests approved by the
+    parent. Prefer extending nearby tests over duplicating coverage in another
+    suite.
+16. In `/blu-add-tests` mode, keep RED/GREEN-style evidence honest: passing
+    generated tests need a targeted command or explicit support; failing tests
+    that expose product behavior are reported as bugs, not fixed; test-authoring
+    mistakes introduced by this agent may be repaired once and rerun; blocked
+    checks must name the missing prerequisite.
+17. In `/blu-add-tests` mode, do not widen into implementation fixes, broad
+    refactors, unrelated docs, or suite-wide test runs unless the parent prompt
+    explicitly approved that scope.
 
 ## Progress Checkpoint Contract
 
@@ -146,6 +168,19 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
   the parent command should pass the resolved numeric phase, the numeric
   `planId` for the matching saved plan, and the full summary body, then trust
   the returned `path` and `linkedPlanPath` as authoritative.
+- When assigned `/blu-add-tests`, also include:
+  - `## Add-Tests Classification Used`
+  - `## Test Plan Executed`
+  - `## Test Files Changed`
+  - `## Targeted Test Evidence`
+  - `## Bugs Or Blockers`
+  - `## Report Notes`
+- In `## Targeted Test Evidence`, list the exact command run, generated/passing/
+  failing/blocked counts, and whether failures are implementation bugs,
+  test-authoring errors, or blocked prerequisites.
+- In `## Report Notes`, provide concise rows the parent can copy into the
+  canonical `report.add-tests` authoring template; do not write the report
+  directly.
 
 ## Deviation And Partial-Run Rules
 
@@ -177,3 +212,5 @@ summary-ready `XX-YY-SUMMARY.md` result per completed plan.
 - Do not invent MCP results, hidden approvals, or completed acceptance criteria.
 - Do not reintroduce `.planning`, legacy slash-command surfaces, or
   script-owned persistence.
+- In `/blu-add-tests` mode, do not mutate product implementation to make tests
+  pass; report discovered bugs or blockers to the parent command.
