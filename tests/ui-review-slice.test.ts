@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import { blueprintReviewRecord } from "../src/mcp/tools/review.js";
@@ -107,31 +108,65 @@ test("ui-review docs and catalog metadata promote the UI audit slice to implemen
   assert.match(commandDoc, /## In-Flight Progress Contract/);
   assert.match(
     commandDoc,
-    /saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW\.md` artifact is being created, reused, or revised, main findings or pass signals, and next safe action/i
+    /saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW\.md` artifact is being created, reused, or revised, overall score or main findings\/pass signals, and next safe action/i
   );
   assert.match(commandDoc, /`update_topic` tool and keep a compact UI-review checklist with `write_todos`/i);
   assert.match(commandDoc, /actual frontend surface under review/i);
   assert.match(commandDoc, /created, reused, or revised/i);
+  assert.match(commandDoc, /ui-review-runtime-contract\.md/);
+  assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
+  assert.match(commandDoc, /contract\.authoringTemplate/);
+  assert.match(commandDoc, /overall score out of 24/i);
+  assert.match(commandDoc, /Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design/);
+  assert.match(commandDoc, /no-subagent fallback/i);
+  assert.match(commandDoc, /browser-only, web-search-only, shell-only, or generic helpers/i);
+  assert.match(commandDoc, /retry once through MCP/i);
   assert.match(
     runtimeReference,
     /`ui-review`[\s\S]*Long-running-mutation profile for phase-scoped UI audit/i
   );
   assert.match(
     runtimeReference,
+    /`ui-review`[\s\S]*`blueprint_artifact_contract_read`[\s\S]*`blueprint_review_record`/i
+  );
+  assert.match(
+    runtimeReference,
     /`ui-review`[\s\S]*`update_topic` and `write_todos` for non-trivial ui-review runs/i
   );
+  assert.match(runtimeReference, /ui-review-runtime-contract\.md/i);
+  assert.match(runtimeReference, /scored six-pillar evidence with overall `\/24`/i);
   assert.match(
     runtimeReference,
     /`ui-review`[\s\S]*saved `XX-UI-SPEC\.md` coverage and the actual frontend surface explicit/i
   );
   assert.match(
     runtimeReference,
-    /`ui-review`[\s\S]*inline versus `blueprint-ui-auditor`-assisted analysis/i
+    /`ui-review`[\s\S]*inline versus capability-gated `blueprint-ui-auditor`-assisted analysis/i
   );
   assert.match(
     runtimeReference,
     /`ui-review`[\s\S]*artifact create\/reuse\/revise status plus findings-or-pass posture explicit/i
   );
+});
+
+test("review.ui-review contract template carries rich scoring guidance without changing path ownership", () => {
+  const contract = readArtifactContract("review.ui-review");
+
+  assert.equal(contract.ownerTool, "blueprint_review_record");
+  assert.equal(contract.pathOwner, "blueprint_review_record");
+  assert.deepEqual(contract.requiredHeadings, [
+    "UI Review Summary",
+    "Evidence Reviewed",
+    "Findings",
+    "Follow-Ups",
+    "Next Safe Action"
+  ]);
+  assert.match(contract.authoringTemplate, /## Pillar Scores/);
+  assert.match(contract.authoringTemplate, /## Priority Fixes/);
+  assert.match(contract.authoringTemplate, /## Audit Trail/);
+  assert.match(contract.authoringTemplate, /Copywriting/);
+  assert.match(contract.authoringTemplate, /Experience Design/);
+  assert.match(contract.notes.join("\n"), /scored six-pillar evidence/);
 });
 
 test("blueprint_review_record writes a phase-scoped UI review artifact with follow-up counts", async (t) => {
@@ -153,6 +188,21 @@ test("blueprint_review_record writes a phase-scoped UI review artifact with foll
 - .blueprint/phases/06-ui-audit/06-01-SUMMARY.md
 - .blueprint/phases/06-ui-audit/06-UI-SPEC.md
 
+## Pillar Scores
+
+| Pillar | Score | Evidence | Key Finding |
+|---|---:|---|---|
+| Copywriting | 3/4 | .blueprint/phases/06-ui-audit/06-01-SUMMARY.md | Copy is mostly clear. |
+| Visual Hierarchy | 3/4 | .blueprint/phases/06-ui-audit/06-UI-SPEC.md | Desktop hierarchy matches the contract. |
+| Color | 4/4 | .blueprint/phases/06-ui-audit/06-UI-SPEC.md | No color drift found. |
+| Typography | 3/4 | .blueprint/phases/06-ui-audit/06-UI-SPEC.md | Type scale is consistent. |
+| Spacing | 2/4 | .blueprint/phases/06-ui-audit/06-UI-SPEC.md | Mobile empty-state spacing needs polish. |
+| Experience Design | 3/4 | .blueprint/phases/06-ui-audit/06-01-SUMMARY.md | Responsive behavior is implemented with one follow-up. |
+
+## Priority Fixes
+
+1. Mobile empty-state spacing is weak - affects scanability - tighten spacing and affordance copy.
+
 ## Findings
 
 - Mobile empty-state hierarchy is weaker than the desktop contract.
@@ -160,6 +210,10 @@ test("blueprint_review_record writes a phase-scoped UI review artifact with foll
 ## Follow-Ups
 
 - Tighten mobile empty-state spacing and affordance copy.
+
+## Audit Trail
+
+- Audit date: 2026-04-13; execution mode: inline; screenshots: not supplied; score check: 18/24.
 
 ## Next Safe Action
 
@@ -213,6 +267,7 @@ test("ui-review is exposed as an implemented review command with the registered 
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",
+    "blueprint_artifact_contract_read",
     "blueprint_review_record"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-ui-auditor"]);

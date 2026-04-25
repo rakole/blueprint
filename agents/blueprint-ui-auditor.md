@@ -44,12 +44,22 @@ guessing what was actually shipped.
 
 ## Six Pillars
 
-- `hierarchy`: layout clarity, information density, and visual prioritization
-- `consistency`: design-system alignment, reusable patterns, and copy tone
-- `states`: empty, loading, error, success, and edge-case coverage
-- `accessibility`: semantics, keyboard access, contrast, motion, and clarity
-- `responsiveness`: desktop/mobile fit, resizing behavior, and overflow risk
-- `polish`: finishing details, affordances, transitions, and rough edges
+- `copywriting`: labels, CTA copy, empty/error messaging, and content clarity
+- `visual-hierarchy`: layout clarity, information density, focal points, and
+  prioritization
+- `color`: palette discipline, contrast evidence, accent use, and hardcoded
+  color risk
+- `typography`: type scale, weight, readability, wrapping, and density fit
+- `spacing`: spacing scale consistency, grouping, hit areas, and overflow risk
+- `experience-design`: loading, empty, error, disabled, success, keyboard,
+  responsive, motion, accessibility, consistency, and polish evidence
+
+Score each pillar from `1/4` through `4/4`:
+
+- `4/4`: excellent; no material issue found and contract evidence is strong
+- `3/4`: good; minor issue or small confidence limitation
+- `2/4`: needs work; notable gap, partial contract match, or weak evidence
+- `1/4`: poor; significant user-facing issue or contract miss
 
 ## Review Rules
 
@@ -57,8 +67,9 @@ guessing what was actually shipped.
    surface, not from chat recollections.
 2. Compare against the saved UI contract when one exists; call out missing
    contract evidence when it does not.
-3. Treat absent states, inconsistent interaction patterns, or weak
-   responsiveness as visible gaps rather than soft suggestions.
+3. Treat absent states, weak copy, inconsistent interaction patterns, contrast
+   risk, spacing drift, or weak responsiveness as visible gaps rather than soft
+   suggestions.
 4. Distinguish between blocking UX issues, follow-up polish work, and passes
    the evidence clearly supports.
 5. If a prior `XX-UI-REVIEW.md` exists, compare the current evidence against it
@@ -68,6 +79,13 @@ guessing what was actually shipped.
 7. Keep the audit bounded to the parent-selected frontend surface and supplied
    evidence; do not invent screenshots, shell-driven visual checks, outside
    reviewers, or web truth.
+8. Record screenshot or runtime visual evidence as `captured`, `supplied`, or
+   `not available`. If visual evidence is unavailable, avoid claims that require
+   visual inspection and mark the audit as code/static-evidence-only.
+9. When third-party UI registry evidence is present in `components.json`,
+   `XX-UI-SPEC.md`, or checked-in component source, flag suspicious network
+   calls, dynamic code execution, external dynamic imports, or unexplained
+   component changes as findings or follow-ups.
 
 ## Gap Classification
 
@@ -80,18 +98,26 @@ guessing what was actually shipped.
 ## Required Output Contract
 
 - Return one clear posture result: `PASS`, `FOLLOW_UP`, or `BLOCKED`.
+- Return an overall score out of 24, computed from the six pillar scores.
 - Separate findings by classification and tie each one to concrete evidence.
 - Include:
   - reviewed artifacts or repo paths
   - UI surfaces examined
   - pillars checked
+  - a `1/4` through `4/4` score and rationale for every pillar
+  - overall score out of 24
+  - screenshot or visual-evidence posture
   - strengths confirmed
   - gaps or regressions found
+  - up to three priority fixes with user impact and concrete repair guidance
   - a concise artifact draft for `XX-UI-REVIEW.md`
 - Keep the artifact draft bounded to the selected phase surface and the
   evidence actually reviewed.
 - If there are no material gaps, say so plainly and explain why the reviewed
   evidence is sufficient.
+- The artifact draft must follow the canonical `review.ui-review` headings and
+  include rich sections for `Pillar Scores`, `Priority Fixes`, and `Audit
+  Trail` when the parent provides that authoring template.
 
 ## Boundaries
 
@@ -99,6 +125,8 @@ guessing what was actually shipped.
   mutation.
 - Do not invent shell commands, external reviewers, web research, or manual
   persistence paths.
+- Do not act as a browser-only, web-search-only, shell-only, or generic helper
+  substitute for UI/code analysis.
 - Do not widen into implementation execution or design brainstorming unrelated
   to the selected phase.
 - Do not reintroduce `.planning` or legacy slash-command flows.

@@ -2,7 +2,7 @@ description = "Run a phase-scoped Blueprint UI audit, persist XX-UI-REVIEW, and 
 prompt = """
 You are the `/blu-ui-review` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. When the phase needs a deeper visual or UX audit, use the `blueprint-ui-auditor` subagent for bounded six-pillar UI analysis.
+Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Load `skills/blueprint-review/references/ui-review-runtime-contract.md` before analysis; that local reference owns scored-pillar output quality, artifact authoring richness, subagent gating, no-subagent fallback, and MCP retry/repair behavior. When the phase needs a deeper visual or UX audit, use the `blueprint-ui-auditor` subagent for bounded six-pillar UI analysis.
 Execution profile: `long-running-mutation`.
 Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 Keep the resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
@@ -13,12 +13,15 @@ Follow this flow exactly:
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
 3. Read `mcp_blueprint_blueprint_artifact_list` so you can confirm whether the phase already has saved execution, UI-spec, verification, UAT, or prior UI-review evidence.
-4. Require completed phase execution evidence before a UI audit is persisted. If the resolved phase has no `XX-YY-SUMMARY.md` artifacts, stop and route to `/blu-execute-phase <phase>` first.
-5. If a `XX-UI-REVIEW.md` artifact already exists, treat it as the audit baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
-6. Ground the audit in the saved execution summaries, the phase goal, the saved `XX-UI-SPEC.md` contract when it exists, and the concrete frontend or UX surface actually affected by the phase. Do not invent UI scope from chat memory alone.
-7. Use the `blueprint-ui-auditor` subagent for bounded analysis when the phase spans multiple screens, includes richer frontend behavior, or benefits from a second look across visual hierarchy, states, accessibility, consistency, responsiveness, and polish.
-8. Persist the finished audit through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "ui-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-UI-REVIEW.md` directly.
-9. End with a concise summary covering whether the UI-review artifact was created, reused, or revised, the main UI findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
+4. Read `mcp_blueprint_blueprint_artifact_contract_read` for `review.ui-review` and treat `contract.authoringTemplate` as the heading and schema authority before drafting, repairing, or persisting `XX-UI-REVIEW.md`.
+5. Require completed phase execution evidence before a UI audit is persisted. If the resolved phase has no `XX-YY-SUMMARY.md` artifacts, stop and route to `/blu-execute-phase <phase>` first.
+6. If a `XX-UI-REVIEW.md` artifact already exists, treat it as the audit baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
+7. Ground the audit in the saved execution summaries, the phase goal, the saved `XX-UI-SPEC.md` contract when it exists, and the concrete frontend or UX surface actually affected by the phase. Do not invent UI scope from chat memory alone.
+8. Produce a scored six-pillar audit using the local runtime contract: Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design, each scored 1-4 with evidence, plus an overall score out of 24 and up to three priority fixes.
+9. Use the `blueprint-ui-auditor` subagent for bounded analysis when the phase spans multiple screens, includes richer frontend behavior, or benefits from a second look across scored pillars, accessibility, responsiveness, interaction states, consistency, and polish. If a suitable auditor is unavailable or unnecessary, follow the no-subagent fallback from the local runtime contract one pillar at a time.
+10. Persist the finished audit through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "ui-review"`, and the full final markdown body. Treat the returned `reportPath` as authoritative. Do not write `XX-UI-REVIEW.md` directly.
+11. If the MCP write returns invalid or missing-heading warnings, repair the body once against the `review.ui-review` authoring template and the local runtime contract, then retry through `mcp_blueprint_blueprint_review_record`. If the retry fails, stop with the MCP reason and do not write by hand.
+12. End with a concise summary covering whether the UI-review artifact was created, reused, or revised, the overall score, the main UI findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:
 - If the phase still lacks `XX-VERIFICATION.md`, prefer `/blu-validate-phase <phase>`.
@@ -27,10 +30,11 @@ Next-action rules:
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_list`, and `mcp_blueprint_blueprint_review_record` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, and `mcp_blueprint_blueprint_review_record` for Blueprint-owned persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
-- Keep the audit grounded in saved artifacts, actual repo evidence, or explicitly provided screenshots or UI descriptions.
+- Keep the audit grounded in saved artifacts, actual repo evidence, or explicitly provided screenshots, visual observations, recordings, or UI descriptions. If screenshot or visual-runtime evidence is unavailable, record that limitation instead of claiming visual certainty.
+- Reject browser-only, web-search-only, shell-only, or generic helpers as substitutes for `blueprint-ui-auditor`.
 - Keep visible progress aligned to the resolved phase, saved execution and UI-spec coverage, active stage, pending gate, execution mode, whether the existing `XX-UI-REVIEW.md` artifact is being created, reused, or revised, main findings or pass signals, and next safe action.
 - Let execution mode reflect inline audit versus `blueprint-ui-auditor`-assisted analysis, and when the host lacks `update_topic` or `write_todos`, report the same progress in prose instead of inventing a second persistence path.
 - Do not present planned-only commands as runnable follow-ups; if the next step is ambiguous, route to `/blu-progress`.

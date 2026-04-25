@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `ui-review` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and UI-spec evidence, decide whether overwrite confirmation or a bounded auditor handoff is needed, execute the six-pillar UI audit that fits the saved scope, persist the durable UI-review artifact through MCP, validate the saved audit posture, and route to the next safe implemented follow-up without widening beyond the selected phase.
 - Keep the UI-audit posture explicit throughout the run: resolved scope must stay tied to the selected phase, saved execution evidence, saved `XX-UI-SPEC.md` contract when present, and the actual frontend surface under review; pending gates stay limited to overwrite confirmation; execution mode should reflect inline versus `blueprint-ui-auditor`-assisted analysis; and the artifact plus findings posture must stay legible while the audit is in flight.
+- Runtime contract reference: `skills/blueprint-review/references/ui-review-runtime-contract.md` owns scored-pillar output quality, evidence depth, capability-gated auditor use, no-subagent fallback, and MCP retry/repair behavior.
 
 
 ## Purpose
@@ -37,9 +38,9 @@
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
+- User-facing result: a concise completion summary plus the next logical action when applicable, including artifact status, overall `/24` score, top findings or pass signals, and any visual-evidence limitations.
 - Repo side effects: Writes only the declared phase-scoped UI-review artifact for this command.
-- In-flight ui-review work should keep the resolved scope, active stage, saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW.md` artifact is being created, reused, or revised, main findings or pass signals, and next safe action legible while the run is still live.
+- In-flight ui-review work should keep the resolved scope, active stage, saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW.md` artifact is being created, reused, or revised, overall score or main findings/pass signals, and next safe action legible while the run is still live.
 
 
 ## Blueprint And Global State Reads
@@ -59,11 +60,28 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
+- `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, notes}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 
 ## UI Review Artifact Contract
 
+- Read `blueprint_artifact_contract_read` for `review.ui-review` before drafting or revising `XX-UI-REVIEW.md`.
+- Use `contract.authoringTemplate` as the heading and schema authority. The local runtime contract adds the output-quality requirements: scored six-pillar table, overall `/24`, priority fixes, evidence trail, and retry/repair behavior.
 - Persist the durable UI audit through `blueprint_review_record` with `artifact: "ui-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-UI-REVIEW.md`.
+
+## Output Quality Contract
+
+- Score these six pillars from 1 to 4: Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design. The artifact must include the overall score out of 24 and evidence for each score.
+- Findings must cite saved artifacts, repo-relative paths and lines when available, UI-spec requirements, supplied screenshots or visual observations, or explicit unavailable-evidence notes.
+- Include up to three priority fixes with user impact and concrete repair guidance. If no material fix exists, write `none` and explain the pass evidence.
+- Treat accessibility, responsiveness, interaction states, consistency, and polish as required evidence dimensions inside the scored pillars.
+- If screenshot or visual-runtime evidence is unavailable, record the audit as code/static-evidence-only and avoid claims that require visual inspection.
+
+## Subagent And Fallback Contract
+
+- Use `blueprint-ui-auditor` only when a suitable UI/code-analysis subagent is available and the phase spans multiple screens, richer interactions, supplied visual evidence, prior UI-review comparison, or a broad saved UI contract.
+- Do not substitute browser-only, web-search-only, shell-only, or generic helpers for `blueprint-ui-auditor`.
+- If the auditor is unavailable or unnecessary, use the no-subagent fallback from `skills/blueprint-review/references/ui-review-runtime-contract.md`: read saved evidence first, identify the actual UI surface, audit one pillar at a time, compress carry-forward context after each pillar, and run a final score/evidence consistency pass before persistence.
 
 
 ## Skills And Subagents
@@ -126,6 +144,7 @@
 
 - Preserve generated review artifacts when follow-up git or external CLI steps fail.
 - Fall back to explicit UI evidence review or manual next-step guidance instead of guessing.
+- If `blueprint_review_record` returns `status: "invalid"` or missing-heading warnings, repair the authored markdown against the canonical `review.ui-review` template and the local runtime contract, retry once through MCP, and stop with the MCP reason if the retry still fails.
 
 
 ## Acceptance Criteria
@@ -134,6 +153,9 @@
 - Produces a durable artifact for review, security, UI, or shipping work.
 - Non-trivial ui-review runs use the shared long-running-mutation posture with visible stage and status fields.
 - Grounds the audit in saved execution evidence and the UI contract when available.
+- Reads the canonical `review.ui-review` authoring template before drafting or repair.
+- Produces scored six-pillar evidence, an overall `/24` score, and top priority fixes or explicit pass evidence.
+- Provides a capability-gated `blueprint-ui-auditor` path and a clear one-pillar-at-a-time no-subagent fallback.
 - Keeps the review stages, pending gate, execution mode, artifact status, findings posture, and next safe action explicit while the UI audit is in flight.
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.

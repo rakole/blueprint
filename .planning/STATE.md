@@ -59,3 +59,9 @@ None yet.
 Last session: 2026-04-24 22:00
 Stopped at: Initial roadmap creation for `/blu-impact`
 Resume file: None
+
+## Quick Tasks Completed
+
+| ID | Date | Task | Summary |
+|----|------|------|---------|
+| 260425-i23 | 2026-04-25 | Repair `/blu-ui-review` workflow dilution against retained `/gsd-ui-review` behavior | `.planning/quick/260425-i23-repair-blu-ui-review-workflow-dilution-a/260425-i23-SUMMARY.md` |
