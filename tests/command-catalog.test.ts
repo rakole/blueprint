@@ -858,6 +858,7 @@ test("ui-review is implemented once manifest, review skill, and review MCP tools
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_phase_locate",
     "blueprint_review_record"
