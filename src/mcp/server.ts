@@ -10,6 +10,7 @@ import {
 import { registerBlueprintCommandResources } from "./command-resources.js";
 import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
+import { impactToolDefinitions } from "./tools/impact.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
 import { reviewToolDefinitions } from "./tools/review.js";
@@ -32,6 +33,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...phaseToolDefinitions,
   ...reviewToolDefinitions,
   ...artifactToolDefinitions,
+  ...impactToolDefinitions,
   ...updateToolDefinitions,
   ...workspaceToolDefinitions
 ];
@@ -74,6 +76,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
+  "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",
   "blueprint_workspace_remove",

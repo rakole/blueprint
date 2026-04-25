@@ -31,6 +31,7 @@ import {
   blueprintStateUpdate
 } from "./state.js";
 import { reviewToolDefinitions } from "./review.js";
+import { impactToolDefinitions } from "./impact.js";
 import { updateToolDefinitions } from "./update.js";
 import { workspaceToolDefinitions } from "./workspace.js";
 import {
@@ -204,6 +205,7 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...phaseToolDefinitions.map((definition) => definition.name),
   ...reviewToolDefinitions.map((definition) => definition.name),
   ...artifactToolDefinitions.map((definition) => definition.name),
+  ...impactToolDefinitions.map((definition) => definition.name),
   ...updateToolDefinitions.map((definition) => definition.name),
   ...workspaceToolDefinitions.map((definition) => definition.name)
 ]);

@@ -90,6 +90,19 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_review_load_findings` | Load structured findings, follow-ups, and severity counts from a saved phase-scoped review artifact | `{findings, severityCounts, followUps, path, warnings}` |
 | `blueprint_review_record` | Persist a phase-scoped review artifact such as `XX-SECURITY.md`, `XX-REVIEW.md`, `XX-REVIEWS.md`, or `XX-UI-REVIEW.md` with overwrite protection | `{reportPath, counts, followUps, status, warnings}` |
 
+### Impact
+
+The impact tool family is registered as the Phase 2 typed skeleton for the planned additive `/blu-impact` command. These tools currently return safe placeholder warnings, and `blueprint_impact_report_write` is guarded from writing until the later report-writing phase lands.
+
+| Tool | Purpose | Returns |
+|---|---|---|
+| `blueprint_impact_config_get` | Load impact-analysis config shape, provenance, validation warnings, and a config hash without mutating repo state | `{status, config, provenance, warnings, errors, configHash}` |
+| `blueprint_impact_scope_resolve` | Resolve and fingerprint the requested analysis scope from accepted input modes while avoiding secret or file-content reads in the skeleton phase | `{status, scope, changedFiles, git, diffStats, patchHash, scopeFingerprint, confidence, warnings}` |
+| `blueprint_impact_context_load` | Load Blueprint and repo context for impact analysis; in the skeleton phase this reports registered impact tools and explicit placeholder warnings | `{status, project, config, roadmap, phases, catalog, runtime, repoHints, warnings}` |
+| `blueprint_impact_analyze` | Produce the normalized impact-analysis seam for status, risk, confidence, findings, obligations, unknowns, evidence, and report data | `{phaseStatus, impactId, status, impactStatus, risk, confidence, surfaces, findings, obligations, unknowns, evidence, report, warnings}` |
+| `blueprint_impact_report_write` | Future bounded writer for `.blueprint/impact/<impact-id>/`; currently disabled and returns no written paths | `{status, impactId, impactDir, paths, written, warnings}` |
+| `blueprint_impact_output_render` | Render placeholder impact output in the accepted output modes until normalized report rendering lands | `{phaseStatus, mode, status, impactStatus, content, impactId, warnings}` |
+
 ### Workspace
 
 | Tool | Purpose | Returns |
