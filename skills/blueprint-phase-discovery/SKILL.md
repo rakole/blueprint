@@ -24,6 +24,7 @@ input_bundles:
       - skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md
     "/blu-ui-phase":
       - docs/commands/ui-phase.md
+      - skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md
     "/blu-list-phase-assumptions":
       - docs/commands/list-phase-assumptions.md
 ---
@@ -69,6 +70,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - keep the GSD-inspired discovery staples Blueprint actually ships: prior-context sweeps, deferred-idea folding, methodology lenses, codebase-scout reuse, stronger assumptions-mode analysis, progress recaps, checkpoint-per-area persistence, and end-of-run `STATE.md` updates
 - use `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the rich behavior contract for `/blu-discuss-phase`
 - use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract for `/blu-research-phase`
+- use `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` as the rich behavior contract for `/blu-ui-phase`
 - treat `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts
 
 ## Required Inputs
@@ -191,19 +193,25 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 
 ### `ui-phase`
 
+Before running the command flow, read `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md`. It locks the retained UI-phase behavior that is easy to dilute: canonical UI-spec reads, upstream artifact grounding, design-system evidence, concrete spacing/typography/color/copy/state/registry guidance, capability-gated designer and checker use, a single-agent no-subagent fallback, six-dimension UI quality review, validation repair, and implemented-only routing.
+
 1. Inspect effective config through `blueprint_config_get`.
 2. Respect `workflow.ui_phase` and `workflow.ui_safety_gate`.
-3. Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting, revising, or persisting `XX-UI-SPEC.md`.
+3. Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting, revising, or persisting `XX-UI-SPEC.md`; keep `contract.authoringTemplate` as the heading and schema authority while the runtime contract provides richness and evidence expectations.
 4. Read any existing `XX-UI-SPEC.md` through `blueprint_phase_artifact_read` before proposing replacement so reuse remains the default.
-5. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
-6. Keep the resolved scope explicit as the selected phase, current research readiness, artifact reuse-versus-replace posture, and whether config currently points toward a real UI contract or an explicit skip rationale.
-7. Treat pending gates explicitly as missing or ambiguous phase resolution, contract-versus-skip choice, `workflow.ui_safety_gate` rationale confirmation, overwrite confirmation, or checker-requested revision before save instead of flattening them into recap prose.
-8. Keep execution mode explicit as real UI contract versus explicit skip rationale, plus inline drafting versus the bounded `blueprint-ui-designer` and `blueprint-checker` loop.
-9. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
-10. Require explicit overwrite confirmation before replacing an existing UI spec.
-11. When deeper design work is needed, use `blueprint-ui-designer` for the draft and `blueprint-checker` for a bounded review loop before persistence. If the checker requests revisions, update only the affected sections, re-normalize to the same `authoringTemplate`, and re-run the checker before saving.
-12. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
-13. End with the next safe action inside the implemented surface, usually `/blu-plan-phase <phase>` once the UI artifact is settled or `/blu-progress` when discovery prerequisites remain unresolved.
+5. If `blueprint_phase_research_status` reports saved context or research, read those actual artifacts through `blueprint_phase_artifact_read` with `artifact: "context"` and `artifact: "research"` before drafting so the UI spec is grounded in saved decisions rather than status booleans.
+6. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
+7. Keep the resolved scope explicit as the selected phase, current research readiness, artifact reuse-versus-replace posture, and whether config currently points toward a real UI contract or an explicit skip rationale.
+8. Treat pending gates explicitly as missing or ambiguous phase resolution, contract-versus-skip choice, `workflow.ui_safety_gate` rationale confirmation, overwrite confirmation, checker-requested revision, or MCP validation repair instead of flattening them into recap prose.
+9. Keep execution mode explicit as real UI contract versus explicit skip rationale, plus inline drafting versus the bounded `blueprint-ui-designer` and `blueprint-checker` loop.
+10. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
+11. Require explicit overwrite confirmation before replacing an existing UI spec.
+12. When deeper design work is needed, use `blueprint-ui-designer` for the draft and `blueprint-checker` for a bounded review loop before persistence. If the checker requests revisions, update only the affected sections, re-normalize to the same `authoringTemplate`, and re-run the checker before saving.
+13. If no suitable Blueprint UI design, code-analysis, or workflow-analysis subagent is available, use the runtime contract's no-subagent fallback: compress carry-forward evidence, decide contract versus skip mode, draft one canonical section at a time, self-check the six UI dimensions, and repair blocked dimensions before persistence without lowering output richness.
+14. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for Blueprint UI design, codebase, or workflow analysis. External references may support claims only when explicitly supplied or approved.
+15. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
+16. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry through MCP once before treating `/blu-ui-phase` as blocked.
+17. End with the next safe action inside the implemented surface, usually `/blu-plan-phase <phase>` once the UI artifact is settled or `/blu-progress` when discovery prerequisites remain unresolved.
 
 ## Non-Negotiables
 

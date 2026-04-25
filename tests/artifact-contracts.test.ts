@@ -235,10 +235,17 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(uiContract.authoringTemplate, /Typography:/);
   assert.match(uiContract.authoringTemplate, /Color and contrast:/);
   assert.match(uiContract.authoringTemplate, /Copy and content:/);
+  assert.match(uiContract.authoringTemplate, /Design-system evidence:/);
+  assert.match(uiContract.authoringTemplate, /Typography limits:/);
+  assert.match(uiContract.authoringTemplate, /Color hierarchy:/);
+  assert.match(uiContract.authoringTemplate, /Copywriting contract:/);
+  assert.match(uiContract.authoringTemplate, /## Checker Review/);
   assert.match(uiContract.authoringTemplate, /## Rationale/);
   assert.match(uiContract.authoringTemplate, /Registry and design-system safety:/);
   assert.match(uiContract.notes.join("\n"), /spacing, typography, color, copy\/content/i);
   assert.match(uiContract.notes.join("\n"), /optional `## Rationale` branch/i);
+  assert.match(uiContract.notes.join("\n"), /ui-phase-runtime-contract\.md/i);
+  assert.match(uiContract.notes.join("\n"), /six UI dimensions/i);
   assert.match(summaryContract.notes.join("\n"), /`COMPLETED` is the only status that closes execution debt/);
   assert.match(summaryContract.notes.join("\n"), /`PARTIAL` and `BLOCKED` are truthful carry-forward evidence/);
   assert.ok(
@@ -254,6 +261,11 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.ok(
     uiContract.placeholderSignals.includes(
       "Registry and design-system safety: <how the draft avoids forking the registry or design system>"
+    )
+  );
+  assert.ok(
+    uiContract.placeholderSignals.includes(
+      "Copywriting: <PASS, FLAG, BLOCK, or not yet reviewed, with evidence>"
     )
   );
   assert.deepEqual(verificationContract.requiredHeadings, [

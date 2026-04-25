@@ -295,11 +295,20 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(uiCommand, /`blueprint-checker`/i);
   assert.match(uiCommand, /artifactId: "phase\.ui-spec"/i);
   assert.match(uiCommand, /authoringTemplate/i);
+  assert.match(uiCommand, /ui-phase-runtime-contract\.md/i);
+  assert.match(uiCommand, /artifact: "context"/i);
+  assert.match(uiCommand, /artifact: "research"/i);
+  assert.match(uiCommand, /no-subagent fallback/i);
+  assert.match(uiCommand, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(uiCommand, /Do not create a second UI-skip artifact/i);
   assert.match(uiDoc, /## UI Persistence Contract/);
   assert.match(uiDoc, /canonical `phase\.ui-spec` contract/i);
   assert.match(uiDoc, /bounded checker review loop/i);
   assert.match(uiDoc, /single durable output/i);
+  assert.match(uiDoc, /## UI Quality Contract/);
+  assert.match(uiDoc, /saved context or research/i);
+  assert.match(uiDoc, /six dimensions/i);
+  assert.match(uiDoc, /retry through MCP once/i);
 
   assert.match(discoverySkill, /structured discuss checkpoint shape/i);
   assert.match(discoverySkill, /discuss-phase-runtime-contract\.md/i);
@@ -316,6 +325,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discoverySkill, /repair the same normalized draft/i);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);
   assert.match(discoverySkill, /artifactId: "phase\.ui-spec"/);
+  assert.match(discoverySkill, /ui-phase-runtime-contract\.md/i);
+  assert.match(discoverySkill, /six-dimension UI quality review/i);
+  assert.match(discoverySkill, /no-subagent fallback/i);
   assert.match(discoverySkill, /blueprint-checker/i);
 });
 

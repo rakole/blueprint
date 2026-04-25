@@ -85,9 +85,37 @@ or is blocked by missing prerequisites.
    implementation chores.
 13. UI-spec revision quality: phase UI drafts must read the canonical
    `phase.ui-spec` contract, preserve the single durable `XX-UI-SPEC.md`
-   output, and keep any revision loop bounded to the affected sections.
+   output, cite the saved artifacts or repo evidence that shaped major UI
+   decisions, and keep any revision loop bounded to the affected sections.
 14. Blueprint rule compliance: plans must preserve MCP-owned persistence,
    implemented-only routing, and the current command status semantics.
+
+## UI-Spec Six-Dimension Gate
+
+When reviewing a `/blu-ui-phase` draft, evaluate all six dimensions unless the
+parent command states that `workflow.ui_safety_gate=false` for registry safety:
+
+1. Copywriting: CTA labels, empty states, error states, and destructive
+   confirmations must be specific and actionable. Generic labels such as
+   "Submit", "OK", "Cancel", "Save", or "No data found" are blockers when
+   they leave execution ambiguous.
+2. Visual hierarchy: focal points, information hierarchy, screen/state priority,
+   and icon-only fallbacks must be explicit enough for implementation.
+3. Color: the contract must define accent use narrowly, describe the color
+   hierarchy, and avoid treating accent as "all interactive elements".
+4. Typography: type sizes, weights, and line heights must be constrained enough
+   to prevent visual noise; more than four sizes or more than two weights is a
+   blocker unless repo evidence already establishes a different system.
+5. Spacing: spacing and layout values must align with the repo design system or
+   a stated multiples-of-4 scale; unexplained arbitrary spacing is a blocker.
+6. Registry and design-system safety: third-party blocks or new primitives must
+   have concrete vetting evidence, developer approval after review, or a clear
+   blocked/not-applicable status. Intent to vet later is not evidence.
+
+Use `BLOCK` when a dimension would cause the planner or executor to guess, use
+`REVISE` when targeted edits can fix the draft, and use `ACCEPT` only when the
+draft is concrete enough to persist. For every UI-spec finding, cite the exact
+draft section or missing evidence and give a bounded fix.
 
 ## Outputs
 
@@ -117,6 +145,9 @@ or is blocked by missing prerequisites.
   `phase.ui-spec` contract and whether any remaining changes can stay bounded
   to the affected sections before persistence. If revision is needed, re-run
   the checker after the bounded edits instead of widening the loop.
+- For UI-spec reviews, include the six-dimension result table with
+  `PASS`, `FLAG`, or `BLOCK` for copywriting, visual hierarchy, color,
+  typography, spacing, and registry/design-system safety.
 
 ## Boundaries
 
