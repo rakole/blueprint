@@ -653,6 +653,7 @@ For each phase:
     - why the phase is now safe to close
 18. Do not begin the next phase until the current phase passes DoD and code review or the orchestrator has explicitly
     resolved the exhausted-loop exception.
+19. Orchestrator should try and preserve its context sanity, only keep in context basic information about previously completed Phase, cleanup the context about completed phase and then move to next phase.
 
 ### Per-Phase Completion Checklist
 
