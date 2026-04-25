@@ -3,6 +3,10 @@ type ImpactStatus = "PASS" | "WARN" | "BLOCK";
 type ImpactRiskLevel = "low" | "medium" | "high" | "critical" | "unknown";
 type ImpactConfidenceLevel = "low" | "medium" | "high";
 type ImpactOutputMode = "human" | "json" | "markdown" | "pr-comment" | "summary";
+type ImpactScopeMode = NonNullable<ImpactScopeResolveArgs["mode"]>;
+type ImpactScopeKind = Exclude<ImpactScopeMode, "auto"> | "unresolved";
+type ImpactConfigStatus = "ok" | "invalid";
+type ImpactScopeStatus = "resolved" | "unresolved";
 type ImpactConfigGetArgs = {
     cwd?: string;
     configPath?: string;
@@ -61,14 +65,47 @@ type ImpactRisk = {
     reasons: string[];
 };
 type ImpactScopeSummary = {
-    kind: "unresolved" | "staged" | "working-tree" | "range" | "base-head" | "files" | "diff-file" | "description";
+    kind: ImpactScopeKind;
     description: string | null;
     files: string[];
     source: string;
 };
+type ImpactConfig = {
+    schemaVersion: typeof IMPACT_SCHEMA_VERSION;
+    baseBranches: string[];
+    paths: {
+        include: string[];
+        ignore: string[];
+        generated: string[];
+        docs: string[];
+        tests: string[];
+    };
+    ownership: {
+        sources: string[];
+        requiredOwnerMatch: boolean;
+        fallbackReviewers: string[];
+    };
+    dependencyGraph: {
+        sources: string[];
+        customGraphFiles: string[];
+        requireReverseDepsFor: string[];
+    };
+    risk: {
+        blockOnCritical: boolean;
+        blockOnBreakingContract: boolean;
+        blockOnSensitiveUnknownOwner: boolean;
+        warnBelowConfidence: number;
+        blockBelowConfidenceForSensitiveAreas: number;
+    };
+    reporting: {
+        defaultVerbosity: "compact" | "normal" | "detailed";
+        writeEvidenceLog: boolean;
+        redactPathPatterns: string[];
+    };
+};
 type ImpactConfigGetResult = {
-    status: "placeholder";
-    config: Record<string, unknown>;
+    status: ImpactConfigStatus;
+    config: ImpactConfig;
     provenance: {
         layersApplied: string[];
         defaultsPath: string | null;
@@ -80,11 +117,11 @@ type ImpactConfigGetResult = {
     configHash: string;
 };
 type ImpactScopeResolveResult = {
-    status: "placeholder";
+    status: ImpactScopeStatus;
     scope: ImpactScopeSummary;
     changedFiles: string[];
     git: {
-        mode: ImpactScopeResolveArgs["mode"];
+        mode: ImpactScopeMode;
         range: string | null;
         base: string | null;
         head: string | null;
@@ -158,6 +195,7 @@ type ImpactOutputRenderResult = {
     impactId: string;
     warnings: string[];
 };
+declare const IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
 export declare function blueprintImpactConfigGet(args?: ImpactConfigGetArgs): Promise<ImpactConfigGetResult>;
 export declare function blueprintImpactScopeResolve(args?: ImpactScopeResolveArgs): Promise<ImpactScopeResolveResult>;
 export declare function blueprintImpactContextLoad(args?: ImpactContextLoadArgs): Promise<ImpactContextLoadResult>;
