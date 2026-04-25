@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `add-phase` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded roadmap append, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
 - Keep the waiting state explicit as `phase-number-confirmation` while the computed append target is waiting for approval, and as `stale-phase-number` when the previewed number is no longer current.
+- Rich behavior reference: `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`
 
 
 ## Purpose
@@ -72,7 +73,7 @@
 - Preview the exact computed next integer phase number from the roadmap read result before append, then use `ask_user` for the confirmation gate before any mutation.
 - Call `blueprint_roadmap_add_phase` with the confirmed phase description and the confirmed next phase number in `expectedPhaseNumber` after the user approves the previewed number. Do not precompute the slug or directory path yourself.
 - Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative new-phase metadata.
-- Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
+- Scaffold the initial context file at `${phaseDir}/${phasePrefix}-CONTEXT.md` from the returned phase metadata. Do not treat scaffold text as finished phase context.
 
 
 ## Skills And Subagents
@@ -80,6 +81,7 @@
 
 - Primary skill: `blueprint-roadmap-admin`
 - Optional subagents: none
+- No-subagent fallback: the parent command completes the workflow directly from MCP results; browser, web-search-only, shell-only, or generic agents are not substitutes.
 
 
 ## Dependencies
@@ -125,6 +127,8 @@
 - Show roadmap and phase-directory drift before mutation if the roadmap read reveals a mismatch.
 - Explain which base phase numbers were considered and which decimal suffixes were ignored when deriving the append target.
 - Reject the add-phase mutation if the live next phase no longer matches the confirmed `expectedPhaseNumber`; re-read the roadmap before retrying.
+- If scaffold creation fails, report the exact `${phaseDir}/${phasePrefix}-CONTEXT.md` path and stop without manually writing the file.
+- If state update fails after roadmap append and scaffold success, report the completed writes, the state-update failure, and `/blu-progress` as the recovery route instead of manually editing `STATE.md`.
 - Stop without mutation when the phase description is missing, the roadmap is unavailable, or the previewed next phase number cannot be confirmed.
 
 

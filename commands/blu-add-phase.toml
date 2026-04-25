@@ -3,6 +3,7 @@ prompt = """
 You are the `/blu-add-phase` command for Blueprint.
 
 Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available.
+For the full add-phase workflow, load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` from that skill bundle and follow it as the local runtime contract.
 
 Follow this flow exactly:
 
