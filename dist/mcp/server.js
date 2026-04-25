@@ -28469,6 +28469,379 @@ var init_review = __esm({
   }
 });
 
+// src/mcp/tools/impact.ts
+import { createHash } from "node:crypto";
+function stableHash(value) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 12);
+}
+function placeholderConfidence(reason) {
+  return {
+    score: 0.1,
+    level: "low",
+    reasons: [reason]
+  };
+}
+function placeholderImpactId(seed) {
+  return `impact-${stableHash(seed)}`;
+}
+function getPlaceholderConfig() {
+  return {
+    schemaVersion: IMPACT_SCHEMA_VERSION,
+    paths: {
+      include: ["**/*"],
+      ignore: ["node_modules/**", "coverage/**"],
+      generated: ["dist/**", "**/*.generated.*"],
+      docs: ["docs/**", "**/*.md"],
+      tests: ["tests/**", "**/*.test.ts"]
+    },
+    ownership: {
+      sources: ["CODEOWNERS", ".blueprint/impact/ownership.json"],
+      requiredOwnerMatch: false,
+      fallbackReviewers: []
+    },
+    dependencyGraph: {
+      sources: ["package-json", "package-lock", "ts-import-scan"],
+      customGraphFiles: [".blueprint/impact/dependency-graph.json"],
+      requireReverseDepsFor: ["runtime", "contract", "security", "compliance"]
+    },
+    risk: {
+      blockOnCritical: true,
+      blockOnBreakingContract: true,
+      blockOnSensitiveUnknownOwner: true,
+      warnBelowConfidence: 0.7,
+      blockBelowConfidenceForSensitiveAreas: 0.5
+    },
+    reporting: {
+      defaultVerbosity: "normal",
+      writeEvidenceLog: true,
+      redactPathPatterns: ["**/secrets/**"]
+    }
+  };
+}
+async function blueprintImpactConfigGet(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const config2 = getPlaceholderConfig();
+  const warnings = [
+    IMPACT_PLACEHOLDER_WARNING,
+    "Impact config merging is not active yet; returning the built-in safe-default shape only."
+  ];
+  if (args.configPath) {
+    warnings.push(
+      "Invocation configPath was accepted by the Phase 2 schema but is not read until Phase 3."
+    );
+  }
+  if (args.strictConfig) {
+    warnings.push(
+      "strictConfig was accepted by the Phase 2 schema but is not enforced until Phase 3."
+    );
+  }
+  if (args.overrides && Object.keys(args.overrides).length > 0) {
+    warnings.push(
+      "Config overrides were accepted by the Phase 2 schema but are not merged until Phase 3."
+    );
+  }
+  return {
+    status: "placeholder",
+    config: config2,
+    provenance: {
+      layersApplied: ["built-in-placeholder"],
+      defaultsPath: null,
+      projectPath: null,
+      invocationPath: null
+    },
+    warnings,
+    errors: [],
+    configHash: stableHash(config2)
+  };
+}
+async function blueprintImpactScopeResolve(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const mode = args.mode ?? "auto";
+  const files = [...new Set(args.files ?? [])].sort();
+  const description = args.description?.trim() || null;
+  const hasSpecificScope = files.length > 0 || Boolean(args.range || args.base || args.head || args.diffFile);
+  const kind = mode === "auto" && !hasSpecificScope && description ? "description" : mode === "auto" ? "unresolved" : mode;
+  const fingerprintSeed = {
+    mode,
+    description,
+    range: args.range ?? null,
+    base: args.base ?? null,
+    head: args.head ?? null,
+    files,
+    diffFile: args.diffFile ?? null,
+    phase: args.phase ?? null,
+    roadmapItem: args.roadmapItem ?? null,
+    seedFile: args.seedFile ?? null,
+    meta: args.meta ?? {}
+  };
+  return {
+    status: "placeholder",
+    scope: {
+      kind,
+      description,
+      files,
+      source: "phase-2-skeleton"
+    },
+    changedFiles: files,
+    git: {
+      mode,
+      range: args.range ?? null,
+      base: args.base ?? null,
+      head: args.head ?? null
+    },
+    diffStats: {
+      filesChanged: files.length,
+      additions: null,
+      deletions: null
+    },
+    patchHash: null,
+    scopeFingerprint: stableHash(fingerprintSeed),
+    confidence: placeholderConfidence(
+      "Scope resolution has only validated inputs; git and diff inspection are implemented in Phase 3."
+    ),
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "No git diff, patch, or file content has been inspected by the Phase 2 scope skeleton."
+    ]
+  };
+}
+async function blueprintImpactContextLoad(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  return {
+    status: "placeholder",
+    project: null,
+    config: null,
+    roadmap: null,
+    phases: [],
+    catalog: null,
+    runtime: {
+      registeredImpactTools: [...IMPACT_TOOL_NAMES],
+      includeRuntime: args.includeRuntime ?? true,
+      includeCatalog: args.includeCatalog ?? true,
+      includeArtifacts: args.includeArtifacts ?? true
+    },
+    repoHints: {
+      cwdAccepted: true,
+      packageMetadataLoaded: false,
+      artifactContractsLoaded: false
+    },
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "Blueprint context, roadmap, catalog, runtime metadata, and repo hints are not loaded until Phase 4."
+    ]
+  };
+}
+async function blueprintImpactAnalyze(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const impactId = placeholderImpactId({
+    scope: args.scope ?? null,
+    context: args.context ?? null,
+    config: args.config ?? null
+  });
+  return {
+    phaseStatus: "placeholder",
+    impactId,
+    status: "WARN",
+    impactStatus: "WARN",
+    risk: {
+      level: "unknown",
+      reasons: [
+        "Impact analysis has not classified changed surfaces, ownership, dependencies, contracts, or obligations yet."
+      ]
+    },
+    confidence: placeholderConfidence(
+      "Phase 2 only proves the typed MCP seam exists; analysis scoring arrives in later phases."
+    ),
+    surfaces: [],
+    findings: [],
+    obligations: [],
+    unknowns: [
+      "unknown.impactAnalysisNotImplemented",
+      "unknown.ownershipNotLoaded",
+      "unknown.dependencyGraphNotLoaded"
+    ],
+    evidence: [],
+    report: {
+      schemaVersion: "blueprint.impact.report.v1",
+      impactId,
+      status: "WARN",
+      summary: "Impact analysis is registered but not implemented; treat this as an advisory placeholder only."
+    },
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "Analysis returns WARN with low confidence until surface classification, ownership, dependency, and scoring phases land."
+    ]
+  };
+}
+async function blueprintImpactReportWrite(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
+  return {
+    status: "disabled",
+    impactId,
+    impactDir: `.blueprint/impact/${impactId}`,
+    paths: {
+      impactMarkdown: null,
+      impactJson: null,
+      summaryJson: null,
+      evidenceJsonl: null,
+      reviewChecklist: null,
+      questions: null
+    },
+    written: false,
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "Impact report writing is intentionally disabled until Phase 8 adds validated report persistence."
+    ]
+  };
+}
+async function blueprintImpactOutputRender(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const mode = args.mode ?? "human";
+  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
+  const content = mode === "json" ? JSON.stringify(
+    {
+      impactId,
+      status: "WARN",
+      warning: IMPACT_PLACEHOLDER_WARNING
+    },
+    null,
+    2
+  ) : `Impact ${impactId}: WARN
+
+${IMPACT_PLACEHOLDER_WARNING}`;
+  return {
+    phaseStatus: "placeholder",
+    mode,
+    status: "WARN",
+    impactStatus: "WARN",
+    content,
+    impactId,
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "Output rendering uses placeholder content until normalized report rendering lands in Phase 8."
+    ]
+  };
+}
+var IMPACT_TOOL_NAMES, IMPACT_PLACEHOLDER_WARNING, IMPACT_SCHEMA_VERSION, PLACEHOLDER_IMPACT_ID, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, impactToolDefinitions;
+var init_impact = __esm({
+  "src/mcp/tools/impact.ts"() {
+    "use strict";
+    init_v4();
+    init_artifacts();
+    IMPACT_TOOL_NAMES = [
+      "blueprint_impact_config_get",
+      "blueprint_impact_scope_resolve",
+      "blueprint_impact_context_load",
+      "blueprint_impact_analyze",
+      "blueprint_impact_report_write",
+      "blueprint_impact_output_render"
+    ];
+    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 2 MCP skeleton is registered; deterministic implementation continues in later impact phases.";
+    IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
+    PLACEHOLDER_IMPACT_ID = "impact-phase-2-placeholder";
+    nonEmptyStringSchema = string2().trim().min(1);
+    impactModeSchema = _enum([
+      "auto",
+      "staged",
+      "working-tree",
+      "range",
+      "base-head",
+      "files",
+      "diff-file",
+      "description"
+    ]);
+    impactIdSchema = string2().trim().min(1).regex(/^impact-[a-z0-9][a-z0-9._-]*$/u);
+    outputModeSchema = _enum(["human", "json", "markdown", "pr-comment", "summary"]);
+    impactConfigGetInputSchema = {
+      cwd: string2().optional(),
+      configPath: string2().optional(),
+      strictConfig: boolean2().optional(),
+      overrides: record(string2(), unknown()).optional()
+    };
+    impactScopeResolveInputSchema = {
+      cwd: string2().optional(),
+      mode: impactModeSchema.optional(),
+      description: string2().optional(),
+      range: nonEmptyStringSchema.optional(),
+      base: nonEmptyStringSchema.optional(),
+      head: nonEmptyStringSchema.optional(),
+      files: array(nonEmptyStringSchema).optional(),
+      diffFile: nonEmptyStringSchema.optional(),
+      phase: union([string2(), number2()]).optional(),
+      roadmapItem: nonEmptyStringSchema.optional(),
+      seedFile: nonEmptyStringSchema.optional(),
+      meta: record(string2(), string2()).optional()
+    };
+    impactContextLoadInputSchema = {
+      cwd: string2().optional(),
+      phase: union([string2(), number2()]).optional(),
+      roadmapItem: nonEmptyStringSchema.optional(),
+      includeRuntime: boolean2().optional(),
+      includeCatalog: boolean2().optional(),
+      includeArtifacts: boolean2().optional()
+    };
+    impactAnalyzeInputSchema = {
+      cwd: string2().optional(),
+      scope: record(string2(), unknown()).optional(),
+      context: record(string2(), unknown()).optional(),
+      config: record(string2(), unknown()).optional()
+    };
+    impactReportWriteInputSchema = {
+      cwd: string2().optional(),
+      impactId: impactIdSchema.optional(),
+      report: record(string2(), unknown()).optional(),
+      overwrite: boolean2().optional(),
+      writeEvidenceLog: boolean2().optional()
+    };
+    impactOutputRenderInputSchema = {
+      cwd: string2().optional(),
+      mode: outputModeSchema.optional(),
+      impactId: impactIdSchema.optional(),
+      report: record(string2(), unknown()).optional(),
+      verbosity: _enum(["compact", "normal", "detailed"]).optional()
+    };
+    impactToolDefinitions = [
+      {
+        name: "blueprint_impact_config_get",
+        description: "Load Blueprint impact-analysis configuration provenance and validation signals without mutating repo state.",
+        inputSchema: impactConfigGetInputSchema,
+        handler: async (args) => blueprintImpactConfigGet(args)
+      },
+      {
+        name: "blueprint_impact_scope_resolve",
+        description: "Resolve the proposed impact-analysis scope from git, explicit files, diff input, or description-only seeds without reading secrets.",
+        inputSchema: impactScopeResolveInputSchema,
+        handler: async (args) => blueprintImpactScopeResolve(args)
+      },
+      {
+        name: "blueprint_impact_context_load",
+        description: "Load Blueprint and repository context for impact analysis while treating missing optional metadata as explicit warnings.",
+        inputSchema: impactContextLoadInputSchema,
+        handler: async (args) => blueprintImpactContextLoad(args)
+      },
+      {
+        name: "blueprint_impact_analyze",
+        description: "Analyze impact surfaces, findings, obligations, unknowns, risk, confidence, and advisory status from normalized scope and context.",
+        inputSchema: impactAnalyzeInputSchema,
+        handler: async (args) => blueprintImpactAnalyze(args)
+      },
+      {
+        name: "blueprint_impact_report_write",
+        description: "Persist a validated impact report bundle under .blueprint/impact/<impact-id>/ when the report-writing phase is implemented.",
+        inputSchema: impactReportWriteInputSchema,
+        handler: async (args) => blueprintImpactReportWrite(args)
+      },
+      {
+        name: "blueprint_impact_output_render",
+        description: "Render a normalized impact report or saved impact id as human, JSON, Markdown, PR-comment, or summary output.",
+        inputSchema: impactOutputRenderInputSchema,
+        handler: async (args) => blueprintImpactOutputRender(args)
+      }
+    ];
+  }
+});
+
 // src/mcp/tools/update.ts
 import { execFile } from "node:child_process";
 import { promises as fs6 } from "node:fs";
@@ -29204,7 +29577,7 @@ var init_update = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash as createHash2 } from "node:crypto";
 import { promises as fs7 } from "node:fs";
 import os2 from "node:os";
 import path8 from "node:path";
@@ -30154,7 +30527,7 @@ function patchAuditPath(registryPath, patchId) {
   return path8.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
+  return createHash2("sha256").update(value).digest("hex");
 }
 function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
@@ -32345,6 +32718,7 @@ var init_project = __esm({
     init_phase();
     init_state();
     init_review();
+    init_impact();
     init_update();
     init_workspace();
     init_runtime_vocabulary();
@@ -32409,6 +32783,7 @@ var init_project = __esm({
       ...phaseToolDefinitions.map((definition) => definition.name),
       ...reviewToolDefinitions.map((definition) => definition.name),
       ...artifactToolDefinitions.map((definition) => definition.name),
+      ...impactToolDefinitions.map((definition) => definition.name),
       ...updateToolDefinitions.map((definition) => definition.name),
       ...workspaceToolDefinitions.map((definition) => definition.name)
     ]);
@@ -42897,6 +43272,7 @@ function registerBlueprintCommandResources(server) {
 // src/mcp/server.ts
 init_artifacts();
 init_config();
+init_impact();
 init_phase();
 init_project();
 init_review();
@@ -42910,6 +43286,7 @@ var TOOL_DEFINITIONS = [
   ...phaseToolDefinitions,
   ...reviewToolDefinitions,
   ...artifactToolDefinitions,
+  ...impactToolDefinitions,
   ...updateToolDefinitions,
   ...workspaceToolDefinitions
 ];
@@ -42951,6 +43328,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
+  "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",
   "blueprint_workspace_remove",

@@ -770,7 +770,7 @@ test("impact stays non-routable while its additive command substrate is planned"
   assert.equal(entry.manifestPath, null);
   assert.equal(entry.skillPath, null);
   assert.equal(entry.specPath, "docs/commands/impact.md");
-  assert.equal(entry.requiredToolsSatisfied, false);
+  assert.equal(entry.requiredToolsSatisfied, true);
   assert.deepEqual(entry.requiredTools, [
     "blueprint_impact_config_get",
     "blueprint_impact_scope_resolve",
@@ -784,7 +784,7 @@ test("impact stays non-routable while its additive command substrate is planned"
     /Missing command manifest: commands\/blu-impact\.toml/
   );
   assert.match(entry.blockedBy.join("\n"), /Missing primary skill: skills\/blueprint-impact\/SKILL\.md/);
-  assert.match(entry.blockedBy.join("\n"), /Missing required MCP tool: blueprint_impact_config_get/);
+  assert.doesNotMatch(entry.blockedBy.join("\n"), /Missing required MCP tool: blueprint_impact_/);
 });
 
 test("plan-phase is implemented once manifest, skill, and plan MCP tools exist", async () => {
