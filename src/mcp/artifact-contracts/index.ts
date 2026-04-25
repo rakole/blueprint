@@ -1135,19 +1135,38 @@ function renderUiReviewTemplate(context?: ArtifactTemplateContext): string {
 
 ## UI Review Summary
 
-- Concise UI quality result grounded in saved evidence and the actual surface.
+- Phase, reviewed UI surface, baseline, overall score out of 24, visual-evidence posture, execution mode, and concise verdict rationale.
 
 ## Evidence Reviewed
 
-- Saved summaries, UI spec, screenshots, or repo references reviewed.
+- Saved summaries, UI spec, plans or context when available, validation or UAT evidence, screenshots or visual observations when available, repo paths, and unavailable evidence that limits confidence.
+
+## Pillar Scores
+
+| Pillar | Score | Evidence | Key Finding |
+|---|---:|---|---|
+| Copywriting | 1-4/4 | Saved artifact or repo path. | One-line finding or pass signal. |
+| Visual Hierarchy | 1-4/4 | Saved artifact, screenshot, or repo path. | One-line finding or pass signal. |
+| Color | 1-4/4 | Saved artifact, screenshot, or repo path. | One-line finding or pass signal. |
+| Typography | 1-4/4 | Saved artifact, screenshot, or repo path. | One-line finding or pass signal. |
+| Spacing | 1-4/4 | Saved artifact, screenshot, or repo path. | One-line finding or pass signal. |
+| Experience Design | 1-4/4 | Saved artifact, screenshot, or repo path. | One-line finding or pass signal. |
+
+## Priority Fixes
+
+1. Specific issue - user impact - concrete repair, or \`none\`.
 
 ## Findings
 
-- Six-pillar UI issue, improvement, or \`none\`.
+- Pillar-scoped UI issue, score impact, evidence, user impact, and fix or verification guidance, or \`none\`.
 
 ## Follow-Ups
 
 - Explicit UI repair, validation step, or \`none\`.
+
+## Audit Trail
+
+- Audit date, existing-review posture, screenshot or visual-runtime evidence status, auditor/fallback path, and score consistency note.
 
 ## Next Safe Action
 
@@ -2350,7 +2369,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     requiredHeadings: ["UI Review Summary", "Evidence Reviewed", "Findings", "Follow-Ups", "Next Safe Action"],
     lockedMarkers: ["**Verdict:**"],
     placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
-    notes: ["UI review artifacts stay phase-scoped and evidence-backed."],
+    notes: [
+      "UI review artifacts stay phase-scoped and evidence-backed. Authoring should include scored six-pillar evidence, overall /24 score, priority fixes or explicit pass evidence, visual-evidence limitations, and an audit trail before persistence."
+    ],
     renderScaffoldTemplate: renderUiReviewTemplate,
     renderAuthoringTemplate: renderUiReviewTemplate
   },

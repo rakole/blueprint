@@ -673,6 +673,43 @@ Security audit expectations:
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
 
+### `XX-UI-REVIEW.md`
+
+`XX-UI-REVIEW.md` is the phase-scoped UI audit contract for completed
+frontend or UX work.
+
+Canonical source-of-truth note:
+- The runtime contract registry under `src/mcp/artifact-contracts/` is
+  canonical. This section is the human-readable mirror of the
+  `review.ui-review` contract and should stay aligned with it.
+
+Minimum validation structure:
+- `**Verdict:** PASS|FOLLOW_UP|BLOCKED`
+- `## UI Review Summary`
+- `## Evidence Reviewed`
+- `## Findings`
+- `## Follow-Ups`
+- `## Next Safe Action`
+
+Authoring expectations:
+- must read the canonical `review.ui-review` authoring template before
+  drafting or repair
+- should include `## Pillar Scores`, `## Priority Fixes`, and `## Audit Trail`
+  when creating or updating a UI review
+- should score Copywriting, Visual Hierarchy, Color, Typography, Spacing, and
+  Experience Design from 1-4, with an overall score out of 24
+- must stay grounded in saved execution summaries, the saved `XX-UI-SPEC.md`
+  when present, actual repo evidence, and supplied screenshots or visual
+  observations when available
+- must record screenshot or visual-runtime limitations instead of claiming
+  visual certainty from static evidence alone
+- should identify up to three concrete priority fixes with user impact and
+  repair guidance, or write `none` with explicit pass evidence
+- invalid or incomplete UI-review content should be repaired against the
+  canonical `review.ui-review` authoring template and retried once through
+  `blueprint_review_record`; the command must not bypass MCP by writing the
+  artifact directly
+
 ### `XX-REVIEW.md`
 
 `XX-REVIEW.md` is the phase-scoped code review contract for a completed phase.
