@@ -705,6 +705,7 @@ Used for non-phase-specific outputs and command logs:
 - milestone summaries
 - pause / resume handoffs
 - debug logs
+- review-branch preparation reports
 - cleanup reports
 - update and patch reports
 - quick-task reports
@@ -820,6 +821,76 @@ Contract notes:
 - Keep required section names unchanged so `blueprint_artifact_report_write` continues to recognize the canonical audit-fix report contract.
 - Persist this report through `blueprint_artifact_report_write` with the bare report name `audit-fix-<phase>`; do not route through `blueprint_review_record`.
 - Replacing an existing audit-fix report requires explicit confirmation.
+
+### `reports/pr-branch-latest.md`
+
+Purpose:
+- durable review-branch preparation report for `/blu-pr-branch`
+- evidence bridge between the source branch and the clean review branch reviewers should inspect
+
+Minimum locked sections:
+- `## Source Branch`
+- `## Review Branch`
+- `## Filtered Scope`
+- `## Verification`
+- `## Next Safe Action`
+
+Pr-branch report expectations:
+- must record base branch, source branch, source `HEAD`, candidate review branch, created review branch, current branch after validation, and config inputs used for branch policy
+- must include a commit classification ledger with commit SHA, subject, classification (`code-only`, `blueprint-only`, `mixed`, or `empty-after-filter`), include/exclude/skip action, filtered paths, and reason
+- must record included and excluded repo-relative path sets plus digest `inputsUsed`
+- must capture post-create verification commands and results, including clean status, retained file count, retained commit count, and excluded `.blueprint/**` file count
+- must document recovery notes or blockers rather than claiming success when replay or verification fails
+- should document invalid-write repair or retry outcomes if `blueprint_artifact_report_write` rejects the first body
+
+Exact persistence template:
+
+```md
+# PR Branch Report
+
+## Source Branch
+
+- Base branch: <base branch>
+- Source branch: <source branch>
+- Source HEAD: <commit sha>
+- Config used: git.base_branch=<value>; git.branching_strategy=<value>; planning.commit_docs=<true|false>
+
+## Review Branch
+
+- Candidate branch: <candidate review branch>
+- Created branch: <created review branch or not created>
+- Current branch after run: <current branch after validation>
+- Execution mode: <preview-only|confirmed-replay|blocked>
+- Git commands approved: <commands or none>
+
+## Filtered Scope
+
+- .blueprint policy: <excluded|included> because <reason>
+- Digest inputs used: <inputsUsed from blueprint_artifact_summary_digest>
+- Included paths: <repo-relative paths or none>
+- Excluded paths: <repo-relative paths or none>
+
+| Commit | Subject | Classification | Action | Filtered paths | Reason |
+|---|---|---|---|---|---|
+| <sha> | <subject> | <code-only|blueprint-only|mixed|empty-after-filter> | <include|exclude|skip> | <paths or none> | <reason> |
+
+## Verification
+
+- Clean review branch status: <command and result>
+- Excluded .blueprint file count in review diff: <count>
+- Total files in review diff: <count>
+- Review branch commits ahead of base: <count>
+- Recovery or blocker: <none or blocker>
+
+## Next Safe Action
+
+- <manual push/PR guidance or /blu-progress>
+```
+
+Contract notes:
+- Keep required section names unchanged so `blueprint_artifact_report_write` continues to recognize the canonical pr-branch report contract.
+- Persist this report through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`.
+- Replacing an existing pr-branch report requires explicit confirmation.
 
 ### `reports/pause-work-latest.md`
 

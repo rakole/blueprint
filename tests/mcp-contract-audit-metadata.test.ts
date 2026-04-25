@@ -711,8 +711,12 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
 
   assert.match(prBranchCommand, /repo-relative `artifactPaths` and, when useful, repo-relative `trackedFiles`/i);
   assert.match(prBranchCommand, /returned `inputsUsed` list as the authoritative digest scope/i);
+  assert.match(prBranchCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
+  assert.match(prBranchCommand, /contract\.authoringTemplate/i);
+  assert.match(prBranchCommand, /commit classification ledger/i);
   assert.match(prBranchCommand, /bare report name `pr-branch-latest`/i);
   assert.match(prBranchDoc, /## Digest And Report Contract/);
+  assert.match(prBranchDoc, /## Commit Classification And Replay Contract/);
 
   assert.match(shipCommand, /repo-relative tracked-file inputs/i);
   assert.match(shipCommand, /returned `inputsUsed` list as the authoritative digest scope/i);

@@ -11,6 +11,7 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Keep the pre-mutation posture explicit throughout the run: resolved scope must stay tied to the source branch, base branch, candidate review branch, filtered include or exclude decision, and digest-backed evidence; pending gates stay limited to `clean-working-tree`, `review-branch-confirmation`, and report overwrite confirmation when those gates are triggered; execution mode should reflect preview-only versus confirmed review-branch preparation; and the next safe action should stay visible while the command is waiting on cleanup, approval, or manual follow-through.
+- Detailed contract: `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md`
 
 
 ## Purpose
@@ -61,14 +62,27 @@
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
 ## Digest And Report Contract
 
 - Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening the filtered branch evidence after the tool returns.
+- Read `report.pr-branch` through `blueprint_artifact_contract_read` before drafting the saved report.
+- Use `contract.authoringTemplate` as the heading and schema authority for `pr-branch-latest`.
 - Persist the durable report through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
+
+## Commit Classification And Replay Contract
+
+- Analyze commits ahead of the base branch before confirmation.
+- Classify each commit as `code-only`, `blueprint-only`, `mixed`, or `empty-after-filter`.
+- Preview the commit SHA, subject, touched paths, filtered paths, include/exclude/skip action, and reason before mutation.
+- Exclude `.blueprint/**` commits by default when `planning.commit_docs` is true unless the user explicitly asks to keep Blueprint artifacts.
+- Replay retained commits in source order, preserve commit messages when using commit replay, and strip excluded `.blueprint/**` paths from mixed commits before committing on the review branch.
+- Validate the created review branch with clean status, retained file count, retained commit count, and zero excluded `.blueprint/**` entries when filtering is active.
+- Return to the source branch after validation unless the user explicitly asks to stay on the review branch.
 
 
 ## Skills And Subagents
@@ -76,6 +90,7 @@
 
 - Primary skill: `blueprint-maintenance`
 - Optional subagents: none
+- No-subagent fallback is canonical for this workflow. A suitable code-analysis sidecar may provide read-only advisory notes on the candidate file list only when the user asks for extra risk review; browser, web-search-only, shell-only, and generic agents are not substitutes.
 
 
 ## Dependencies
@@ -111,6 +126,7 @@
 - Base-branch and commit-docs behavior should come from normalized effective config rather than a second branch-detection path inside the command.
 - The command should stop on a dirty working tree instead of mixing uncommitted changes into the review-branch replay path.
 - The command should also name the resolved source branch, base branch, filtered target, pending gate, and next safe action explicitly before mutation so preflight validation is reviewable.
+- Mixed commits should stay reviewer-friendly: non-Blueprint changes are retained, excluded `.blueprint/**` paths are restored or removed before the replay commit, and the report records what was filtered.
 
 
 ## User Prompts And Confirmation Gates
@@ -148,6 +164,7 @@
 - Preserves the source branch and records the created review branch plus filtered scope in `.blueprint/reports/pr-branch-latest.md`.
 - Honors normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` when preparing a review branch.
 - Keeps the report-backed pre-mutation posture, pending gates, and the next safe action explicit while the command is waiting on cleanup, confirmation, or report overwrite approval.
+- Records a commit classification ledger and post-create verification evidence in the durable report.
 
 
 ## Test Cases

@@ -60,8 +60,12 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
 
   assert.match(prBranch, /If the repo has uncommitted changes, stop/i);
   assert.match(prBranch, /pending gate `clean-working-tree`/);
-  assert.match(prBranch, /Summarize the target base branch, current source branch, candidate review branch name/i);
+  assert.match(prBranch, /pr-branch-runtime-contract\.md/);
+  assert.match(prBranch, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(prBranch, /commit classification ledger/i);
+  assert.match(prBranch, /Summarize the target base branch, current source branch, source `HEAD`, candidate review branch name/i);
   assert.match(prBranch, /Require explicit confirmation before any branch creation or replay step/i);
+  assert.match(prBranch, /retained file count, retained commit count/i);
   assert.match(prBranch, /If that report already exists.*require explicit overwrite confirmation before replacing it/i);
   assert.match(prBranch, /next safe action/i);
 
@@ -116,6 +120,9 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /dirty working tree/i);
   assert.match(skill, /pending gate `clean-working-tree`/);
   assert.match(skill, /`review-branch-confirmation`/);
+  assert.match(skill, /pr-branch-runtime-contract\.md/);
+  assert.match(skill, /commit classification/i);
+  assert.match(skill, /canonical authoring template/i);
   assert.match(skill, /`update_topic` tool and keep a compact shipping checklist with `write_todos`/i);
   assert.match(skill, /tracker-eligible only for session-local coordination/i);
   assert.match(skill, /`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/);
@@ -135,6 +142,9 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   const runtimeReference = await readRepoFile("docs/RUNTIME-REFERENCE.md");
 
   assert.match(runtimeReference, /`pr-branch`[\s\S]*High-risk-maintenance profile for clean review-branch preparation/i);
+  assert.match(runtimeReference, /`pr-branch`[\s\S]*blueprint_artifact_contract_read/i);
+  assert.match(runtimeReference, /`pr-branch`[\s\S]*pr-branch-runtime-contract\.md/i);
+  assert.match(runtimeReference, /`pr-branch`[\s\S]*classify commits into `code-only`, `blueprint-only`, `mixed`, and `empty-after-filter`/i);
   assert.match(runtimeReference, /`pr-branch`[\s\S]*`clean-working-tree`, `review-branch-confirmation`, or report overwrite approval/i);
   assert.match(runtimeReference, /`pr-branch`[\s\S]*report-backed pre-mutation posture reviewable/i);
   assert.match(runtimeReference, /`pr-branch`[\s\S]*next safe action explicit/i);

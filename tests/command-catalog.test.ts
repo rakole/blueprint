@@ -1272,6 +1272,7 @@ test("pr-branch is implemented once manifest, skill, and review-branch report MC
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
     "blueprint_config_get",

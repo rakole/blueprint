@@ -58,6 +58,7 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
 - `docs/RUNTIME-REFERENCE.md`
+- `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md`
 
 ## Required MCP Tools
 
@@ -76,6 +77,7 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - `blueprint_patch_record`
 - `blueprint_roadmap_read`
 - `blueprint_artifact_list`
+- `blueprint_artifact_contract_read`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
 - `blueprint_state_update`
@@ -83,6 +85,7 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 ## Shared MCP Contracts
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories, slugs, or filenames.
+- `blueprint_artifact_contract_read`: for known report shapes such as `report.pr-branch`, use the returned `authoringTemplate` as the heading and schema authority before report persistence.
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `trackedFiles`, and related file inputs only, and treat `inputsUsed` as the authoritative digest scope.
 - `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, `undo-latest`, or `cleanup-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
 
@@ -160,19 +163,27 @@ Shared rule for all maintenance flows:
 
 ### `pr-branch`
 
+- Load `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md` as the detailed runtime contract for stage mapping, commit classification, replay validation, report authoring, fallback behavior, and completion criteria.
+- Execution profile: `high-risk-maintenance`
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
+- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
+
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.
 2. Read effective config through `blueprint_config_get` before deriving base-branch or commit-docs behavior. Prefer explicit user input, then `git.base_branch`, then safe repo detection.
 3. Inspect git status before mutation. A dirty working tree is a hard stop for the clean review-branch flow.
 4. Keep the waiting state explicit before mutation: a dirty working tree should surface the pending gate `clean-working-tree` plus the next safe action to clean, stash, or commit before rerunning.
-5. Make the resolved target explicit before mutation: name the source branch, base branch, candidate review branch, and whether `.blueprint/**` is included.
-6. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
-7. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
-8. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
-9. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, and included versus excluded scope before any git mutation, and keep the pending gate visible as `review-branch-confirmation` until the user approves.
-10. If a later `pr-branch-latest` replacement is blocked on an existing report, keep the pending gate explicit as report overwrite confirmation and name the next safe action instead of smoothing past it.
-11. Create the review branch without rewriting or deleting the source branch in place.
-12. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, and use the returned `path` as the authoritative saved report location.
-13. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
+5. Make the resolved target explicit before mutation: name the source branch, source `HEAD`, base branch, candidate review branch, and whether `.blueprint/**` is included.
+6. Classify commits ahead of the base branch into `code-only`, `blueprint-only`, `mixed`, and `empty-after-filter`; preview the include/exclude/skip action, touched paths, filtered paths, and reason for each row before confirmation.
+7. Build the preview through `blueprint_artifact_summary_digest` with explicit `artifactPaths` and, when useful, changed-file inputs so the filtered review scope stays evidence-backed.
+8. Read `report.pr-branch` through `blueprint_artifact_contract_read` and use the canonical authoring template as the report heading and schema authority.
+9. Keep the filtering decision explicit: default to excluding `.blueprint/**` bookkeeping paths when `planning.commit_docs` is true unless the user clearly wants those artifacts included.
+10. Fail fast when the filtered diff is empty. Do not create noise branches just to satisfy the command.
+11. Require one explicit confirmation that includes the base branch, source branch, candidate review branch name, commit classification counts, and included versus excluded scope before any git mutation, and keep the pending gate visible as `review-branch-confirmation` until the user approves.
+12. If a later `pr-branch-latest` replacement is blocked on an existing report, keep the pending gate explicit as report overwrite confirmation and name the next safe action instead of smoothing past it.
+13. Create the review branch without rewriting or deleting the source branch in place, replay retained commits in source order, strip excluded `.blueprint/**` paths from mixed commits, and return to the source branch unless the user explicitly asks to stay on the review branch.
+14. Validate the created review branch with concrete git checks: clean status, retained file count, retained commit count, and zero excluded `.blueprint/**` entries when filtering is active.
+15. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`, and use the returned `path` as the authoritative saved report location. If the write is invalid, repair once against the canonical `report.pr-branch` template before stopping.
+16. Keep follow-up guidance honest: give manual push or PR guidance when later shipping commands are still planned instead of advertising them as runnable.
 
 ### `ship`
 
