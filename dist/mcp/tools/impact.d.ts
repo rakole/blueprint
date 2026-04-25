@@ -212,9 +212,14 @@ type ImpactAnalysisReport = Record<string, unknown> & {
     surfaces: ImpactSurfaceRecord[];
     areaSummary: ImpactSummaryRecord[];
     surfaceSummary: ImpactSummaryRecord[];
+    ownership: ImpactOwnershipAnalysis;
+    dependencyGraph: ImpactDependencyAnalysis;
+    findings: ImpactFindingRecord[];
+    unknowns: ImpactUnknownRecord[];
+    evidence: ImpactEvidenceRecord[];
 };
 type ImpactAnalyzeResult = {
-    phaseStatus: "classified";
+    phaseStatus: "ownership-dependencies-analyzed";
     impactId: string;
     status: ImpactStatus;
     impactStatus: ImpactStatus;
@@ -223,12 +228,107 @@ type ImpactAnalyzeResult = {
     surfaces: ImpactSurfaceRecord[];
     areaSummary: ImpactSummaryRecord[];
     surfaceSummary: ImpactSummaryRecord[];
-    findings: unknown[];
+    ownership: ImpactOwnershipAnalysis;
+    dependencyGraph: ImpactDependencyAnalysis;
+    findings: ImpactFindingRecord[];
     obligations: unknown[];
-    unknowns: string[];
-    evidence: unknown[];
+    unknowns: ImpactUnknownRecord[];
+    evidence: ImpactEvidenceRecord[];
     report: ImpactAnalysisReport;
     warnings: string[];
+};
+type ImpactEvidenceRecord = {
+    id: string;
+    kind: "scope" | "surface" | "ownership" | "dependency" | "metadata" | "config";
+    source: string;
+    summary: string;
+    paths: string[];
+    data?: Record<string, unknown>;
+};
+type ImpactUnknownCategory = "ownership" | "dependency" | "contract" | "obligation" | "risk-scoring";
+type ImpactUnknownRecord = {
+    id: string;
+    category: ImpactUnknownCategory;
+    title: string;
+    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    impactedFiles: string[];
+    reason: string;
+    resolution: string;
+    evidenceRefs: string[];
+};
+type ImpactFindingRecord = {
+    id: string;
+    checkId: string;
+    title: string;
+    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    status: ImpactStatus;
+    confidence: number;
+    impactedFiles: string[];
+    impactedAreas: string[];
+    owners: string[];
+    requiredActions: string[];
+    evidenceRefs: string[];
+};
+type ImpactOwnershipRule = {
+    source: "codeowners" | "metadata";
+    sourcePath: string;
+    pattern: string;
+    owners: string[];
+    sensitive: boolean;
+    line: number | null;
+    order: number;
+};
+type ImpactOwnershipMatch = {
+    path: string;
+    owners: string[];
+    matchedRules: ImpactOwnershipRule[];
+    fallbackReviewers: string[];
+    fallbackUsed: boolean;
+    sensitive: boolean;
+    ownerMissing: boolean;
+    evidenceRefs: string[];
+};
+type ImpactOwnershipCoverage = {
+    status: "none" | "partial" | "complete";
+    sourcesConfigured: string[];
+    sourcesUsed: string[];
+    fallbackReviewers: string[];
+    filesWithOwners: number;
+    filesMissingOwners: number;
+    gaps: string[];
+};
+type ImpactOwnershipAnalysis = {
+    coverage: ImpactOwnershipCoverage;
+    codeownersPath: string | null;
+    metadataPaths: string[];
+    rules: ImpactOwnershipRule[];
+    matches: ImpactOwnershipMatch[];
+};
+type ImpactDependencyNode = {
+    id: string;
+    path: string | null;
+    kind: "package" | "workspace" | "file" | "external" | "custom";
+    source: string;
+};
+type ImpactDependencyEdge = {
+    from: string;
+    to: string;
+    type: string;
+    source: string;
+};
+type ImpactDependencyCoverage = {
+    status: "none" | "partial" | "complete-ish";
+    sourcesConfigured: string[];
+    sourcesUsed: string[];
+    filesCovered: string[];
+    filesUncovered: string[];
+    gaps: string[];
+};
+type ImpactDependencyAnalysis = {
+    coverage: ImpactDependencyCoverage;
+    nodes: ImpactDependencyNode[];
+    edges: ImpactDependencyEdge[];
+    reverseDependentsByPath: Record<string, string[]>;
 };
 type ImpactReportWriteResult = {
     status: "disabled";

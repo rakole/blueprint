@@ -18,6 +18,7 @@ import {
   blueprintImpactAnalyze,
   blueprintImpactConfigGet,
   blueprintImpactContextLoad,
+  blueprintImpactOutputRender,
   blueprintImpactReportWrite,
   blueprintImpactScopeResolve
 } from "../src/mcp/tools/impact.js";
@@ -548,7 +549,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
   assert.deepEqual(first.surfaces, second.surfaces);
 });
 
-test("impact analyze classifies Phase 4 surface matrix overlaps deterministically", async () => {
+test("impact analyze classifies the surface matrix overlaps deterministically", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: [
@@ -702,7 +703,7 @@ test("impact downstream handlers stay read-only while analysis classification is
   assert.equal(scope.scope.kind, "description");
   assert.equal(scope.confidence.level, "low");
   assert.equal(analysis.impactStatus, "WARN");
-  assert.equal(analysis.phaseStatus, "classified");
+  assert.equal(analysis.phaseStatus, "ownership-dependencies-analyzed");
   assert.equal(analysis.confidence.level, "low");
   assert.equal(write.status, "disabled");
   assert.equal(write.written, false);
@@ -715,4 +716,706 @@ test("impact downstream handlers stay read-only while analysis classification is
     questions: null
   });
   await assert.rejects(access(path.join(repoRoot, ".blueprint", "impact", "impact-abc123")));
+});
+
+test("impact analyze emits structured ownership unknowns without inventing owners", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+
+    const match = analysis.ownership.matches.find((entry) => entry.path === "src/app.ts");
+
+    assert.equal(analysis.status, "WARN");
+    assert.equal(match?.ownerMissing, true);
+    assert.deepEqual(match?.owners, []);
+    assert.ok(analysis.unknowns.some((unknown) => unknown.id === "unknown.ownership.src-app-ts"));
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze blocks sensitive missing owner when configured", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["secrets/prod.token"],
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        },
+        risk: {
+          blockOnSensitiveUnknownOwner: true
+        }
+      }
+    });
+
+    assert.equal(analysis.status, "BLOCK");
+    assert.equal(analysis.impactStatus, "BLOCK");
+    assert.ok(
+      analysis.findings.some(
+        (finding) =>
+          finding.checkId === "ownership.sensitive-owner" &&
+          finding.status === "BLOCK" &&
+          finding.evidenceRefs.length > 0
+      )
+    );
+    assert.ok(
+      analysis.unknowns.some(
+        (unknown) =>
+          unknown.id === "unknown.ownership.secrets-prod-token" &&
+          unknown.category === "ownership"
+      )
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze honors configured CODEOWNERS discovery order and last matching rule", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(repoPath, "CODEOWNERS", "src/* @root/team\n");
+    await writeRepoFile(
+      repoPath,
+      ".github/CODEOWNERS",
+      ["*.ts @first/team", "src/* @last/team # inline comment", ""].join("\n")
+    );
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          sources: [".github/CODEOWNERS", "CODEOWNERS"],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+    const match = analysis.ownership.matches.find((entry) => entry.path === "src/app.ts");
+
+    assert.equal(analysis.ownership.codeownersPath, ".github/CODEOWNERS");
+    assert.deepEqual(match?.owners, ["@last/team"]);
+    assert.equal(match?.matchedRules[0]?.pattern, "src/*");
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze strips CODEOWNERS inline comments from owner tokens", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(repoPath, "CODEOWNERS", "src/* @team # comment\n");
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          sources: ["CODEOWNERS"],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+    const match = analysis.ownership.matches.find((entry) => entry.path === "src/app.ts");
+
+    assert.deepEqual(match?.owners, ["@team"]);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze applies ownership metadata rules and fallback reviewer precedence", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      ".blueprint/impact/ownership.json",
+      JSON.stringify({
+        schemaVersion: "blueprint.impact.ownership.v1",
+        rules: [
+          {
+            pattern: "src/owned.ts",
+            owners: ["@metadata/owner"],
+            sensitive: true
+          }
+        ],
+        fallbackReviewers: ["@metadata/fallback"]
+      })
+    );
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/owned.ts", "src/unmatched.ts"],
+      config: {
+        ownership: {
+          sources: [".blueprint/impact/ownership.json"],
+          fallbackReviewers: ["@config/fallback"]
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+    const owned = analysis.ownership.matches.find((entry) => entry.path === "src/owned.ts");
+    const unmatched = analysis.ownership.matches.find(
+      (entry) => entry.path === "src/unmatched.ts"
+    );
+
+    assert.deepEqual(owned?.owners, ["@metadata/owner"]);
+    assert.equal(owned?.sensitive, true);
+    assert.deepEqual(unmatched?.owners, ["@config/fallback"]);
+    assert.equal(unmatched?.fallbackUsed, true);
+    assert.deepEqual(analysis.ownership.coverage.fallbackReviewers, ["@config/fallback"]);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze handles disabled, malformed, and escaping ownership config sources", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(repoPath, ".blueprint/impact/ownership.json", "{not json\n");
+
+    const disabled = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+
+    assert.doesNotMatch(disabled.warnings.join("\n"), /ownership metadata/i);
+
+    const malformed = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          sources: [".blueprint/impact/ownership.json"],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+
+    assert.match(malformed.warnings.join("\n"), /Impact ownership metadata/);
+    assert.ok(
+      malformed.unknowns.some((unknown) => unknown.id.includes("unknown.ownership.metadata"))
+    );
+
+    await assert.rejects(
+      blueprintImpactAnalyze({
+        cwd: repoPath,
+        changedFiles: ["src/app.ts"],
+        config: {
+          ownership: {
+            sources: ["../ownership.json"],
+            fallbackReviewers: []
+          }
+        }
+      }),
+      /escapes the repository|escapes the allowed root/
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze reports missing reverse dependency coverage without limited-impact wording", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["package.json", "src/app.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+    const serialized = JSON.stringify(analysis);
+
+    assert.equal(analysis.dependencyGraph.coverage.status, "none");
+    assert.ok(
+      analysis.unknowns.some((unknown) =>
+        unknown.id.startsWith("unknown.reverseDependencies.package-runtime")
+      )
+    );
+    assert.ok(
+      analysis.unknowns.some((unknown) =>
+        unknown.id.startsWith("unknown.reverseDependencies.source")
+      )
+    );
+    assert.doesNotMatch(serialized, /limited impact/i);
+    assert.doesNotMatch(serialized, /limited-impact/i);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze handles disabled, malformed, and escaping dependency graph sources", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(repoPath, ".blueprint/impact/dependency-graph.json", "{not json\n");
+
+    const disabled = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: [],
+          customGraphFiles: [".blueprint/impact/dependency-graph.json"]
+        }
+      }
+    });
+
+    assert.doesNotMatch(disabled.warnings.join("\n"), /dependency graph/i);
+
+    const malformed = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: ["custom-graph"],
+          customGraphFiles: [".blueprint/impact/dependency-graph.json"]
+        }
+      }
+    });
+
+    assert.match(malformed.warnings.join("\n"), /Impact dependency graph/);
+    assert.ok(
+      malformed.unknowns.some((unknown) => unknown.id.includes("unknown.dependency.metadata"))
+    );
+
+    await assert.rejects(
+      blueprintImpactAnalyze({
+        cwd: repoPath,
+        changedFiles: ["src/app.ts"],
+        config: {
+          dependencyGraph: {
+            customGraphFiles: ["../dependency-graph.json"]
+          }
+        }
+      }),
+      /escapes the repository|escapes the allowed root/
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze reports partial custom graph reverse dependents and coverage gaps", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      ".blueprint/impact/dependency-graph.json",
+      JSON.stringify({
+        schemaVersion: "blueprint.impact.dependency-graph.v1",
+        nodes: [
+          { id: "file:src/a.ts", path: "src/a.ts" },
+          { id: "file:src/b.ts", path: "src/b.ts" }
+        ],
+        edges: [{ from: "file:src/b.ts", to: "file:src/a.ts", type: "imports" }]
+      })
+    );
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/a.ts", "src/c.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: ["custom-graph"],
+          customGraphFiles: [".blueprint/impact/dependency-graph.json"]
+        }
+      }
+    });
+
+    assert.equal(analysis.dependencyGraph.coverage.status, "partial");
+    assert.deepEqual(analysis.dependencyGraph.reverseDependentsByPath["src/a.ts"], [
+      "src/b.ts"
+    ]);
+    assert.ok(analysis.dependencyGraph.coverage.filesUncovered.includes("src/c.ts"));
+    assert.ok(
+      analysis.unknowns.some((unknown) => unknown.id === "unknown.reverseDependencies.source.src-c-ts")
+    );
+    assert.equal(
+      analysis.unknowns.some((unknown) => unknown.id === "unknown.reverseDependencies.source.src-a-ts"),
+      false
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze keeps reverse dependency unknowns when graph nodes have no incoming dependents", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      ".blueprint/impact/dependency-graph.json",
+      JSON.stringify({
+        schemaVersion: "blueprint.impact.dependency-graph.v1",
+        nodes: [{ id: "file:src/app.ts", path: "src/app.ts" }],
+        edges: []
+      })
+    );
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: ["custom-graph"],
+          customGraphFiles: [".blueprint/impact/dependency-graph.json"]
+        }
+      }
+    });
+
+    assert.equal(analysis.dependencyGraph.coverage.status, "partial");
+    assert.deepEqual(analysis.dependencyGraph.reverseDependentsByPath["src/app.ts"], []);
+    assert.ok(
+      analysis.dependencyGraph.coverage.gaps.includes(
+        "Reverse dependency coverage is absent for src/app.ts."
+      )
+    );
+    assert.ok(
+      analysis.unknowns.some(
+        (unknown) => unknown.id === "unknown.reverseDependencies.source.src-app-ts"
+      )
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze reports high confidence when ownership and reverse dependencies are covered", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      ".blueprint/impact/dependency-graph.json",
+      JSON.stringify({
+        schemaVersion: "blueprint.impact.dependency-graph.v1",
+        nodes: [
+          { id: "file:src/app.ts", path: "src/app.ts" },
+          { id: "file:src/consumer.ts", path: "src/consumer.ts" }
+        ],
+        edges: [{ from: "file:src/consumer.ts", to: "file:src/app.ts", type: "imports" }]
+      })
+    );
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: ["custom-graph"],
+          customGraphFiles: [".blueprint/impact/dependency-graph.json"]
+        }
+      }
+    });
+
+    assert.equal(analysis.dependencyGraph.coverage.status, "complete-ish");
+    assert.equal(analysis.confidence.score, 0.68);
+    assert.equal(analysis.confidence.level, "high");
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze treats nested workspace src files as source for reverse coverage unknowns", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["packages/a/src/index.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+
+    assert.deepEqual(surfaceFor(analysis, "packages/a/src/index.ts").surfaces, [
+      "source"
+    ]);
+    assert.ok(
+      analysis.unknowns.some(
+        (unknown) =>
+          unknown.id === "unknown.reverseDependencies.source.packages-a-src-index-ts"
+      )
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze detects simple workspaces and TS import reverse relationships", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      "package.json",
+      JSON.stringify({
+        name: "@repo/root",
+        workspaces: ["packages/*"],
+        scripts: {
+          test: "node --test"
+        }
+      })
+    );
+    await writeRepoFile(
+      repoPath,
+      "packages/a/package.json",
+      JSON.stringify({
+        name: "@repo/a",
+        dependencies: {
+          "@repo/b": "workspace:*"
+        }
+      })
+    );
+    await writeRepoFile(
+      repoPath,
+      "packages/b/package.json",
+      JSON.stringify({
+        name: "@repo/b"
+      })
+    );
+    await writeRepoFile(
+      repoPath,
+      "packages/a/src/index.ts",
+      "import { value } from '@repo/b';\nexport const a = value;\n"
+    );
+    await writeRepoFile(repoPath, "packages/b/src/index.ts", "export const value = 1;\n");
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["packages/b/src/index.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: ["package-json", "ts-import-scan"]
+        }
+      }
+    });
+
+    assert.ok(analysis.dependencyGraph.nodes.some((node) => node.id === "package:@repo/a"));
+    assert.ok(analysis.dependencyGraph.nodes.some((node) => node.id === "package:@repo/b"));
+    assert.ok(
+      analysis.dependencyGraph.edges.some(
+        (edge) =>
+          edge.from === "package:@repo/a" &&
+          edge.to === "package:@repo/b" &&
+          edge.type === "workspace-package-dependency"
+      )
+    );
+    assert.ok(
+      analysis.dependencyGraph.reverseDependentsByPath["packages/b/src/index.ts"]?.includes(
+        "packages/a"
+      )
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze resolves extensionless TS imports to existing source files", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      "src/a.ts",
+      "import { value } from './b';\nexport const a = value;\n"
+    );
+    await writeRepoFile(repoPath, "src/b.ts", "export const value = 1;\n");
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/b.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: ["ts-import-scan"]
+        }
+      }
+    });
+
+    assert.ok(
+      analysis.dependencyGraph.reverseDependentsByPath["src/b.ts"]?.includes("src/a.ts")
+    );
+    assert.equal(
+      analysis.unknowns.some((unknown) => unknown.id === "unknown.reverseDependencies.source.src-b-ts"),
+      false
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze keeps source as driver for mixed generated and source changes", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["dist/app.js", "src/app.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+
+    assert.deepEqual(surfaceFor(analysis, "dist/app.js").surfaces, ["generated"]);
+    assert.deepEqual(surfaceFor(analysis, "src/app.ts").surfaces, ["source"]);
+    assert.ok(
+      analysis.unknowns.some(
+        (unknown) => unknown.id === "unknown.reverseDependencies.mixed-generated-source"
+      )
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze skips secret-like source import scanning without leaking import text", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    await writeRepoFile(
+      repoPath,
+      "src/secrets/api.ts",
+      "import 'SECRET_IMPORT_SHOULD_NOT_APPEAR';\nexport const secret = true;\n"
+    );
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/secrets/api.ts"],
+      config: {
+        ownership: {
+          fallbackReviewers: ["@security"]
+        },
+        dependencyGraph: {
+          sources: ["ts-import-scan"]
+        }
+      }
+    });
+    const serialized = JSON.stringify(analysis);
+
+    assert.ok(
+      analysis.evidence.some(
+        (evidence) =>
+          evidence.source === "ts-import-scan" &&
+          evidence.data?.skippedSecretFileCount === 1
+      )
+    );
+    assert.doesNotMatch(serialized, /SECRET_IMPORT_SHOULD_NOT_APPEAR/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer and output renderer remain disabled placeholders for Phase 5 reports", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/tools/impact.ts"],
+    config: {
+      ownership: {
+        fallbackReviewers: ["@reviewer"]
+      },
+      dependencyGraph: {
+        sources: []
+      }
+    }
+  });
+  const write = await blueprintImpactReportWrite({
+    cwd: repoRoot,
+    impactId: analysis.impactId,
+    report: analysis.report
+  });
+  const rendered = await blueprintImpactOutputRender({
+    cwd: repoRoot,
+    mode: "json",
+    impactId: analysis.impactId,
+    report: analysis.report
+  });
+
+  assert.equal(write.status, "disabled");
+  assert.equal(write.written, false);
+  assert.equal(rendered.phaseStatus, "placeholder");
+  assert.match(rendered.content, /Phase 5/);
 });
