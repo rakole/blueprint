@@ -1,16 +1,17 @@
 # Blueprint Progress
 
-Last updated: 2026-04-23
+Last updated: 2026-04-25
 
-Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
+Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by active rollout intent, then by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
 
 ## Incomplete Commands (Priority Up)
 
-Total: 1
+Total: 2
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
 | 1 | `do` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
+| 2 | `impact` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -18,11 +19,11 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `do` | `none` | `none` | The `/blu-do` blocker-removal slice is now defined; it is the next planned control-plane slice, but it remains non-routable until its dedicated manifest lands and the runtime catalog can stop deriving a repairing state from that missing artifact. |
+| 1 | `do` | `impact` | `none` | `/blu-do` remains the retained planned control-plane slice and is still non-routable until its dedicated manifest lands. `/blu-impact` is the active additive command rollout and remains non-routable until its manifest, primary skill, and impact MCP tool family land. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
-None. `/blu-do` is still the only incomplete command; docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands.
+None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline; docs keep its control-plane status at `planned`, while the live runtime must remain non-routable until the dedicated manifest, primary skill, registered impact MCP tools, tests, docs, and built assets align.
 
 ## Completed Commands (Bubbled Down)
 
