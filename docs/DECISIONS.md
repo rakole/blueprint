@@ -102,3 +102,6 @@ This file records the product and architecture decisions that are locked for Blu
 
 33. `BP-033` Maintenance integrity preflights
     High-risk maintenance and workspace flows must share explicit preflight integrity checks for dirty state, resolved targets, provenance, and report-before-mutate behavior.
+
+34. `BP-034` Impact command addition
+    `/blu-impact` is an intentional additive Blueprint command outside the locked 53-command retained baseline. It belongs to Wave 4 `Quality And Shipping` as a low-risk advisory/reporting flow because V1 may write only a bounded `.blueprint/impact/<impact-id>/` report bundle and must not mutate source files, roadmap state, PR state, deployment state, command catalog state, or the installed extension directory. It remains non-routable until its command spec, manifest, primary skill, registered MCP tools, docs, tests, and built assets align and the live command catalog marks it `implemented`.

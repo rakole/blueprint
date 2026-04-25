@@ -33,6 +33,19 @@ These commands are in scope for Blueprint v1 planning and documentation:
 - `ui-phase`, `ui-review`, `undo`, `update`
 - `validate-phase`, `verify-work`, `workstreams`
 
+## Intentionally Added Commands
+
+These commands are not part of the original 53-command retained baseline, but
+they are explicitly approved Blueprint additions rather than silently revived
+legacy omissions:
+
+- `impact`: advisory blast-radius analysis for proposed or actual changes,
+  planned as `/blu-impact` in Wave 4 `Quality And Shipping`.
+
+`impact` does not weaken the strict omit policy. It is a new Blueprint-native
+advisory workflow for evidence-backed review confidence, not an omitted legacy
+command returning under a different name.
+
 ## Removed Or Omitted Commands
 
 ### Explicitly removed

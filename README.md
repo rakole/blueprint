@@ -285,9 +285,10 @@ Blueprint is opinionated about safety:
 
 ## Commands Not Public Yet
 
-Only one retained command is still not public in the current runtime and should not be treated as available today:
+The retained direct router below and the planned additive impact command are not public in the current runtime and should not be treated as available today:
 
 - `/blu-do` (control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped)
+- `/blu-impact` (intentionally added outside the original retained baseline, planned for advisory blast-radius reports, and non-routable until its manifest, skill, MCP tools, tests, docs, and built assets ship)
 
 If you ask `/blu` or `/blu-help` for available commands, they will not advertise those until they are actually shipped.
 

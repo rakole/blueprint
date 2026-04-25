@@ -460,10 +460,10 @@ non-routable until their extra MCP substrate lands.
    retry/repair behavior, output quality criteria, and completion criteria.
 2. Resolve the target phase first and read the current Blueprint artifact
    inventory before assembling reviewer prompts.
-3. Read the canonical `review.peer-review` contract through
-   `blueprint_artifact_contract_read` before drafting, revising, or repairing
-   `XX-REVIEWS.md`. Use `contract.authoringTemplate`, required headings, and
-   locked markers as the heading/schema authority.
+3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS.md`.
+   Use the `review.peer-review` contract id, `contract.authoringTemplate`,
+   required headings, and locked markers as the heading/schema authority before
+   drafting, revising, or repairing the artifact.
 4. Read `blueprint_phase_plan_index` and then each selected plan through
    `blueprint_phase_plan_read`. If no saved plan exists, stop and route to
    `/blu-plan-phase <phase>` instead of reviewing chat memory.
