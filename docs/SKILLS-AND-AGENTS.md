@@ -69,7 +69,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `quick` may use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` depending on the requested depth.
 - `validate-phase`, `verify-work`, and `add-tests` use `blueprint-verifier`.
 - `add-tests` may also use `blueprint-executor` for bounded multi-file test implementation.
-- `add-phase`, `remove-phase`, `complete-milestone`, and `milestone-summary` remain skill-led roadmap-admin flows and do not require dedicated subagents.
+- `add-phase`, `remove-phase`, `complete-milestone`, and `milestone-summary` remain skill-led roadmap-admin flows and do not require dedicated subagents. `add-phase` keeps its richer runtime behavior in `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`; browser, web-search-only, shell-only, or generic agents are not substitutes for that contract.
 - `plan-milestone-gaps` may use `blueprint-roadmapper` for grouped gap-closure proposals, and `new-milestone` may use it for carry-forward synthesis.
 - `audit-milestone` uses `blueprint-verifier`.
 - `code-review` uses `blueprint-reviewer`.

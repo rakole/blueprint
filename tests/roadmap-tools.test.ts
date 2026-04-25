@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
+import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
 import {
   blueprintRoadmapAddPhase,
   blueprintRoadmapInsertPhase,
@@ -290,6 +291,35 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   assert.equal(after.phases.at(-1)?.phaseDir, ".blueprint/phases/03-notifications-flow");
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Notifications Flow\*\*/);
   assert.match(roadmapBody, /### Phase 3: Notifications Flow/);
+});
+
+test("add-phase scaffold path uses returned phase metadata as authoritative context seed", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Notifications Flow",
+    expectedPhaseNumber: "3"
+  });
+  const contextPath = `${result.phaseDir}/${result.phasePrefix}-CONTEXT.md`;
+  const scaffold = await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [contextPath]
+  });
+  const contextBody = await readFile(path.join(repoPath, contextPath), "utf8");
+
+  assert.equal(contextPath, ".blueprint/phases/03-notifications-flow/03-CONTEXT.md");
+  assert.deepEqual(scaffold.createdFiles, [contextPath]);
+  assert.deepEqual(scaffold.reusedFiles, []);
+  assert.match(contextBody, /# Phase 03: Notifications Flow - Context/);
+  assert.match(
+    contextBody,
+    /<implementation decision 1>/,
+    "scaffold remains starter context until /blu-discuss-phase authors the real context"
+  );
 });
 
 test("blueprint_roadmap_add_phase rejects when the confirmed next phase is stale", async (t) => {

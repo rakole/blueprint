@@ -56,6 +56,7 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
 - `docs/RUNTIME-REFERENCE.md`
+- `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` when running `/blu-add-phase`
 
 ## Required MCP Tools
 
@@ -93,14 +94,17 @@ Treat roadmap-admin commands as short, bounded roadmap or report work, not as lo
 
 ### `add-phase`
 
+Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` as the richer local runtime contract for this command. The summary below is the quick checklist; the reference owns the detailed stage mapping, required MCP call controls, stale-confirmation behavior, no-subagent fallback, retry rules, and output-quality criteria.
+
 1. Require a non-empty phase description before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
-3. Require explicit confirmation before appending the phase.
-4. Choose the next phase number from the highest base phase number already present in the roadmap and ignore decimal suffixes when counting.
-5. Persist the roadmap mutation through `blueprint_roadmap_add_phase`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.
-6. Scaffold the new phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file.
-7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
+3. Preview the exact next integer phase number from the roadmap read result, ignoring decimal suffixes, then require explicit `ask_user` confirmation before appending the phase.
+4. Persist the roadmap mutation through `blueprint_roadmap_add_phase` with the confirmed number in `expectedPhaseNumber`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt.
+5. Treat returned `phaseNumber`, `phasePrefix`, `phaseName`, `slug`, and `phaseDir` as authoritative, and scaffold `${phaseDir}/${phasePrefix}-CONTEXT.md` through `blueprint_artifact_scaffold`.
+6. Do not treat scaffold text as finished phase context; route to `/blu-discuss-phase <phase>` so the context is authored by the discovery workflow.
+7. Update `STATE.md` through `blueprint_state_update` so the new phase becomes current, `/blu-add-phase` is the active command, and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
 8. Keep follow-up routing inside implemented Blueprint commands only.
+9. Keep the flow skill-led. There is no add-phase subagent path; browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin analysis.
 
 ### `insert-phase`
 

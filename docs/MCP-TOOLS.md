@@ -48,7 +48,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | Tool | Purpose | Returns |
 |---|---|---|
 | `blueprint_roadmap_read` | Load roadmap, milestone, and phase list | `{roadmap, milestone, phases}` |
-| `blueprint_roadmap_add_phase` | Append the next whole-number phase and derive the matching `.blueprint/phases/<phase-slug>/` directory without mutating code or git history | `{phaseNumber, phaseDir, roadmapPath}` |
+| `blueprint_roadmap_add_phase` | Append the next whole-number phase, reject stale confirmed numbers through `expectedPhaseNumber`, and derive the matching `.blueprint/phases/<phase-slug>/` directory without mutating code or git history | `{phaseNumber, phasePrefix, phaseName, slug, phaseDir, roadmapPath, milestone, written, warnings}` |
 | `blueprint_roadmap_insert_phase` | Insert the next decimal phase after an existing integer phase via numeric `after` without renumbering later roadmap entries | `{afterPhaseNumber, phaseNumber, phasePrefix, phaseDir, roadmapPath}` |
 | `blueprint_roadmap_remove_phase` | Remove and renumber phase entries | `{removedPhase, renumberedPhases, roadmapPath}` |
 | `blueprint_roadmap_promote_backlog` | Preview backlog items or promote confirmed items into appended roadmap phases while reusing reserved `999.x` phase stubs when present | `{status, backlogItems, selectedBacklogIds, promotedItems, createdPhaseDirs, warnings}` |
@@ -154,7 +154,7 @@ Resource-adoption guardrails:
 - `add-tests` uses phase locate, summary index/read, validation read/write, `blueprint_artifact_contract_read`, artifact list/validate/report-write, and state update tools to keep repo test generation grounded in saved execution evidence while keeping Blueprint-owned persistence phase-scoped and report-backed.
 - `pause-work` and `resume-work` use state load and update tools together with pause handoff read and write support.
 - `list-phase-assumptions` uses `blueprint_phase_locate`, `blueprint_phase_context`, `blueprint_roadmap_read`, and `blueprint_project_status`.
-- `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update`.
+- `add-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_add_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update`. The richer behavior lives in `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`: read the roadmap before mutation, preview the next integer phase number while ignoring decimal suffixes, confirm with `ask_user`, pass the confirmed number as `expectedPhaseNumber`, scaffold `${phaseDir}/${phasePrefix}-CONTEXT.md` from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route to `/blu-discuss-phase <phase>`.
 - `insert-phase` uses `blueprint_roadmap_read`, `blueprint_roadmap_insert_phase`, `blueprint_artifact_scaffold`, and `blueprint_state_update` to insert the next decimal phase after an existing integer anchor, record a durable `roadmapEvolutionNotes` entry in `STATE.md`, and route the repo back into `/blu-discuss-phase`.
 - `remove-phase` uses `blueprint_roadmap_read`, `blueprint_phase_locate`, `blueprint_roadmap_remove_phase`, and `blueprint_state_update`, with `force: true` reserved for a separately confirmed execution-evidence removal path.
 - `plan-milestone-gaps` uses `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_roadmap_add_phase`, and `blueprint_state_update` to compare audit-backed requirement, integration, flow, and optional gaps, repair traceability where needed, and append grouped roadmap phases without touching code or git history.
@@ -219,9 +219,9 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 ### Roadmap Creation And Insertion
 
-- `blueprint_roadmap_add_phase` accepts only `description` plus optional `cwd`.
+- For plain `/blu-add-phase`, call `blueprint_roadmap_add_phase` with `description` plus the confirmed `expectedPhaseNumber` stale guard after reading the roadmap and confirming the preview. `cwd` is optional. Audit-backed callers may additionally pass `auditBackedDetails` only when a documented audit-follow-up workflow supplies that evidence.
 - `blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`.
-- Do not precompute phase numbers, decimal suffixes, slugs, or phase directories in prompt logic. The tool owns numbering and conflict checks.
+- Do not precompute decimal suffixes, slugs, or phase directories in prompt logic. For add-phase, the command may compute the previewed next integer from `blueprint_roadmap_read` solely for confirmation and `expectedPhaseNumber`; the tool remains authoritative for the committed phase metadata.
 - After the tool returns, use the returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative when follow-on scaffolding or routing needs a concrete phase target.
 
 ### Phase Artifact Writes And Checkpoints
