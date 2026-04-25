@@ -23,32 +23,36 @@ The command's core value is:
 
 Use these corrections instead of the generic Pro-plan assumptions.
 
-| Area | Normalized Blueprint Decision |
-|---|---|
-| Command manifests | `commands/blu-*.toml` are prompt contracts, not declarative metadata files. Do not add `status`, `primary_skill`, or `required_tools` TOML fields. |
-| Runtime catalog | `blueprint_command_catalog` derives availability from `docs/COMMAND-CATALOG.md`, `docs/commands/<command>.md`, command manifest existence, primary skill existence, and registered MCP tools. |
-| Required tools | Required tools are parsed from the `## Required MCP Tools` section in `docs/commands/<command>.md`. |
-| Runtime FQNs | Command manifests must reference MCP tools through runtime FQNs such as `mcp_blueprint_blueprint_impact_scope_resolve`. |
-| Artifact contracts | Artifact contracts live in `src/mcp/artifact-contracts/index.ts`, not in separate JSON Schema files. |
-| JSON payload validation | Use Zod and typed helpers inside the impact tool module for `impact.json`, config, evidence, and summary payloads. |
-| Tool-family shape | Prefer one family module, `src/mcp/tools/impact.ts`, with internal helpers, matching current `project`, `phase`, `review`, and `workspace` patterns. |
-| Tool registration | Register `impactToolDefinitions` in `src/mcp/server.ts`, include impact tools in `src/mcp/tools/project.ts` availability checks, and rebuild `dist/`. |
-| Output location | Write impact reports under `.blueprint/impact/<impact-id>/`, not `.blueprint/reports/`, because each run owns a multi-file report bundle. |
-| V1 PR support | Use local git and CI environment metadata first. Do not require provider APIs or mutate PR comments in V1. |
-| Command-surface status | `/blu-impact` is outside the current 53-command baseline, so adding it requires an explicit command-surface decision update before it is routable. |
+| Area                    | Normalized Blueprint Decision                                                                                                                                                                 |
+|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Command manifests       | `commands/blu-*.toml` are prompt contracts, not declarative metadata files. Do not add `status`, `primary_skill`, or `required_tools` TOML fields.                                            |
+| Runtime catalog         | `blueprint_command_catalog` derives availability from `docs/COMMAND-CATALOG.md`, `docs/commands/<command>.md`, command manifest existence, primary skill existence, and registered MCP tools. |
+| Required tools          | Required tools are parsed from the `## Required MCP Tools` section in `docs/commands/<command>.md`.                                                                                           |
+| Runtime FQNs            | Command manifests must reference MCP tools through runtime FQNs such as `mcp_blueprint_blueprint_impact_scope_resolve`.                                                                       |
+| Artifact contracts      | Artifact contracts live in `src/mcp/artifact-contracts/index.ts`, not in separate JSON Schema files.                                                                                          |
+| JSON payload validation | Use Zod and typed helpers inside the impact tool module for `impact.json`, config, evidence, and summary payloads.                                                                            |
+| Tool-family shape       | Prefer one family module, `src/mcp/tools/impact.ts`, with internal helpers, matching current `project`, `phase`, `review`, and `workspace` patterns.                                          |
+| Tool registration       | Register `impactToolDefinitions` in `src/mcp/server.ts`, include impact tools in `src/mcp/tools/project.ts` availability checks, and rebuild `dist/`.                                         |
+| Output location         | Write impact reports under `.blueprint/impact/<impact-id>/`, not `.blueprint/reports/`, because each run owns a multi-file report bundle.                                                     |
+| V1 PR support           | Use local git and CI environment metadata first. Do not require provider APIs or mutate PR comments in V1.                                                                                    |
+| Command-surface status  | `/blu-impact` is outside the current 53-command baseline, so adding it requires an explicit command-surface decision update before it is routable.                                            |
 
 ## Non-Negotiable Runtime Guarantees
 
-- `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` must continue to surface only commands whose live runtime catalog entry is `implemented`.
-- `/blu-impact` must stay non-routable until the command spec, catalog row, command manifest, primary skill, registered MCP tools, docs, tests, and built `dist/` assets all align.
+- `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` must continue to surface only commands whose live runtime
+  catalog entry is `implemented`.
+- `/blu-impact` must stay non-routable until the command spec, catalog row, command manifest, primary skill, registered
+  MCP tools, docs, tests, and built `dist/` assets all align.
 - Missing metadata must never become false certainty:
-  - Missing ownership does not mean no owners are required.
-  - Missing dependency graph does not mean no reverse dependencies.
-  - Missing compliance map does not mean not regulated.
-  - Missing test map does not mean no tests are required.
-- Agents may help with narrative synthesis only. MCP tools decide deterministic findings, evidence, risk, confidence, status, and output paths.
+    - Missing ownership does not mean no owners are required.
+    - Missing dependency graph does not mean no reverse dependencies.
+    - Missing compliance map does not mean not regulated.
+    - Missing test map does not mean no tests are required.
+- Agents may help with narrative synthesis only. MCP tools decide deterministic findings, evidence, risk, confidence,
+  status, and output paths.
 - Secret values must not be read or printed. Secret-sensitive reporting is path/key/provenance only.
-- Description-only impact runs are allowed only as low-confidence advisory planning reports and cannot produce a high-confidence `PASS`.
+- Description-only impact runs are allowed only as low-confidence advisory planning reports and cannot produce a
+  high-confidence `PASS`.
 
 ## V1 User Experience
 
@@ -71,31 +75,31 @@ Supported invocation shapes:
 
 Default scope resolution:
 
-| Situation | Default |
-|---|---|
-| Staged changes exist | Analyze staged diff. |
-| No staged changes, dirty working tree | Analyze working tree diff. |
-| Clean non-base branch | Analyze branch diff against configured base branch or detected default branch. |
-| CI with PR refs | Analyze CI-provided base/head refs. |
-| CI without PR refs | Analyze `HEAD^..HEAD` unless configured otherwise. |
-| No git scope and only description | Produce `WARN`, low confidence, and explicit `scope not proven` unknown. |
+| Situation                             | Default                                                                        |
+|---------------------------------------|--------------------------------------------------------------------------------|
+| Staged changes exist                  | Analyze staged diff.                                                           |
+| No staged changes, dirty working tree | Analyze working tree diff.                                                     |
+| Clean non-base branch                 | Analyze branch diff against configured base branch or detected default branch. |
+| CI with PR refs                       | Analyze CI-provided base/head refs.                                            |
+| CI without PR refs                    | Analyze `HEAD^..HEAD` unless configured otherwise.                             |
+| No git scope and only description     | Produce `WARN`, low confidence, and explicit `scope not proven` unknown.       |
 
 Recommended output statuses:
 
-| Status | Meaning | Default local exit |
-|---|---|---:|
-| `PASS` | No blocking impact found and confidence is sufficient for the analyzed scope. | `0` |
-| `WARN` | Non-blocking risk, missing metadata, or review/test obligations exist. | `0` |
-| `BLOCK` | A breaking change, sensitive-path unknown, required evidence gap, or policy threshold should block approval until resolved. | `0` |
+| Status  | Meaning                                                                                                                     | Default local exit |
+|---------|-----------------------------------------------------------------------------------------------------------------------------|-------------------:|
+| `PASS`  | No blocking impact found and confidence is sufficient for the analyzed scope.                                               |                `0` |
+| `WARN`  | Non-blocking risk, missing metadata, or review/test obligations exist.                                                      |                `0` |
+| `BLOCK` | A breaking change, sensitive-path unknown, required evidence gap, or policy threshold should block approval until resolved. |                `0` |
 
 Recommended exit codes:
 
-| Exit | Meaning |
-|---:|---|
-| `0` | Command completed; advisory status may be `PASS`, `WARN`, or `BLOCK`. |
-| `1` | Invalid seed/config, tool/runtime error, or artifact write failure. |
-| `2` | Completed but failed configured CI policy threshold. |
-| `3` | Scope could not be resolved at all. |
+| Exit | Meaning                                                               |
+|-----:|-----------------------------------------------------------------------|
+|  `0` | Command completed; advisory status may be `PASS`, `WARN`, or `BLOCK`. |
+|  `1` | Invalid seed/config, tool/runtime error, or artifact write failure.   |
+|  `2` | Completed but failed configured CI policy threshold.                  |
+|  `3` | Scope could not be resolved at all.                                   |
 
 In CI, `--ci` should default to `--fail-on=block`; local advisory use should not fail automatically on `BLOCK`.
 
@@ -104,14 +108,14 @@ In CI, `--ci` should default to `--fail-on=block`; local advisory use should not
 Keep the model-facing surface small and deterministic. Internal helpers may be
 larger, but the command should call a compact sequence.
 
-| Tool | Responsibility | Writes |
-|---|---|---|
-| `blueprint_impact_config_get` | Load built-in defaults, optional host-global impact defaults, `.blueprint/impact/config.json`, optional invocation config, and flag overrides. Return merged config, provenance, validation warnings, and config hash. | No |
-| `blueprint_impact_scope_resolve` | Resolve seed into normalized changed files, git metadata, diff stats, patch hash, scope fingerprint, scope confidence, and unresolved-scope warnings. | No |
-| `blueprint_impact_context_load` | Load relevant Blueprint context: project status, config, roadmap, phase artifacts when requested, command catalog, manifests, skills, MCP tool registry metadata, artifact contracts, and repo package/test/doc hints. | No |
-| `blueprint_impact_analyze` | Classify surfaces, ownership, dependencies, contracts, obligations, unknowns, findings, risk, confidence, and final impact status. | No |
-| `blueprint_impact_report_write` | Write `IMPACT.md`, `impact.json`, `summary.json`, optional `review-checklist.md`, optional `QUESTIONS.md`, and optional `evidence.jsonl` under `.blueprint/impact/<impact-id>/`. | Yes, bounded |
-| `blueprint_impact_output_render` | Render compact human, JSON, Markdown, PR-comment, or summary output from a normalized report object or saved impact id. | No |
+| Tool                             | Responsibility                                                                                                                                                                                                         | Writes       |
+|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|
+| `blueprint_impact_config_get`    | Load built-in defaults, optional host-global impact defaults, `.blueprint/impact/config.json`, optional invocation config, and flag overrides. Return merged config, provenance, validation warnings, and config hash. | No           |
+| `blueprint_impact_scope_resolve` | Resolve seed into normalized changed files, git metadata, diff stats, patch hash, scope fingerprint, scope confidence, and unresolved-scope warnings.                                                                  | No           |
+| `blueprint_impact_context_load`  | Load relevant Blueprint context: project status, config, roadmap, phase artifacts when requested, command catalog, manifests, skills, MCP tool registry metadata, artifact contracts, and repo package/test/doc hints. | No           |
+| `blueprint_impact_analyze`       | Classify surfaces, ownership, dependencies, contracts, obligations, unknowns, findings, risk, confidence, and final impact status.                                                                                     | No           |
+| `blueprint_impact_report_write`  | Write `IMPACT.md`, `impact.json`, `summary.json`, optional `review-checklist.md`, optional `QUESTIONS.md`, and optional `evidence.jsonl` under `.blueprint/impact/<impact-id>/`.                                       | Yes, bounded |
+| `blueprint_impact_output_render` | Render compact human, JSON, Markdown, PR-comment, or summary output from a normalized report object or saved impact id.                                                                                                | No           |
 
 The tool implementation should live in:
 
@@ -191,11 +195,19 @@ Every deterministic check should produce normalized findings:
   "severity": "MEDIUM",
   "status": "WARN",
   "confidence": 0.86,
-  "impactedFiles": ["commands/blu-impact.toml"],
-  "impactedAreas": ["blueprint-runtime"],
+  "impactedFiles": [
+    "commands/blu-impact.toml"
+  ],
+  "impactedAreas": [
+    "blueprint-runtime"
+  ],
   "owners": [],
-  "requiredActions": ["Review command manifest and command spec alignment"],
-  "evidenceRefs": ["ev.diff.commands-blu-impact.001"]
+  "requiredActions": [
+    "Review command manifest and command spec alignment"
+  ],
+  "evidenceRefs": [
+    "ev.diff.commands-blu-impact.001"
+  ]
 }
 ```
 
@@ -209,18 +221,18 @@ Required finding rules:
 
 Core V1 checks:
 
-| Check | Required V1 Behavior |
-|---|---|
-| Changed files | Resolve staged, working tree, range, base/head, explicit files, diff file, CI refs, and description-only seeds. |
+| Check                      | Required V1 Behavior                                                                                                                                                                                                                                                                                  |
+|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Changed files              | Resolve staged, working tree, range, base/head, explicit files, diff file, CI refs, and description-only seeds.                                                                                                                                                                                       |
 | Blueprint runtime surfaces | Detect changes to `commands/*.toml`, `docs/commands/**`, `docs/COMMAND-CATALOG.md`, `src/mcp/server.ts`, `src/mcp/tools/**`, `src/mcp/artifact-contracts/**`, `src/mcp/command-resources.ts`, `skills/**`, `agents/**`, `gemini-extension.json`, `tabnine-extension.json`, `hooks/**`, and `dist/**`. |
-| Implemented-only routing | If a command is declared `implemented`, verify manifest, skill, and required MCP tools exist. Check that router/help/progress surfaces remain implemented-only. |
-| Artifact contracts | Detect required heading changes, new report contracts, removed contracts, and migration risk. |
-| Package/runtime | Detect `package.json`, `package-lock.json`, `tsconfig.json`, build script, Node engine, and dependency changes. |
-| Tests | Map changed implementation surfaces to likely tests and required quality gates. Missing test map becomes warning, not false safety. |
-| Ownership | Parse CODEOWNERS when present and optional `.blueprint/impact/ownership.json`. Missing owner on sensitive path can block. |
-| Dependency graph | Support package-lock/package.json workspaces and TypeScript/JavaScript import scan fallback. Missing reverse graph becomes unknown. |
-| Config/env/secrets | Report path/key-level config changes and secret-sensitive paths without reading secret values. |
-| Docs obligations | Require docs updates for command, MCP, artifact, config, public behavior, and runtime-reference changes. |
+| Implemented-only routing   | If a command is declared `implemented`, verify manifest, skill, and required MCP tools exist. Check that router/help/progress surfaces remain implemented-only.                                                                                                                                       |
+| Artifact contracts         | Detect required heading changes, new report contracts, removed contracts, and migration risk.                                                                                                                                                                                                         |
+| Package/runtime            | Detect `package.json`, `package-lock.json`, `tsconfig.json`, build script, Node engine, and dependency changes.                                                                                                                                                                                       |
+| Tests                      | Map changed implementation surfaces to likely tests and required quality gates. Missing test map becomes warning, not false safety.                                                                                                                                                                   |
+| Ownership                  | Parse CODEOWNERS when present and optional `.blueprint/impact/ownership.json`. Missing owner on sensitive path can block.                                                                                                                                                                             |
+| Dependency graph           | Support package-lock/package.json workspaces and TypeScript/JavaScript import scan fallback. Missing reverse graph becomes unknown.                                                                                                                                                                   |
+| Config/env/secrets         | Report path/key-level config changes and secret-sensitive paths without reading secret values.                                                                                                                                                                                                        |
+| Docs obligations           | Require docs updates for command, MCP, artifact, config, public behavior, and runtime-reference changes.                                                                                                                                                                                              |
 
 Out of scope for V1:
 
@@ -251,23 +263,54 @@ Initial config shape:
 ```json
 {
   "schemaVersion": "blueprint.impact.config.v1",
-  "baseBranches": ["main", "master"],
+  "baseBranches": [
+    "main",
+    "master"
+  ],
   "paths": {
-    "include": ["**/*"],
-    "ignore": ["node_modules/**", "coverage/**"],
-    "generated": ["dist/**", "**/*.generated.*"],
-    "docs": ["docs/**", "**/*.md"],
-    "tests": ["tests/**", "**/*.test.ts"]
+    "include": [
+      "**/*"
+    ],
+    "ignore": [
+      "node_modules/**",
+      "coverage/**"
+    ],
+    "generated": [
+      "dist/**",
+      "**/*.generated.*"
+    ],
+    "docs": [
+      "docs/**",
+      "**/*.md"
+    ],
+    "tests": [
+      "tests/**",
+      "**/*.test.ts"
+    ]
   },
   "ownership": {
-    "sources": ["CODEOWNERS", ".blueprint/impact/ownership.json"],
+    "sources": [
+      "CODEOWNERS",
+      ".blueprint/impact/ownership.json"
+    ],
     "requiredOwnerMatch": false,
     "fallbackReviewers": []
   },
   "dependencyGraph": {
-    "sources": ["package-json", "package-lock", "ts-import-scan"],
-    "customGraphFiles": [".blueprint/impact/dependency-graph.json"],
-    "requireReverseDepsFor": ["runtime", "contract", "security", "compliance"]
+    "sources": [
+      "package-json",
+      "package-lock",
+      "ts-import-scan"
+    ],
+    "customGraphFiles": [
+      ".blueprint/impact/dependency-graph.json"
+    ],
+    "requireReverseDepsFor": [
+      "runtime",
+      "contract",
+      "security",
+      "compliance"
+    ]
   },
   "risk": {
     "blockOnCritical": true,
@@ -279,7 +322,9 @@ Initial config shape:
   "reporting": {
     "defaultVerbosity": "normal",
     "writeEvidenceLog": true,
-    "redactPathPatterns": ["**/secrets/**"]
+    "redactPathPatterns": [
+      "**/secrets/**"
+    ]
   }
 }
 ```
@@ -306,9 +351,11 @@ Goal: Make it explicit that `/blu-impact` is being added beyond the original
 Work:
 
 - Update `docs/DECISIONS.md` with a new decision for `/blu-impact`.
-- Update `docs/COMMAND-BASELINE.md` to list `/blu-impact` as an intentionally added Blueprint command, not a silently revived omitted command.
+- Update `docs/COMMAND-BASELINE.md` to list `/blu-impact` as an intentionally added Blueprint command, not a silently
+  revived omitted command.
 - Update `PROGRESS.md` and `MEMORY.md` to reflect the new planned command.
-- Decide whether it belongs to Wave 4 quality/shipping or a new Impact/Advisory family. Recommended: Wave 4, family `Quality And Shipping`, risk `Low` for V1 because writes are bounded to `.blueprint/impact/`.
+- Decide whether it belongs to Wave 4 quality/shipping or a new Impact/Advisory family. Recommended: Wave 4, family
+  `Quality And Shipping`, risk `Low` for V1 because writes are bounded to `.blueprint/impact/`.
 
 Acceptance:
 
@@ -345,7 +392,8 @@ Work:
 - Define Zod input schemas and typed result objects for all six V1 tools.
 - Register `impactToolDefinitions` in `src/mcp/server.ts`.
 - Include impact tool names in the availability set used by `src/mcp/tools/project.ts`.
-- Add minimal tests proving tools register, reject invalid inputs, and return safe placeholder warnings where appropriate.
+- Add minimal tests proving tools register, reject invalid inputs, and return safe placeholder warnings where
+  appropriate.
 - Rebuild `dist/`.
 
 Acceptance:
@@ -369,7 +417,8 @@ Work:
 
 Acceptance:
 
-- Tests cover staged diff, working tree, range, base/head, explicit files, diff file, no diff, non-git description-only, invalid path, and invalid config.
+- Tests cover staged diff, working tree, range, base/head, explicit files, diff file, no diff, non-git description-only,
+  invalid path, and invalid config.
 - Description-only scope returns low confidence and cannot be marked high-confidence `PASS`.
 - No secret values or full file contents are included in scope output.
 
@@ -380,14 +429,17 @@ Goal: Classify changed files into actionable Blueprint and repo surfaces.
 Work:
 
 - Implement `blueprint_impact_context_load`.
-- Load project status, effective Blueprint config, roadmap and phase context when requested, command catalog, package metadata, artifact contracts, and runtime tool registry metadata.
+- Load project status, effective Blueprint config, roadmap and phase context when requested, command catalog, package
+  metadata, artifact contracts, and runtime tool registry metadata.
 - Implement surface classification inside `blueprint_impact_analyze`.
 - Classify Blueprint-specific runtime surfaces separately from generic source/docs/tests.
 
 Acceptance:
 
-- Tests classify command manifests, command docs, MCP tools, artifact contracts, skills, agents, extension manifests, hooks, tests, docs, package files, and generated `dist/**`.
-- Missing optional context produces explicit warnings, not tool failure unless the input specifically required that context.
+- Tests classify command manifests, command docs, MCP tools, artifact contracts, skills, agents, extension manifests,
+  hooks, tests, docs, package files, and generated `dist/**`.
+- Missing optional context produces explicit warnings, not tool failure unless the input specifically required that
+  context.
 
 ### Phase 5: Ownership And Dependency Analysis
 
@@ -398,7 +450,8 @@ Work:
 - Parse CODEOWNERS where present.
 - Load optional `.blueprint/impact/ownership.json`.
 - Support fallback reviewers only when configured.
-- Build package/dependency hints from `package.json`, `package-lock.json`, workspaces where present, and TS/JS import scan fallback.
+- Build package/dependency hints from `package.json`, `package-lock.json`, workspaces where present, and TS/JS import
+  scan fallback.
 - Load optional `.blueprint/impact/dependency-graph.json`.
 - Report graph coverage.
 
@@ -407,7 +460,8 @@ Acceptance:
 - Missing ownership emits owner unknowns.
 - Sensitive path with missing owner can produce `BLOCK` when configured.
 - Missing reverse dependency graph emits `unknown.reverseDependencies`, not a limited-impact conclusion.
-- Tests cover monorepo-style packages, missing ownership, missing graph, partial graph, and generated/source mixed changes.
+- Tests cover monorepo-style packages, missing ownership, missing graph, partial graph, and generated/source mixed
+  changes.
 
 ### Phase 6: Contract And Obligation Checks
 
@@ -427,7 +481,8 @@ Acceptance:
 - Implemented command missing manifest, primary skill, or required tools produces `BLOCK`.
 - Planned command exposure in router/help/progress produces `BLOCK`.
 - Runtime contract or command-doc changes produce docs/test obligations.
-- Tests cover command manifest change, MCP tool change, artifact contract change, skill change, extension manifest change, and `dist/` stale/missing scenarios.
+- Tests cover command manifest change, MCP tool change, artifact contract change, skill change, extension manifest
+  change, and `dist/` stale/missing scenarios.
 
 ### Phase 7: Scoring And Report Model
 
@@ -462,7 +517,8 @@ Work:
 
 Acceptance:
 
-- Report writer refuses empty sections, unresolved placeholders, invalid JSON payloads, path escapes, and writes outside `.blueprint/impact/`.
+- Report writer refuses empty sections, unresolved placeholders, invalid JSON payloads, path escapes, and writes outside
+  `.blueprint/impact/`.
 - `IMPACT.md`, `impact.json`, and `summary.json` are always written when writing is enabled.
 - Checklist/questions/evidence files are written only when relevant or configured.
 - Golden snapshot tests confirm stable Markdown and JSON ordering.
@@ -476,7 +532,8 @@ Work:
 - Add `skills/blueprint-impact/SKILL.md`.
 - Add `commands/blu-impact.toml`.
 - Ensure manifest references all required MCP tools through runtime FQNs.
-- Update `docs/SKILLS-AND-AGENTS.md`, `docs/MCP-TOOLS.md`, `docs/RUNTIME-REFERENCE.md`, `docs/ARTIFACT-SCHEMA.md`, `README.md`, `PROGRESS.md`, and `MEMORY.md`.
+- Update `docs/SKILLS-AND-AGENTS.md`, `docs/MCP-TOOLS.md`, `docs/RUNTIME-REFERENCE.md`, `docs/ARTIFACT-SCHEMA.md`,
+  `README.md`, `PROGRESS.md`, and `MEMORY.md`.
 - Flip `docs/COMMAND-CATALOG.md` status to `implemented` only after tests prove catalog alignment.
 
 Acceptance:
@@ -530,7 +587,8 @@ Goal: Make the command useful enough for production review workflows.
 Work:
 
 - Run a real impact report on the `/blu-impact` implementation branch itself.
-- Use the generated report to verify it catches command, MCP, docs, skill, tests, artifact-contract, package, and `dist/` impact.
+- Use the generated report to verify it catches command, MCP, docs, skill, tests, artifact-contract, package, and`dist/`
+  impact.
 - Tighten false-positive noise.
 - Update docs with any intentional runtime deltas.
 
@@ -549,18 +607,18 @@ is intentionally strict to prevent shallow plans, incomplete implementation, or
 
 ### Roles
 
-| Role | Responsibility | May Implement? |
-|---|---|---|
-| Orchestrator | Own sequencing, context handoff, gates, subagent lifecycle, integration, and final decision-making. | No, except when prescribed review/fix turns are exhausted. |
-| Phase Planner | Plans exactly one phase from this document and live repo context. | No |
-| Plan Quality Reviewer | Reviews the phase plan for enterprise-grade completeness, missing risks, shallow tasks, weak tests, and Blueprint drift. | No |
-| Implementor | Implements the approved phase plan only. | Yes |
-| DoD Reviewer | Checks phase acceptance criteria, docs alignment, routing safety, and completion evidence. | No |
-| Code Reviewer | Reviews changed source/tests/docs for bugs, drift, maintainability, and missing tests. | No |
-| Final E2E DoD Reviewer | Reviews all phases against this bible. | No |
-| Final E2E Code Reviewer | Reviews integrated code and docs across the complete workflow. | No |
-| Final Quality Checker | Reviews whether `/blu-impact` provides production-grade, high-value blast-radius output. | No |
-| Final Test Reviewer | Reviews whether tests are meaningful, non-shallow, and cover the risky surfaces. | No |
+| Role                    | Responsibility                                                                                                           | May Implement?                                             | model              |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|--------------------|
+| Orchestrator            | Own sequencing, context handoff, gates, subagent lifecycle, integration, and final decision-making.                      | No, except when prescribed review/fix turns are exhausted. | GPT-5.5 xhigh      |
+| Phase Planner           | Plans exactly one phase from this document and live repo context.                                                        | No                                                         | GPT-5.5 high       |
+| Plan Quality Reviewer   | Reviews the phase plan for enterprise-grade completeness, missing risks, shallow tasks, weak tests, and Blueprint drift. | No                                                         | GPT-5.4 high       |
+| Implementor             | Implements the approved phase plan only.                                                                                 | Yes                                                        | GPT-5.5 xhigh      |
+| DoD Reviewer            | Checks phase acceptance criteria, docs alignment, routing safety, and completion evidence.                               | No                                                         | GPT-5.2 high       |
+| Code Reviewer           | Reviews changed source/tests/docs for bugs, drift, maintainability, and missing tests.                                   | No                                                         | GPT-5.3-Codex high |
+| Final E2E DoD Reviewer  | Reviews all phases against this bible.                                                                                   | No                                                         | GPT-5.4 high       |
+| Final E2E Code Reviewer | Reviews integrated code and docs across the complete workflow.                                                           | No                                                         | GPT-5.5 xhigh      |
+| Final Quality Checker   | Reviews whether `/blu-impact` provides production-grade, high-value blast-radius output.                                 | No                                                         | GPT-5.5 xhigh      |
+| Final Test Reviewer     | Reviews whether tests are meaningful, non-shallow, and cover the risky surfaces.                                         | No                                                         | GPT-5.4 high       |
 
 ### Per-Phase Algorithm
 
@@ -574,7 +632,8 @@ For each phase:
 4. Start a Plan Quality Reviewer with the plan, phase goal, and phase acceptance criteria.
 5. Wait for the plan-quality review.
 6. Close the Plan Quality Reviewer immediately after collecting the review.
-7. If the plan quality reviewer finds issues, send the plan back through a single planner revision loop or revise the plan locally as orchestrator-owned planning. Do not implement until the plan is approved.
+7. If the plan quality reviewer finds issues, send the plan back through a single planner revision loop or revise the
+   plan locally as orchestrator-owned planning. Do not implement until the plan is approved.
 8. Start one Implementor with the approved plan and exact write scope.
 9. Wait for implementation.
 10. Close the Implementor immediately after collecting the result.
@@ -586,12 +645,14 @@ For each phase:
 14. If neither reviewer finds actionable issues, mark the phase complete and proceed to the next phase.
 15. If either reviewer finds actionable issues, start a new Implementor with only those findings as scope.
 16. Repeat review -> fix -> review for at most three review rounds per phase.
-17. If actionable issues remain after three rounds, the Orchestrator may implement or repair directly, but must document:
+17. If actionable issues remain after three rounds, the Orchestrator may implement or repair directly, but must
+    document:
     - which agent loop exhausted
     - which issues remained
     - exactly what the orchestrator changed
     - why the phase is now safe to close
-18. Do not begin the next phase until the current phase passes DoD and code review or the orchestrator has explicitly resolved the exhausted-loop exception.
+18. Do not begin the next phase until the current phase passes DoD and code review or the orchestrator has explicitly
+    resolved the exhausted-loop exception.
 
 ### Per-Phase Completion Checklist
 
