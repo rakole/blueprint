@@ -14,7 +14,7 @@ The shipped lifecycle slice also includes `/blu-plan-phase`, `/blu-execute-phase
 
 ## Current Runtime Layout
 
-The active implementation lives in the repo runtime surfaces below:
+The active implementation lives in the repo runtime surfaces below. This list is representative rather than exhaustive:
 
 - `commands/blu-help.toml`
 - `commands/blu-progress.toml`
@@ -231,6 +231,8 @@ The review-branch command `/blu-pr-branch` is now shipped.
 - `/blu-undo`: preview and run a safe revert flow with an explicit report first
 - `/blu-new-workspace`: create an isolated workspace under the configured workspace root after confirmation
 - `/blu-remove-workspace`: preview and remove a recorded workspace after confirmation
+- `/blu-workstreams`: inspect, switch, and archive project-local workstreams with explicit safety gates
+- `/blu-update`: check for newer Blueprint extension releases and produce advisory update guidance
 - `/blu-cleanup`: archive completed phase directories after confirmation
 - `/blu-reapply-patches`: preview and replay a recorded host-global patch set after confirmation
 
@@ -283,11 +285,9 @@ Blueprint is opinionated about safety:
 
 ## Commands Not Public Yet
 
-These retained commands are still not public in the current runtime and should not be treated as available today:
+Only one retained command is still not public in the current runtime and should not be treated as available today:
 
-- `/blu-do` (planned next; its routing contract is documented, but the manifest is not shipped yet)
-- `/blu-workstreams`
-- `/blu-update`
+- `/blu-do` (control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped)
 
 If you ask `/blu` or `/blu-help` for available commands, they will not advertise those until they are actually shipped.
 
