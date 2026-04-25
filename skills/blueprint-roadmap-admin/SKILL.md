@@ -57,6 +57,7 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - `docs/MCP-TOOLS.md`
 - `docs/RUNTIME-REFERENCE.md`
 - `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` when running `/blu-add-phase`
+- `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md` when running `/blu-insert-phase`
 
 ## Required MCP Tools
 
@@ -108,6 +109,8 @@ Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` a
 
 ### `insert-phase`
 
+Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md` as the richer local runtime contract for this command. The summary below is the quick checklist; the reference owns the detailed stage mapping, required MCP call controls, artifact scaffold rules, no-subagent fallback, retry rules, output-quality criteria, and completion criteria.
+
 1. Require an explicit integer phase number and a non-empty phase description before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
 3. Require explicit confirmation before inserting the decimal phase, and prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation. Preview the computed decimal number plus the fact that later phases will not be renumbered automatically.
@@ -117,6 +120,8 @@ Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` a
 7. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file at `${phaseDir}/${phasePrefix}-CONTEXT.md`.
 8. Update `STATE.md` through `blueprint_state_update` so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
 9. Keep follow-up routing inside implemented Blueprint commands only.
+10. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
+11. Treat scaffold text as starter material only. Do not author final `XX-CONTEXT.md` content or create insert-phase-specific reports; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
 
 ### `remove-phase`
 

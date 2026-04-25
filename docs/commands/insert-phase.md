@@ -11,6 +11,7 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `insert-phase` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded roadmap insert, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Rich runtime contract: `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md`. The command manifest stays thin; the reference owns MCP result controls, artifact scaffold rules, no-subagent fallback, retry behavior, output quality, and completion criteria.
 - Keep the waiting state explicit as `phase-insert-confirmation` while the computed decimal insert is waiting for approval, `invalid-insertion-anchor` when the requested integer anchor is unusable, and `conflicting-decimal-directory` when on-disk state blocks the insert.
 
 
@@ -74,6 +75,7 @@
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
 - Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
+- Do not create an insert-phase-specific report. The only artifact seed is the initial `phase.context` scaffold, and `/blu-discuss-phase <decimal>` owns rich context authoring afterward.
 
 
 ## Skills And Subagents
@@ -81,6 +83,7 @@
 
 - Primary skill: `blueprint-roadmap-admin`
 - Optional subagents: none
+- Subagent fallback: complete the flow in the parent command from MCP read and write results; do not use Blueprint roadmapper, Blueprint verifier, browser, web-search-only, shell-only, or generic agents as substitutes for this bounded insertion workflow.
 
 
 ## Dependencies
@@ -94,6 +97,8 @@
 - `docs/IMPLEMENTATION-ORDER.md`
 - Related command docs:
 - `docs/commands/add-phase.md`
+- Command-specific runtime reference:
+- `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md`
 
 
 ## External Shell Or Git Dependencies
@@ -129,6 +134,7 @@
 - Refuse mutation when the target phase is not an existing integer phase.
 - Refuse mutation when the roadmap cannot place the new Phase Details block immediately after the target base-phase group.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
+- If scaffold or state update fails after roadmap insertion, report which MCP-backed steps succeeded, surface the failed step, and route to `/blu-progress` or recovery guidance instead of hand-editing `.blueprint/`.
 
 
 ## Acceptance Criteria
