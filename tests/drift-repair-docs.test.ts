@@ -65,7 +65,7 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
-  const [agents, catalog, artifactSchema, drift, skills, progress, readme, bluCommand, bluHelp] = await Promise.all([
+  const [agents, catalog, artifactSchema, runtimeReference, skills, progress, readme, bluCommand, bluHelp] = await Promise.all([
     readRepoFile("AGENTS.md"),
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/ARTIFACT-SCHEMA.md"),
@@ -124,7 +124,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(skills, /`blueprint-roadmap-admin` .* `milestone-summary`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `new-milestone`/);
   assert.match(skills, /`blueprint-phase-execution` .* `execute-phase`, `quick`, `fast`/);
-  assert.match(drift, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
+  assert.match(agents, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
   assert.match(
     agents,
     /Control-plane docs such as `docs\/COMMAND-CATALOG\.md`, `PROGRESS\.md`, and[\s\S]*command specs record the declared status/i
@@ -138,10 +138,6 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
     /`\/blu-new-workspace`, `\/blu-remove-workspace`, `\/blu-workstreams`, `\/blu-update`, `\/blu-cleanup`, and `\/blu-reapply-patches`/
   );
   assert.match(
-    drift,
-    /A future command can therefore stay declared `planned` in docs while the[\s\S]*runtime remains `repairing` or `blocked`/i
-  );
-  assert.match(
     bluCommand,
     /If the user asks for a blocked command, explain the missing substrate using `status` and `blockedBy`\./
   );
@@ -150,7 +146,7 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
     /Explain blocked commands as blocked; do not present them as runnable\./
   );
   assert.match(
-    drift,
+    runtimeReference,
     /Control-plane docs may keep a future command declared `planned` while `blueprint_command_catalog` still derives a non-routable runtime status such as `repairing` or `blocked`/i
   );
 });
