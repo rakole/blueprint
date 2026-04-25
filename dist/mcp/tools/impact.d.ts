@@ -1,4 +1,7 @@
 import * as z from "zod/v4";
+import { blueprintConfigGet } from "./config.js";
+import { blueprintRoadmapRead } from "./phase.js";
+import { listArtifactContracts } from "../artifact-contracts/index.js";
 type ImpactStatus = "PASS" | "WARN" | "BLOCK";
 type ImpactRiskLevel = "low" | "medium" | "high" | "critical" | "unknown";
 type ImpactConfidenceLevel = "low" | "medium" | "high";
@@ -37,6 +40,8 @@ type ImpactContextLoadArgs = {
 };
 type ImpactAnalyzeArgs = {
     cwd?: string;
+    changedFiles?: string[];
+    files?: string[];
     scope?: Record<string, unknown>;
     context?: Record<string, unknown>;
     config?: Record<string, unknown>;
@@ -136,39 +141,93 @@ type ImpactScopeResolveResult = {
     confidence: ImpactConfidence;
     warnings: string[];
 };
-type ImpactContextLoadResult = {
-    status: "placeholder";
-    project: null;
-    config: null;
-    roadmap: null;
-    phases: unknown[];
-    catalog: null;
-    runtime: {
-        registeredImpactTools: string[];
-        includeRuntime: boolean;
-        includeCatalog: boolean;
-        includeArtifacts: boolean;
-    };
-    repoHints: {
-        cwdAccepted: boolean;
-        packageMetadataLoaded: boolean;
-        artifactContractsLoaded: boolean;
-    };
+type ImpactSurface = "secret-sensitive" | "env-config" | "command-catalog" | "command-manifest" | "command-doc" | "mcp-server" | "mcp-tool" | "mcp-resource" | "artifact-contract" | "skill" | "agent" | "extension-manifest" | "hook" | "package-runtime" | "build-config" | "test" | "docs" | "generated" | "config" | "source" | "repo-root" | "unknown";
+type ImpactSurfaceRecord = {
+    path: string;
+    surfaces: ImpactSurface[];
+    primarySurface: ImpactSurface;
+    area: string;
+    reasons: string[];
+};
+type ImpactSummaryRecord = {
+    name: string;
+    files: string[];
+    count: number;
+};
+type ImpactRuntimeContext = {
+    registeredImpactTools: string[];
+    implementationPhase: number;
+    readOnly: boolean;
+    includeRuntime: boolean;
+    includeCatalog: boolean;
+    includeArtifacts: boolean;
+};
+type ImpactRepoHints = {
+    cwdAccepted: boolean;
+    packageMetadataLoaded: boolean;
+    packageJsonPath: string | null;
+    packageName: string | null;
+    packageVersion: string | null;
+    packageScripts: string[];
+    packageManager: string | null;
+    testPaths: string[];
+    docsPaths: string[];
+    sourceRoots: string[];
+    artifactContractsLoaded: boolean;
+};
+type ImpactCommandAssets = {
+    commandCount: number;
+    implementedCommands: string[];
+    nonRoutableCommands: string[];
+    manifestPaths: string[];
+    specPaths: string[];
+    skillPaths: string[];
+    missingAssetCount: number;
+    impact: unknown;
+};
+type ImpactPhaseContextEntry = {
+    phaseNumber: string;
+    phaseName: string | null;
+    requestedBy: string[];
+    context: unknown;
     warnings: string[];
 };
+type ImpactContextLoadResult = {
+    status: "loaded" | "partial";
+    project: unknown | null;
+    config: Awaited<ReturnType<typeof blueprintConfigGet>> | null;
+    roadmap: Awaited<ReturnType<typeof blueprintRoadmapRead>> | null;
+    phases: ImpactPhaseContextEntry[];
+    catalog?: unknown;
+    commandAssets?: ImpactCommandAssets;
+    artifactContracts?: ReturnType<typeof listArtifactContracts>;
+    runtime?: ImpactRuntimeContext;
+    repoHints: ImpactRepoHints;
+    warnings: string[];
+};
+type ImpactAnalysisReport = Record<string, unknown> & {
+    schemaVersion: "blueprint.impact.report.v1";
+    impactId: string;
+    status: ImpactStatus;
+    surfaces: ImpactSurfaceRecord[];
+    areaSummary: ImpactSummaryRecord[];
+    surfaceSummary: ImpactSummaryRecord[];
+};
 type ImpactAnalyzeResult = {
-    phaseStatus: "placeholder";
+    phaseStatus: "classified";
     impactId: string;
     status: ImpactStatus;
     impactStatus: ImpactStatus;
     risk: ImpactRisk;
     confidence: ImpactConfidence;
-    surfaces: unknown[];
+    surfaces: ImpactSurfaceRecord[];
+    areaSummary: ImpactSummaryRecord[];
+    surfaceSummary: ImpactSummaryRecord[];
     findings: unknown[];
     obligations: unknown[];
     unknowns: string[];
     evidence: unknown[];
-    report: Record<string, unknown>;
+    report: ImpactAnalysisReport;
     warnings: string[];
 };
 type ImpactReportWriteResult = {
@@ -256,6 +315,8 @@ export declare const impactToolDefinitions: ({
     description: string;
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
+        changedFiles: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         scope: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         context: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         config: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;

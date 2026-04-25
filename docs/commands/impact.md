@@ -28,10 +28,12 @@
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
-- Optional description, explicit file paths, seed file, diff file, git scope flags, phase number, roadmap item, metadata flags, output mode, and CI policy flags.
+- Optional description, explicit file paths, seed file, diff file, git scope flags, phase number, roadmap item, metadata flags, output mode, and CI policy flags. Phase and roadmap item inputs select Blueprint context targets; they do not prove changed-file scope on their own.
 - A git repository is preferred for high-confidence scope resolution, but description-only advisory planning runs are allowed at low confidence.
-- `.blueprint/` project state, roadmap, phase artifacts, command catalog metadata, artifact contracts, package metadata, CODEOWNERS, and optional impact configuration improve confidence when present.
+- `.blueprint/` project state, roadmap, requested phase artifacts, command catalog metadata, command assets, artifact contracts, package metadata, CODEOWNERS, and optional impact configuration improve confidence when present.
 - Missing ownership, dependency graph, compliance map, or test map metadata must become explicit unknowns or warnings, not false proof of limited impact.
+- Phase 4 context loading supports `includeRuntime`, `includeCatalog`, and `includeArtifacts`; setting one to `false` omits that optional section with a deterministic warning and does not by itself make context `partial`.
+- Requested `phase` and `roadmapItem` targets resolve independently. `roadmapItem` can match phase number, phase name, or roadmap requirement id; duplicate phase numbers are deduped and sorted, while unresolved requested targets make context `partial`.
 
 ## Outputs
 
@@ -72,26 +74,28 @@
 
 - `blueprint_impact_config_get` -> `{config, provenance, warnings, errors, configHash}`
 - `blueprint_impact_scope_resolve` -> `{scope, changedFiles, git, diffStats, patchHash, scopeFingerprint, confidence, warnings}`
-- `blueprint_impact_context_load` -> `{project, config, roadmap, phases, catalog, runtime, repoHints, warnings}`
-- `blueprint_impact_analyze` -> `{impactId, status, risk, confidence, surfaces, findings, obligations, unknowns, evidence, report}`
+- `blueprint_impact_context_load` -> `{status, project, config, roadmap, phases, catalog?, commandAssets?, artifactContracts?, runtime?, repoHints, warnings}`
+- `blueprint_impact_analyze` -> `{impactId, status, risk, confidence, surfaces, areaSummary, surfaceSummary, findings, obligations, unknowns, evidence, report}`
 - `blueprint_impact_report_write` -> `{status, impactId, impactDir, paths, warnings}`
 - `blueprint_impact_output_render` -> `{mode, status, content, impactId, warnings}`
 
 ## Scope Resolution Contract
 
 - Prefer staged changes, then dirty working tree, then branch diff against configured or detected default branch, then CI PR refs, then `HEAD^..HEAD` in CI, then description-only low-confidence advisory scope.
-- Honor explicit `--range`, `--base` and `--head`, `--files`, `--diff-file`, `--phase`, `--roadmap-item`, and `--seed-file` inputs before defaults.
+- Honor explicit `--range`, `--base` and `--head`, `--files`, `--diff-file`, and `--seed-file` inputs before defaults when resolving file scope.
+- Treat `--phase` and `--roadmap-item` as Blueprint context targets resolved by `blueprint_impact_context_load`; they remain low-confidence/advisory for impact unless paired with file, git, diff, or seed scope evidence.
 - Enforce repo-relative path containment for explicit files, seed files, diff files, and config inputs.
 - Secret values must not be read or printed. Secret-sensitive reporting is limited to path, key, and provenance.
 - Description-only scope must return low confidence, include `scope not proven`, and cannot produce a high-confidence `PASS`.
 
 ## Analysis Contract
 
-- Detect Blueprint runtime surfaces such as command manifests, command docs, command catalog, MCP server and tool modules, artifact contracts, command resources, skills, agents, extension manifests, hooks, tests, docs, and `dist/**`.
-- Detect generic package, runtime, config, environment, secret-sensitive, docs, generated, and test surfaces.
-- Verify implemented-only routing invariants when command-surface files are in scope.
+- Phase 4 normalizes file scope from top-level `changedFiles`, top-level `files`, nested `scope.files`, and nested `scope.changedFiles`; mismatches produce a deterministic union warning.
+- Phase 4 detects Blueprint runtime surfaces such as command manifests, command docs, command catalog, MCP server and tool modules, artifact contracts, command resources, skills, agents, extension manifests, hooks, tests, docs, and `dist/**`.
+- Phase 4 detects generic package runtime, build config, repo config, environment config, secret-sensitive, docs, generated, source, repo-root, and unknown surfaces with deterministic priority ordering.
+- Later phases still verify implemented-only routing invariants, ownership, dependency graph, compliance, test-map coverage, contract obligations, findings, and final scoring.
 - Treat ownership, dependency graph, compliance, and test-map gaps as explicit unknowns with resolution guidance.
-- Generate deterministic findings with stable ids, non-empty evidence references unless explicitly unknown, deterministic sorting, separate severity/status/risk/confidence, and required actions.
+- Future finding generation must keep stable ids, non-empty evidence references unless explicitly unknown, deterministic sorting, separate severity/status/risk/confidence, and required actions.
 - Agents may help narrative synthesis only when a future skill enables them; MCP tools own deterministic scope, findings, risk, confidence, status, and output paths.
 
 ## Skills And Subagents
