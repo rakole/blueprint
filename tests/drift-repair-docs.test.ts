@@ -65,16 +65,17 @@ test("control-plane docs describe the shipped lifecycle runtime and active close
 });
 
 test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
-  const [catalog, artifactSchema, runtimeReference, skills, progress, readme, agents] =
-    await Promise.all([
-      readRepoFile("docs/COMMAND-CATALOG.md"),
-      readRepoFile("docs/ARTIFACT-SCHEMA.md"),
-      readRepoFile("docs/RUNTIME-REFERENCE.md"),
-      readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-      readRepoFile("PROGRESS.md"),
-      readRepoFile("README.md"),
-      readRepoFile("AGENTS.md")
-    ]);
+  const [agents, catalog, artifactSchema, drift, skills, progress, readme, bluCommand, bluHelp] = await Promise.all([
+    readRepoFile("AGENTS.md"),
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("PROGRESS.md"),
+    readRepoFile("README.md"),
+    readRepoFile("commands/blu.toml"),
+    readRepoFile("commands/blu-help.toml")
+  ]);
 
   assert.match(catalog, /\| Command \| Wave \| Family \| Primary Skill \| Status \| Key Writes \| Risk \|/);
   assert.match(catalog, /`map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented`/);
@@ -91,9 +92,24 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
   assert.match(catalog, /`plan-milestone-gaps` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
   assert.match(progress, /\| 1 \| `do` \| .* \| `planned` \| 3 \| `Capture And Lightweight Execution` \| Low \|/);
+  assert.match(
+    progress,
+    /docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands/i
+  );
   assert.match(readme, /## Commands Not Public Yet/);
   assert.match(readme, /\/blu-do/);
-  assert.match(readme, /planned next; its routing contract is documented, but the manifest is not shipped yet/i);
+  assert.match(
+    readme,
+    /control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped/i
+  );
+  assert.match(
+    readme,
+    /The active implementation lives in the repo runtime surfaces below\. This list is representative rather than exhaustive:/i
+  );
+  assert.match(readme, /\/blu-workstreams/);
+  assert.match(readme, /\/blu-update/);
+  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-workstreams/);
+  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-update/);
   assert.match(catalog, /STRUCTURE\.md/);
   assert.match(artifactSchema, /`STRUCTURE\.md`/);
   assert.match(artifactSchema, /`reports\/milestone-complete-<version>\.md`/);
@@ -108,12 +124,35 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.match(skills, /`blueprint-roadmap-admin` .* `milestone-summary`/);
   assert.match(skills, /`blueprint-roadmap-admin` .* `new-milestone`/);
   assert.match(skills, /`blueprint-phase-execution` .* `execute-phase`, `quick`, `fast`/);
-  assert.match(agents, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
+  assert.match(drift, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
   assert.match(
-    runtimeReference,
-    /Wave 2 roadmap administration, Wave 3 capture plus lightweight execution, Wave 4 docs and review, and the shipped Wave 5 maintenance surfaces including `new-workspace`, `cleanup`, and `update` all remain locked to their documented command contracts/i
+    agents,
+    /Control-plane docs such as `docs\/COMMAND-CATALOG\.md`, `PROGRESS\.md`, and[\s\S]*command specs record the declared status/i
   );
-  await assert.rejects(() => readRepoFile("docs/DRIFT.MD"), /ENOENT/);
+  assert.match(
+    agents,
+    /`new-workspace`, `remove-workspace`, `workstreams`, `update`, `cleanup`, and `reapply-patches`/
+  );
+  assert.match(
+    agents,
+    /`\/blu-new-workspace`, `\/blu-remove-workspace`, `\/blu-workstreams`, `\/blu-update`, `\/blu-cleanup`, and `\/blu-reapply-patches`/
+  );
+  assert.match(
+    drift,
+    /A future command can therefore stay declared `planned` in docs while the[\s\S]*runtime remains `repairing` or `blocked`/i
+  );
+  assert.match(
+    bluCommand,
+    /If the user asks for a blocked command, explain the missing substrate using `status` and `blockedBy`\./
+  );
+  assert.match(
+    bluHelp,
+    /Explain blocked commands as blocked; do not present them as runnable\./
+  );
+  assert.match(
+    drift,
+    /Control-plane docs may keep a future command declared `planned` while `blueprint_command_catalog` still derives a non-routable runtime status such as `repairing` or `blocked`/i
+  );
 });
 
 test("runtime docs keep .planning and hook control out of Blueprint runtime ownership", async () => {

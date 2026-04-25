@@ -275,10 +275,11 @@ test("capture skill and shipped note, backlog, and explore docs are marked imple
 });
 
 test("do docs and router skill keep the planned freeform-routing contract explicit", async () => {
-  const [catalogMarkdown, doDoc, routerSkill, readme] = await Promise.all([
+  const [catalogMarkdown, doDoc, routerSkill, runtimeReference, readme] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/commands/do.md"),
     readRepoFile("skills/blueprint-router/SKILL.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
     readRepoFile("README.md")
   ]);
 
@@ -330,9 +331,28 @@ test("do docs and router skill keep the planned freeform-routing contract explic
     routerSkill,
     /`\/blu` is the front door, `\/blu-explore` is ideation with confirmation-gated persistence, and `\/blu-do` is the future direct freeform router\./
   );
+  assert.match(
+    runtimeReference,
+    /\| `do` \| `docs\/commands\/do\.md` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \| none \| none \| Planned direct freeform router contract only: control-plane docs keep `\/blu-do` declared `planned`, while the live catalog may still derive `repairing` until the dedicated manifest ships\./
+  );
+  assert.match(
+    runtimeReference,
+    /Keep it non-routable until the catalog marks it `implemented`, use the documented intent taxonomy for repo\/status guidance, lightweight capture, ideation, small execution, bounded execution, and planning escalation/i
+  );
+  assert.match(
+    runtimeReference,
+    /never hide maintenance behavior or route to planned, blocked, or repairing commands\./i
+  );
   assert.match(readme, /## Commands Not Public Yet/);
   assert.match(readme, /\/blu-do/);
-  assert.match(readme, /planned next; its routing contract is documented, but the manifest is not shipped yet/i);
+  assert.match(
+    readme,
+    /control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped/i
+  );
+  assert.match(readme, /\/blu-workstreams/);
+  assert.match(readme, /\/blu-update/);
+  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-workstreams/);
+  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-update/);
 });
 
 test("map-codebase docs keep the repaired brownfield mapping contract explicit", async () => {

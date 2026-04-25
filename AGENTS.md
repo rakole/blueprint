@@ -12,9 +12,9 @@ It is not a literal port of earlier tooling internals.
 
 ## Current Phase
 
-- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `list-phase-assumptions`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `add-tests`, `quick`, `debug`, `pause-work`, `resume-work`, `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore`, `docs-update`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `pr-branch`, `ship`, `undo`, and `cleanup`
+- Wave 0 plus Phase 3 discovery runtime exists for `/blu`, `new-project`, `settings`, `set-profile`, `help`, `progress`, `health`, `map-codebase`, `discuss-phase`, `list-phase-assumptions`, `research-phase`, `ui-phase`, `next`, `plan-phase`, `execute-phase`, `validate-phase`, `verify-work`, `add-tests`, `quick`, `debug`, `pause-work`, `resume-work`, `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone`, `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore`, `docs-update`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `update`, `cleanup`, and `reapply-patches`
 - Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both completed on 2026-04-11
-- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `quick` and `debug` are also now shipped on the lightweight execution and investigation paths, `verify-work`, `add-tests`, `pause-work`, `resume-work`, `docs-update`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `pr-branch`, `ship`, `undo`, and `cleanup` are also shipped, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, `/blu-explore`, and `/blu-list-phase-assumptions` are now implemented as the current Wave 2, Wave 3, Wave 4, and Wave 5 roadmap, capture, lightweight execution, review, review-fix, docs, shipping, and maintenance slices
+- Phase 3 discovery shipped on 2026-04-11 and is under active repair; `plan-phase`, `execute-phase`, and `validate-phase` are now implemented on top of the plan, summary, and validation MCP substrates, `quick` and `debug` are also now shipped on the lightweight execution and investigation paths, `verify-work`, `add-tests`, `pause-work`, `resume-work`, `docs-update`, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `update`, `cleanup`, and `reapply-patches` are also shipped, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, `/blu-explore`, `/blu-list-phase-assumptions`, `/blu-new-workspace`, `/blu-remove-workspace`, `/blu-workstreams`, `/blu-update`, `/blu-cleanup`, and `/blu-reapply-patches` are now implemented as the current Wave 2, Wave 3, Wave 4, and Wave 5 roadmap, capture, lightweight execution, review, review-fix, docs, shipping, and maintenance slices
 - `/blu`, `/blu-help`, and `/blu-progress` must still surface only commands whose catalog entry is `implemented`
 
 ## Core Product Decisions
@@ -53,6 +53,13 @@ It is not a literal port of earlier tooling internals.
 - `implemented`: manifest, primary skill, and required MCP tools are all present
 - `blocked`: not safe to expose because required runtime pieces are missing
 - `repairing`: partially shipped and under active drift repair
+
+Control-plane docs such as `docs/COMMAND-CATALOG.md`, `PROGRESS.md`, and
+command specs record the declared status for retained work. The live
+`blueprint_command_catalog` may still derive a different non-routable runtime
+status from missing runtime pieces. For example, `/blu-do` stays declared
+`planned` in docs while the runtime catalog remains `repairing` until the
+dedicated manifest exists.
 
 ## Guardrails
 

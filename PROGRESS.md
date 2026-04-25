@@ -18,11 +18,11 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `do` | `none` | `none` | The `/blu-do` blocker-removal slice is now defined; it is the next planned control-plane slice, but it remains non-routable until its dedicated manifest and prompt land. |
+| 1 | `do` | `none` | `none` | The `/blu-do` blocker-removal slice is now defined; it is the next planned control-plane slice, but it remains non-routable until its dedicated manifest lands and the runtime catalog can stop deriving a repairing state from that missing artifact. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
-None. `/blu-do` is now planned next rather than blocked, but it still lacks the dedicated manifest and prompt that would make it routable.
+None. `/blu-do` is still the only incomplete command; docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands.
 
 ## Completed Commands (Bubbled Down)
 
