@@ -64,4 +64,5 @@ Resume file: None
 
 | ID | Date | Task | Summary |
 |----|------|------|---------|
+| 260425-jpp | 2026-04-25 | Improve `docs/diagrams/new-project-to-phase1.drawio` visually and content-wise | `.planning/quick/260425-jpp-improve-docs-diagrams-new-project-to-pha/260425-jpp-SUMMARY.md` |
 | 260425-i23 | 2026-04-25 | Repair `/blu-ui-review` workflow dilution against retained `/gsd-ui-review` behavior | `.planning/quick/260425-i23-repair-blu-ui-review-workflow-dilution-a/260425-i23-SUMMARY.md` |
