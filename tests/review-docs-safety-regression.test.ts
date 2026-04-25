@@ -22,7 +22,8 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
     "docs/commands/review.md",
     "docs/commands/secure-phase.md",
     "docs/commands/ui-review.md",
-    "skills/blueprint-review/SKILL.md"
+    "skills/blueprint-review/SKILL.md",
+    "skills/blueprint-review/references/review-runtime-contract.md"
   ]);
 
   const codeReview = files["docs/commands/code-review.md"];
@@ -63,6 +64,36 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   assert.match(
     review,
     /Use Gemini CLI's `ask_user` tool for overwrite confirmation before replacing an existing `XX-REVIEWS\.md`/i
+  );
+  assert.match(
+    review,
+    /Read `review\.peer-review` through `blueprint_artifact_contract_read` before drafting or repairing the artifact/i
+  );
+  assert.match(
+    review,
+    /Optional subagents: `blueprint-reviewer`/i
+  );
+  assert.match(
+    review,
+    /When no suitable subagent is available, the command continues sequentially/i
+  );
+
+  const reviewRuntimeContract = files["skills/blueprint-review/references/review-runtime-contract.md"];
+  assert.match(
+    reviewRuntimeContract,
+    /contract\.authoringTemplate.*canonical shape for `XX-REVIEWS\.md`/is
+  );
+  assert.match(
+    reviewRuntimeContract,
+    /The peer-review artifact must be useful standalone review evidence, not merely\s+valid Markdown/i
+  );
+  assert.match(
+    reviewRuntimeContract,
+    /If `blueprint_review_record` rejects the body or reports missing headings,\s+repair once against `review\.peer-review`/i
+  );
+  assert.match(
+    reviewRuntimeContract,
+    /Browser-only, web-search-only, shell-only, or generic helpers are not\s+acceptable substitutes/i
   );
 
   const securePhase = files["docs/commands/secure-phase.md"];
@@ -254,6 +285,7 @@ test("review and docs agents stay read-only with parent-owned confirmation and p
         /## Parent-Owned Responsibilities/,
         /`update_topic`, `write_todos`, and `ask_user`/,
         /The parent command owns `blueprint_review_record` and every other\s+MCP-backed persistence step/i,
+        /For `\/blu-review`, the parent command owns external reviewer CLI selection,\s+reviewer availability\/authentication truth/i,
         /Remain read-only; the parent command owns MCP persistence and any repo\s+mutation/i,
         /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i
       ]
