@@ -1,0 +1,8 @@
+{
+  "hooks": [
+    {
+      "event": "BeforeTool",
+      "command": "node dist/hooks/example.js"
+    }
+  ]
+}
