@@ -105,6 +105,7 @@ function validResearchContent(summary: string): string {
 
 ## State Of The Art
 
+- Not externally checked; this failure-logging fixture validates local MCP behavior only.
 - Blueprint keeps best-effort mutation diagnostics in .blueprint/mcp-write-failures.ndjson.
 
 ## Common Pitfalls
