@@ -706,6 +706,47 @@ test("checkpoint delete refuses to remove a foreign shared checkpoint when owner
   assert.equal(checkpoint.ownerCommand, "/blu-research-phase");
 });
 
+test("checkpoint delete refuses unguarded deletion of a shared checkpoint", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: 3,
+    checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
+      completedAreas: ["Scope boundaries"],
+      remainingAreas: ["Open questions"],
+      decisions: [],
+      deferredIdeas: [],
+      canonicalReferences: [],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["Open questions"],
+        completedTopics: ["Scope boundaries"],
+        notes: [],
+        updatedAt: "2026-04-19T00:00:08.000Z"
+      }
+    }
+  });
+
+  const deleted = await blueprintPhaseCheckpointDelete({
+    cwd: repoPath,
+    phase: 3
+  });
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(deleted.deleted, false);
+  assert.match(
+    deleted.reason ?? "",
+    /without expectedOwnerCommand or expectedMode/i
+  );
+  assert.equal(checkpoint.found, true);
+  assert.equal(checkpoint.ownerCommand, "/blu-discuss-phase");
+});
+
 test("checkpoint delete remains compatible with legacy mode-owned checkpoints", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

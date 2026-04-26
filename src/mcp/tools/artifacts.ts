@@ -2202,7 +2202,16 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
 }
 
 function containsSourceEvidence(section: string): boolean {
-  return /https?:\/\/|`[^`]+`|\.blueprint\/|docs\/|src\/|tests\//.test(section);
+  const repoDirectoryReference =
+    /(?:^|[\s([`])(?:\.blueprint\/|(?:agents|commands|docs|hooks|scripts|skills|src|tests)\/)[A-Za-z0-9._~!$&'()*+,;=:@%/-]+/m;
+  const repoRootFileReference =
+    /(?:^|[\s([`])(?:AGENTS\.md|MEMORY\.md|PROGRESS\.md|README\.md|gemini-extension\.json|package(?:-lock)?\.json|tabnine-extension\.json|tsconfig\.json)\b/m;
+
+  return (
+    /\bhttps?:\/\/[^\s)]+/.test(section) ||
+    repoDirectoryReference.test(section) ||
+    repoRootFileReference.test(section)
+  );
 }
 
 function stripResearchPlaceholderSignals(section: string): string {

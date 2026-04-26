@@ -19148,7 +19148,9 @@ function parsePlanFrontmatter(content) {
   };
 }
 function containsSourceEvidence(section) {
-  return /https?:\/\/|`[^`]+`|\.blueprint\/|docs\/|src\/|tests\//.test(section);
+  const repoDirectoryReference = /(?:^|[\s([`])(?:\.blueprint\/|(?:agents|commands|docs|hooks|scripts|skills|src|tests)\/)[A-Za-z0-9._~!$&'()*+,;=:@%/-]+/m;
+  const repoRootFileReference = /(?:^|[\s([`])(?:AGENTS\.md|MEMORY\.md|PROGRESS\.md|README\.md|gemini-extension\.json|package(?:-lock)?\.json|tabnine-extension\.json|tsconfig\.json)\b/m;
+  return /\bhttps?:\/\/[^\s)]+/.test(section) || repoDirectoryReference.test(section) || repoRootFileReference.test(section);
 }
 function stripResearchPlaceholderSignals(section) {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
@@ -28500,14 +28502,26 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
       reason: `${checkpointPath} did not exist.`
     };
   }
+  const parsed = ensureCheckpointObject(
+    safeJsonParseObject(await fs4.readFile(absolutePath, "utf8"), {
+      label: checkpointPath,
+      maxBytes: 256 * 1024
+    }),
+    checkpointPath
+  );
+  if (!args.expectedOwnerCommand && !args.expectedMode) {
+    return {
+      phaseFound: true,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      path: checkpointPath,
+      deleted: false,
+      reason: `Refusing to delete ${checkpointPath} without expectedOwnerCommand or expectedMode; shared checkpoint deletes must provide an ownership guard.`
+    };
+  }
   if (args.expectedOwnerCommand || args.expectedMode) {
-    const parsed = ensureCheckpointObject(
-      safeJsonParseObject(await fs4.readFile(absolutePath, "utf8"), {
-        label: checkpointPath,
-        maxBytes: 256 * 1024
-      }),
-      checkpointPath
-    );
     const expectedOwnerCommand = args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
     const expectedMode = args.expectedMode ?? (expectedOwnerCommand ? PHASE_CHECKPOINT_OWNER_MODES[expectedOwnerCommand] : void 0);
     const ownershipSafety = evaluateCheckpointResumeSafety(

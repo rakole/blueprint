@@ -168,6 +168,7 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     mcpToolsDoc,
     researchCommand,
     researchDoc,
+    researchRuntimeContract,
     uiCommand,
     uiDoc,
     discoverySkill,
@@ -181,6 +182,7 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     readRepoFile("docs/MCP-TOOLS.md"),
     readRepoFile("commands/blu-research-phase.toml"),
     readRepoFile("docs/commands/research-phase.md"),
+    readRepoFile("skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"),
     readRepoFile("commands/blu-ui-phase.toml"),
     readRepoFile("docs/commands/ui-phase.md"),
     readRepoFile("skills/blueprint-phase-discovery/SKILL.md"),
@@ -279,18 +281,23 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(mcpToolsDoc, /discuss-phase-runtime-contract\.md/i);
   assert.match(mcpToolsDoc, /long-running-phase-discovery-profile\.md/i);
 
-  assert.match(researchCommand, /default strict mode/i);
-  assert.match(researchCommand, /returned `path` as authoritative/i);
+  assert.match(researchCommand, /validation-failing research content/i);
+  assert.match(researchCommand, /resolved numeric phase reference only/i);
   assert.match(researchCommand, /artifactId: "phase\.research"/);
   assert.match(researchCommand, /authoringTemplate/);
   assert.match(researchCommand, /research-phase-runtime-contract\.md/);
   assert.match(researchCommand, /single-agent fallback/i);
-  assert.match(researchCommand, /browser-only, web-search-only, shell-only, or generic agents/i);
-  assert.match(researchDoc, /## Research Persistence Contract/);
+  assert.match(researchRuntimeContract, /strict mode[\s\S]*repair invalid results/i);
+  assert.match(
+    mcpToolsDoc,
+    /Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative/i
+  );
+  assert.match(researchRuntimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
+  assert.match(researchDoc, /## Research Runtime Anchors/);
   assert.match(researchDoc, /artifactId: "phase\.research"/);
-  assert.match(researchDoc, /Bare names such as `RESEARCH` and absolute paths are invalid/i);
+  assert.match(researchDoc, /deliberate placeholder/i);
   assert.match(researchDoc, /research-phase-runtime-contract\.md/);
-  assert.match(researchDoc, /validation repair\/retry/i);
+  assert.match(researchRuntimeContract, /validation repair before completion/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
   assert.match(uiCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);

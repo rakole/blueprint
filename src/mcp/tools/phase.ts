@@ -6705,14 +6705,28 @@ export async function blueprintPhaseCheckpointDelete(
     };
   }
 
+  const parsed = ensureCheckpointObject(
+    safeJsonParseObject(await fs.readFile(absolutePath, "utf8"), {
+      label: checkpointPath,
+      maxBytes: 256 * 1024
+    }),
+    checkpointPath
+  );
+
+  if (!args.expectedOwnerCommand && !args.expectedMode) {
+    return {
+      phaseFound: true,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      path: checkpointPath,
+      deleted: false,
+      reason: `Refusing to delete ${checkpointPath} without expectedOwnerCommand or expectedMode; shared checkpoint deletes must provide an ownership guard.`
+    };
+  }
+
   if (args.expectedOwnerCommand || args.expectedMode) {
-    const parsed = ensureCheckpointObject(
-      safeJsonParseObject(await fs.readFile(absolutePath, "utf8"), {
-        label: checkpointPath,
-        maxBytes: 256 * 1024
-      }),
-      checkpointPath
-    );
     const expectedOwnerCommand =
       args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
     const expectedMode =

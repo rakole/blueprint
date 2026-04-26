@@ -249,7 +249,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - Research writes should be normalized to Blueprint's exact `XX-RESEARCH.md` template before calling the tool, and angle-bracket placeholders must be replaced with real content.
 - `blueprint_phase_checkpoint_get` accepts optional `expectedOwnerCommand` and `expectedMode` fields so commands can deterministically avoid resuming stale or foreign continuation state. Legacy saved checkpoints remain readable, but reads include `warnings` and `safeToResume`.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object that includes `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. `ownerCommand` must match `resumeMeta.mode` (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`, `/blu-verify-work` -> `uat`). The tool owns the shared checkpoint filename and location, and rejects overwriting a checkpoint owned by a different command or mode.
-- `blueprint_phase_checkpoint_delete` accepts the same optional `expectedOwnerCommand` and `expectedMode` guard fields. When supplied, the tool refuses to delete a foreign shared checkpoint and reports the ownership/mode blocker in `reason`.
+- `blueprint_phase_checkpoint_delete` accepts the same `expectedOwnerCommand` and `expectedMode` guard fields. When a checkpoint exists, the tool refuses unguarded deletes and refuses to delete a foreign shared checkpoint, reporting the ownership/mode blocker in `reason`.
 - Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative for artifact and checkpoint persistence.
 
 ### Plan, Summary, And Validation Artifacts
