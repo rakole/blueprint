@@ -19,6 +19,7 @@ input_bundles:
     "/blu-discuss-phase":
       - docs/commands/discuss-phase.md
       - skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md
+      - skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md
     "/blu-research-phase":
       - docs/commands/research-phase.md
       - skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md
@@ -42,11 +43,7 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
-- Execution profile for `/blu-discuss-phase`: `long-running-mutation`.
-- Keep the shared stage vocabulary explicit during non-trivial `/blu-discuss-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
-- Keep the in-flight status contract visible during non-trivial `/blu-discuss-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
-- On Gemini, use `update_topic` and `write_todos` only as session-local visibility aids during non-trivial `/blu-discuss-phase` runs; do not let them replace MCP-backed artifacts, checkpoints, or `STATE.md`.
-- When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
+- Execution profile for `/blu-discuss-phase`: `long-running-mutation`; read `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for the shared stage, in-flight status, and session-local helper contract.
 - Execution profile for `/blu-research-phase`: `long-running-mutation`.
 - Keep the shared stage vocabulary explicit during non-trivial `/blu-research-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the in-flight status contract visible during non-trivial `/blu-research-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
@@ -69,6 +66,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - later chaining and power-mode variants stay deferred until the downstream lifecycle substrate exists
 - keep the GSD-inspired discovery staples Blueprint actually ships: prior-context sweeps, deferred-idea folding, methodology lenses, codebase-scout reuse, stronger assumptions-mode analysis, progress recaps, checkpoint-per-area persistence, and end-of-run `STATE.md` updates
 - use `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the rich behavior contract for `/blu-discuss-phase`
+- use `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` as the shared long-running profile for `/blu-discuss-phase`
 - use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract for `/blu-research-phase`
 - use `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` as the rich behavior contract for `/blu-ui-phase`
 - treat `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts
@@ -179,8 +177,8 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 6. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus. If an answer is vague, incomplete, or conflicts with saved context, ask a focused follow-up or retry the question with a narrower prompt before treating it as final.
 7. Treat pending gates explicitly as phase ambiguity, resume-versus-discard checkpoint choice, gray-area selection, overwrite confirmation, or validation blockers instead of burying them in recap prose.
 8. Keep execution mode explicit as interactive `workflow.discuss_mode="discuss"`, stronger assumptions-mode analysis, or repo-evidence-driven `workflow.skip_discuss=true`, plus fresh versus resumed checkpoint posture.
-9. During non-trivial multi-area discovery runs on Gemini, use `update_topic` and `write_todos` to keep the active stage and next safe action visible without turning either tool into persistence. When a host does not expose those helpers, keep the same visibility through normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
-10. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the structured discuss checkpoint shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology. Do not pretend power, chain, or auto modes are shipped.
+9. Follow `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for stage visibility, next-safe-action visibility, and session-local helper fallback behavior.
+10. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the structured discuss checkpoint shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology.
 11. Use capability-gated subagents only when suitable Blueprint discovery or research agents are available and bounded evidence work materially improves a single gray area or assumptions pass. `blueprint-researcher` may return options, tradeoffs, rationale, complexity or impact surface, and cited evidence for one area, but the parent command owns synthesis, questions, persistence, and routing. If no suitable subagent is available, use the single-agent fallback from the runtime contract: handle one area at a time, compress carry-forward context, checkpoint it, then move on without reducing output richness.
 12. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished content through `blueprint_phase_artifact_write`.
 13. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-discuss-phase` as complete. If repair cannot finish safely, leave the checkpoint intact and report the validation blocker.

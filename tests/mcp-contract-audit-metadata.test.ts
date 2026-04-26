@@ -217,6 +217,7 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussDoc, /normalized to the canonical `authoringTemplate` before write/i);
   assert.match(discussDoc, /self-checked against that contract/i);
   assert.match(discussDoc, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussDoc, /long-running-phase-discovery-profile\.md/i);
   assert.match(discussDoc, /capability-gated[\s\S]*single-agent fallback/i);
   assert.match(discussDoc, /repair.*validation issues/i);
   assert.match(
@@ -224,12 +225,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     /blueprint_phase_context[\s\S]*projectBrief[\s\S]*requirementsGrounding[\s\S]*workflowPosture[\s\S]*codebase[\s\S]*requirements[\s\S]*missingArtifacts[\s\S]*warnings/i
   );
   assert.match(discussDoc, /prior-context sweeps/i);
-  assert.match(discussDoc, /dedicated todo\/backlog file crawl/i);
-  assert.match(discussDoc, /codebase scout summaries/i);
-  assert.match(discussDoc, /stronger assumptions-mode analysis/i);
-  assert.match(discussDoc, /progress recaps/i);
+  assert.match(discussDoc, /assumptions-mode analysis/i);
   assert.match(discussDoc, /checkpoint-per-area/i);
-  assert.match(discussDoc, /end-of-run `STATE\.md` update/i);
   assert.match(artifactSchema, /full discuss-phase context contract sections/i);
   assert.match(artifactSchema, /evidence-backed enough for downstream research and planning/i);
   assert.match(artifactSchema, /repair any returned write validation issues/i);
@@ -245,10 +242,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     discussRuntimeReference,
     /`discuss-phase`[\s\S]*`blueprint_phase_plan_index`[\s\S]*`blueprint_artifact_contract_read`/i
   );
-  assert.match(discussRuntimeReference, /stronger assumptions-mode analysis/i);
+  assert.match(discussRuntimeReference, /assumptions-mode analysis/i);
   assert.match(discussRuntimeReference, /progress recaps/i);
   assert.match(discussRuntimeReference, /checkpoint-per-area/i);
-  assert.match(discussRuntimeReference, /end-of-run `STATE\.md` updates/i);
+  assert.match(discussRuntimeReference, /`blueprint_state_update`[\s\S]*`blueprint_state_load`/i);
   assert.match(discussRuntimeReference, /discuss-phase-runtime-contract\.md/i);
   assert.match(discussRuntimeReference, /single-agent fallback/i);
   assert.match(discussRuntimeReference, /returned artifact validation issues/i);
@@ -275,7 +272,7 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     /`discuss-phase` uses phase location\/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`/i
   );
   assert.match(mcpToolsDoc, /discuss-phase-runtime-contract\.md/i);
-  assert.match(mcpToolsDoc, /single-agent one-area-at-a-time fallback/i);
+  assert.match(mcpToolsDoc, /long-running-phase-discovery-profile\.md/i);
 
   assert.match(researchCommand, /default strict mode/i);
   assert.match(researchCommand, /returned `path` as authoritative/i);

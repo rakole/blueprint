@@ -6,6 +6,11 @@ with `artifactId: "phase.context"` and, when used, `artifactId:
 "phase.discussion-log"`. Treat this file as orchestration and evidence-density
 guidance, not a competing markdown schema.
 
+Use `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
+for the shared `long-running-mutation` stage vocabulary, in-flight status
+fields, session-local helper policy, and host-supported structured choice
+guidance.
+
 ## Parity Target
 
 `/blu-discuss-phase` must behave like a Blueprint-native thinking partner, not a
@@ -149,6 +154,9 @@ Good options are concrete and code-informed:
 
 Do not ask checklist questions. Start broad enough to learn the user's intent,
 then dig into the area that actually changes the implementation.
+
+Do not claim unshipped power, batch, chain, auto, or auto-advance behavior in
+this runtime.
 
 ## Artifact Authoring
 
