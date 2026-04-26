@@ -88,6 +88,10 @@ test("discuss-phase command references only registered phase-discovery tool name
     ),
     "utf8"
   );
+  const researcherAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-researcher.md"),
+    "utf8"
+  );
   const runtimeReference = await readFile(
     path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
     "utf8"
@@ -147,6 +151,8 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /codebase scout/i);
   assert.match(commandFile, /capability-gated subagents/i);
   assert.match(commandFile, /blueprint-researcher[\s\S]*one gray area|one gray area[\s\S]*blueprint-researcher/i);
+  assert.match(commandFile, /gray-area memo mode/i);
+  assert.match(commandFile, /Do not ask it to produce `phase\.research` or `XX-RESEARCH\.md`/i);
   assert.match(commandFile, /single-agent fallback/i);
   assert.match(commandFile, /compress carry-forward context/i);
   assert.match(commandFile, /stronger assumptions-mode analysis/i);
@@ -201,6 +207,14 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, /progress recaps/i);
   assert.match(skillFile, /checkpoint-per-area/i);
   assert.match(skillFile, /end-of-run `STATE\.md` updates/i);
+  assert.match(skillFile, /Command-Scoped Required MCP Tools/i);
+  const discussToolSection = skillFile.match(
+    /### `\/blu-discuss-phase`\n([\s\S]*?)(?=\n### `\/blu-research-phase`)/
+  )?.[1] ?? "";
+  assert.match(discussToolSection, /`blueprint_state_load`/);
+  assert.doesNotMatch(discussToolSection, /`blueprint_project_status`/);
+  assert.doesNotMatch(discussToolSection, /`blueprint_phase_research_status`/);
+  assert.doesNotMatch(discussToolSection, /`blueprint_command_catalog`/);
   assert.match(discussReference, /blueprint_state_update` with `base: "synced"/i);
   assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
   assert.match(
@@ -280,12 +294,16 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussRuntimeRow, /discuss-phase-runtime-contract\.md/i);
   assert.match(discussRuntimeRow, /contract\.authoringTemplate/i);
   assert.match(discussRuntimeRow, /capability-gated `blueprint-researcher` sidecars/i);
+  assert.match(discussRuntimeRow, /`blueprint_state_load`/);
+  assert.match(discussRuntimeRow, /lightweight gray-area memo mode/i);
   assert.match(discussRuntimeRow, /single-agent fallback/i);
   assert.match(discussRuntimeRow, /repair returned artifact validation issues/i);
 
   assert.match(discussReference, /# Discuss Phase Runtime Contract/);
   assert.match(discussReference, /schema authority/i);
   assert.match(discussReference, /Capability-Gated Agent Use/);
+  assert.match(discussReference, /gray-area memo mode/i);
+  assert.match(discussReference, /Do not ask it to populate `phase\.research` or draft\s+`XX-RESEARCH\.md`/i);
   assert.match(discussReference, /Single-Agent Fallback/);
   assert.match(discussReference, /compress carry-forward context/i);
   assert.match(discussReference, /Assumptions Mode/);
@@ -293,6 +311,9 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /Artifact Authoring/);
   assert.match(discussReference, /Validation And Repair/);
   assert.match(discussReference, /status: "invalid"/);
+  assert.match(researcherAgent, /Output Mode Selection/);
+  assert.match(researcherAgent, /gray-area memo mode/);
+  assert.match(researcherAgent, /not a populated `phase\.research` or\s+`XX-RESEARCH\.md` body/i);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {

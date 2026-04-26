@@ -80,26 +80,62 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 Command-specific inputs are resolved from the structured `input_bundles` frontmatter for the invoking discovery command.
 
-## Required MCP Tools
+## Command-Scoped Required MCP Tools
+
+Use only the MCP tools allowed by the active command contract. The shared skill
+does not grant broader tool scope to a command.
+
+### `/blu-discuss-phase`
 
 - `blueprint_phase_locate`
 - `blueprint_phase_context`
 - `blueprint_roadmap_read`
-- `blueprint_project_status`
-- `blueprint_phase_research_status`
+- `blueprint_artifact_list`
+- `blueprint_config_get`
 - `blueprint_phase_artifact_read`
-- `blueprint_phase_artifact_write`
 - `blueprint_phase_plan_index`
 - `blueprint_artifact_contract_read`
+- `blueprint_phase_artifact_write`
 - `blueprint_phase_checkpoint_get`
 - `blueprint_phase_checkpoint_put`
 - `blueprint_phase_checkpoint_delete`
-- `blueprint_artifact_list`
-- `blueprint_command_catalog`
-- `blueprint_state_load`
 - `blueprint_artifact_scaffold`
 - `blueprint_state_update`
+- `blueprint_state_load`
+
+### `/blu-research-phase`
+
+- `blueprint_phase_locate`
+- `blueprint_phase_context`
+- `blueprint_phase_research_status`
+- `blueprint_phase_artifact_read`
+- `blueprint_phase_artifact_write`
+- `blueprint_artifact_contract_read`
+- `blueprint_artifact_scaffold`
+- `blueprint_phase_checkpoint_get`
+- `blueprint_phase_checkpoint_put`
+- `blueprint_phase_checkpoint_delete`
+- `blueprint_state_load`
+- `blueprint_command_catalog`
+- `blueprint_state_update`
+
+### `/blu-ui-phase`
+
+- `blueprint_phase_locate`
+- `blueprint_phase_research_status`
 - `blueprint_config_get`
+- `blueprint_artifact_contract_read`
+- `blueprint_phase_artifact_read`
+- `blueprint_phase_artifact_write`
+- `blueprint_artifact_scaffold`
+- `blueprint_state_update`
+
+### `/blu-list-phase-assumptions`
+
+- `blueprint_phase_locate`
+- `blueprint_project_status`
+- `blueprint_roadmap_read`
+- `blueprint_phase_context`
 
 ## Optional Agents
 
@@ -154,65 +190,42 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 
 ### `research-phase`
 
-Before running the command flow, read `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`. It locks the retained research behavior that is easy to dilute: phase validation, existing research reuse/update gates, actual saved context reads, planner-consumed research sections, repo-versus-external provenance, capability-gated researcher use, a single-agent no-subagent fallback, checkpointed inconclusive strands, validation repair, and implemented-only routing.
-
-1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
-2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in the saved discovery context, not only status metadata.
-3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
-4. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
-5. Use `blueprint_artifact_scaffold` only to seed a missing research file.
-6. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
-7. Keep the resolved scope explicit as the selected phase, current context and research reuse-versus-update posture, codebase-bundle availability, the topic strand currently in progress, and whether the run is repo-evidence-only or also checking external truth.
-8. Ground repo truth first in `blueprint_phase_context`, the actual saved `XX-CONTEXT.md` body, any existing research, and saved `.blueprint/codebase/` summaries before consulting external sources.
-9. Use official docs or explicitly supplied external references only when the repo cannot settle a claim, and keep repo-derived evidence distinct from external or web-derived evidence in the draft, recommendations, and `## Sources`. If external verification is skipped or unavailable, say so plainly instead of implying it happened.
-10. During non-trivial multi-strand research on Gemini, use `update_topic` and `write_todos` to keep the active stage and next safe action visible without turning either tool into persistence. When a host does not expose those helpers, keep the same visibility through short progress recaps plus MCP-backed checkpoints and `STATE.md`.
-11. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
-12. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
-13. Require explicit overwrite confirmation before replacing existing research.
-14. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
-15. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
-16. Break long-running research into topic-sized strands instead of forcing a single linear pass. Re-check the phase context and saved research status between strands so the command can continue from the last durable checkpoint instead of redoing settled work.
-17. When a strand reaches a natural pause, write or refresh the phase checkpoint with the completed topics, remaining topics, open questions, and a resume hint that stays inside the implemented Blueprint surface. Treat the checkpoint as the continuation point for the next run.
-18. If evidence stays incomplete or conflicts remain unresolved after a reasonable pass, mark the result as inconclusive rather than stretching the draft. Summarize what was verified, what remains unknown, and the next safe action within the implemented surface, such as continuing research, revisiting context, or moving to `/blu-progress` when planning is no longer appropriate.
-19. Do not imply auto-chaining or power-mode continuation. Any continuation path must be explicit, checkpointed, and resumable through the shipped discovery workflow.
-20. If no suitable Blueprint research or code-analysis subagent is available, use the runtime contract's single-agent fallback: handle one topic strand at a time, compress carry-forward evidence before moving on, normalize the draft section-by-section to the canonical template, and checkpoint pauses or inconclusive evidence without lowering output richness.
-21. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for codebase and workflow analysis. External references may support claims, but they do not replace repo evidence or the saved Blueprint artifacts.
-22. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-research-phase` as complete. If repair cannot finish safely, leave or refresh the checkpoint and report the blocker.
+Before running the command flow, read
+`skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`.
+That command-specific reference preserves the topic-strand research behavior,
+repo-derived evidence distinct from external or web-derived evidence,
+official docs or explicitly supplied external references,
+capability-gated `blueprint-researcher` artifact drafting, single-agent
+fallback, checkpointing, and repair the same normalized draft behavior. Do not
+inline the full research workflow into `/blu-discuss-phase` context.
+It preserves the rejection of browser-only, web-search-only, shell-only, or generic agents.
 
 ### `list-phase-assumptions`
 
-0. Treat `/blu-list-phase-assumptions` as an `interactive-read` summary, not a long-running progress flow.
-1. Resolve the phase through `blueprint_phase_locate`; omitted phase input may be inferred from state or roadmap, but an explicit invalid phase must fail clearly.
-2. Read `blueprint_project_status`, `blueprint_roadmap_read`, and `blueprint_phase_context` before presenting any assumptions so the answer stays grounded in actual repo readiness, roadmap intent, and saved discovery artifacts.
-3. Keep the command read-only. Do not scaffold, write, repair, or update `.blueprint/` artifacts from this flow.
-4. Surface assumptions across the five required areas: technical approach, implementation order, scope boundaries, risk areas, and dependencies.
-5. Mark uncertainty explicitly instead of overstating confidence; use evidence-first language when context is thin or missing.
-6. If the requested phase cannot be resolved, report the exact failure reason and list valid roadmap phases instead of guessing a substitute.
-7. When deeper technical context would materially improve the summary, `blueprint-researcher` may be used as a bounded read-only sidecar, but the command still ends with conversational output only.
-8. Keep blocked or missing phase resolution in a visible waiting-state posture with an explicit next safe action instead of smoothing it away.
-9. End by inviting corrections and keeping any next-step suggestion inside the implemented Blueprint surface.
+Treat `/blu-list-phase-assumptions` as an `interactive-read` summary and keep
+it read-only. Do not use `update_topic`, `write_todos`, or task tracker tools
+for `/blu-list-phase-assumptions`; keep blocked or missing phase resolution in
+a visible waiting-state posture with an explicit next safe action. The command
+spec `docs/commands/list-phase-assumptions.md` remains the command-specific
+source for the five assumption areas, `blueprint-researcher` sidecar limits,
+and correction-oriented conversational output.
 
 ### `ui-phase`
 
-Before running the command flow, read `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md`. It locks the retained UI-phase behavior that is easy to dilute: canonical UI-spec reads, upstream artifact grounding, design-system evidence, concrete spacing/typography/color/copy/state/registry guidance, capability-gated designer and checker use, a single-agent no-subagent fallback, six-dimension UI quality review, validation repair, and implemented-only routing.
-
-1. Inspect effective config through `blueprint_config_get`.
-2. Respect `workflow.ui_phase` and `workflow.ui_safety_gate`.
-3. Read the canonical `phase.ui-spec` contract through `blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting, revising, or persisting `XX-UI-SPEC.md`; keep `contract.authoringTemplate` as the heading and schema authority while the runtime contract provides richness and evidence expectations.
-4. Read any existing `XX-UI-SPEC.md` through `blueprint_phase_artifact_read` before proposing replacement so reuse remains the default.
-5. If `blueprint_phase_research_status` reports saved context or research, read those actual artifacts through `blueprint_phase_artifact_read` with `artifact: "context"` and `artifact: "research"` before drafting so the UI spec is grounded in saved decisions rather than status booleans.
-6. Prefer a one-question `ask_user` dialog for overwrite confirmation and focused contract-versus-skip decisions when a structured choice will help.
-7. Keep the resolved scope explicit as the selected phase, current research readiness, artifact reuse-versus-replace posture, and whether config currently points toward a real UI contract or an explicit skip rationale.
-8. Treat pending gates explicitly as missing or ambiguous phase resolution, contract-versus-skip choice, `workflow.ui_safety_gate` rationale confirmation, overwrite confirmation, checker-requested revision, or MCP validation repair instead of flattening them into recap prose.
-9. Keep execution mode explicit as real UI contract versus explicit skip rationale, plus inline drafting versus the bounded `blueprint-ui-designer` and `blueprint-checker` loop.
-10. Use `XX-UI-SPEC.md` as the single durable output for both a real UI contract and an explicit skip rationale.
-11. Require explicit overwrite confirmation before replacing an existing UI spec.
-12. When deeper design work is needed, use `blueprint-ui-designer` for the draft and `blueprint-checker` for a bounded review loop before persistence. If the checker requests revisions, update only the affected sections, re-normalize to the same `authoringTemplate`, and re-run the checker before saving.
-13. If no suitable Blueprint UI design, code-analysis, or workflow-analysis subagent is available, use the runtime contract's no-subagent fallback: compress carry-forward evidence, decide contract versus skip mode, draft one canonical section at a time, self-check the six UI dimensions, and repair blocked dimensions before persistence without lowering output richness.
-14. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for Blueprint UI design, codebase, or workflow analysis. External references may support claims only when explicitly supplied or approved.
-15. When UI work is intentionally skipped, record the rationale in `XX-UI-SPEC.md` instead of inventing a second file.
-16. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry through MCP once before treating `/blu-ui-phase` as blocked.
-17. End with the next safe action inside the implemented surface, usually `/blu-plan-phase <phase>` once the UI artifact is settled or `/blu-progress` when discovery prerequisites remain unresolved.
+Before running the command flow, read
+`skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md`.
+That command-specific reference preserves saved context or research grounding,
+contract-versus-skip choice handling, `workflow.ui_safety_gate` rationale
+confirmation, checker-requested revision, six-dimension UI quality review,
+six UI dimensions, `blueprint_artifact_contract_read` with `artifactId:
+"phase.ui-spec"`,
+bounded `blueprint-checker` use, no-subagent fallback, browser-only,
+web-search-only, shell-only, or generic agents rejection, validation repair,
+and `/blu-plan-phase <phase>` or `/blu-progress` routing. Do not inline the
+full UI workflow into `/blu-discuss-phase` context.
+It preserves the exact `workflow.ui_safety_gate` rationale confirmation gate.
+It preserves the rejection of browser-only, web-search-only, shell-only, or generic agents.
+It preserves `artifactId: "phase.ui-spec"` as the canonical UI-spec contract id.
 
 ## Non-Negotiables
 
