@@ -16,6 +16,10 @@ import {
   blueprintPhaseArtifactWrite,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
+import {
+  blueprintStateLoad,
+  blueprintStateUpdate
+} from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 
@@ -211,6 +215,11 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /artifactId: "phase\.research"/);
   assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /artifact_read` for the current `context` artifact before drafting|actual current context content/i);
+  assert.match(commandFile, /If the current `context` artifact read reports `found: false`/i);
+  assert.match(commandFile, /do not draft research until saved context exists/i);
+  assert.match(commandFile, /do not offer `skip`, `view`, or default reuse as a successful exit/i);
+  assert.match(commandFile, /valid `view`\/`skip`\/`reuse` exit, call .*state_update.*base: "synced"/is);
+  assert.match(commandFile, /Draft directly from `contract\.authoringTemplate`/i);
   assert.match(commandFile, /phase_checkpoint_get/i);
   assert.match(commandFile, /phase_checkpoint_put/i);
   assert.match(commandFile, /phase_checkpoint_delete/i);
@@ -229,6 +238,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /STATE\.md/);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /\/blu-plan-phase/);
+  assert.match(commandFile, /\/blu-discuss-phase/);
   assert.match(commandFile, /Do not treat its response as a routing decision/i);
   assert.match(commandFile, /blueprint_state_load.+reported next safe action comes from the refreshed state/i);
   assert.match(commandFile, /refreshed safe action is `\/blu-plan-phase`/i);
@@ -244,6 +254,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(docFile, /write_todos/);
   assert.match(docFile, /repo truth/i);
   assert.match(docFile, /official docs or explicitly supplied external references/i);
+  assert.match(docFile, /Missing `XX-CONTEXT\.md` is a visible gate/i);
+  assert.match(docFile, /invalid existing research as repair-only/i);
+  assert.match(docFile, /reserves scaffold for deliberate placeholder creation only/i);
+  assert.match(docFile, /refresh `STATE\.md` on valid non-writing exits/i);
 
   assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
   assert.match(runtimeReference, /Long-running-mutation profile for topic-strand phase research/i);
@@ -251,13 +265,20 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeReference, /write_todos/);
   assert.match(runtimeReference, /repo truth/i);
   assert.match(runtimeReference, /external truth/i);
+  assert.match(runtimeReference, /stop on missing `XX-CONTEXT\.md`/i);
+  assert.match(runtimeReference, /reserve `blueprint_artifact_scaffold` for deliberate placeholder creation only/i);
+  assert.match(runtimeReference, /force repair when existing research is invalid/i);
+  assert.match(runtimeReference, /sync `STATE\.md` even on valid non-writing reuse paths/i);
   assert.match(
     mcpToolsDoc,
-    /`research-phase` uses phase location\/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
+    /`research-phase` uses phase location\/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
   );
   assert.match(mcpToolsDoc, /research-phase-runtime-contract\.md/);
   assert.match(mcpToolsDoc, /single-agent topic-strand fallback/i);
   assert.match(mcpToolsDoc, /reject browser\/web-search\/shell-only or generic agents/i);
+  assert.match(mcpToolsDoc, /stop on missing `XX-CONTEXT\.md`/i);
+  assert.match(mcpToolsDoc, /force repair when existing research is invalid/i);
+  assert.match(mcpToolsDoc, /sync `STATE\.md` even on valid non-writing reuse paths/i);
 
   assert.match(skillFile, /Execution profile for `\/blu-research-phase`: `long-running-mutation`/);
   assert.match(skillFile, /research-phase-runtime-contract\.md/);
@@ -268,6 +289,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /single-agent fallback/i);
   assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /repair the same normalized draft/i);
+  assert.match(skillFile, /If that read reports `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
+  assert.match(skillFile, /Force repair when saved research is invalid/i);
+  assert.match(skillFile, /Draft directly from `contract\.authoringTemplate`/i);
+  assert.match(skillFile, /valid `view`\/`skip`\/`reuse` exit, call `blueprint_state_update` with `base: "synced"`/i);
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
 
   assert.deepEqual(contract.skillInputs.shared, [
@@ -315,6 +340,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /stop and route back to\s+`\/blu-discuss-phase <phase>`/i);
+  assert.match(runtimeContract, /Default drafting should start from\s+`contract\.authoringTemplate`/i);
+  assert.match(runtimeContract, /do not allow skip, default reuse, or an\s+unchanged invalid write result/i);
+  assert.match(runtimeContract, /sync `STATE\.md` through `blueprint_state_update` with `base: "synced"`/i);
   assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
   assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
@@ -418,4 +447,156 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.validation.issues.join("\n"), /required section|Confidence|source/i);
   assert.match(researchBody, /Update the artifact after an explicit overwrite path/);
+});
+
+test("research scaffold can be replaced by substantive content without explicit overwrite", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-RESEARCH.md"]
+  });
+
+  const scaffoldStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent("Replace the scaffold with substantive research content.")
+  });
+  const finalStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(scaffoldStatus.hasResearch, true);
+  assert.equal(scaffoldStatus.researchValid, false);
+  assert.match(scaffoldStatus.researchIssues.join("\n"), /scaffold placeholder text/i);
+  assert.equal(written.status, "updated");
+  assert.equal(written.written, true);
+  assert.equal(written.overwritten, true);
+  assert.match(written.warnings.join("\n"), /Replacing the existing scaffold or non-canonical research artifact/i);
+  assert.equal(finalStatus.researchValid, true);
+});
+
+test("invalid existing research must be repaired instead of being treated as reused", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const researchPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"
+  );
+  const invalidContent = "# Phase 03: Phase Discovery - Research\n\n## Summary\n- Missing required sections.\n";
+
+  await writeFile(researchPath, invalidContent, "utf8");
+
+  const statusBefore = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const unchanged = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: invalidContent
+  });
+  const repaired = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent("Repair the invalid research artifact in place.")
+  });
+  const statusAfter = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(statusBefore.hasResearch, true);
+  assert.equal(statusBefore.researchValid, false);
+  assert.match(statusBefore.suggestedRepairs.join("\n"), /Update the phase research through \/blu-research-phase/i);
+  assert.equal(unchanged.status, "invalid");
+  assert.equal(unchanged.written, false);
+  assert.match(unchanged.validation?.issues.join("\n") ?? "", /required section|Confidence|source/i);
+  assert.equal(repaired.status, "updated");
+  assert.equal(repaired.written, true);
+  assert.match(repaired.warnings.join("\n"), /Replacing the existing scaffold or non-canonical research artifact/i);
+  assert.equal(statusAfter.researchValid, true);
+});
+
+test("missing context keeps research routing pointed at discuss-phase", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const missingContext = await blueprintPhaseArtifactRead({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context"
+  });
+  const researchStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(missingContext.found, false);
+  assert.match(missingContext.reason ?? "", /03-CONTEXT\.md does not exist yet/i);
+  assert.equal(researchStatus.hasContext, false);
+  assert.deepEqual(stateUpdate.updatedFields.sort(), ["activeCommand", "lastUpdated"].sort());
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-discuss-phase 3/);
+  assert.match(stateBody, /Run \/blu-discuss-phase 3 to rebuild the current phase context/);
+});
+
+test("valid existing research can sync STATE without mutating the research artifact", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+  await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent("Keep the research artifact unchanged while routing state forward."),
+    overwrite: true
+  });
+
+  const researchPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"
+  );
+  const researchBefore = await readFile(researchPath, "utf8");
+  const reused = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: researchBefore
+  });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const researchAfter = await readFile(researchPath, "utf8");
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(reused.status, "reused");
+  assert.equal(reused.written, false);
+  assert.equal(researchAfter, researchBefore);
+  assert.deepEqual(stateUpdate.updatedFields.sort(), ["activeCommand", "lastUpdated"].sort());
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-research-phase 3/);
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-(ui-phase|plan-phase) 3/);
+  assert.match(stateBody, /Run \/blu-(ui-phase|plan-phase) 3/);
 });
