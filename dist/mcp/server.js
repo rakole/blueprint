@@ -24342,10 +24342,11 @@ function parseRoadmapDocument(raw) {
     }
     const phaseNumber = normalizePhaseNumber3(headerMatch[1]);
     const goal = body.match(/^\*\*Goal\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
+    const successCriteria = body.match(/^\*\*Success Criteria\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
     const requirements = parseRequirements(
       body.match(/^\*\*Requirements\*\*:\s*(.+)$/m)?.[1] ?? null
     );
-    details.set(phaseNumber, { goal, requirements });
+    details.set(phaseNumber, { goal, successCriteria, requirements });
   }
   const phases = [];
   for (const match of raw.matchAll(
@@ -24361,6 +24362,7 @@ function parseRoadmapDocument(raw) {
       completed: match[1].toLowerCase() === "x",
       summary: match[4]?.trim() ?? null,
       goal: detail?.goal ?? null,
+      successCriteria: detail?.successCriteria ?? null,
       requirements: detail?.requirements ?? []
     });
   }
@@ -25318,6 +25320,41 @@ async function readMappedCodebaseContext(projectRoot) {
     digest,
     warnings
   };
+}
+async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifact) {
+  if (!artifactPath) {
+    return {
+      present: false,
+      valid: null,
+      usable: false,
+      issues: [],
+      warnings: [],
+      unreadable: false
+    };
+  }
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+  try {
+    const raw = await fs4.readFile(absolutePath, "utf8");
+    const validation = validatePhaseArtifactContent(raw, artifact);
+    return {
+      present: true,
+      valid: validation.valid,
+      usable: validation.valid,
+      issues: validation.issues,
+      warnings: validation.warnings,
+      unreadable: false
+    };
+  } catch (error2) {
+    const reason = error2 instanceof Error && error2.message.trim().length > 0 ? error2.message : "unknown read failure";
+    return {
+      present: true,
+      valid: false,
+      usable: false,
+      issues: [`${artifactPath} could not be read: ${reason}.`],
+      warnings: [`${artifactPath} is stale, deleted, or unreadable: ${reason}.`],
+      unreadable: true
+    };
+  }
 }
 function buildLocateRecovery(reason) {
   if (!reason) {
@@ -26698,6 +26735,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
       completed: false,
       summary: null,
       goal: null,
+      successCriteria: null,
       requirements: []
     });
     promotedItems.push({
@@ -26860,6 +26898,12 @@ async function blueprintPhaseContext(args = {}) {
       phasePrefix: located.phasePrefix,
       phaseName: located.phaseName ?? matchedPhase?.phaseName ?? slugToTitle2(located.phaseDir),
       phaseDir: located.phaseDir,
+      roadmap: {
+        completed: matchedPhase?.completed ?? false,
+        summary: matchedPhase?.summary ?? null,
+        goal: matchedPhase?.goal ?? null,
+        successCriteria: matchedPhase?.successCriteria ?? null
+      },
       artifacts: {
         all: artifacts,
         context: findArtifact(artifacts, "-CONTEXT.md"),
@@ -26899,15 +26943,25 @@ async function blueprintPhaseContext(args = {}) {
   };
 }
 async function blueprintPhaseResearchStatus(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
   const context = await blueprintPhaseContext(args);
   const artifacts = context.phase?.artifacts;
+  const contextStatus = await evaluatePhaseArtifactUsability(
+    projectRoot,
+    artifacts?.context ?? null,
+    "context"
+  );
+  const uiSpecStatus = await evaluatePhaseArtifactUsability(
+    projectRoot,
+    artifacts?.uiSpec ?? null,
+    "ui-spec"
+  );
   const researchPath = artifacts?.research ?? null;
   let researchValid = null;
   let researchIssues = [];
   let researchUnreadable = false;
-  const warnings = [...context.warnings];
+  const warnings = [...context.warnings, ...contextStatus.warnings, ...uiSpecStatus.warnings];
   if (researchPath) {
-    const projectRoot = await ensureRepoRoot(args.cwd);
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs4.readFile(absolutePath, "utf8");
@@ -26927,18 +26981,39 @@ async function blueprintPhaseResearchStatus(args = {}) {
       );
     }
   }
+  const suggestedRepairs = [];
+  if (contextStatus.issues.length > 0) {
+    suggestedRepairs.push(
+      contextStatus.unreadable ? `Restore or regenerate ${artifacts?.context} with /blu-discuss-phase before planning.` : "Update the phase context through /blu-discuss-phase so it matches the required context schema before planning."
+    );
+  }
+  if (researchIssues.length > 0) {
+    suggestedRepairs.push(
+      researchUnreadable ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.` : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
+    );
+  }
+  if (uiSpecStatus.issues.length > 0) {
+    suggestedRepairs.push(
+      uiSpecStatus.unreadable ? `Restore or regenerate ${artifacts?.uiSpec} with /blu-ui-phase before planning.` : "Update the phase UI spec through /blu-ui-phase so it provides a usable contract or explicit skip rationale before planning."
+    );
+  }
   return {
-    hasContext: Boolean(artifacts?.context),
+    hasContext: contextStatus.present,
     hasResearch: Boolean(artifacts?.research),
-    hasUiSpec: Boolean(artifacts?.uiSpec),
+    hasUiSpec: uiSpecStatus.present,
+    hasUsableContext: contextStatus.usable,
+    hasUsableResearch: researchValid === true,
+    hasUsableUiSpec: uiSpecStatus.usable,
     contextPath: artifacts?.context ?? null,
     researchPath,
     uiSpecPath: artifacts?.uiSpec ?? null,
+    contextValid: contextStatus.valid,
+    contextIssues: contextStatus.issues,
     researchValid,
     researchIssues,
-    suggestedRepairs: researchIssues.length > 0 ? [
-      researchUnreadable ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.` : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
-    ] : [],
+    uiSpecValid: uiSpecStatus.valid,
+    uiSpecIssues: uiSpecStatus.issues,
+    suggestedRepairs,
     warnings
   };
 }
@@ -28730,13 +28805,13 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_context",
-        description: "Summarize a Blueprint phase's durable discovery artifacts and requirement mapping.",
+        description: "Summarize a Blueprint phase's roadmap slice, durable discovery artifacts, mapped codebase context, and requirement grounding.",
         inputSchema: phaseLookupInputSchema,
         handler: async (args) => blueprintPhaseContext(args)
       },
       {
         name: "blueprint_phase_research_status",
-        description: "Report whether a Blueprint phase already has context, research, and UI-spec artifacts.",
+        description: "Report whether a Blueprint phase already has context, research, and UI-spec artifacts, and whether each saved input is currently usable for planning.",
         inputSchema: phaseLookupInputSchema,
         handler: async (args) => blueprintPhaseResearchStatus(args)
       },

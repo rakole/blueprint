@@ -67,9 +67,11 @@ Interactive planning UX rules:
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
-- `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec}`
+- `blueprint_phase_context` -> `{phase: {roadmap}, codebase, requirements, missingArtifacts}`
+- `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, hasUsableContext, hasUsableResearch, hasUsableUiSpec, contextValid, contextIssues, researchValid, researchIssues, uiSpecValid, uiSpecIssues}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, validation, reason}`
+- `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
@@ -87,6 +89,8 @@ Interactive planning UX rules:
 - Do not seed `XX-YY-PLAN.md` with scaffold placeholders; draft the finished plan body before the first write.
 - `/blu-plan-phase` writes must use `validationMode: "strict"`; do not use warn-mode writes from this command.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone.
+- Use `blueprint_phase_context.phase.roadmap` as the current phase's roadmap goal and success slice; do not require a separate roadmap read just to recover the phase goal.
+- Read saved validation evidence through `blueprint_phase_validation_read` and saved review findings through `blueprint_review_load_findings` when those artifacts exist before replanning around validation or review feedback.
 - Before finalization, map every declared phase requirement and must-have to explicit plan coverage or a named blocker. If the phase is too broad for one coherent plan, split/prioritize it into smaller dependency-aware waves before writing.
 - Author plans at execution-prompt quality, not outline quality: concrete repo-relative `Read First` entries, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, goal-backward must-haves with observable truths/artifacts/key links, and full-fidelity coverage of locked context decisions.
 - Do not silently reduce scope with `v1`, placeholder, static-for-now, future-wiring, stub, or "will be wired later" language. If full fidelity does not fit, split, prioritize with user confirmation, or block.
