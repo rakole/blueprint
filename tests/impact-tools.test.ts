@@ -84,6 +84,67 @@ function surfaceFor(
   return surface;
 }
 
+type ImpactAnalysis = Awaited<ReturnType<typeof blueprintImpactAnalyze>>;
+
+function lowNoiseConfig(): Record<string, unknown> {
+  return {
+    ownership: {
+      sources: [],
+      fallbackReviewers: ["@reviewer"]
+    },
+    dependencyGraph: {
+      sources: []
+    }
+  };
+}
+
+function minimalPhase6Context(
+  commands: Record<string, Record<string, unknown>>
+): Record<string, unknown> {
+  return {
+    catalog: {
+      commands
+    },
+    runtime: {
+      registeredTools: [
+        "blueprint_command_catalog",
+        "blueprint_project_status",
+        ...IMPACT_TOOL_NAMES
+      ]
+    },
+    artifactContracts: []
+  };
+}
+
+function findingByCheck(analysis: ImpactAnalysis, checkId: string) {
+  return analysis.findings.find((finding) => finding.checkId === checkId);
+}
+
+function obligationTitles(analysis: ImpactAnalysis): string[] {
+  return analysis.obligations.map((obligation) => obligation.title);
+}
+
+function assertHasObligation(analysis: ImpactAnalysis, title: string): void {
+  assert.ok(
+    obligationTitles(analysis).includes(title),
+    `Expected obligation title: ${title}\nActual: ${obligationTitles(analysis).join("\n")}`
+  );
+}
+
+function assertEveryEvidenceRefIsNonEmpty(analysis: ImpactAnalysis): void {
+  for (const finding of analysis.findings) {
+    assert.ok(finding.evidenceRefs.length > 0, `${finding.id} should include evidence refs`);
+  }
+
+  for (const obligation of analysis.obligations) {
+    assert.ok(obligation.evidenceRefs.length > 0, `${obligation.id} should include evidence refs`);
+  }
+
+  for (const unknown of analysis.unknowns) {
+    assert.ok(unknown.evidenceRefs.length > 0, `${unknown.id} should include evidence refs`);
+  }
+}
+
 test("impact MCP skeleton tools are registered and satisfy the planned command tool substrate", async () => {
   for (const toolName of IMPACT_TOOL_NAMES) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
@@ -556,6 +617,7 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
       "secrets/prod.token",
       ".env.local",
       "docs/COMMAND-CATALOG.md",
+      "docs/RUNTIME-REFERENCE.md",
       "commands/blu-impact.toml",
       "docs/commands/impact.md",
       "src/mcp/server.ts",
@@ -592,6 +654,10 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
   ]);
   assert.deepEqual(surfaceFor(analysis, "docs/COMMAND-CATALOG.md").surfaces, [
     "command-catalog",
+    "docs"
+  ]);
+  assert.deepEqual(surfaceFor(analysis, "docs/RUNTIME-REFERENCE.md").surfaces, [
+    "runtime-reference",
     "docs"
   ]);
   assert.deepEqual(surfaceFor(analysis, "commands/blu-impact.toml").surfaces, [
@@ -703,7 +769,7 @@ test("impact downstream handlers stay read-only while analysis classification is
   assert.equal(scope.scope.kind, "description");
   assert.equal(scope.confidence.level, "low");
   assert.equal(analysis.impactStatus, "WARN");
-  assert.equal(analysis.phaseStatus, "ownership-dependencies-analyzed");
+  assert.equal(analysis.phaseStatus, "contract-obligations-analyzed");
   assert.equal(analysis.confidence.level, "low");
   assert.equal(write.status, "disabled");
   assert.equal(write.written, false);
@@ -1389,7 +1455,458 @@ test("impact analyze skips secret-like source import scanning without leaking im
   }
 });
 
-test("impact report writer and output renderer remain disabled placeholders for Phase 5 reports", async () => {
+test("impact analyze blocks implemented command substrate gaps from injected catalog context", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/commands/custom-command.md"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({
+      "custom-command": {
+        declaredStatus: "implemented",
+        status: "repairing",
+        implemented: false,
+        manifestPath: null,
+        specPath: "docs/commands/custom-command.md",
+        skillPath: null,
+        primarySkill: "blueprint-custom",
+        requiredTools: ["blueprint_missing_tool"],
+        requiredToolsSatisfied: false,
+        blockedBy: [
+          "Missing command manifest: commands/blu-custom-command.toml",
+          "Missing primary skill: skills/blueprint-custom/SKILL.md",
+          "Missing required MCP tool: blueprint_missing_tool"
+        ]
+      }
+    })
+  });
+
+  assert.equal(analysis.status, "BLOCK");
+  assert.equal(findingByCheck(analysis, "contract.command.manifest")?.status, "BLOCK");
+  assert.equal(findingByCheck(analysis, "contract.command.skill")?.status, "BLOCK");
+  assert.equal(findingByCheck(analysis, "contract.command.required-tools")?.status, "BLOCK");
+  const requiredToolFinding = findingByCheck(analysis, "contract.command.required-tools");
+  const requiredToolEvidence = analysis.evidence.find(
+    (entry) => entry.id === requiredToolFinding?.evidenceRefs[0]
+  );
+
+  assert.match(
+    JSON.stringify(requiredToolEvidence),
+    /Missing required MCP tool: blueprint_missing_tool/
+  );
+});
+
+test("impact analyze consumes registeredImpactTools runtime context for required tool gaps", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/commands/custom-command.md"],
+    config: lowNoiseConfig(),
+    context: {
+      catalog: {
+        commands: {
+          "custom-command": {
+            declaredStatus: "implemented",
+            status: "implemented",
+            implemented: true,
+            manifestPath: "commands/blu-custom-command.toml",
+            specPath: "docs/commands/custom-command.md",
+            skillPath: "skills/blueprint-custom/SKILL.md",
+            primarySkill: "blueprint-custom",
+            requiredTools: ["blueprint_missing_runtime_tool"],
+            requiredToolsSatisfied: true,
+            blockedBy: []
+          }
+        }
+      },
+      runtime: {
+        registeredImpactTools: [...IMPACT_TOOL_NAMES]
+      },
+      artifactContracts: []
+    }
+  });
+
+  const requiredToolFinding = findingByCheck(analysis, "contract.command.required-tools");
+  const requiredToolEvidence = analysis.evidence.find(
+    (entry) => entry.id === requiredToolFinding?.evidenceRefs[0]
+  );
+
+  assert.equal(analysis.status, "BLOCK");
+  assert.equal(requiredToolFinding?.status, "BLOCK");
+  assert.match(JSON.stringify(requiredToolEvidence), /blueprint_missing_runtime_tool/);
+  assert.doesNotMatch(JSON.stringify(requiredToolEvidence), /Missing required MCP tool:/);
+});
+
+test("impact analyze keeps planned impact missing manifest and skill expected", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["commands/blu-impact.toml"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({
+      impact: {
+        declaredStatus: "planned",
+        status: "blocked",
+        implemented: false,
+        manifestPath: null,
+        specPath: "docs/commands/impact.md",
+        skillPath: null,
+        requiredTools: [...IMPACT_TOOL_NAMES],
+        requiredToolsSatisfied: true,
+        blockedBy: [
+          "Missing command manifest: commands/blu-impact.toml",
+          "Missing primary skill: skills/blueprint-impact/SKILL.md"
+        ]
+      }
+    })
+  });
+
+  assert.equal(analysis.status, "WARN");
+  assert.equal(
+    analysis.findings.some((finding) => finding.checkId.startsWith("contract.command")),
+    false
+  );
+  assertHasObligation(analysis, "Command contract review required");
+});
+
+test("impact analyze emits explicit unknowns for omitted or malformed Phase 6 context", async () => {
+  const omitted = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["commands/blu-custom.toml"],
+    config: lowNoiseConfig(),
+    context: {}
+  });
+  const malformed = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/artifact-contracts/index.ts", "src/mcp/tools/impact.ts"],
+    config: lowNoiseConfig(),
+    context: {
+      catalog: {
+        commands: "not an object"
+      },
+      runtime: "not an object",
+      artifactContracts: {
+        bad: true
+      }
+    }
+  });
+
+  assert.ok(
+    omitted.unknowns.some((unknown) => unknown.id === "unknown.contract.catalog-context-missing")
+  );
+  assert.match(omitted.warnings.join("\n"), /omitted catalog data/);
+  assert.ok(
+    malformed.unknowns.some(
+      (unknown) => unknown.id === "unknown.contract.runtime-context-malformed"
+    )
+  );
+  assert.ok(
+    malformed.unknowns.some(
+      (unknown) => unknown.id === "unknown.contract.artifact-contract-context-malformed"
+    )
+  );
+  assert.match(malformed.warnings.join("\n"), /context\.runtime was not an object/);
+});
+
+test("impact analyze requires runtime context for command manifest surfaces", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["commands/blu-custom-command.toml"],
+    config: lowNoiseConfig(),
+    context: {
+      catalog: {
+        commands: {
+          "custom-command": {
+            declaredStatus: "implemented",
+            status: "implemented",
+            implemented: true,
+            manifestPath: "commands/blu-custom-command.toml",
+            specPath: "docs/commands/custom-command.md",
+            skillPath: "skills/blueprint-custom/SKILL.md",
+            primarySkill: "blueprint-custom",
+            requiredTools: ["blueprint_custom_tool"],
+            requiredToolsSatisfied: true,
+            blockedBy: []
+          }
+        }
+      },
+      artifactContracts: []
+    }
+  });
+
+  assert.ok(
+    analysis.unknowns.some((unknown) => unknown.id === "unknown.contract.runtime-context-missing")
+  );
+  assert.match(analysis.warnings.join("\n"), /omitted runtime data/);
+});
+
+test("impact analyze blocks router planned-command exposure review but not benign guardrail docs", async () => {
+  const context = minimalPhase6Context({
+    impact: {
+      declaredStatus: "planned",
+      status: "blocked",
+      implemented: false,
+      blockedBy: ["Missing command manifest: commands/blu-impact.toml"]
+    }
+  });
+  const router = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["commands/blu.toml"],
+    config: lowNoiseConfig(),
+    context
+  });
+  const guardrailDoc = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/commands/impact.md"],
+    config: lowNoiseConfig(),
+    context
+  });
+  const rootRouterDoc = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/commands/root-router.md"],
+    config: lowNoiseConfig(),
+    context
+  });
+
+  assert.equal(
+    findingByCheck(router, "contract.planned-command-exposure")?.title,
+    "planned command exposure requires review"
+  );
+  assert.equal(findingByCheck(router, "contract.planned-command-exposure")?.status, "BLOCK");
+  assert.equal(
+    findingByCheck(rootRouterDoc, "contract.planned-command-exposure")?.status,
+    "BLOCK"
+  );
+  assert.equal(findingByCheck(guardrailDoc, "contract.planned-command-exposure"), undefined);
+});
+
+test("impact analyze creates command review, docs, and metadata-test obligations", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["commands/blu-code-review.toml"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({})
+  });
+
+  assertHasObligation(analysis, "Command contract review required");
+  assertHasObligation(analysis, "Command documentation and runtime reference must be reviewed");
+  assertHasObligation(
+    analysis,
+    "Command metadata tests must cover command contract changes"
+  );
+});
+
+test("impact analyze creates docs and tests obligations for runtime reference changes", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/RUNTIME-REFERENCE.md"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({})
+  });
+
+  assertHasObligation(analysis, "Command documentation and runtime reference must be reviewed");
+  assertHasObligation(
+    analysis,
+    "Command metadata tests must cover command contract changes"
+  );
+});
+
+test("impact analyze creates MCP docs, tests, and dist/build obligations", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/tools/impact.ts"],
+    config: lowNoiseConfig()
+  });
+
+  assertHasObligation(analysis, "MCP tool documentation must be reviewed");
+  assertHasObligation(analysis, "MCP registry and contract tests must cover runtime changes");
+  assertHasObligation(analysis, "Runtime source changes require generated dist review");
+});
+
+test("impact analyze creates artifact schema, tests, and migration obligations", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/artifact-contracts/index.ts"],
+    config: lowNoiseConfig()
+  });
+
+  assertHasObligation(analysis, "Artifact schema documentation must be reviewed");
+  assertHasObligation(analysis, "Artifact contract tests must cover schema changes");
+  assertHasObligation(analysis, "Artifact compatibility and migration review required");
+});
+
+test("impact analyze creates skill and agent contract and metadata-test obligations", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["skills/blueprint-review/SKILL.md", "agents/blueprint-reviewer.md"],
+    config: lowNoiseConfig()
+  });
+
+  assertHasObligation(analysis, "Skill and agent contract review required");
+  assertHasObligation(analysis, "Skill and agent metadata tests must cover contract changes");
+});
+
+test("impact analyze creates extension deployment smoke and built-entrypoint obligations", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["gemini-extension.json"],
+    config: lowNoiseConfig()
+  });
+
+  assertHasObligation(analysis, "Extension deployment install smoke required");
+  assertHasObligation(analysis, "Built entrypoint must be verified");
+});
+
+test("impact analyze blocks missing dist/mcp/server.js for extension runtime readiness", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["gemini-extension.json"],
+      config: lowNoiseConfig()
+    });
+
+    assert.equal(analysis.status, "BLOCK");
+    assert.equal(findingByCheck(analysis, "build.dist-entrypoint")?.status, "BLOCK");
+    assert.match(
+      findingByCheck(analysis, "build.dist-entrypoint")?.title ?? "",
+      /Missing built entrypoint/
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze warns when runtime source changes lack dist coverage", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/tools/impact.ts"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(findingByCheck(analysis, "build.dist-coverage")?.status, "WARN");
+  assert.ok(
+    analysis.unknowns.some(
+      (unknown) => unknown.id === "unknown.obligation.build-dist-coverage"
+    )
+  );
+  assert.match(
+    analysis.warnings.join("\n"),
+    /without corresponding dist\/\*\* runtime bundle coverage/
+  );
+});
+
+test("impact analyze does not count declaration-only dist output as runtime bundle coverage", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/tools/impact.ts", "dist/mcp/tools/impact.d.ts"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(findingByCheck(analysis, "build.dist-coverage")?.status, "WARN");
+  assert.ok(
+    analysis.unknowns.some(
+      (unknown) => unknown.id === "unknown.obligation.build-dist-coverage"
+    )
+  );
+});
+
+test("impact analyze does not count unrelated hook bundles as MCP runtime coverage", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/tools/impact.ts", "dist/hooks/read-before-edit.js"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(findingByCheck(analysis, "build.dist-coverage")?.status, "WARN");
+  assert.ok(
+    analysis.unknowns.some(
+      (unknown) => unknown.id === "unknown.obligation.build-dist-coverage"
+    )
+  );
+});
+
+test("impact analyze warns on generated-only dist provenance", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["dist/mcp/server.js"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(findingByCheck(analysis, "build.generated-provenance")?.status, "WARN");
+  assert.ok(
+    analysis.unknowns.some(
+      (unknown) => unknown.id === "unknown.obligation.generated-dist-provenance"
+    )
+  );
+  assertHasObligation(analysis, "Generated output provenance must be verified");
+});
+
+test("impact analyze warns on generated-only hook bundle provenance", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["dist/hooks/read-before-edit.js"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(findingByCheck(analysis, "build.generated-provenance")?.status, "WARN");
+  assert.ok(
+    analysis.unknowns.some(
+      (unknown) => unknown.id === "unknown.obligation.generated-dist-provenance"
+    )
+  );
+  assertHasObligation(analysis, "Generated output provenance must be verified");
+});
+
+test("impact analyze keeps stable ids, deterministic sorting, and non-empty evidence refs", async () => {
+  const first = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: [
+      "src/mcp/tools/impact.ts",
+      "dist/mcp/server.js",
+      "commands/blu-code-review.toml"
+    ],
+    config: lowNoiseConfig()
+  });
+  const second = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: [
+      "commands/blu-code-review.toml",
+      "dist/mcp/server.js",
+      "src/mcp/tools/impact.ts"
+    ],
+    config: lowNoiseConfig()
+  });
+  const sortKeys = first.obligations.map(
+    (obligation) =>
+      `${obligation.status}:${obligation.severity}:${obligation.category}:${obligation.title}:${obligation.id}`
+  );
+
+  assert.deepEqual(
+    first.findings.map((finding) => finding.id),
+    second.findings.map((finding) => finding.id)
+  );
+  assert.deepEqual(
+    first.obligations.map((obligation) => obligation.id),
+    second.obligations.map((obligation) => obligation.id)
+  );
+  assert.deepEqual(sortKeys, [...sortKeys].sort());
+  assertEveryEvidenceRefIsNonEmpty(first);
+});
+
+test("impact analyze creates security, deployment, release, and test obligations for sensitive runtime surfaces", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: [".env.local", "package.json", "scripts/build.mjs", "hooks/hooks.json"],
+    config: lowNoiseConfig()
+  });
+  const categories = new Set(analysis.obligations.map((obligation) => obligation.category));
+
+  assert.ok(categories.has("security"));
+  assert.ok(categories.has("deployment"));
+  assert.ok(categories.has("release"));
+  assert.ok(categories.has("tests"));
+});
+
+test("impact report writer and output renderer remain disabled placeholders for Phase 6 reports", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["src/mcp/tools/impact.ts"],
@@ -1417,5 +1934,5 @@ test("impact report writer and output renderer remain disabled placeholders for 
   assert.equal(write.status, "disabled");
   assert.equal(write.written, false);
   assert.equal(rendered.phaseStatus, "placeholder");
-  assert.match(rendered.content, /Phase 5/);
+  assert.match(rendered.content, /Phase 6/);
 });

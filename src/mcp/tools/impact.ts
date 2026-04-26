@@ -8,12 +8,21 @@ import { promisify } from "node:util";
 import * as z from "zod/v4";
 
 import {
+  artifactToolDefinitions,
   ensureRepoRoot,
   getProjectRoot,
   toRepoRelativePath
 } from "./artifacts.js";
-import { blueprintConfigGet } from "./config.js";
-import { blueprintPhaseContext, blueprintRoadmapRead } from "./phase.js";
+import { blueprintConfigGet, configToolDefinitions } from "./config.js";
+import {
+  blueprintPhaseContext,
+  blueprintRoadmapRead,
+  phaseToolDefinitions
+} from "./phase.js";
+import { reviewToolDefinitions } from "./review.js";
+import { stateToolDefinitions } from "./state.js";
+import { updateToolDefinitions } from "./update.js";
+import { workspaceToolDefinitions } from "./workspace.js";
 import { listArtifactContracts } from "../artifact-contracts/index.js";
 import { resolveBlueprintRuntimeHost } from "../runtime-host.js";
 import {
@@ -194,6 +203,7 @@ type ImpactSurface =
   | "command-catalog"
   | "command-manifest"
   | "command-doc"
+  | "runtime-reference"
   | "mcp-server"
   | "mcp-tool"
   | "mcp-resource"
@@ -227,6 +237,7 @@ type ImpactSummaryRecord = {
 };
 
 type ImpactRuntimeContext = {
+  registeredTools: string[];
   registeredImpactTools: string[];
   implementationPhase: number;
   readOnly: boolean;
@@ -292,12 +303,13 @@ type ImpactAnalysisReport = Record<string, unknown> & {
   ownership: ImpactOwnershipAnalysis;
   dependencyGraph: ImpactDependencyAnalysis;
   findings: ImpactFindingRecord[];
+  obligations: ImpactObligationRecord[];
   unknowns: ImpactUnknownRecord[];
   evidence: ImpactEvidenceRecord[];
 };
 
 type ImpactAnalyzeResult = {
-  phaseStatus: "ownership-dependencies-analyzed";
+  phaseStatus: "contract-obligations-analyzed";
   impactId: string;
   status: ImpactStatus;
   impactStatus: ImpactStatus;
@@ -309,7 +321,7 @@ type ImpactAnalyzeResult = {
   ownership: ImpactOwnershipAnalysis;
   dependencyGraph: ImpactDependencyAnalysis;
   findings: ImpactFindingRecord[];
-  obligations: unknown[];
+  obligations: ImpactObligationRecord[];
   unknowns: ImpactUnknownRecord[];
   evidence: ImpactEvidenceRecord[];
   report: ImpactAnalysisReport;
@@ -318,7 +330,16 @@ type ImpactAnalyzeResult = {
 
 type ImpactEvidenceRecord = {
   id: string;
-  kind: "scope" | "surface" | "ownership" | "dependency" | "metadata" | "config";
+  kind:
+    | "scope"
+    | "surface"
+    | "ownership"
+    | "dependency"
+    | "metadata"
+    | "config"
+    | "contract"
+    | "obligation"
+    | "build";
   source: string;
   summary: string;
   paths: string[];
@@ -353,6 +374,28 @@ type ImpactFindingRecord = {
   impactedFiles: string[];
   impactedAreas: string[];
   owners: string[];
+  requiredActions: string[];
+  evidenceRefs: string[];
+};
+
+type ImpactObligationCategory =
+  | "contract-review"
+  | "docs"
+  | "tests"
+  | "release"
+  | "migration"
+  | "security"
+  | "deployment"
+  | "build";
+
+type ImpactObligationRecord = {
+  id: string;
+  category: ImpactObligationCategory;
+  title: string;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  status: ImpactStatus;
+  impactedFiles: string[];
+  sourceSurfaces: ImpactSurface[];
   requiredActions: string[];
   evidenceRefs: string[];
 };
@@ -447,17 +490,23 @@ type RoadmapPhaseLike = {
   requirements: string[];
 };
 
+type CommandCatalogEntryLike = {
+  command?: unknown;
+  route?: unknown;
+  primarySkill?: unknown;
+  declaredStatus?: unknown;
+  status?: unknown;
+  implemented?: unknown;
+  blockedBy?: unknown;
+  manifestPath?: unknown;
+  skillPath?: unknown;
+  specPath?: unknown;
+  requiredTools?: unknown;
+  requiredToolsSatisfied?: unknown;
+};
+
 type CommandCatalogLike = {
-  commands?: Record<
-    string,
-    {
-      implemented?: boolean;
-      manifestPath?: string | null;
-      specPath?: string | null;
-      skillPath?: string | null;
-      blockedBy?: string[];
-    }
-  >;
+  commands?: Record<string, CommandCatalogEntryLike>;
 };
 
 type PackageJsonLike = {
@@ -506,11 +555,16 @@ const IMPACT_TOOL_NAMES = [
   "blueprint_impact_report_write",
   "blueprint_impact_output_render"
 ] as const;
+const PROJECT_RUNTIME_TOOL_NAMES = [
+  "blueprint_command_catalog",
+  "blueprint_project_init",
+  "blueprint_project_status"
+] as const;
 
 const IMPACT_PLACEHOLDER_WARNING =
-  "/blu-impact Phase 5 config, scope, context, surface, ownership, and dependency analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
+  "/blu-impact Phase 6 config, scope, context, surface, ownership, dependency, contract, and obligation analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
 const IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
-const PLACEHOLDER_IMPACT_ID = "impact-phase-5-placeholder";
+const PLACEHOLDER_IMPACT_ID = "impact-phase-6-placeholder";
 const OWNERSHIP_SCHEMA_VERSION = "blueprint.impact.ownership.v1";
 const DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
 const IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
@@ -543,23 +597,24 @@ const IMPACT_SURFACE_PRIORITY: Record<ImpactSurface, number> = {
   "command-catalog": 3,
   "command-manifest": 4,
   "command-doc": 5,
-  "mcp-server": 6,
-  "mcp-tool": 7,
-  "mcp-resource": 8,
-  "artifact-contract": 9,
-  skill: 10,
-  agent: 11,
-  "extension-manifest": 12,
-  hook: 13,
-  "package-runtime": 14,
-  "build-config": 15,
-  test: 16,
-  docs: 17,
-  generated: 18,
-  config: 19,
-  source: 20,
-  "repo-root": 21,
-  unknown: 22
+  "runtime-reference": 6,
+  "mcp-server": 7,
+  "mcp-tool": 8,
+  "mcp-resource": 9,
+  "artifact-contract": 10,
+  skill: 11,
+  agent: 12,
+  "extension-manifest": 13,
+  hook: 14,
+  "package-runtime": 15,
+  "build-config": 16,
+  test: 17,
+  docs: 18,
+  generated: 19,
+  config: 20,
+  source: 21,
+  "repo-root": 22,
+  unknown: 23
 };
 const SOURCE_FILE_EXTENSIONS = new Set([
   ".cjs",
@@ -929,6 +984,7 @@ function areaForSurface(surface: ImpactSurface): string {
       "command-catalog",
       "command-manifest",
       "command-doc",
+      "runtime-reference",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -996,6 +1052,11 @@ function classifyImpactFile(filePath: string): ImpactSurfaceRecord {
   if (normalizedPath === "docs/COMMAND-CATALOG.md") {
     addSurfaceRule(rules, "command-catalog", "Command catalog documentation changed.");
     addSurfaceRule(rules, "docs", "Command catalog is a documentation surface.");
+  }
+
+  if (normalizedPath === "docs/RUNTIME-REFERENCE.md") {
+    addSurfaceRule(rules, "runtime-reference", "Runtime reference contract documentation changed.");
+    addSurfaceRule(rules, "docs", "Runtime reference is a documentation surface.");
   }
 
   if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
@@ -1191,6 +1252,20 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter((value) => value.trim().length > 0))].sort();
 }
 
+function allRegisteredRuntimeToolNames(): string[] {
+  return uniqueSorted([
+    ...PROJECT_RUNTIME_TOOL_NAMES,
+    ...configToolDefinitions.map((definition) => definition.name),
+    ...stateToolDefinitions.map((definition) => definition.name),
+    ...phaseToolDefinitions.map((definition) => definition.name),
+    ...reviewToolDefinitions.map((definition) => definition.name),
+    ...artifactToolDefinitions.map((definition) => definition.name),
+    ...impactToolDefinitions.map((definition) => definition.name),
+    ...updateToolDefinitions.map((definition) => definition.name),
+    ...workspaceToolDefinitions.map((definition) => definition.name)
+  ]);
+}
+
 function stableRecordId(prefix: string, seed: unknown): string {
   return `${prefix}.${stableHash(seed)}`;
 }
@@ -1227,6 +1302,44 @@ function sortFindings(records: ImpactFindingRecord[]): ImpactFindingRecord[] {
       findingSeverityRank(left.severity) - findingSeverityRank(right.severity) ||
       left.impactedAreas.join(",").localeCompare(right.impactedAreas.join(",")) ||
       left.checkId.localeCompare(right.checkId) ||
+      left.id.localeCompare(right.id)
+  );
+}
+
+function sortObligations(records: ImpactObligationRecord[]): ImpactObligationRecord[] {
+  const deduped = new Map<string, ImpactObligationRecord>();
+
+  for (const record of records) {
+    const existing = deduped.get(record.id);
+
+    if (!existing) {
+      deduped.set(record.id, {
+        ...record,
+        impactedFiles: uniqueSorted(record.impactedFiles),
+        sourceSurfaces: [...new Set(record.sourceSurfaces)].sort(compareImpactSurfaces),
+        requiredActions: uniqueSorted(record.requiredActions),
+        evidenceRefs: uniqueSorted(record.evidenceRefs)
+      });
+      continue;
+    }
+
+    deduped.set(record.id, {
+      ...existing,
+      impactedFiles: uniqueSorted([...existing.impactedFiles, ...record.impactedFiles]),
+      sourceSurfaces: [...new Set([...existing.sourceSurfaces, ...record.sourceSurfaces])].sort(
+        compareImpactSurfaces
+      ),
+      requiredActions: uniqueSorted([...existing.requiredActions, ...record.requiredActions]),
+      evidenceRefs: uniqueSorted([...existing.evidenceRefs, ...record.evidenceRefs])
+    });
+  }
+
+  return [...deduped.values()].sort(
+    (left, right) =>
+      findingStatusRank(left.status) - findingStatusRank(right.status) ||
+      findingSeverityRank(left.severity) - findingSeverityRank(right.severity) ||
+      left.category.localeCompare(right.category) ||
+      left.title.localeCompare(right.title) ||
       left.id.localeCompare(right.id)
   );
 }
@@ -1305,6 +1418,7 @@ function isContractLikeSurface(record: ImpactSurfaceRecord): boolean {
       "command-catalog",
       "command-manifest",
       "command-doc",
+      "runtime-reference",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -2799,6 +2913,1071 @@ async function loadDependencyAnalysis(
   };
 }
 
+type Phase6Context = {
+  catalog: CommandCatalogLike | null;
+  commandAssets: Record<string, unknown> | null;
+  runtime: Record<string, unknown> | null;
+  artifactContracts: unknown[] | null;
+  provided: boolean;
+};
+
+function hasOwnContextKey(context: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(context, key);
+}
+
+function catalogEntries(catalog: CommandCatalogLike): Array<[string, CommandCatalogEntryLike]> {
+  return Object.entries(catalog.commands ?? {})
+    .filter(([, entry]) => isPlainObject(entry))
+    .sort(([left], [right]) => left.localeCompare(right)) as Array<
+    [string, CommandCatalogEntryLike]
+  >;
+}
+
+function contextRequiresCatalog(surfaces: ImpactSurfaceRecord[]): boolean {
+  return surfaces.some((surface) =>
+    surface.surfaces.some((name) =>
+      [
+        "command-catalog",
+        "command-manifest",
+        "command-doc",
+        "runtime-reference",
+        "mcp-resource"
+      ].includes(name)
+    )
+  );
+}
+
+function contextRequiresRuntime(surfaces: ImpactSurfaceRecord[]): boolean {
+  return surfaces.some((surface) =>
+    surface.surfaces.some((name) =>
+      [
+        "command-catalog",
+        "command-manifest",
+        "command-doc",
+        "runtime-reference",
+        "mcp-server",
+        "mcp-tool",
+        "mcp-resource",
+        "extension-manifest"
+      ].includes(name)
+    )
+  );
+}
+
+function contextRequiresArtifactContracts(surfaces: ImpactSurfaceRecord[]): boolean {
+  return surfaces.some((surface) => surface.surfaces.includes("artifact-contract"));
+}
+
+function addContextUnknown(
+  evidence: ImpactEvidenceRecord[],
+  unknowns: ImpactUnknownRecord[],
+  warnings: string[],
+  options: {
+    id: string;
+    title: string;
+    reason: string;
+    resolution: string;
+    impactedFiles: string[];
+    contextKey: string;
+  }
+): void {
+  warnings.push(options.reason);
+  const evidenceRef = addEvidence(evidence, {
+    kind: "contract",
+    source: "phase-6-context",
+    summary: options.reason,
+    paths: options.impactedFiles,
+    data: { contextKey: options.contextKey }
+  });
+  unknowns.push({
+    id: options.id,
+    category: "contract",
+    title: options.title,
+    severity: "HIGH",
+    impactedFiles: options.impactedFiles,
+    reason: options.reason,
+    resolution: options.resolution,
+    evidenceRefs: [evidenceRef]
+  });
+}
+
+async function resolvePhase6Context(
+  projectRoot: string,
+  providedContext: Record<string, unknown> | undefined,
+  surfaces: ImpactSurfaceRecord[],
+  evidence: ImpactEvidenceRecord[],
+  unknowns: ImpactUnknownRecord[],
+  warnings: string[]
+): Promise<Phase6Context> {
+  const contractFiles = surfaces.filter(isContractLikeSurface).map((surface) => surface.path);
+  const requireCatalog = contextRequiresCatalog(surfaces);
+  const requireRuntime = contextRequiresRuntime(surfaces);
+  const requireArtifactContracts = contextRequiresArtifactContracts(surfaces);
+
+  if (!providedContext) {
+    let catalog: CommandCatalogLike | null = null;
+    let commandAssets: Record<string, unknown> | null = null;
+    let artifactContracts: unknown[] | null = null;
+    const runtime: Record<string, unknown> = {
+      registeredTools: allRegisteredRuntimeToolNames(),
+      registeredImpactTools: [...IMPACT_TOOL_NAMES],
+      implementationPhase: 6,
+      readOnly: true,
+      includeRuntime: true,
+      includeCatalog: true,
+      includeArtifacts: true
+    };
+
+    try {
+      const loadedCatalog = await loadCommandCatalog();
+
+      if (isPlainObject(loadedCatalog) && isPlainObject(loadedCatalog.commands)) {
+        catalog = loadedCatalog as CommandCatalogLike;
+        commandAssets = buildCommandAssets(loadedCatalog) as unknown as Record<string, unknown>;
+      } else if (requireCatalog) {
+        addContextUnknown(evidence, unknowns, warnings, {
+          id: "unknown.contract.catalog-context-malformed",
+          title: "Command catalog context is malformed",
+          reason:
+            "Live command catalog context was loaded for Phase 6 analysis, but it did not expose a commands object.",
+          resolution:
+            "Repair the command catalog projection before treating command contract safety as known.",
+          impactedFiles: contractFiles,
+          contextKey: "catalog"
+        });
+      }
+    } catch (error) {
+      if (requireCatalog) {
+        addContextUnknown(evidence, unknowns, warnings, {
+          id: "unknown.contract.catalog-context-missing",
+          title: "Command catalog context is unavailable",
+          reason: `Live command catalog context could not be loaded for Phase 6 analysis: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          resolution:
+            "Load or provide command catalog context before treating command contract safety as known.",
+          impactedFiles: contractFiles,
+          contextKey: "catalog"
+        });
+      }
+    }
+
+    try {
+      artifactContracts = listArtifactContracts();
+    } catch (error) {
+      if (requireArtifactContracts) {
+        addContextUnknown(evidence, unknowns, warnings, {
+          id: "unknown.contract.artifact-contract-context-missing",
+          title: "Artifact contract context is unavailable",
+          reason: `Live artifact contract context could not be loaded for Phase 6 analysis: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          resolution:
+            "Load artifact contract context before treating artifact compatibility as known.",
+          impactedFiles: surfaces
+            .filter((surface) => surface.surfaces.includes("artifact-contract"))
+            .map((surface) => surface.path),
+          contextKey: "artifactContracts"
+        });
+      }
+    }
+
+    return {
+      catalog,
+      commandAssets,
+      runtime,
+      artifactContracts,
+      provided: false
+    };
+  }
+
+  const catalogValue = providedContext.catalog;
+  const commandAssetsValue = providedContext.commandAssets;
+  const runtimeValue = providedContext.runtime;
+  const artifactContractsValue = providedContext.artifactContracts;
+  let catalog: CommandCatalogLike | null = null;
+  let commandAssets: Record<string, unknown> | null = null;
+  let runtime: Record<string, unknown> | null = null;
+  let artifactContracts: unknown[] | null = null;
+
+  if (isPlainObject(catalogValue) && isPlainObject(catalogValue.commands)) {
+    catalog = catalogValue as CommandCatalogLike;
+  } else if (requireCatalog) {
+    addContextUnknown(evidence, unknowns, warnings, {
+      id: hasOwnContextKey(providedContext, "catalog")
+        ? "unknown.contract.catalog-context-malformed"
+        : "unknown.contract.catalog-context-missing",
+      title: hasOwnContextKey(providedContext, "catalog")
+        ? "Command catalog context is malformed"
+        : "Command catalog context is missing",
+      reason: hasOwnContextKey(providedContext, "catalog")
+        ? "Provided Phase 6 context.catalog did not expose a commands object."
+        : "Provided Phase 6 context omitted catalog data for command-like changed surfaces.",
+      resolution:
+        "Provide context.catalog from blueprint_command_catalog or omit context so live read-only catalog loading can run.",
+      impactedFiles: contractFiles,
+      contextKey: "catalog"
+    });
+  }
+
+  if (isPlainObject(commandAssetsValue)) {
+    commandAssets = commandAssetsValue;
+  }
+
+  if (isPlainObject(runtimeValue)) {
+    runtime = runtimeValue;
+  } else if (requireRuntime) {
+    addContextUnknown(evidence, unknowns, warnings, {
+      id: hasOwnContextKey(providedContext, "runtime")
+        ? "unknown.contract.runtime-context-malformed"
+        : "unknown.contract.runtime-context-missing",
+      title: hasOwnContextKey(providedContext, "runtime")
+        ? "Runtime tool context is malformed"
+        : "Runtime tool context is missing",
+      reason: hasOwnContextKey(providedContext, "runtime")
+        ? "Provided Phase 6 context.runtime was not an object."
+        : "Provided Phase 6 context omitted runtime data for command, MCP, or extension changed surfaces.",
+      resolution:
+        "Provide runtime tool context or omit context so live read-only runtime loading can run.",
+      impactedFiles: contractFiles,
+      contextKey: "runtime"
+    });
+  }
+
+  if (Array.isArray(artifactContractsValue)) {
+    artifactContracts = artifactContractsValue;
+  } else if (requireArtifactContracts) {
+    addContextUnknown(evidence, unknowns, warnings, {
+      id: hasOwnContextKey(providedContext, "artifactContracts")
+        ? "unknown.contract.artifact-contract-context-malformed"
+        : "unknown.contract.artifact-contract-context-missing",
+      title: hasOwnContextKey(providedContext, "artifactContracts")
+        ? "Artifact contract context is malformed"
+        : "Artifact contract context is missing",
+      reason: hasOwnContextKey(providedContext, "artifactContracts")
+        ? "Provided Phase 6 context.artifactContracts was not an array."
+        : "Provided Phase 6 context omitted artifactContracts for artifact contract changed surfaces.",
+      resolution:
+        "Provide context.artifactContracts from blueprint_artifact_contract_read/listArtifactContracts or omit context so live read-only artifact loading can run.",
+      impactedFiles: surfaces
+        .filter((surface) => surface.surfaces.includes("artifact-contract"))
+        .map((surface) => surface.path),
+      contextKey: "artifactContracts"
+    });
+  }
+
+  return {
+    catalog,
+    commandAssets,
+    runtime,
+    artifactContracts,
+    provided: true
+  };
+}
+
+function extractBlockedBy(entry: CommandCatalogEntryLike): string[] {
+  return extractStringArray(entry.blockedBy);
+}
+
+function extractRequiredTools(entry: CommandCatalogEntryLike): string[] {
+  return extractStringArray(entry.requiredTools);
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function pathFromBlockedBy(blockedBy: string[], prefix: string): string | null {
+  const row = blockedBy.find((item) => item.startsWith(prefix));
+
+  return row ? row.slice(prefix.length).trim() || null : null;
+}
+
+function expectedCommandManifestPath(commandName: string): string {
+  return commandName === "blu" ? "commands/blu.toml" : `commands/blu-${commandName}.toml`;
+}
+
+function expectedCommandSpecPath(commandName: string): string {
+  return commandName === "blu" ? "docs/commands/blu.md" : `docs/commands/${commandName}.md`;
+}
+
+function expectedSkillPath(entry: CommandCatalogEntryLike): string | null {
+  const primarySkill = stringValue(entry.primarySkill);
+
+  return primarySkill ? `skills/${primarySkill}/SKILL.md` : null;
+}
+
+function registeredRuntimeToolNames(runtime: Record<string, unknown> | null): Set<string> | null {
+  if (!runtime) {
+    return null;
+  }
+
+  const keys = ["registeredTools", "toolNames", "availableTools", "registeredImpactTools"];
+  const names = keys.flatMap((key) => extractStringArray(runtime[key]));
+
+  return names.length > 0 ? new Set(names) : null;
+}
+
+function addCommandSubstrateFinding(
+  findings: ImpactFindingRecord[],
+  evidence: ImpactEvidenceRecord[],
+  commandName: string,
+  entry: CommandCatalogEntryLike,
+  asset: "spec" | "manifest" | "skill" | "required-tools",
+  impactedFiles: string[],
+  requiredActions: string[],
+  extraData: Record<string, unknown> = {}
+): void {
+  const blockedBy = extractBlockedBy(entry);
+  const evidenceRef = addEvidence(evidence, {
+    kind: "contract",
+    source: "command-substrate",
+    summary:
+      "A command declared implemented is missing required runtime substrate according to catalog blockedBy evidence.",
+    paths: impactedFiles,
+    data: {
+      command: commandName,
+      asset,
+      declaredStatus: entry.declaredStatus,
+      status: entry.status,
+      implemented: entry.implemented,
+      blockedBy,
+      ...extraData
+    }
+  });
+  const titleByAsset = {
+    spec: "Implemented command missing command spec",
+    manifest: "Implemented command missing command manifest",
+    skill: "Implemented command missing primary skill",
+    "required-tools": "Implemented command missing required MCP tool"
+  } as const;
+
+  findings.push({
+    id: `finding.contract.command-substrate.${sanitizeIdentifier(commandName)}.${asset}`,
+    checkId: `contract.command.${asset}`,
+    title: titleByAsset[asset],
+    severity: "CRITICAL",
+    status: "BLOCK",
+    confidence: 0.9,
+    impactedFiles,
+    impactedAreas: ["blueprint-runtime"],
+    owners: [],
+    requiredActions,
+    evidenceRefs: [evidenceRef]
+  });
+}
+
+function analyzeImplementedCommandSubstrate(
+  catalog: CommandCatalogLike | null,
+  runtime: Record<string, unknown> | null,
+  findings: ImpactFindingRecord[],
+  evidence: ImpactEvidenceRecord[]
+): void {
+  if (!catalog) {
+    return;
+  }
+
+  const runtimeToolNames = registeredRuntimeToolNames(runtime);
+
+  for (const [commandName, entry] of catalogEntries(catalog)) {
+    if (entry.declaredStatus !== "implemented") {
+      continue;
+    }
+
+    const blockedBy = extractBlockedBy(entry);
+    const specPath =
+      stringValue(entry.specPath) ??
+      pathFromBlockedBy(blockedBy, "Missing command spec: ") ??
+      expectedCommandSpecPath(commandName);
+    const manifestPath =
+      stringValue(entry.manifestPath) ??
+      pathFromBlockedBy(blockedBy, "Missing command manifest: ") ??
+      expectedCommandManifestPath(commandName);
+    const skillPath =
+      stringValue(entry.skillPath) ??
+      pathFromBlockedBy(blockedBy, "Missing primary skill: ") ??
+      expectedSkillPath(entry);
+    const missingRequiredToolsFromBlockedBy = uniqueSorted(
+      blockedBy
+        .filter((item) => item.startsWith("Missing required MCP tool: "))
+        .map((item) => item.slice("Missing required MCP tool: ".length).trim())
+    );
+    const missingRequiredToolsFromRuntime =
+      runtimeToolNames && extractRequiredTools(entry).length > 0
+        ? extractRequiredTools(entry).filter((toolName) => !runtimeToolNames.has(toolName))
+        : [];
+    const missingRequiredTools = uniqueSorted([
+      ...missingRequiredToolsFromBlockedBy,
+      ...missingRequiredToolsFromRuntime,
+      ...(entry.requiredToolsSatisfied === false &&
+      missingRequiredToolsFromBlockedBy.length === 0 &&
+      missingRequiredToolsFromRuntime.length === 0
+        ? ["unknown-required-tool"]
+        : [])
+    ]);
+
+    if (!stringValue(entry.specPath) || blockedBy.some((item) => item.startsWith("Missing command spec: "))) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "spec",
+        [specPath],
+        [
+          `Restore ${specPath} before ${commandName} can remain declared implemented.`,
+          "Keep the command out of runnable routing until the catalog substrate is complete."
+        ]
+      );
+    }
+
+    if (
+      !stringValue(entry.manifestPath) ||
+      blockedBy.some((item) => item.startsWith("Missing command manifest: "))
+    ) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "manifest",
+        [manifestPath],
+        [
+          `Restore ${manifestPath} before ${commandName} can remain declared implemented.`,
+          "Keep the command out of runnable routing until the catalog substrate is complete."
+        ]
+      );
+    }
+
+    if (!stringValue(entry.skillPath) || blockedBy.some((item) => item.startsWith("Missing primary skill: "))) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "skill",
+        skillPath ? [skillPath] : [],
+        [
+          "Restore the declared primary skill before this command can remain declared implemented.",
+          "Keep the command out of runnable routing until the catalog substrate is complete."
+        ]
+      );
+    }
+
+    if (missingRequiredTools.length > 0) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "required-tools",
+        [],
+        [
+          `Register or restore missing required MCP tools: ${missingRequiredTools.join(", ")}.`,
+          "Keep the command out of runnable routing until all required tools are present."
+        ],
+        { missingRequiredTools }
+      );
+    }
+  }
+}
+
+function nonImplementedCommandsFromContext(
+  catalog: CommandCatalogLike | null,
+  commandAssets: Record<string, unknown> | null
+): string[] {
+  if (catalog) {
+    return catalogEntries(catalog)
+      .filter(([, entry]) => entry.implemented !== true || entry.status !== "implemented")
+      .map(([command]) => command)
+      .sort();
+  }
+
+  return commandAssets ? extractStringArray(commandAssets.nonRoutableCommands) : [];
+}
+
+function isRouterHelpProgressNextSurface(filePath: string): boolean {
+  return (
+    /^(?:commands\/blu(?:-(?:help|progress|next))?\.toml)$/u.test(filePath) ||
+    /^docs\/commands\/(?:root-router|help|progress|next)\.md$/u.test(filePath) ||
+    filePath === "src/mcp/command-resources.ts" ||
+    filePath === "src/mcp/tools/project.ts"
+  );
+}
+
+function analyzePlannedCommandExposure(
+  files: string[],
+  catalog: CommandCatalogLike | null,
+  commandAssets: Record<string, unknown> | null,
+  findings: ImpactFindingRecord[],
+  evidence: ImpactEvidenceRecord[]
+): void {
+  const routerFiles = files.filter(isRouterHelpProgressNextSurface);
+
+  if (routerFiles.length === 0) {
+    return;
+  }
+
+  const nonImplementedCommands = nonImplementedCommandsFromContext(catalog, commandAssets);
+
+  if (nonImplementedCommands.length === 0) {
+    return;
+  }
+
+  const evidenceRef = addEvidence(evidence, {
+    kind: "contract",
+    source: "planned-command-exposure",
+    summary:
+      "Router/help/progress/next surfaces changed while non-implemented commands exist in catalog context.",
+    paths: routerFiles,
+    data: {
+      nonImplementedCommands
+    }
+  });
+
+  findings.push({
+    id: "finding.contract.planned-command-exposure.requires-review",
+    checkId: "contract.planned-command-exposure",
+    title: "planned command exposure requires review",
+    severity: "HIGH",
+    status: "BLOCK",
+    confidence: 0.74,
+    impactedFiles: routerFiles,
+    impactedAreas: ["blueprint-runtime"],
+    owners: [],
+    requiredActions: [
+      "Verify router, help, progress, and next surfaces did not recommend or route non-implemented commands.",
+      "Keep planned commands non-routable until their catalog entry is implemented."
+    ],
+    evidenceRefs: [evidenceRef]
+  });
+}
+
+function addObligation(
+  obligations: ImpactObligationRecord[],
+  evidence: ImpactEvidenceRecord[],
+  options: {
+    category: ImpactObligationCategory;
+    title: string;
+    severity: ImpactObligationRecord["severity"];
+    status?: ImpactStatus;
+    impactedFiles: string[];
+    sourceSurfaces: ImpactSurface[];
+    requiredActions: string[];
+    evidenceKind?: ImpactEvidenceRecord["kind"];
+    source?: string;
+  }
+): void {
+  if (options.impactedFiles.length === 0) {
+    return;
+  }
+
+  const evidenceRef = addEvidence(evidence, {
+    kind: options.evidenceKind ?? "obligation",
+    source: options.source ?? "surface-obligation",
+    summary: options.title,
+    paths: options.impactedFiles,
+    data: {
+      category: options.category,
+      sourceSurfaces: options.sourceSurfaces
+    }
+  });
+
+  obligations.push({
+    id: `obligation.${options.category}.${sanitizeIdentifier(options.title)}`,
+    category: options.category,
+    title: options.title,
+    severity: options.severity,
+    status: options.status ?? "WARN",
+    impactedFiles: options.impactedFiles,
+    sourceSurfaces: options.sourceSurfaces,
+    requiredActions: options.requiredActions,
+    evidenceRefs: [evidenceRef]
+  });
+}
+
+function filesWithAnySurface(
+  surfaces: ImpactSurfaceRecord[],
+  surfaceNames: ImpactSurface[]
+): string[] {
+  return surfaces
+    .filter((surface) => surfaceNames.some((name) => surface.surfaces.includes(name)))
+    .map((surface) => surface.path)
+    .sort();
+}
+
+function addSurfaceObligations(
+  surfaces: ImpactSurfaceRecord[],
+  obligations: ImpactObligationRecord[],
+  evidence: ImpactEvidenceRecord[]
+): void {
+  const commandFiles = filesWithAnySurface(surfaces, [
+    "command-catalog",
+    "command-manifest",
+    "command-doc",
+    "runtime-reference"
+  ]);
+  const mcpFiles = filesWithAnySurface(surfaces, ["mcp-server", "mcp-tool", "mcp-resource"]);
+  const artifactFiles = filesWithAnySurface(surfaces, ["artifact-contract"]);
+  const skillAgentFiles = filesWithAnySurface(surfaces, ["skill", "agent"]);
+  const extensionFiles = filesWithAnySurface(surfaces, ["extension-manifest"]);
+  const hookFiles = filesWithAnySurface(surfaces, ["hook"]);
+  const packageBuildFiles = filesWithAnySurface(surfaces, ["package-runtime", "build-config"]);
+  const sensitiveConfigFiles = filesWithAnySurface(surfaces, [
+    "secret-sensitive",
+    "env-config"
+  ]);
+
+  addObligation(obligations, evidence, {
+    category: "contract-review",
+    title: "Command contract review required",
+    severity: "HIGH",
+    impactedFiles: commandFiles,
+    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    requiredActions: [
+      "Review command manifest, command documentation, catalog status, and routing expectations together."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "docs",
+    title: "Command documentation and runtime reference must be reviewed",
+    severity: "MEDIUM",
+    impactedFiles: commandFiles,
+    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    requiredActions: [
+      "Verify command docs, MCP tool docs, and runtime reference remain aligned with the changed command surface."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "Command metadata tests must cover command contract changes",
+    severity: "MEDIUM",
+    impactedFiles: commandFiles,
+    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    requiredActions: [
+      "Add or update command catalog, routing, and metadata regression tests for the changed command surface."
+    ]
+  });
+
+  addObligation(obligations, evidence, {
+    category: "docs",
+    title: "MCP tool documentation must be reviewed",
+    severity: "MEDIUM",
+    impactedFiles: mcpFiles,
+    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    requiredActions: [
+      "Update docs/MCP-TOOLS.md and runtime-reference notes for changed MCP tools or resources."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "MCP registry and contract tests must cover runtime changes",
+    severity: "HIGH",
+    impactedFiles: mcpFiles,
+    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    requiredActions: [
+      "Run or add tests that prove MCP registration, tool schema, and resource contract behavior."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "build",
+    title: "Runtime source changes require generated dist review",
+    severity: "HIGH",
+    impactedFiles: mcpFiles,
+    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    requiredActions: ["Run the build and verify dist output provenance for runtime source changes."],
+    evidenceKind: "build"
+  });
+
+  addObligation(obligations, evidence, {
+    category: "docs",
+    title: "Artifact schema documentation must be reviewed",
+    severity: "MEDIUM",
+    impactedFiles: artifactFiles,
+    sourceSurfaces: ["artifact-contract"],
+    requiredActions: [
+      "Verify docs describe any artifact heading, template, or report contract compatibility changes."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "Artifact contract tests must cover schema changes",
+    severity: "HIGH",
+    impactedFiles: artifactFiles,
+    sourceSurfaces: ["artifact-contract"],
+    requiredActions: [
+      "Add or update artifact-contract tests for required headings, locked markers, and template compatibility."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "migration",
+    title: "Artifact compatibility and migration review required",
+    severity: "HIGH",
+    impactedFiles: artifactFiles,
+    sourceSurfaces: ["artifact-contract"],
+    requiredActions: [
+      "Review whether existing .blueprint artifacts need compatibility notes or migration guidance."
+    ]
+  });
+
+  addObligation(obligations, evidence, {
+    category: "contract-review",
+    title: "Skill and agent contract review required",
+    severity: "HIGH",
+    impactedFiles: skillAgentFiles,
+    sourceSurfaces: ["skill", "agent"],
+    requiredActions: [
+      "Review skill and agent frontmatter, tool boundaries, and command contract alignment."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "Skill and agent metadata tests must cover contract changes",
+    severity: "MEDIUM",
+    impactedFiles: skillAgentFiles,
+    sourceSurfaces: ["skill", "agent"],
+    requiredActions: [
+      "Run or update metadata tests that validate skill and agent discoverability and contracts."
+    ]
+  });
+
+  addObligation(obligations, evidence, {
+    category: "deployment",
+    title: "Extension deployment install smoke required",
+    severity: "HIGH",
+    impactedFiles: extensionFiles,
+    sourceSurfaces: ["extension-manifest"],
+    requiredActions: [
+      "Run extension install or smoke coverage for changed Gemini/Tabnine extension manifests."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "build",
+    title: "Built entrypoint must be verified",
+    severity: "HIGH",
+    impactedFiles: extensionFiles,
+    sourceSurfaces: ["extension-manifest"],
+    requiredActions: ["Verify dist/mcp/server.js exists and matches the current runtime source."],
+    evidenceKind: "build"
+  });
+
+  for (const files of [hookFiles, packageBuildFiles, sensitiveConfigFiles]) {
+    const sourceSurfaces: ImpactSurface[] =
+      files === hookFiles
+        ? ["hook"]
+        : files === packageBuildFiles
+          ? ["package-runtime", "build-config"]
+          : ["secret-sensitive", "env-config"];
+
+    addObligation(obligations, evidence, {
+      category: "security",
+      title: "Security review required for sensitive runtime surface",
+      severity: "HIGH",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Review changed secrets, environment, hook, package, or build behavior for unsafe execution or disclosure risk."
+      ]
+    });
+    addObligation(obligations, evidence, {
+      category: "deployment",
+      title: "Deployment readiness review required",
+      severity: "MEDIUM",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Verify deployment, install, or local runtime instructions remain accurate for this changed surface."
+      ]
+    });
+    addObligation(obligations, evidence, {
+      category: "release",
+      title: "Release notes review required",
+      severity: "MEDIUM",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Decide whether release notes or operator-facing change notes are required."
+      ]
+    });
+    addObligation(obligations, evidence, {
+      category: "tests",
+      title: "Targeted test coverage required for runtime-sensitive change",
+      severity: "HIGH",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Run or add tests for the changed security, deployment, package, build, or hook behavior."
+      ]
+    });
+  }
+}
+
+function isRuntimeSourceOrExtensionSurface(surface: ImpactSurfaceRecord): boolean {
+  if (surface.surfaces.includes("generated")) {
+    return false;
+  }
+
+  return surface.surfaces.some((name) =>
+    [
+      "mcp-server",
+      "mcp-tool",
+      "mcp-resource",
+      "artifact-contract",
+      "hook",
+      "extension-manifest"
+    ].includes(name)
+  );
+}
+
+async function addBuildAndDistFindings(
+  projectRoot: string,
+  surfaces: ImpactSurfaceRecord[],
+  findings: ImpactFindingRecord[],
+  unknowns: ImpactUnknownRecord[],
+  obligations: ImpactObligationRecord[],
+  evidence: ImpactEvidenceRecord[],
+  warnings: string[]
+): Promise<void> {
+  const runtimeOrExtensionFiles = surfaces
+    .filter(isRuntimeSourceOrExtensionSurface)
+    .map((surface) => surface.path)
+    .sort();
+  const mcpOrExtensionFiles = surfaces
+    .filter((surface) =>
+      surface.surfaces.some((name) =>
+        [
+          "mcp-server",
+          "mcp-tool",
+          "mcp-resource",
+          "artifact-contract",
+          "extension-manifest"
+        ].includes(name)
+      )
+    )
+    .map((surface) => surface.path)
+    .sort();
+  const hookRuntimeFiles = surfaces
+    .filter((surface) => surface.surfaces.includes("hook"))
+    .map((surface) => surface.path)
+    .sort();
+  const distFiles = surfaces
+    .filter((surface) => surface.path.startsWith("dist/"))
+    .map((surface) => surface.path)
+    .sort();
+  const mcpRuntimeBundleFiles = distFiles
+    .filter((filePath) => filePath === "dist/mcp/server.js")
+    .sort();
+  const hookRuntimeBundleFiles = distFiles
+    .filter((filePath) => /^dist\/hooks\/[^/]+\.js$/u.test(filePath))
+    .sort();
+  const hasRuntimeOrExtension = runtimeOrExtensionFiles.length > 0;
+  const hasDistFiles = distFiles.length > 0;
+  const missingMcpRuntimeBundleCoverage =
+    mcpOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
+  const missingHookRuntimeBundleCoverage =
+    hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
+  const hasRuntimeDistBundleCoverage =
+    hasRuntimeOrExtension &&
+    !missingMcpRuntimeBundleCoverage &&
+    !missingHookRuntimeBundleCoverage;
+
+  if (hasRuntimeOrExtension && !(await pathExists(path.join(projectRoot, "dist/mcp/server.js")))) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "build",
+      source: "dist-entrypoint",
+      summary: "dist/mcp/server.js is missing while extension or runtime source surfaces changed.",
+      paths: [...runtimeOrExtensionFiles, "dist/mcp/server.js"],
+      data: { missingPath: "dist/mcp/server.js" }
+    });
+    findings.push({
+      id: "finding.build.dist-entrypoint.missing",
+      checkId: "build.dist-entrypoint",
+      title: "Missing built entrypoint blocks extension runtime readiness",
+      severity: "CRITICAL",
+      status: "BLOCK",
+      confidence: 0.94,
+      impactedFiles: runtimeOrExtensionFiles,
+      impactedAreas: ["blueprint-runtime"],
+      owners: [],
+      requiredActions: [
+        "Run the build and restore dist/mcp/server.js before treating extension runtime readiness as known."
+      ],
+      evidenceRefs: [evidenceRef]
+    });
+  }
+
+  if (hasRuntimeOrExtension && !hasRuntimeDistBundleCoverage) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "build",
+      source: "dist-coverage",
+      summary:
+        "Runtime source or extension manifest changed without corresponding dist/** runtime bundle coverage.",
+      paths: runtimeOrExtensionFiles,
+      data: {
+        changedDistFiles: distFiles,
+        changedMcpRuntimeBundleFiles: mcpRuntimeBundleFiles,
+        changedHookRuntimeBundleFiles: hookRuntimeBundleFiles,
+        missingMcpRuntimeBundleCoverage,
+        missingHookRuntimeBundleCoverage
+      }
+    });
+    const reason =
+      "Runtime source or extension manifest changes are in scope without corresponding dist/** runtime bundle coverage.";
+    warnings.push(reason);
+    findings.push({
+      id: "finding.build.dist-coverage.missing",
+      checkId: "build.dist-coverage",
+      title: "Runtime changes require generated dist coverage",
+      severity: "HIGH",
+      status: "WARN",
+      confidence: 0.78,
+      impactedFiles: runtimeOrExtensionFiles,
+      impactedAreas: ["blueprint-runtime"],
+      owners: [],
+      requiredActions: [
+        "Run npm run build and include or verify generated dist output before relying on this impact report."
+      ],
+      evidenceRefs: [evidenceRef]
+    });
+    unknowns.push({
+      id: "unknown.obligation.build-dist-coverage",
+      category: "obligation",
+      title: "Generated dist coverage is not proven",
+      severity: "MEDIUM",
+      impactedFiles: runtimeOrExtensionFiles,
+      reason,
+      resolution:
+        "Run the build and review generated dist output provenance; this is a coverage gap, not a stale-content claim.",
+      evidenceRefs: [evidenceRef]
+    });
+  }
+
+  if (hasDistFiles && !hasRuntimeOrExtension) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "build",
+      source: "generated-provenance",
+      summary: "dist/** changed without runtime source or extension manifest coverage.",
+      paths: distFiles
+    });
+    const reason =
+      "Generated dist output changed without matching runtime source or extension manifest coverage in the analyzed scope.";
+    warnings.push(reason);
+    findings.push({
+      id: "finding.build.generated-only.provenance",
+      checkId: "build.generated-provenance",
+      title: "Generated-only dist change requires provenance review",
+      severity: "MEDIUM",
+      status: "WARN",
+      confidence: 0.76,
+      impactedFiles: distFiles,
+      impactedAreas: ["generated"],
+      owners: [],
+      requiredActions: [
+        "Verify generated output provenance and confirm the source change is present or intentionally outside scope."
+      ],
+      evidenceRefs: [evidenceRef]
+    });
+    unknowns.push({
+      id: "unknown.obligation.generated-dist-provenance",
+      category: "obligation",
+      title: "Generated dist provenance is not proven",
+      severity: "MEDIUM",
+      impactedFiles: distFiles,
+      reason,
+      resolution:
+        "Review build provenance and source correspondence before relying on generated-only output.",
+      evidenceRefs: [evidenceRef]
+    });
+  }
+
+  if (hasDistFiles) {
+    addObligation(obligations, evidence, {
+      category: "build",
+      title: "Generated output provenance must be verified",
+      severity: "HIGH",
+      impactedFiles: uniqueSorted([...runtimeOrExtensionFiles, ...distFiles]),
+      sourceSurfaces: ["generated"],
+      requiredActions: [
+        "Verify dist/** output was generated from the intended source and extension runtime inputs."
+      ],
+      evidenceKind: "build",
+      source: "generated-provenance"
+    });
+  }
+}
+
+async function analyzeContractAndObligations(
+  projectRoot: string,
+  files: string[],
+  surfaces: ImpactSurfaceRecord[],
+  providedContext: Record<string, unknown> | undefined,
+  warnings: string[]
+): Promise<{
+  findings: ImpactFindingRecord[];
+  obligations: ImpactObligationRecord[];
+  unknowns: ImpactUnknownRecord[];
+  evidence: ImpactEvidenceRecord[];
+}> {
+  const findings: ImpactFindingRecord[] = [];
+  const obligations: ImpactObligationRecord[] = [];
+  const unknowns: ImpactUnknownRecord[] = [];
+  const evidence: ImpactEvidenceRecord[] = [];
+  const phase6Context = await resolvePhase6Context(
+    projectRoot,
+    providedContext,
+    surfaces,
+    evidence,
+    unknowns,
+    warnings
+  );
+
+  addEvidence(evidence, {
+    kind: "contract",
+    source: phase6Context.provided ? "provided-context" : "live-readonly-context",
+    summary:
+      "Phase 6 contract and obligation analysis consumed catalog, runtime, command asset, and artifact context where available.",
+    paths: files.filter((file) => isContractLikeSurface(classifyImpactFile(file))),
+    data: {
+      catalogLoaded: phase6Context.catalog !== null,
+      commandAssetsLoaded: phase6Context.commandAssets !== null,
+      runtimeLoaded: phase6Context.runtime !== null,
+      artifactContractsLoaded: phase6Context.artifactContracts !== null,
+      contextProvided: phase6Context.provided
+    }
+  });
+
+  analyzeImplementedCommandSubstrate(
+    phase6Context.catalog,
+    phase6Context.runtime,
+    findings,
+    evidence
+  );
+  analyzePlannedCommandExposure(
+    files,
+    phase6Context.catalog,
+    phase6Context.commandAssets,
+    findings,
+    evidence
+  );
+  addSurfaceObligations(surfaces, obligations, evidence);
+  await addBuildAndDistFindings(
+    projectRoot,
+    surfaces,
+    findings,
+    unknowns,
+    obligations,
+    evidence,
+    warnings
+  );
+
+  return {
+    findings: sortFindings(findings),
+    obligations: sortObligations(obligations),
+    unknowns: sortUnknownRecords(unknowns),
+    evidence: sortEvidenceRecords(evidence)
+  };
+}
+
 async function runGit(
   projectRoot: string,
   args: string[],
@@ -4051,7 +5230,7 @@ function buildCommandAssets(catalog: unknown): ImpactCommandAssets {
   const missingAssetCount = entries.reduce(
     (count, [, entry]) =>
       count +
-      (entry.blockedBy ?? []).filter((blockedBy) => blockedBy.startsWith("Missing ")).length,
+      extractBlockedBy(entry).filter((blockedBy) => blockedBy.startsWith("Missing ")).length,
     0
   );
 
@@ -4170,8 +5349,9 @@ export async function blueprintImpactContextLoad(
 
   if (includeRuntime) {
     runtime = {
+      registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 5,
+      implementationPhase: 6,
       readOnly: true,
       includeRuntime,
       includeCatalog,
@@ -4223,7 +5403,7 @@ export async function blueprintImpactAnalyze(
 
   if (sources.length === 0) {
     warnings.push(
-      "No changed files were provided to impact analysis; Phase 5 ownership and dependency analysis has no file-backed surfaces."
+      "No changed files were provided to impact analysis; Phase 6 ownership, dependency, contract, and obligation analysis has no file-backed surfaces."
     );
   }
 
@@ -4242,7 +5422,7 @@ export async function blueprintImpactAnalyze(
   addEvidence(evidence, {
     kind: "config",
     source: "impact-analyze-config",
-    summary: "Impact analysis resolved effective Phase 5 ownership and dependency configuration.",
+    summary: "Impact analysis resolved effective Phase 6 ownership and dependency configuration.",
     paths: [],
     data: {
       ownershipSources: config.ownership.sources,
@@ -4265,55 +5445,45 @@ export async function blueprintImpactAnalyze(
     config,
     warnings
   );
+  const contractResult = await analyzeContractAndObligations(
+    projectRoot,
+    files,
+    surfaces,
+    args.context,
+    warnings
+  );
   const deferredEvidenceRef = addEvidence(evidence, {
     kind: "metadata",
-    source: "phase-5-deferred-checks",
+    source: "phase-7-deferred-scoring",
     summary:
-      "Phase 5 analyzes ownership and dependencies only; contract, obligation, and scoring phases remain deferred.",
+      "Phase 6 analyzes ownership, dependencies, contract substrate, and path-level obligations; full scoring remains deferred to Phase 7.",
     paths: []
   });
   const deferredUnknowns: ImpactUnknownRecord[] = [
-    {
-      id: "unknown.contractChecksDeferred",
-      category: "contract",
-      title: "Contract checks are deferred",
-      severity: "MEDIUM",
-      impactedFiles: files,
-      reason: "Phase 6 contract and compatibility checks are not part of this Phase 5 implementation.",
-      resolution: "Run the future contract/compatibility phase when it lands before treating compatibility as proven.",
-      evidenceRefs: [deferredEvidenceRef]
-    },
-    {
-      id: "unknown.obligationChecksDeferred",
-      category: "obligation",
-      title: "Review, test, and documentation obligations are deferred",
-      severity: "MEDIUM",
-      impactedFiles: files,
-      reason: "Phase 6/7 obligation checks are not part of this Phase 5 implementation.",
-      resolution: "Use later obligation analysis before relying on this report for required tests or reviewers beyond ownership.",
-      evidenceRefs: [deferredEvidenceRef]
-    },
     {
       id: "unknown.riskScoringDeferred",
       category: "risk-scoring",
       title: "Full risk scoring is deferred",
       severity: "LOW",
       impactedFiles: files,
-      reason: "Phase 7 full scoring is deferred; Phase 5 only adjusts status for sensitive missing-owner BLOCK cases.",
+      reason: "Phase 7 full scoring is deferred; Phase 6 uses deterministic BLOCK/WARN rules for ownership, contract, build, and obligation signals.",
       resolution: "Treat current risk and confidence as simple advisory signals until Phase 7 scoring lands.",
       evidenceRefs: [deferredEvidenceRef]
     }
   ];
-  const findings = sortFindings([...ownershipResult.findings]);
+  const findings = sortFindings([...ownershipResult.findings, ...contractResult.findings]);
+  const obligations = sortObligations(contractResult.obligations);
   const unknowns = sortUnknownRecords([
     ...ownershipResult.unknowns,
     ...dependencyResult.unknowns,
+    ...contractResult.unknowns,
     ...deferredUnknowns
   ]);
   const allEvidence = sortEvidenceRecords([
     ...evidence,
     ...ownershipResult.evidence,
-    ...dependencyResult.evidence
+    ...dependencyResult.evidence,
+    ...contractResult.evidence
   ]);
   const status: ImpactStatus = findings.some((finding) => finding.status === "BLOCK")
     ? "BLOCK"
@@ -4339,7 +5509,10 @@ export async function blueprintImpactAnalyze(
       nodes: dependencyResult.dependencyGraph.nodes,
       edges: dependencyResult.dependencyGraph.edges,
       reverseDependentsByPath: dependencyResult.dependencyGraph.reverseDependentsByPath
-    }
+    },
+    findings,
+    obligations,
+    unknowns
   });
   const confidenceScore =
     files.length === 0
@@ -4357,14 +5530,14 @@ export async function blueprintImpactAnalyze(
       ? {
           level: "critical",
           reasons: [
-            "A sensitive changed file lacks an explicit owner or fallback reviewer.",
-            "Phase 7 full scoring is deferred; this critical risk reflects only the Phase 5 BLOCK rule."
+            "At least one deterministic Phase 6 BLOCK finding was produced for ownership, command substrate, planned-command exposure, or build readiness.",
+            "Phase 7 full scoring is deferred; this critical risk reflects deterministic Phase 6 BLOCK rules."
           ]
         }
       : {
           level: "unknown",
           reasons: [
-            "Phase 5 analyzes ownership and dependency coverage, but contract, obligation, and full scoring checks are deferred.",
+            "Phase 6 analyzes ownership, dependency coverage, command contracts, build readiness, and path-level obligations.",
             "Missing metadata remains visible as unknowns instead of proving low impact."
           ]
         };
@@ -4376,20 +5549,21 @@ export async function blueprintImpactAnalyze(
         ? [
             "Changed files were normalized and classified deterministically.",
             "Ownership and dependency metadata were analyzed where configured and available.",
-            "Confidence remains capped until contract, obligation, and Phase 7 scoring checks land."
+            "Contract substrate and path-level obligations were analyzed where context was available.",
+            "Confidence remains capped until Phase 7 scoring lands."
           ]
         : [
-            "No file-backed scope was available for deterministic ownership or dependency analysis.",
+            "No file-backed scope was available for deterministic ownership, dependency, contract, or obligation analysis.",
             "Confidence remains low until a scope resolver supplies changed files."
           ]
   };
   const summary =
     status === "BLOCK"
-      ? "Impact analysis found a sensitive ownership gap that blocks advisory approval until resolved."
-      : "Impact analysis classified changed file surfaces and analyzed configured ownership and dependency metadata; deferred phases remain explicit unknowns.";
+      ? "Impact analysis found a deterministic Phase 6 BLOCK finding that blocks advisory approval until resolved."
+      : "Impact analysis classified changed file surfaces, ownership, dependency metadata, command contracts, build readiness, and path-level obligations; Phase 7 scoring remains an explicit unknown.";
 
   return {
-    phaseStatus: "ownership-dependencies-analyzed",
+    phaseStatus: "contract-obligations-analyzed",
     impactId,
     status,
     impactStatus: status,
@@ -4401,7 +5575,7 @@ export async function blueprintImpactAnalyze(
     ownership: ownershipResult.ownership,
     dependencyGraph: dependencyResult.dependencyGraph,
     findings,
-    obligations: [],
+    obligations,
     unknowns,
     evidence: allEvidence,
     report: {
@@ -4416,7 +5590,7 @@ export async function blueprintImpactAnalyze(
       ownership: ownershipResult.ownership,
       dependencyGraph: dependencyResult.dependencyGraph,
       findings,
-      obligations: [],
+      obligations,
       unknowns,
       evidence: allEvidence
     },
