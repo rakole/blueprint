@@ -623,6 +623,37 @@ test("research validation requires dated freshness claims or an explicit uncheck
   );
 });
 
+test("research validation rejects generic code spans as source evidence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Create research whose source list uses a generic code span instead of real evidence."
+    ).replace(
+      /## Sources[\s\S]*$/,
+      "## Sources\n\n- `not a path` - fabricated non-source citation.\n"
+    ),
+    overwrite: true
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    invalid.validation.issues.join("\n"),
+    /source bullet with a URL, repo path, or cited file/i
+  );
+});
+
 test("missing context keeps research routing pointed at discuss-phase", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
