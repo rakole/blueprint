@@ -207,77 +207,52 @@ test("research-phase command references only registered tool names and safe rout
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, /research-phase-runtime-contract\.md/);
-  assert.match(commandFile, /`blueprint-researcher` subagent/);
-  assert.match(commandFile, /explicit confirmation/i);
+  assert.match(commandFile, /Use the `blueprint-researcher` subagent only when/i);
   assert.match(commandFile, /`ask_user`/);
   assert.match(commandFile, /view/);
   assert.match(commandFile, /skip/);
   assert.match(commandFile, /update/);
+  assert.match(commandFile, /choosing `update` is the overwrite gate/i);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, /artifactId: "phase\.research"/);
   assert.match(commandFile, /contract\.authoringTemplate/);
-  assert.match(commandFile, /artifact_read` for the current `context` artifact before drafting|actual current context content/i);
-  assert.match(commandFile, /If the current `context` artifact read reports `found: false`/i);
-  assert.match(commandFile, /do not draft research until saved context exists/i);
-  assert.match(commandFile, /do not offer `skip`, `view`, or default reuse as a successful exit/i);
-  assert.match(commandFile, /valid `view`\/`skip`\/`reuse` exit, call .*state_update.*base: "synced"/is);
-  assert.match(commandFile, /Draft directly from `contract\.authoringTemplate`/i);
-  assert.match(commandFile, /phase_checkpoint_get/i);
-  assert.match(commandFile, /phase_checkpoint_put/i);
-  assert.match(commandFile, /phase_checkpoint_delete/i);
-  assert.match(commandFile, /expectedOwnerCommand: "\/blu-research-phase"/);
-  assert.match(commandFile, /expectedMode: "research"/);
-  assert.match(
-    commandFile,
-    /phase_checkpoint_delete[\s\S]*expectedOwnerCommand: "\/blu-research-phase"[\s\S]*expectedMode: "research"/i
-  );
-  assert.match(commandFile, /topic-sized strands/i);
+  assert.match(commandFile, /current `context` artifact is missing or unreadable/i);
+  assert.match(commandFile, /route back to `\/blu-discuss-phase <phase>`/i);
+  assert.match(commandFile, /repair or update as the only successful path/i);
+  assert.match(commandFile, /state_update` with `base: "synced"`/i);
+  assert.match(commandFile, /state_load/i);
+  assert.match(commandFile, /command_catalog/i);
+  assert.match(commandFile, /research-owned checkpoint/i);
   assert.match(commandFile, /long-running-mutation/);
-  assert.match(commandFile, /update_topic/);
-  assert.match(commandFile, /write_todos/);
   assert.match(commandFile, /inconclusive/i);
-  assert.match(commandFile, /Keep repo truth explicit/i);
-  assert.match(commandFile, /Honor the effective `research\.external_sources` policy/i);
-  assert.match(commandFile, /`off` means do not perform external lookup and mark freshness-sensitive claims as not externally checked/i);
-  assert.match(commandFile, /`ask` means stop for confirmation before any external check/i);
-  assert.match(commandFile, /`auto` allows official-doc or external verification/i);
+  assert.match(commandFile, /research\.external_sources/i);
+  assert.match(commandFile, /`off`, `ask`, or `auto`/i);
   assert.match(commandFile, /official docs or explicitly supplied external references/i);
-  assert.match(commandFile, /distinct from repo-derived evidence/i);
-  assert.match(commandFile, /source title, date, URL, excerpt, claim, and evidence class/i);
-  assert.match(commandFile, /must not imply it fetched official docs itself/i);
-  assert.match(commandFile, /`## State Of The Art` freshness claims explicit/i);
+  assert.match(commandFile, /Keep repo-derived evidence distinct/i);
   assert.match(commandFile, /not externally checked/i);
   assert.match(commandFile, /single-agent fallback/i);
-  assert.match(commandFile, /browser-only, web-search-only, shell-only, or generic agents/i);
-  assert.match(commandFile, /PROJECT\.md/);
-  assert.match(commandFile, /REQUIREMENTS\.md/);
+  assert.match(commandFile, /validation-failing research content/i);
   assert.match(commandFile, /STATE\.md/);
-  assert.match(commandFile, /\/blu-progress/);
-  assert.match(commandFile, /\/blu-plan-phase/);
   assert.match(commandFile, /\/blu-discuss-phase/);
-  assert.match(commandFile, /Do not treat its response as a routing decision/i);
-  assert.match(commandFile, /blueprint_state_load.+reported next safe action comes from the refreshed state/i);
-  assert.match(commandFile, /refreshed safe action is `\/blu-plan-phase`/i);
-  assert.doesNotMatch(commandFile, /state_update[^\n]+set the next safe action/i);
+  assert.doesNotMatch(commandFile, /Follow this flow exactly/i);
+  assert.doesNotMatch(commandFile, /update_topic|write_todos/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
   assert.ok(docFile.includes("`blueprint_artifact_contract_read` -> `{artifactId, contract}`"));
   assert.ok(docFile.includes("contract.authoringTemplate"));
   assert.ok(docFile.includes("contract.freehandPolicy"));
-  assert.ok(docFile.includes("additional-top-level-headings"));
+  assert.match(docFile, /extra top-level headings/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docFile, /topic-strand phase research/i);
-  assert.match(docFile, /update_topic/);
-  assert.match(docFile, /write_todos/);
-  assert.match(docFile, /repo truth/i);
+  assert.match(docFile, /active command's inputs/i);
   assert.match(docFile, /research\.external_sources/i);
   assert.match(docFile, /workflowPosture\.research\.externalSources/i);
-  assert.match(docFile, /source title, source date, URL, excerpt, claim/i);
+  assert.match(docFile, /Choosing `update` is the overwrite gate/i);
   assert.match(docFile, /not externally checked/i);
   assert.match(docFile, /official docs or explicitly supplied external references/i);
-  assert.match(docFile, /Missing `XX-CONTEXT\.md` is a visible gate/i);
-  assert.match(docFile, /invalid existing research as repair-only/i);
-  assert.match(docFile, /reserves scaffold for deliberate placeholder creation only/i);
-  assert.match(docFile, /refresh `STATE\.md` on valid non-writing exits/i);
+  assert.match(docFile, /If the context read returns `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
+  assert.match(docFile, /Invalid existing research must go through repair/i);
+  assert.match(docFile, /use the runtime contract's single-agent topic-strand fallback/i);
+  assert.match(docFile, /call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load`/i);
+  assert.doesNotMatch(docFile, /update_topic|write_todos/);
 
   assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
   assert.match(runtimeReference, /Long-running-mutation profile for topic-strand phase research/i);
@@ -307,13 +282,17 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(mcpToolsDoc, /sync `STATE\.md` even on valid non-writing reuse paths/i);
 
   assert.match(skillFile, /Execution profile for `\/blu-research-phase`: `long-running-mutation`/);
+  assert.match(skillFile, /Load only the active command's `input_bundles\.commands\[\.\.\.\]` inputs/i);
   assert.match(skillFile, /research-phase-runtime-contract\.md/);
   assert.match(skillFile, /update_topic/);
   assert.match(skillFile, /write_todos/);
   assert.match(skillFile, /blueprint_config_get/);
   assert.match(skillFile, /research\.external_sources/);
-  assert.match(skillFile, /official docs or explicitly supplied external references/i);
-  assert.match(skillFile, /repo-derived evidence distinct from external or web-derived evidence/i);
+  assert.match(
+    skillFile,
+    /official-doc or external verification|official reference or supplied reference/i
+  );
+  assert.match(skillFile, /shared skill can stay command-selective/i);
   assert.match(skillFile, /source title, date, URL, excerpt, claim/i);
   assert.match(skillFile, /not externally checked/i);
   assert.match(skillFile, /single-agent fallback/i);
@@ -322,7 +301,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /If that read reports `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
   assert.match(skillFile, /Force repair when saved research is invalid/i);
   assert.match(skillFile, /Draft directly from `contract\.authoringTemplate`/i);
+  assert.match(skillFile, /choosing `update` is the overwrite gate/i);
+  assert.match(skillFile, /Use `blueprint-researcher` only when a suitable Blueprint research or code-analysis agent is available/i);
   assert.match(skillFile, /valid `view`\/`skip`\/`reuse` exit, call `blueprint_state_update` with `base: "synced"`/i);
+  assert.doesNotMatch(skillFile, /Require explicit overwrite confirmation before replacing existing research/i);
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
 
   assert.deepEqual(contract.skillInputs.shared, [
@@ -380,6 +362,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Retry And Repair Behavior/);
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
+  assert.match(runtimeContract, /Load it\s+on demand for research runs/i);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
   assert.match(runtimeContract, /blueprint_config_get/);
   assert.match(runtimeContract, /workflowPosture\.research\.externalSources/);
@@ -390,6 +373,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /stop and route back to\s+`\/blu-discuss-phase <phase>`/i);
   assert.match(runtimeContract, /Default drafting should start from\s+`contract\.authoringTemplate`/i);
   assert.match(runtimeContract, /do not allow skip, default reuse, or an\s+unchanged invalid write result/i);
+  assert.match(runtimeContract, /explicit `update` selection as the overwrite gate/i);
   assert.match(runtimeContract, /sync `STATE\.md` through `blueprint_state_update` with `base: "synced"`/i);
   assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
   assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
