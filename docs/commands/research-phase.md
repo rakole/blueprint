@@ -89,6 +89,14 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Use `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, and `blueprint_phase_checkpoint_delete` only as resumability aids for `/blu-research-phase`, respecting checkpoint ownership and mode guards.
 - After a successful research write or a valid non-writing reuse path, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load`. Use `blueprint_command_catalog` before recommending `/blu-plan-phase`, `/blu-ui-phase`, or any other follow-up.
 
+## Research Persistence Contract
+
+- Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` and draft from `contract.authoringTemplate` before persistence.
+- Persist final research through `blueprint_phase_artifact_write` with the resolved numeric `phase`, `artifact: "research"`, and full markdown body.
+- Bare names such as `RESEARCH` and absolute paths are invalid tool inputs; the tool owns the final repo-relative path.
+- Use the returned `path` as authoritative after writes.
+- Failed validation requires validation repair/retry before the command can treat research as complete.
+
 ## Skills And Subagents
 
 - Primary skill: `blueprint-phase-discovery`

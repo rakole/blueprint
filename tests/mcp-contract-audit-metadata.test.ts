@@ -338,6 +338,7 @@ test("execution and validation contracts stay explicit across manifests, docs, s
     executeCommand,
     executeDoc,
     executionSkill,
+    executeRuntimeContract,
     executorAgent,
     validateCommand,
     validateDoc,
@@ -350,6 +351,7 @@ test("execution and validation contracts stay explicit across manifests, docs, s
     readRepoFile("commands/blu-execute-phase.toml"),
     readRepoFile("docs/commands/execute-phase.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
+    readRepoFile("skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md"),
     readRepoFile("agents/blueprint-executor.md"),
     readRepoFile("commands/blu-validate-phase.toml"),
     readRepoFile("docs/commands/validate-phase.md"),
@@ -369,10 +371,11 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(executeDoc, /Do not pass summary filenames, phase slugs, phase directories/i);
   assert.match(executeDoc, /Pre-persistence gates/i);
   assert.match(executeDoc, /Verifier handoff/i);
-  assert.match(executionSkill, /matching plan must already exist/i);
-  assert.match(executionSkill, /pre-persistence gates/i);
-  assert.match(executionSkill, /post-execution checks/i);
-  assert.match(executionSkill, /phase-level completion claim/i);
+  assert.match(executionSkill, /references\/execute-phase-runtime-contract\.md/);
+  assert.match(executeRuntimeContract, /matching plan must already exist/i);
+  assert.match(executeRuntimeContract, /pre-persistence gates/i);
+  assert.match(executeRuntimeContract, /post-execution checks/i);
+  assert.match(executeRuntimeContract, /phase-level completion claim/i);
   assert.match(
     executorAgent,
     /resolved numeric phase,\s+the numeric\s+`planId` for the matching saved plan/i
