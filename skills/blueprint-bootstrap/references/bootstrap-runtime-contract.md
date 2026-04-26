@@ -234,12 +234,13 @@ session instead of degrading to shallow synthesis.
    - The seed should carry grouped committed requirements, deferred scope,
      explicit out-of-scope cuts, roadmap phases, requirement IDs, phase
      objectives, and success criteria.
-   - If any committed requirement lacks a durable ID or a roadmap phase, revise
-     before calling the MCP tool.
+   - If any committed requirement lacks a durable ID, appears in zero or
+     multiple roadmap phases, or any phase lacks requirement IDs or success
+     criteria, revise before calling the MCP tool.
 3. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
 4. Require explicit overwrite confirmation before calling
    `mcp_blueprint_blueprint_project_init` with `overwrite: true`.
-5. Call `mcp_blueprint_blueprint_artifact_scaffold` only when you deliberately need additional bootstrap artifacts, and pass only supported repo-relative Blueprint artifact paths.
+5. Do not call `mcp_blueprint_blueprint_artifact_scaffold` before initialization. Call it only when you deliberately need additional bootstrap artifacts after `mcp_blueprint_blueprint_project_init`, and pass only supported repo-relative Blueprint artifact paths.
 6. Treat scaffold output as seeding, not final authored persistence.
 7. After initialization, use `mcp_blueprint_blueprint_config_set` only with a
    JSON-object `patch`, default repo writes to `scope: "project"`, and touch

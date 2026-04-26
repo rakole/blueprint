@@ -24,9 +24,10 @@ Remember that `bootstrapMode` behavior, brownfield map-first routing, saved-defa
 - The local runtime contract also owns capability-gated project research and roadmapping paths, plus the sequential no-subagent fallback; do not substitute browser, web-search, or shell-only helpers for Blueprint code/workflow analysis agents.
 - Check project status before the first write. If status shows an unmapped brownfield repo or `mapping-incomplete`, route to `/blu-map-codebase` and do not initialize project artifacts.
 - If status is `mapped-only`, initialize project artifacts without treating the existing `.blueprint/codebase/*.md` bundle as an overwrite conflict; preserve those codebase docs.
+- Do not call scaffold before the project-init MCP write; scaffold is only for deliberate extra artifacts after bootstrap initialization.
 - Pass `bootstrapMode: "interactive"` unless the user explicitly requested automatic synthesis with `--auto`.
 - In interactive mode, initialize only with a sufficient `bootstrapSeed`; do not ask the MCP layer to synthesize purpose, requirements, roadmap, state, config, or phases from a missing or thin seed.
-- In auto mode, synthesis is allowed only because the user requested it and only after brownfield map-first gating has passed.
+- In auto mode, call the project-init MCP tool only after you can supply a sufficient `bootstrapSeed`; stop for a missing brief instead of asking the MCP layer to invent one.
 
 Response requirements:
 - For the approval gate, show a visible structured approval packet in the main Gemini CLI conversation before asking for approval: project brief, requirement groups, roadmap phase table, assumptions, deferred or out-of-scope items, and defaults provenance.

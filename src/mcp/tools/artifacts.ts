@@ -1300,7 +1300,7 @@ export function buildDefaultBootstrapSeed(
             title: "Foundation Bootstrap",
             objective:
               "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
-            requirementIds: ["RQ-02", "RQ-03"],
+            requirementIds: ["RQ-02"],
             successCriteria: [
               "ROADMAP.md maps delivery-boundary requirements to concrete follow-up phases.",
               "STATE.md routes maintainers to `/blu-progress` after bootstrap validation passes."
@@ -3522,6 +3522,10 @@ function validateBootstrapRoadmapArtifact(
   const notes = extractMarkdownSection(content, "Notes");
   const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
   const coverageIds = extractBootstrapScopedRequirementIds(requirementCoverage);
+  const phaseRequirementRefs = phaseBlocks.flatMap((phaseBlock) =>
+    extractBootstrapRoadmapPhaseRequirementIds(phaseBlock)
+  );
+  const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
 
   if (isBootstrapRoadmapArtifact(content)) {
     if (!hasBootstrapText(milestone)) {
@@ -3546,6 +3550,12 @@ function validateBootstrapRoadmapArtifact(
 
     if (phaseBlocks.length === 0) {
       issues.push("Roadmap artifact section Phases must include at least one concrete phase entry.");
+    }
+
+    if (duplicatePhaseRequirementRefs.length > 0) {
+      issues.push(
+        `Roadmap artifact phase entries must not reference a requirement ID more than once: ${duplicatePhaseRequirementRefs.join(", ")}.`
+      );
     }
 
     for (const phaseBlock of phaseBlocks) {
@@ -4691,7 +4701,26 @@ function extractRequirementIds(content: string): string[] {
 }
 
 function extractRequirementIdsFromMarkdown(content: string): string[] {
-  return [...new Set([...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]))];
+  return [...new Set(extractRequirementIdsFromMarkdownAll(content))];
+}
+
+function extractRequirementIdsFromMarkdownAll(content: string): string[] {
+  return [...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]);
+}
+
+function valuesWithDuplicates(values: string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+
+    seen.add(value);
+  }
+
+  return [...duplicates];
 }
 
 function extractBootstrapRequirementListIds(section: string): string[] {
@@ -4730,7 +4759,7 @@ function extractBootstrapRoadmapPhaseRequirementIds(phaseBlock: string): string[
     return [];
   }
 
-  return extractRequirementIdsFromMarkdown(requirementClause);
+  return extractRequirementIdsFromMarkdownAll(requirementClause);
 }
 
 function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock: string): string[] {

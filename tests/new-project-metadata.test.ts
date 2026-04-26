@@ -85,8 +85,7 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
     "blueprint_config_set",
     "blueprint_state_update",
     "blueprint_artifact_contract_read",
-    "blueprint_artifact_validate",
-    "blueprint_artifact_scaffold"
+    "blueprint_artifact_validate"
   ] as const) {
     assert.match(
       `${skillFile}\n${guardrailsRef}`,

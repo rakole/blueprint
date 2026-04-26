@@ -18,7 +18,10 @@ import {
   type NormalizedBootstrapSeed,
   type BootstrapSeed
 } from "./artifacts.js";
-import { safeJsonParseObject } from "../../shared/security.js";
+import {
+  normalizeBlueprintPhaseRef,
+  safeJsonParseObject
+} from "../../shared/security.js";
 import {
   configToolDefinitions,
   blueprintConfigGet,
@@ -233,8 +236,7 @@ const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
         "blueprint_config_set",
         "blueprint_state_update",
         "blueprint_artifact_contract_read",
-        "blueprint_artifact_validate",
-        "blueprint_artifact_scaffold"
+        "blueprint_artifact_validate"
       ],
       requiredToolsSatisfied: true,
       optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
@@ -511,6 +513,34 @@ function assertBootstrapSeedPreflight(seed: NormalizedBootstrapSeed): void {
   }
 }
 
+function bootstrapSeedExplicitGapIssues(seed: BootstrapSeed): string[] {
+  const issues: string[] = [];
+
+  for (const phase of seed.roadmapPhases ?? []) {
+    const phaseLabel = phase.phase.trim() || "(blank)";
+    const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
+    const successCriteria = phase.successCriteria?.map((value) => value.trim()).filter(Boolean) ?? [];
+
+    if (requirementIds.length === 0) {
+      issues.push(`Phase ${phaseLabel} must include explicit requirementIds before the first write.`);
+    }
+
+    if (successCriteria.length === 0) {
+      issues.push(`Phase ${phaseLabel} must include explicit successCriteria before the first write.`);
+    }
+  }
+
+  return issues;
+}
+
+function assertBootstrapSeedHasNoExplicitGaps(seed: BootstrapSeed): void {
+  const issues = bootstrapSeedExplicitGapIssues(seed);
+
+  if (issues.length > 0) {
+    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
+  }
+}
+
 function assertBootstrapCanWrite(args: {
   inspection: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>;
   bootstrapAssessment: BootstrapAssessment;
@@ -553,7 +583,7 @@ function assertBootstrapCanWrite(args: {
     !bootstrapSeedIsSufficient(args.bootstrapSeed)
   ) {
     throw new Error(
-      "Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Provide the seed or use bootstrapMode: \"auto\" only when synthesis is explicitly requested."
+      "Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Keep questioning until the seed is ready; auto mode also requires enough project context before persistence."
     );
   }
 }
@@ -805,9 +835,18 @@ export async function blueprintProjectInit(
     bootstrapMode === "auto"
       ? mergeBootstrapSeed(autoBaseSeed!, args.bootstrapSeed)
       : args.bootstrapSeed!;
+  assertBootstrapSeedHasNoExplicitGaps(seedInput);
+
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
 
   assertBootstrapSeedPreflight(bootstrapSeed);
+
+  const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase
+    ? normalizeBlueprintPhaseRef(
+        bootstrapSeed.roadmapPhases[0].phase,
+        "Initial roadmap phase"
+      )
+    : "1";
 
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
@@ -830,7 +869,7 @@ export async function blueprintProjectInit(
     patch: {
       projectStatus: "initialized",
       currentMilestone: bootstrapSeed.currentMilestone ?? "v1",
-      currentPhase: bootstrapSeed.roadmapPhases?.[0]?.phase ?? "1",
+      currentPhase: initialPhase,
       activeCommand: blueprintDirectCommand("new-project"),
       nextAction:
         bootstrapAssessment.provisionalRoadmap

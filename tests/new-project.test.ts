@@ -19,7 +19,8 @@ import {
   CODEBASE_ARTIFACTS,
   blueprintArtifactContractRead,
   blueprintArtifactValidate,
-  blueprintCodebaseArtifactWrite
+  blueprintCodebaseArtifactWrite,
+  type BootstrapSeed
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigGet, blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
@@ -78,6 +79,76 @@ async function cpFixtureContents(sourcePath: string, targetPath: string): Promis
 async function readJsonFile<T>(filePath: string): Promise<T> {
   const raw = await readFile(filePath, "utf8");
   return JSON.parse(raw) as T;
+}
+
+function buildAutoBootstrapSeed(overrides: Partial<BootstrapSeed> = {}): BootstrapSeed {
+  return {
+    vision:
+      "Establish the fresh repo fixture with durable Blueprint planning context for the first milestone.",
+    currentMilestone: "v1",
+    requirements: [
+      {
+        id: "RQ-01",
+        scope: "committed",
+        group: "Product direction",
+        requirement: "Define the product outcome and first-milestone goals for the fresh repo fixture.",
+        status: "Pending",
+        notes: "Bootstrap draft requirement."
+      },
+      {
+        id: "RQ-02",
+        scope: "committed",
+        group: "Delivery boundaries",
+        requirement:
+          "Record durable constraints, non-goals, and acceptance boundaries before detailed planning starts.",
+        status: "Pending",
+        notes: "Keeps later discovery and planning grounded."
+      },
+      {
+        id: "RQ-03",
+        scope: "deferred",
+        group: "Follow-through planning",
+        requirement:
+          "Prepare the repo for Blueprint lifecycle commands with stable requirement and roadmap traceability.",
+        status: "Pending",
+        notes: "Foundation requirement for later phases."
+      },
+      {
+        id: "RQ-04",
+        scope: "out_of_scope",
+        group: "Explicit bootstrap cuts",
+        requirement: "Do not turn the bootstrap draft into a full implementation backlog or execution plan.",
+        status: "Pending",
+        notes: "Keeps v1 bootstrap narrower than later work streams."
+      }
+    ],
+    roadmapPhases: [
+      {
+        phase: "1",
+        title: "Discovery And Definition",
+        objective:
+          "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
+        requirementIds: ["RQ-01"],
+        successCriteria: [
+          "PROJECT.md names the product audience, value, constraints, and first milestone.",
+          "REQUIREMENTS.md records committed product-direction requirements with durable IDs."
+        ]
+      },
+      {
+        phase: "2",
+        title: "Foundation Bootstrap",
+        objective:
+          "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
+        requirementIds: ["RQ-02"],
+        successCriteria: [
+          "ROADMAP.md maps delivery-boundary requirements to concrete follow-up phases.",
+          "STATE.md routes maintainers to `/blu-progress` after bootstrap validation passes."
+        ]
+      }
+    ],
+    assumptions: ["The first milestone should stay small enough to validate Blueprint's workflow on this repo."],
+    ...overrides
+  };
 }
 
 async function writeAuthoredCodebaseBundle(repoPath: string): Promise<void> {
@@ -292,7 +363,11 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const result = await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed()
+  });
   const config = await readJsonFile<Record<string, unknown>>(
     path.join(repoPath, ".blueprint/config.json")
   );
@@ -358,7 +433,7 @@ test("new-project initializes deterministic .blueprint artifacts", async (t) => 
   assert.match(requirementsDoc, /## Out-of-Scope Cuts/);
   assert.match(requirementsDoc, /## Traceability Notes/);
   assert.match(roadmapDoc, /Requirements: RQ-01/);
-  assert.match(roadmapDoc, /Requirements: RQ-02, RQ-03/);
+  assert.match(roadmapDoc, /Requirements: RQ-02/);
   assert.match(roadmapDoc, /Success Criteria:/);
   assert.match(
     roadmapDoc,
@@ -688,6 +763,45 @@ test("new-project rejects duplicate phase refs and generic success criteria befo
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
+test("new-project rejects bootstrap seed roadmap gaps before writes", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapSeed: {
+        vision:
+          "Create a reliable project bootstrap workflow with durable requirement traceability.",
+        currentMilestone: "v1",
+        requirements: [
+          {
+            id: "PF-21",
+            scope: "committed",
+            group: "Traceability",
+            requirement:
+              "Reject roadmap phases that omit requirement coverage or observable success criteria.",
+            status: "Pending",
+            notes: "Missing phase detail guard."
+          }
+        ],
+        roadmapPhases: [
+          {
+            phase: "1",
+            title: "Incomplete Roadmap Phase",
+            objective: "Show that seed gaps are rejected before persistence."
+          }
+        ]
+      }
+    }),
+    /must include explicit requirementIds[\s\S]*must include explicit successCriteria/i
+  );
+
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
 test("new-project applies valid saved defaults and reports provenance", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   const defaultsPath = path.join(
@@ -701,6 +815,7 @@ test("new-project applies valid saved defaults and reports provenance", async (t
   const result = await blueprintProjectInit({
     cwd: repoPath,
     bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed(),
     defaultsPath
   });
   const config = await readJsonFile<Record<string, unknown>>(
@@ -729,6 +844,7 @@ test("new-project falls back to hardcoded defaults when saved defaults are malfo
   const result = await blueprintProjectInit({
     cwd: repoPath,
     bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed(),
     defaultsPath
   });
   const config = await readJsonFile<Record<string, unknown>>(
@@ -746,7 +862,11 @@ test("project status reports initialization and a clear next action after bootst
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed()
+  });
   const status = await blueprintProjectStatus({ cwd: repoPath });
 
   assert.equal(status.initialized, true);
@@ -859,7 +979,12 @@ test("new-project accepts committed-only bootstrap seeds and keeps post-init val
         {
           phase: "1",
           title: "Bootstrap Core Workflow",
-          objective: "Capture the initial repo direction with one committed requirement."
+          objective: "Capture the initial repo direction with one committed requirement.",
+          requirementIds: ["BP-11"],
+          successCriteria: [
+            "The committed-only requirement is visible in the roadmap.",
+            "The bootstrap validation stays green after persistence."
+          ]
         }
       ],
       assumptions: ["The first milestone should stay intentionally narrow."]
@@ -917,33 +1042,50 @@ test("new-project normalizes whole-number decimal roadmap phases from bootstrap 
   await blueprintProjectInit({
     cwd: repoPath,
     bootstrapMode: "auto",
-    bootstrapSeed: {
+    bootstrapSeed: buildAutoBootstrapSeed({
       roadmapPhases: [
         {
           phase: "1.0",
           title: "Discovery And Definition",
-          objective: "Confirm milestone intent."
+          objective: "Confirm milestone intent.",
+          requirementIds: ["RQ-01"],
+          successCriteria: [
+            "Phase one keeps the product-direction requirement traceable.",
+            "Whole-number decimal phase notation is normalized in ROADMAP.md."
+          ]
         },
         {
           phase: "2.0",
           title: "Foundation Bootstrap",
-          objective: "Prepare planning inputs."
+          objective: "Prepare planning inputs.",
+          requirementIds: ["RQ-02"],
+          successCriteria: [
+            "Phase two keeps the delivery-boundary requirement traceable.",
+            "Whole-number decimal phase notation is normalized in STATE.md."
+          ]
         },
         {
           phase: "2.1",
           title: "Urgent Insert",
-          objective: "Handle inserted work."
+          objective: "Handle inserted work.",
+          requirementIds: ["RQ-03"],
+          successCriteria: [
+            "The inserted decimal phase remains visible as a decimal phase.",
+            "Deferred follow-through remains traceable without duplicating committed requirements."
+          ]
         }
       ]
-    }
+    })
   });
 
   const roadmapDoc = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const status = await blueprintProjectStatus({ cwd: repoPath });
 
   assert.match(roadmapDoc, /Phase 1: Discovery And Definition/);
   assert.match(roadmapDoc, /Phase 2: Foundation Bootstrap/);
   assert.match(roadmapDoc, /Phase 2\.1: Urgent Insert/);
   assert.doesNotMatch(roadmapDoc, /Phase 1\.0:|Phase 2\.0:/);
+  assert.equal(status.currentPhase, "1");
 });
 
 test("new-project hard-stops on unmapped brownfield before any writes", async (t) => {
@@ -998,7 +1140,11 @@ test("new-project bootstraps mapped-only brownfield and preserves codebase docs"
           phase: "1",
           title: "Bootstrap From Map",
           objective: "Create core Blueprint artifacts without replacing codebase docs.",
-          requirementIds: ["BF-01"]
+          requirementIds: ["BF-01"],
+          successCriteria: [
+            "Mapped codebase evidence remains preserved after bootstrap.",
+            "The brownfield bootstrap requirement is traceable in the roadmap."
+          ]
         }
       ]
     }
@@ -1022,12 +1168,42 @@ test("new-project runtime summaries surface the live next action for fresh and b
     await rm(path.dirname(brownfieldRepoPath), { recursive: true, force: true });
   });
 
-  const freshInit = await blueprintProjectInit({ cwd: freshRepoPath, bootstrapMode: "auto" });
+  const freshInit = await blueprintProjectInit({
+    cwd: freshRepoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed()
+  });
   const freshStatus = await blueprintProjectStatus({ cwd: freshRepoPath });
   await writeAuthoredCodebaseBundle(brownfieldRepoPath);
   const brownfieldInit = await blueprintProjectInit({
     cwd: brownfieldRepoPath,
-    bootstrapMode: "auto"
+    bootstrapMode: "auto",
+    bootstrapSeed: {
+      vision: "Bring the mapped brownfield fixture under Blueprint planning.",
+      currentMilestone: "v1-brownfield-bootstrap",
+      requirements: [
+        {
+          id: "BF-01",
+          scope: "committed",
+          group: "Bootstrap",
+          requirement: "Preserve mapped codebase evidence while creating project artifacts.",
+          status: "Pending",
+          notes: "Map-first bootstrap requirement."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Bootstrap From Map",
+          objective: "Create core Blueprint artifacts without replacing codebase docs.",
+          requirementIds: ["BF-01"],
+          successCriteria: [
+            "Mapped codebase evidence remains preserved after bootstrap.",
+            "The brownfield bootstrap requirement is traceable in the roadmap."
+          ]
+        }
+      ]
+    }
   });
   const brownfieldStatus = await blueprintProjectStatus({ cwd: brownfieldRepoPath });
   const brownfieldProjectDoc = await readFile(
@@ -1094,7 +1270,8 @@ test("command contract references the same Phase 1 tool names as the MCP server"
     "blueprint_config_get",
     "blueprint_config_set",
     "blueprint_state_update",
-    "blueprint_artifact_scaffold"
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_validate"
   ];
 
   for (const toolName of requiredTools) {
