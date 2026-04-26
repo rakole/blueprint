@@ -52,7 +52,7 @@
 - Approval must be reviewable in the main Gemini CLI conversation before the confirmation prompt.
 - `bootstrapMode` defaults to `interactive`; `--auto` is the command-facing way to request `bootstrapMode: "auto"`.
 - Interactive mode must pass a sufficient `bootstrapSeed` into `blueprint_project_init`. If the seed is missing or too thin, the tool rejects before writing and the command should keep asking rather than asking the MCP layer to invent purpose, requirements, roadmap, state, config, or phases.
-- `--auto` may synthesize bootstrap artifacts only because the user explicitly requested it, only when the supplied or repo-derived brief is strong enough, and only after brownfield map-first gating has passed.
+- `--auto` may synthesize bootstrap artifacts only because the user explicitly requested it, only when the supplied or repo-derived brief is strong enough to produce a complete `bootstrapSeed`, and only after brownfield map-first gating has passed. If no complete seed can be produced, stop and ask for the missing brief.
 
 ## Behavior Stages
 
@@ -95,7 +95,6 @@
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
-- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 
 ## Gemini-Native Internal Tool Guidance
 
@@ -110,7 +109,7 @@
 - Brownfield map-first gating happens before this write: unmapped brownfield repos and `mapping-incomplete` codebase-only bundles must route to `/blu-map-codebase`.
 - `mapped-only` is not an overwrite conflict; call `blueprint_project_init` with an explicit seed and preserve existing `.blueprint/codebase/*.md`.
 - Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
-- Use `blueprint_artifact_scaffold` only for deliberate extra Blueprint artifacts, with supported repo-relative Blueprint artifact paths only. Bare names and absolute paths are invalid.
+- Do not call `blueprint_artifact_scaffold` before initialization. Use it only for deliberate extra Blueprint artifacts after `blueprint_project_init`, with supported repo-relative Blueprint artifact paths only. Bare names and absolute paths are invalid.
 - Treat scaffold output as seeding, not final authored persistence.
 - Validate the written bootstrap artifacts with `blueprint_artifact_validate` before treating bootstrap as complete.
 - `blueprint_config_set` expects a JSON-object `patch`. Keep repo writes at `scope: "project"` by default, and use `scope: "defaults"` only when the user explicitly approved changing saved defaults.

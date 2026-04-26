@@ -1265,7 +1265,7 @@ export function buildDefaultBootstrapSeed(
             title: "Align Requirements With Mapped Codebase",
             objective:
               "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
-            requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
+            requirementIds: ["RQ-01", "RQ-02"],
             successCriteria: [
               "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
               "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
@@ -1276,7 +1276,7 @@ export function buildDefaultBootstrapSeed(
             title: "Plan First Brownfield Delivery Slice",
             objective:
               "Shape the first implementation slice from mapped repo constraints and durable requirements.",
-            requirementIds: ["RQ-02", "RQ-03"],
+            requirementIds: ["RQ-03"],
             successCriteria: [
               "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
               "Requirement traceability stays intact as brownfield work moves toward execution."
@@ -1289,7 +1289,7 @@ export function buildDefaultBootstrapSeed(
             title: "Discovery And Definition",
             objective:
               "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
-            requirementIds: ["RQ-01", "RQ-02"],
+            requirementIds: ["RQ-01"],
             successCriteria: [
               "The product direction and first milestone are explicit enough to guide downstream planning.",
               "Requirements remain traceable into the roadmap without renumbering."
@@ -1300,7 +1300,7 @@ export function buildDefaultBootstrapSeed(
             title: "Foundation Bootstrap",
             objective:
               "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
-            requirementIds: ["RQ-02", "RQ-03"],
+            requirementIds: ["RQ-02"],
             successCriteria: [
               "The bootstrap draft is ready to support later discovery and execution planning.",
               "Requirement traceability stays intact as the roadmap moves toward implementation."
@@ -3522,6 +3522,10 @@ function validateBootstrapRoadmapArtifact(
   const notes = extractMarkdownSection(content, "Notes");
   const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
   const coverageIds = extractBootstrapScopedRequirementIds(requirementCoverage);
+  const phaseRequirementRefs = phaseBlocks.flatMap((phaseBlock) =>
+    extractBootstrapRoadmapPhaseRequirementIds(phaseBlock)
+  );
+  const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
 
   if (isBootstrapRoadmapArtifact(content)) {
     if (!hasBootstrapText(milestone)) {
@@ -3546,6 +3550,12 @@ function validateBootstrapRoadmapArtifact(
 
     if (phaseBlocks.length === 0) {
       issues.push("Roadmap artifact section Phases must include at least one concrete phase entry.");
+    }
+
+    if (duplicatePhaseRequirementRefs.length > 0) {
+      issues.push(
+        `Roadmap artifact phase entries must not reference a requirement ID more than once: ${duplicatePhaseRequirementRefs.join(", ")}.`
+      );
     }
 
     for (const phaseBlock of phaseBlocks) {
@@ -4691,7 +4701,26 @@ function extractRequirementIds(content: string): string[] {
 }
 
 function extractRequirementIdsFromMarkdown(content: string): string[] {
-  return [...new Set([...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]))];
+  return [...new Set(extractRequirementIdsFromMarkdownAll(content))];
+}
+
+function extractRequirementIdsFromMarkdownAll(content: string): string[] {
+  return [...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]);
+}
+
+function valuesWithDuplicates(values: string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+
+    seen.add(value);
+  }
+
+  return [...duplicates];
 }
 
 function extractBootstrapRequirementListIds(section: string): string[] {
@@ -4730,7 +4759,7 @@ function extractBootstrapRoadmapPhaseRequirementIds(phaseBlock: string): string[
     return [];
   }
 
-  return extractRequirementIdsFromMarkdown(requirementClause);
+  return extractRequirementIdsFromMarkdownAll(requirementClause);
 }
 
 function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock: string): string[] {

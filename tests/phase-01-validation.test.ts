@@ -18,7 +18,8 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactScaffold,
-  resolveBlueprintPath
+  resolveBlueprintPath,
+  type BootstrapSeed
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
@@ -83,6 +84,36 @@ async function readJsonFile<T>(filePath: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+function buildBootstrapSeed(): BootstrapSeed {
+  return {
+    vision: "Initialize a durable Blueprint planning fixture for Phase 1 validation tests.",
+    currentMilestone: "v1",
+    requirements: [
+      {
+        id: "BP-01",
+        scope: "committed",
+        group: "Fixture setup",
+        requirement: "Create initialized Blueprint artifacts for config and state validation.",
+        status: "Pending",
+        notes: "Phase 1 validation fixture requirement."
+      }
+    ],
+    roadmapPhases: [
+      {
+        phase: "1",
+        title: "Initialize Fixture",
+        objective: "Create deterministic bootstrap state for config and state tool tests.",
+        requirementIds: ["BP-01"],
+        successCriteria: [
+          "The fixture has initialized Blueprint project artifacts.",
+          "The first phase remains traceable to the fixture requirement."
+        ]
+      }
+    ],
+    assumptions: ["Fixture bootstrap exists only to exercise config and state tools."]
+  };
+}
+
 test("root router and shipped host contexts stay aligned with the Phase 1 routing contract", async () => {
   const routerFile = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
   const requiredRouterTools = [
@@ -115,7 +146,11 @@ test("config_set persists normalized project patches and rejects reserved repo k
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
   const result = await blueprintConfigSet({
     cwd: repoPath,
     patch: {
@@ -157,7 +192,11 @@ test("state_update patches STATE.md deterministically and reports updated fields
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
   const result = await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
@@ -183,7 +222,11 @@ test("state_update preserves roadmap evolution notes for urgent decimal insertio
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
   const result = await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
@@ -213,7 +256,11 @@ test("legacy STATE.md files without roadmap evolution notes still parse cleanly"
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
   await writeFile(
     path.join(repoPath, ".blueprint/STATE.md"),
     `# Blueprint State

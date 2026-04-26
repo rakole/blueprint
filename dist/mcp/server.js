@@ -18580,7 +18580,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       phase: "1",
       title: "Align Requirements With Mapped Codebase",
       objective: "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
-      requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
+      requirementIds: ["RQ-01", "RQ-02"],
       successCriteria: [
         "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
         "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
@@ -18590,7 +18590,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       phase: "2",
       title: "Plan First Brownfield Delivery Slice",
       objective: "Shape the first implementation slice from mapped repo constraints and durable requirements.",
-      requirementIds: ["RQ-02", "RQ-03"],
+      requirementIds: ["RQ-03"],
       successCriteria: [
         "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
         "Requirement traceability stays intact as brownfield work moves toward execution."
@@ -18601,7 +18601,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       phase: "1",
       title: "Discovery And Definition",
       objective: "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
-      requirementIds: ["RQ-01", "RQ-02"],
+      requirementIds: ["RQ-01"],
       successCriteria: [
         "The product direction and first milestone are explicit enough to guide downstream planning.",
         "Requirements remain traceable into the roadmap without renumbering."
@@ -18611,7 +18611,7 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       phase: "2",
       title: "Foundation Bootstrap",
       objective: "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
-      requirementIds: ["RQ-02", "RQ-03"],
+      requirementIds: ["RQ-02"],
       successCriteria: [
         "The bootstrap draft is ready to support later discovery and execution planning.",
         "Requirement traceability stays intact as the roadmap moves toward implementation."
@@ -20021,6 +20021,10 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
   const notes = extractMarkdownSection(content, "Notes");
   const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
   const coverageIds = extractBootstrapScopedRequirementIds(requirementCoverage);
+  const phaseRequirementRefs = phaseBlocks.flatMap(
+    (phaseBlock) => extractBootstrapRoadmapPhaseRequirementIds(phaseBlock)
+  );
+  const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
   if (isBootstrapRoadmapArtifact(content)) {
     if (!hasBootstrapText(milestone2)) {
       issues.push("Roadmap artifact section Milestone must name the active bootstrap milestone.");
@@ -20037,6 +20041,11 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
     }
     if (phaseBlocks.length === 0) {
       issues.push("Roadmap artifact section Phases must include at least one concrete phase entry.");
+    }
+    if (duplicatePhaseRequirementRefs.length > 0) {
+      issues.push(
+        `Roadmap artifact phase entries must not reference a requirement ID more than once: ${duplicatePhaseRequirementRefs.join(", ")}.`
+      );
     }
     for (const phaseBlock of phaseBlocks) {
       if (!/^- \[(?: |x)\] Phase \d+(?:\.\d+)?:\s+\S+/m.test(phaseBlock)) {
@@ -20808,7 +20817,21 @@ function extractRequirementIds(content) {
   return [...content.matchAll(/\|\s*([A-Z][A-Z0-9-]*-\d+)\s*\|/g)].map((match) => match[1]);
 }
 function extractRequirementIdsFromMarkdown(content) {
-  return [...new Set([...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]))];
+  return [...new Set(extractRequirementIdsFromMarkdownAll(content))];
+}
+function extractRequirementIdsFromMarkdownAll(content) {
+  return [...content.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1]);
+}
+function valuesWithDuplicates(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const duplicates = /* @__PURE__ */ new Set();
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+    seen.add(value);
+  }
+  return [...duplicates];
 }
 function extractBootstrapRequirementListIds(section) {
   return [...new Set([...section.matchAll(/^\s*-\s+`([A-Z][A-Z0-9-]*-\d+)`:/gm)].map((match) => match[1]))];
@@ -20833,7 +20856,7 @@ function extractBootstrapRoadmapPhaseRequirementIds(phaseBlock) {
   if (requirementClause.trim().length === 0) {
     return [];
   }
-  return extractRequirementIdsFromMarkdown(requirementClause);
+  return extractRequirementIdsFromMarkdownAll(requirementClause);
 }
 function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock) {
   const lines = phaseBlock.replace(/\r\n/g, "\n").split("\n");
@@ -37561,6 +37584,116 @@ function bootstrapSeedIsSufficient(seed) {
     seed?.vision?.trim() && seed.currentMilestone?.trim() && seed.requirements && seed.requirements.length > 0 && seed.roadmapPhases && seed.roadmapPhases.length > 0
   );
 }
+function trimmedValues(values) {
+  return (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
+}
+function duplicateValues(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const duplicates = /* @__PURE__ */ new Set();
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+    seen.add(value);
+  }
+  return [...duplicates];
+}
+function assertBootstrapSeedReadyForPersistence(seed) {
+  const issues = [];
+  const requirements = seed.requirements ?? [];
+  const roadmapPhases = seed.roadmapPhases ?? [];
+  const requirementIds = requirements.map((requirement) => requirement.id.trim());
+  const declaredRequirementIds = new Set(requirementIds);
+  const duplicateRequirementIds = duplicateValues(requirementIds);
+  const committedRequirementIds = requirements.filter((requirement) => (requirement.scope ?? "committed") === "committed").map((requirement) => requirement.id.trim());
+  const roadmapRequirementRefs = [];
+  if (!seed.vision?.trim()) {
+    issues.push("bootstrapSeed.vision is required.");
+  }
+  if (!seed.currentMilestone?.trim()) {
+    issues.push("bootstrapSeed.currentMilestone is required.");
+  }
+  if (requirements.length === 0) {
+    issues.push("bootstrapSeed.requirements must include at least one requirement.");
+  }
+  if (roadmapPhases.length === 0) {
+    issues.push("bootstrapSeed.roadmapPhases must include at least one phase.");
+  }
+  for (const duplicateRequirementId of duplicateRequirementIds) {
+    issues.push(`bootstrapSeed.requirements contains duplicate requirement ID ${duplicateRequirementId}.`);
+  }
+  for (const requirement of requirements) {
+    const requirementId = requirement.id.trim();
+    if (!DURABLE_REQUIREMENT_ID_PATTERN.test(requirementId)) {
+      issues.push(
+        `bootstrapSeed requirement ID ${requirement.id} must use a durable format like RQ-01 or BP-03.`
+      );
+    }
+    if (!requirement.requirement.trim()) {
+      issues.push(`bootstrapSeed requirement ${requirementId} must include substantive requirement text.`);
+    }
+  }
+  for (const phase of roadmapPhases) {
+    const phaseLabel2 = phase.phase.trim() || "(blank)";
+    const requirementRefs = trimmedValues(phase.requirementIds);
+    const successCriteria = trimmedValues(phase.successCriteria);
+    if (!phase.phase.trim()) {
+      issues.push("bootstrapSeed roadmap phases must include a phase number.");
+    } else {
+      try {
+        normalizeBlueprintPhaseRef(phase.phase, `Bootstrap roadmap phase ${phaseLabel2}`);
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : String(error2);
+        issues.push(message);
+      }
+    }
+    if (!phase.title.trim()) {
+      issues.push(`bootstrapSeed roadmap phase ${phaseLabel2} must include a title.`);
+    }
+    if (!phase.objective.trim()) {
+      issues.push(`bootstrapSeed roadmap phase ${phaseLabel2} must include an objective.`);
+    }
+    if (requirementRefs.length === 0) {
+      issues.push(
+        `bootstrapSeed roadmap phase ${phaseLabel2} must include explicit requirementIds before persistence.`
+      );
+    }
+    if (successCriteria.length === 0) {
+      issues.push(
+        `bootstrapSeed roadmap phase ${phaseLabel2} must include explicit successCriteria before persistence.`
+      );
+    }
+    for (const requirementRef of requirementRefs) {
+      roadmapRequirementRefs.push(requirementRef);
+      if (!DURABLE_REQUIREMENT_ID_PATTERN.test(requirementRef)) {
+        issues.push(
+          `bootstrapSeed roadmap phase ${phaseLabel2} references non-durable requirement ID ${requirementRef}.`
+        );
+      } else if (!declaredRequirementIds.has(requirementRef)) {
+        issues.push(
+          `bootstrapSeed roadmap phase ${phaseLabel2} references undeclared requirement ID ${requirementRef}.`
+        );
+      }
+    }
+  }
+  for (const duplicateRequirementRef of duplicateValues(roadmapRequirementRefs)) {
+    issues.push(
+      `bootstrapSeed roadmap phases reference requirement ${duplicateRequirementRef} more than once.`
+    );
+  }
+  for (const requirementId of committedRequirementIds) {
+    const referenceCount = roadmapRequirementRefs.filter((value) => value === requirementId).length;
+    if (referenceCount !== 1) {
+      issues.push(
+        `bootstrapSeed committed requirement ${requirementId} must appear in exactly one roadmap phase.`
+      );
+    }
+  }
+  if (issues.length > 0) {
+    throw new Error(`Bootstrap seed is not ready for persistence:
+- ${issues.join("\n- ")}`);
+  }
+}
 function assertBootstrapCanWrite(args) {
   if (args.inspection.readiness === "partial") {
     throw new Error(
@@ -37584,7 +37717,12 @@ function assertBootstrapCanWrite(args) {
   }
   if (args.bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
     throw new Error(
-      'Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Provide the seed or use bootstrapMode: "auto" only when synthesis is explicitly requested.'
+      "Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Keep questioning until the seed is ready; auto mode also requires enough project context before persistence."
+    );
+  }
+  if (args.bootstrapMode === "auto" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
+    throw new Error(
+      "Automatic project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases. If --auto lacks enough project context, stop and ask for the missing brief before any writes."
     );
   }
 }
@@ -37765,6 +37903,11 @@ async function blueprintProjectInit(args = {}) {
     ),
     args.bootstrapSeed
   ) : args.bootstrapSeed;
+  assertBootstrapSeedReadyForPersistence(bootstrapSeed);
+  const initialPhase = bootstrapSeed.roadmapPhases?.[0]?.phase ? normalizeBlueprintPhaseRef(
+    bootstrapSeed.roadmapPhases[0].phase,
+    "Initial roadmap phase"
+  ) : "1";
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
     overwrite,
@@ -37786,7 +37929,7 @@ async function blueprintProjectInit(args = {}) {
     patch: {
       projectStatus: "initialized",
       currentMilestone: bootstrapSeed.currentMilestone ?? "v1",
-      currentPhase: bootstrapSeed.roadmapPhases?.[0]?.phase ?? "1",
+      currentPhase: initialPhase,
       activeCommand: blueprintDirectCommand("new-project"),
       nextAction: bootstrapAssessment.provisionalRoadmap ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
       blockers: [],
@@ -37900,6 +38043,7 @@ var init_project = __esm({
     init_artifacts();
     init_security();
     init_config();
+    init_security();
     init_phase();
     init_state();
     init_review();
@@ -37995,8 +38139,7 @@ var init_project = __esm({
             "blueprint_config_set",
             "blueprint_state_update",
             "blueprint_artifact_contract_read",
-            "blueprint_artifact_validate",
-            "blueprint_artifact_scaffold"
+            "blueprint_artifact_validate"
           ],
           requiredToolsSatisfied: true,
           optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],

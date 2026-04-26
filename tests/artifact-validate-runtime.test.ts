@@ -299,7 +299,7 @@ function createBootstrapRoadmapContent(options: {
 - Out-of-scope: RQ-04`;
   const phases =
     options.phases ??
-    `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-02)
+    `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01)
   - Objective: Seed the first milestone.
   - Success Criteria:
     - Bootstrap requirements are traceable.

@@ -67,7 +67,6 @@ This skill package is the runtime source of truth for `/blu-new-project`.
 - `mcp_blueprint_blueprint_state_update`
 - `mcp_blueprint_blueprint_artifact_contract_read`
 - `mcp_blueprint_blueprint_artifact_validate`
-- `mcp_blueprint_blueprint_artifact_scaffold`
 
 ## Optional Agents
 
@@ -99,7 +98,7 @@ carry-forward evidence, then continue.
   Roadmap phases must cover every committed requirement exactly once and carry
   observable success criteria suitable for later discovery, planning, and
   validation.
-- `mcp_blueprint_blueprint_project_init` remains the first persistent bootstrap write, with the detailed mutation contract preserved in `references/bootstrap-runtime-contract.md`.
+- `mcp_blueprint_blueprint_project_init` remains the first persistent bootstrap write, with the detailed mutation contract preserved in `references/bootstrap-runtime-contract.md`; do not call scaffold before it.
 - Workflow preference capture still covers mode, granularity, parallelization posture, planning-doc git preference, and key workflow toggles through the local runtime references.
 - Preserve brownfield classification, saved-default handling, workflow
   preference capture, revision loop behavior, and next safe implemented command
