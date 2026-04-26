@@ -303,6 +303,7 @@ test("phase lifecycle tool schemas accept numeric JSON phase refs and plan ids",
   for (const toolName of [
     "blueprint_phase_plan_index",
     "blueprint_phase_execution_targets",
+    "blueprint_phase_plan_validate",
     "blueprint_phase_artifact_read",
     "blueprint_phase_artifact_write",
     "blueprint_phase_validation_read",

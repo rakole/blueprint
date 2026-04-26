@@ -189,6 +189,8 @@ type PhasePlanReadArgs = PhaseLookupArgs & {
   planId: NumericInput;
 };
 
+type PhasePlanValidateArgs = PhaseLookupArgs;
+
 type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
   wave?: number;
   gapsOnly?: boolean;
@@ -570,6 +572,25 @@ type PhasePlanReadResult = {
   reason: string | null;
 };
 
+type PhasePlanValidationResult = {
+  phaseFound: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  status: "valid" | "invalid";
+  issues: string[];
+  warnings: string[];
+  planCount: number;
+  planIds: string[];
+  roadmapRequirementIds: string[];
+  coveredRequirementIds: string[];
+  uncoveredRequirementIds: string[];
+  unexpectedRequirementIds: string[];
+  missingDependencyIds: string[];
+  cyclicDependencyPlanIds: string[][];
+};
+
 type PhasePlanWriteResult = {
   phaseNumber: string;
   phasePrefix: string;
@@ -643,6 +664,16 @@ type PhaseSummaryWriteResult = {
   status: "created" | "updated" | "reused" | "invalid";
   issues: string[];
   warnings: string[];
+};
+
+type LoadedPhasePlanArtifact = {
+  path: string;
+  planIdFromPath: string;
+  content: string;
+  heading: string | null;
+  metadata: ReturnType<typeof validatePlanArtifactContent>["metadata"];
+  validation: ReturnType<typeof validatePlanArtifactContent>;
+  normalizedFrontmatterPlanId: string | null;
 };
 
 type PhaseExecutionTargetSummary = {
@@ -870,6 +901,10 @@ const phasePlanReadInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   planId: numericBlueprintInputSchema
+};
+const phasePlanValidateInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional()
 };
 const phasePlanWriteInputSchema = {
   cwd: z.string().optional(),
@@ -2688,11 +2723,27 @@ function planPathFor(
   return buildArtifactPath(located.phaseDir, located.phasePrefix, `-${normalizePlanId(planId)}-PLAN.md`);
 }
 
-function replacePlanSlotLabel(value: string, fromPlanId: string, toPlanId: string): string {
-  return value.replace(
-    new RegExp(`\\bPlan\\s+${fromPlanId}\\b`, "g"),
-    `Plan ${toPlanId}`
-  );
+function replacePlanSlotLabel(
+  value: string,
+  fromPlanId: string | null,
+  toPlanId: string
+): string {
+  const candidates = new Set<string>(["YY"]);
+
+  if (fromPlanId) {
+    candidates.add(fromPlanId);
+  }
+
+  let updated = value;
+
+  for (const candidate of candidates) {
+    updated = updated.replace(
+      new RegExp(`\\bPlan\\s+${escapeForRegex(candidate)}\\b`, "g"),
+      `Plan ${toPlanId}`
+    );
+  }
+
+  return updated;
 }
 
 function extractPlanIdFromFrontmatterLine(line: string): string | null {
@@ -2712,7 +2763,7 @@ function extractPlanIdFromFrontmatterLine(line: string): string | null {
 
 function reconcilePlanTitleLine(
   line: string,
-  fromPlanId: string,
+  fromPlanId: string | null,
   toPlanId: string
 ): string | null {
   const match = line.match(/^(\s*title:\s*)(.+)$/);
@@ -2737,7 +2788,7 @@ function reconcilePlanTitleLine(
 
 function reconcilePlanHeadingLine(
   line: string,
-  fromPlanId: string,
+  fromPlanId: string | null,
   toPlanId: string
 ): string | null {
   if (!/^#\s+/.test(line)) {
@@ -2761,7 +2812,8 @@ function reconcileAutoAssignedPlanContent(content: string, planId: string): stri
   const updatedFrontmatterLines = frontmatter.split("\n");
   const sourcePlanId = updatedFrontmatterLines
     .map((line) => extractPlanIdFromFrontmatterLine(line))
-    .find((value): value is string => value !== null);
+    .find((value): value is string => value !== null)
+    ?? null;
   const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
 
   if (planIdLineIndex >= 0) {
@@ -2776,42 +2828,38 @@ function reconcileAutoAssignedPlanContent(content: string, planId: string): stri
     }
   }
 
-  if (sourcePlanId && sourcePlanId !== normalizedPlanId) {
-    const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
+  const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
 
-    if (titleLineIndex >= 0) {
-      const updatedTitleLine = reconcilePlanTitleLine(
-        updatedFrontmatterLines[titleLineIndex] ?? "",
-        sourcePlanId,
-        normalizedPlanId
-      );
+  if (titleLineIndex >= 0) {
+    const updatedTitleLine = reconcilePlanTitleLine(
+      updatedFrontmatterLines[titleLineIndex] ?? "",
+      sourcePlanId,
+      normalizedPlanId
+    );
 
-      if (updatedTitleLine) {
-        updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
-      }
+    if (updatedTitleLine) {
+      updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
     }
   }
 
   const contentStart = frontmatterMatch.index;
   const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
   const reconciledBody =
-    sourcePlanId && sourcePlanId !== normalizedPlanId
-      ? (() => {
-          let headingRewritten = false;
+    (() => {
+      let headingRewritten = false;
 
-          return contentAfterFrontmatter
-            .split("\n")
-            .map((line) => {
-              if (headingRewritten || !/^#\s+/.test(line)) {
-                return line;
-              }
+      return contentAfterFrontmatter
+        .split("\n")
+        .map((line) => {
+          if (headingRewritten || !/^#\s+/.test(line)) {
+            return line;
+          }
 
-              headingRewritten = true;
-              return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
-            })
-            .join("\n");
-        })()
-      : contentAfterFrontmatter;
+          headingRewritten = true;
+          return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
+        })
+        .join("\n");
+    })();
 
   return `---\n${updatedFrontmatterLines.join("\n")}\n---${reconciledBody}`;
 }
@@ -2828,6 +2876,418 @@ function collectInvalidPlanDependencyIssues(planPath: string, dependsOn: string[
   }
 
   return issues;
+}
+
+function normalizeMaybePlanId(value: string | null): string | null {
+  if (!value || !/^\d+$/.test(value)) {
+    return null;
+  }
+
+  return normalizePlanId(value);
+}
+
+function extractHeadingText(content: string): string | null {
+  return content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
+}
+
+function extractReferencedPlanId(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const placeholderMatch = value.match(/\bPlan\s+(YY)\b/i);
+
+  if (placeholderMatch) {
+    return placeholderMatch[1].toUpperCase();
+  }
+
+  const numericMatch = value.match(/\bPlan\s+(\d+)\b/i);
+
+  if (!numericMatch) {
+    return null;
+  }
+
+  try {
+    return normalizePlanId(numericMatch[1]);
+  } catch {
+    return null;
+  }
+}
+
+function extractHeadingPhaseDetails(
+  heading: string | null
+): {
+  phaseNumber: string | null;
+  phaseName: string | null;
+} {
+  if (!heading) {
+    return {
+      phaseNumber: null,
+      phaseName: null
+    };
+  }
+
+  const match = heading.match(/^Phase\s+(\d+(?:\.\d+)?):\s+(.+?)\s+-\s+Plan\s+\S+\s*$/);
+
+  if (!match) {
+    return {
+      phaseNumber: null,
+      phaseName: null
+    };
+  }
+
+  return {
+    phaseNumber: normalizePhaseNumber(match[1]),
+    phaseName: match[2]?.trim() ?? null
+  };
+}
+
+async function readPhaseRoadmapRequirements(
+  projectRoot: string,
+  phaseNumber: string
+): Promise<string[]> {
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  if (!(await pathExists(roadmapPath))) {
+    return [];
+  }
+
+  const roadmap = parseRoadmapDocument(await fs.readFile(roadmapPath, "utf8"));
+  const matchedPhase = roadmap.phases.find(
+    (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
+  );
+
+  return matchedPhase?.requirements ?? [];
+}
+
+async function collectPhasePlanArtifacts(
+  projectRoot: string,
+  resolved: ResolvedPhaseLocation,
+  overrides: ReadonlyMap<string, string> = new Map()
+): Promise<{
+  plans: LoadedPhasePlanArtifact[];
+  nonCanonicalPlanPaths: string[];
+}> {
+  const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
+  const planPaths = new Set<string>();
+
+  if (await pathExists(phaseRoot)) {
+    const entries = await fs.readdir(phaseRoot, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith("-PLAN.md")) {
+        continue;
+      }
+
+      planPaths.add(`${resolved.phaseDir}/${entry.name}`);
+    }
+  }
+
+  for (const planPath of overrides.keys()) {
+    if (planPath.endsWith("-PLAN.md")) {
+      planPaths.add(planPath);
+    }
+  }
+
+  const plans: LoadedPhasePlanArtifact[] = [];
+  const nonCanonicalPlanPaths: string[] = [];
+
+  for (const planPath of [...planPaths].sort((left, right) => left.localeCompare(right))) {
+    const planIdFromPath = parsePlanArtifactPath(planPath, resolved.phasePrefix);
+
+    if (!planIdFromPath) {
+      nonCanonicalPlanPaths.push(planPath);
+      continue;
+    }
+
+    const content = overrides.get(planPath)
+      ?? await fs.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
+
+    plans.push({
+      path: planPath,
+      planIdFromPath,
+      content,
+      heading: extractHeadingText(content),
+      metadata: validation.metadata,
+      validation,
+      normalizedFrontmatterPlanId: normalizeMaybePlanId(validation.metadata.planId)
+    });
+  }
+
+  return {
+    plans,
+    nonCanonicalPlanPaths
+  };
+}
+
+function detectDependencyCycles(graph: ReadonlyMap<string, string[]>): string[][] {
+  const cycles = new Set<string>();
+  const state = new Map<string, "visiting" | "visited">();
+  const stack: string[] = [];
+
+  const visit = (planId: string): void => {
+    const currentState = state.get(planId);
+
+    if (currentState === "visiting") {
+      const cycleStart = stack.indexOf(planId);
+
+      if (cycleStart >= 0) {
+        const cycle = [...stack.slice(cycleStart), planId];
+        cycles.add(cycle.join("->"));
+      }
+
+      return;
+    }
+
+    if (currentState === "visited") {
+      return;
+    }
+
+    state.set(planId, "visiting");
+    stack.push(planId);
+
+    for (const dependency of graph.get(planId) ?? []) {
+      if (!graph.has(dependency)) {
+        continue;
+      }
+
+      visit(dependency);
+    }
+
+    stack.pop();
+    state.set(planId, "visited");
+  };
+
+  for (const planId of graph.keys()) {
+    visit(planId);
+  }
+
+  return [...cycles]
+    .map((cycle) => cycle.split("->"))
+    .sort((left, right) => left.join("->").localeCompare(right.join("->")));
+}
+
+async function validatePhasePlanSet(
+  projectRoot: string,
+  resolved: ResolvedPhaseLocation,
+  options: {
+    overrides?: ReadonlyMap<string, string>;
+    roadmapCoverageSeverity?: "issue" | "warning" | "ignore";
+  } = {}
+): Promise<PhasePlanValidationResult> {
+  const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
+  const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
+    projectRoot,
+    resolved,
+    options.overrides
+  );
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const roadmapRequirementIds = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const coveredRequirementIds = new Set<string>();
+  const unexpectedRequirementIds = new Set<string>();
+  const missingDependencyIds = new Set<string>();
+  const dependencyGraph = new Map<string, string[]>();
+  const plansById = new Map<string, LoadedPhasePlanArtifact>();
+  const frontmatterPlanPaths = new Map<string, string[]>();
+
+  for (const planPath of nonCanonicalPlanPaths) {
+    issues.push(
+      `${planPath}: plan artifact path must match ${resolved.phasePrefix}-YY-PLAN.md for Phase ${resolved.phaseNumber}.`
+    );
+  }
+
+  for (const plan of plans) {
+    dependencyGraph.set(plan.planIdFromPath, []);
+    plansById.set(plan.planIdFromPath, plan);
+
+    for (const requirementId of plan.metadata.requirements) {
+      coveredRequirementIds.add(requirementId);
+
+      if (roadmapRequirementIds.length > 0 && !roadmapRequirementIds.includes(requirementId)) {
+        unexpectedRequirementIds.add(requirementId);
+      }
+    }
+
+    if (plan.normalizedFrontmatterPlanId) {
+      frontmatterPlanPaths.set(plan.normalizedFrontmatterPlanId, [
+        ...(frontmatterPlanPaths.get(plan.normalizedFrontmatterPlanId) ?? []),
+        plan.path
+      ]);
+    }
+
+    for (const issue of plan.validation.issues) {
+      issues.push(`${plan.path}: ${issue}`);
+    }
+    for (const warning of plan.validation.warnings) {
+      warnings.push(`${plan.path}: ${warning}`);
+    }
+
+    if (
+      plan.normalizedFrontmatterPlanId &&
+      plan.normalizedFrontmatterPlanId !== plan.planIdFromPath
+    ) {
+      issues.push(
+        `${plan.path}: frontmatter plan_id "${plan.metadata.planId}" must match the path plan id "${plan.planIdFromPath}".`
+      );
+    }
+
+    const titlePlanId = extractReferencedPlanId(plan.metadata.title);
+
+    if (titlePlanId === "YY") {
+      issues.push(
+        `${plan.path}: frontmatter title must replace placeholder plan id YY with "${plan.planIdFromPath}".`
+      );
+    } else if (titlePlanId && titlePlanId !== plan.planIdFromPath) {
+      issues.push(
+        `${plan.path}: frontmatter title references plan ${titlePlanId}, which does not match path plan id "${plan.planIdFromPath}".`
+      );
+    }
+
+    const headingPlanId = extractReferencedPlanId(plan.heading);
+
+    if (headingPlanId === "YY") {
+      issues.push(
+        `${plan.path}: plan heading must replace placeholder plan id YY with "${plan.planIdFromPath}".`
+      );
+    } else if (headingPlanId && headingPlanId !== plan.planIdFromPath) {
+      issues.push(
+        `${plan.path}: plan heading references plan ${headingPlanId}, which does not match path plan id "${plan.planIdFromPath}".`
+      );
+    }
+
+    const headingPhase = extractHeadingPhaseDetails(plan.heading);
+
+    if (
+      headingPhase.phaseNumber &&
+      normalizePhaseNumber(headingPhase.phaseNumber) !== normalizePhaseNumber(resolved.phaseNumber)
+    ) {
+      issues.push(
+        `${plan.path}: plan heading phase ${headingPhase.phaseNumber} must match Phase ${resolved.phaseNumber}.`
+      );
+    }
+
+    if (headingPhase.phaseName && headingPhase.phaseName !== resolved.phaseName) {
+      issues.push(
+        `${plan.path}: plan heading phase name "${headingPhase.phaseName}" must match "${resolved.phaseName}".`
+      );
+    }
+  }
+
+  for (const [frontmatterPlanId, planPaths] of frontmatterPlanPaths) {
+    if (planPaths.length > 1) {
+      issues.push(
+        `Frontmatter plan_id "${frontmatterPlanId}" is declared by multiple plan files: ${planPaths.join(", ")}.`
+      );
+    }
+  }
+
+  for (const plan of plans) {
+    const dependencyIds = plan.metadata.dependsOn
+      .map((dependency) => normalizeMaybePlanId(dependency))
+      .filter((dependency): dependency is string => dependency !== null);
+
+    dependencyGraph.set(plan.planIdFromPath, dependencyIds);
+
+    for (const dependencyId of dependencyIds) {
+      const dependencyPlan = plansById.get(dependencyId);
+
+      if (!dependencyPlan) {
+        missingDependencyIds.add(dependencyId);
+        issues.push(
+          `${plan.path}: depends_on references missing plan "${dependencyId}".`
+        );
+        continue;
+      }
+
+      if (
+        typeof plan.metadata.wave === "number" &&
+        typeof dependencyPlan.metadata.wave === "number" &&
+        dependencyPlan.metadata.wave >= plan.metadata.wave
+      ) {
+        issues.push(
+          `${plan.path}: wave ${plan.metadata.wave} must come after dependency ${dependencyId} in wave ${dependencyPlan.metadata.wave}.`
+        );
+      }
+    }
+  }
+
+  const cyclicDependencyPlanIds = detectDependencyCycles(dependencyGraph);
+
+  for (const cycle of cyclicDependencyPlanIds) {
+    issues.push(`Plan dependency cycle detected: ${cycle.join(" -> ")}.`);
+  }
+
+  const uncoveredRequirementIds = roadmapRequirementIds.filter(
+    (requirementId) => !coveredRequirementIds.has(requirementId)
+  );
+
+  if (uncoveredRequirementIds.length > 0) {
+    const message = `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
+
+    if (coverageSeverity === "issue") {
+      issues.push(message);
+    } else if (coverageSeverity === "warning") {
+      warnings.push(message);
+    }
+  }
+
+  if (unexpectedRequirementIds.size > 0) {
+    warnings.push(
+      `Phase ${resolved.phaseNumber} plans reference requirements not declared for this roadmap phase: ${[...unexpectedRequirementIds]
+        .sort((left, right) => left.localeCompare(right))
+        .join(", ")}.`
+    );
+  }
+
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    status: issues.length === 0 ? "valid" : "invalid",
+    issues,
+    warnings,
+    planCount: plans.length,
+    planIds: plans.map((plan) => plan.planIdFromPath),
+    roadmapRequirementIds,
+    coveredRequirementIds: [...coveredRequirementIds].sort((left, right) => left.localeCompare(right)),
+    uncoveredRequirementIds,
+    unexpectedRequirementIds: [...unexpectedRequirementIds].sort((left, right) => left.localeCompare(right)),
+    missingDependencyIds: [...missingDependencyIds].sort((left, right) => left.localeCompare(right)),
+    cyclicDependencyPlanIds
+  };
+}
+
+function selectRelevantPlanValidationIssues(
+  validation: PhasePlanValidationResult,
+  pathValue: string,
+  planId: string
+): string[] {
+  return validation.issues.filter((issue) => {
+    if (issue.startsWith(`${pathValue}:`) || issue.includes(pathValue)) {
+      return true;
+    }
+
+    if (issue.startsWith("Plan dependency cycle detected:")) {
+      const cycle = issue
+        .replace(/^Plan dependency cycle detected:\s*/, "")
+        .replace(/\.$/, "")
+        .split(/\s*->\s*/);
+
+      return cycle.includes(planId);
+    }
+
+    return (
+      issue.includes(`dependency ${planId} `) ||
+      issue.includes(`plan "${planId}"`) ||
+      issue.includes(`plan ${planId}`) ||
+      issue.includes(`plan_id "${planId}"`) ||
+      issue.includes(`path plan id "${planId}"`)
+    );
+  });
 }
 
 function parseSummaryArtifactPath(
@@ -4961,6 +5421,40 @@ export async function blueprintPhasePlanRead(
   };
 }
 
+export async function blueprintPhasePlanValidate(
+  args: PhasePlanValidateArgs = {}
+): Promise<PhasePlanValidationResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      status: "invalid",
+      issues: [],
+      warnings: [
+        ...located.warnings,
+        ...(located.reason ? [located.reason] : [])
+      ],
+      planCount: 0,
+      planIds: [],
+      roadmapRequirementIds: [],
+      coveredRequirementIds: [],
+      uncoveredRequirementIds: [],
+      unexpectedRequirementIds: [],
+      missingDependencyIds: [],
+      cyclicDependencyPlanIds: []
+    };
+  }
+
+  return validatePhasePlanSet(projectRoot, resolved);
+}
+
 export async function blueprintPhasePlanWrite(
   args: PhasePlanWriteArgs
 ): Promise<PhasePlanWriteResult> {
@@ -5069,6 +5563,37 @@ export async function blueprintPhasePlanWrite(
       };
     }
 
+    const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
+      overrides: new Map([[pathValue, preparedContent.content]]),
+      roadmapCoverageSeverity: "warning"
+    });
+    const blockingIssues = selectRelevantPlanValidationIssues(
+      prospectiveValidation,
+      pathValue,
+      planId
+    );
+
+    if (blockingIssues.length > 0 && strictValidation) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: blockingIssues,
+          warnings: prospectiveValidation.warnings
+        },
+        warnings: [...warnings, ...prospectiveValidation.warnings]
+      };
+    }
+
     const exists = await pathExists(absolutePath);
     const normalizePersistedText = (value: string): string =>
       value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
@@ -5091,11 +5616,11 @@ export async function blueprintPhasePlanWrite(
           overwritten: false,
           status: "reused",
           validation: {
-            valid: validation.valid && dependencyIssues.length === 0,
-            issues: validationIssues,
-            warnings: validation.warnings
+            valid: prospectiveValidation.status === "valid",
+            issues: prospectiveValidation.issues,
+            warnings: prospectiveValidation.warnings
           },
-          warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+          warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
 
@@ -5128,11 +5653,11 @@ export async function blueprintPhasePlanWrite(
       overwritten: exists,
       status: exists ? "updated" : "created",
       validation: {
-        valid: validation.valid && dependencyIssues.length === 0,
-        issues: validationIssues,
-        warnings: validation.warnings
+        valid: prospectiveValidation.status === "valid",
+        issues: prospectiveValidation.issues,
+        warnings: prospectiveValidation.warnings
       },
-      warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+      warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });
 }
@@ -6222,6 +6747,14 @@ export const phaseToolDefinitions = [
     inputSchema: phasePlanReadInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhasePlanRead(args as PhasePlanReadArgs)
+  },
+  {
+    name: "blueprint_phase_plan_validate",
+    description:
+      "Validate the full saved PLAN set for one phase, including dependency coherence, plan-slot consistency, and roadmap coverage.",
+    inputSchema: phasePlanValidateInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhasePlanValidate(args as PhasePlanValidateArgs)
   },
   {
     name: "blueprint_phase_plan_write",

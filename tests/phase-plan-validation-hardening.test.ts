@@ -818,11 +818,11 @@ test("warn-mode plan writes surface malformed depends_on without blocking the wr
   assert.equal(result.status, "created");
   assert.equal(result.written, true);
   assert.equal(result.validation?.valid, false);
-  assert.match(result.validation?.issues.join("\n") ?? "", /invalid depends_on reference/i);
+  assert.match(result.validation?.issues.join("\n") ?? "", /depends_on entries must be numeric plan ids/i);
   assert.match(written, /plan_id: "05"/);
 });
 
-test("strict plan writes allow concrete forward dependencies and wave 1 plans", async (t) => {
+test("strict plan writes reject wave 1 plans that declare dependencies", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -836,12 +836,13 @@ test("strict plan writes allow concrete forward dependencies and wave 1 plans", 
     overwrite: true
   });
 
-  assert.equal(result.status, "created");
-  assert.equal(result.written, true);
-  assert.equal(result.validation?.valid, true);
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.equal(result.validation?.valid, false);
+  assert.match(result.validation?.issues.join("\n") ?? "", /depends_on references missing plan "01"/);
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-03-PLAN.md")),
-    true
+    false
   );
 });
 
