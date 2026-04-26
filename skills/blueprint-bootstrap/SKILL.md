@@ -12,7 +12,7 @@ commands:
   - /blu-new-project
 ---
 ### Guidance for LLM only(not to show on screen)
-- Make sure to keep updating the user what you are doing through gemini cli native tools / UX, Do not dump whole ouput, but step name and just the gist of what you are doing is enough
+- Keep the user updated through Gemini CLI native tools or the equivalent host UX when those helpers are available. If not, use concise conversational progress notes with the stage name and gist; do not dump whole output.
 
 # Blueprint Bootstrap Skill
 

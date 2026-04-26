@@ -15,6 +15,7 @@ import {
   inspectBootstrapArtifacts,
   type BootstrapArtifactDiagnostics,
   type BootstrapAssessment,
+  type NormalizedBootstrapSeed,
   type BootstrapSeed
 } from "./artifacts.js";
 import { safeJsonParseObject } from "../../shared/security.js";
@@ -361,6 +362,155 @@ function bootstrapSeedIsSufficient(seed: BootstrapSeed | undefined): boolean {
   );
 }
 
+const MIN_SUBSTANTIVE_WORDS = 6;
+const GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
+const GENERIC_SUCCESS_CRITERIA_PATTERNS = [
+  /^(?:complete|finish|do|implement|handle|support|make|prepare)\s+(?:the\s+)?(?:work|task|feature|phase|roadmap|bootstrap|workflow)\.?$/i,
+  /^(?:keep|ensure|verify|validate|confirm)\s+(?:things|it|this|the work|the phase|the roadmap|the workflow)\s+(?:working|done|ready|traceable|complete)\.?$/i,
+  /^complete .+ with traceable handoff evidence\.?$/i,
+  /^keep requirement ids traceable into later roadmap artifacts\.?$/i
+];
+
+function countWords(value: string): number {
+  return (value.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g) ?? []).length;
+}
+
+function isSubstantiveText(value: string | undefined, minimumWords = MIN_SUBSTANTIVE_WORDS): boolean {
+  const normalized = value?.trim() ?? "";
+
+  return (
+    normalized.length > 0 &&
+    countWords(normalized) >= minimumWords &&
+    !GENERIC_TEXT_PATTERN.test(normalized)
+  );
+}
+
+function bootstrapSeedHasAutoContext(seed: BootstrapSeed | undefined, repoSummary: string | null): boolean {
+  if (isSubstantiveText(repoSummary ?? undefined)) {
+    return true;
+  }
+
+  if (isSubstantiveText(seed?.vision)) {
+    return true;
+  }
+
+  const substantiveRequirements =
+    seed?.requirements?.filter((requirement) => isSubstantiveText(requirement.requirement)).length ?? 0;
+  const substantivePhases =
+    seed?.roadmapPhases?.filter(
+      (phase) => isSubstantiveText(phase.title, 2) && isSubstantiveText(phase.objective)
+    ).length ?? 0;
+
+  return substantiveRequirements > 0 && substantivePhases > 0;
+}
+
+function normalizedPhaseRef(value: string): string {
+  return value.trim().replace(/\.0+$/, "").toLowerCase();
+}
+
+function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
+  const issues: string[] = [];
+  const requirementIds = new Set<string>();
+  const committedRequirementIds = new Set<string>();
+  const committedCoverageCounts = new Map<string, number>();
+  const phaseRefs = new Set<string>();
+
+  if (!isSubstantiveText(seed.vision)) {
+    issues.push("bootstrapSeed.vision must contain a substantive project brief before the first write.");
+  }
+
+  if (!isSubstantiveText(seed.currentMilestone, 1)) {
+    issues.push("bootstrapSeed.currentMilestone must name the active milestone before the first write.");
+  }
+
+  for (const requirement of seed.requirements) {
+    if (requirementIds.has(requirement.id)) {
+      issues.push(`bootstrapSeed requirements contain duplicate requirement ID ${requirement.id}.`);
+    }
+
+    requirementIds.add(requirement.id);
+
+    if (!isSubstantiveText(requirement.requirement, 5)) {
+      issues.push(`Requirement ${requirement.id} must be substantive before the first write.`);
+    }
+
+    if (requirement.scope === "committed") {
+      committedRequirementIds.add(requirement.id);
+      committedCoverageCounts.set(requirement.id, 0);
+    }
+  }
+
+  if (committedRequirementIds.size === 0) {
+    issues.push("bootstrapSeed must include at least one committed requirement before the first write.");
+  }
+
+  for (const phase of seed.roadmapPhases) {
+    const phaseRef = normalizedPhaseRef(phase.phase);
+
+    if (phaseRefs.has(phaseRef)) {
+      issues.push(`bootstrapSeed roadmapPhases contain duplicate phase reference ${phase.phase}.`);
+    }
+
+    phaseRefs.add(phaseRef);
+
+    const phaseRequirementIds = phase.requirementIds ?? [];
+    const uniquePhaseRequirementIds = new Set<string>();
+
+    for (const requirementId of phaseRequirementIds) {
+      if (uniquePhaseRequirementIds.has(requirementId)) {
+        issues.push(`Phase ${phase.phase} references requirement ${requirementId} more than once.`);
+      }
+
+      uniquePhaseRequirementIds.add(requirementId);
+
+      if (!requirementIds.has(requirementId)) {
+        issues.push(`Phase ${phase.phase} references undeclared requirement ${requirementId}.`);
+      }
+
+      if (committedCoverageCounts.has(requirementId)) {
+        committedCoverageCounts.set(requirementId, (committedCoverageCounts.get(requirementId) ?? 0) + 1);
+      }
+    }
+
+    const successCriteria = phase.successCriteria ?? [];
+
+    if (successCriteria.length < 2 || successCriteria.length > 5) {
+      issues.push(`Phase ${phase.phase} must include 2-5 success criteria before the first write.`);
+    }
+
+    for (const criterion of successCriteria) {
+      const trimmedCriterion = criterion.trim();
+
+      if (
+        !isSubstantiveText(trimmedCriterion) ||
+        GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))
+      ) {
+        issues.push(`Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`);
+      }
+    }
+  }
+
+  for (const requirementId of committedRequirementIds) {
+    const coverageCount = committedCoverageCounts.get(requirementId) ?? 0;
+
+    if (coverageCount !== 1) {
+      issues.push(
+        `Committed requirement ${requirementId} must be mapped to exactly one roadmap phase before the first write; found ${coverageCount}.`
+      );
+    }
+  }
+
+  return issues;
+}
+
+function assertBootstrapSeedPreflight(seed: NormalizedBootstrapSeed): void {
+  const issues = bootstrapSeedPreflightIssues(seed);
+
+  if (issues.length > 0) {
+    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
+  }
+}
+
 function assertBootstrapCanWrite(args: {
   inspection: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>;
   bootstrapAssessment: BootstrapAssessment;
@@ -633,17 +783,32 @@ export async function blueprintProjectInit(
   const projectName = await inferProjectName(projectRoot, args.projectName);
   const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
   const repoSummary = await readRepoSummary(projectRoot);
-  const bootstrapSeed =
+
+  if (
+    bootstrapMode === "auto" &&
+    !bootstrapSeedHasAutoContext(args.bootstrapSeed, repoSummary)
+  ) {
+    throw new Error(
+      "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes. Provide bootstrapSeed.vision or add README/package description context."
+    );
+  }
+
+  const autoBaseSeed =
     bootstrapMode === "auto"
-      ? mergeBootstrapSeed(
-          buildDefaultBootstrapSeed(
-            projectName,
-            bootstrapAssessment,
-            repoSummary ? { vision: repoSummary } : undefined
-          ),
-          args.bootstrapSeed
+      ? buildDefaultBootstrapSeed(
+          projectName,
+          bootstrapAssessment,
+          repoSummary ? { vision: repoSummary } : undefined
         )
+      : undefined;
+  const seedInput =
+    bootstrapMode === "auto"
+      ? mergeBootstrapSeed(autoBaseSeed!, args.bootstrapSeed)
       : args.bootstrapSeed!;
+  const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
+
+  assertBootstrapSeedPreflight(bootstrapSeed);
+
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
     overwrite,
