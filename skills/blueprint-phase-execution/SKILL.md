@@ -52,6 +52,8 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
   `mcp_blueprint_blueprint_project_status`.
 - Translate shorthand tool ids from older docs into runtime FQNs before
   calling them.
+- Translate any shorthand tool ids like `blueprint_project_status` into runtime
+  FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI
   entrypoints, not shell executables.

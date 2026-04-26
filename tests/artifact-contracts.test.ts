@@ -67,6 +67,7 @@ ${requirementRows}
 
 ## State Of The Art
 
+- Not externally checked; this unit fixture validates local contract behavior only.
 - Template-driven drafting keeps the agent aligned with the live runtime contract.
 
 ## Common Pitfalls
