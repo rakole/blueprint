@@ -10,8 +10,8 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `plan-phase` uses the shared long-running-mutation posture: resolve the target phase, read live planning inputs, decide the reuse/revise/replace gate, execute bounded drafting, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
-- When saved plans already exist, keep the pending gate explicit and require a structured `reuse`, `revise`, or `replace` gate before any overwrite path.
+- `plan-phase` uses the shared long-running-mutation posture. Keep the detailed behavior in `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md` and keep this command doc focused on the user-facing surface and MCP boundaries.
+- When saved plans would be revised or replaced, keep the pending gate explicit and require a structured `reuse`, `revise`, or `replace` decision before the overwrite path. Additive new plan ids may proceed without that gate when no saved plan body will be overwritten.
 - The rich local runtime contract lives at `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md`; it defines the detailed stage mapping, MCP call control flow, anti-shallow plan authoring rules, capability-gated subagent path, no-subagent fallback, validation repair behavior, output quality criteria, and completion criteria.
 
 
@@ -60,7 +60,6 @@ Interactive planning UX rules:
 
 - `one or more XX-YY-PLAN.md files`
 - `.blueprint/STATE.md`
-- `optional plan-check report in .blueprint/reports/`
 
 
 ## Required MCP Tools
@@ -84,26 +83,18 @@ Interactive planning UX rules:
 ## Plan Persistence Contract
 
 
-- Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` before drafting or revising `XX-YY-PLAN.md`, and normalize the final draft to `contract.authoringTemplate`. Use the live contract object as the source of truth for the plan shape and required wording rather than a copied local template.
-- Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly.
-- Do not seed `XX-YY-PLAN.md` with scaffold placeholders; draft the finished plan body before the first write.
-- `/blu-plan-phase` writes must use `validationMode: "strict"`; do not use warn-mode writes from this command.
-- Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone.
-- Use `blueprint_phase_context.phase.roadmap` as the current phase's roadmap goal and success slice; do not require a separate roadmap read just to recover the phase goal.
-- Read saved validation evidence through `blueprint_phase_validation_read` and saved review findings through `blueprint_review_load_findings` when those artifacts exist before replanning around validation or review feedback.
-- Before finalization, map every declared phase requirement and must-have to explicit plan coverage or a named blocker. If the phase is too broad for one coherent plan, split/prioritize it into smaller dependency-aware waves before writing.
-- Author plans at execution-prompt quality, not outline quality: concrete repo-relative `Read First` entries, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, goal-backward must-haves with observable truths/artifacts/key links, and full-fidelity coverage of locked context decisions.
-- Do not silently reduce scope with `v1`, placeholder, static-for-now, future-wiring, stub, or "will be wired later" language. If full fidelity does not fit, split, prioritize with user confirmation, or block.
-- Use `blueprint-planner` and `blueprint-checker` only when suitable planning/workflow analysis agents are available; otherwise follow the runtime contract's sequential no-subagent fallback, drafting and validating one plan or topic at a time with compressed carry-forward context.
-- Do not use browser, web-search-only, or generic browsing agents as substitutes for codebase or workflow planning agents.
-- If planner/checker revisions keep failing after a bounded number of passes, stop the loop, preserve the best coherent draft, and report the exact unresolved requirement or split point instead of looping indefinitely.
-- After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion.
-- If `blueprint_phase_plan_write` or final scoped plan validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
+- Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` before drafting or revising `XX-YY-PLAN.md`, and normalize the final draft to `contract.authoringTemplate`. Use the live contract object as the source of truth rather than a copied local template.
+- Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone. Read saved validation evidence through `blueprint_phase_validation_read` and saved review findings through `blueprint_review_load_findings` when those artifacts exist before replanning around them.
+- Use saved research for unstable technical choices. If needed research is missing or stale under the active gates, route to `/blu-research-phase` instead of browsing live web docs during planning.
+- Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly. `/blu-plan-phase` writes must use `validationMode: "strict"`; do not use warn-mode writes from this command.
+- After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion. If `blueprint_phase_plan_write` or final scoped plan validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
+- When `workflow.plan_check=true`, run the bounded review loop from the runtime contract before finalization: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
 - If targeting a specific plan, pass only the numeric plan id. Prefer zero-padded string values such as `"01"` so the request matches Blueprint artifact naming, but numeric inputs such as `1` are also accepted.
 - Do not derive `planId` manually from a scaffold path and do not pass phase slugs, filenames, or combined tokens such as `02-01` as `planId`.
+- When omitting `planId` to add a new plan and no saved plan body will be overwritten, do not force a reuse/revise/replace gate just because other plans already exist for the phase.
 
 
 ## Skills And Subagents
@@ -133,8 +124,7 @@ Interactive planning UX rules:
 ## External Shell Or Git Dependencies
 
 
-- External dependencies:
-- web docs for unstable technical choices
+- No live web dependency: use saved research for unstable technical choices, or route back to `/blu-research-phase` when the plan still needs fresh external evidence.
 
 
 ## Shell Risk Profile
@@ -144,9 +134,9 @@ Interactive planning UX rules:
 ## User Prompts And Confirmation Gates
 
 
-- Confirm destructive replanning when plans already exist.
+- Confirm destructive replanning when the current write would revise or replace saved plans.
 - Prefer reusing the existing plan index and reading existing plan files before creating replacements.
-- Use `ask_user` for overwrite confirmation and any reuse/revise/replace decision when one or more plan files already exist.
+- Use `ask_user` for overwrite confirmation and any reuse/revise/replace decision that would mutate an existing saved plan body or the saved plan set.
 
 
 ## Edge Cases
@@ -178,7 +168,7 @@ Interactive planning UX rules:
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Derives research, plan-check, Nyquist, UI-gate, and planning-confirmation behavior from normalized effective config instead of re-deriving defaults inside the command.
-- Keeps the planner/checker loop bounded, requirements-aware, and split-friendly when the phase is too broad for a single coherent plan.
+- Keeps the plan-check loop conditional, bounded, requirements-aware, and split-friendly when the phase is too broad for a single coherent plan.
 - Reads the live `phase.plan` contract before writing instead of copying local template text.
 - Loads the local plan-phase runtime contract and applies its anti-shallow output criteria, no-subagent fallback, and validation repair loop.
 

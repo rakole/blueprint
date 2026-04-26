@@ -96,7 +96,10 @@ test("mapping and discovery specialist agents encode concrete output modes and r
     researcher,
     /preserve strong sections and\s+revise only the stale or weak parts/i
   );
-  assert.match(researcher, /official docs or explicitly supplied external references/);
+  assert.match(
+    researcher,
+    /official-doc or external evidence packets|official docs or supplied external references/i
+  );
   assert.match(researcher, /Replace every angle-bracket placeholder before returning the draft/i);
   assert.match(
     researcher,
@@ -123,6 +126,8 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(checker, /XX-UI-SPEC\.md/);
   assert.match(checker, /phase\.ui-spec/);
   assert.match(checker, /bounded/i);
+  assert.match(checker, /## Review Modes/);
+  assert.match(checker, /Do not apply\s+the UI-specific six-dimension gate to ordinary plan reviews/i);
   assert.match(checker, /re-run\s+the checker/i);
 });
 

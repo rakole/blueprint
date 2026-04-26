@@ -53,17 +53,24 @@ Blueprint-native.
   - `workflow.plan_check=true`: run the checker loop before acceptance.
   - `workflow.plan_check=false`: state that checker review was skipped by
     config.
-- When existing plans are present, use `ask_user` for `reuse`, `revise`, or
-  `replace`; replacement requires explicit confirmation. Reuse/review is the
-  default safe path.
+- Use saved research for freshness-sensitive or unstable technical decisions.
+  If that evidence is missing or stale under the active planning gates, route
+  to `/blu-research-phase` instead of live browsing or ad hoc web-doc lookup.
+- When the current write would revise or replace saved plan ids or the saved
+  plan set, use `ask_user` for `reuse`, `revise`, or `replace`; replacement
+  requires explicit confirmation. Additive new plan ids may proceed without
+  that gate when no saved plan body will be overwritten.
 - If the phase scope cannot be planned without reducing locked decisions or
   must-haves, recommend a split or prioritization before persistence.
 
 ### Execute
 
-- When `blueprint-planner` and `blueprint-checker` are available, use them for
-  bounded planning and checking. The parent command owns MCP calls, user gates,
-  persistence, validation, state updates, and final routing.
+- When `blueprint-planner` is available, use it for bounded plan drafting.
+- When `workflow.plan_check=true` and `blueprint-checker` is available, use it
+  for bounded saved-plan review. When `workflow.plan_check=false`, skip checker
+  review entirely and state that config disabled it.
+- The parent command owns MCP calls, user gates, persistence, validation, state
+  updates, and final routing.
 - Planner input must include the resolved phase, live plan contract, roadmap
   and requirements, actual context text, actual research/UI/validation/review
   content when present, effective config, mapped codebase summaries, existing
@@ -161,11 +168,12 @@ Use this path only when suitable code/workflow analysis subagents are available:
    contract, config gates, mapped codebase summaries, and existing plans.
 3. Planner returns complete plan bodies, coverage mapping, dependency waves,
    split rationale, blockers, and assumptions.
-4. Parent writes through MCP, then gives saved plan bodies to
+4. Parent writes through MCP.
+5. If `workflow.plan_check=true`, parent gives the saved plan bodies to
    `blueprint-checker`.
-5. Checker returns `ACCEPT`, `REVISE`, or `BLOCK` with blockers, warnings,
+6. Checker returns `ACCEPT`, `REVISE`, or `BLOCK` with blockers, warnings,
    evidence, why each issue matters, and concrete fix hints.
-6. Parent performs targeted revisions, up to three checker passes. If issue
+7. Parent performs targeted revisions, up to three checker passes. If issue
    count stalls or the checker keeps finding the same blocker, ask whether to
    adjust approach, proceed with an explicitly risky saved draft, or stop.
 
@@ -183,7 +191,9 @@ When planner/checker agents are unavailable, continue sequentially:
    `authoringTemplate`.
 3. Run an inline checklist for requirement coverage, decision fidelity,
    dependency correctness, task specificity, scope sanity, verification
-   readiness, must-have quality, and invalid scope-reduction language.
+   readiness, must-have quality, and invalid scope-reduction language. This
+   checklist is always required, and it becomes the final review fallback when
+   `workflow.plan_check=true` but no suitable checker agent is available.
 4. Persist only after the current plan passes the inline checklist.
 5. Move to the next dependency wave only after summarizing what was already
    written and what evidence still carries forward.
@@ -197,19 +207,20 @@ When planner/checker agents are unavailable, continue sequentially:
   producing command instead of fabricating evidence.
 - Missing UI contract under enabled UI gates: require skip rationale or route to
   `/blu-ui-phase`.
-- Existing plans: never replace without the explicit `replace` decision and
-  overwrite confirmation.
+- Existing plans: additive new plan writes may proceed without the
+  reuse/revise/replace gate when no saved plan id is being overwritten; never
+  replace without the explicit `replace` decision and overwrite confirmation.
 - Invalid write: repair the content using validation issues, then retry the
   same MCP write. Do not bypass validation with raw file writes.
 - Scoped plan validation failure: repair only the affected plan ids or split
   point, then rerun the same scoped validation before completion.
-- Checker `REVISE`: revise only affected plan ids unless the whole plan set is
-  unsound.
-- Checker `BLOCK`: stop or split unless the missing substrate can be produced
-  by an implemented command.
-- Max revision loop: three checker passes. After that, report the unresolved
-  issues and route to `/blu-progress` unless the user explicitly chooses a
-  risky proceed path.
+- Checker `REVISE`: when `workflow.plan_check=true`, revise only affected plan
+  ids unless the whole plan set is unsound.
+- Checker `BLOCK`: when `workflow.plan_check=true`, stop or split unless the
+  missing substrate can be produced by an implemented command.
+- Max revision loop: three checker passes when `workflow.plan_check=true`.
+  After that, report the unresolved issues and route to `/blu-progress` unless
+  the user explicitly chooses a risky proceed path.
 
 ## Output Quality Criteria
 
@@ -236,7 +247,8 @@ When planner/checker agents are unavailable, continue sequentially:
   `mcp_blueprint_blueprint_phase_plan_write`.
 - Saved plans were validated through
   `mcp_blueprint_blueprint_phase_plan_validate` and checker-reviewed when
-  `workflow.plan_check` is enabled, or the config-disabled skip is stated.
+  `workflow.plan_check` is enabled, or the config-disabled skip is stated and
+  no checker review is claimed.
 - `.blueprint/STATE.md` was refreshed through synced state update.
 - The final response names the phase, gates, plan ids, revision/checker result,
   warnings or blockers, and the next safe implemented action.
