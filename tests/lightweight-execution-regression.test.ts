@@ -10,10 +10,11 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("lightweight execution keeps quick as the only long-running visible-progress path", async () => {
-  const [quickToml, quickDoc, executionSkill, runtimeReference] = await Promise.all([
+  const [quickToml, quickDoc, executionSkill, quickRuntimeContract, runtimeReference] = await Promise.all([
     readRepoFile("commands/blu-quick.toml"),
     readRepoFile("docs/commands/quick.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
+    readRepoFile("skills/blueprint-phase-execution/references/quick-runtime-contract.md"),
     readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
@@ -27,9 +28,12 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickDoc, /Branchy quick work is tracker-eligible/i);
   assert.match(quickDoc, /Persist the durable quick-run report/i);
 
-  assert.match(executionSkill, /Execution profile for `\/blu-execute-phase` and non-trivial `\/blu-quick`: `long-running-mutation`/);
-  assert.match(executionSkill, /tracker-eligible `\/blu-quick` runs/i);
-  assert.match(executionSkill, /Persist durable quick-run evidence through `blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest`/);
+  assert.match(executionSkill, /references\/quick-runtime-contract\.md/);
+  assert.match(executionSkill, /references\/long-running-execution-profile\.md/);
+  assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
+  assert.match(quickRuntimeContract, /quick-run-latest/);
+  assert.match(quickRuntimeContract, /\/blu-plan-phase/);
+  assert.match(quickRuntimeContract, /\/blu-execute-phase/);
 
   assert.match(runtimeReference, /`quick`[\s\S]*Long-running-mutation profile for non-trivial bounded quick runs/i);
   assert.match(runtimeReference, /`quick`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
@@ -37,10 +41,11 @@ test("lightweight execution keeps quick as the only long-running visible-progres
 });
 
 test("lightweight execution keeps fast on the trivial inline path instead of merging quick's progress layer", async () => {
-  const [fastToml, fastDoc, executionSkill, runtimeReference] = await Promise.all([
+  const [fastToml, fastDoc, executionSkill, fastRuntimeContract, runtimeReference] = await Promise.all([
     readRepoFile("commands/blu-fast.toml"),
     readRepoFile("docs/commands/fast.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
+    readRepoFile("skills/blueprint-phase-execution/references/fast-runtime-contract.md"),
     readRepoFile("docs/RUNTIME-REFERENCE.md")
   ]);
 
@@ -57,8 +62,10 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.match(fastDoc, /In-flight posture: none beyond a concise inline summary or reroute/i);
   assert.match(fastDoc, /Does not create quick-run reports, phase artifacts, or subagent side effects\./);
 
-  assert.match(executionSkill, /`\/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker tools; finish the run inline or reroute/i);
-  assert.match(executionSkill, /`\/blu-fast` is the trivial inline execution path: start from `blueprint_project_status`, keep the ask genuinely small, do not use subagents, do not use `update_topic`, `write_todos`, or tracker tools, and do not create durable reports or phase artifacts\./);
+  assert.match(executionSkill, /references\/fast-runtime-contract\.md/);
+  assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
+  assert.match(fastRuntimeContract, /no-subagent execution path/i);
 
   assert.match(runtimeReference, /`fast`[\s\S]*Interactive-read profile for trivial inline execution/i);
   assert.match(runtimeReference, /`fast`[\s\S]*explicitly exclude tracker-backed branching plus `update_topic` or `write_todos` long-running visibility/i);

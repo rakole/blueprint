@@ -213,7 +213,7 @@ function validResearchContent(): string {
 
 ## State Of The Art
 
-- Plan-phase consumes saved discovery artifacts through MCP-backed readiness checks.
+- Plan-phase consumes saved discovery artifacts through MCP-backed readiness checks; external currency was not checked.
 
 ## Common Pitfalls
 
@@ -685,6 +685,32 @@ test("phase planning tools accept numeric phase and plan identifiers from runtim
   assert.equal(read.planId, "01");
   assert.equal(read.metadata?.gapClosure, true);
   assert.deepEqual(index.plans.map((plan) => plan.planId), ["01"]);
+});
+
+test("phase planning tools reject zero plan identifiers", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    blueprintPhasePlanWrite({
+      cwd: repoPath,
+      phase: "3",
+      planId: 0,
+      content: validPlanContent("00", 1)
+    }),
+    /Plan id must be greater than zero/
+  );
+
+  await assert.rejects(
+    blueprintPhasePlanRead({
+      cwd: repoPath,
+      phase: "3",
+      planId: "00"
+    }),
+    /Plan id must be greater than zero/
+  );
 });
 
 test("phase plan validation reports missing phases as invalid warnings instead of throwing", async (t) => {

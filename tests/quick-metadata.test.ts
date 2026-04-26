@@ -45,32 +45,45 @@ test("quick manifest references the execution skill, bounded depth agents, and r
 });
 
 test("execution skill and runtime reference capture quick-run visibility, tracker eligibility, and report persistence", async () => {
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"),
-    "utf8"
-  );
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
+  const [skillFile, quickRuntimeContract, runtimeReference] = await Promise.all([
+    readFile(path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-execution/references/quick-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+  ]);
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu-execute-phase/);
   assert.match(skillFile, /\/blu-quick/);
-  assert.match(skillFile, /\/blu-fast/);
-  assert.match(skillFile, /blueprint_project_status/);
-  assert.match(skillFile, /blueprint_command_catalog/);
-  assert.match(skillFile, /blueprint_artifact_report_write/);
-  assert.match(skillFile, /quick-run-latest/);
-  assert.match(skillFile, /bounded quick work stays report-backed/i);
-  assert.match(skillFile, /tracker-eligible `\/blu-quick` runs/i);
-  assert.match(skillFile, /Treat tracker state as session-local coordination only/i);
-  assert.match(skillFile, /keep the active stage visible, keep the resolved scope, pending gate, execution mode, and next safe action explicit/i);
-  assert.match(skillFile, /implemented Blueprint surface/i);
-  assert.match(skillFile, /\/blu-progress/);
+  assert.match(
+    skillFile,
+    /skills\/blueprint-phase-execution\/references\/quick-runtime-contract\.md/
+  );
+  assert.match(
+    skillFile,
+    /skills\/blueprint-phase-execution\/references\/long-running-execution-profile\.md/
+  );
+
+  assert.match(quickRuntimeContract, /quick-run-latest/);
+  assert.match(quickRuntimeContract, /tracker-backed branching is allowed only as session-local coordination/i);
+  assert.match(quickRuntimeContract, /saved phase plan,\s+multi-wave execution/i);
+  assert.match(quickRuntimeContract, /--discuss`, `--research`, `--validate`, and `--full`/);
+  assert.match(quickRuntimeContract, /blueprint-researcher/);
+  assert.match(quickRuntimeContract, /blueprint-planner/);
+  assert.match(quickRuntimeContract, /blueprint-executor/);
+  assert.match(quickRuntimeContract, /blueprint-verifier/);
+  assert.match(quickRuntimeContract, /\/blu-progress/);
 
   assert.match(runtimeReference, /`quick`[\s\S]*Long-running-mutation profile for non-trivial bounded quick runs/i);
   assert.match(runtimeReference, /`quick`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(runtimeReference, /`quick`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
   assert.match(runtimeReference, /`quick`[\s\S]*do not let quick impersonate saved planning or broad lifecycle execution/i);
+  assert.match(
+    runtimeReference,
+    /`quick`[\s\S]*skills\/blueprint-phase-execution\/references\/quick-runtime-contract\.md/i
+  );
 });

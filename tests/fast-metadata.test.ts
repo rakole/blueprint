@@ -34,18 +34,35 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
 });
 
 test("fast skill and runtime reference keep the trivial path off the tracker and long-running progress layer", async () => {
-  const [skillFile, runtimeReference] = await Promise.all([
+  const [skillFile, fastRuntimeContract, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
+      ),
+      "utf8"
+    ),
     readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
   ]);
 
-  assert.match(skillFile, /Execution profile for `\/blu-fast`: `interactive-read`/);
   assert.match(
     skillFile,
-    /`\/blu-fast` explicitly excludes `update_topic`, `write_todos`, and tracker tools; finish the run inline or reroute/i
+    /skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/
   );
+  assert.match(skillFile, /Execution profile: `interactive-read`/);
+  assert.match(fastRuntimeContract, /no-subagent execution path/i);
+  assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
+  assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
+  assert.match(fastRuntimeContract, /\/blu-health/);
+  assert.match(fastRuntimeContract, /\/blu-quick/);
+  assert.match(fastRuntimeContract, /\/blu-plan-phase/);
   assert.match(
     runtimeReference,
     /`fast`[\s\S]*Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus `update_topic` or `write_todos` long-running visibility/i
+  );
+  assert.match(
+    runtimeReference,
+    /`fast`[\s\S]*skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/i
   );
 });

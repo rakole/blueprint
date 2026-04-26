@@ -1419,6 +1419,58 @@ test("project status keeps execute-phase as the next action for partial and bloc
   assert.doesNotMatch(partialState.derivedStatus.nextAction, /\/blu-validate-phase 3/);
 
   await writeFile(
+    path.join(phaseRoot, "03-VERIFICATION.md"),
+    `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** The verification cites the partial summary but must not count until execution is completed.
+**Gate State:** PASS
+**Sign-off:** validation-owner
+
+## Validation Summary
+
+- The cited execution summary remains PARTIAL and should not unlock validation evidence.
+
+## Requirement / Task Coverage
+
+| Requirement / Task | Source Summary | Result | Notes |
+|--------------------|----------------|--------|-------|
+| EXEC-01 | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | PASS | This citation is intentionally insufficient because the summary is partial. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Gate State
+
+- Gate: PASS
+- Readiness: ready for UAT
+
+## Next Step
+
+- Continue only after execution is completed.
+`,
+    "utf8"
+  );
+
+  const partialSync = await blueprintStateSync({ cwd: repoPath });
+  const partialWithVerificationState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(partialSync.warnings.join("\n"), /no valid execution summaries were found/i);
+  assert.match(partialWithVerificationState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(
+    partialWithVerificationState.derivedStatus.nextAction,
+    /\/blu-validate-phase 3/
+  );
+
+  await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
     `# Phase 03: Phase Discovery - Summary 01
 

@@ -25,6 +25,13 @@ Review a saved Blueprint plan set or phase UI spec goal-backward so the parent
 command knows whether the artifact is ready to accept, needs targeted revision,
 or is blocked by missing prerequisites.
 
+## Review Modes
+
+- For `/blu-plan-phase`, use the core plan-review contract only. Do not apply
+  the UI-specific six-dimension gate to ordinary plan reviews.
+- For `/blu-ui-phase`, apply the core contract plus the UI-specific section
+  below when the parent command asks for UI-spec review.
+
 ## Parent-Owned Responsibilities
 
 - The parent command owns when the checker runs, whether there is another
@@ -46,7 +53,7 @@ or is blocked by missing prerequisites.
   they matter for this phase
 - locked Blueprint docs and schema rules that constrain planning quality
 
-## Review Dimensions
+## Core Review Dimensions
 
 1. Goal alignment: the plan set must actually achieve the named phase goal and
    not drift into unrelated feature work.
@@ -83,17 +90,15 @@ or is blocked by missing prerequisites.
 12. Must-have derivation: `## Must Haves` should name observable truths,
    required artifacts, and key links or wiring points rather than only
    implementation chores.
-13. UI-spec revision quality: phase UI drafts must read the canonical
-   `phase.ui-spec` contract, preserve the single durable `XX-UI-SPEC.md`
-   output, cite the saved artifacts or repo evidence that shaped major UI
-   decisions, and keep any revision loop bounded to the affected sections.
-14. Blueprint rule compliance: plans must preserve MCP-owned persistence,
+13. Blueprint rule compliance: plans must preserve MCP-owned persistence,
    implemented-only routing, and the current command status semantics.
 
 ## UI-Spec Six-Dimension Gate
 
-When reviewing a `/blu-ui-phase` draft, evaluate all six dimensions unless the
-parent command states that `workflow.ui_safety_gate=false` for registry safety:
+Use this section only when reviewing a `/blu-ui-phase` draft. Do not import it
+into `/blu-plan-phase` plan checks. When a UI-spec draft is in scope, evaluate
+all six dimensions unless the parent command states that
+`workflow.ui_safety_gate=false` for registry safety:
 
 1. Copywriting: CTA labels, empty states, error states, and destructive
    confirmations must be specific and actionable. Generic labels such as
@@ -116,6 +121,13 @@ Use `BLOCK` when a dimension would cause the planner or executor to guess, use
 `REVISE` when targeted edits can fix the draft, and use `ACCEPT` only when the
 draft is concrete enough to persist. For every UI-spec finding, cite the exact
 draft section or missing evidence and give a bounded fix.
+
+## UI-Spec Review Addendum
+
+- UI-spec revision quality: phase UI drafts must read the canonical
+  `phase.ui-spec` contract, preserve the single durable `XX-UI-SPEC.md`
+  output, cite the saved artifacts or repo evidence that shaped major UI
+  decisions, and keep any revision loop bounded to the affected sections.
 
 ## Outputs
 

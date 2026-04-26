@@ -49,6 +49,7 @@
 
 ## State Of The Art
 
+- Not externally checked; this fixture validates local router and artifact behavior only.
 - Healthy router fixtures now preserve the full research contract used by lifecycle status reads.
 
 ## Common Pitfalls

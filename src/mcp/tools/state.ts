@@ -713,12 +713,11 @@ async function collectValidatedSummaryPathsForPhase(
     });
 
     if (validation.valid) {
-      summaryPaths.push(summaryPath);
-
       const summaryStatus = extractSummaryStatus(content);
 
       if (summaryStatus === "COMPLETED") {
         summaryIds.push(summaryId);
+        summaryPaths.push(summaryPath);
       } else if (summaryStatus) {
         warnings.push(
           `${summaryPath}: summary status is ${summaryStatus}, so it remains pending execution debt.`
@@ -1469,6 +1468,10 @@ async function deriveNextAction(args: {
     args.workflow.researchEnabled &&
     args.phaseArtifacts.hasResearch &&
     args.phaseArtifacts.researchValid === false &&
+    !args.phaseArtifacts.hasPlans &&
+    !args.phaseArtifacts.hasSummaries &&
+    !args.phaseArtifacts.hasVerification &&
+    !args.phaseArtifacts.hasUat &&
     implementedCommands.has(researchPhaseCommand)
   ) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to repair invalid phase research`;
@@ -1486,7 +1489,6 @@ async function deriveNextAction(args: {
 
   if (
     args.phaseArtifacts.hasResearch &&
-    args.phaseArtifacts.researchValid === true &&
     args.workflow.uiPhaseEnabled &&
     !args.phaseArtifacts.hasUiSpec &&
     implementedCommands.has(uiPhaseCommand)
