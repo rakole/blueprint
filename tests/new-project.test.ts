@@ -814,13 +814,17 @@ test("new-project runtime summaries surface the live next action for fresh and b
 });
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {
-  const [commandFile, commandDoc, runtimeReference, skillFile, contractRef] = await Promise.all([
+  const [commandFile, commandDoc, runtimeReference, skillFile, contractRef, guardrailsRef] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
     readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
     readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"),
+      "utf8"
+    ),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
       "utf8"
     )
   ]);
@@ -838,21 +842,22 @@ test("command contract references the same Phase 1 tool names as the MCP server"
       blueprintToolNames.includes(toolName),
       `${toolName} should be registered in the MCP server`
     );
-    assert.match(commandFile, new RegExp(toolName));
+    assert.match(`${commandDoc}\n${skillFile}\n${contractRef}`, new RegExp(toolName));
   }
 
   assert.match(commandFile, /--auto/);
   assert.match(commandFile, /\.blueprint\/config\.json/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_project_init/);
-  assert.match(commandFile, /Blueprint MCP server is disconnected or undiscovered/i);
-  assert.match(commandFile, /Never try to invoke Blueprint MCP tools through shell commands/i);
+  assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
+  assert.match(guardrailsRef, /mcp_blueprint_blueprint_project_init/);
+  assert.match(guardrailsRef, /Blueprint MCP server is disconnected or undiscovered/i);
+  assert.match(guardrailsRef, /Never try to invoke Blueprint MCP tools through shell/i);
   assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(commandDoc, /## Shared Runtime Contract/);
   assert.match(commandDoc, /resolved scope:/i);
   assert.match(commandDoc, /next safe action:/i);
   assert.match(skillFile, /Execution profile: `long-running-mutation`/);
   assert.match(contractRef, /Execution profile: `long-running-mutation`/);
-  assert.match(runtimeReference, /Long-running-mutation profile for Gemini-native bootstrap/i);
+  assert.match(runtimeReference, /Long-running-mutation Gemini-native bootstrap/i);
 });
 
 test("manifest, command files, and build output line up for installation", async () => {

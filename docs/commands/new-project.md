@@ -47,10 +47,9 @@
 - Interactive bootstrap should begin with thread-following project questioning, not a rigid checklist.
 - The questioning loop should capture enough clarity around vision, audience, constraints, milestone scope, and success outcomes that authored bootstrap artifacts do not force downstream commands to guess.
 - Short option lists are allowed when they sharpen a concrete tradeoff, but the command should stay conversational and host-native.
-- When structured choices help, interactive bootstrap should prefer Gemini CLI's built-in `ask_user` dialog, asked one focused question at a time with labeled options plus a typed custom-answer path.
-- When the bootstrap spans multiple stages, use Gemini CLI's internal `update_topic` and `write_todos` tools to keep the session legible instead of relying on repeated prose-only progress recaps.
+- Use Gemini-native coordination helpers according to the centralized guardrails in `skills/blueprint-bootstrap/references/runtime-guardrails.md`.
 - In interactive mode, the command should summarize its understanding and secure explicit approval before the first persistent bootstrap write.
-- Approval must be reviewable in the main Gemini CLI conversation: render a structured project brief and roadmap preview as normal assistant Markdown before opening the approval `ask_user` dialog. Do not use shell output, hidden tool panes, temporary files, or collapsed subagent results as the approval surface.
+- Approval must be reviewable in the main Gemini CLI conversation before the confirmation prompt.
 - `bootstrapMode` defaults to `interactive`; `--auto` is the command-facing way to request `bootstrapMode: "auto"`.
 - Interactive mode must pass a sufficient `bootstrapSeed` into `blueprint_project_init`. If the seed is missing or too thin, the tool rejects before writing and the command should keep asking rather than asking the MCP layer to invent purpose, requirements, roadmap, state, config, or phases.
 - `--auto` may synthesize bootstrap artifacts only because the user explicitly requested it, only when the supplied or repo-derived brief is strong enough, and only after brownfield map-first gating has passed.
@@ -100,13 +99,9 @@
 
 ## Gemini-Native Internal Tool Guidance
 
-- Prefer `ask_user` for structured clarification, overwrite approval, and the final pre-write decision gate.
-- The final pre-write decision gate must be preceded by a visible approval packet in the main conversation, including the project brief, requirement groups, roadmap phases, assumptions, deferred or out-of-scope items, defaults provenance, and brownfield confidence notes when relevant.
-- Use `write_todos` for the visible session-local bootstrap checklist when the run spans multiple stages.
-- Use `update_topic` to keep the current bootstrap stage and status visible during long discovery or shaping runs.
-- When the bootstrap flow develops real internal dependencies, use Gemini CLI task-tracking tools such as `tracker_create_task`, `tracker_add_dependency`, `tracker_update_task`, `tracker_get_task`, `tracker_list_tasks`, and `tracker_visualize` to coordinate that graph instead of recreating it in prose.
-- Treat Gemini-native todos, topic narration, and task tracking as session-local coordination aids only; Blueprint MCP tools remain the only durable state owner.
-- If the command needs to verify Gemini CLI capability details before relying on them, use `get_internal_docs` for self-correction instead of guessing.
+- `skills/blueprint-bootstrap/references/runtime-guardrails.md` is the canonical source for `ask_user`, `update_topic`, `write_todos`, task-tracker, `get_internal_docs`, MCP FQN, shell, and approval-surface behavior.
+- Keep those helpers session-local only; Blueprint MCP tools remain the only durable state owner.
+- The final pre-write approval still requires a visible project brief and roadmap preview in the main conversation.
 
 ## Bootstrap Contract
 
@@ -166,17 +161,14 @@
 - When interactive and `~/.<host>/blueprint/defaults.json` exists, offer those saved defaults before asking project-specific setup questions.
 - In interactive mode, ask enough discovery questions to write a substantive project brief before the first persistent write.
 - Follow the thread of the user's idea instead of running a canned bootstrap survey.
-- Use concise conversational choices only when they help the user react to a real ambiguity or scope tradeoff, and prefer `ask_user` over plain-text numbered lists when a structured choice is useful.
+- Use concise conversational choices only when they help the user react to a real ambiguity or scope tradeoff.
 - `--auto` is a non-interactive bootstrap mode: apply saved defaults automatically when they are available and valid, skip follow-up questioning, and surface any assumptions explicitly in the written artifacts.
 - Confirm overwrite if `.blueprint/` already exists.
 - `--auto` must not bypass the overwrite confirmation gate.
-- In interactive mode, summarize your understanding and require explicit approval before the first persistent bootstrap write, preferably through `ask_user`.
-- The approval prompt must refer to the visible preview already shown in the main Gemini CLI window; it must not ask the user to approve content that appeared only in shell output, a file, or a hidden agent/tool panel.
+- In interactive mode, summarize your understanding and require explicit approval before the first persistent bootstrap write.
+- Follow the centralized approval-surface rule in `runtime-guardrails.md`: the prompt must refer to a visible preview already shown in the main Gemini CLI window.
 - In interactive mode, requirements and roadmap shape should support a revision loop before the first persistent write when the user wants adjustments.
-- Keep Gemini-native session coordination honest as the bootstrap progresses:
-- initialize `write_todos` and `update_topic` early for non-trivial runs
-- update task-tracker state when optional research, revision, or validation branches appear
-- close the loop before finishing so the visible topic and task state match the actual bootstrap outcome
+- Keep Gemini-native session coordination honest as described in `runtime-guardrails.md`.
 - For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
 - if the repo is unmapped, hard-stop before writing and route to `map-codebase`
 - if `.blueprint/codebase/` is interrupted, invalid, or incomplete, route to `map-codebase`
@@ -206,7 +198,7 @@
 - Interactive bootstrap discovery follows the user's idea thread deeply enough that project intent, milestone scope, and success outcomes are explicit before the first write.
 - Interactive bootstrap provides a revision loop for requirements and roadmap structure before first-write persistence when the user wants changes.
 - Interactive bootstrap shows the reviewable project brief and roadmap preview in the main Gemini CLI conversation before the approval prompt.
-- Uses Gemini-native session helpers such as `ask_user`, `write_todos`, `update_topic`, and the task tracker when helpful to keep long bootstrap runs structured without turning those helpers into durable state.
+- Uses Gemini-native session helpers through the centralized guardrail contract when helpful, without turning those helpers into durable state.
 - Keeps requirement IDs traceable from `REQUIREMENTS.md` into `ROADMAP.md`.
 - Makes repo-shape assumptions explicit instead of silently inventing them.
 - For brownfield repos, sets the next safe action to `map-codebase` whenever roadmap confidence is still provisional.

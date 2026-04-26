@@ -143,8 +143,8 @@ export type CodebaseArtifactDiagnostics = {
 
 export const DURABLE_REQUIREMENT_ID_PATTERN = /^[A-Z][A-Z0-9-]*-\d+$/;
 
-type NormalizedBootstrapRequirementRow = Required<BootstrapRequirementRow>;
-type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirements"> & {
+export type NormalizedBootstrapRequirementRow = Required<BootstrapRequirementRow>;
+export type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirements"> & {
   requirements: NormalizedBootstrapRequirementRow[];
 };
 
@@ -1146,18 +1146,14 @@ export function parseCaptureIndexDocument(
   };
 }
 
-function buildDefaultBootstrapSeed(
+export function buildDefaultBootstrapSeed(
   projectName: string,
   assessment: BootstrapAssessment,
   seed?: BootstrapSeed
 ): NormalizedBootstrapSeed {
-  const brownfieldNeedsMapping =
-    assessment.repoShape === "brownfield" && !assessment.codebaseMapped;
   const defaultVision =
-    brownfieldNeedsMapping
-      ? `Bring ${projectName} under Blueprint with a trustworthy understanding of the existing repo, durable requirements, and a roadmap that stays provisional until the codebase is mapped.`
-      : assessment.repoShape === "brownfield"
-        ? `Bring ${projectName} under Blueprint with the saved codebase map, durable requirements, and a roadmap grounded in current repo evidence.`
+    assessment.repoShape === "brownfield"
+      ? `Bring ${projectName} under Blueprint with the saved codebase map, durable requirements, and a roadmap grounded in current repo evidence.`
       : `Establish ${projectName} with a durable Blueprint bootstrap draft so later discovery, planning, and execution commands inherit clear project intent and requirement traceability.`;
   const defaultPrimaryAudience =
     assessment.repoShape === "brownfield"
@@ -1179,10 +1175,8 @@ function buildDefaultBootstrapSeed(
   const defaultNonGoals = [
     "Hidden runtime conventions.",
     "Undocumented aliases.",
-    brownfieldNeedsMapping
-      ? "Treating the roadmap as fully durable before `/blu-map-codebase` captures the existing repo."
-      : assessment.repoShape === "brownfield"
-        ? "Replacing or ignoring the saved `.blueprint/codebase/` mapping during bootstrap."
+    assessment.repoShape === "brownfield"
+      ? "Replacing or ignoring the saved `.blueprint/codebase/` mapping during bootstrap."
       : "Prompt-only bootstrap artifacts that skip requirement or roadmap traceability."
   ];
   const defaultRequirements: BootstrapRequirementRow[] =
@@ -1208,18 +1202,12 @@ function buildDefaultBootstrapSeed(
           },
           {
             id: "RQ-03",
-            scope: brownfieldNeedsMapping ? "deferred" : "committed",
-            group: brownfieldNeedsMapping
-              ? "Codebase mapping follow-through"
-              : "Mapped baseline",
+            scope: "committed",
+            group: "Mapped baseline",
             requirement:
-              brownfieldNeedsMapping
-                ? "Map the existing codebase before treating later roadmap phases as durable execution commitments."
-                : "Use the saved codebase mapping bundle as bootstrap evidence for requirements and roadmap scope.",
+              "Use the saved codebase mapping bundle as bootstrap evidence for requirements and roadmap scope.",
             status: "Pending",
-            notes: brownfieldNeedsMapping
-              ? "Unmapped brownfield repos should route to `/blu-map-codebase`."
-              : "Map-first bootstrap has already produced the codebase bundle."
+            notes: "Map-first bootstrap has already produced the codebase bundle."
           },
           {
             id: "RQ-04",
@@ -1270,60 +1258,31 @@ function buildDefaultBootstrapSeed(
           }
         ];
   const defaultRoadmapPhases: BootstrapRoadmapPhase[] =
-    brownfieldNeedsMapping
+    assessment.repoShape === "brownfield"
       ? [
           {
             phase: "1",
-            title: "Map Existing Codebase",
+            title: "Align Requirements With Mapped Codebase",
             objective:
-              "Capture the current repo architecture, constraints, and risk areas before locking in later delivery phases.",
-            requirementIds: ["RQ-01", "RQ-03"],
+              "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
+            requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
             successCriteria: [
-              "The existing repo architecture, constraints, and risk areas are documented clearly enough to support later planning.",
-              "The bootstrap handoff points directly to `/blu-map-codebase` before later phases are treated as durable."
-            ],
-            notes: [
-              "Route to `/blu-map-codebase` immediately after bootstrap.",
-              "Treat later phases as provisional until mapping is complete."
+              "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
+              "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
             ]
           },
           {
             phase: "2",
-            title: "Align Requirements And Roadmap",
+            title: "Plan First Brownfield Delivery Slice",
             objective:
-              "Refine milestone scope and convert bootstrap findings into durable phased work once mapping evidence exists.",
+              "Shape the first implementation slice from mapped repo constraints and durable requirements.",
             requirementIds: ["RQ-02", "RQ-03"],
             successCriteria: [
-              "Requirement coverage and roadmap scope are aligned with mapped codebase evidence.",
-              "Later execution planning can continue without losing requirement traceability."
+              "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
+              "Requirement traceability stays intact as brownfield work moves toward execution."
             ]
           }
         ]
-      : assessment.repoShape === "brownfield"
-        ? [
-            {
-              phase: "1",
-              title: "Align Requirements With Mapped Codebase",
-              objective:
-                "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
-              requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
-              successCriteria: [
-                "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
-                "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
-              ]
-            },
-            {
-              phase: "2",
-              title: "Plan First Brownfield Delivery Slice",
-              objective:
-                "Shape the first implementation slice from mapped repo constraints and durable requirements.",
-              requirementIds: ["RQ-02", "RQ-03"],
-              successCriteria: [
-                "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
-                "Requirement traceability stays intact as brownfield work moves toward execution."
-              ]
-            }
-          ]
       : [
           {
             phase: "1",
@@ -1349,16 +1308,11 @@ function buildDefaultBootstrapSeed(
           }
         ];
   const defaultAssumptions =
-    brownfieldNeedsMapping
+    assessment.repoShape === "brownfield"
       ? [
-          "The repo already contains implementation context that should be mapped before the roadmap is treated as durable.",
-          "Bootstrap artifacts should stay explicit about which parts are draft assumptions."
+          "The saved codebase mapping is the baseline for bootstrap scope.",
+          "Bootstrap artifacts should preserve mapped evidence rather than replacing it."
         ]
-      : assessment.repoShape === "brownfield"
-        ? [
-            "The saved codebase mapping is the baseline for bootstrap scope.",
-            "Bootstrap artifacts should preserve mapped evidence rather than replacing it."
-          ]
       : [
           "The first milestone should stay small enough to validate Blueprint's workflow on this repo.",
           "Bootstrap artifacts can start as draft planning inputs as long as they are no longer placeholder-only shells."

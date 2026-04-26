@@ -7,29 +7,14 @@ Runtime contract references:
 - `skills/blueprint-bootstrap/references/questioning.md`
 - `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`
 - `skills/blueprint-bootstrap/references/runtime-guardrails.md`
-Keep this manifest focused on host-entrypoint and runtime guardrails:
-- Do not run `/blu-new-project` in the shell; it is a host CLI slash command, not a shell executable.
-- Treat Blueprint skills as guidance, not callable tools.
-- Do not try to re-activate Blueprint skills as tools inside this command.
+
+Keep this manifest focused on host entrypoint routing:
+- Apply `runtime-guardrails.md` as the canonical host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrail source instead of duplicating those rules here.
+- Use the required MCP tool set and optional agent names declared by the `blueprint-bootstrap` skill package.
 - Do not require `docs/commands/new-project.md` before running the command.
 - Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`.
 - Avoid invented auto-advance chaining or slash-command self-invocation.
 - Keep persistent writes inside Blueprint MCP runtime tools only.
-- Required Blueprint MCP runtime FQNs for this command:
-  - `mcp_blueprint_blueprint_project_init`
-  - `mcp_blueprint_blueprint_project_status`
-  - `mcp_blueprint_blueprint_config_get`
-  - `mcp_blueprint_blueprint_config_set`
-  - `mcp_blueprint_blueprint_state_update`
-  - `mcp_blueprint_blueprint_artifact_contract_read`
-  - `mcp_blueprint_blueprint_artifact_validate`
-  - `mcp_blueprint_blueprint_artifact_scaffold`
-- When you name a Blueprint MCP tool explicitly in the current CLI host, use the runtime FQN form `mcp_blueprint_<toolName>`.
-- Translate any shorthand `blueprint_*` ids from older docs into their `mcp_blueprint_*` runtime FQNs before calling them.
-- Never try to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts.
-- If a required Blueprint MCP tool is unavailable, stop and report that the Blueprint MCP server is disconnected or undiscovered instead of improvising a shell fallback.
-- Preserve honest Gemini-native coordination: prefer built-in helpers such as `ask_user`, `update_topic`, `write_todos`, task-tracker tools, and `get_internal_docs` when the skill contract calls for them, and state the fallback plainly when a helper is unavailable.
-- Never use shell output, hidden tool panes, or collapsed subagent results as the approval surface. Before any approval `ask_user` prompt, render the project brief and roadmap preview directly in the main Gemini CLI conversation as a structured Markdown response.
 
 Optional bounded subagents permitted by the skill contract:
 - `blueprint-project-researcher`
@@ -37,10 +22,10 @@ Optional bounded subagents permitted by the skill contract:
 
 Remember that `bootstrapMode` behavior, brownfield map-first routing, saved-default handling, workflow-preference capture, staged execution, validation, revision loops, and next-safe-action routing now live in the skill package references above.
 - The local runtime contract also owns capability-gated project research and roadmapping paths, plus the sequential no-subagent fallback; do not substitute browser, web-search, or shell-only helpers for Blueprint code/workflow analysis agents.
-- Call `mcp_blueprint_blueprint_project_status` before the first write. If status shows an unmapped brownfield repo or `mapping-incomplete`, route to `/blu-map-codebase` and do not call `mcp_blueprint_blueprint_project_init`.
-- If status is `mapped-only`, call `mcp_blueprint_blueprint_project_init` without treating the existing `.blueprint/codebase/*.md` bundle as an overwrite conflict; preserve those codebase docs.
+- Check project status before the first write. If status shows an unmapped brownfield repo or `mapping-incomplete`, route to `/blu-map-codebase` and do not initialize project artifacts.
+- If status is `mapped-only`, initialize project artifacts without treating the existing `.blueprint/codebase/*.md` bundle as an overwrite conflict; preserve those codebase docs.
 - Pass `bootstrapMode: "interactive"` unless the user explicitly requested automatic synthesis with `--auto`.
-- In interactive mode, call `mcp_blueprint_blueprint_project_init` only with a sufficient `bootstrapSeed`; do not ask the MCP tool to synthesize purpose, requirements, roadmap, state, config, or phases from a missing or thin seed.
+- In interactive mode, initialize only with a sufficient `bootstrapSeed`; do not ask the MCP layer to synthesize purpose, requirements, roadmap, state, config, or phases from a missing or thin seed.
 - In auto mode, synthesis is allowed only because the user requested it and only after brownfield map-first gating has passed.
 
 Response requirements:
