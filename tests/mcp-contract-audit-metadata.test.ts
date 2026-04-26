@@ -170,7 +170,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     researchDoc,
     uiCommand,
     uiDoc,
-    discoverySkill
+    discoverySkill,
+    discussRuntimeContract
   ] = await Promise.all([
     readRepoFile("commands/blu-discuss-phase.toml"),
     readRepoFile("docs/commands/discuss-phase.md"),
@@ -182,30 +183,34 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     readRepoFile("docs/commands/research-phase.md"),
     readRepoFile("commands/blu-ui-phase.toml"),
     readRepoFile("docs/commands/ui-phase.md"),
-    readRepoFile("skills/blueprint-phase-discovery/SKILL.md")
+    readRepoFile("skills/blueprint-phase-discovery/SKILL.md"),
+    readRepoFile("skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md")
   ]);
 
   assert.match(discussCommand, /repo-relative Blueprint artifact paths such as `?\.blueprint\/phases\//i);
-  assert.match(discussCommand, /structured discuss checkpoint shape/i);
-  assert.match(
-    discussCommand,
-    /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
-  );
-  assert.match(discussCommand, /`resumeMeta` must carry the resumability details/i);
-  assert.match(discussCommand, /returned `path` as the authoritative saved filename/i);
-  assert.match(discussCommand, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
-  assert.match(discussCommand, /self-check the normalized body against the contract/i);
   assert.match(discussCommand, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussCommand, /long-running-phase-discovery-profile\.md/i);
+  assert.match(discussCommand, /referenced runtime contract as the source of truth/i);
   assert.match(discussCommand, /contract\.authoringTemplate[\s\S]*schema authority/i);
-  assert.match(discussCommand, /capability-gated subagents/i);
-  assert.match(discussCommand, /single-agent fallback/i);
-  assert.match(discussCommand, /compress carry-forward context/i);
-  assert.match(discussCommand, /status: "invalid"[\s\S]*repair/i);
-  assert.match(discussCommand, /prior-context sweep/i);
-  assert.match(discussCommand, /codebase scout/i);
-  assert.match(discussCommand, /stronger assumptions-mode analysis/i);
-  assert.match(discussCommand, /checkpoint-per-area/i);
-  assert.match(discussCommand, /end-of-run `STATE\.md` update/i);
+  assert.match(discussCommand, /substantive user-authored artifacts/i);
+  assert.doesNotMatch(discussCommand, /Follow this flow exactly/i);
+  assert.match(discussRuntimeContract, /structured checkpoint/i);
+  assert.match(
+    discussRuntimeContract,
+    /`completedAreas`[\s\S]*`remainingAreas`[\s\S]*`decisions`[\s\S]*`deferredIdeas`[\s\S]*`canonicalReferences`[\s\S]*`resumeMeta`/i
+  );
+  assert.match(discussRuntimeContract, /`resumeMeta\.mode: "discuss"`/i);
+  assert.match(discussRuntimeContract, /returned `path` as the authoritative saved filename/i);
+  assert.match(discussRuntimeContract, /Normalize the draft to the live `authoringTemplate`/i);
+  assert.match(discussRuntimeContract, /Self-check for placeholder text/i);
+  assert.match(discussRuntimeContract, /Capability-Gated Agent Use/i);
+  assert.match(discussRuntimeContract, /Single-Agent Fallback/i);
+  assert.match(discussRuntimeContract, /status: "invalid"[\s\S]*repair/i);
+  assert.match(discussRuntimeContract, /prior-context sweep/i);
+  assert.match(discussRuntimeContract, /mapped codebase summaries/i);
+  assert.match(discussRuntimeContract, /Assumptions Mode/i);
+  assert.match(discussRuntimeContract, /checkpoint-per-area/i);
+  assert.match(discussRuntimeContract, /state_update` with `base: "synced"/i);
   assert.match(discussDoc, /## Artifact Persistence Contract/);
   assert.match(discussDoc, /resolved numeric phase reference only/i);
   assert.match(discussDoc, /structured discuss checkpoint shape/i);

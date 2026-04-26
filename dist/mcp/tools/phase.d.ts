@@ -109,6 +109,10 @@ type PhaseCheckpointGetArgs = PhaseLookupArgs & {
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
     checkpoint: PhaseCheckpointWriteRecord;
 };
+type PhaseCheckpointDeleteArgs = PhaseLookupArgs & {
+    expectedOwnerCommand?: PhaseCheckpointOwnerCommand;
+    expectedMode?: PhaseCheckpointResumeMode;
+};
 type PhasePlanReadArgs = PhaseLookupArgs & {
     planId: NumericInput;
 };
@@ -556,7 +560,7 @@ export declare function blueprintPhaseSummaryRead(args: PhaseSummaryReadArgs): P
 export declare function blueprintPhaseSummaryWrite(args: PhaseSummaryWriteArgs): Promise<PhaseSummaryWriteResult>;
 export declare function blueprintPhaseCheckpointGet(args?: PhaseCheckpointGetArgs): Promise<PhaseCheckpointGetResult>;
 export declare function blueprintPhaseCheckpointPut(args: PhaseCheckpointPutArgs): Promise<PhaseCheckpointPutResult>;
-export declare function blueprintPhaseCheckpointDelete(args?: PhaseLookupArgs): Promise<PhaseCheckpointDeleteResult>;
+export declare function blueprintPhaseCheckpointDelete(args?: PhaseCheckpointDeleteArgs): Promise<PhaseCheckpointDeleteResult>;
 export declare const phaseToolDefinitions: ({
     name: string;
     description: string;
@@ -833,6 +837,16 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        expectedOwnerCommand: z.ZodOptional<z.ZodEnum<{
+            "/blu-discuss-phase": "/blu-discuss-phase";
+            "/blu-research-phase": "/blu-research-phase";
+            "/blu-verify-work": "/blu-verify-work";
+        }>>;
+        expectedMode: z.ZodOptional<z.ZodEnum<{
+            research: "research";
+            uat: "uat";
+            discuss: "discuss";
+        }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointDeleteResult>;
 })[];
