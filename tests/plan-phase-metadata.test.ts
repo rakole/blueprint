@@ -32,9 +32,9 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_artifact_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_validate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_validate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_load")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
   assert.match(commandFile, /workflow\.research/);
@@ -62,6 +62,10 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /no silent `v1`/i);
   assert.match(commandFile, /browser, web-search-only, or generic browsing agents/i);
   assert.match(commandFile, /repair the content against the live contract and retry through MCP/i);
+  assert.match(commandFile, /validationMode: "strict"/);
+  assert.match(commandFile, /validationMode: "warn"/);
+  assert.doesNotMatch(commandFile, /blueprint_artifact_scaffold/);
+  assert.doesNotMatch(commandFile, /blueprint_artifact_validate/);
   assert.doesNotMatch(
     commandFile,
     /--auto|--research|--skip-research|--gaps|--skip-verify|--prd|--reviews|--text/
@@ -120,6 +124,10 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /browser, web-search-only, or generic browsing agents/i);
   assert.match(skillFile, /raw `\.blueprint\/` edits/i);
+  assert.match(skillFile, /validationMode: "strict"/);
+  assert.match(skillFile, /validationMode: "warn"/);
+  assert.doesNotMatch(skillFile, /blueprint_artifact_scaffold/);
+  assert.doesNotMatch(skillFile, /blueprint_artifact_validate/);
   assert.doesNotMatch(
     skillFile,
     /--auto|--research|--skip-research|--gaps|--skip-verify|--prd|--reviews|--text/
@@ -136,7 +144,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_write/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_validate/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_validate/);
+  assert.match(runtimeContract, /validationMode:\s+"strict"/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_update/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
   assert.match(runtimeContract, /Artifact Authoring Rules/);
@@ -152,7 +161,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
 
   assert.match(
     runtimeReference,
-    /\| `plan-phase` \| `docs\/commands\/plan-phase\.md` \| `blueprint-phase-planning` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_context`<br>`blueprint_phase_research_status`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_plan_write`<br>`blueprint_config_get`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+    /\| `plan-phase` \| `docs\/commands\/plan-phase\.md` \| `blueprint-phase-planning` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_context`<br>`blueprint_phase_research_status`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_plan_validate`<br>`blueprint_phase_plan_write`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
   );
   assert.match(
     runtimeReference,
@@ -161,7 +170,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeReference, /anti-shallow plan authoring/i);
   assert.match(runtimeReference, /one-plan-at-a-time no-subagent fallback/i);
   assert.match(runtimeReference, /browser\/web-search-only agents as substitutes/i);
-  assert.match(runtimeReference, /repair invalid writes or validation failures through MCP/i);
+  assert.match(runtimeReference, /repair invalid writes or scoped plan-validation failures through MCP/i);
 });
 
 test("plan-phase command doc explains the plan write contract for planId", async () => {
@@ -203,6 +212,10 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /goal-backward must-haves/i);
   assert.match(docFile, /browser, web-search-only, or generic browsing agents/i);
   assert.match(docFile, /repair against the live contract and retry through MCP/i);
+  assert.match(docFile, /validationMode: "strict"/);
+  assert.match(docFile, /warn-mode writes/i);
+  assert.doesNotMatch(docFile, /blueprint_artifact_scaffold/);
+  assert.doesNotMatch(docFile, /blueprint_artifact_validate/);
   assert.doesNotMatch(
     docFile,
     /--auto|--research|--skip-research|--gaps|--skip-verify|--prd|--reviews|--text/
@@ -272,7 +285,7 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
 
   assert.match(
     mcpToolsDoc,
-    /`plan-phase` uses the canonical `phase\.plan` contract read, plan index, plan read and write tools, config, artifact validation, and state update tools\./i
+    /`plan-phase` uses the canonical `phase\.plan` contract read, plan index, plan read\/write\/validate tools, config, and state update tools\./i
   );
   assert.match(mcpToolsDoc, /plan-phase-runtime-contract\.md/);
   assert.match(mcpToolsDoc, /requirements-coverage check before finalization/i);
@@ -280,7 +293,7 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(mcpToolsDoc, /anti-shallow authoring rules/i);
   assert.match(mcpToolsDoc, /one-plan-at-a-time no-subagent fallback/i);
   assert.match(mcpToolsDoc, /browser\/web-search-only agents as substitutes/i);
-  assert.match(mcpToolsDoc, /repairs invalid writes or validation failures through MCP/i);
+  assert.match(mcpToolsDoc, /repairs invalid writes or scoped plan-validation failures through MCP/i);
   assert.match(mcpToolsDoc, /synced state recomputation/i);
 
   assert.match(contractFile, /Plan authoring should stay execution-ready/i);

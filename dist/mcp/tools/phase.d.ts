@@ -116,6 +116,7 @@ type PhaseCheckpointDeleteArgs = PhaseLookupArgs & {
 type PhasePlanReadArgs = PhaseLookupArgs & {
     planId: NumericInput;
 };
+type PhasePlanValidateArgs = PhaseLookupArgs;
 type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
     wave?: number;
     gapsOnly?: boolean;
@@ -456,6 +457,24 @@ type PhasePlanReadResult = {
     } | null;
     reason: string | null;
 };
+type PhasePlanValidationResult = {
+    phaseFound: boolean;
+    phaseNumber: string | null;
+    phasePrefix: string | null;
+    phaseName: string | null;
+    phaseDir: string | null;
+    status: "valid" | "invalid";
+    issues: string[];
+    warnings: string[];
+    planCount: number;
+    planIds: string[];
+    roadmapRequirementIds: string[];
+    coveredRequirementIds: string[];
+    uncoveredRequirementIds: string[];
+    unexpectedRequirementIds: string[];
+    missingDependencyIds: string[];
+    cyclicDependencyPlanIds: string[][];
+};
 type PhasePlanWriteResult = {
     phaseNumber: string;
     phasePrefix: string;
@@ -637,6 +656,7 @@ export declare function blueprintPhaseValidationRead(args: PhaseValidationReadAr
 export declare function blueprintPhaseValidationWrite(args: PhaseValidationWriteArgs): Promise<PhaseValidationWriteResult>;
 export declare function blueprintPhasePlanIndex(args?: PlanIndexArgs): Promise<PhasePlanIndexResult>;
 export declare function blueprintPhasePlanRead(args: PhasePlanReadArgs): Promise<PhasePlanReadResult>;
+export declare function blueprintPhasePlanValidate(args?: PhasePlanValidateArgs): Promise<PhasePlanValidationResult>;
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
 export declare function blueprintPhaseSummaryRead(args: PhaseSummaryReadArgs): Promise<PhaseSummaryReadResult>;
@@ -820,6 +840,14 @@ export declare const phaseToolDefinitions: ({
         planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhasePlanReadResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhasePlanValidationResult>;
 } | {
     name: string;
     description: string;
