@@ -119,102 +119,63 @@ test("discuss-phase command references only registered phase-discovery tool name
     assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
+  const sharedProfilePath =
+    "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md";
+  const runtimeContractPath =
+    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md";
+  const sharedProfile = await readFile(path.join(repoRoot, sharedProfilePath), "utf8");
+
+  const runtimeToolCalls = [...commandFile.matchAll(/mcp_blueprint_blueprint_[a-z_]+/g)]
+    .map(([tool]) => tool)
+    .sort();
+  assert.deepEqual(
+    [...new Set(runtimeToolCalls)],
+    requiredTools.map((toolName) => blueprintRuntimeToolFqn(toolName)).sort()
+  );
+
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
-  assert.match(commandFile, /Execution profile: `long-running-mutation`\./);
-  assert.match(
-    commandFile,
-    /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/
-  );
-  assert.match(
-    commandFile,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action/
-  );
-  assert.match(commandFile, /`update_topic` and `write_todos`/);
-  assert.match(
-    commandFile,
-    /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
-  );
-  assert.match(commandFile, /explicit overwrite confirmation/i);
-  assert.match(commandFile, /`ask_user`/);
-  assert.match(commandFile, /one focused question per `ask_user` call/i);
-  assert.match(commandFile, /workflow\.discuss_mode/);
-  assert.match(commandFile, /workflow\.skip_discuss/);
-  assert.match(commandFile, /workflow\.research_before_questions/);
-  assert.match(commandFile, /phase\.context/);
-  assert.match(commandFile, /phase\.discussion-log/);
-  assert.match(commandFile, /normalize the final context and discussion drafts to the returned `authoringTemplate`/i);
-  assert.match(commandFile, /blocking anti-pattern check/i);
-  assert.match(commandFile, /discuss-phase-runtime-contract\.md/);
+  assert.match(commandFile, new RegExp(runtimeContractPath));
+  assert.match(commandFile, new RegExp(sharedProfilePath));
   assert.match(commandFile, /contract\.authoringTemplate.*schema authority/i);
-  assert.match(commandFile, /prior-context sweep/i);
-  assert.match(commandFile, /dedicated todo\/backlog file crawl/i);
-  assert.match(commandFile, /codebase scout/i);
-  assert.match(commandFile, /capability-gated subagents/i);
-  assert.match(commandFile, /blueprint-researcher[\s\S]*one gray area|one gray area[\s\S]*blueprint-researcher/i);
-  assert.match(commandFile, /gray-area memo mode/i);
-  assert.match(commandFile, /Do not ask it to produce `phase\.research` or `XX-RESEARCH\.md`/i);
-  assert.match(commandFile, /single-agent fallback/i);
-  assert.match(commandFile, /compress carry-forward context/i);
-  assert.match(commandFile, /stronger assumptions-mode analysis/i);
-  assert.match(commandFile, /evidence-backed saved context/i);
-  assert.match(commandFile, /consequences if assumptions are wrong/i);
-  assert.match(commandFile, /progress recap|session legibility/i);
-  assert.match(commandFile, /checkpoint-per-area|checkpoint per area/i);
   assert.match(commandFile, /base: "synced"/);
-  assert.match(commandFile, /Do not treat the update response as a routing decision/i);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_load[\s\S]*refreshed state/i);
   assert.match(
     commandFile,
     /Delete any saved checkpoint[\s\S]*context write[\s\S]*optional discussion-log write[\s\S]*synced state update[\s\S]*follow-up state load/i
   );
-  assert.match(commandFile, /PROJECT\.md/);
-  assert.match(commandFile, /REQUIREMENTS\.md/);
-  assert.match(commandFile, /STATE\.md/);
-  assert.match(commandFile, /existing plans.*\/blu-plan-phase|plan inventory.*\/blu-plan-phase/i);
-  assert.match(commandFile, /gray areas/i);
-  assert.match(commandFile, /next area|more questions/i);
-  assert.match(commandFile, /canonical references/i);
-  assert.match(commandFile, /deferred ideas/i);
-  assert.match(commandFile, /structured gray-area/i);
-  assert.match(commandFile, /answer is vague|retry the question/i);
-  assert.match(commandFile, /power mode|chain mode|auto mode|auto-advance/i);
-  assert.match(commandFile, /\/blu-progress/);
+  assert.match(commandFile, /expectedOwnerCommand: "\/blu-discuss-phase"/);
+  assert.match(commandFile, /expectedMode: "discuss"/);
+  assert.match(commandFile, /resumeMeta\.mode.*"discuss"/);
+  assert.match(commandFile, /host-supported structured choices/i);
+  assert.doesNotMatch(commandFile, /type:\s*"choice"|2-4 labeled options|Type your own answer/i);
+  assert.doesNotMatch(commandFile, /Map the discovery flow onto the shared stages/i);
+  assert.doesNotMatch(commandFile, /power mode|chain mode|auto mode|auto-advance/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
 
-  assert.match(skillFile, /blocking anti-pattern check/i);
-  assert.match(skillFile, /discuss-phase-runtime-contract\.md/);
+  assert.match(sharedProfile, /# Long-Running Phase Discovery Profile/);
+  for (const stage of ["Resolve", "Read", "Decide", "Execute", "Persist", "Validate", "Route"]) {
+    assert.match(sharedProfile, new RegExp(`\`${stage}\``));
+  }
+  assert.match(sharedProfile, /resolved scope/);
+  assert.match(sharedProfile, /pending gate/);
+  assert.match(sharedProfile, /`update_topic` and `write_todos`/);
+  assert.match(sharedProfile, /host-supported structured choices/i);
+
+  assert.match(skillFile, new RegExp(runtimeContractPath));
+  assert.match(skillFile, new RegExp(sharedProfilePath));
   assert.match(skillFile, /contract\.authoringTemplate.*schema authority/i);
-  assert.match(skillFile, /Execution profile for `\/blu-discuss-phase`: `long-running-mutation`\./);
-  assert.match(skillFile, /shared stage vocabulary explicit during non-trivial `\/blu-discuss-phase` runs/i);
-  assert.match(skillFile, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
-  assert.match(skillFile, /`update_topic` and `write_todos`/);
-  assert.match(
-    skillFile,
-    /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
-  );
-  assert.match(skillFile, /focused follow-up or retry the question/i);
-  assert.match(skillFile, /capability-gated subagents/i);
-  assert.match(skillFile, /single-agent fallback/i);
-  assert.match(skillFile, /compress carry-forward context/i);
-  assert.match(skillFile, /validation issues[\s\S]*repair/i);
-  assert.match(skillFile, /saved-artifact sweep, not a dedicated todo\/backlog file crawl/i);
-  assert.match(skillFile, /Blueprint-friendly lenses/i);
-  assert.match(skillFile, /prior-context sweep/i);
-  assert.match(skillFile, /deferred-idea folding/i);
-  assert.match(skillFile, /methodology/i);
-  assert.match(skillFile, /codebase-scout reuse/i);
-  assert.match(skillFile, /stronger assumptions-mode analysis/i);
-  assert.match(skillFile, /progress recaps/i);
-  assert.match(skillFile, /checkpoint-per-area/i);
-  assert.match(skillFile, /end-of-run `STATE\.md` updates/i);
   assert.match(skillFile, /Command-Scoped Required MCP Tools/i);
   const discussToolSection = skillFile.match(
     /### `\/blu-discuss-phase`\n([\s\S]*?)(?=\n### `\/blu-research-phase`)/
   )?.[1] ?? "";
-  assert.match(discussToolSection, /`blueprint_state_load`/);
+  const skillDiscussTools = [...discussToolSection.matchAll(/`(blueprint_[a-z_]+)`/g)]
+    .map(([, tool]) => tool)
+    .sort();
+  assert.deepEqual(skillDiscussTools, [...requiredTools].sort());
   assert.doesNotMatch(discussToolSection, /`blueprint_project_status`/);
   assert.doesNotMatch(discussToolSection, /`blueprint_phase_research_status`/);
   assert.doesNotMatch(discussToolSection, /`blueprint_command_catalog`/);
+
   assert.match(discussReference, /blueprint_state_update` with `base: "synced"/i);
   assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
   assert.match(
@@ -229,13 +190,15 @@ test("discuss-phase command references only registered phase-discovery tool name
   ]);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
     "docs/commands/discuss-phase.md",
-    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+    runtimeContractPath,
+    sharedProfilePath
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
     "docs/ARTIFACT-SCHEMA.md",
     "docs/MCP-TOOLS.md",
     "docs/commands/discuss-phase.md",
-    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+    runtimeContractPath,
+    sharedProfilePath
   ]);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
@@ -247,59 +210,36 @@ test("discuss-phase command references only registered phase-discovery tool name
     false
   );
 
-  assert.match(docFile, /retained GSD thinking-partner behavior/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
-  assert.match(docFile, /resolved scope, active stage, pending gate, execution mode, next safe action/);
-  assert.match(docFile, /`update_topic` and `write_todos`/);
-  assert.match(
-    docFile,
-    /host does not expose `update_topic` or `write_todos`[\s\S]*normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
-  );
+  assert.match(docFile, new RegExp(sharedProfilePath));
   assert.match(docFile, /## Behavior Stages/);
   assert.match(docFile, /answer validation and retry/i);
-  assert.match(docFile, /discuss-phase-runtime-contract\.md/);
+  assert.match(docFile, new RegExp(runtimeContractPath));
   assert.match(docFile, /contract\.authoringTemplate/);
   assert.match(docFile, /capability-gated sidecar research/i);
   assert.match(docFile, /single-agent fallback/i);
-  assert.match(docFile, /compressed carry-forward context/i);
-  assert.match(docFile, /evidence behind decisions/i);
   assert.match(docFile, /repair.*validation issues/i);
-  assert.match(docFile, /prior-context sweeps across saved phase artifacts/i);
-  assert.match(docFile, /methodology-shaped gray-area lenses/i);
-  assert.match(docFile, /blocking anti-pattern check/i);
-  assert.match(docFile, /folding deferred ideas into the saved record/i);
-  assert.match(docFile, /prior-context sweeps/i);
-  assert.match(docFile, /dedicated todo\/backlog file crawl/i);
-  assert.match(docFile, /codebase scout summaries/i);
-  assert.match(docFile, /stronger assumptions-mode analysis/i);
   assert.match(docFile, /checkpoint-per-area/i);
-  assert.match(docFile, /progress recaps/i);
-  assert.match(docFile, /end-of-run `STATE\.md` update/i);
+  assert.match(docFile, /Writes only declared `\.blueprint\/` phase artifacts, checkpoints, and `STATE\.md`/);
+  assert.doesNotMatch(docFile, /may also mutate code or git state/i);
 
   const discussRuntimeRow = runtimeReference
     .split("\n")
     .find((line) => line.startsWith("| `discuss-phase` |"));
   assert.ok(discussRuntimeRow, "runtime reference should include the discuss-phase row");
-  assert.match(discussRuntimeRow, /Long-running-mutation profile for branchy phase discovery/i);
-  assert.match(discussRuntimeRow, /`update_topic` and `write_todos`/);
-  assert.match(
-    discussRuntimeRow,
-    /helpers are unavailable fall back to normal progress recaps plus MCP-backed checkpoints and `STATE\.md`/i
-  );
-  assert.match(
-    discussRuntimeRow,
-    /The contract does not promise a dedicated todo\/backlog file crawl\./i
-  );
-  assert.match(discussRuntimeRow, /discuss-phase-runtime-contract\.md/i);
+  assert.match(discussRuntimeRow, new RegExp(sharedProfilePath));
+  assert.match(discussRuntimeRow, new RegExp(runtimeContractPath));
   assert.match(discussRuntimeRow, /contract\.authoringTemplate/i);
-  assert.match(discussRuntimeRow, /capability-gated `blueprint-researcher` sidecars/i);
   assert.match(discussRuntimeRow, /`blueprint_state_load`/);
   assert.match(discussRuntimeRow, /lightweight gray-area memo mode/i);
   assert.match(discussRuntimeRow, /single-agent fallback/i);
-  assert.match(discussRuntimeRow, /repair returned artifact validation issues/i);
+  assert.doesNotMatch(
+    discussRuntimeRow,
+    /use Gemini-native `update_topic` and `write_todos`[\s\S]*helpers are unavailable/i
+  );
 
   assert.match(discussReference, /# Discuss Phase Runtime Contract/);
+  assert.match(discussReference, new RegExp(sharedProfilePath));
   assert.match(discussReference, /schema authority/i);
   assert.match(discussReference, /Capability-Gated Agent Use/);
   assert.match(discussReference, /gray-area memo mode/i);
@@ -311,6 +251,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /Artifact Authoring/);
   assert.match(discussReference, /Validation And Repair/);
   assert.match(discussReference, /status: "invalid"/);
+  assert.match(discussReference, /Do not claim unshipped power, batch, chain, auto, or auto-advance behavior/i);
   assert.match(researcherAgent, /Output Mode Selection/);
   assert.match(researcherAgent, /gray-area memo mode/);
   assert.match(researcherAgent, /not a populated `phase\.research` or\s+`XX-RESEARCH\.md` body/i);

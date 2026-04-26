@@ -8,21 +8,14 @@
 
 ## Shared Runtime Contract
 
-- Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
-- In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `discuss-phase` uses the shared long-running-mutation posture for branchy gray-area discovery: keep `Resolve`/`Read`/`Decide`/`Execute`/`Persist`/`Validate`/`Route` narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native `update_topic` and `write_todos` for non-trivial multi-area discovery without turning them into persistence, keep one-question `ask_user` branching explicit, and preserve checkpoint-per-area resumability through MCP.
-- When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
-- Keep the in-flight discovery posture honest while the run is live:
-  - resolved scope: the target phase, prior-context bundle, current artifact reuse-versus-replace posture, and the gray area currently under discussion
-  - active stage: the shared stage label behind the current discovery pass
-  - pending gate: missing or ambiguous phase resolution, resume-versus-discard checkpoint choice, gray-area selection, overwrite confirmation, or validation blocker
-  - execution mode: interactive `workflow.discuss_mode="discuss"`, stronger assumptions-mode analysis, or repo-evidence-driven `workflow.skip_discuss=true`, plus fresh versus resumed checkpoint posture
-  - next safe action: continue the current area, move to the next area, re-run `/blu-plan-phase` so saved plans reflect refreshed context, or fall back to `/blu-progress` when the follow-up route is still uncertain
+- Shared profile reference: `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
+- Command behavior reference: `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`
+- Saved artifact schema authority: the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`
 
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. The repaired Blueprint flow keeps the retained GSD thinking-partner behavior while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps across saved phase artifacts and codebase scout summaries; answer validation and retry; stronger assumptions-mode analysis; capability-gated sidecar research for one gray area when suitable agents are available, limited to a lightweight gray-area options memo rather than artifact-grade `XX-RESEARCH.md` content; single-agent fallback that handles one discussion area at a time with compressed carry-forward context and checkpointing; methodology-shaped gray-area lenses; folding deferred ideas into the saved record; checkpoint-per-area behavior; progress recaps that keep the session legible; and a validation/repair loop before completion. The contract does not promise a dedicated todo/backlog file crawl; any follow-up references only carry forward when they are already present in the saved discovery record. It still reads actual saved discovery context before questioning, persists substantive context content and resumable checkpoint state through dedicated MCP tools, and normalizes the final context and discussion drafts to the canonical `authoringTemplate` before write. It restores the intended gray-area conversation loop while still deferring legacy power-mode, chain-mode, auto-mode, or auto-advance behavior until later substrate exists. In Blueprint it stays host-native, delegates persistence to documented MCP tools, and keeps the repo-side contract explicit enough that this command can be repaired without broadening runtime exposure elsewhere.
+`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. It preserves the thinking-partner discovery loop while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps, answer validation and retry, assumptions-mode analysis, capability-gated sidecar research for one gray area, single-agent fallback, deferred-idea capture, checkpoint-per-area resumability, and validation/repair before completion. The detailed behavior lives in the runtime contract reference instead of being repeated here.
 
 
 ## Command Path And Examples
@@ -43,8 +36,8 @@
 
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
-- In-flight discovery should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible until the run concludes or stops on a checkpoint or overwrite decision.
+- Repo side effects: Writes only declared `.blueprint/` phase artifacts, checkpoints, and `STATE.md` through MCP tools.
+- In-flight discovery follows the shared profile until the run concludes or stops on a checkpoint or overwrite decision.
 - The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved artifact schema remains the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`.
 
 
@@ -145,13 +138,12 @@
 
 - Confirm overwrite when a context artifact already exists.
 - Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
-- When structured discovery choices help, prefer Gemini CLI's built-in `ask_user` dialog asked one focused question at a time instead of a plain-text questionnaire.
+- When structured discovery choices help, use host-supported structured choices one focused question at a time instead of a plain-text questionnaire.
 - Identify gray areas from repo evidence first, let the user choose which area to discuss next, and support iterative `next area` or `more questions` loops.
 - Use `blueprint-researcher` only as a capability-gated, bounded, read-only sidecar for a single gray area or assumptions pass when the host exposes it and extra evidence would materially improve the choices. Ask for gray-area memo output with options, tradeoffs, complexity or impact surface, recommendation rationale, confidence, and evidence; do not ask for `phase.research` or `XX-RESEARCH.md` content from `/blu-discuss-phase`. If no suitable subagent is available, the main agent must continue one area at a time, compress carry-forward context, checkpoint, and preserve the same artifact depth.
-- During non-trivial multi-area discovery runs on Gemini, keep the active stage and next safe action visible with `update_topic` and `write_todos` while leaving persistence to MCP artifacts, checkpoints, and `STATE.md`.
-- When those Gemini visibility helpers are unavailable, keep the same stage and next-safe-action visibility through normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
+- Follow the shared long-running phase-discovery profile for stage visibility, next-safe-action visibility, and session-local helper fallback behavior.
 - Inspect the saved plan inventory before rewriting context and warn that refreshed context does not rewrite existing plans unless the user re-runs `/blu-plan-phase`.
-- Do not advertise follow-on execution or planning flows as runnable until those commands are implemented in the runtime catalog.
+- Keep follow-on routing inside the implemented runtime catalog.
 
 
 ## Edge Cases
