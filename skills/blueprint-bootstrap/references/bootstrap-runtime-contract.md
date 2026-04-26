@@ -70,12 +70,14 @@ Map the bootstrap workflow to the shared stages like this:
 ## Read
 
 1. Initialize session-local bootstrap coordination before the workflow gets
-   deep:
-   - set the opening stage with `update_topic`
-   - create a compact `write_todos` list for preflight, discovery, shaping,
-     writing, validation, and routing
-   - if the run already looks dependency-heavy, seed task-tracker entries
-     before the first branching decisions
+   deep when the current host/session exposes those helpers:
+   - optionally set the opening stage with `update_topic`
+   - optionally create a compact `write_todos` list for preflight, discovery,
+     shaping, writing, validation, and routing
+   - if the run already looks dependency-heavy and tracker helpers are
+     available, seed task-tracker entries before the first branching decisions
+   - when these helpers are unavailable, continue with concise conversational
+     status notes that keep the same stage labels visible
 2. Read `mcp_blueprint_blueprint_config_get` before mutating anything so saved
    defaults, provenance, and effective warnings are visible.
 3. Read the canonical bootstrap artifact contracts with

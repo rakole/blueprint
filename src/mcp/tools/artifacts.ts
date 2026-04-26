@@ -1265,10 +1265,10 @@ export function buildDefaultBootstrapSeed(
             title: "Align Requirements With Mapped Codebase",
             objective:
               "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
-            requirementIds: ["RQ-01", "RQ-02", "RQ-03"],
+            requirementIds: ["RQ-01", "RQ-02"],
             successCriteria: [
-              "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
-              "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
+              "PROJECT.md and REQUIREMENTS.md cite the saved `.blueprint/codebase/` bundle as bootstrap evidence.",
+              "The first milestone separates mapped brownfield facts from assumptions that still need owner review."
             ]
           },
           {
@@ -1276,10 +1276,10 @@ export function buildDefaultBootstrapSeed(
             title: "Plan First Brownfield Delivery Slice",
             objective:
               "Shape the first implementation slice from mapped repo constraints and durable requirements.",
-            requirementIds: ["RQ-02", "RQ-03"],
+            requirementIds: ["RQ-03"],
             successCriteria: [
-              "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
-              "Requirement traceability stays intact as brownfield work moves toward execution."
+              "ROADMAP.md names the first delivery slice from the mapped repo constraints.",
+              "The preserved codebase map can be reused by later discovery without rerunning bootstrap."
             ]
           }
         ]
@@ -1289,10 +1289,10 @@ export function buildDefaultBootstrapSeed(
             title: "Discovery And Definition",
             objective:
               "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
-            requirementIds: ["RQ-01", "RQ-02"],
+            requirementIds: ["RQ-01"],
             successCriteria: [
-              "The product direction and first milestone are explicit enough to guide downstream planning.",
-              "Requirements remain traceable into the roadmap without renumbering."
+              "PROJECT.md names the product audience, value, constraints, and first milestone.",
+              "REQUIREMENTS.md records committed product-direction requirements with durable IDs."
             ]
           },
           {
@@ -1302,8 +1302,8 @@ export function buildDefaultBootstrapSeed(
               "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
             requirementIds: ["RQ-02", "RQ-03"],
             successCriteria: [
-              "The bootstrap draft is ready to support later discovery and execution planning.",
-              "Requirement traceability stays intact as the roadmap moves toward implementation."
+              "ROADMAP.md maps delivery-boundary requirements to concrete follow-up phases.",
+              "STATE.md routes maintainers to `/blu-progress` after bootstrap validation passes."
             ]
           }
         ];
@@ -1334,13 +1334,13 @@ export function buildDefaultBootstrapSeed(
     nonGoals: normalizeList(seed?.nonGoals, defaultNonGoals),
     requirements: normalizedRequirements,
     roadmapPhases: sourceRoadmapPhases.map((phase, index) => ({
-        ...phase,
-        requirementIds: normalizeBootstrapRoadmapPhaseRequirementIds(phase, normalizedRequirements, index),
-        successCriteria: normalizeSuccessCriteria(phase.successCriteria, [
-          `Complete ${phase.title} with traceable handoff evidence.`,
-          "Keep requirement IDs traceable into later roadmap artifacts."
-        ])
-      })),
+      ...phase,
+      requirementIds: normalizeBootstrapRoadmapPhaseRequirementIds(phase, normalizedRequirements, index),
+      successCriteria: normalizeSuccessCriteria(phase.successCriteria, [
+        `${phase.title} produces reviewable Blueprint artifacts tied to the selected requirement IDs.`,
+        "Maintainers can validate the phase outcome through `.blueprint/ROADMAP.md` and `.blueprint/STATE.md`."
+      ])
+    })),
     brownfieldMode: seed?.brownfieldMode ?? assessment.repoShape,
     assumptions: normalizeList(seed?.assumptions, defaultAssumptions)
   };
