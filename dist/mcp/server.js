@@ -25445,7 +25445,11 @@ function checkpointPathFor(located) {
   return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
 }
 function normalizePlanId(value) {
-  return normalizeNumericArtifactId(normalizeBlueprintInput(value), "Plan id");
+  const normalizedInput = normalizeBlueprintInput(value).trim();
+  if (/^0+$/.test(normalizedInput)) {
+    throw new Error("Plan id must be greater than zero.");
+  }
+  return normalizeNumericArtifactId(normalizedInput, "Plan id");
 }
 function parsePlanArtifactPath(pathValue, phasePrefix2) {
   const match = pathValue.match(
@@ -25470,17 +25474,17 @@ function replacePlanSlotLabel(value, fromPlanId, toPlanId) {
   }
   return updated;
 }
-function extractPlanIdFromFrontmatterLine(line) {
+function extractPlanSlotLabelFromFrontmatterLine(line) {
   const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
   const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
-  if (!rawValue) {
+  const trimmed = rawValue?.trim() ?? "";
+  if (!/^\d+$/.test(trimmed)) {
     return null;
   }
-  try {
-    return normalizePlanId(rawValue);
-  } catch {
-    return null;
+  if (/^0+$/.test(trimmed)) {
+    return trimmed.padStart(2, "0");
   }
+  return normalizePlanId(trimmed);
 }
 function reconcilePlanTitleLine(line, fromPlanId, toPlanId) {
   const match = line.match(/^(\s*title:\s*)(.+)$/);
@@ -25513,7 +25517,7 @@ function reconcileAutoAssignedPlanContent(content, planId2) {
   }
   const frontmatter = frontmatterMatch[1] ?? "";
   const updatedFrontmatterLines = frontmatter.split("\n");
-  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanIdFromFrontmatterLine(line)).find((value) => value !== null) ?? null;
+  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanSlotLabelFromFrontmatterLine(line)).find((value) => value !== null) ?? null;
   const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
   if (planIdLineIndex >= 0) {
     updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
