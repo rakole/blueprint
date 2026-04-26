@@ -223,6 +223,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /phase_checkpoint_get/i);
   assert.match(commandFile, /phase_checkpoint_put/i);
   assert.match(commandFile, /phase_checkpoint_delete/i);
+  assert.match(commandFile, /expectedOwnerCommand: "\/blu-research-phase"/);
+  assert.match(commandFile, /expectedMode: "research"/);
+  assert.match(
+    commandFile,
+    /phase_checkpoint_delete[\s\S]*expectedOwnerCommand: "\/blu-research-phase"[\s\S]*expectedMode: "research"/i
+  );
   assert.match(commandFile, /topic-sized strands/i);
   assert.match(commandFile, /long-running-mutation/);
   assert.match(commandFile, /update_topic/);

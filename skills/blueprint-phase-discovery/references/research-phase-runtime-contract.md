@@ -80,11 +80,15 @@ helpers when available, or concise progress recaps when they are not.
 - `blueprint_phase_checkpoint_put`: persists inconclusive or paused strand
   state using the structured checkpoint shape with
   `ownerCommand: "/blu-research-phase"` and `resumeMeta.mode: "research"`.
+  The MCP tool owns the shared checkpoint path; do not assume the filename is
+  research-specific.
 - `blueprint_phase_artifact_write`: persists final research with the resolved
   numeric `phase`, `artifact: "research"`, full markdown body, and strict
   validation unless the user explicitly accepts a warned save.
 - `blueprint_phase_checkpoint_delete`: removes stale continuation state after a
-  successful final research write.
+  successful final research write. Pass
+  `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`
+  so cleanup cannot delete another command's shared checkpoint.
 - `blueprint_state_update`: records completion or repair posture after
   artifact persistence.
 
@@ -225,6 +229,6 @@ and planner-ready:
   authoring template
 - strict MCP write validation passed, or a validation blocker was checkpointed
   and reported
-- stale research checkpoints were deleted after success
+- stale research-owned shared checkpoints were deleted after success
 - `STATE.md` was updated through MCP
 - refreshed state and command catalog were used for the next safe action

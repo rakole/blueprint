@@ -265,7 +265,7 @@ Plan note:
 
 Auxiliary phase artifacts:
 - `XX-DISCUSSION-LOG.md`
-- `XX-DISCUSS-CHECKPOINT.json` (temporary resumability state for `discuss-phase`; should be deleted after successful context capture)
+- `XX-DISCUSS-CHECKPOINT.json` (shared temporary phase continuation state; the retained filename is legacy-compatible, while ownership now comes from `ownerCommand` and `resumeMeta.mode`)
 - `XX-REVIEW.md`
 - `XX-REVIEW-FIX.md`
 - `XX-REVIEWS.md`
@@ -320,7 +320,9 @@ Validation expectations:
 
 ### `XX-DISCUSS-CHECKPOINT.json`
 
-`XX-DISCUSS-CHECKPOINT.json` is temporary resumability state for `discuss-phase`.
+`XX-DISCUSS-CHECKPOINT.json` is the shared phase continuation checkpoint for
+discovery and validation flows. The retained filename is legacy-compatible; the
+actual owner is declared inside the checkpoint body.
 
 Structured persistence expectations:
 - top-level JSON value must be an object
@@ -328,7 +330,8 @@ Structured persistence expectations:
 - `ownerCommand` identifies the command that owns the continuation state; current values are `/blu-discuss-phase`, `/blu-research-phase`, and `/blu-verify-work`
 - `resumeMeta.mode` is enum-like ownership metadata; current values are `discuss`, `research`, and `uat`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`, `/blu-verify-work` -> `uat`)
 - `resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`
-- legacy object-shaped checkpoints may still be read for compatibility, but `blueprint_phase_checkpoint_get` reports ownership/mode warnings and a `safeToResume` signal when the caller supplies expected ownership
+- the MCP tool owns the shared checkpoint path; callers must treat returned `path` values as authoritative instead of hand-building mode-specific filenames
+- legacy object-shaped checkpoints may still be read for compatibility, and matching legacy mode-only checkpoints may still be updated or deleted by the owning command, but `blueprint_phase_checkpoint_get` reports ownership/mode warnings and a `safeToResume` signal when the caller supplies expected ownership
 
 ### `XX-RESEARCH.md`
 
