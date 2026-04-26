@@ -302,6 +302,7 @@ test("phase lifecycle tool schemas accept numeric JSON phase refs and plan ids",
 
   for (const toolName of [
     "blueprint_phase_plan_index",
+    "blueprint_phase_execution_targets",
     "blueprint_phase_artifact_read",
     "blueprint_phase_artifact_write",
     "blueprint_phase_validation_read",
@@ -315,6 +316,11 @@ test("phase lifecycle tool schemas accept numeric JSON phase refs and plan ids",
     assert.ok(definition, `${toolName} should exist`);
     assert.equal(definition.inputSchema.phase.safeParse(3).success, true, `${toolName} should accept numeric phase refs`);
   }
+
+  const executionTargets = tool("blueprint_phase_execution_targets");
+  assert.ok(executionTargets, "blueprint_phase_execution_targets should exist");
+  assert.equal(executionTargets.inputSchema.wave.safeParse(2).success, true, "blueprint_phase_execution_targets should accept numeric waves");
+  assert.equal(executionTargets.inputSchema.gapsOnly.safeParse(true).success, true, "blueprint_phase_execution_targets should accept gapsOnly");
 
   for (const toolName of [
     "blueprint_phase_plan_read",
