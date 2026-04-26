@@ -20130,6 +20130,102 @@ function isExplicitUiSkipRationale(content) {
     outcomeMode
   );
 }
+function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
+  const issues = [];
+  const flaggedModes = /* @__PURE__ */ new Set();
+  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+    if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line)) {
+      continue;
+    }
+    if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line)) {
+      continue;
+    }
+    for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
+      if (pattern.test(line) && !flaggedModes.has(mode)) {
+        issues.push(
+          `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`
+        );
+        flaggedModes.add(mode);
+      }
+    }
+  }
+  return issues;
+}
+function markdownSectionLines(section) {
+  return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
+}
+function hasConcreteCanonicalReference(section) {
+  return markdownSectionLines(section).filter(
+    (line) => !/^(?:none|n\/a|na|not applicable|no canonical references?|no saved references?)\b/i.test(
+      line
+    )
+  ).some(
+    (line) => /https?:\/\/\S+|(?:^|[\s`])(?:\.blueprint|src|tests|docs|commands|skills|agents|hooks|scripts|dist)\/[^\s`,)]+|\b(?:ROADMAP|STATE|PROJECT|REQUIREMENTS|MEMORY|AGENTS|README|CHANGELOG)\.md\b|\b(?:roadmap|requirements?|project brief|state|saved phase artifacts?|phase artifacts?|context artifact|discussion log)\b|\b[\w.-]+\.(?:ts|tsx|js|mjs|json|toml|md|yaml|yml)\b/i.test(
+      line
+    )
+  );
+}
+function hasDeferredIdeaSignal(section) {
+  return /\b(?:deferred ideas?|later follow-?ups?|future follow-?ups?|follow-?up ideas?|scope creep|revisit|after this phase|next phase|backlog|parking lot)\b/i.test(
+    section
+  );
+}
+function hasConcreteDeferredIdeas(section) {
+  return markdownSectionLines(section).filter(
+    (line) => !/^(?:none|n\/a|na|not applicable|no\b.*(?:deferred|follow-?up|ideas?)|nothing deferred)\b/i.test(
+      line
+    )
+  ).some((line) => countMeaningfulWords(line) >= 3);
+}
+function validateDiscussPhaseContextAntiPatterns(content) {
+  const issues = [];
+  const warnings = [];
+  const canonicalReferences = extractMarkdownSection(content, "Canonical References");
+  const deferredIdeas = extractMarkdownSection(content, "Deferred Ideas");
+  const deferredSourceSections = [
+    "Discovery Grounding",
+    "Implementation Decisions",
+    "Specific Ideas",
+    "Existing Code Insights",
+    "Dependencies",
+    "Open Questions"
+  ].map((heading) => extractMarkdownSection(content, heading)).join("\n");
+  issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+  if (!hasConcreteCanonicalReference(canonicalReferences)) {
+    issues.push(
+      "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL."
+    );
+  }
+  if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
+    issues.push(
+      "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
+    );
+  }
+  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
+    warnings.push(
+      "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
+    );
+  }
+  return { issues, warnings };
+}
+function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
+  const issues = [];
+  const warnings = [];
+  const followUps = extractMarkdownSection(content, "Follow-Ups");
+  const discussionSections = ["Summary", "Notes"].map((heading) => extractMarkdownSection(content, heading)).join("\n");
+  issues.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
+  if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
+    issues.push(
+      "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section."
+    );
+  }
+  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
+    warnings.push(
+      "Discussion log artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
+    );
+  }
+  return { issues, warnings };
+}
 function validatePhaseArtifactContent(content, artifact) {
   if (artifact === "research") {
     return validateResearchArtifactContent(content);
@@ -20186,6 +20282,14 @@ function validatePhaseArtifactContent(content, artifact) {
         );
       }
     }
+    const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
+    issues.push(...discussValidation.issues);
+    warnings.push(...discussValidation.warnings);
+  }
+  if (artifact === "discussion-log") {
+    const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
+    issues.push(...discussValidation.issues);
+    warnings.push(...discussValidation.warnings);
   }
   if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {
     warnings.push(
@@ -22319,7 +22423,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -22644,6 +22748,15 @@ var init_artifacts = __esm({
       },
       { pattern: /\bPASS\|FAIL\|PARTIAL\b/i, signal: "PASS|FAIL|PARTIAL" }
     ];
+    UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS = [
+      { mode: "power mode", pattern: /\bpower[\s-]?mode\b/i },
+      { mode: "chain mode", pattern: /\bchain[\s-]?mode\b/i },
+      { mode: "auto mode", pattern: /\bauto[\s-]?mode\b/i },
+      { mode: "batch mode", pattern: /\bbatch[\s-]?mode\b/i },
+      { mode: "auto-advance", pattern: /\bauto[\s-]?advance(?:ment|s|d)?\b/i }
+    ];
+    UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN = /\b(?:supports?|supported|implements?|implemented|ships?|shipped|available|enabled|routable|provides?|offers?|runs?)\b/i;
+    UNSUPPORTED_MODE_NEGATION_PATTERN = /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
     REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
       "phase.verification"
     ).requiredHeadings;
