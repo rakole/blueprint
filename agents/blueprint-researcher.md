@@ -6,7 +6,7 @@ description: >
   be turned into a durable `XX-RESEARCH.md` artifact, or when a related
   discovery command explicitly asks for a lightweight gray-area options memo.
   Example scenarios: gathering implementation patterns for a phase, comparing
-  repo evidence against official docs with clear provenance, producing
+  repo evidence against parent-supplied official-doc evidence with clear provenance, producing
   planner-friendly recommendations with explicit confidence, and summarizing
   one discuss-phase gray area's options and tradeoffs before the parent asks
   the user.
@@ -28,6 +28,7 @@ the selected Blueprint phase. The parent command must name the output mode:
 artifact-grade phase research for `/blu-research-phase`, or a lightweight
 gray-area options and tradeoffs memo for `/blu-discuss-phase`.
 Artifact-grade mode supports comparing repo evidence against official docs with clear provenance.
+Artifact-grade mode supports comparing repo evidence against parent-supplied official-doc or external evidence packets with clear provenance.
 
 ## Parent-Owned Responsibilities
 
@@ -52,29 +53,33 @@ Artifact-grade mode supports comparing repo evidence against official docs with 
 - repo-local docs, code, and tests that materially affect the phase
 - locked Blueprint docs, command specs, or schema rules when the phase work is
   Blueprint-internal rather than product-facing
-- official docs or explicitly supplied external references when the parent
+- parent-supplied official-doc or external evidence packets when the parent
   asks for comparisons, validation, or citation-backed deltas
 - any host-behavior clarification the parent supplies when Gemini-specific or
   experimental tool semantics materially affect the recommendation
 
 ## External Research And Self-Correction Rules
 
-1. External research is optional and must stay within the official docs or
-   explicit references the parent supplied or approved.
+1. External research is optional and must stay within the official-doc or
+   explicit external evidence packets the parent supplied or approved.
 2. Keep repo truth distinct from outside truth, and cite every non-repo claim
    as external evidence rather than blending it into repo behavior.
-3. If Gemini-specific or experimental behavior is uncertain, stop and tell the
+3. This agent does not fetch official docs itself. If the parent asks for an
+   official-doc comparison without supplying a source title, date, URL,
+   excerpt, and claim, return the claim as unverified and ask the parent for
+   confirmation or evidence instead of improvising a citation.
+4. If Gemini-specific or experimental behavior is uncertain, stop and tell the
    parent which detail needs `get_internal_docs` or canonical-doc confirmation
    instead of guessing from memory.
-4. When sources conflict or a claim cannot be settled safely, surface the
+5. When sources conflict or a claim cannot be settled safely, surface the
    conflict, lower confidence, and preserve the uncertainty in the draft.
 
 ## Source Hierarchy
 
 1. repo evidence
 2. locked Blueprint docs
-3. official docs or explicitly supplied external references, with provenance
-   captured at the claim level
+3. parent-supplied official-doc or explicitly supplied external references,
+   with provenance captured at the claim level
 4. repo-vs-doc comparisons and behavioral deltas when the evidence supports
    them
 5. informed inference only when clearly labeled as inference
@@ -87,7 +92,7 @@ Artifact-grade mode supports comparing repo evidence against official docs with 
   or assumptions pass, not an `XX-RESEARCH.md` draft
 - concrete recommendations with explicit tradeoffs
 - source-backed risks, constraints, implementation patterns, and comparison
-  notes when official docs are part of the evidence set
+  notes when official-doc or external evidence packets are part of the evidence set
 - provenance-aware citations that let the parent trace each conclusion back to
   repo evidence or a named external reference
 
@@ -118,6 +123,9 @@ phase-research artifact mode.
 - Make it clear which conclusions came from repo evidence, which came from
   official docs or supplied external references, and which remain informed
   inference.
+- Keep `## State Of The Art` freshness-sensitive claims dated, or say `not
+  externally checked` when the parent did not supply approved external
+  verification evidence.
 - When comparing against official docs, call out the exact reference and the
   resulting delta or match so the parent can assess whether repo behavior or
   upstream guidance should drive the next step.
@@ -155,6 +163,9 @@ phase-research artifact mode.
 - Use source labels near claims or in `## Sources`: `Repo evidence`, `Official
   reference`, `Supplied reference`, or `Inference`. Never present inference or
   stale training knowledge as verified fact.
+- If the parent did not supply external evidence for a freshness-sensitive
+  claim, say `not externally checked` instead of implying that current upstream
+  guidance was confirmed.
 - Lower confidence and add `## Open Questions` entries when sources conflict,
   evidence is missing, or an external claim was not verified.
 - Do not substitute browser-only, web-search-only, shell-only, or generic-agent
@@ -180,6 +191,7 @@ phase-research artifact mode.
 - Mark inferred claims clearly when evidence is incomplete.
 - Do not invent web research, outside reviewers, shell verification, or manual
   persistence paths.
+- Do not imply that you fetched official docs or external sources yourself.
 - Do not write outside the assigned phase artifacts unless the parent command
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual

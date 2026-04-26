@@ -33,9 +33,11 @@ Use the shared long-running-mutation stages:
 
 - `Resolve`: resolve the phase and current roadmap boundary.
 - `Read`: load phase context, current context artifact, existing research,
-  checkpoint state, state, catalog, and the canonical research contract.
+  checkpoint state, effective external-source policy, state, catalog, and the
+  canonical research contract.
 - `Decide`: choose reuse, view, update, resume, discard, repo-only, or
-  repo-plus-external verification posture.
+  repo-plus-external verification posture based on
+  `research.external_sources`.
 - `Execute`: research one topic strand at a time and keep evidence provenance
   visible.
 - `Persist`: scaffold only a missing file, write checkpoints for pauses, and
@@ -54,7 +56,13 @@ helpers when available, or concise progress recaps when they are not.
   number, prefix, name, and directory. Stop on `found: false`.
 - `blueprint_phase_context`: provides project brief, roadmap boundary,
   requirement mapping, workflow posture, missing artifacts, and saved codebase
-  bundle signals. This controls research scope.
+  bundle signals. This controls research scope and surfaces the mirrored
+  `workflowPosture.research.externalSources` policy view.
+- `blueprint_config_get` with `scope: "effective"`: provides the source-of-truth
+  `research.external_sources` policy before any official-doc or other external
+  verification step. `off` means no live external lookup, `ask` means confirm
+  first, and `auto` allows official-doc or external verification when the repo
+  cannot settle the claim.
 - `blueprint_phase_research_status`: detects existing context, research,
   UI-spec, validity, stale paths, and suggested repair posture.
 - `blueprint_phase_artifact_read` with `artifact: "context"`: loads the actual
@@ -115,7 +123,8 @@ Quality rules for `XX-RESEARCH.md`:
 - `## Architecture Patterns`, `## Don't Hand-Roll`, and `## Anti-Patterns`
   give planner-usable implementation structure and verification risks.
 - `## State Of The Art` identifies current guidance, repo-local currency, or
-  explicitly says external currency was not checked.
+  explicitly says external currency was not checked. Freshness-sensitive claims
+  in this section need explicit source dates when external evidence is cited.
 - `## Common Pitfalls` describes failure modes, why they happen, and how a plan
   should prevent them.
 - `## Open Questions` lists only unresolved questions that matter downstream,
@@ -146,6 +155,8 @@ When used, pass the agent:
 - resolved phase number, name, goal, success criteria, and requirements
 - the actual saved context artifact content
 - saved codebase summaries or a compact repo evidence packet
+- any external evidence packet the parent already gathered or the user already
+  supplied, with source title, date, URL, excerpt, claim, and evidence class
 - existing research content when revising
 - `contract.authoringTemplate`, required headings, locked markers,
   placeholder signals, and freehand policy
@@ -153,8 +164,12 @@ When used, pass the agent:
 - source and confidence expectations
 
 Ask the agent for populated research content or a bounded section draft with
-warnings. The parent command owns synthesis, user gates, normalization,
-checkpointing, final artifact persistence, state updates, and routing.
+warnings. The agent must not imply it fetched official docs itself. If the
+parent asks for official-doc comparison without an external evidence packet,
+the agent should mark the claim unverified and ask the parent for confirmation
+or supplied evidence. The parent command owns synthesis, user gates,
+normalization, checkpointing, final artifact persistence, state updates, and
+routing.
 
 ## No-Subagent Fallback
 
@@ -168,7 +183,7 @@ the workflow without lowering output quality:
    availability, validation/testing impact, risk/pitfalls, or sources.
 3. Read only the repo files or saved Blueprint artifacts needed for that
    strand. Use official or supplied references only for claims the repo cannot
-   settle.
+   settle, and only when the `research.external_sources` policy allows them.
 4. Append or revise the normalized research draft section-by-section against
    the canonical template.
 5. Compress the completed strand into the carry-forward packet.
@@ -185,6 +200,11 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 - If existing research is present, default to reuse unless the user chooses
   view or update, but only when the saved research is already valid.
   Replacement requires explicit confirmation.
+- If `research.external_sources` is `off`, do not perform live external lookup.
+  Keep the run repo-only and mark freshness-sensitive claims as not externally
+  checked.
+- If `research.external_sources` is `ask`, stop for confirmation before any
+  official-doc or external verification.
 - If existing research is invalid, do not allow skip, default reuse, or an
   unchanged invalid write result to count as successful completion. Surface the
   validation issues, repair the artifact, or stop with the blocker.
@@ -215,6 +235,8 @@ and planner-ready:
 - pitfalls are tied to prevention or validation steps
 - code examples or pseudocode are useful, or their omission is justified
 - sources include at least one repo path, URL, or cited file reference
+- `## State Of The Art` includes explicit source dates for freshness-sensitive
+  claims, or clearly says external currency was not checked
 - confidence is honest and scoped by topic
 - unresolved questions are visible instead of hidden by confident language
 
@@ -232,3 +254,5 @@ and planner-ready:
 - stale research-owned shared checkpoints were deleted after success
 - `STATE.md` was updated through MCP
 - refreshed state and command catalog were used for the next safe action
+- the effective `research.external_sources` policy was honored before any
+  external verification step

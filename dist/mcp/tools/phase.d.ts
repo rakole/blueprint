@@ -223,6 +223,7 @@ type PhaseLocateResult = {
     recovery: string[];
     warnings: string[];
 };
+type ResearchExternalSourcesMode = "off" | "ask" | "auto";
 type PhaseContextResult = {
     phase: {
         phaseNumber: string;
@@ -285,6 +286,9 @@ type PhaseContextResult = {
             discussMode: string;
             skipDiscuss: boolean;
             useWorktrees: boolean;
+        };
+        research: {
+            externalSources: ResearchExternalSourcesMode;
         };
         summary: string;
         warnings: string[];

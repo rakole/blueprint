@@ -685,7 +685,7 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ## State Of The Art
 
-- <current ecosystem or repo update>
+- <current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>
 
 ## Common Pitfalls
 
@@ -2101,7 +2101,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<durable implementation pattern>",
       "<existing tool, helper, or platform feature>",
       "<anti-pattern detail or implementation to avoid>",
-      "<current ecosystem or repo update>",
+      "<current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>",
       "<failure mode or regression risk>",
       "<open question that still needs an answer>",
       "<topic>",
@@ -2114,7 +2114,8 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Research writes validate in strict mode by default.",
       "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
       "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
+      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
+      "State Of The Art should cite explicit source dates for freshness-sensitive claims, or say that external currency was not checked."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
     renderAuthoringTemplate: renderResearchTemplate

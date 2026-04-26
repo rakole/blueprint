@@ -729,6 +729,37 @@ test("map-codebase is implemented once the brownfield mapping contract and tools
   assert.match(commandDoc ?? "", /\| Execution profile \| `long-running-mutation` \|/);
 });
 
+test("research-phase is implemented once manifest, skill, and external-policy-aware tools exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["research-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.equal(entry.manifestPath, "commands/blu-research-phase.toml");
+  assert.ok(entry.skillPath);
+  assert.ok(entry.specPath);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_phase_locate",
+    "blueprint_phase_context",
+    "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
+    "blueprint_phase_checkpoint_get",
+    "blueprint_phase_checkpoint_put",
+    "blueprint_phase_checkpoint_delete",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_scaffold",
+    "blueprint_config_get",
+    "blueprint_state_load",
+    "blueprint_command_catalog",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, ["blueprint-researcher"]);
+  assert.deepEqual(entry.blockedBy, []);
+});
+
 test("runtime command catalog only advertises metadata-valid optional agents", async () => {
   const catalog = await blueprintCommandCatalog();
   const availableAgents = new Set(
