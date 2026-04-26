@@ -299,7 +299,8 @@ test("discovery runtime contracts expose command-scoped effective skill inputs",
       command: "discuss-phase",
       ownDoc: "docs/commands/discuss-phase.md",
       extraInputs: [
-        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md"
+        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
+        "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
       ],
       siblingDocs: [
         "docs/commands/research-phase.md",
