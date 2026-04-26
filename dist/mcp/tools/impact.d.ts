@@ -5,6 +5,7 @@ import { listArtifactContracts } from "../artifact-contracts/index.js";
 type ImpactStatus = "PASS" | "WARN" | "BLOCK";
 type ImpactRiskLevel = "low" | "medium" | "high" | "critical" | "unknown";
 type ImpactConfidenceLevel = "low" | "medium" | "high";
+type ImpactSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 type ImpactOutputMode = "human" | "json" | "markdown" | "pr-comment" | "summary";
 type ImpactScopeMode = NonNullable<ImpactScopeResolveArgs["mode"]>;
 type ImpactScopeKind = Exclude<ImpactScopeMode, "auto"> | "unresolved";
@@ -210,6 +211,19 @@ type ImpactAnalysisReport = Record<string, unknown> & {
     schemaVersion: "blueprint.impact.report.v1";
     impactId: string;
     status: ImpactStatus;
+    impactStatus: ImpactStatus;
+    summary: string;
+    scope: ImpactReportScope;
+    files: string[];
+    risk: ImpactRisk;
+    confidence: ImpactConfidence;
+    scoring: ImpactScoringSummary;
+    topImpactedAreas: ImpactSummaryRecord[];
+    requiredReviewers: string[];
+    requiredTests: string[];
+    requiredActions: string[];
+    blockingFindings: ImpactFindingRecord[];
+    warningFindings: ImpactFindingRecord[];
     surfaces: ImpactSurfaceRecord[];
     areaSummary: ImpactSummaryRecord[];
     surfaceSummary: ImpactSummaryRecord[];
@@ -221,7 +235,7 @@ type ImpactAnalysisReport = Record<string, unknown> & {
     evidence: ImpactEvidenceRecord[];
 };
 type ImpactAnalyzeResult = {
-    phaseStatus: "contract-obligations-analyzed";
+    phaseStatus: "scored-report-modeled";
     impactId: string;
     status: ImpactStatus;
     impactStatus: ImpactStatus;
@@ -239,6 +253,30 @@ type ImpactAnalyzeResult = {
     report: ImpactAnalysisReport;
     warnings: string[];
 };
+type ImpactReportScope = {
+    kind: string;
+    source: string | null;
+    description: string | null;
+    fingerprint: string;
+    confidence: ImpactConfidence;
+};
+type ImpactScoringSummary = {
+    status: ImpactStatus;
+    riskLevel: ImpactRiskLevel;
+    confidenceScore: number;
+    confidenceLevel: ImpactConfidenceLevel;
+    maxSeverity: ImpactSeverity | null;
+    blocking: boolean;
+    drivers: string[];
+    reducers: string[];
+    policy: {
+        blockOnCritical: boolean;
+        blockOnBreakingContract: boolean;
+        blockOnSensitiveUnknownOwner: boolean;
+        warnBelowConfidence: number;
+        blockBelowConfidenceForSensitiveAreas: number;
+    };
+};
 type ImpactEvidenceRecord = {
     id: string;
     kind: "scope" | "surface" | "ownership" | "dependency" | "metadata" | "config" | "contract" | "obligation" | "build";
@@ -247,12 +285,12 @@ type ImpactEvidenceRecord = {
     paths: string[];
     data?: Record<string, unknown>;
 };
-type ImpactUnknownCategory = "ownership" | "dependency" | "contract" | "obligation" | "risk-scoring";
+type ImpactUnknownCategory = "scope" | "ownership" | "dependency" | "contract" | "obligation";
 type ImpactUnknownRecord = {
     id: string;
     category: ImpactUnknownCategory;
     title: string;
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    severity: ImpactSeverity;
     impactedFiles: string[];
     reason: string;
     resolution: string;
@@ -262,7 +300,7 @@ type ImpactFindingRecord = {
     id: string;
     checkId: string;
     title: string;
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    severity: ImpactSeverity;
     status: ImpactStatus;
     confidence: number;
     impactedFiles: string[];
@@ -276,7 +314,7 @@ type ImpactObligationRecord = {
     id: string;
     category: ImpactObligationCategory;
     title: string;
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    severity: ImpactSeverity;
     status: ImpactStatus;
     impactedFiles: string[];
     sourceSurfaces: ImpactSurface[];

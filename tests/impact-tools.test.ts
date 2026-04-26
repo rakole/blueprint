@@ -576,10 +576,17 @@ test("impact context load resolves phase and roadmapItem targets independently w
 });
 
 test("impact analyze normalizes all file input shapes with mismatch union warnings and deterministic ids", async () => {
+  const normalizationConfig = {
+    ...lowNoiseConfig(),
+    risk: {
+      blockBelowConfidenceForSensitiveAreas: 0
+    }
+  };
   const first = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["src/app.ts", "commands/blu-impact.toml"],
     files: ["docs/commands/impact.md"],
+    config: normalizationConfig,
     scope: {
       files: ["package.json", "src/app.ts"],
       changedFiles: ["tests/impact-tools.test.ts"]
@@ -588,6 +595,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
   const second = await blueprintImpactAnalyze({
     cwd: repoRoot,
     files: ["tests/impact-tools.test.ts", "package.json"],
+    config: normalizationConfig,
     scope: {
       changedFiles: ["commands/blu-impact.toml"],
       files: ["docs/commands/impact.md", "src/app.ts"]
@@ -769,8 +777,11 @@ test("impact downstream handlers stay read-only while analysis classification is
   assert.equal(scope.scope.kind, "description");
   assert.equal(scope.confidence.level, "low");
   assert.equal(analysis.impactStatus, "WARN");
-  assert.equal(analysis.phaseStatus, "contract-obligations-analyzed");
+  assert.equal(analysis.phaseStatus, "scored-report-modeled");
   assert.equal(analysis.confidence.level, "low");
+  assert.ok(
+    analysis.unknowns.some((unknown) => unknown.id === "unknown.scope.file-backed")
+  );
   assert.equal(write.status, "disabled");
   assert.equal(write.written, false);
   assert.deepEqual(write.paths, {
@@ -782,6 +793,75 @@ test("impact downstream handlers stay read-only while analysis classification is
     questions: null
   });
   await assert.rejects(access(path.join(repoRoot, ".blueprint", "impact", "impact-abc123")));
+});
+
+test("impact analyze can produce PASS with stable normalized Phase 7 report data", async () => {
+  const first = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["tests/impact-tools.test.ts"],
+    config: lowNoiseConfig()
+  });
+  const second = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["tests/impact-tools.test.ts"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(first.status, "PASS");
+  assert.equal(first.impactStatus, "PASS");
+  assert.equal(first.risk.level, "low");
+  assert.equal(first.confidence.level, "high");
+  assert.equal(first.report.status, "PASS");
+  assert.equal(first.report.impactStatus, "PASS");
+  assert.equal(first.report.scoring.status, "PASS");
+  assert.equal(first.report.scoring.riskLevel, "low");
+  assert.deepEqual(first.report.requiredReviewers, ["@reviewer"]);
+  assert.deepEqual(first.report.requiredTests, []);
+  assert.deepEqual(first.report.blockingFindings, []);
+  assert.deepEqual(first.report.warningFindings, []);
+  assert.ok(first.report.scope.fingerprint.length > 0);
+  assert.ok(
+    first.evidence.some((evidence) => evidence.source === "phase-7-scoring")
+  );
+  assert.deepEqual(first.impactId, second.impactId);
+  assert.deepEqual(first.report, second.report);
+});
+
+test("impact analyze raises WARN for obligations without conflating risk and confidence", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/commands/impact.md"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({})
+  });
+
+  assert.equal(analysis.status, "WARN");
+  assert.notEqual(analysis.risk.level, analysis.confidence.level);
+  assert.equal(analysis.report.scoring.status, "WARN");
+  assert.ok(analysis.report.requiredTests.length > 0);
+  assertHasObligation(analysis, "Command metadata tests must cover command contract changes");
+});
+
+test("impact analyze keeps description-only scope low-confidence and non-PASS", async () => {
+  const scope = await blueprintImpactScopeResolve({
+    cwd: repoRoot,
+    mode: "description",
+    description: "Add checkout payment retry support"
+  });
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    scope: scope.scope,
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(scope.confidence.level, "low");
+  assert.equal(analysis.status, "WARN");
+  assert.equal(analysis.risk.level, "unknown");
+  assert.equal(analysis.confidence.level, "low");
+  assert.equal(analysis.report.scope.kind, "description");
+  assert.ok(
+    analysis.unknowns.some((unknown) => unknown.id === "unknown.scope.file-backed")
+  );
 });
 
 test("impact analyze emits structured ownership unknowns without inventing owners", async () => {
@@ -836,6 +916,9 @@ test("impact analyze blocks sensitive missing owner when configured", async () =
 
     assert.equal(analysis.status, "BLOCK");
     assert.equal(analysis.impactStatus, "BLOCK");
+    assert.equal(analysis.risk.level, "critical");
+    assert.equal(analysis.confidence.level, "low");
+    assert.equal(analysis.report.scoring.blocking, true);
     assert.ok(
       analysis.findings.some(
         (finding) =>
@@ -1243,7 +1326,7 @@ test("impact analyze reports high confidence when ownership and reverse dependen
     });
 
     assert.equal(analysis.dependencyGraph.coverage.status, "complete-ish");
-    assert.equal(analysis.confidence.score, 0.68);
+    assert.ok(analysis.confidence.score >= 0.8);
     assert.equal(analysis.confidence.level, "high");
   } finally {
     await rm(repoPath, { recursive: true, force: true });
@@ -1566,7 +1649,7 @@ test("impact analyze keeps planned impact missing manifest and skill expected", 
   assertHasObligation(analysis, "Command contract review required");
 });
 
-test("impact analyze emits explicit unknowns for omitted or malformed Phase 6 context", async () => {
+test("impact analyze emits explicit unknowns for omitted or malformed impact context", async () => {
   const omitted = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["commands/blu-custom.toml"],
@@ -1906,7 +1989,7 @@ test("impact analyze creates security, deployment, release, and test obligations
   assert.ok(categories.has("tests"));
 });
 
-test("impact report writer and output renderer remain disabled placeholders for Phase 6 reports", async () => {
+test("impact report writer and output renderer remain disabled placeholders for Phase 7 reports", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["src/mcp/tools/impact.ts"],
@@ -1934,5 +2017,5 @@ test("impact report writer and output renderer remain disabled placeholders for 
   assert.equal(write.status, "disabled");
   assert.equal(write.written, false);
   assert.equal(rendered.phaseStatus, "placeholder");
-  assert.match(rendered.content, /Phase 6/);
+  assert.match(rendered.content, /Phase 7/);
 });
