@@ -515,7 +515,7 @@ test("phase execution skill and bounded execution agent are marked implemented i
 
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-phase-execution` \| `implemented` \| Plan execution, bounded quick delivery, and summary or report generation \|/
+    /\| `blueprint-phase-execution` \| `implemented` \| Plan execution, bounded quick delivery, and durable execution evidence \|/
   );
   assert.match(
     skillsMarkdown,
@@ -531,18 +531,18 @@ test("execute-phase runtime references keep the topic/todo contract, summary con
 
   assert.match(
     runtimeReference,
-    /\| `execute-phase` \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+    /\| `execute-phase` \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
   );
   assert.match(runtimeReference, /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration/i);
   assert.match(runtimeReference, /pair Gemini-native `update_topic` and `write_todos` for long execution runs without turning them into persistence/i);
   assert.match(runtimeReference, /reads the canonical `phase\.summary` contract before any summary write or replacement/i);
-  assert.match(runtimeReference, /stops later-wave execution when lower-wave gaps remain/i);
+  assert.match(runtimeReference, /stop later-wave execution whenever any lower-wave pending plan remains/i);
   assert.match(
     migrationMarkdown,
-    /\| `execute-phase` \| `commands\/gsd\/execute-phase\.md` \| GSD has an upstream workflow file \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+    /\| `execute-phase` \| `commands\/gsd\/execute-phase\.md` \| GSD has an upstream workflow file \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
   );
   assert.match(migrationMarkdown, /reads the canonical `phase\.summary` contract before summary writes/i);
-  assert.match(migrationMarkdown, /keeps later-wave work blocked until lower-wave gaps are closed/i);
+  assert.match(migrationMarkdown, /keeps later-wave work blocked until any lower-wave pending plans are closed/i);
 });
 
 test("quick command docs keep the bounded report-backed execution contract explicit", async () => {

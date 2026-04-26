@@ -17,7 +17,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-capture` | `implemented` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
 | `blueprint-phase-discovery` | `implemented` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
-| `blueprint-phase-execution` | `implemented` | Plan execution, bounded quick delivery, and summary or report generation | `execute-phase`, `quick`, `fast` |
+| `blueprint-phase-execution` | `implemented` | Plan execution, bounded quick delivery, and durable execution evidence | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
 | `blueprint-debug` | `implemented` | Debug investigations and recovery plans | `debug` |
 | `blueprint-docs` | `implemented` | Documentation generation and verification | `docs-update` |

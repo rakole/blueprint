@@ -30,7 +30,7 @@ const SKILL_BUNDLES = [
   },
   {
     name: "blueprint-phase-execution",
-    description: "Plan execution, bounded quick delivery, and summary or report generation",
+    description: "Plan execution, bounded quick delivery, and durable execution evidence",
     commands: ["/blu-execute-phase", "/blu-fast", "/blu-quick"]
   },
   {
