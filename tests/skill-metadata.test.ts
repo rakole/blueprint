@@ -80,7 +80,7 @@ test("structured input bundles resolve command-specific execution inputs", async
   ]);
 });
 
-test("legacy required-input sections remain the fallback for unmigrated skills", async () => {
+test("plan-phase skill resolves its slim command-scoped input bundle", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-phase-planning",
     "/blu-plan-phase",
@@ -88,14 +88,13 @@ test("legacy required-input sections remain the fallback for unmigrated skills",
   );
 
   assert.equal(inputs.skill, "blueprint-phase-planning");
-  assert.deepEqual(inputs.commandSpecific, []);
-  assert.deepEqual(inputs.shared, [
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
     "docs/commands/plan-phase.md",
-    "docs/COMMAND-CATALOG.md",
-    "docs/SKILLS-AND-AGENTS.md",
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
     "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
   ]);
-  assert.deepEqual(inputs.effective, inputs.shared);
+  assert.deepEqual(inputs.effective, [
+    "docs/commands/plan-phase.md",
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ]);
 });
