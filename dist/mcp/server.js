@@ -18582,8 +18582,8 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       objective: "Convert the saved codebase map into durable project intent, requirements, and first-milestone scope.",
       requirementIds: ["RQ-01", "RQ-02"],
       successCriteria: [
-        "The saved codebase mapping remains preserved and referenced by bootstrap artifacts.",
-        "The roadmap starts from mapped repo evidence instead of provisional mapping follow-up."
+        "PROJECT.md and REQUIREMENTS.md cite the saved `.blueprint/codebase/` bundle as bootstrap evidence.",
+        "The first milestone separates mapped brownfield facts from assumptions that still need owner review."
       ]
     },
     {
@@ -18592,8 +18592,8 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       objective: "Shape the first implementation slice from mapped repo constraints and durable requirements.",
       requirementIds: ["RQ-03"],
       successCriteria: [
-        "Later lifecycle commands can plan against the mapped baseline without redoing bootstrap.",
-        "Requirement traceability stays intact as brownfield work moves toward execution."
+        "ROADMAP.md names the first delivery slice from the mapped repo constraints.",
+        "The preserved codebase map can be reused by later discovery without rerunning bootstrap."
       ]
     }
   ] : [
@@ -18603,8 +18603,8 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       objective: "Confirm product intent, user constraints, and first-milestone scope before deeper lifecycle commands run.",
       requirementIds: ["RQ-01"],
       successCriteria: [
-        "The product direction and first milestone are explicit enough to guide downstream planning.",
-        "Requirements remain traceable into the roadmap without renumbering."
+        "PROJECT.md names the product audience, value, constraints, and first milestone.",
+        "REQUIREMENTS.md records committed product-direction requirements with durable IDs."
       ]
     },
     {
@@ -18613,8 +18613,8 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       objective: "Turn the bootstrap draft into durable planning inputs for later execution-oriented phases.",
       requirementIds: ["RQ-02"],
       successCriteria: [
-        "The bootstrap draft is ready to support later discovery and execution planning.",
-        "Requirement traceability stays intact as the roadmap moves toward implementation."
+        "ROADMAP.md maps delivery-boundary requirements to concrete follow-up phases.",
+        "STATE.md routes maintainers to `/blu-progress` after bootstrap validation passes."
       ]
     }
   ];
@@ -18643,8 +18643,8 @@ function buildDefaultBootstrapSeed(projectName, assessment, seed) {
       ...phase,
       requirementIds: normalizeBootstrapRoadmapPhaseRequirementIds(phase, normalizedRequirements, index),
       successCriteria: normalizeSuccessCriteria(phase.successCriteria, [
-        `Complete ${phase.title} with traceable handoff evidence.`,
-        "Keep requirement IDs traceable into later roadmap artifacts."
+        `${phase.title} produces reviewable Blueprint artifacts tied to the selected requirement IDs.`,
+        "Maintainers can validate the phase outcome through `.blueprint/ROADMAP.md` and `.blueprint/STATE.md`."
       ])
     })),
     brownfieldMode: seed?.brownfieldMode ?? assessment.repoShape,
@@ -37584,114 +37584,123 @@ function bootstrapSeedIsSufficient(seed) {
     seed?.vision?.trim() && seed.currentMilestone?.trim() && seed.requirements && seed.requirements.length > 0 && seed.roadmapPhases && seed.roadmapPhases.length > 0
   );
 }
-function trimmedValues(values) {
-  return (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
+function countWords(value) {
+  return (value.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g) ?? []).length;
 }
-function duplicateValues(values) {
-  const seen = /* @__PURE__ */ new Set();
-  const duplicates = /* @__PURE__ */ new Set();
-  for (const value of values) {
-    if (seen.has(value)) {
-      duplicates.add(value);
-    }
-    seen.add(value);
+function isSubstantiveText(value, minimumWords = MIN_SUBSTANTIVE_WORDS) {
+  const normalized = value?.trim() ?? "";
+  return normalized.length > 0 && countWords(normalized) >= minimumWords && !GENERIC_TEXT_PATTERN.test(normalized);
+}
+function bootstrapSeedHasAutoContext(seed, repoSummary) {
+  if (isSubstantiveText(repoSummary ?? void 0)) {
+    return true;
   }
-  return [...duplicates];
+  if (isSubstantiveText(seed?.vision)) {
+    return true;
+  }
+  const substantiveRequirements = seed?.requirements?.filter((requirement) => isSubstantiveText(requirement.requirement)).length ?? 0;
+  const substantivePhases = seed?.roadmapPhases?.filter(
+    (phase) => isSubstantiveText(phase.title, 2) && isSubstantiveText(phase.objective)
+  ).length ?? 0;
+  return substantiveRequirements > 0 && substantivePhases > 0;
 }
-function assertBootstrapSeedReadyForPersistence(seed) {
+function normalizedPhaseRef(value) {
+  return value.trim().replace(/\.0+$/, "").toLowerCase();
+}
+function bootstrapSeedPreflightIssues(seed) {
   const issues = [];
-  const requirements = seed.requirements ?? [];
-  const roadmapPhases = seed.roadmapPhases ?? [];
-  const requirementIds = requirements.map((requirement) => requirement.id.trim());
-  const declaredRequirementIds = new Set(requirementIds);
-  const duplicateRequirementIds = duplicateValues(requirementIds);
-  const committedRequirementIds = requirements.filter((requirement) => (requirement.scope ?? "committed") === "committed").map((requirement) => requirement.id.trim());
-  const roadmapRequirementRefs = [];
-  if (!seed.vision?.trim()) {
-    issues.push("bootstrapSeed.vision is required.");
+  const requirementIds = /* @__PURE__ */ new Set();
+  const committedRequirementIds = /* @__PURE__ */ new Set();
+  const committedCoverageCounts = /* @__PURE__ */ new Map();
+  const phaseRefs = /* @__PURE__ */ new Set();
+  if (!isSubstantiveText(seed.vision)) {
+    issues.push("bootstrapSeed.vision must contain a substantive project brief before the first write.");
   }
-  if (!seed.currentMilestone?.trim()) {
-    issues.push("bootstrapSeed.currentMilestone is required.");
+  if (!isSubstantiveText(seed.currentMilestone, 1)) {
+    issues.push("bootstrapSeed.currentMilestone must name the active milestone before the first write.");
   }
-  if (requirements.length === 0) {
-    issues.push("bootstrapSeed.requirements must include at least one requirement.");
-  }
-  if (roadmapPhases.length === 0) {
-    issues.push("bootstrapSeed.roadmapPhases must include at least one phase.");
-  }
-  for (const duplicateRequirementId of duplicateRequirementIds) {
-    issues.push(`bootstrapSeed.requirements contains duplicate requirement ID ${duplicateRequirementId}.`);
-  }
-  for (const requirement of requirements) {
-    const requirementId = requirement.id.trim();
-    if (!DURABLE_REQUIREMENT_ID_PATTERN.test(requirementId)) {
-      issues.push(
-        `bootstrapSeed requirement ID ${requirement.id} must use a durable format like RQ-01 or BP-03.`
-      );
+  for (const requirement of seed.requirements) {
+    if (requirementIds.has(requirement.id)) {
+      issues.push(`bootstrapSeed requirements contain duplicate requirement ID ${requirement.id}.`);
     }
-    if (!requirement.requirement.trim()) {
-      issues.push(`bootstrapSeed requirement ${requirementId} must include substantive requirement text.`);
+    requirementIds.add(requirement.id);
+    if (!isSubstantiveText(requirement.requirement, 5)) {
+      issues.push(`Requirement ${requirement.id} must be substantive before the first write.`);
+    }
+    if (requirement.scope === "committed") {
+      committedRequirementIds.add(requirement.id);
+      committedCoverageCounts.set(requirement.id, 0);
     }
   }
-  for (const phase of roadmapPhases) {
-    const phaseLabel2 = phase.phase.trim() || "(blank)";
-    const requirementRefs = trimmedValues(phase.requirementIds);
-    const successCriteria = trimmedValues(phase.successCriteria);
-    if (!phase.phase.trim()) {
-      issues.push("bootstrapSeed roadmap phases must include a phase number.");
-    } else {
-      try {
-        normalizeBlueprintPhaseRef(phase.phase, `Bootstrap roadmap phase ${phaseLabel2}`);
-      } catch (error2) {
-        const message = error2 instanceof Error ? error2.message : String(error2);
-        issues.push(message);
+  if (committedRequirementIds.size === 0) {
+    issues.push("bootstrapSeed must include at least one committed requirement before the first write.");
+  }
+  for (const phase of seed.roadmapPhases) {
+    const phaseRef = normalizedPhaseRef(phase.phase);
+    if (phaseRefs.has(phaseRef)) {
+      issues.push(`bootstrapSeed roadmapPhases contain duplicate phase reference ${phase.phase}.`);
+    }
+    phaseRefs.add(phaseRef);
+    const phaseRequirementIds = phase.requirementIds ?? [];
+    const uniquePhaseRequirementIds = /* @__PURE__ */ new Set();
+    for (const requirementId of phaseRequirementIds) {
+      if (uniquePhaseRequirementIds.has(requirementId)) {
+        issues.push(`Phase ${phase.phase} references requirement ${requirementId} more than once.`);
+      }
+      uniquePhaseRequirementIds.add(requirementId);
+      if (!requirementIds.has(requirementId)) {
+        issues.push(`Phase ${phase.phase} references undeclared requirement ${requirementId}.`);
+      }
+      if (committedCoverageCounts.has(requirementId)) {
+        committedCoverageCounts.set(requirementId, (committedCoverageCounts.get(requirementId) ?? 0) + 1);
       }
     }
-    if (!phase.title.trim()) {
-      issues.push(`bootstrapSeed roadmap phase ${phaseLabel2} must include a title.`);
+    const successCriteria = phase.successCriteria ?? [];
+    if (successCriteria.length < 2 || successCriteria.length > 5) {
+      issues.push(`Phase ${phase.phase} must include 2-5 success criteria before the first write.`);
     }
-    if (!phase.objective.trim()) {
-      issues.push(`bootstrapSeed roadmap phase ${phaseLabel2} must include an objective.`);
-    }
-    if (requirementRefs.length === 0) {
-      issues.push(
-        `bootstrapSeed roadmap phase ${phaseLabel2} must include explicit requirementIds before persistence.`
-      );
-    }
-    if (successCriteria.length === 0) {
-      issues.push(
-        `bootstrapSeed roadmap phase ${phaseLabel2} must include explicit successCriteria before persistence.`
-      );
-    }
-    for (const requirementRef of requirementRefs) {
-      roadmapRequirementRefs.push(requirementRef);
-      if (!DURABLE_REQUIREMENT_ID_PATTERN.test(requirementRef)) {
-        issues.push(
-          `bootstrapSeed roadmap phase ${phaseLabel2} references non-durable requirement ID ${requirementRef}.`
-        );
-      } else if (!declaredRequirementIds.has(requirementRef)) {
-        issues.push(
-          `bootstrapSeed roadmap phase ${phaseLabel2} references undeclared requirement ID ${requirementRef}.`
-        );
+    for (const criterion of successCriteria) {
+      const trimmedCriterion = criterion.trim();
+      if (!isSubstantiveText(trimmedCriterion) || GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))) {
+        issues.push(`Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`);
       }
     }
-  }
-  for (const duplicateRequirementRef of duplicateValues(roadmapRequirementRefs)) {
-    issues.push(
-      `bootstrapSeed roadmap phases reference requirement ${duplicateRequirementRef} more than once.`
-    );
   }
   for (const requirementId of committedRequirementIds) {
-    const referenceCount = roadmapRequirementRefs.filter((value) => value === requirementId).length;
-    if (referenceCount !== 1) {
+    const coverageCount = committedCoverageCounts.get(requirementId) ?? 0;
+    if (coverageCount !== 1) {
       issues.push(
-        `bootstrapSeed committed requirement ${requirementId} must appear in exactly one roadmap phase.`
+        `Committed requirement ${requirementId} must be mapped to exactly one roadmap phase before the first write; found ${coverageCount}.`
       );
     }
   }
+  return issues;
+}
+function assertBootstrapSeedPreflight(seed) {
+  const issues = bootstrapSeedPreflightIssues(seed);
   if (issues.length > 0) {
-    throw new Error(`Bootstrap seed is not ready for persistence:
-- ${issues.join("\n- ")}`);
+    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
+  }
+}
+function bootstrapSeedExplicitGapIssues(seed) {
+  const issues = [];
+  for (const phase of seed.roadmapPhases ?? []) {
+    const phaseLabel2 = phase.phase.trim() || "(blank)";
+    const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
+    const successCriteria = phase.successCriteria?.map((value) => value.trim()).filter(Boolean) ?? [];
+    if (requirementIds.length === 0) {
+      issues.push(`Phase ${phaseLabel2} must include explicit requirementIds before the first write.`);
+    }
+    if (successCriteria.length === 0) {
+      issues.push(`Phase ${phaseLabel2} must include explicit successCriteria before the first write.`);
+    }
+  }
+  return issues;
+}
+function assertBootstrapSeedHasNoExplicitGaps(seed) {
+  const issues = bootstrapSeedExplicitGapIssues(seed);
+  if (issues.length > 0) {
+    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
   }
 }
 function assertBootstrapCanWrite(args) {
@@ -37718,11 +37727,6 @@ function assertBootstrapCanWrite(args) {
   if (args.bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
     throw new Error(
       "Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Keep questioning until the seed is ready; auto mode also requires enough project context before persistence."
-    );
-  }
-  if (args.bootstrapMode === "auto" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
-    throw new Error(
-      "Automatic project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases. If --auto lacks enough project context, stop and ask for the missing brief before any writes."
     );
   }
 }
@@ -37895,16 +37899,21 @@ async function blueprintProjectInit(args = {}) {
   const projectName = await inferProjectName2(projectRoot, args.projectName);
   const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
   const repoSummary = await readRepoSummary(projectRoot);
-  const bootstrapSeed = bootstrapMode === "auto" ? mergeBootstrapSeed(
-    buildDefaultBootstrapSeed(
-      projectName,
-      bootstrapAssessment,
-      repoSummary ? { vision: repoSummary } : void 0
-    ),
-    args.bootstrapSeed
-  ) : args.bootstrapSeed;
-  assertBootstrapSeedReadyForPersistence(bootstrapSeed);
-  const initialPhase = bootstrapSeed.roadmapPhases?.[0]?.phase ? normalizeBlueprintPhaseRef(
+  if (bootstrapMode === "auto" && !bootstrapSeedHasAutoContext(args.bootstrapSeed, repoSummary)) {
+    throw new Error(
+      "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes. Provide bootstrapSeed.vision or add README/package description context."
+    );
+  }
+  const autoBaseSeed = bootstrapMode === "auto" ? buildDefaultBootstrapSeed(
+    projectName,
+    bootstrapAssessment,
+    repoSummary ? { vision: repoSummary } : void 0
+  ) : void 0;
+  const seedInput = bootstrapMode === "auto" ? mergeBootstrapSeed(autoBaseSeed, args.bootstrapSeed) : args.bootstrapSeed;
+  assertBootstrapSeedHasNoExplicitGaps(seedInput);
+  const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
+  assertBootstrapSeedPreflight(bootstrapSeed);
+  const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase ? normalizeBlueprintPhaseRef(
     bootstrapSeed.roadmapPhases[0].phase,
     "Initial roadmap phase"
   ) : "1";
@@ -38035,7 +38044,7 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, FALLBACK_COMMAND_CATALOG, projectToolDefinitions;
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, FALLBACK_COMMAND_CATALOG, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, GENERIC_SUCCESS_CRITERIA_PATTERNS, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
@@ -38043,7 +38052,6 @@ var init_project = __esm({
     init_artifacts();
     init_security();
     init_config();
-    init_security();
     init_phase();
     init_state();
     init_review();
@@ -38153,6 +38161,14 @@ var init_project = __esm({
         "new-project": blueprintDirectCommandAliases("new-project")
       }
     };
+    MIN_SUBSTANTIVE_WORDS = 6;
+    GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
+    GENERIC_SUCCESS_CRITERIA_PATTERNS = [
+      /^(?:complete|finish|do|implement|handle|support|make|prepare)\s+(?:the\s+)?(?:work|task|feature|phase|roadmap|bootstrap|workflow)\.?$/i,
+      /^(?:keep|ensure|verify|validate|confirm)\s+(?:things|it|this|the work|the phase|the roadmap|the workflow)\s+(?:working|done|ready|traceable|complete)\.?$/i,
+      /^complete .+ with traceable handoff evidence\.?$/i,
+      /^keep requirement ids traceable into later roadmap artifacts\.?$/i
+    ];
     projectToolDefinitions = [
       {
         name: "blueprint_command_catalog",

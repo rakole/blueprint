@@ -37,7 +37,7 @@
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: Writes the declared Blueprint artifacts and may also mutate code or git state when the command owns that behavior.
+- Repo side effects: Writes only the declared Blueprint project artifacts under `.blueprint/` for bootstrap. It must not mutate source code or git state.
 - `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` must be substantive bootstrap drafts rather than scaffold-only placeholders.
 - Brownfield repos should be left ready for `map-codebase`, and project bootstrap should preserve durable requirement and roadmap traceability.
 - In-flight bootstrap should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
