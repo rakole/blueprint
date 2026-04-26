@@ -18,7 +18,7 @@ import {
   blueprintPhaseCheckpointPut,
   blueprintPhaseContext
 } from "../src/mcp/tools/phase.js";
-import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
+import { blueprintStateLoad, blueprintStateUpdate } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 
@@ -106,7 +106,8 @@ test("discuss-phase command references only registered phase-discovery tool name
     "blueprint_phase_checkpoint_put",
     "blueprint_phase_checkpoint_delete",
     "blueprint_artifact_scaffold",
-    "blueprint_state_update"
+    "blueprint_state_update",
+    "blueprint_state_load"
   ] as const;
 
   for (const toolName of requiredTools) {
@@ -153,6 +154,13 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /consequences if assumptions are wrong/i);
   assert.match(commandFile, /progress recap|session legibility/i);
   assert.match(commandFile, /checkpoint-per-area|checkpoint per area/i);
+  assert.match(commandFile, /base: "synced"/);
+  assert.match(commandFile, /Do not treat the update response as a routing decision/i);
+  assert.match(commandFile, /mcp_blueprint_blueprint_state_load[\s\S]*refreshed state/i);
+  assert.match(
+    commandFile,
+    /Delete any saved checkpoint[\s\S]*context write[\s\S]*optional discussion-log write[\s\S]*synced state update[\s\S]*follow-up state load/i
+  );
   assert.match(commandFile, /PROJECT\.md/);
   assert.match(commandFile, /REQUIREMENTS\.md/);
   assert.match(commandFile, /STATE\.md/);
@@ -193,6 +201,12 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, /progress recaps/i);
   assert.match(skillFile, /checkpoint-per-area/i);
   assert.match(skillFile, /end-of-run `STATE\.md` updates/i);
+  assert.match(discussReference, /blueprint_state_update` with `base: "synced"/i);
+  assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
+  assert.match(
+    discussReference,
+    /Delete the checkpoint only after[\s\S]*context write[\s\S]*optional discussion-log[\s\S]*synced state update[\s\S]*state load/i
+  );
   const contract = await buildBlueprintCommandRuntimeContractResource("discuss-phase");
 
   assert.deepEqual(contract.skillInputs.shared, [
@@ -435,17 +449,18 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
 `,
     overwrite: true
   });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-discuss-phase",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
   const checkpointDeleted = await blueprintPhaseCheckpointDelete({
     cwd: repoPath,
     phase: "3"
-  });
-  const stateUpdate = await blueprintStateUpdate({
-    cwd: repoPath,
-    patch: {
-      activeCommand: "/blu-progress",
-      nextAction: "Run /blu-progress to review the saved discovery context",
-      lastUpdated: "2026-04-12T00:00:00.000Z"
-    }
   });
   const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
   const listed = await blueprintArtifactList({ cwd: repoPath });
@@ -481,8 +496,10 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   assert.equal(contextWrite.overwritten, true);
   assert.equal(discussionWrite.written, true);
   assert.equal(checkpointDeleted.deleted, true);
-  assert.deepEqual(stateUpdate.updatedFields.sort(), ["lastUpdated", "nextAction"].sort());
+  assert.deepEqual(stateUpdate.updatedFields.sort(), ["activeCommand", "lastUpdated"].sort());
   assert.equal(stateUpdate.statePath, ".blueprint/STATE.md");
+  assert.equal(loadedState.state.activeCommand, "/blu-discuss-phase");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-research-phase 3/);
   assert.equal(
     context.phase?.artifacts.discussionLog,
     ".blueprint/phases/03-phase-discovery/03-DISCUSSION-LOG.md"
@@ -492,5 +509,121 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   );
   assert.match(contextBody, /checkpoint-per-area/i);
   assert.notEqual(contextBody, scaffoldContextBody);
-  assert.match(stateBody, /Run \/blu-progress to review the saved discovery context/);
+  assert.match(stateBody, /Run \/blu-research-phase 3 to capture phase research/);
+});
+
+test("discuss-phase keeps checkpoint when final synced state update fails", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      completedAreas: ["Scope boundaries"],
+      remainingAreas: ["UI expectations"],
+      decisions: [
+        {
+          topic: "Scope boundaries",
+          decision: "Keep checkpoint deletion gated on final state sync",
+          rationale: "The command should remain resumable if finalization fails"
+        }
+      ],
+      deferredIdeas: [],
+      canonicalReferences: [
+        {
+          label: "STATE.md",
+          target: ".blueprint/STATE.md",
+          note: "Final routing state"
+        }
+      ],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["UI expectations"],
+        completedTopics: ["Scope boundaries"],
+        currentQuestion: "What should resume after state sync is repaired?",
+        notes: ["Do not delete before synced state update and state load complete."],
+        resumeHint: "Repair STATE.md, then resume finalization.",
+        updatedAt: "2026-04-11T00:00:02.000Z"
+      }
+    }
+  });
+  await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Keep discovery scoped to phase 3 and preserve resumability until final state sync succeeds.
+- Capture durable context, not planning or execution detail.
+- Leave the next safe action in STATE.md.
+
+## Discovery Grounding
+- Project brief - discovery should stay phase-scoped and resumable.
+- Requirements grounding - keep the saved requirements visible in the context.
+- Workflow posture - finalization should report routing from refreshed state.
+- Prior-context sweep - review existing context, checkpoint state, and roadmap evidence before closing.
+
+## Implementation Decisions
+- Call state_update with base synced only after context and optional discussion-log writes succeed.
+- Call state_load after state_update and use the loaded next action for the summary.
+- Keep the checkpoint if final state sync or state load fails.
+
+## Specific Ideas
+- Gate checkpoint deletion on the full finalize sequence.
+- Use the checkpoint resume hint to recover from a state write failure.
+- Prefer /blu-progress if refreshed routing is unclear.
+
+## Existing Code Insights
+- STATE.md is the durable routing surface.
+- The phase checkpoint carries the current question and completed areas.
+
+## Dependencies
+- Context writes, optional discussion logs, synced state update, and state load all precede checkpoint deletion.
+- The command must not treat state_update.updatedFields as routing.
+- Explicit overwrite confirmation is required before replacing substantive context.
+
+## Open Questions
+- What follow-up should resume if finalization fails?
+- Which state repair should happen before checkpoint deletion?
+
+## Deferred Ideas
+- Revisit checkpoint deletion only after state routing is refreshed.
+- Preserve follow-up ideas in the saved context.
+
+## Canonical References
+- STATE.md defines the refreshed next safe action.
+- The discuss checkpoint defines resumability after a failed finalize attempt.
+`,
+    overwrite: true
+  });
+
+  await rm(path.join(repoPath, ".blueprint/STATE.md"), { force: true });
+  await mkdir(path.join(repoPath, ".blueprint/STATE.md"));
+
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      base: "synced",
+      patch: {
+        activeCommand: "/blu-discuss-phase"
+      }
+    }),
+    /EISDIR|directory/i
+  );
+
+  const retained = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(retained.found, true);
+  assert.deepEqual(retained.checkpoint?.completedAreas, ["Scope boundaries"]);
+  assert.equal(
+    retained.checkpoint?.resumeMeta?.resumeHint,
+    "Repair STATE.md, then resume finalization."
+  );
 });
