@@ -24,6 +24,7 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /`blueprint-executor` subagent/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_execution_targets")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
@@ -37,6 +38,7 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /workflow\.use_worktrees/);
   assert.match(commandFile, /parallelization\./);
   assert.match(commandFile, /git\.branching_strategy/);
+  assert.match(commandFile, /base: "synced"/);
   assert.match(commandFile, /one `XX-YY-SUMMARY\.md` artifact per plan/i);
   assert.match(commandFile, /lower-wave debt/i);
   assert.match(commandFile, /review, skip, or stop/i);
@@ -56,8 +58,11 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(commandFile, /\/blu-verify-work/);
   assert.match(commandFile, /gap-closure/i);
   assert.match(commandFile, /gapClosurePlans/);
+  assert.match(commandFile, /selectedPlanIds/);
+  assert.match(commandFile, /lowerWavePendingPlans/);
   assert.match(commandFile, /Existing summaries only count as durable execution evidence when they are valid/i);
   assert.match(commandFile, /repair or replace target/i);
+  assert.match(commandFile, /ask the same focused decision in prose/i);
   assert.doesNotMatch(commandFile, /Existing summaries mean that plan already has durable execution evidence/i);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(docsFile, /\| Execution profile \| `long-running-mutation` \|/);
@@ -73,6 +78,7 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(docsFile, /## In-Flight Progress Contract/);
   assert.match(docsFile, /Existing summary files only count as completed evidence when summary validation passes/i);
   assert.match(docsFile, /malformed summaries remain repair or replace targets/i);
+  assert.match(docsFile, /blueprint_phase_execution_targets/i);
   assert.match(docsFile, /Pre-persistence gates/i);
   assert.match(docsFile, /Ownership gates/i);
   assert.match(docsFile, /Verification gates/i);
@@ -80,6 +86,7 @@ test("execute-phase manifest references the execution gates, summary tools, and 
   assert.match(docsFile, /Subagent-capable runs/i);
   assert.match(docsFile, /Single-agent fallback runs/i);
   assert.match(docsFile, /`COMPLETED` is the only summary status that closes execution debt/i);
+  assert.match(docsFile, /base: "synced"/);
   assert.match(docsFile, /Verifier handoff/i);
   assert.match(docsFile, /phase-level completion claim/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md|agents\/blueprint-executor\.md/);
@@ -105,6 +112,7 @@ test("execute-phase skill captures wave-based execution and summary generation r
   assert.match(skillFile, /`write_todos`/);
   assert.match(skillFile, /blueprint-executor/);
   assert.match(skillFile, /summary/i);
+  assert.match(skillFile, /blueprint_phase_execution_targets/);
   assert.match(skillFile, /blueprint_phase_summary_write/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /workflow\.use_worktrees/);
@@ -118,10 +126,12 @@ test("execute-phase skill captures wave-based execution and summary generation r
   assert.match(skillFile, /Refuse to execute stale or invalid plans/i);
   assert.match(skillFile, /disjoint write ownership/i);
   assert.match(skillFile, /single-agent fallback/i);
-  assert.match(skillFile, /summary\/checkpoint through MCP/i);
+  assert.match(skillFile, /persist a summary through MCP/i);
+  assert.match(skillFile, /durable checkpoint evidence/i);
   assert.match(skillFile, /test\/repair loop/i);
   assert.match(skillFile, /PARTIAL` or `BLOCKED` summaries/i);
   assert.match(skillFile, /rerun `blueprint_phase_summary_index`/i);
+  assert.match(skillFile, /base: "synced"/);
   assert.match(skillFile, /failed tests/i);
   assert.match(skillFile, /pre-persistence gates/i);
   assert.match(skillFile, /post-execution checks/i);
@@ -131,6 +141,7 @@ test("execute-phase skill captures wave-based execution and summary generation r
   assert.match(skillFile, /lower-wave debt/i);
   assert.match(skillFile, /gapClosurePlans/);
   assert.match(skillFile, /shared file set/i);
+  assert.match(skillFile, /ask the same focused question in prose/i);
   assert.match(skillFile, /\/blu-progress/);
 });
 
