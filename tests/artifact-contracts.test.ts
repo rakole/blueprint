@@ -268,7 +268,8 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Suggested Next Actions"
   ]);
   assert.match(impactContract.authoringTemplate, /^# Impact Report:/);
-  assert.match(impactContract.notes.join("\n"), /planned and non-routable/);
+  assert.match(impactContract.notes.join("\n"), /implemented as an advisory command/);
+  assert.match(impactContract.notes.join("\n"), /do not mutate source, roadmap, PR, deployment, command-catalog, or installed-extension state/);
   assert.ok(
     uiContract.placeholderSignals.includes(
       "Spacing and layout: <grid, rhythm, or layout constraints>"

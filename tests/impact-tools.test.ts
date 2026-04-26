@@ -254,7 +254,7 @@ function assertEveryEvidenceRefIsNonEmpty(analysis: ImpactAnalysis): void {
   }
 }
 
-test("impact MCP skeleton tools are registered and satisfy the planned command tool substrate", async () => {
+test("impact MCP tools are registered and satisfy the implemented command substrate", async () => {
   for (const toolName of IMPACT_TOOL_NAMES) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
     assert.ok(blueprintToolRegistry[toolName], `${toolName} should have a registry entry`);
@@ -263,16 +263,15 @@ test("impact MCP skeleton tools are registered and satisfy the planned command t
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands.impact;
 
-  assert.equal(entry.declaredStatus, "planned");
-  assert.equal(entry.status, "blocked");
-  assert.equal(entry.implemented, false);
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.manifestPath, "commands/blu-impact.toml");
+  assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
+  assert.equal(entry.specPath, "docs/commands/impact.md");
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.deepEqual(entry.requiredTools, [...IMPACT_TOOL_NAMES]);
-  assert.match(
-    entry.blockedBy.join("\n"),
-    /Missing command manifest: commands\/blu-impact\.toml/
-  );
-  assert.match(entry.blockedBy.join("\n"), /Missing primary skill: skills\/blueprint-impact\/SKILL\.md/);
+  assert.deepEqual(entry.blockedBy, []);
   assert.doesNotMatch(entry.blockedBy.join("\n"), /Missing required MCP tool: blueprint_impact_/);
 });
 
@@ -589,7 +588,7 @@ test("impact context load honors toggles without marking omitted optional sectio
   assert.match(context.warnings.join("\n"), /includeArtifacts=false/);
 });
 
-test("impact context load reports Phase 8 runtime metadata", async () => {
+test("impact context load reports Phase 9 runtime metadata", async () => {
   const context = await blueprintImpactContextLoad({
     cwd: repoRoot,
     includeCatalog: false,
@@ -597,7 +596,7 @@ test("impact context load reports Phase 8 runtime metadata", async () => {
   });
 
   assert.equal(context.status, "loaded");
-  assert.equal(context.runtime?.implementationPhase, 8);
+  assert.equal(context.runtime?.implementationPhase, 9);
   assert.equal(context.runtime?.readOnly, true);
 });
 
@@ -2100,7 +2099,7 @@ test("impact analyze creates security, deployment, release, and test obligations
   assert.ok(categories.has("tests"));
 });
 
-test("impact report writer persists required and optional Phase 8 bundle files", async () => {
+test("impact report writer persists required and optional impact bundle files", async () => {
   const repoPath = await createTempRepo();
 
   try {

@@ -4,14 +4,15 @@
 | Wave | `4` |
 | Family | `Quality And Shipping` |
 | Execution profile | `long-running-mutation` |
-| Root-routable | Yes after implementation. The root `/blu` router may dispatch here only when the live command catalog marks `impact` as `implemented`. |
+| Root-routable | Yes. The root `/blu` router may dispatch here because the live command catalog marks `impact` as `implemented`. |
 
 ## Shared Runtime Contract
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `impact` uses the shared long-running-mutation posture because it may persist a bounded report bundle under `.blueprint/impact/<impact-id>/`.
-- Until the manifest, primary skill, registered MCP tools, docs, tests, and built assets align, `/blu-impact` remains planned metadata only and must not be recommended as runnable by `/blu`, `/blu-help`, `/blu-progress`, or `/blu-next`.
+- Rich runtime contract: `skills/blueprint-impact/references/impact-runtime-contract.md`. The command manifest stays thin; the reference owns MCP call ordering, uncertainty rules, report-quality checks, no-write rendering, overwrite gates, and completion self-checks.
+- `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` may recommend `/blu-impact` only while the live command catalog keeps `impact` implemented.
 
 ## Purpose
 
@@ -102,7 +103,7 @@
 - Missing or partial reverse dependency coverage for package runtime, contract-like Blueprint runtime, secret/security-sensitive, source, or package changes becomes structured `unknown.reverseDependencies.*`; absent graph data must never be phrased as proof of limited impact.
 - Mixed generated/source changes keep source as an impact driver and add a dependency coverage unknown rather than treating the scope as generated-only.
 - Impact analysis consumes provided `context.catalog`, `context.commandAssets`, `context.runtime`, and `context.artifactContracts` when present, or loads live read-only catalog/runtime/artifact context when context is omitted. Missing or malformed catalog/runtime/artifact context for contract-like surfaces becomes explicit warnings, unknowns, and evidence rather than a contract-safety claim.
-- Impact analysis blocks when a catalog entry declared `implemented` is missing its command spec, manifest, primary skill, or required MCP tools according to catalog/runtime substrate evidence. Planned `/blu-impact` missing its manifest or skill remains expected and does not itself block.
+- Impact analysis blocks when a catalog entry declared `implemented` is missing its command spec, manifest, primary skill, or required MCP tools according to catalog/runtime substrate evidence.
 - Impact analysis conservatively blocks router/help/progress/next surfaces for planned-command exposure review only when those surfaces changed and catalog context contains non-implemented commands; benign guardrail text in non-router docs does not create that finding by itself.
 - Impact analysis creates typed obligations for command, MCP, artifact-contract, skill, agent, extension manifest, hook, package/build, environment, secret-sensitive, generated, and dist/build surfaces. Obligations include deterministic ids, category, severity, status, impacted files, source surfaces, required actions, and non-empty evidence references.
 - Impact analysis checks dist/build readiness: missing `dist/mcp/server.js` blocks extension/runtime source readiness, runtime or extension changes without changed `dist/**` coverage produce a build/dist warning and unknown, and generated-only `dist/**` changes produce provenance warnings and obligations without claiming stale content.
@@ -192,7 +193,7 @@
 
 ## Acceptance Criteria
 
-- Remains non-routable until its manifest, primary skill, required MCP tools, docs, tests, and built assets align and the live catalog marks `impact` as `implemented`.
+- Live catalog marks `impact` as `implemented` only when its manifest, primary skill, required MCP tools, docs, tests, and built assets align.
 - Produces evidence-backed impact status, risk, confidence, findings, obligations, unknowns, and next actions.
 - Writes only the declared `.blueprint/impact/<impact-id>/` report bundle when writing is enabled.
 - Does not mutate source files, roadmap state, phase state, command catalog state, PR state, deployment state, or the installed extension directory.
@@ -211,7 +212,7 @@
 - Command manifest, command doc, MCP tool, artifact contract, skill, agent, extension manifest, hook, package/config, generated, docs-only, and sensitive-path changes.
 - Missing ownership and missing dependency graph fixtures.
 - Implemented command missing manifest, primary skill, or required MCP tool from injected catalog context.
-- Planned `/blu-impact` missing manifest/skill remains expected and non-blocking while declared `planned`.
+- Historical planned-context fixtures for `/blu-impact` missing manifest or skill remain non-blocking only when the injected catalog context declares it planned.
 - Missing or malformed catalog/runtime/artifact context for contract-like surfaces produces explicit unknowns and warnings.
 - Router/help/progress/next planned-command exposure review blocks while benign non-router guardrail docs do not.
 - Command, MCP, artifact, skill/agent, extension, hook, package/build, env, secret, runtime source, generated-only, and mixed source/generated scopes produce deterministic obligations.

@@ -26,9 +26,11 @@ The active implementation lives in the repo runtime surfaces below. This list is
 - `commands/blu-code-review.toml`
 - `commands/blu-code-review-fix.toml`
 - `commands/blu-audit-fix.toml`
+- `commands/blu-impact.toml`
 - `commands/blu-ui-review.toml`
 - `commands/blu-ship.toml`
 - `skills/blueprint-router.md`
+- `skills/blueprint-impact/SKILL.md`
 - `skills/blueprint-maintenance/SKILL.md`
 
 ## What Blueprint Gives You
@@ -133,6 +135,7 @@ Blueprint keeps project state in `.blueprint/` inside your repo:
   STATE.md
   config.json
   phases/
+  impact/
   reports/
   codebase/
   notes/
@@ -148,6 +151,7 @@ What those files do:
 - `STATE.md`: the current workflow position and safest next action
 - `config.json`: repo-level Blueprint settings
 - `phases/`: per-phase context, research, plans, summaries, validation, UAT, review, and UI artifacts
+- `impact/`: blast-radius report bundles from `/blu-impact`
 - `reports/`: command reports such as debug, ship, cleanup, milestone audit, and add-tests outputs
 - `codebase/`: brownfield repo mapping documents
 - `notes/`, `todos/`, `backlog/`: lightweight project capture
@@ -224,6 +228,7 @@ The review-branch command `/blu-pr-branch` is now shipped.
 - `/blu-secure-phase`: audit a completed phase for security posture
 - `/blu-ui-review`: review the UX and visual quality of a completed phase
 - `/blu-review`: run cross-CLI peer review over saved plans
+- `/blu-impact`: compute an evidence-backed blast-radius report for proposed or actual changes
 - `/blu-docs-update`: update repo documentation based on real project evidence
 - `/blu-add-tests`: add or update focused tests for a completed phase
 - `/blu-pr-branch`: prepare a clean review branch
@@ -285,12 +290,11 @@ Blueprint is opinionated about safety:
 
 ## Commands Not Public Yet
 
-The retained direct router below and the planned additive impact command are not public in the current runtime and should not be treated as available today:
+The retained direct router below is not public in the current runtime and should not be treated as available today:
 
 - `/blu-do` (control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped)
-- `/blu-impact` (intentionally added outside the original retained baseline, planned for advisory blast-radius reports, and non-routable until its manifest, skill, MCP tools, tests, docs, and built assets ship)
 
-If you ask `/blu` or `/blu-help` for available commands, they will not advertise those until they are actually shipped.
+If you ask `/blu` or `/blu-help` for available commands, they will not advertise `/blu-do` until it is actually shipped.
 
 ## Troubleshooting
 

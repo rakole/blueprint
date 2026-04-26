@@ -92,7 +92,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 ### Impact
 
-The impact tool family is registered for the planned additive `/blu-impact` command. Phase 8 implements deterministic config loading, scope resolution, read-only context loading, multi-label file-surface classification, ownership coverage, dependency coverage, command-substrate checks, planned-command exposure review gates, path-level review/docs/test/release/migration/security/deployment/build obligations, dist/build provenance checks, advisory scoring, normalized report validation, bounded report-bundle writing, and output rendering. `/blu-impact` remains planned and non-routable until the dedicated command manifest and primary skill ship.
+The impact tool family is registered for the implemented additive `/blu-impact` command. Phase 9 ships the dedicated command manifest, `blueprint-impact` skill, and `skills/blueprint-impact/references/impact-runtime-contract.md` on top of deterministic config loading, scope resolution, read-only context loading, multi-label file-surface classification, ownership coverage, dependency coverage, command-substrate checks, planned-command exposure review gates, path-level review/docs/test/release/migration/security/deployment/build obligations, dist/build provenance checks, advisory scoring, normalized report validation, bounded report-bundle writing, and output rendering.
 
 | Tool | Purpose | Returns |
 |---|---|---|

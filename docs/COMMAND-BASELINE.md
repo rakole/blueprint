@@ -40,7 +40,7 @@ they are explicitly approved Blueprint additions rather than silently revived
 legacy omissions:
 
 - `impact`: advisory blast-radius analysis for proposed or actual changes,
-  planned as `/blu-impact` in Wave 4 `Quality And Shipping`.
+  shipped as `/blu-impact` in Wave 4 `Quality And Shipping`.
 
 `impact` does not weaken the strict omit policy. It is a new Blueprint-native
 advisory workflow for evidence-backed review confidence, not an omitted legacy

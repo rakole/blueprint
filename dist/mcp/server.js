@@ -16724,7 +16724,7 @@ var init_artifact_contracts = __esm({
         notes: [
           "Impact reports are bounded bundles under .blueprint/impact/<impact-id>/ and are written only through blueprint_impact_report_write.",
           "The writer validates the structured report payload plus rendered Markdown quality before persistence.",
-          "/blu-impact remains planned and non-routable until the command manifest and primary skill ship."
+          "/blu-impact is implemented as an advisory command; report writes stay bounded to the impact bundle and do not mutate source, roadmap, PR, deployment, command-catalog, or installed-extension state."
         ],
         renderScaffoldTemplate: renderImpactTemplate,
         renderAuthoringTemplate: renderImpactTemplate
@@ -33731,7 +33731,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     const runtime2 = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 8,
+      implementationPhase: 9,
       readOnly: true,
       includeRuntime: true,
       includeCatalog: true,
@@ -35514,7 +35514,7 @@ async function blueprintImpactContextLoad(args = {}) {
     runtime = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 8,
+      implementationPhase: 9,
       readOnly: true,
       includeRuntime,
       includeCatalog,

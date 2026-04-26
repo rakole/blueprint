@@ -43,6 +43,7 @@ const IMPLEMENTED_COMMANDS = [
   "code-review",
   "code-review-fix",
   "audit-fix",
+  "impact",
   "ui-review",
   "remove-phase",
   "plan-phase",
@@ -200,6 +201,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
 
   assert.deepEqual(advertisedCommands, expectedAdvertisedCommands);
   assert.ok(advertisedCommands.includes("help"));
+  assert.ok(advertisedCommands.includes("impact"));
   assert.ok(!advertisedCommands.includes("do"));
   assert.ok(!advertisedCommands.includes("review"));
 
@@ -760,15 +762,15 @@ test("planned commands stay non-routable until their dedicated manifest exists",
   }
 });
 
-test("impact stays non-routable while its additive command substrate is planned", async () => {
+test("impact is implemented once its additive command substrate is complete", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands.impact;
 
-  assert.equal(entry.declaredStatus, "planned");
-  assert.equal(entry.status, "blocked");
-  assert.equal(entry.implemented, false);
-  assert.equal(entry.manifestPath, null);
-  assert.equal(entry.skillPath, null);
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.manifestPath, "commands/blu-impact.toml");
+  assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
   assert.equal(entry.specPath, "docs/commands/impact.md");
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.deepEqual(entry.requiredTools, [
@@ -779,11 +781,7 @@ test("impact stays non-routable while its additive command substrate is planned"
     "blueprint_impact_report_write",
     "blueprint_impact_output_render"
   ]);
-  assert.match(
-    entry.blockedBy.join("\n"),
-    /Missing command manifest: commands\/blu-impact\.toml/
-  );
-  assert.match(entry.blockedBy.join("\n"), /Missing primary skill: skills\/blueprint-impact\/SKILL\.md/);
+  assert.deepEqual(entry.blockedBy, []);
   assert.doesNotMatch(entry.blockedBy.join("\n"), /Missing required MCP tool: blueprint_impact_/);
 });
 

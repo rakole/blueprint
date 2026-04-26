@@ -3952,7 +3952,7 @@ async function resolvePhase6Context(
     const runtime: Record<string, unknown> = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 8,
+      implementationPhase: 9,
       readOnly: true,
       includeRuntime: true,
       includeCatalog: true,
@@ -6282,7 +6282,7 @@ export async function blueprintImpactContextLoad(
     runtime = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 8,
+      implementationPhase: 9,
       readOnly: true,
       includeRuntime,
       includeCatalog,
