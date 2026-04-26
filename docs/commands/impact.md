@@ -32,7 +32,7 @@
 - A git repository is preferred for high-confidence scope resolution, but description-only advisory planning runs are allowed at low confidence.
 - `.blueprint/` project state, roadmap, requested phase artifacts, command catalog metadata, command assets, artifact contracts, package metadata, configured CODEOWNERS candidates, optional impact ownership metadata, optional dependency graph metadata, and optional impact configuration improve confidence when present.
 - Missing ownership, dependency graph, compliance map, or test map metadata must become explicit unknowns or warnings, not false proof of limited impact.
-- Phase 5 context loading supports `includeRuntime`, `includeCatalog`, and `includeArtifacts`; setting one to `false` omits that optional section with a deterministic warning and does not by itself make context `partial`.
+- Phase 6 context loading supports `includeRuntime`, `includeCatalog`, and `includeArtifacts`; setting one to `false` omits that optional section with a deterministic warning and does not by itself make context `partial`.
 - Requested `phase` and `roadmapItem` targets resolve independently. `roadmapItem` can match phase number, phase name, or roadmap requirement id; duplicate phase numbers are deduped and sorted, while unresolved requested targets make context `partial`.
 
 ## Outputs
@@ -77,8 +77,8 @@
 - `blueprint_impact_config_get` -> `{config, provenance, warnings, errors, configHash}`
 - `blueprint_impact_scope_resolve` -> `{scope, changedFiles, git, diffStats, patchHash, scopeFingerprint, confidence, warnings}`
 - `blueprint_impact_context_load` -> `{status, project, config, roadmap, phases, catalog?, commandAssets?, artifactContracts?, runtime?, repoHints, warnings}`
-- `blueprint_impact_analyze` -> `{impactId, status, risk, confidence, surfaces, areaSummary, surfaceSummary, ownership, dependencyGraph, findings, obligations, unknowns, evidence, report}`
-- `blueprint_impact_report_write` -> `{status, impactId, impactDir, paths, warnings}`
+- `blueprint_impact_analyze` -> `{phaseStatus, impactId, status, impactStatus, risk, confidence, surfaces, areaSummary, surfaceSummary, ownership, dependencyGraph, findings, obligations, unknowns, evidence, report}`
+- `blueprint_impact_report_write` -> `{status, impactId, impactDir, paths, written, warnings}`
 - `blueprint_impact_output_render` -> `{phaseStatus, mode, status, impactStatus, content, impactId, warnings}`
 
 ## Scope Resolution Contract
@@ -92,16 +92,21 @@
 
 ## Analysis Contract
 
-- Phase 5 normalizes file scope from top-level `changedFiles`, top-level `files`, nested `scope.files`, and nested `scope.changedFiles`; mismatches produce a deterministic union warning.
-- Phase 5 detects Blueprint runtime surfaces such as command manifests, command docs, command catalog, MCP server and tool modules, artifact contracts, command resources, skills, agents, extension manifests, hooks, tests, docs, and `dist/**`.
-- Phase 5 detects generic package runtime, build config, repo config, environment config, secret-sensitive, docs, generated, source, repo-root, and unknown surfaces with deterministic priority ordering.
-- Phase 5 resolves effective impact config from built-ins plus invocation `config`, then honors `ownership.sources`, `ownership.fallbackReviewers`, `dependencyGraph.sources`, and `dependencyGraph.customGraphFiles`. Configured source paths must stay repo-contained; path escapes fail hard.
+- Phase 6 normalizes file scope from top-level `changedFiles`, top-level `files`, nested `scope.files`, and nested `scope.changedFiles`; mismatches produce a deterministic union warning.
+- Phase 6 detects Blueprint runtime surfaces such as command manifests, command docs, command catalog, MCP server and tool modules, artifact contracts, command resources, skills, agents, extension manifests, hooks, tests, docs, and `dist/**`.
+- Phase 6 detects generic package runtime, build config, repo config, environment config, secret-sensitive, docs, generated, source, repo-root, and unknown surfaces with deterministic priority ordering.
+- Phase 6 resolves effective impact config from built-ins plus invocation `config`, then honors `ownership.sources`, `ownership.fallbackReviewers`, `dependencyGraph.sources`, and `dependencyGraph.customGraphFiles`. Configured source paths must stay repo-contained; path escapes fail hard.
 - Ownership analysis checks configured CODEOWNERS candidates in configured order, selects the first existing configured CODEOWNERS file, applies last-match-wins within that file, augments those rules with optional `blueprint.impact.ownership.v1` metadata, and applies fallback reviewers only when no specific owner matched. Malformed optional ownership metadata yields a warning and structured unknown, not a crash.
 - Missing owner coverage becomes structured unknowns. Sensitive paths or sensitive ownership rules with missing owner produce an advisory `BLOCK` finding when `risk.blockOnSensitiveUnknownOwner` is enabled.
 - Dependency analysis honors configured package-json, package-lock, bounded TS/JS import scan, and optional `blueprint.impact.dependency-graph.v1` graph sources. It reports sources used, nodes, edges, reverse dependents by path, coverage status, and coverage gaps. Malformed optional graph metadata yields a warning and structured unknown; graph source path escapes fail hard.
 - Missing or partial reverse dependency coverage for package runtime, contract-like Blueprint runtime, secret/security-sensitive, source, or package changes becomes structured `unknown.reverseDependencies.*`; absent graph data must never be phrased as proof of limited impact.
 - Mixed generated/source changes keep source as an impact driver and add a dependency coverage unknown rather than treating the scope as generated-only.
-- Phase 6 contract/compatibility checks, obligation checks, and Phase 7 full scoring remain deferred. Phase 5 risk/confidence stays simple except for sensitive missing-owner `BLOCK`.
+- Phase 6 consumes provided `context.catalog`, `context.commandAssets`, `context.runtime`, and `context.artifactContracts` when present, or loads live read-only catalog/runtime/artifact context when context is omitted. Missing or malformed catalog/runtime/artifact context for contract-like surfaces becomes explicit warnings, unknowns, and evidence rather than a contract-safety claim.
+- Phase 6 blocks when a catalog entry declared `implemented` is missing its command spec, manifest, primary skill, or required MCP tools according to catalog/runtime substrate evidence. Planned `/blu-impact` missing its manifest or skill remains expected and does not itself block.
+- Phase 6 conservatively blocks router/help/progress/next surfaces for planned-command exposure review only when those surfaces changed and catalog context contains non-implemented commands; benign guardrail text in non-router docs does not create that finding by itself.
+- Phase 6 creates typed obligations for command, MCP, artifact-contract, skill, agent, extension manifest, hook, package/build, environment, secret-sensitive, generated, and dist/build surfaces. Obligations include deterministic ids, category, severity, status, impacted files, source surfaces, required actions, and non-empty evidence references.
+- Phase 6 checks dist/build readiness: missing `dist/mcp/server.js` blocks extension/runtime source readiness, runtime or extension changes without changed `dist/**` coverage produce a build/dist warning and unknown, and generated-only `dist/**` changes produce provenance warnings and obligations without claiming stale content.
+- Phase 7 full scoring remains deferred. Phase 6 risk/confidence stays simple while reflecting deterministic ownership, contract, build, and obligation signals.
 - Finding generation keeps stable ids, non-empty evidence references, deterministic sorting, separate severity/status/risk/confidence, and required actions.
 - Agents may help narrative synthesis only when a future skill enables them; MCP tools own deterministic scope, findings, risk, confidence, status, and output paths.
 
@@ -200,4 +205,10 @@
 - Invalid path and invalid config fixtures.
 - Command manifest, command doc, MCP tool, artifact contract, skill, agent, extension manifest, hook, package/config, generated, docs-only, and sensitive-path changes.
 - Missing ownership and missing dependency graph fixtures.
+- Implemented command missing manifest, primary skill, or required MCP tool from injected catalog context.
+- Planned `/blu-impact` missing manifest/skill remains expected and non-blocking while declared `planned`.
+- Missing or malformed catalog/runtime/artifact context for contract-like surfaces produces explicit unknowns and warnings.
+- Router/help/progress/next planned-command exposure review blocks while benign non-router guardrail docs do not.
+- Command, MCP, artifact, skill/agent, extension, hook, package/build, env, secret, runtime source, generated-only, and mixed source/generated scopes produce deterministic obligations.
+- Missing `dist/mcp/server.js`, runtime source without dist coverage, and generated-only dist provenance are reported distinctly.
 - Planned command remains non-routable until runtime substrate exists.

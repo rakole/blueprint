@@ -28469,406 +28469,14 @@ var init_review = __esm({
   }
 });
 
-// src/mcp/tools/impact.ts
+// src/mcp/tools/update.ts
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
 import { promises as fs6 } from "node:fs";
 import os from "node:os";
 import path7 from "node:path";
 import { promisify } from "node:util";
-function stableHash(value) {
-  return createHash("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
-}
-function stableStringify(value) {
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
-  }
-  if (value && typeof value === "object") {
-    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-function placeholderImpactId(seed) {
-  return `impact-${stableHash(seed)}`;
-}
-function getBuiltInImpactConfig() {
-  return {
-    schemaVersion: IMPACT_SCHEMA_VERSION,
-    baseBranches: [...BUILT_IN_BASE_BRANCHES],
-    paths: {
-      include: ["**/*"],
-      ignore: ["node_modules/**", "coverage/**"],
-      generated: ["dist/**", "**/*.generated.*"],
-      docs: ["docs/**", "**/*.md"],
-      tests: ["tests/**", "**/*.test.ts"]
-    },
-    ownership: {
-      sources: [
-        "CODEOWNERS",
-        ".github/CODEOWNERS",
-        "docs/CODEOWNERS",
-        ".blueprint/impact/ownership.json"
-      ],
-      requiredOwnerMatch: false,
-      fallbackReviewers: []
-    },
-    dependencyGraph: {
-      sources: ["package-json", "package-lock", "ts-import-scan"],
-      customGraphFiles: [".blueprint/impact/dependency-graph.json"],
-      requireReverseDepsFor: ["runtime", "contract", "security", "compliance"]
-    },
-    risk: {
-      blockOnCritical: true,
-      blockOnBreakingContract: true,
-      blockOnSensitiveUnknownOwner: true,
-      warnBelowConfidence: 0.7,
-      blockBelowConfidenceForSensitiveAreas: 0.5
-    },
-    reporting: {
-      defaultVerbosity: "normal",
-      writeEvidenceLog: true,
-      redactPathPatterns: ["**/secrets/**"]
-    }
-  };
-}
-function isPlainObject6(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function compareImpactSurfaces(left, right) {
-  return IMPACT_SURFACE_PRIORITY[left] - IMPACT_SURFACE_PRIORITY[right];
-}
-function normalizeRepoPathForClassification(filePath) {
-  return filePath.trim().replaceAll("\\", "/").replace(/^\.\//u, "");
-}
-function addSurfaceRule(rules, surface, reason) {
-  if (!rules.some((rule) => rule.surface === surface)) {
-    rules.push({ surface, reason });
-  }
-}
-function hasPathSegment(filePath, segment) {
-  return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
-}
-function hasConfigName(filePath) {
-  const basename = path7.posix.basename(filePath);
-  return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
-}
-function isGeneratedPath(filePath) {
-  return GENERATED_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
-}
-function isTestPath(filePath) {
-  return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
-}
-function isDocsPath(filePath) {
-  const extension = path7.posix.extname(filePath).toLowerCase();
-  return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
-}
-function areaForSurface(surface) {
-  if ([
-    "command-catalog",
-    "command-manifest",
-    "command-doc",
-    "mcp-server",
-    "mcp-tool",
-    "mcp-resource",
-    "artifact-contract",
-    "skill",
-    "agent",
-    "extension-manifest",
-    "hook",
-    "package-runtime",
-    "build-config"
-  ].includes(surface)) {
-    return "blueprint-runtime";
-  }
-  if (surface === "secret-sensitive" || surface === "env-config") {
-    return "sensitive-config";
-  }
-  if (surface === "test") {
-    return "tests";
-  }
-  if (surface === "docs") {
-    return "docs";
-  }
-  if (surface === "generated") {
-    return "generated";
-  }
-  if (surface === "config") {
-    return "config";
-  }
-  if (surface === "source") {
-    return "source";
-  }
-  if (surface === "repo-root") {
-    return "repo-root";
-  }
-  return "unknown";
-}
-function classifyImpactFile(filePath) {
-  const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path7.posix.basename(normalizedPath);
-  const extension = path7.posix.extname(normalizedPath).toLowerCase();
-  const rules = [];
-  if (SECRET_PATH_PATTERN.test(normalizedPath)) {
-    addSurfaceRule(
-      rules,
-      "secret-sensitive",
-      "Path name indicates secret, token, or credential sensitivity."
-    );
-  }
-  if (basename === ".env" || basename.startsWith(".env.")) {
-    addSurfaceRule(rules, "env-config", "Environment file path matched .env*.");
-  }
-  if (normalizedPath === "docs/COMMAND-CATALOG.md") {
-    addSurfaceRule(rules, "command-catalog", "Command catalog documentation changed.");
-    addSurfaceRule(rules, "docs", "Command catalog is a documentation surface.");
-  }
-  if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
-    addSurfaceRule(rules, "command-manifest", "Command manifest TOML changed.");
-    addSurfaceRule(rules, "config", "Command manifests are TOML configuration.");
-  }
-  if (hasPathSegment(normalizedPath, "docs/commands")) {
-    addSurfaceRule(rules, "command-doc", "Command specification documentation changed.");
-    addSurfaceRule(rules, "docs", "Command specifications are documentation surfaces.");
-  }
-  if (normalizedPath === "src/mcp/server.ts") {
-    addSurfaceRule(rules, "mcp-server", "MCP server registration surface changed.");
-    addSurfaceRule(rules, "source", "MCP server is TypeScript source.");
-  }
-  if (hasPathSegment(normalizedPath, "src/mcp/tools")) {
-    addSurfaceRule(rules, "mcp-tool", "MCP tool implementation surface changed.");
-    addSurfaceRule(rules, "source", "MCP tools are TypeScript source.");
-  }
-  if (normalizedPath === "src/mcp/command-resources.ts") {
-    addSurfaceRule(rules, "mcp-resource", "MCP command resource projection changed.");
-    addSurfaceRule(rules, "source", "MCP resources are TypeScript source.");
-  }
-  if (hasPathSegment(normalizedPath, "src/mcp/artifact-contracts")) {
-    addSurfaceRule(rules, "artifact-contract", "Artifact contract registry changed.");
-    addSurfaceRule(rules, "source", "Artifact contracts are TypeScript source.");
-  }
-  if (hasPathSegment(normalizedPath, "skills")) {
-    addSurfaceRule(rules, "skill", "Blueprint skill contract changed.");
-    if (isDocsPath(normalizedPath)) {
-      addSurfaceRule(rules, "docs", "Markdown skill files are documentation surfaces.");
-    }
-  }
-  if (hasPathSegment(normalizedPath, "agents")) {
-    addSurfaceRule(rules, "agent", "Blueprint agent contract changed.");
-    if (isDocsPath(normalizedPath)) {
-      addSurfaceRule(rules, "docs", "Markdown agent files are documentation surfaces.");
-    }
-  }
-  if (normalizedPath === "gemini-extension.json" || normalizedPath === "tabnine-extension.json") {
-    addSurfaceRule(rules, "extension-manifest", "Extension host manifest changed.");
-    addSurfaceRule(rules, "config", "Extension manifests are JSON configuration.");
-  }
-  if (hasPathSegment(normalizedPath, "hooks") || hasPathSegment(normalizedPath, "src/hooks")) {
-    addSurfaceRule(rules, "hook", "Blueprint advisory hook surface changed.");
-    if (hasPathSegment(normalizedPath, "src/hooks")) {
-      addSurfaceRule(rules, "source", "Hook runtime implementation is source code.");
-    }
-  }
-  if (normalizedPath === "package.json" || normalizedPath === "package-lock.json") {
-    addSurfaceRule(rules, "package-runtime", "Node package runtime metadata changed.");
-    addSurfaceRule(rules, "config", "Package metadata is JSON configuration.");
-  }
-  if (normalizedPath === "tsconfig.json" || normalizedPath === "scripts/build.mjs") {
-    addSurfaceRule(rules, "build-config", "Build configuration changed.");
-    addSurfaceRule(rules, "config", "Build configuration is runtime configuration.");
-  }
-  if (isTestPath(normalizedPath)) {
-    addSurfaceRule(rules, "test", "Path matched tests directory or test file suffix.");
-  }
-  if (isDocsPath(normalizedPath)) {
-    addSurfaceRule(rules, "docs", "Path matched docs directory or documentation file extension.");
-  }
-  if (isGeneratedPath(normalizedPath)) {
-    addSurfaceRule(rules, "generated", "Path matched generated output directory or suffix.");
-  }
-  if (CONFIG_FILE_EXTENSIONS.has(extension) || hasConfigName(normalizedPath)) {
-    addSurfaceRule(rules, "config", "Path matched configuration extension or naming convention.");
-  }
-  if (hasPathSegment(normalizedPath, "src") && SOURCE_FILE_EXTENSIONS.has(extension)) {
-    addSurfaceRule(rules, "source", "Path matched source tree and code extension.");
-  }
-  if (!normalizedPath.includes("/")) {
-    addSurfaceRule(rules, "repo-root", "Path is at the repository root.");
-  }
-  if (rules.length === 0) {
-    addSurfaceRule(rules, "unknown", "No impact surface rule matched this path.");
-  }
-  const sortedRules = rules.sort(
-    (left, right) => compareImpactSurfaces(left.surface, right.surface)
-  );
-  const surfaces = sortedRules.map((rule) => rule.surface);
-  const primarySurface = surfaces[0] ?? "unknown";
-  return {
-    path: normalizedPath,
-    surfaces,
-    primarySurface,
-    area: areaForSurface(primarySurface),
-    reasons: sortedRules.map((rule) => rule.reason)
-  };
-}
-function summarizeSurfaceRecords(records, selector, sortNames = (left, right) => left.localeCompare(right)) {
-  const summary = /* @__PURE__ */ new Map();
-  for (const record2 of records) {
-    const key = selector(record2);
-    const files = summary.get(key) ?? /* @__PURE__ */ new Set();
-    files.add(record2.path);
-    summary.set(key, files);
-  }
-  return [...summary.entries()].sort(([left], [right]) => sortNames(left, right)).map(([name, files]) => {
-    const sortedFiles = [...files].sort();
-    return {
-      name,
-      files: sortedFiles,
-      count: sortedFiles.length
-    };
-  });
-}
-function buildAreaSummary(records) {
-  const areaOrder = [
-    "sensitive-config",
-    "blueprint-runtime",
-    "tests",
-    "docs",
-    "generated",
-    "config",
-    "source",
-    "repo-root",
-    "unknown"
-  ];
-  return summarizeSurfaceRecords(records, (record2) => record2.area, (left, right) => {
-    const leftIndex = areaOrder.indexOf(left);
-    const rightIndex = areaOrder.indexOf(right);
-    const normalizedLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
-    const normalizedRightIndex = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
-    return normalizedLeftIndex - normalizedRightIndex || left.localeCompare(right);
-  });
-}
-function buildSurfaceSummary(records) {
-  const surfaceFiles = /* @__PURE__ */ new Map();
-  for (const record2 of records) {
-    for (const surface of record2.surfaces) {
-      const files = surfaceFiles.get(surface) ?? /* @__PURE__ */ new Set();
-      files.add(record2.path);
-      surfaceFiles.set(surface, files);
-    }
-  }
-  return [...surfaceFiles.entries()].sort(([left], [right]) => compareImpactSurfaces(left, right)).map(([name, files]) => {
-    const sortedFiles = [...files].sort();
-    return {
-      name,
-      files: sortedFiles,
-      count: sortedFiles.length
-    };
-  });
-}
-function uniqueSorted2(values) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))].sort();
-}
-function stableRecordId(prefix, seed) {
-  return `${prefix}.${stableHash(seed)}`;
-}
-function sanitizeIdentifier(value) {
-  const sanitized = value.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-+|-+$/gu, "");
-  return sanitized.length > 0 ? sanitized.slice(0, 80) : "unknown";
-}
-function sortEvidenceRecords(records) {
-  return [...records].sort((left, right) => left.id.localeCompare(right.id));
-}
-function sortUnknownRecords(records) {
-  return [...records].sort((left, right) => left.id.localeCompare(right.id));
-}
-function findingSeverityRank(value) {
-  return { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }[value];
-}
-function findingStatusRank(value) {
-  return { BLOCK: 0, WARN: 1, PASS: 2 }[value];
-}
-function sortFindings(records) {
-  return [...records].sort(
-    (left, right) => findingStatusRank(left.status) - findingStatusRank(right.status) || findingSeverityRank(left.severity) - findingSeverityRank(right.severity) || left.impactedAreas.join(",").localeCompare(right.impactedAreas.join(",")) || left.checkId.localeCompare(right.checkId) || left.id.localeCompare(right.id)
-  );
-}
-function addEvidence(records, record2) {
-  const id = stableRecordId(`ev.${record2.kind}`, record2);
-  records.push({
-    id,
-    ...record2,
-    paths: uniqueSorted2(record2.paths)
-  });
-  return id;
-}
-function escapeRegExp2(value) {
-  return value.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
-}
-function globPatternToRegExp(pattern) {
-  const normalized = pattern.trim().replaceAll("\\", "/").replace(/^\//u, "");
-  let expression = "^";
-  for (let index = 0; index < normalized.length; index += 1) {
-    const character = normalized[index];
-    const next = normalized[index + 1];
-    if (character === "*" && next === "*") {
-      expression += ".*";
-      index += 1;
-    } else if (character === "*") {
-      expression += "[^/]*";
-    } else if (character === "?") {
-      expression += "[^/]";
-    } else {
-      expression += escapeRegExp2(character ?? "");
-    }
-  }
-  if (normalized.endsWith("/")) {
-    expression += ".*";
-  }
-  expression += "$";
-  return new RegExp(expression, "u");
-}
-function matchesRepoPattern(filePath, pattern) {
-  const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const normalizedPattern = pattern.trim().replaceAll("\\", "/").replace(/^\//u, "");
-  if (normalizedPattern.length === 0) {
-    return false;
-  }
-  if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path7.posix.basename(normalizedPath));
-  }
-  return globPatternToRegExp(normalizedPattern).test(normalizedPath);
-}
-function isCodeownersCandidate(source) {
-  return CODEOWNERS_CANDIDATES.includes(source);
-}
-function hasSurface(record2, surface) {
-  return record2.surfaces.includes(surface);
-}
-function isContractLikeSurface(record2) {
-  return record2.surfaces.some(
-    (surface) => [
-      "command-catalog",
-      "command-manifest",
-      "command-doc",
-      "mcp-server",
-      "mcp-tool",
-      "mcp-resource",
-      "artifact-contract",
-      "skill",
-      "agent",
-      "extension-manifest",
-      "hook"
-    ].includes(surface)
-  );
-}
-function isGeneratedOnlySurface(record2) {
-  return record2.surfaces.includes("generated") && !record2.surfaces.includes("source");
-}
-function isReverseDependencyRelevant(record2) {
-  return hasSurface(record2, "source") || hasSurface(record2, "package-runtime") || hasSurface(record2, "secret-sensitive") || isContractLikeSurface(record2);
-}
-function cloneConfig2(config2) {
-  return JSON.parse(JSON.stringify(config2));
+function defaultUpdatePlanMode(host) {
+  return host === "gemini" ? "ask_user" : "manual";
 }
 function expandHomePath(value) {
   const trimmed = value.trim();
@@ -28880,6 +28488,12 @@ function expandHomePath(value) {
   }
   return trimmed;
 }
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function normalizeOptionalString(value) {
+  return isNonEmptyString(value) ? value.trim() : null;
+}
 async function pathExists4(targetPath) {
   try {
     await fs6.access(targetPath);
@@ -28888,2730 +28502,10 @@ async function pathExists4(targetPath) {
     return false;
   }
 }
-function resolveContainedInputPath(projectRoot, inputPath, label) {
-  const trimmed = inputPath.trim();
-  if (trimmed.length === 0) {
-    throw new Error(`${label} must not be blank.`);
-  }
-  const candidatePath = path7.isAbsolute(trimmed) ? trimmed : path7.resolve(projectRoot, trimmed);
-  return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
-}
-function toRepoRelativeInputPath(projectRoot, inputPath, label) {
-  const absolutePath = resolveContainedInputPath(projectRoot, inputPath, label);
-  return toRepoRelativePath(projectRoot, absolutePath);
-}
-function extractStringArray(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item) => typeof item === "string");
-}
-function collectAnalyzeFileSources(args) {
-  return [
-    {
-      label: "changedFiles",
-      files: extractStringArray(args.changedFiles)
-    },
-    {
-      label: "files",
-      files: extractStringArray(args.files)
-    },
-    {
-      label: "scope.files",
-      files: extractStringArray(args.scope?.files)
-    },
-    {
-      label: "scope.changedFiles",
-      files: extractStringArray(args.scope?.changedFiles)
-    }
-  ].filter((source) => source.files.length > 0);
-}
-function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
-  const normalizedBySource = sources.map((source) => ({
-    label: source.label,
-    files: [
-      ...new Set(
-        source.files.map(
-          (file2) => toRepoRelativeInputPath(projectRoot, file2, `Impact analyze ${source.label} file`)
-        )
-      )
-    ].sort()
-  }));
-  const sourceFingerprints = [
-    ...new Set(normalizedBySource.map((source) => source.files.join("\n")))
-  ];
-  if (sourceFingerprints.length > 1) {
-    warnings.push(
-      `Impact analyze file inputs differed across ${normalizedBySource.map((source) => source.label).join(", ")}; using deterministic union.`
-    );
-  }
-  return [...new Set(normalizedBySource.flatMap((source) => source.files))].sort();
-}
-function getImpactDefaultsPath() {
-  const runtimeHost = resolveBlueprintRuntimeHost();
-  return path7.resolve(
-    expandHomePath(
-      path7.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
-    )
-  );
-}
-function isUnsafeRepoPattern(value) {
-  const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path7.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
-}
-function validateConfigPathArrays(config2) {
-  const errors = [];
-  const pathArrays = [
-    ["paths.include", config2.paths.include],
-    ["paths.ignore", config2.paths.ignore],
-    ["paths.generated", config2.paths.generated],
-    ["paths.docs", config2.paths.docs],
-    ["paths.tests", config2.paths.tests],
-    ["ownership.sources", config2.ownership.sources],
-    ["dependencyGraph.customGraphFiles", config2.dependencyGraph.customGraphFiles],
-    ["reporting.redactPathPatterns", config2.reporting.redactPathPatterns]
-  ];
-  for (const [label, values] of pathArrays) {
-    for (const value of values) {
-      if (isUnsafeRepoPattern(value)) {
-        errors.push(`${label} contains a path pattern that escapes the repository: ${value}`);
-      }
-    }
-  }
-  return errors;
-}
-function formatZodIssues(prefix, error2) {
-  return error2.issues.map((issue2) => {
-    const issuePath = issue2.path.length > 0 ? issue2.path.join(".") : "(root)";
-    return `${prefix} ${issuePath}: ${issue2.message}`;
-  });
-}
-function sanitizeConfigLayer(layer, label, strictConfig, warnings, errors) {
-  const sanitized = {};
-  const knownKeys = new Set(KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS);
-  for (const [key, value] of Object.entries(layer)) {
-    if (!knownKeys.has(key)) {
-      const message = `Unknown impact config key in ${label}: ${key}`;
-      if (strictConfig) {
-        errors.push(message);
-      } else {
-        warnings.push(message);
-      }
-      continue;
-    }
-    sanitized[key] = value;
-  }
-  return sanitized;
-}
-function mergeConfigLayer(target, source) {
-  for (const [key, value] of Object.entries(source)) {
-    if (isPlainObject6(value) && isPlainObject6(target[key])) {
-      mergeConfigLayer(target[key], value);
-    } else if (Array.isArray(value)) {
-      target[key] = [...value];
-    } else {
-      target[key] = value;
-    }
-  }
-}
-async function readConfigLayer(filePath, label, warnings, errors) {
-  if (!await pathExists4(filePath)) {
-    return null;
-  }
-  try {
-    return safeJsonParseObject(await fs6.readFile(filePath, "utf8"), { label });
-  } catch (error2) {
-    errors.push(error2 instanceof Error ? error2.message : `${label} could not be read.`);
-    return null;
-  }
-}
-function applyConfigLayer2(config2, layer, label, strictConfig, warnings, errors) {
-  const sanitized = sanitizeConfigLayer(layer, label, strictConfig, warnings, errors);
-  const parseResult = partialImpactConfigSchema.safeParse(sanitized);
-  if (!parseResult.success) {
-    errors.push(...formatZodIssues(`Invalid impact config in ${label}:`, parseResult.error));
-    return false;
-  }
-  mergeConfigLayer(config2, parseResult.data);
-  return Object.keys(sanitized).length > 0;
-}
-function validateFinalImpactConfig(config2, errors) {
-  const parseResult = impactConfigSchema.safeParse(config2);
-  if (!parseResult.success) {
-    errors.push(...formatZodIssues("Invalid effective impact config:", parseResult.error));
-    return getBuiltInImpactConfig();
-  }
-  errors.push(...validateConfigPathArrays(parseResult.data));
-  return parseResult.data;
-}
-function resolveAnalyzeImpactConfig(providedConfig, warnings) {
-  const config2 = cloneConfig2(getBuiltInImpactConfig());
-  const errors = [];
-  if (providedConfig && Object.keys(providedConfig).length > 0) {
-    applyConfigLayer2(config2, providedConfig, "analyze config", false, warnings, errors);
-  }
-  const effectiveConfig = validateFinalImpactConfig(config2, errors);
-  if (errors.length > 0) {
-    throw new Error(`Invalid impact analyze config: ${[...new Set(errors)].join(" ")}`);
-  }
-  return effectiveConfig;
-}
-function parseCodeownersRules(raw, sourcePath) {
-  const rules = [];
-  for (const [lineIndex, rawLine] of raw.split(/\r?\n/u).entries()) {
-    const line = rawLine.replace(/\s+#.*$/u, "").trim();
-    if (line.length === 0 || line.startsWith("#")) {
-      continue;
-    }
-    const [pattern, ...owners] = line.split(/\s+/u);
-    if (!pattern) {
-      continue;
-    }
-    rules.push({
-      source: "codeowners",
-      sourcePath,
-      pattern,
-      owners: uniqueSorted2(owners),
-      sensitive: false,
-      line: lineIndex + 1,
-      order: rules.length
-    });
-  }
-  return rules;
-}
-function matchLastCodeownersRule(filePath, rules) {
-  let matched = null;
-  for (const rule of rules) {
-    if (matchesRepoPattern(filePath, rule.pattern)) {
-      matched = rule;
-    }
-  }
-  return matched;
-}
-async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warnings) {
-  const evidence = [];
-  const unknowns = [];
-  const findings = [];
-  const configuredSources = uniqueSorted2(config2.ownership.sources);
-  const sourcesUsed = [];
-  const metadataFallbackReviewers = [];
-  const metadataPaths = [];
-  const rules = [];
-  let codeownersPath = null;
-  for (const source of config2.ownership.sources) {
-    if (!isCodeownersCandidate(source)) {
-      continue;
-    }
-    const absolutePath = resolveContainedInputPath(
-      projectRoot,
-      source,
-      "Impact ownership CODEOWNERS source"
-    );
-    if (!await pathExists4(absolutePath)) {
-      continue;
-    }
-    codeownersPath = toRepoRelativePath(projectRoot, absolutePath);
-    const parsedRules = parseCodeownersRules(await fs6.readFile(absolutePath, "utf8"), codeownersPath);
-    rules.push(...parsedRules);
-    sourcesUsed.push(codeownersPath);
-    addEvidence(evidence, {
-      kind: "ownership",
-      source: codeownersPath,
-      summary: `Loaded ${parsedRules.length} CODEOWNERS ownership rules; last matching rule wins within this file.`,
-      paths: [codeownersPath],
-      data: { ruleCount: parsedRules.length }
-    });
-    break;
-  }
-  const metadataSources = config2.ownership.sources.filter((source) => !isCodeownersCandidate(source));
-  for (const source of metadataSources) {
-    const absolutePath = resolveContainedInputPath(
-      projectRoot,
-      source,
-      "Impact ownership metadata source"
-    );
-    if (!await pathExists4(absolutePath)) {
-      continue;
-    }
-    const relativePath = toRepoRelativePath(projectRoot, absolutePath);
-    try {
-      const parsed = safeJsonParseObject(await fs6.readFile(absolutePath, "utf8"), {
-        label: `Impact ownership metadata ${relativePath}`
-      });
-      const metadataResult = ownershipMetadataSchema.safeParse(parsed);
-      if (!metadataResult.success) {
-        throw new Error(
-          formatZodIssues(`Invalid impact ownership metadata ${relativePath}:`, metadataResult.error).join(
-            " "
-          )
-        );
-      }
-      const startIndex = rules.length;
-      for (const [index, rule] of metadataResult.data.rules.entries()) {
-        rules.push({
-          source: "metadata",
-          sourcePath: relativePath,
-          pattern: rule.pattern,
-          owners: uniqueSorted2(rule.owners),
-          sensitive: rule.sensitive,
-          line: null,
-          order: startIndex + index
-        });
-      }
-      metadataFallbackReviewers.push(...metadataResult.data.fallbackReviewers);
-      metadataPaths.push(relativePath);
-      sourcesUsed.push(relativePath);
-      addEvidence(evidence, {
-        kind: "ownership",
-        source: relativePath,
-        summary: `Loaded ${metadataResult.data.rules.length} optional ownership metadata rules.`,
-        paths: [relativePath],
-        data: {
-          ruleCount: metadataResult.data.rules.length,
-          fallbackReviewerCount: metadataResult.data.fallbackReviewers.length
-        }
-      });
-    } catch (error2) {
-      const message = error2 instanceof Error ? error2.message : `Impact ownership metadata ${relativePath} could not be parsed.`;
-      warnings.push(message);
-      const evidenceRef = addEvidence(evidence, {
-        kind: "metadata",
-        source: relativePath,
-        summary: "Optional ownership metadata could not be parsed; ownership analysis continued without it.",
-        paths: [relativePath]
-      });
-      unknowns.push({
-        id: `unknown.ownership.metadata.${sanitizeIdentifier(relativePath)}`,
-        category: "ownership",
-        title: "Optional ownership metadata is malformed",
-        severity: "MEDIUM",
-        impactedFiles: [],
-        reason: message,
-        resolution: `Repair ${relativePath} to match ${OWNERSHIP_SCHEMA_VERSION}.`,
-        evidenceRefs: [evidenceRef]
-      });
-    }
-  }
-  const effectiveMetadataFallback = uniqueSorted2(metadataFallbackReviewers);
-  const configuredFallback = uniqueSorted2(config2.ownership.fallbackReviewers);
-  const orderedFallbackReviewers = configuredFallback.length > 0 ? configuredFallback : effectiveMetadataFallback;
-  const matches = [];
-  const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
-  for (const file2 of files) {
-    const codeownersRule = matchLastCodeownersRule(file2, rules.filter((rule) => rule.source === "codeowners"));
-    const metadataRules = rules.filter(
-      (rule) => rule.source === "metadata" && matchesRepoPattern(file2, rule.pattern)
-    );
-    const matchedRules = [...codeownersRule ? [codeownersRule] : [], ...metadataRules].sort(
-      (left, right) => left.order - right.order
-    );
-    const explicitOwners = uniqueSorted2(matchedRules.flatMap((rule) => rule.owners));
-    const fallbackReviewers = explicitOwners.length === 0 ? orderedFallbackReviewers : [];
-    const owners = explicitOwners.length > 0 ? explicitOwners : fallbackReviewers;
-    const surface = surfaceByPath.get(file2);
-    const sensitive = surface?.surfaces.includes("secret-sensitive") === true || matchedRules.some((rule) => rule.sensitive);
-    const ownerMissing = owners.length === 0;
-    const evidenceRef = addEvidence(evidence, {
-      kind: "ownership",
-      source: matchedRules.length > 0 ? "ownership-rules" : "ownership-coverage",
-      summary: ownerMissing ? "No explicit owner or fallback reviewer matched this changed file." : fallbackReviewers.length > 0 ? "Fallback reviewers were applied because no specific ownership rule matched this changed file." : "Specific ownership rules matched this changed file.",
-      paths: [file2],
-      data: {
-        ownerCount: owners.length,
-        fallbackUsed: fallbackReviewers.length > 0,
-        sensitive
-      }
-    });
-    matches.push({
-      path: file2,
-      owners,
-      matchedRules,
-      fallbackReviewers,
-      fallbackUsed: fallbackReviewers.length > 0,
-      sensitive,
-      ownerMissing,
-      evidenceRefs: [evidenceRef]
-    });
-    if (ownerMissing) {
-      unknowns.push({
-        id: `unknown.ownership.${sanitizeIdentifier(file2)}`,
-        category: "ownership",
-        title: sensitive ? "Sensitive changed file has no owner" : "Changed file has no owner",
-        severity: sensitive ? "HIGH" : "MEDIUM",
-        impactedFiles: [file2],
-        reason: "No configured CODEOWNERS rule, ownership metadata rule, or fallback reviewer covered this changed file.",
-        resolution: "Add a CODEOWNERS or impact ownership metadata rule, or configure ownership.fallbackReviewers.",
-        evidenceRefs: [evidenceRef]
-      });
-    }
-    if (sensitive && ownerMissing && config2.risk.blockOnSensitiveUnknownOwner) {
-      findings.push({
-        id: `finding.ownership.sensitive-owner.${sanitizeIdentifier(file2)}`,
-        checkId: "ownership.sensitive-owner",
-        title: "Sensitive changed file has no accountable owner",
-        severity: "CRITICAL",
-        status: "BLOCK",
-        confidence: 0.86,
-        impactedFiles: [file2],
-        impactedAreas: [surface?.area ?? "sensitive-config"],
-        owners: [],
-        requiredActions: [
-          "Assign an explicit owner or fallback reviewer before relying on this impact report."
-        ],
-        evidenceRefs: [evidenceRef]
-      });
-    }
-  }
-  const filesWithOwners = matches.filter((match) => !match.ownerMissing).length;
-  const filesMissingOwners = matches.length - filesWithOwners;
-  const coverageStatus = matches.length === 0 || filesWithOwners === 0 ? "none" : filesMissingOwners === 0 ? "complete" : "partial";
-  return {
-    ownership: {
-      coverage: {
-        status: coverageStatus,
-        sourcesConfigured: configuredSources,
-        sourcesUsed: uniqueSorted2(sourcesUsed),
-        fallbackReviewers: orderedFallbackReviewers,
-        filesWithOwners,
-        filesMissingOwners,
-        gaps: matches.filter((match) => match.ownerMissing).map((match) => match.path).sort()
-      },
-      codeownersPath,
-      metadataPaths: metadataPaths.sort(),
-      rules: rules.sort((left, right) => left.sourcePath.localeCompare(right.sourcePath) || left.order - right.order),
-      matches: matches.sort((left, right) => left.path.localeCompare(right.path))
-    },
-    unknowns: sortUnknownRecords(unknowns),
-    findings: sortFindings(findings),
-    evidence: sortEvidenceRecords(evidence)
-  };
-}
-function addDependencyNode(nodes, node) {
-  const existing = nodes.get(node.id);
-  if (!existing) {
-    nodes.set(node.id, node);
-    return;
-  }
-  nodes.set(node.id, {
-    ...existing,
-    path: existing.path ?? node.path,
-    source: uniqueSorted2([...existing.source.split(","), node.source]).join(",")
-  });
-}
-function addDependencyEdge(edges, edge) {
-  const key = `${edge.from}\0${edge.to}\0${edge.type}\0${edge.source}`;
-  if (!edges.has(key)) {
-    edges.set(key, edge);
-  }
-}
-function dependencyNamesFromPackageJson(parsed) {
-  return uniqueSorted2(
-    ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(
-      (key) => isPlainObject6(parsed[key]) ? Object.keys(parsed[key]) : []
-    )
-  );
-}
-function packageScriptsFromPackageJson(parsed) {
-  return isPlainObject6(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
-}
-function packageJsonWorkspaces(parsed) {
-  if (Array.isArray(parsed.workspaces)) {
-    return parsed.workspaces.filter((item) => typeof item === "string");
-  }
-  if (isPlainObject6(parsed.workspaces) && Array.isArray(parsed.workspaces.packages)) {
-    return parsed.workspaces.packages.filter((item) => typeof item === "string");
-  }
-  return [];
-}
-async function readJsonObjectIfPresent(filePath, label) {
-  if (!await pathExists4(filePath)) {
-    return null;
-  }
-  return safeJsonParseObject(await fs6.readFile(filePath, "utf8"), { label });
-}
-async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns) {
-  const directories = [];
-  for (const pattern of workspacePatterns) {
-    const normalizedPattern = pattern.trim().replaceAll("\\", "/").replace(/\/+$/u, "");
-    if (!["packages/*", "apps/*"].includes(normalizedPattern)) {
-      continue;
-    }
-    const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path7.join(projectRoot, root);
-    if (!await pathExists4(absoluteRoot)) {
-      continue;
-    }
-    const entries = await fs6.readdir(absoluteRoot, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".")) {
-        continue;
-      }
-      const relativePath = `${root}/${entry.name}`;
-      if (await pathExists4(path7.join(projectRoot, relativePath, "package.json"))) {
-        directories.push(relativePath);
-      }
-    }
-  }
-  return uniqueSorted2(directories);
-}
-async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path7.join(projectRoot, "package.json");
-  const parsed = await readJsonObjectIfPresent(packagePath, "Impact package.json");
-  const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
-  if (!parsed) {
-    return { used: false, packageNameByWorkspacePath };
-  }
-  const rootName = typeof parsed.name === "string" ? parsed.name : "root-package";
-  const rootNodeId = `package:${rootName}`;
-  addDependencyNode(nodes, {
-    id: rootNodeId,
-    path: ".",
-    kind: "package",
-    source: PACKAGE_JSON_SOURCE
-  });
-  for (const dependencyName of dependencyNamesFromPackageJson(parsed)) {
-    const dependencyNodeId = `external:${dependencyName}`;
-    addDependencyNode(nodes, {
-      id: dependencyNodeId,
-      path: null,
-      kind: "external",
-      source: PACKAGE_JSON_SOURCE
-    });
-    addDependencyEdge(edges, {
-      from: rootNodeId,
-      to: dependencyNodeId,
-      type: "package-dependency",
-      source: PACKAGE_JSON_SOURCE
-    });
-  }
-  const workspaceDirectories = await resolveSimpleWorkspaceDirectories(
-    projectRoot,
-    packageJsonWorkspaces(parsed)
-  );
-  const workspacePackageNames = /* @__PURE__ */ new Map();
-  for (const workspacePath of workspaceDirectories) {
-    try {
-      const workspacePackage = await readJsonObjectIfPresent(
-        path7.join(projectRoot, workspacePath, "package.json"),
-        `Impact workspace package ${workspacePath}/package.json`
-      );
-      if (!workspacePackage) {
-        continue;
-      }
-      const workspaceName = typeof workspacePackage.name === "string" ? workspacePackage.name : workspacePath;
-      const workspaceNodeId = `package:${workspaceName}`;
-      workspacePackageNames.set(workspaceName, workspaceNodeId);
-      packageNameByWorkspacePath.set(workspacePath, workspaceName);
-      addDependencyNode(nodes, {
-        id: workspaceNodeId,
-        path: workspacePath,
-        kind: "workspace",
-        source: PACKAGE_JSON_SOURCE
-      });
-      addDependencyEdge(edges, {
-        from: rootNodeId,
-        to: workspaceNodeId,
-        type: "workspace",
-        source: PACKAGE_JSON_SOURCE
-      });
-    } catch (error2) {
-      warnings.push(
-        `Could not read impact workspace package metadata at ${workspacePath}/package.json: ${error2 instanceof Error ? error2.message : String(error2)}`
-      );
-    }
-  }
-  for (const workspacePath of workspaceDirectories) {
-    const workspacePackage = await readJsonObjectIfPresent(
-      path7.join(projectRoot, workspacePath, "package.json"),
-      `Impact workspace package ${workspacePath}/package.json`
-    );
-    if (!workspacePackage) {
-      continue;
-    }
-    const workspaceName = typeof workspacePackage.name === "string" ? workspacePackage.name : workspacePath;
-    const fromNodeId = `package:${workspaceName}`;
-    for (const dependencyName of dependencyNamesFromPackageJson(workspacePackage)) {
-      const workspaceTargetId = workspacePackageNames.get(dependencyName);
-      if (workspaceTargetId) {
-        addDependencyEdge(edges, {
-          from: fromNodeId,
-          to: workspaceTargetId,
-          type: "workspace-package-dependency",
-          source: PACKAGE_JSON_SOURCE
-        });
-      }
-    }
-  }
-  addEvidence(evidence, {
-    kind: "dependency",
-    source: "package.json",
-    summary: "Loaded package runtime dependencies, scripts, and simple packages/* or apps/* workspaces.",
-    paths: ["package.json", ...workspaceDirectories.map((entry) => `${entry}/package.json`)],
-    data: {
-      dependencyCount: dependencyNamesFromPackageJson(parsed).length,
-      scriptCount: packageScriptsFromPackageJson(parsed).length,
-      workspaceCount: workspaceDirectories.length
-    }
-  });
-  return { used: true, packageNameByWorkspacePath };
-}
-async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path7.join(projectRoot, "package-lock.json");
-  if (!await pathExists4(lockPath)) {
-    return false;
-  }
-  try {
-    const parsed = safeJsonParseObject(await fs6.readFile(lockPath, "utf8"), {
-      label: "Impact package-lock.json"
-    });
-    const packages = isPlainObject6(parsed.packages) ? Object.entries(parsed.packages) : [];
-    for (const [packagePath] of packages.slice(0, 500)) {
-      if (packagePath.length === 0 || packagePath.startsWith("node_modules/")) {
-        continue;
-      }
-      addDependencyNode(nodes, {
-        id: `lock:${packagePath}`,
-        path: normalizeRepoPathForClassification(packagePath),
-        kind: "package",
-        source: PACKAGE_LOCK_SOURCE
-      });
-    }
-    addEvidence(evidence, {
-      kind: "dependency",
-      source: "package-lock.json",
-      summary: "Loaded package-lock package path hints for dependency coverage.",
-      paths: ["package-lock.json"],
-      data: { packageHintCount: packages.length }
-    });
-    return true;
-  } catch (error2) {
-    const message = error2 instanceof Error ? error2.message : "Impact package-lock.json could not be parsed.";
-    warnings.push(message);
-    const evidenceRef = addEvidence(evidence, {
-      kind: "metadata",
-      source: "package-lock.json",
-      summary: "package-lock metadata could not be parsed; dependency analysis continued without it.",
-      paths: ["package-lock.json"]
-    });
-    unknowns.push({
-      id: "unknown.dependency.package-lock-metadata",
-      category: "dependency",
-      title: "package-lock metadata is malformed",
-      severity: "LOW",
-      impactedFiles: [],
-      reason: message,
-      resolution: "Repair package-lock.json or disable the package-lock impact dependency source.",
-      evidenceRefs: [evidenceRef]
-    });
-    return false;
-  }
-}
-async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
-  const results = /* @__PURE__ */ new Set();
-  const queue = [];
-  for (const root of roots) {
-    if (await pathExists4(path7.join(projectRoot, root))) {
-      queue.push({ relativePath: root, depth: 0 });
-    }
-  }
-  while (queue.length > 0 && results.size < 600) {
-    const current = queue.shift();
-    if (!current || current.depth > 8) {
-      continue;
-    }
-    const absolutePath = path7.join(projectRoot, current.relativePath);
-    const entries = await fs6.readdir(absolutePath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (results.size >= 600) {
-        break;
-      }
-      if (entry.name.startsWith(".")) {
-        continue;
-      }
-      const relativePath = `${current.relativePath}/${entry.name}`;
-      if (entry.isDirectory()) {
-        if (["node_modules", "dist", "coverage", "build"].includes(entry.name)) {
-          continue;
-        }
-        queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path7.posix.extname(relativePath).toLowerCase())) {
-        results.add(relativePath);
-      }
-    }
-  }
-  for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path7.posix.extname(file2).toLowerCase())) {
-      results.add(file2);
-    }
-  }
-  return [...results].sort();
-}
-function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPaths) {
-  if (!specifier.startsWith(".")) {
-    return null;
-  }
-  const base = path7.posix.normalize(path7.posix.join(path7.posix.dirname(importerPath), specifier));
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.js`,
-    `${base}.jsx`,
-    `${base}.mjs`,
-    `${base}.cjs`,
-    `${base}/index.ts`,
-    `${base}/index.tsx`,
-    `${base}/index.js`
-  ];
-  return candidates.find((candidate) => knownRepoPaths.has(candidate)) ?? candidates[0] ?? null;
-}
-function extractImportSpecifiers(sourceText) {
-  const specifiers = /* @__PURE__ */ new Set();
-  const importPattern = /\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']|\brequire\s*\(\s*["']([^"']+)["']\s*\)/gu;
-  for (const match of sourceText.matchAll(importPattern)) {
-    const specifier = match[1] ?? match[2];
-    if (specifier) {
-      specifiers.add(specifier);
-    }
-  }
-  return [...specifiers].sort();
-}
-function findWorkspaceNodeForPath(filePath, nodes) {
-  const workspaceNodes = [...nodes.values()].filter((node) => node.kind === "workspace" && node.path).sort((left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0));
-  return workspaceNodes.find(
-    (node) => node.path && (filePath === node.path || filePath.startsWith(`${node.path}/`))
-  ) ?? null;
-}
-async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfaceByPath, nodes, edges, evidence) {
-  const sourceFiles = await listBoundedSourceFiles(projectRoot, BOUNDED_SOURCE_ROOTS, changedFiles);
-  const sourceFileSet = new Set(sourceFiles);
-  let scannedCount = 0;
-  let skippedSecretCount = 0;
-  const workspaceNameToNode = new Map(
-    [...nodes.values()].filter((node) => node.kind === "workspace" && node.id.startsWith("package:")).map((node) => [node.id.slice("package:".length), node.id])
-  );
-  for (const file2 of sourceFiles) {
-    const classifiedSurface = surfaceByPath.get(file2) ?? classifyImpactFile(file2);
-    if (classifiedSurface.surfaces.includes("secret-sensitive")) {
-      skippedSecretCount += 1;
-      continue;
-    }
-    const absolutePath = path7.join(projectRoot, file2);
-    if (!await pathExists4(absolutePath)) {
-      continue;
-    }
-    const fileNodeId = `file:${file2}`;
-    addDependencyNode(nodes, {
-      id: fileNodeId,
-      path: file2,
-      kind: "file",
-      source: TS_IMPORT_SCAN_SOURCE
-    });
-    const workspaceNode = findWorkspaceNodeForPath(file2, nodes);
-    if (workspaceNode) {
-      addDependencyEdge(edges, {
-        from: workspaceNode.id,
-        to: fileNodeId,
-        type: "contains-file",
-        source: TS_IMPORT_SCAN_SOURCE
-      });
-    }
-    const rawSource = await fs6.readFile(absolutePath, "utf8");
-    scannedCount += 1;
-    for (const specifier of extractImportSpecifiers(rawSource)) {
-      const targetPath = resolveImportSpecifierToRepoPath(file2, specifier, sourceFileSet);
-      if (targetPath) {
-        const targetNodeId = `file:${targetPath}`;
-        addDependencyNode(nodes, {
-          id: targetNodeId,
-          path: targetPath,
-          kind: "file",
-          source: TS_IMPORT_SCAN_SOURCE
-        });
-        addDependencyEdge(edges, {
-          from: fileNodeId,
-          to: targetNodeId,
-          type: "ts-import",
-          source: TS_IMPORT_SCAN_SOURCE
-        });
-        continue;
-      }
-      const workspaceTargetId = workspaceNameToNode.get(specifier);
-      if (workspaceTargetId) {
-        addDependencyEdge(edges, {
-          from: fileNodeId,
-          to: workspaceTargetId,
-          type: "workspace-import",
-          source: TS_IMPORT_SCAN_SOURCE
-        });
-      }
-    }
-  }
-  addEvidence(evidence, {
-    kind: "dependency",
-    source: TS_IMPORT_SCAN_SOURCE,
-    summary: "Scanned bounded TypeScript/JavaScript roots and changed source files for dependency edges; secret-sensitive paths were skipped.",
-    paths: [],
-    data: {
-      scannedFileCount: scannedCount,
-      skippedSecretFileCount: skippedSecretCount
-    }
-  });
-  return scannedCount > 0 || skippedSecretCount > 0;
-}
-async function loadCustomDependencyGraphs(projectRoot, config2, nodes, edges, evidence, unknowns, warnings) {
-  let used = false;
-  for (const graphPath of config2.dependencyGraph.customGraphFiles) {
-    const absolutePath = resolveContainedInputPath(
-      projectRoot,
-      graphPath,
-      "Impact dependency graph source"
-    );
-    if (!await pathExists4(absolutePath)) {
-      continue;
-    }
-    const relativePath = toRepoRelativePath(projectRoot, absolutePath);
-    try {
-      const parsed = safeJsonParseObject(await fs6.readFile(absolutePath, "utf8"), {
-        label: `Impact dependency graph ${relativePath}`
-      });
-      const graphResult = dependencyGraphMetadataSchema.safeParse(parsed);
-      if (!graphResult.success) {
-        throw new Error(
-          formatZodIssues(`Invalid impact dependency graph ${relativePath}:`, graphResult.error).join(
-            " "
-          )
-        );
-      }
-      for (const node of graphResult.data.nodes) {
-        addDependencyNode(nodes, {
-          id: node.id,
-          path: node.path ? toRepoRelativeInputPath(projectRoot, node.path, "Impact dependency graph node path") : null,
-          kind: "custom",
-          source: relativePath
-        });
-      }
-      for (const edge of graphResult.data.edges) {
-        addDependencyEdge(edges, {
-          from: edge.from,
-          to: edge.to,
-          type: edge.type,
-          source: relativePath
-        });
-      }
-      addEvidence(evidence, {
-        kind: "dependency",
-        source: relativePath,
-        summary: "Loaded optional custom impact dependency graph metadata.",
-        paths: [relativePath],
-        data: {
-          nodeCount: graphResult.data.nodes.length,
-          edgeCount: graphResult.data.edges.length
-        }
-      });
-      used = true;
-    } catch (error2) {
-      const message = error2 instanceof Error ? error2.message : `Impact dependency graph ${relativePath} could not be parsed.`;
-      if (message.includes("escapes the allowed root")) {
-        throw error2;
-      }
-      warnings.push(message);
-      const evidenceRef = addEvidence(evidence, {
-        kind: "metadata",
-        source: relativePath,
-        summary: "Optional dependency graph metadata could not be parsed; dependency analysis continued without it.",
-        paths: [relativePath]
-      });
-      unknowns.push({
-        id: `unknown.dependency.metadata.${sanitizeIdentifier(relativePath)}`,
-        category: "dependency",
-        title: "Optional dependency graph metadata is malformed",
-        severity: "MEDIUM",
-        impactedFiles: [],
-        reason: message,
-        resolution: `Repair ${relativePath} to match ${DEPENDENCY_GRAPH_SCHEMA_VERSION}.`,
-        evidenceRefs: [evidenceRef]
-      });
-    }
-  }
-  return used;
-}
-function nodeMatchesChangedFile(node, filePath) {
-  if (!node.path) {
-    return false;
-  }
-  if (node.path === ".") {
-    return filePath === "package.json" || filePath === "package-lock.json";
-  }
-  return filePath === node.path || filePath.startsWith(`${node.path}/`) || node.path.startsWith(`${filePath}/`);
-}
-function buildReverseDependentsByPath(files, nodes, edges) {
-  const nodeById = new Map(nodes.map((node) => [node.id, node]));
-  const incoming = /* @__PURE__ */ new Map();
-  for (const edge of edges) {
-    const dependents = incoming.get(edge.to) ?? /* @__PURE__ */ new Set();
-    const fromNode = nodeById.get(edge.from);
-    dependents.add(fromNode?.path ?? edge.from);
-    incoming.set(edge.to, dependents);
-  }
-  const reverseDependentsByPath = {};
-  for (const file2 of files) {
-    const matchingNodeIds = nodes.filter((node) => nodeMatchesChangedFile(node, file2)).map((node) => node.id);
-    const dependents = uniqueSorted2(
-      matchingNodeIds.flatMap((nodeId) => [...incoming.get(nodeId) ?? /* @__PURE__ */ new Set()])
-    );
-    reverseDependentsByPath[file2] = dependents;
-  }
-  return Object.fromEntries(
-    Object.entries(reverseDependentsByPath).sort(([left], [right]) => left.localeCompare(right))
-  );
-}
-function buildDependencyCoverage(files, surfaces, sourcesConfigured, sourcesUsed, nodes, reverseDependentsByPath) {
-  const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
-  const relevantFiles = files.filter((file2) => {
-    const surface = surfaceByPath.get(file2);
-    return surface ? isReverseDependencyRelevant(surface) : false;
-  });
-  const filesCovered = relevantFiles.filter(
-    (file2) => nodes.some((node) => nodeMatchesChangedFile(node, file2))
-  );
-  const reverseCovered = filesCovered.filter(
-    (file2) => (reverseDependentsByPath[file2]?.length ?? 0) > 0
-  );
-  const filesUncovered = relevantFiles.filter((file2) => !filesCovered.includes(file2));
-  const gaps = uniqueSorted2([
-    ...filesUncovered.map((file2) => `No dependency node covered ${file2}.`),
-    ...relevantFiles.filter((file2) => !reverseCovered.includes(file2)).map((file2) => `Reverse dependency coverage is absent for ${file2}.`)
-  ]);
-  const status = relevantFiles.length === 0 || sourcesUsed.length === 0 || filesCovered.length === 0 ? "none" : gaps.length === 0 ? "complete-ish" : "partial";
-  return {
-    status,
-    sourcesConfigured,
-    sourcesUsed,
-    filesCovered: filesCovered.sort(),
-    filesUncovered: filesUncovered.sort(),
-    gaps
-  };
-}
-function dependencyUnknownId(filePath, surface) {
-  if (surface.surfaces.includes("package-runtime")) {
-    return `unknown.reverseDependencies.package-runtime.${sanitizeIdentifier(filePath)}`;
-  }
-  if (surface.surfaces.includes("secret-sensitive")) {
-    return `unknown.reverseDependencies.security-sensitive.${sanitizeIdentifier(filePath)}`;
-  }
-  if (isContractLikeSurface(surface)) {
-    return `unknown.reverseDependencies.contract.${sanitizeIdentifier(filePath)}`;
-  }
-  return `unknown.reverseDependencies.source.${sanitizeIdentifier(filePath)}`;
-}
-async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, warnings) {
-  const nodesById = /* @__PURE__ */ new Map();
-  const edgesByKey = /* @__PURE__ */ new Map();
-  const evidence = [];
-  const unknowns = [];
-  const sourcesConfigured = uniqueSorted2(config2.dependencyGraph.sources);
-  const sourcesUsed = [];
-  const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
-  if (config2.dependencyGraph.sources.includes(PACKAGE_JSON_SOURCE)) {
-    const packageJsonResult = await loadPackageJsonDependencySource(
-      projectRoot,
-      nodesById,
-      edgesByKey,
-      evidence,
-      warnings
-    );
-    if (packageJsonResult.used) {
-      sourcesUsed.push(PACKAGE_JSON_SOURCE);
-    }
-  }
-  if (config2.dependencyGraph.sources.includes(PACKAGE_LOCK_SOURCE)) {
-    const usedPackageLock = await loadPackageLockDependencySource(
-      projectRoot,
-      nodesById,
-      evidence,
-      unknowns,
-      warnings
-    );
-    if (usedPackageLock) {
-      sourcesUsed.push(PACKAGE_LOCK_SOURCE);
-    }
-  }
-  if (config2.dependencyGraph.sources.includes(CUSTOM_GRAPH_SOURCE) || config2.dependencyGraph.sources.includes("custom")) {
-    const usedCustomGraph = await loadCustomDependencyGraphs(
-      projectRoot,
-      config2,
-      nodesById,
-      edgesByKey,
-      evidence,
-      unknowns,
-      warnings
-    );
-    if (usedCustomGraph) {
-      sourcesUsed.push(CUSTOM_GRAPH_SOURCE);
-    }
-  }
-  if (config2.dependencyGraph.sources.includes(TS_IMPORT_SCAN_SOURCE)) {
-    const usedTsScan = await loadTsImportScanDependencySource(
-      projectRoot,
-      files,
-      surfaceByPath,
-      nodesById,
-      edgesByKey,
-      evidence
-    );
-    if (usedTsScan) {
-      sourcesUsed.push(TS_IMPORT_SCAN_SOURCE);
-    }
-  }
-  const nodes = [...nodesById.values()].sort((left, right) => left.id.localeCompare(right.id));
-  const edges = [...edgesByKey.values()].sort(
-    (left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to) || left.type.localeCompare(right.type) || left.source.localeCompare(right.source)
-  );
-  const reverseDependentsByPath = buildReverseDependentsByPath(files, nodes, edges);
-  const coverage = buildDependencyCoverage(
-    files,
-    surfaces,
-    sourcesConfigured,
-    uniqueSorted2(sourcesUsed),
-    nodes,
-    reverseDependentsByPath
-  );
-  for (const file2 of files) {
-    const surface = surfaceByPath.get(file2);
-    if (!surface || !isReverseDependencyRelevant(surface)) {
-      continue;
-    }
-    const hasReverseCoverage = coverage.filesCovered.includes(file2) && (reverseDependentsByPath[file2]?.length ?? 0) > 0;
-    if (!hasReverseCoverage) {
-      const evidenceRef = addEvidence(evidence, {
-        kind: "dependency",
-        source: "dependency-coverage",
-        summary: "Reverse dependency coverage is absent or partial for this changed file.",
-        paths: [file2],
-        data: {
-          coverageStatus: coverage.status,
-          reverseDependentCount: reverseDependentsByPath[file2]?.length ?? 0
-        }
-      });
-      unknowns.push({
-        id: dependencyUnknownId(file2, surface),
-        category: "dependency",
-        title: "Reverse dependency impact is not fully known",
-        severity: surface.surfaces.includes("secret-sensitive") || isContractLikeSurface(surface) ? "HIGH" : "MEDIUM",
-        impactedFiles: [file2],
-        reason: "The available dependency graph sources do not fully prove which downstream files, packages, or runtime surfaces depend on this change.",
-        resolution: "Add or repair dependency graph metadata, enable bounded import scanning, or review downstream dependents manually.",
-        evidenceRefs: [evidenceRef]
-      });
-    }
-  }
-  const hasGenerated = surfaces.some((surface) => surface.surfaces.includes("generated"));
-  const hasSource = surfaces.some((surface) => surface.surfaces.includes("source"));
-  if (hasGenerated && hasSource) {
-    const impactedFiles = surfaces.filter((surface) => surface.surfaces.includes("generated") || surface.surfaces.includes("source")).map((surface) => surface.path).sort();
-    const evidenceRef = addEvidence(evidence, {
-      kind: "dependency",
-      source: "surface-coverage",
-      summary: "Generated and source files changed together; source remains an impact driver.",
-      paths: impactedFiles
-    });
-    unknowns.push({
-      id: "unknown.reverseDependencies.mixed-generated-source",
-      category: "dependency",
-      title: "Generated and source changes need source-driven dependency review",
-      severity: "MEDIUM",
-      impactedFiles,
-      reason: "Generated output changed alongside source files, so analysis must not downgrade the scope to generated-only.",
-      resolution: "Review source-level dependency coverage and ensure generated output corresponds to the source change.",
-      evidenceRefs: [evidenceRef]
-    });
-  } else if (surfaces.some(isGeneratedOnlySurface)) {
-    addEvidence(evidence, {
-      kind: "dependency",
-      source: "surface-coverage",
-      summary: "Generated-only changed files were detected; dependency conclusions remain scoped to generated outputs.",
-      paths: surfaces.filter(isGeneratedOnlySurface).map((surface) => surface.path)
-    });
-  }
-  return {
-    dependencyGraph: {
-      coverage,
-      nodes,
-      edges,
-      reverseDependentsByPath
-    },
-    unknowns: sortUnknownRecords(unknowns),
-    evidence: sortEvidenceRecords(evidence)
-  };
-}
-async function runGit(projectRoot, args, options = {}) {
+async function runGit(args, options = {}) {
+  const timeoutMs = options.timeoutMs ?? GIT_COMMAND_TIMEOUT_MS;
   try {
     const { stdout, stderr } = await execFileAsync("git", args, {
-      cwd: projectRoot,
-      timeout: GIT_COMMAND_TIMEOUT_MS,
-      env: {
-        ...process.env,
-        GIT_TERMINAL_PROMPT: "0"
-      }
-    });
-    return {
-      stdout,
-      stderr,
-      success: true
-    };
-  } catch (error2) {
-    if (!options.allowFailure) {
-      throw error2;
-    }
-    const stdout = error2 && typeof error2 === "object" && "stdout" in error2 ? String(error2.stdout ?? "") : "";
-    const stderr = error2 && typeof error2 === "object" && "stderr" in error2 ? String(error2.stderr ?? "") : error2 instanceof Error ? error2.message : "git command failed";
-    return {
-      stdout,
-      stderr,
-      success: false
-    };
-  }
-}
-async function isGitRepository(projectRoot) {
-  const result = await runGit(projectRoot, ["rev-parse", "--is-inside-work-tree"], {
-    allowFailure: true
-  });
-  return result.success && result.stdout.trim() === "true";
-}
-function parseNullSeparatedPaths(stdout) {
-  return [...new Set(stdout.split("\0").map((value) => value.trim()).filter(Boolean))].sort();
-}
-function parseNumstat(stdout) {
-  let additions = 0;
-  let deletions = 0;
-  let sawBinary = false;
-  for (const line of stdout.split(/\r?\n/u)) {
-    const [rawAdditions, rawDeletions] = line.split("	");
-    if (!rawAdditions || !rawDeletions) {
-      continue;
-    }
-    if (rawAdditions === "-" || rawDeletions === "-") {
-      sawBinary = true;
-      continue;
-    }
-    additions += Number.parseInt(rawAdditions, 10);
-    deletions += Number.parseInt(rawDeletions, 10);
-  }
-  return {
-    additions: sawBinary ? null : additions,
-    deletions: sawBinary ? null : deletions
-  };
-}
-function parsePorcelainPaths(stdout) {
-  const paths = [];
-  for (const line of stdout.split(/\r?\n/u)) {
-    if (line.trim().length === 0) {
-      continue;
-    }
-    const status = line.slice(0, 2);
-    const rawPath = line.slice(3).trim();
-    const normalizedPath = rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) ?? rawPath : rawPath;
-    if (status === "??" || status[1] !== " ") {
-      paths.push(normalizedPath.replace(/^"|"$/gu, ""));
-    }
-  }
-  return paths;
-}
-function assertSafeGitRevision(value, label) {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    throw new Error(`${label} must not be blank.`);
-  }
-  if (trimmed.includes("\0") || trimmed.startsWith("-")) {
-    throw new Error(`${label} is not a safe git revision: ${value}`);
-  }
-  return trimmed;
-}
-async function resolveGitDiffMetadata(projectRoot, kind, diffArgs, hashSeed) {
-  const nameResult = await runGit(
-    projectRoot,
-    ["diff", "--name-only", "-z", "--diff-filter=ACMRTUXB", ...diffArgs],
-    { allowFailure: true }
-  );
-  if (!nameResult.success) {
-    return {
-      changedFiles: [],
-      additions: null,
-      deletions: null,
-      patchHash: null
-    };
-  }
-  let changedFiles = parseNullSeparatedPaths(nameResult.stdout);
-  const numstatResult = await runGit(projectRoot, ["diff", "--numstat", ...diffArgs], {
-    allowFailure: true
-  });
-  const stats = numstatResult.success ? parseNumstat(numstatResult.stdout) : { additions: null, deletions: null };
-  if (kind === "working-tree") {
-    const statusResult = await runGit(projectRoot, ["status", "--porcelain=v1"], {
-      allowFailure: true
-    });
-    const workingTreeOnlyPaths = statusResult.success ? parsePorcelainPaths(statusResult.stdout) : [];
-    changedFiles = [.../* @__PURE__ */ new Set([...changedFiles, ...workingTreeOnlyPaths])].sort();
-  }
-  return {
-    changedFiles,
-    additions: stats.additions,
-    deletions: stats.deletions,
-    patchHash: changedFiles.length > 0 ? stableHash({
-      ...hashSeed,
-      changedFiles,
-      additions: stats.additions,
-      deletions: stats.deletions
-    }) : null
-  };
-}
-function parseDiffFilePaths(rawDiff) {
-  const paths = [];
-  for (const line of rawDiff.split(/\r?\n/u)) {
-    if (line.startsWith("diff --git ")) {
-      const match = /^diff --git "?a\/(.+?)"? "?b\/(.+?)"?$/u.exec(line);
-      if (match?.[2] && match[2] !== "/dev/null") {
-        paths.push(match[2]);
-      }
-      continue;
-    }
-    if (line.startsWith("+++ ")) {
-      const nextPath = line.slice(4).trim();
-      if (nextPath !== "/dev/null") {
-        paths.push(nextPath.replace(/^"?(?:b\/)?(.+?)"?$/u, "$1"));
-      }
-    }
-  }
-  return [...new Set(paths)].sort();
-}
-function parseDiffFileStats(rawDiff) {
-  let additions = 0;
-  let deletions = 0;
-  for (const line of rawDiff.split(/\r?\n/u)) {
-    if (line.startsWith("+++") || line.startsWith("---")) {
-      continue;
-    }
-    if (line.startsWith("+")) {
-      additions += 1;
-    } else if (line.startsWith("-")) {
-      deletions += 1;
-    }
-  }
-  return { additions, deletions };
-}
-function confidenceForScope(kind, changedFiles, warnings) {
-  if (kind === "description") {
-    return {
-      score: 0.2,
-      level: "low",
-      reasons: [
-        "Description-only impact scope has no proven file or git evidence.",
-        "Description-only scope cannot produce a high-confidence PASS."
-      ]
-    };
-  }
-  if (changedFiles.length === 0) {
-    return {
-      score: 0,
-      level: "low",
-      reasons: ["No changed files were resolved for impact analysis."]
-    };
-  }
-  if (warnings.length > 0) {
-    return {
-      score: 0.72,
-      level: "medium",
-      reasons: ["Scope is file-backed, but one or more resolution warnings remain."]
-    };
-  }
-  return {
-    score: kind === "files" ? 0.76 : 0.86,
-    level: "high",
-    reasons: kind === "files" ? ["Explicit file scope was provided and path-containment checks passed."] : ["Git-backed scope resolved changed files and deterministic diff metadata."]
-  };
-}
-function unresolvedScopeResult(mode, description, warnings, seed) {
-  return {
-    status: "unresolved",
-    scope: {
-      kind: "unresolved",
-      description,
-      files: [],
-      source: "unresolved"
-    },
-    changedFiles: [],
-    git: {
-      mode,
-      range: null,
-      base: null,
-      head: null
-    },
-    diffStats: {
-      filesChanged: 0,
-      additions: null,
-      deletions: null
-    },
-    patchHash: null,
-    scopeFingerprint: stableHash(seed),
-    confidence: confidenceForScope("unresolved", [], warnings),
-    warnings
-  };
-}
-async function detectDefaultBaseRef(projectRoot) {
-  for (const baseBranch of BUILT_IN_BASE_BRANCHES) {
-    const localResult = await runGit(
-      projectRoot,
-      ["rev-parse", "--verify", `${baseBranch}^{commit}`],
-      { allowFailure: true }
-    );
-    if (localResult.success) {
-      return baseBranch;
-    }
-    const remoteResult = await runGit(
-      projectRoot,
-      ["rev-parse", "--verify", `origin/${baseBranch}^{commit}`],
-      { allowFailure: true }
-    );
-    if (remoteResult.success) {
-      return `origin/${baseBranch}`;
-    }
-  }
-  const originHead = await runGit(
-    projectRoot,
-    ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
-    { allowFailure: true }
-  );
-  return originHead.success ? originHead.stdout.trim() : null;
-}
-async function resolveAutoGitScope(projectRoot) {
-  const staged = await resolveGitDiffMetadata(projectRoot, "staged", ["--cached", "--"], {
-    kind: "staged"
-  });
-  if (staged.changedFiles.length > 0) {
-    return {
-      kind: "staged",
-      diffArgs: ["--cached", "--"],
-      range: null,
-      base: null,
-      head: null,
-      source: "git-staged"
-    };
-  }
-  const workingTree = await resolveGitDiffMetadata(projectRoot, "working-tree", ["--"], {
-    kind: "working-tree"
-  });
-  if (workingTree.changedFiles.length > 0) {
-    return {
-      kind: "working-tree",
-      diffArgs: ["--"],
-      range: null,
-      base: null,
-      head: null,
-      source: "git-working-tree"
-    };
-  }
-  const currentBranch = await runGit(projectRoot, ["branch", "--show-current"], {
-    allowFailure: true
-  });
-  const baseRef = await detectDefaultBaseRef(projectRoot);
-  const branchName = currentBranch.success ? currentBranch.stdout.trim() : "";
-  if (baseRef && branchName && !BUILT_IN_BASE_BRANCHES.includes(branchName)) {
-    return {
-      kind: "base-head",
-      diffArgs: [`${baseRef}..HEAD`, "--"],
-      range: null,
-      base: baseRef,
-      head: "HEAD",
-      source: "git-current-branch"
-    };
-  }
-  if (process.env.GITHUB_BASE_REF && process.env.GITHUB_HEAD_REF) {
-    return {
-      kind: "base-head",
-      diffArgs: [`${process.env.GITHUB_BASE_REF}..${process.env.GITHUB_HEAD_REF}`, "--"],
-      range: null,
-      base: process.env.GITHUB_BASE_REF,
-      head: process.env.GITHUB_HEAD_REF,
-      source: "ci-pr-refs"
-    };
-  }
-  if (process.env.CI && (await runGit(projectRoot, ["rev-parse", "--verify", "HEAD^"], {
-    allowFailure: true
-  })).success) {
-    return {
-      kind: "range",
-      diffArgs: ["HEAD^..HEAD", "--"],
-      range: "HEAD^..HEAD",
-      base: null,
-      head: null,
-      source: "ci-head-parent"
-    };
-  }
-  return null;
-}
-async function loadSeededScopeArgs(projectRoot, args) {
-  if (!args.seedFile) {
-    return args;
-  }
-  const seedPath = resolveContainedInputPath(projectRoot, args.seedFile, "Impact seed file");
-  const parsed = safeJsonParseObject(await fs6.readFile(seedPath, "utf8"), {
-    label: "Impact seed file"
-  });
-  const seedResult = impactScopeSeedSchema.safeParse(parsed);
-  if (!seedResult.success) {
-    throw new Error(
-      formatZodIssues("Invalid impact seed file:", seedResult.error).join(" ")
-    );
-  }
-  return {
-    ...seedResult.data,
-    ...args,
-    meta: {
-      ...seedResult.data.meta ?? {},
-      ...args.meta ?? {}
-    }
-  };
-}
-async function blueprintImpactConfigGet(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const strictConfig = args.strictConfig ?? false;
-  const config2 = cloneConfig2(getBuiltInImpactConfig());
-  const warnings = [];
-  const errors = [];
-  const layersApplied = ["built-in"];
-  const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path7.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
-  let appliedDefaultsPath = null;
-  let appliedProjectPath = null;
-  let appliedInvocationPath = null;
-  const defaultsLayer = await readConfigLayer(
-    defaultsPath,
-    "Impact host-global defaults",
-    warnings,
-    errors
-  );
-  if (defaultsLayer) {
-    if (applyConfigLayer2(
-      config2,
-      defaultsLayer,
-      "host-global defaults",
-      strictConfig,
-      warnings,
-      errors
-    )) {
-      layersApplied.push("host-global-defaults");
-      appliedDefaultsPath = defaultsPath;
-    }
-  } else {
-    warnings.push(
-      `No host-global impact defaults found at ${defaultsPath}; using built-in safe defaults for that layer.`
-    );
-  }
-  const projectLayer = await readConfigLayer(
-    projectConfigPath,
-    "Project impact config",
-    warnings,
-    errors
-  );
-  if (projectLayer) {
-    if (applyConfigLayer2(config2, projectLayer, "project config", strictConfig, warnings, errors)) {
-      layersApplied.push("project");
-      appliedProjectPath = toRepoRelativePath(projectRoot, projectConfigPath);
-    }
-  } else {
-    warnings.push(
-      `No project impact config found at ${IMPACT_PROJECT_CONFIG_PATH}; using built-in safe defaults for that layer.`
-    );
-  }
-  if (args.configPath) {
-    const invocationPath = resolveContainedInputPath(
-      projectRoot,
-      args.configPath,
-      "Invocation impact config path"
-    );
-    const invocationLayer = await readConfigLayer(
-      invocationPath,
-      "Invocation impact config",
-      warnings,
-      errors
-    );
-    if (invocationLayer) {
-      if (applyConfigLayer2(
-        config2,
-        invocationLayer,
-        "invocation config",
-        strictConfig,
-        warnings,
-        errors
-      )) {
-        layersApplied.push("invocation");
-        appliedInvocationPath = toRepoRelativePath(projectRoot, invocationPath);
-      }
-    } else {
-      errors.push(`Invocation impact config was not found: ${args.configPath}`);
-    }
-  }
-  if (args.overrides && Object.keys(args.overrides).length > 0) {
-    if (applyConfigLayer2(
-      config2,
-      args.overrides,
-      "invocation overrides",
-      strictConfig,
-      warnings,
-      errors
-    )) {
-      layersApplied.push("overrides");
-    }
-  }
-  const effectiveConfig = validateFinalImpactConfig(config2, errors);
-  if (errors.length === 0) {
-    warnings.push("Impact config loaded successfully through the Phase 3 config resolver.");
-  }
-  return {
-    status: errors.length === 0 ? "ok" : "invalid",
-    config: effectiveConfig,
-    provenance: {
-      layersApplied,
-      defaultsPath: appliedDefaultsPath,
-      projectPath: appliedProjectPath,
-      invocationPath: appliedInvocationPath
-    },
-    warnings: [...new Set(warnings)],
-    errors: [...new Set(errors)],
-    configHash: stableHash(effectiveConfig)
-  };
-}
-async function resolveFilesScope(projectRoot, args, mode, description, warnings) {
-  const files = [
-    ...new Set(
-      (args.files ?? []).map(
-        (file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact file")
-      )
-    )
-  ].sort();
-  const nextWarnings = files.length > 0 ? warnings : [...warnings, "Explicit files mode did not include any files to analyze."];
-  return {
-    status: files.length > 0 ? "resolved" : "unresolved",
-    scope: {
-      kind: "files",
-      description,
-      files,
-      source: "explicit-files"
-    },
-    changedFiles: files,
-    git: {
-      mode,
-      range: null,
-      base: null,
-      head: null
-    },
-    diffStats: {
-      filesChanged: files.length,
-      additions: null,
-      deletions: null
-    },
-    patchHash: files.length > 0 ? stableHash({ mode: "files", files }) : null,
-    scopeFingerprint: stableHash({
-      mode: "files",
-      description,
-      files,
-      phase: args.phase ?? null,
-      roadmapItem: args.roadmapItem ?? null,
-      meta: args.meta ?? {}
-    }),
-    confidence: confidenceForScope("files", files, nextWarnings),
-    warnings: nextWarnings
-  };
-}
-async function resolveDiffFileScope(projectRoot, args, mode, description, warnings) {
-  if (!args.diffFile) {
-    return unresolvedScopeResult(
-      mode,
-      description,
-      [...warnings, "diff-file scope requires a diffFile path."],
-      { mode, description, reason: "missing-diff-file" }
-    );
-  }
-  const diffPath = resolveContainedInputPath(projectRoot, args.diffFile, "Impact diff file");
-  const rawDiff = await fs6.readFile(diffPath, "utf8");
-  const files = parseDiffFilePaths(rawDiff).map((file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact diff path")).sort();
-  const stats = parseDiffFileStats(rawDiff);
-  const diffFileRelativePath = toRepoRelativePath(projectRoot, diffPath);
-  const nextWarnings = files.length > 0 ? warnings : [...warnings, "Diff file did not expose changed file paths."];
-  return {
-    status: files.length > 0 ? "resolved" : "unresolved",
-    scope: {
-      kind: "diff-file",
-      description,
-      files,
-      source: diffFileRelativePath
-    },
-    changedFiles: files,
-    git: {
-      mode,
-      range: null,
-      base: null,
-      head: null
-    },
-    diffStats: {
-      filesChanged: files.length,
-      additions: stats.additions,
-      deletions: stats.deletions
-    },
-    patchHash: files.length > 0 ? stableHash({
-      mode: "diff-file",
-      diffFile: diffFileRelativePath,
-      byteLength: Buffer.byteLength(rawDiff, "utf8"),
-      files,
-      additions: stats.additions,
-      deletions: stats.deletions
-    }) : null,
-    scopeFingerprint: stableHash({
-      mode: "diff-file",
-      description,
-      diffFile: diffFileRelativePath,
-      files,
-      phase: args.phase ?? null,
-      roadmapItem: args.roadmapItem ?? null,
-      meta: args.meta ?? {}
-    }),
-    confidence: confidenceForScope("diff-file", files, nextWarnings),
-    warnings: nextWarnings
-  };
-}
-function resolveDescriptionScope(args, mode, description, warnings) {
-  const nextWarnings = [
-    ...warnings,
-    "Description-only impact scope is low confidence because no changed files or git evidence were resolved.",
-    "Description-only scope cannot be marked as a high-confidence PASS."
-  ];
-  const fingerprintSeed = {
-    mode: "description",
-    description,
-    phase: args.phase ?? null,
-    roadmapItem: args.roadmapItem ?? null,
-    meta: args.meta ?? {}
-  };
-  return {
-    status: "resolved",
-    scope: {
-      kind: "description",
-      description,
-      files: [],
-      source: "description-only"
-    },
-    changedFiles: [],
-    git: {
-      mode,
-      range: null,
-      base: null,
-      head: null
-    },
-    diffStats: {
-      filesChanged: 0,
-      additions: null,
-      deletions: null
-    },
-    patchHash: stableHash(fingerprintSeed),
-    scopeFingerprint: stableHash(fingerprintSeed),
-    confidence: confidenceForScope("description", [], nextWarnings),
-    warnings: nextWarnings
-  };
-}
-async function resolveGitBackedScope(projectRoot, args, mode, kind, diffArgs, git, source, description, warnings) {
-  const metadata = await resolveGitDiffMetadata(projectRoot, kind, diffArgs, {
-    kind,
-    git
-  });
-  const nextWarnings = metadata.changedFiles.length > 0 ? warnings : [...warnings, `No changed files were found for ${kind} scope.`];
-  return {
-    status: metadata.changedFiles.length > 0 ? "resolved" : "unresolved",
-    scope: {
-      kind,
-      description,
-      files: metadata.changedFiles,
-      source
-    },
-    changedFiles: metadata.changedFiles,
-    git: {
-      mode,
-      range: git.range,
-      base: git.base,
-      head: git.head
-    },
-    diffStats: {
-      filesChanged: metadata.changedFiles.length,
-      additions: metadata.additions,
-      deletions: metadata.deletions
-    },
-    patchHash: metadata.patchHash,
-    scopeFingerprint: stableHash({
-      mode,
-      kind,
-      source,
-      description,
-      files: metadata.changedFiles,
-      git,
-      phase: args.phase ?? null,
-      roadmapItem: args.roadmapItem ?? null,
-      meta: args.meta ?? {}
-    }),
-    confidence: confidenceForScope(kind, metadata.changedFiles, nextWarnings),
-    warnings: nextWarnings
-  };
-}
-async function resolveScopeWithGit(projectRoot, args, mode, description, warnings) {
-  if (mode === "staged") {
-    return resolveGitBackedScope(
-      projectRoot,
-      args,
-      mode,
-      "staged",
-      ["--cached", "--"],
-      { range: null, base: null, head: null },
-      "git-staged",
-      description,
-      warnings
-    );
-  }
-  if (mode === "working-tree") {
-    return resolveGitBackedScope(
-      projectRoot,
-      args,
-      mode,
-      "working-tree",
-      ["--"],
-      { range: null, base: null, head: null },
-      "git-working-tree",
-      description,
-      warnings
-    );
-  }
-  if (mode === "range") {
-    if (!args.range) {
-      return unresolvedScopeResult(
-        mode,
-        description,
-        [...warnings, "range scope requires a range value."],
-        { mode, description, reason: "missing-range" }
-      );
-    }
-    const range = assertSafeGitRevision(args.range, "Impact git range");
-    return resolveGitBackedScope(
-      projectRoot,
-      args,
-      mode,
-      "range",
-      [range, "--"],
-      { range, base: null, head: null },
-      "git-range",
-      description,
-      warnings
-    );
-  }
-  if (mode === "base-head") {
-    if (!args.base || !args.head) {
-      return unresolvedScopeResult(
-        mode,
-        description,
-        [...warnings, "base-head scope requires both base and head values."],
-        { mode, description, reason: "missing-base-head" }
-      );
-    }
-    const base = assertSafeGitRevision(args.base, "Impact base ref");
-    const head = assertSafeGitRevision(args.head, "Impact head ref");
-    return resolveGitBackedScope(
-      projectRoot,
-      args,
-      mode,
-      "base-head",
-      [`${base}..${head}`, "--"],
-      { range: null, base, head },
-      "git-base-head",
-      description,
-      warnings
-    );
-  }
-  const autoScope = await resolveAutoGitScope(projectRoot);
-  if (autoScope) {
-    return resolveGitBackedScope(
-      projectRoot,
-      args,
-      mode,
-      autoScope.kind,
-      autoScope.diffArgs,
-      {
-        range: autoScope.range,
-        base: autoScope.base,
-        head: autoScope.head
-      },
-      autoScope.source,
-      description,
-      warnings
-    );
-  }
-  if (description) {
-    return resolveDescriptionScope(args, mode, description, warnings);
-  }
-  return unresolvedScopeResult(
-    mode,
-    description,
-    [...warnings, "No staged, working-tree, branch, CI, or description scope could be resolved."],
-    { mode, description, reason: "no-auto-scope" }
-  );
-}
-async function blueprintImpactScopeResolve(args = {}) {
-  const initialProjectRoot = getProjectRoot(args.cwd);
-  const hasGit = await isGitRepository(initialProjectRoot);
-  const projectRoot = hasGit ? await ensureRepoRoot(args.cwd) : initialProjectRoot;
-  const seededArgs = await loadSeededScopeArgs(projectRoot, args);
-  const mode = seededArgs.mode ?? "auto";
-  const description = seededArgs.description?.trim() || null;
-  const warnings = [];
-  if (!hasGit) {
-    warnings.push("No git repository was detected for scope resolution.");
-  }
-  if (mode === "files" || mode === "auto" && seededArgs.files?.length) {
-    return resolveFilesScope(projectRoot, seededArgs, mode, description, warnings);
-  }
-  if (mode === "diff-file" || mode === "auto" && seededArgs.diffFile) {
-    return resolveDiffFileScope(projectRoot, seededArgs, mode, description, warnings);
-  }
-  if (mode === "description") {
-    return resolveDescriptionScope(seededArgs, mode, description, warnings);
-  }
-  if (!hasGit) {
-    if (description) {
-      return resolveDescriptionScope(seededArgs, mode, description, warnings);
-    }
-    return unresolvedScopeResult(
-      mode,
-      description,
-      [...warnings, "A git-backed scope was requested, but this directory is not a git repository."],
-      { mode, description, reason: "not-git-repository" }
-    );
-  }
-  if (mode === "auto" && seededArgs.range) {
-    return resolveScopeWithGit(projectRoot, seededArgs, "range", description, warnings);
-  }
-  if (mode === "auto" && seededArgs.base && seededArgs.head) {
-    return resolveScopeWithGit(projectRoot, seededArgs, "base-head", description, warnings);
-  }
-  return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
-}
-async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path7.join(projectRoot, "package.json");
-  if (!await pathExists4(packageJsonPath)) {
-    return {
-      loaded: false,
-      name: null,
-      version: null,
-      scripts: [],
-      packageManager: null,
-      warnings: ["No package.json found; package runtime hints are unavailable."],
-      partial: false
-    };
-  }
-  try {
-    const parsed = safeJsonParseObject(await fs6.readFile(packageJsonPath, "utf8"), {
-      label: "package.json"
-    });
-    const scripts = isPlainObject6(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
-    return {
-      loaded: true,
-      name: typeof parsed.name === "string" ? parsed.name : null,
-      version: typeof parsed.version === "string" ? parsed.version : null,
-      scripts,
-      packageManager: typeof parsed.packageManager === "string" ? parsed.packageManager : null,
-      warnings: [],
-      partial: false
-    };
-  } catch (error2) {
-    return {
-      loaded: false,
-      name: null,
-      version: null,
-      scripts: [],
-      packageManager: null,
-      warnings: [
-        `Could not parse package.json for impact repo hints: ${error2 instanceof Error ? error2.message : String(error2)}`
-      ],
-      partial: true
-    };
-  }
-}
-async function listExistingTopLevelPaths(projectRoot, candidates) {
-  const existing = [];
-  for (const candidate of candidates) {
-    if (await pathExists4(path7.join(projectRoot, candidate))) {
-      existing.push(candidate);
-    }
-  }
-  return existing.sort();
-}
-async function loadRepoHints(projectRoot, artifactContractsLoaded) {
-  const packageMetadata = await readPackageMetadata(projectRoot);
-  const testPaths = await listExistingTopLevelPaths(projectRoot, [
-    "tests",
-    "test",
-    "src/__tests__"
-  ]);
-  const docsPaths = await listExistingTopLevelPaths(projectRoot, [
-    "docs",
-    "README.md",
-    "CHANGELOG.md"
-  ]);
-  const sourceRoots = await listExistingTopLevelPaths(projectRoot, [
-    "src",
-    "lib",
-    "packages",
-    "apps"
-  ]);
-  return {
-    repoHints: {
-      cwdAccepted: true,
-      packageMetadataLoaded: packageMetadata.loaded,
-      packageJsonPath: packageMetadata.loaded ? "package.json" : null,
-      packageName: packageMetadata.name,
-      packageVersion: packageMetadata.version,
-      packageScripts: packageMetadata.scripts,
-      packageManager: packageMetadata.packageManager,
-      testPaths,
-      docsPaths,
-      sourceRoots,
-      artifactContractsLoaded
-    },
-    warnings: packageMetadata.warnings,
-    partial: packageMetadata.partial
-  };
-}
-function normalizeRoadmapItem(value) {
-  return String(value).trim().toLowerCase();
-}
-function getRoadmapPhases(roadmap) {
-  return (roadmap?.phases ?? []).map((phase) => ({
-    phaseNumber: phase.phaseNumber,
-    phaseName: phase.phaseName,
-    requirements: phase.requirements
-  }));
-}
-function matchRoadmapItem(roadmap, roadmapItem) {
-  const normalizedItem = normalizeRoadmapItem(roadmapItem);
-  return getRoadmapPhases(roadmap).filter((phase) => {
-    if (normalizeRoadmapItem(phase.phaseNumber) === normalizedItem) {
-      return true;
-    }
-    if (normalizeRoadmapItem(phase.phaseName) === normalizedItem) {
-      return true;
-    }
-    return phase.requirements.some(
-      (requirement) => normalizeRoadmapItem(requirement) === normalizedItem
-    );
-  });
-}
-function comparePhaseNumbers3(left, right) {
-  const leftNumber = Number.parseFloat(left);
-  const rightNumber = Number.parseFloat(right);
-  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) {
-    return leftNumber - rightNumber;
-  }
-  return left.localeCompare(right, void 0, { numeric: true });
-}
-function mergePhaseContextEntry(entries, context, requestedBy) {
-  if (!context.phase) {
-    return;
-  }
-  const existing = entries.get(context.phase.phaseNumber);
-  if (existing) {
-    existing.requestedBy = [.../* @__PURE__ */ new Set([...existing.requestedBy, requestedBy])].sort();
-    existing.warnings = [.../* @__PURE__ */ new Set([...existing.warnings, ...context.warnings])].sort();
-    return;
-  }
-  entries.set(context.phase.phaseNumber, {
-    phaseNumber: context.phase.phaseNumber,
-    phaseName: context.phase.phaseName,
-    requestedBy: [requestedBy],
-    context,
-    warnings: [...new Set(context.warnings)].sort()
-  });
-}
-async function loadRequestedPhaseContexts(projectRoot, args, roadmap, warnings) {
-  const entries = /* @__PURE__ */ new Map();
-  let partial2 = false;
-  if (args.phase !== void 0) {
-    try {
-      const context = await blueprintPhaseContext({ cwd: projectRoot, phase: args.phase });
-      if (context.phase) {
-        mergePhaseContextEntry(entries, context, "phase");
-      } else {
-        partial2 = true;
-        warnings.push(
-          `Requested impact phase target could not be resolved: ${String(args.phase)}.`
-        );
-        warnings.push(...context.warnings);
-      }
-    } catch (error2) {
-      partial2 = true;
-      warnings.push(
-        `Requested impact phase target could not be loaded: ${String(args.phase)} (${error2 instanceof Error ? error2.message : String(error2)}).`
-      );
-    }
-  }
-  if (args.roadmapItem !== void 0) {
-    const matches = matchRoadmapItem(roadmap, args.roadmapItem);
-    if (matches.length === 0) {
-      partial2 = true;
-      warnings.push(
-        `Requested impact roadmapItem could not be resolved from phase number, phase name, or requirement id: ${args.roadmapItem}.`
-      );
-    }
-    for (const match of matches) {
-      try {
-        const context = await blueprintPhaseContext({
-          cwd: projectRoot,
-          phase: match.phaseNumber
-        });
-        if (context.phase) {
-          mergePhaseContextEntry(entries, context, "roadmapItem");
-        } else {
-          partial2 = true;
-          warnings.push(
-            `Requested impact roadmapItem matched phase ${match.phaseNumber}, but phase context could not be loaded.`
-          );
-          warnings.push(...context.warnings);
-        }
-      } catch (error2) {
-        partial2 = true;
-        warnings.push(
-          `Requested impact roadmapItem matched phase ${match.phaseNumber}, but phase context failed to load (${error2 instanceof Error ? error2.message : String(error2)}).`
-        );
-      }
-    }
-  }
-  return {
-    phases: [...entries.values()].sort(
-      (left, right) => comparePhaseNumbers3(left.phaseNumber, right.phaseNumber)
-    ),
-    partial: partial2
-  };
-}
-function buildCommandAssets(catalog) {
-  const commands = catalog.commands ?? {};
-  const entries = Object.entries(commands);
-  const manifestPaths = entries.map(([, entry]) => entry.manifestPath).filter((value) => typeof value === "string").sort();
-  const specPaths = entries.map(([, entry]) => entry.specPath).filter((value) => typeof value === "string").sort();
-  const skillPaths = entries.map(([, entry]) => entry.skillPath).filter((value) => typeof value === "string").sort();
-  const implementedCommands = entries.filter(([, entry]) => entry.implemented === true).map(([command]) => command).sort();
-  const nonRoutableCommands = entries.filter(([, entry]) => entry.implemented !== true).map(([command]) => command).sort();
-  const missingAssetCount = entries.reduce(
-    (count, [, entry]) => count + (entry.blockedBy ?? []).filter((blockedBy) => blockedBy.startsWith("Missing ")).length,
-    0
-  );
-  return {
-    commandCount: entries.length,
-    implementedCommands,
-    nonRoutableCommands,
-    manifestPaths,
-    specPaths,
-    skillPaths,
-    missingAssetCount,
-    impact: commands.impact ?? null
-  };
-}
-async function loadProjectStatus(projectRoot) {
-  const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
-  return projectModule.blueprintProjectStatus({ cwd: projectRoot });
-}
-async function loadCommandCatalog() {
-  const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
-  return projectModule.blueprintCommandCatalog();
-}
-async function blueprintImpactContextLoad(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const includeRuntime = args.includeRuntime ?? true;
-  const includeCatalog = args.includeCatalog ?? true;
-  const includeArtifacts = args.includeArtifacts ?? true;
-  const warnings = [];
-  let partial2 = false;
-  let project = null;
-  let config2 = null;
-  let roadmap = null;
-  let catalog;
-  let commandAssets;
-  let artifactContracts;
-  let runtime;
-  try {
-    project = await loadProjectStatus(projectRoot);
-  } catch (error2) {
-    partial2 = true;
-    warnings.push(
-      `Blueprint project status could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
-    );
-  }
-  try {
-    config2 = await blueprintConfigGet({ cwd: projectRoot, scope: "effective" });
-    warnings.push(...config2.warnings);
-  } catch (error2) {
-    partial2 = true;
-    warnings.push(
-      `Blueprint config could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
-    );
-  }
-  try {
-    roadmap = await blueprintRoadmapRead({ cwd: projectRoot });
-    warnings.push(...roadmap.warnings);
-  } catch (error2) {
-    partial2 = true;
-    warnings.push(
-      `Blueprint roadmap could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
-    );
-  }
-  if (includeCatalog) {
-    try {
-      catalog = await loadCommandCatalog();
-      commandAssets = buildCommandAssets(catalog);
-    } catch (error2) {
-      partial2 = true;
-      warnings.push(
-        `Blueprint command catalog could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
-      );
-    }
-  } else {
-    warnings.push(
-      "includeCatalog=false; command catalog and command asset context omitted by request."
-    );
-  }
-  if (includeArtifacts) {
-    try {
-      artifactContracts = listArtifactContracts();
-    } catch (error2) {
-      partial2 = true;
-      warnings.push(
-        `Blueprint artifact contracts could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
-      );
-    }
-  } else {
-    warnings.push("includeArtifacts=false; artifact contract context omitted by request.");
-  }
-  if (includeRuntime) {
-    runtime = {
-      registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 5,
-      readOnly: true,
-      includeRuntime,
-      includeCatalog,
-      includeArtifacts
-    };
-  } else {
-    warnings.push("includeRuntime=false; runtime metadata omitted by request.");
-  }
-  const requestedPhases = await loadRequestedPhaseContexts(
-    projectRoot,
-    args,
-    roadmap,
-    warnings
-  );
-  partial2 ||= requestedPhases.partial;
-  const repoHintsResult = await loadRepoHints(projectRoot, artifactContracts !== void 0);
-  partial2 ||= repoHintsResult.partial;
-  warnings.push(...repoHintsResult.warnings);
-  return {
-    status: partial2 ? "partial" : "loaded",
-    project,
-    config: config2,
-    roadmap,
-    phases: requestedPhases.phases,
-    ...catalog !== void 0 ? { catalog } : {},
-    ...commandAssets !== void 0 ? { commandAssets } : {},
-    ...artifactContracts !== void 0 ? { artifactContracts } : {},
-    ...runtime !== void 0 ? { runtime } : {},
-    repoHints: repoHintsResult.repoHints,
-    warnings: [...new Set(warnings)].sort()
-  };
-}
-async function blueprintImpactAnalyze(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const warnings = [];
-  const config2 = resolveAnalyzeImpactConfig(args.config, warnings);
-  const sources = collectAnalyzeFileSources(args);
-  const files = normalizeAnalyzeFileSources(projectRoot, sources, warnings);
-  const surfaces = files.map((file2) => classifyImpactFile(file2));
-  const areaSummary = buildAreaSummary(surfaces);
-  const surfaceSummary = buildSurfaceSummary(surfaces);
-  const evidence = [];
-  if (sources.length === 0) {
-    warnings.push(
-      "No changed files were provided to impact analysis; Phase 5 ownership and dependency analysis has no file-backed surfaces."
-    );
-  }
-  addEvidence(evidence, {
-    kind: "surface",
-    source: "impact-surface-classifier",
-    summary: "Changed files were classified into deterministic multi-label impact surfaces.",
-    paths: files,
-    data: {
-      fileCount: files.length,
-      areaCount: areaSummary.length,
-      surfaceCount: surfaceSummary.length
-    }
-  });
-  addEvidence(evidence, {
-    kind: "config",
-    source: "impact-analyze-config",
-    summary: "Impact analysis resolved effective Phase 5 ownership and dependency configuration.",
-    paths: [],
-    data: {
-      ownershipSources: config2.ownership.sources,
-      dependencySources: config2.dependencyGraph.sources,
-      customGraphFiles: config2.dependencyGraph.customGraphFiles
-    }
-  });
-  const ownershipResult = await loadOwnershipAnalysis(
-    projectRoot,
-    files,
-    surfaces,
-    config2,
-    warnings
-  );
-  const dependencyResult = await loadDependencyAnalysis(
-    projectRoot,
-    files,
-    surfaces,
-    config2,
-    warnings
-  );
-  const deferredEvidenceRef = addEvidence(evidence, {
-    kind: "metadata",
-    source: "phase-5-deferred-checks",
-    summary: "Phase 5 analyzes ownership and dependencies only; contract, obligation, and scoring phases remain deferred.",
-    paths: []
-  });
-  const deferredUnknowns = [
-    {
-      id: "unknown.contractChecksDeferred",
-      category: "contract",
-      title: "Contract checks are deferred",
-      severity: "MEDIUM",
-      impactedFiles: files,
-      reason: "Phase 6 contract and compatibility checks are not part of this Phase 5 implementation.",
-      resolution: "Run the future contract/compatibility phase when it lands before treating compatibility as proven.",
-      evidenceRefs: [deferredEvidenceRef]
-    },
-    {
-      id: "unknown.obligationChecksDeferred",
-      category: "obligation",
-      title: "Review, test, and documentation obligations are deferred",
-      severity: "MEDIUM",
-      impactedFiles: files,
-      reason: "Phase 6/7 obligation checks are not part of this Phase 5 implementation.",
-      resolution: "Use later obligation analysis before relying on this report for required tests or reviewers beyond ownership.",
-      evidenceRefs: [deferredEvidenceRef]
-    },
-    {
-      id: "unknown.riskScoringDeferred",
-      category: "risk-scoring",
-      title: "Full risk scoring is deferred",
-      severity: "LOW",
-      impactedFiles: files,
-      reason: "Phase 7 full scoring is deferred; Phase 5 only adjusts status for sensitive missing-owner BLOCK cases.",
-      resolution: "Treat current risk and confidence as simple advisory signals until Phase 7 scoring lands.",
-      evidenceRefs: [deferredEvidenceRef]
-    }
-  ];
-  const findings = sortFindings([...ownershipResult.findings]);
-  const unknowns = sortUnknownRecords([
-    ...ownershipResult.unknowns,
-    ...dependencyResult.unknowns,
-    ...deferredUnknowns
-  ]);
-  const allEvidence = sortEvidenceRecords([
-    ...evidence,
-    ...ownershipResult.evidence,
-    ...dependencyResult.evidence
-  ]);
-  const status = findings.some((finding) => finding.status === "BLOCK") ? "BLOCK" : "WARN";
-  const impactId = placeholderImpactId({
-    files,
-    surfaces: surfaces.map((surface) => ({
-      path: surface.path,
-      surfaces: surface.surfaces
-    })),
-    ownership: {
-      coverage: ownershipResult.ownership.coverage,
-      matches: ownershipResult.ownership.matches.map((match) => ({
-        path: match.path,
-        owners: match.owners,
-        fallbackUsed: match.fallbackUsed,
-        sensitive: match.sensitive,
-        ownerMissing: match.ownerMissing
-      }))
-    },
-    dependencyGraph: {
-      coverage: dependencyResult.dependencyGraph.coverage,
-      nodes: dependencyResult.dependencyGraph.nodes,
-      edges: dependencyResult.dependencyGraph.edges,
-      reverseDependentsByPath: dependencyResult.dependencyGraph.reverseDependentsByPath
-    }
-  });
-  const confidenceScore = files.length === 0 ? 0.25 : status === "BLOCK" ? 0.66 : ownershipResult.ownership.coverage.status === "complete" && dependencyResult.dependencyGraph.coverage.status === "complete-ish" ? 0.68 : 0.56;
-  const confidenceLevel = confidenceScore >= 0.67 ? "high" : confidenceScore >= 0.45 ? "medium" : "low";
-  const risk = status === "BLOCK" ? {
-    level: "critical",
-    reasons: [
-      "A sensitive changed file lacks an explicit owner or fallback reviewer.",
-      "Phase 7 full scoring is deferred; this critical risk reflects only the Phase 5 BLOCK rule."
-    ]
-  } : {
-    level: "unknown",
-    reasons: [
-      "Phase 5 analyzes ownership and dependency coverage, but contract, obligation, and full scoring checks are deferred.",
-      "Missing metadata remains visible as unknowns instead of proving low impact."
-    ]
-  };
-  const confidence = {
-    score: confidenceScore,
-    level: confidenceLevel,
-    reasons: files.length > 0 ? [
-      "Changed files were normalized and classified deterministically.",
-      "Ownership and dependency metadata were analyzed where configured and available.",
-      "Confidence remains capped until contract, obligation, and Phase 7 scoring checks land."
-    ] : [
-      "No file-backed scope was available for deterministic ownership or dependency analysis.",
-      "Confidence remains low until a scope resolver supplies changed files."
-    ]
-  };
-  const summary = status === "BLOCK" ? "Impact analysis found a sensitive ownership gap that blocks advisory approval until resolved." : "Impact analysis classified changed file surfaces and analyzed configured ownership and dependency metadata; deferred phases remain explicit unknowns.";
-  return {
-    phaseStatus: "ownership-dependencies-analyzed",
-    impactId,
-    status,
-    impactStatus: status,
-    risk,
-    confidence,
-    surfaces,
-    areaSummary,
-    surfaceSummary,
-    ownership: ownershipResult.ownership,
-    dependencyGraph: dependencyResult.dependencyGraph,
-    findings,
-    obligations: [],
-    unknowns,
-    evidence: allEvidence,
-    report: {
-      schemaVersion: "blueprint.impact.report.v1",
-      impactId,
-      status,
-      summary,
-      files,
-      surfaces,
-      areaSummary,
-      surfaceSummary,
-      ownership: ownershipResult.ownership,
-      dependencyGraph: dependencyResult.dependencyGraph,
-      findings,
-      obligations: [],
-      unknowns,
-      evidence: allEvidence
-    },
-    warnings: [...new Set(warnings)].sort()
-  };
-}
-async function blueprintImpactReportWrite(args = {}) {
-  await ensureRepoRoot(args.cwd);
-  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
-  return {
-    status: "disabled",
-    impactId,
-    impactDir: `.blueprint/impact/${impactId}`,
-    paths: {
-      impactMarkdown: null,
-      impactJson: null,
-      summaryJson: null,
-      evidenceJsonl: null,
-      reviewChecklist: null,
-      questions: null
-    },
-    written: false,
-    warnings: [
-      IMPACT_PLACEHOLDER_WARNING,
-      "Impact report writing is intentionally disabled until Phase 8 adds validated report persistence."
-    ]
-  };
-}
-async function blueprintImpactOutputRender(args = {}) {
-  await ensureRepoRoot(args.cwd);
-  const mode = args.mode ?? "human";
-  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
-  const content = mode === "json" ? JSON.stringify(
-    {
-      impactId,
-      status: "WARN",
-      warning: IMPACT_PLACEHOLDER_WARNING
-    },
-    null,
-    2
-  ) : `Impact ${impactId}: WARN
-
-${IMPACT_PLACEHOLDER_WARNING}`;
-  return {
-    phaseStatus: "placeholder",
-    mode,
-    status: "WARN",
-    impactStatus: "WARN",
-    content,
-    impactId,
-    warnings: [
-      IMPACT_PLACEHOLDER_WARNING,
-      "Output rendering uses placeholder content until normalized report rendering lands in Phase 8."
-    ]
-  };
-}
-var IMPACT_TOOL_NAMES, IMPACT_PLACEHOLDER_WARNING, IMPACT_SCHEMA_VERSION, PLACEHOLDER_IMPACT_ID, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
-var init_impact = __esm({
-  "src/mcp/tools/impact.ts"() {
-    "use strict";
-    init_v4();
-    init_artifacts();
-    init_config();
-    init_phase();
-    init_artifact_contracts();
-    init_runtime_host();
-    init_security();
-    IMPACT_TOOL_NAMES = [
-      "blueprint_impact_config_get",
-      "blueprint_impact_scope_resolve",
-      "blueprint_impact_context_load",
-      "blueprint_impact_analyze",
-      "blueprint_impact_report_write",
-      "blueprint_impact_output_render"
-    ];
-    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 5 config, scope, context, surface, ownership, and dependency analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
-    IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
-    PLACEHOLDER_IMPACT_ID = "impact-phase-5-placeholder";
-    OWNERSHIP_SCHEMA_VERSION = "blueprint.impact.ownership.v1";
-    DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
-    IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
-    IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
-    GIT_COMMAND_TIMEOUT_MS = 15e3;
-    CODEOWNERS_CANDIDATES = [
-      "CODEOWNERS",
-      ".github/CODEOWNERS",
-      "docs/CODEOWNERS"
-    ];
-    PACKAGE_JSON_SOURCE = "package-json";
-    PACKAGE_LOCK_SOURCE = "package-lock";
-    TS_IMPORT_SCAN_SOURCE = "ts-import-scan";
-    CUSTOM_GRAPH_SOURCE = "custom-graph";
-    BOUNDED_SOURCE_ROOTS = ["src", "lib", "packages", "apps"];
-    KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS = [
-      "schemaVersion",
-      "baseBranches",
-      "paths",
-      "ownership",
-      "dependencyGraph",
-      "risk",
-      "reporting"
-    ];
-    BUILT_IN_BASE_BRANCHES = ["main", "master"];
-    execFileAsync = promisify(execFile);
-    IMPACT_SURFACE_PRIORITY = {
-      "secret-sensitive": 1,
-      "env-config": 2,
-      "command-catalog": 3,
-      "command-manifest": 4,
-      "command-doc": 5,
-      "mcp-server": 6,
-      "mcp-tool": 7,
-      "mcp-resource": 8,
-      "artifact-contract": 9,
-      skill: 10,
-      agent: 11,
-      "extension-manifest": 12,
-      hook: 13,
-      "package-runtime": 14,
-      "build-config": 15,
-      test: 16,
-      docs: 17,
-      generated: 18,
-      config: 19,
-      source: 20,
-      "repo-root": 21,
-      unknown: 22
-    };
-    SOURCE_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
-      ".cjs",
-      ".cts",
-      ".js",
-      ".jsx",
-      ".mjs",
-      ".mts",
-      ".ts",
-      ".tsx"
-    ]);
-    CONFIG_FILE_EXTENSIONS = /* @__PURE__ */ new Set([".json", ".jsonc", ".toml", ".yaml", ".yml"]);
-    DOC_FILE_EXTENSIONS = /* @__PURE__ */ new Set([".md", ".mdx", ".markdown", ".rst", ".txt"]);
-    TEST_FILE_PATTERNS = [
-      /\.test\.[^.]+$/u,
-      /\.spec\.[^.]+$/u,
-      /(^|\/)__tests__\//u,
-      /(^|\/)tests?\//u
-    ];
-    GENERATED_FILE_PATTERNS = [
-      /(^|\/)dist\//u,
-      /\.generated\./u,
-      /\.gen\./u,
-      /\.d\.ts$/u
-    ];
-    SECRET_PATH_PATTERN = /(^|\/)(secrets?|credentials?|tokens?)(\/|$)|(^|[-_.])(secret|credential|token)([-_.]|$)/iu;
-    nonEmptyStringSchema = string2().trim().min(1);
-    impactModeSchema = _enum([
-      "auto",
-      "staged",
-      "working-tree",
-      "range",
-      "base-head",
-      "files",
-      "diff-file",
-      "description"
-    ]);
-    impactIdSchema = string2().trim().min(1).regex(/^impact-[a-z0-9][a-z0-9._-]*$/u);
-    outputModeSchema = _enum(["human", "json", "markdown", "pr-comment", "summary"]);
-    configVerbositySchema = _enum(["compact", "normal", "detailed"]);
-    impactConfigGetInputSchema = {
-      cwd: string2().optional(),
-      configPath: string2().optional(),
-      strictConfig: boolean2().optional(),
-      overrides: record(string2(), unknown()).optional()
-    };
-    impactScopeResolveInputSchema = {
-      cwd: string2().optional(),
-      mode: impactModeSchema.optional(),
-      description: string2().optional(),
-      range: nonEmptyStringSchema.optional(),
-      base: nonEmptyStringSchema.optional(),
-      head: nonEmptyStringSchema.optional(),
-      files: array(nonEmptyStringSchema).optional(),
-      diffFile: nonEmptyStringSchema.optional(),
-      phase: union([string2(), number2()]).optional(),
-      roadmapItem: nonEmptyStringSchema.optional(),
-      seedFile: nonEmptyStringSchema.optional(),
-      meta: record(string2(), string2()).optional()
-    };
-    impactContextLoadInputSchema = {
-      cwd: string2().optional(),
-      phase: union([string2(), number2()]).optional(),
-      roadmapItem: nonEmptyStringSchema.optional(),
-      includeRuntime: boolean2().optional(),
-      includeCatalog: boolean2().optional(),
-      includeArtifacts: boolean2().optional()
-    };
-    impactAnalyzeInputSchema = {
-      cwd: string2().optional(),
-      changedFiles: array(nonEmptyStringSchema).optional(),
-      files: array(nonEmptyStringSchema).optional(),
-      scope: record(string2(), unknown()).optional(),
-      context: record(string2(), unknown()).optional(),
-      config: record(string2(), unknown()).optional()
-    };
-    impactReportWriteInputSchema = {
-      cwd: string2().optional(),
-      impactId: impactIdSchema.optional(),
-      report: record(string2(), unknown()).optional(),
-      overwrite: boolean2().optional(),
-      writeEvidenceLog: boolean2().optional()
-    };
-    impactOutputRenderInputSchema = {
-      cwd: string2().optional(),
-      mode: outputModeSchema.optional(),
-      impactId: impactIdSchema.optional(),
-      report: record(string2(), unknown()).optional(),
-      verbosity: _enum(["compact", "normal", "detailed"]).optional()
-    };
-    stringArraySchema = array(nonEmptyStringSchema);
-    partialImpactConfigSchema = object2({
-      schemaVersion: literal(IMPACT_SCHEMA_VERSION).optional(),
-      baseBranches: stringArraySchema.optional(),
-      paths: object2({
-        include: stringArraySchema.optional(),
-        ignore: stringArraySchema.optional(),
-        generated: stringArraySchema.optional(),
-        docs: stringArraySchema.optional(),
-        tests: stringArraySchema.optional()
-      }).optional(),
-      ownership: object2({
-        sources: stringArraySchema.optional(),
-        requiredOwnerMatch: boolean2().optional(),
-        fallbackReviewers: stringArraySchema.optional()
-      }).optional(),
-      dependencyGraph: object2({
-        sources: stringArraySchema.optional(),
-        customGraphFiles: stringArraySchema.optional(),
-        requireReverseDepsFor: stringArraySchema.optional()
-      }).optional(),
-      risk: object2({
-        blockOnCritical: boolean2().optional(),
-        blockOnBreakingContract: boolean2().optional(),
-        blockOnSensitiveUnknownOwner: boolean2().optional(),
-        warnBelowConfidence: number2().min(0).max(1).optional(),
-        blockBelowConfidenceForSensitiveAreas: number2().min(0).max(1).optional()
-      }).optional(),
-      reporting: object2({
-        defaultVerbosity: configVerbositySchema.optional(),
-        writeEvidenceLog: boolean2().optional(),
-        redactPathPatterns: stringArraySchema.optional()
-      }).optional()
-    }).passthrough();
-    impactConfigSchema = object2({
-      schemaVersion: literal(IMPACT_SCHEMA_VERSION),
-      baseBranches: stringArraySchema,
-      paths: object2({
-        include: stringArraySchema,
-        ignore: stringArraySchema,
-        generated: stringArraySchema,
-        docs: stringArraySchema,
-        tests: stringArraySchema
-      }),
-      ownership: object2({
-        sources: stringArraySchema,
-        requiredOwnerMatch: boolean2(),
-        fallbackReviewers: stringArraySchema
-      }),
-      dependencyGraph: object2({
-        sources: stringArraySchema,
-        customGraphFiles: stringArraySchema,
-        requireReverseDepsFor: stringArraySchema
-      }),
-      risk: object2({
-        blockOnCritical: boolean2(),
-        blockOnBreakingContract: boolean2(),
-        blockOnSensitiveUnknownOwner: boolean2(),
-        warnBelowConfidence: number2().min(0).max(1),
-        blockBelowConfidenceForSensitiveAreas: number2().min(0).max(1)
-      }),
-      reporting: object2({
-        defaultVerbosity: configVerbositySchema,
-        writeEvidenceLog: boolean2(),
-        redactPathPatterns: stringArraySchema
-      })
-    });
-    impactScopeSeedSchema = object2({
-      mode: impactModeSchema.optional(),
-      description: string2().optional(),
-      range: nonEmptyStringSchema.optional(),
-      base: nonEmptyStringSchema.optional(),
-      head: nonEmptyStringSchema.optional(),
-      files: array(nonEmptyStringSchema).optional(),
-      diffFile: nonEmptyStringSchema.optional(),
-      phase: union([string2(), number2()]).optional(),
-      roadmapItem: nonEmptyStringSchema.optional(),
-      meta: record(string2(), string2()).optional()
-    }).passthrough();
-    ownershipMetadataSchema = object2({
-      schemaVersion: literal(OWNERSHIP_SCHEMA_VERSION),
-      rules: array(
-        object2({
-          pattern: nonEmptyStringSchema,
-          owners: stringArraySchema.optional().default([]),
-          sensitive: boolean2().optional().default(false)
-        })
-      ).optional().default([]),
-      fallbackReviewers: stringArraySchema.optional().default([])
-    });
-    dependencyGraphMetadataSchema = object2({
-      schemaVersion: literal(DEPENDENCY_GRAPH_SCHEMA_VERSION),
-      nodes: array(
-        object2({
-          id: nonEmptyStringSchema,
-          path: nonEmptyStringSchema.optional()
-        })
-      ).optional().default([]),
-      edges: array(
-        object2({
-          from: nonEmptyStringSchema,
-          to: nonEmptyStringSchema,
-          type: nonEmptyStringSchema.optional().default("depends-on")
-        })
-      ).optional().default([])
-    });
-    impactToolDefinitions = [
-      {
-        name: "blueprint_impact_config_get",
-        description: "Load Blueprint impact-analysis configuration provenance and validation signals without mutating repo state.",
-        inputSchema: impactConfigGetInputSchema,
-        handler: async (args) => blueprintImpactConfigGet(args)
-      },
-      {
-        name: "blueprint_impact_scope_resolve",
-        description: "Resolve the proposed impact-analysis scope from git, explicit files, diff input, or description-only seeds without reading secrets.",
-        inputSchema: impactScopeResolveInputSchema,
-        handler: async (args) => blueprintImpactScopeResolve(args)
-      },
-      {
-        name: "blueprint_impact_context_load",
-        description: "Load Blueprint and repository context for impact analysis while treating missing optional metadata as explicit warnings.",
-        inputSchema: impactContextLoadInputSchema,
-        handler: async (args) => blueprintImpactContextLoad(args)
-      },
-      {
-        name: "blueprint_impact_analyze",
-        description: "Analyze impact surfaces, findings, obligations, unknowns, risk, confidence, and advisory status from normalized scope and context.",
-        inputSchema: impactAnalyzeInputSchema,
-        handler: async (args) => blueprintImpactAnalyze(args)
-      },
-      {
-        name: "blueprint_impact_report_write",
-        description: "Persist a validated impact report bundle under .blueprint/impact/<impact-id>/ when the report-writing phase is implemented.",
-        inputSchema: impactReportWriteInputSchema,
-        handler: async (args) => blueprintImpactReportWrite(args)
-      },
-      {
-        name: "blueprint_impact_output_render",
-        description: "Render a normalized impact report or saved impact id as human, JSON, Markdown, PR-comment, or summary output.",
-        inputSchema: impactOutputRenderInputSchema,
-        handler: async (args) => blueprintImpactOutputRender(args)
-      }
-    ];
-  }
-});
-
-// src/mcp/tools/update.ts
-import { execFile as execFile2 } from "node:child_process";
-import { promises as fs7 } from "node:fs";
-import os2 from "node:os";
-import path8 from "node:path";
-import { promisify as promisify2 } from "node:util";
-function defaultUpdatePlanMode(host) {
-  return host === "gemini" ? "ask_user" : "manual";
-}
-function expandHomePath2(value) {
-  const trimmed = value.trim();
-  if (trimmed === "~") {
-    return os2.homedir();
-  }
-  if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path8.join(os2.homedir(), trimmed.slice(2));
-  }
-  return trimmed;
-}
-function isNonEmptyString(value) {
-  return typeof value === "string" && value.trim().length > 0;
-}
-function normalizeOptionalString(value) {
-  return isNonEmptyString(value) ? value.trim() : null;
-}
-async function pathExists5(targetPath) {
-  try {
-    await fs7.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function runGit2(args, options = {}) {
-  const timeoutMs = options.timeoutMs ?? GIT_COMMAND_TIMEOUT_MS2;
-  try {
-    const { stdout, stderr } = await execFileAsync2("git", args, {
       cwd: options.cwd,
       timeout: timeoutMs,
       env: {
@@ -31642,14 +28536,14 @@ async function runGit2(args, options = {}) {
   }
 }
 async function readJsonObject(filePath) {
-  if (!await pathExists5(filePath)) {
+  if (!await pathExists4(filePath)) {
     return {
       value: null,
       warning: null
     };
   }
   try {
-    const raw = await fs7.readFile(filePath, "utf8");
+    const raw = await fs6.readFile(filePath, "utf8");
     return {
       value: safeJsonParseObject(raw, { label: filePath }),
       warning: null
@@ -31673,19 +28567,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path8.resolve(extensionPath);
-  if (!await pathExists5(normalizedExtensionPath)) {
+  const normalizedExtensionPath = path7.resolve(extensionPath);
+  if (!await pathExists4(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path8.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path7.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path8.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path7.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path8.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path7.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -31715,13 +28609,13 @@ async function resolveGitMetadata(extensionPath) {
       remoteUrl: null
     };
   }
-  const branchResult = await runGit2(["-C", extensionPath, "branch", "--show-current"], {
+  const branchResult = await runGit(["-C", extensionPath, "branch", "--show-current"], {
     allowFailure: true
   });
-  const headResult = await runGit2(["-C", extensionPath, "rev-parse", "HEAD"], {
+  const headResult = await runGit(["-C", extensionPath, "rev-parse", "HEAD"], {
     allowFailure: true
   });
-  const remoteResult = await runGit2(["-C", extensionPath, "config", "--get", "remote.origin.url"], {
+  const remoteResult = await runGit(["-C", extensionPath, "config", "--get", "remote.origin.url"], {
     allowFailure: true
   });
   return {
@@ -31805,7 +28699,7 @@ function detectInstallProvenance(extensionPath, extensionPathState, gitMetadata)
   };
 }
 async function resolveGithubDefaultBranch(remoteUrl) {
-  const result = await runGit2(["ls-remote", "--symref", remoteUrl, "HEAD"], {
+  const result = await runGit(["ls-remote", "--symref", remoteUrl, "HEAD"], {
     allowFailure: true
   });
   if (!result.success || !result.stdout) {
@@ -31943,7 +28837,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env);
-  const extensionPath = runtimeHost.extensionPath ? path8.resolve(expandHomePath2(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path7.resolve(expandHomePath(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -32155,15 +29049,15 @@ function serializeUpdatePlan(generatedAt, plan) {
   };
 }
 async function removeIfExists(targetPath) {
-  await fs7.rm(targetPath, { force: true });
+  await fs6.rm(targetPath, { force: true });
 }
 async function restoreFromBackup(backupPath, targetPath) {
-  if (!await pathExists5(backupPath)) {
+  if (!await pathExists4(backupPath)) {
     return null;
   }
   try {
     await removeIfExists(targetPath);
-    await fs7.rename(backupPath, targetPath);
+    await fs6.rename(backupPath, targetPath);
     return null;
   } catch (error2) {
     return error2 instanceof Error ? `Failed to restore ${targetPath} from backup: ${error2.message}` : `Failed to restore ${targetPath} from backup.`;
@@ -32186,19 +29080,19 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path8.basename(plan.savedPaths.checklistPath)
+      label: path7.basename(plan.savedPaths.checklistPath)
     });
-    if (await pathExists5(plan.savedPaths.metadataPath)) {
-      await fs7.rename(plan.savedPaths.metadataPath, metadataBackupPath);
+    if (await pathExists4(plan.savedPaths.metadataPath)) {
+      await fs6.rename(plan.savedPaths.metadataPath, metadataBackupPath);
       metadataBackupCreated = true;
     }
-    if (await pathExists5(plan.savedPaths.checklistPath)) {
-      await fs7.rename(plan.savedPaths.checklistPath, checklistBackupPath);
+    if (await pathExists4(plan.savedPaths.checklistPath)) {
+      await fs6.rename(plan.savedPaths.checklistPath, checklistBackupPath);
       checklistBackupCreated = true;
     }
-    await fs7.rename(metadataTmpPath, plan.savedPaths.metadataPath);
+    await fs6.rename(metadataTmpPath, plan.savedPaths.metadataPath);
     metadataPromoted = true;
-    await fs7.rename(checklistTmpPath, plan.savedPaths.checklistPath);
+    await fs6.rename(checklistTmpPath, plan.savedPaths.checklistPath);
     checklistPromoted = true;
     await removeIfExists(metadataBackupPath);
     await removeIfExists(checklistBackupPath);
@@ -32242,10 +29136,10 @@ async function blueprintUpdatePlan(args = {}, env = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env);
   const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env);
-  const updatesDir = path8.resolve(expandHomePath2(runtimeHost.updatesDir));
-  const metadataPath = path8.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path8.join(updatesDir, UPDATE_CHECKLIST_FILE);
-  const created = !(await pathExists5(metadataPath) || await pathExists5(checklistPath));
+  const updatesDir = path7.resolve(expandHomePath(runtimeHost.updatesDir));
+  const metadataPath = path7.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path7.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const created = !(await pathExists4(metadataPath) || await pathExists4(checklistPath));
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const savedPaths = {
     updatesDir,
@@ -32268,7 +29162,7 @@ async function blueprintUpdatePlan(args = {}, env = process.env) {
   plan.warnings.push(...persistenceWarnings);
   return plan;
 }
-var execFileAsync2, UPDATE_PLAN_FILE, UPDATE_CHECKLIST_FILE, UPDATE_ARTIFACT_TEMP_SUFFIX, UPDATE_ARTIFACT_BACKUP_SUFFIX, GIT_COMMAND_TIMEOUT_MS2, HTTP_LOOKUP_TIMEOUT_MS, UPDATE_PLAN_MODES, updateCheckInputSchema, updatePlanInputSchema, updateToolDefinitions;
+var execFileAsync, UPDATE_PLAN_FILE, UPDATE_CHECKLIST_FILE, UPDATE_ARTIFACT_TEMP_SUFFIX, UPDATE_ARTIFACT_BACKUP_SUFFIX, GIT_COMMAND_TIMEOUT_MS, HTTP_LOOKUP_TIMEOUT_MS, UPDATE_PLAN_MODES, updateCheckInputSchema, updatePlanInputSchema, updateToolDefinitions;
 var init_update = __esm({
   "src/mcp/tools/update.ts"() {
     "use strict";
@@ -32276,12 +29170,12 @@ var init_update = __esm({
     init_artifacts();
     init_runtime_host();
     init_security();
-    execFileAsync2 = promisify2(execFile2);
+    execFileAsync = promisify(execFile);
     UPDATE_PLAN_FILE = "update-plan-latest.json";
     UPDATE_CHECKLIST_FILE = "update-plan-latest.md";
     UPDATE_ARTIFACT_TEMP_SUFFIX = ".tmp";
     UPDATE_ARTIFACT_BACKUP_SUFFIX = ".bak";
-    GIT_COMMAND_TIMEOUT_MS2 = 5e3;
+    GIT_COMMAND_TIMEOUT_MS = 5e3;
     HTTP_LOOKUP_TIMEOUT_MS = 5e3;
     UPDATE_PLAN_MODES = ["ask_user", "manual"];
     updateCheckInputSchema = {
@@ -32309,19 +29203,19 @@ var init_update = __esm({
 });
 
 // src/mcp/tools/workspace.ts
-import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash2 } from "node:crypto";
-import { promises as fs8 } from "node:fs";
-import os3 from "node:os";
-import path9 from "node:path";
-import { promisify as promisify3 } from "node:util";
-function expandHomePath3(value) {
+import { execFile as execFile2 } from "node:child_process";
+import { createHash } from "node:crypto";
+import { promises as fs7 } from "node:fs";
+import os2 from "node:os";
+import path8 from "node:path";
+import { promisify as promisify2 } from "node:util";
+function expandHomePath2(value) {
   const trimmed = value.trim();
   if (trimmed === "~") {
-    return os3.homedir();
+    return os2.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path9.join(os3.homedir(), trimmed.slice(2));
+    return path8.join(os2.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -32350,9 +29244,9 @@ function slugifyRepoName(value) {
   const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
   return slug.length > 0 ? slug : "repo";
 }
-async function pathExists6(targetPath) {
+async function pathExists5(targetPath) {
   try {
-    await fs8.access(targetPath);
+    await fs7.access(targetPath);
     return true;
   } catch {
     return false;
@@ -32360,9 +29254,9 @@ async function pathExists6(targetPath) {
 }
 async function canonicalizePath(candidatePath) {
   try {
-    return await fs8.realpath(candidatePath);
+    return await fs7.realpath(candidatePath);
   } catch {
-    return path9.resolve(candidatePath);
+    return path8.resolve(candidatePath);
   }
 }
 function normalizeTextForComparison(value) {
@@ -32403,10 +29297,10 @@ function parseStateSnapshot(raw) {
 }
 async function readCurrentStateSnapshot(projectRoot) {
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
-  if (!await pathExists6(statePath)) {
+  if (!await pathExists5(statePath)) {
     return null;
   }
-  const raw = await fs8.readFile(statePath, "utf8");
+  const raw = await fs7.readFile(statePath, "utf8");
   return parseStateSnapshot(raw);
 }
 async function readRequiredCurrentStateSnapshot(projectRoot) {
@@ -32566,9 +29460,9 @@ function renderWorkstreamsIndex(workstreams) {
 }
 async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await fs8.mkdir(path9.dirname(filePath), { recursive: true });
-  await fs8.writeFile(tempPath, content, "utf8");
-  await fs8.rename(tempPath, filePath);
+  await fs7.mkdir(path8.dirname(filePath), { recursive: true });
+  await fs7.writeFile(tempPath, content, "utf8");
+  await fs7.rename(tempPath, filePath);
 }
 async function writeJsonAtomically(filePath, value) {
   await writeFileAtomically(filePath, `${JSON.stringify(value, null, 2)}
@@ -32577,7 +29471,7 @@ async function writeJsonAtomically(filePath, value) {
 async function snapshotFiles(paths) {
   return Promise.all(
     [...new Set(paths)].map(async (targetPath) => {
-      if (!await pathExists6(targetPath)) {
+      if (!await pathExists5(targetPath)) {
         return {
           path: targetPath,
           existed: false,
@@ -32587,7 +29481,7 @@ async function snapshotFiles(paths) {
       return {
         path: targetPath,
         existed: true,
-        content: await fs8.readFile(targetPath, "utf8")
+        content: await fs7.readFile(targetPath, "utf8")
       };
     })
   );
@@ -32596,24 +29490,24 @@ async function snapshotDirectories(paths) {
   return Promise.all(
     [...new Set(paths)].map(async (targetPath) => ({
       path: targetPath,
-      existed: await pathExists6(targetPath)
+      existed: await pathExists5(targetPath)
     }))
   );
 }
 async function restoreFileSnapshots(snapshots) {
   for (const snapshot of snapshots) {
     if (!snapshot.existed) {
-      await fs8.rm(snapshot.path, { force: true }).catch(() => void 0);
+      await fs7.rm(snapshot.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs8.mkdir(path9.dirname(snapshot.path), { recursive: true });
-    await fs8.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
+    await fs7.mkdir(path8.dirname(snapshot.path), { recursive: true });
+    await fs7.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
   }
 }
 async function restoreDirectorySnapshots(snapshots) {
   const missingDirectories = snapshots.filter((snapshot) => !snapshot.existed).sort((left, right) => right.path.length - left.path.length);
   for (const snapshot of missingDirectories) {
-    await fs8.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs7.rm(snapshot.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function workstreamsRootAbsolute(projectRoot) {
@@ -32623,7 +29517,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path9.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path8.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -32664,10 +29558,10 @@ function buildResumeStatePatch(snapshot) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path9.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path8.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
-  if (!await pathExists6(blueprintRoot)) {
+  if (!await pathExists5(blueprintRoot)) {
     return {
       status: "project_missing",
       projectRoot,
@@ -32682,7 +29576,7 @@ async function loadWorkstreamStore(projectRoot) {
   }
   let entries;
   try {
-    entries = await fs8.readdir(rootPath, {
+    entries = await fs7.readdir(rootPath, {
       encoding: "utf8",
       withFileTypes: true
     });
@@ -32709,11 +29603,11 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path9.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
-      if (!await pathExists6(statePath)) {
+      const statePath = path8.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      if (!await pathExists5(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
-      const raw = await fs8.readFile(statePath, "utf8");
+      const raw = await fs7.readFile(statePath, "utf8");
       const parsed = safeJsonParseObject(raw, {
         label: statePath
       });
@@ -32725,12 +29619,12 @@ async function loadWorkstreamStore(projectRoot) {
       throw new Error("More than one active workstream is recorded on disk.");
     }
     const expectedIndex = renderWorkstreamsIndex(workstreams);
-    const indexExists = await pathExists6(indexPath);
+    const indexExists = await pathExists5(indexPath);
     if (workstreams.length > 0 && !indexExists) {
       throw new Error("The workstream index is missing while workstream state files exist.");
     }
     if (indexExists) {
-      const actualIndex = await fs8.readFile(indexPath, "utf8");
+      const actualIndex = await fs7.readFile(indexPath, "utf8");
       if (normalizeTextForComparison(actualIndex) !== normalizeTextForComparison(expectedIndex)) {
         throw new Error("The workstream index is stale relative to the canonical state files.");
       }
@@ -32821,7 +29715,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path9.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path8.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -32847,9 +29741,9 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
     indexRelativePath
   ];
 }
-async function runGit3(args, options = {}) {
+async function runGit2(args, options = {}) {
   try {
-    const { stdout, stderr } = await execFileAsync3("git", args, {
+    const { stdout, stderr } = await execFileAsync2("git", args, {
       cwd: options.cwd
     });
     return {
@@ -32878,7 +29772,7 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path9.resolve(injectedFailure) === path9.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path8.resolve(injectedFailure) === path8.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
@@ -32910,7 +29804,7 @@ async function maybeDelayWorkspaceRemoveForTest() {
   await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 async function resolveGitRepoRoot(candidatePath) {
-  const result = await runGit3(["-C", candidatePath, "rev-parse", "--show-toplevel"], {
+  const result = await runGit2(["-C", candidatePath, "rev-parse", "--show-toplevel"], {
     allowFailure: true
   });
   if (!result.success || !result.stdout) {
@@ -32919,13 +29813,13 @@ async function resolveGitRepoRoot(candidatePath) {
   return result.stdout;
 }
 async function gitCurrentBranch(repoPath) {
-  const result = await runGit3(["-C", repoPath, "branch", "--show-current"], {
+  const result = await runGit2(["-C", repoPath, "branch", "--show-current"], {
     allowFailure: true
   });
   return result.success && result.stdout.length > 0 ? result.stdout : null;
 }
 async function gitHeadSha(repoPath) {
-  const result = await runGit3(["-C", repoPath, "rev-parse", "HEAD"], {
+  const result = await runGit2(["-C", repoPath, "rev-parse", "HEAD"], {
     allowFailure: true
   });
   if (!result.success || result.stdout.length === 0) {
@@ -32934,13 +29828,13 @@ async function gitHeadSha(repoPath) {
   return result.stdout;
 }
 async function gitWorkingTreeClean(repoPath) {
-  const result = await runGit3(["-C", repoPath, "status", "--short"], {
+  const result = await runGit2(["-C", repoPath, "status", "--short"], {
     allowFailure: true
   });
   return result.success && result.stdout.length === 0;
 }
 async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
-  const result = await runGit3(
+  const result = await runGit2(
     [
       "-C",
       repoPath,
@@ -32959,14 +29853,14 @@ async function gitWorkingTreeCleanForWorkstreamTransition(repoPath) {
   return result.success && result.stdout.length === 0;
 }
 async function localBranchExists(repoPath, branch) {
-  const result = await runGit3(
+  const result = await runGit2(
     ["-C", repoPath, "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`],
     { allowFailure: true }
   );
   return result.success && result.stdout.length > 0;
 }
 async function remoteBranchExists(repoPath, branch) {
-  const result = await runGit3(
+  const result = await runGit2(
     ["-C", repoPath, "rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch}`],
     { allowFailure: true }
   );
@@ -33010,13 +29904,13 @@ function parseWorkspaceRegistryDocument(raw, registryPath) {
   };
 }
 async function readWorkspaceRegistryDocument(registryPath) {
-  if (!await pathExists6(registryPath)) {
+  if (!await pathExists5(registryPath)) {
     return {
       version: WORKSPACE_REGISTRY_VERSION,
       workspaces: []
     };
   }
-  const raw = await fs8.readFile(registryPath, "utf8");
+  const raw = await fs7.readFile(registryPath, "utf8");
   return parseWorkspaceRegistryDocument(raw, registryPath);
 }
 function normalizeRegistryEntry(value) {
@@ -33064,36 +29958,36 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path9.dirname(registryPath);
-  const tempPath = path9.join(
+  const directory = path8.dirname(registryPath);
+  const tempPath = path8.join(
     directory,
-    `${path9.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path8.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
-  await fs8.mkdir(directory, { recursive: true });
-  await fs8.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
+  await fs7.mkdir(directory, { recursive: true });
+  await fs7.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
 `, "utf8");
   try {
     maybeFailWorkspaceRegistryWrite(registryPath);
   } catch (error2) {
-    await fs8.rm(tempPath, { force: true }).catch(() => void 0);
+    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
     throw error2;
   }
-  if (!await pathExists6(registryPath)) {
-    await fs8.rename(tempPath, registryPath);
+  if (!await pathExists5(registryPath)) {
+    await fs7.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path9.join(
+  const backupPath = path8.join(
     directory,
-    `${path9.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path8.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
-    await fs8.copyFile(registryPath, backupPath);
-    await fs8.rename(tempPath, registryPath);
+    await fs7.copyFile(registryPath, backupPath);
+    await fs7.rename(tempPath, registryPath);
   } catch (error2) {
-    await fs8.rm(tempPath, { force: true }).catch(() => void 0);
-    if (!await pathExists6(registryPath) && await pathExists6(backupPath)) {
-      await fs8.copyFile(backupPath, registryPath).then(() => {
+    await fs7.rm(tempPath, { force: true }).catch(() => void 0);
+    if (!await pathExists5(registryPath) && await pathExists5(backupPath)) {
+      await fs7.copyFile(backupPath, registryPath).then(() => {
         restoredOriginal = true;
       }).catch(() => void 0);
     }
@@ -33102,21 +29996,21 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     }
     throw error2;
   }
-  await fs8.rm(backupPath, { force: true }).catch(() => void 0);
+  await fs7.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path8.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path8.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 async function writeWorkspaceRegistryLockFile(filePath, contents) {
-  await fs8.writeFile(filePath, `${contents}
+  await fs7.writeFile(filePath, `${contents}
 `, "utf8");
 }
 async function readWorkspaceRegistryLockOwner(lockHandle) {
   try {
-    return (await fs8.readFile(lockHandle.ownerPath, "utf8")).trim();
+    return (await fs7.readFile(lockHandle.ownerPath, "utf8")).trim();
   } catch (error2) {
     if (error2.code === "ENOENT") {
       return null;
@@ -33135,7 +30029,7 @@ async function refreshWorkspaceRegistryLockLease(lockHandle) {
 async function getWorkspaceRegistryLockAgeMs(lockPath) {
   const leasePath = workspaceRegistryLockLeasePath(lockPath);
   try {
-    const stats = await fs8.stat(leasePath);
+    const stats = await fs7.stat(leasePath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code !== "ENOENT") {
@@ -33143,7 +30037,7 @@ async function getWorkspaceRegistryLockAgeMs(lockPath) {
     }
   }
   try {
-    const stats = await fs8.stat(lockPath);
+    const stats = await fs7.stat(lockPath);
     return Date.now() - stats.mtimeMs;
   } catch (error2) {
     if (error2.code === "ENOENT") {
@@ -33164,16 +30058,16 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
     await writeWorkspaceRegistryLockFile(lockHandle.ownerPath, token);
     await writeWorkspaceRegistryLockFile(lockHandle.leasePath, token);
   } catch (error2) {
-    await fs8.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
+    await fs7.rm(lockPath, { recursive: true, force: true }).catch(() => void 0);
     throw error2;
   }
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs8.mkdir(path9.dirname(lockPath), { recursive: true });
+  await fs7.mkdir(path8.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
-      await fs8.mkdir(lockPath);
+      await fs7.mkdir(lockPath);
       return createWorkspaceRegistryLockHandle(lockPath);
     } catch (error2) {
       const lockError = error2;
@@ -33183,7 +30077,7 @@ async function acquireWorkspaceRegistryLock(lockPath) {
       try {
         const ageMs = await getWorkspaceRegistryLockAgeMs(lockPath);
         if (ageMs !== null && ageMs > workspaceRegistryLockStaleMs()) {
-          await fs8.rm(lockPath, { recursive: true, force: true });
+          await fs7.rm(lockPath, { recursive: true, force: true });
           continue;
         }
       } catch (statError) {
@@ -33215,7 +30109,7 @@ async function releaseWorkspaceRegistryLock(lockHandle) {
   if (ownerToken !== lockHandle.token) {
     return;
   }
-  await fs8.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs7.rm(lockHandle.lockPath, { recursive: true, force: true }).catch(() => void 0);
 }
 async function withWorkspaceRegistryLock(registryPath, callback) {
   const lockPath = `${registryPath}.lock`;
@@ -33248,29 +30142,29 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path9.join(registryPath, "index.json");
+  return path8.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.json`);
+  return path8.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.patch`);
+  return path8.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.audit.ndjson`);
+  return path8.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
-  return createHash2("sha256").update(value).digest("hex");
+  return createHash("sha256").update(value).digest("hex");
 }
 function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath = path9.isAbsolute(trackedFile) ? path9.resolve(trackedFile) : path9.resolve(repoRoot, trackedFile);
+    const candidatePath = path8.isAbsolute(trackedFile) ? path8.resolve(trackedFile) : path8.resolve(repoRoot, trackedFile);
     ensurePathWithinRootSync(repoRoot, candidatePath, {
       label: "Patch tracked file"
     });
-    const relativePath = path9.relative(repoRoot, candidatePath).replaceAll(path9.sep, "/");
+    const relativePath = path8.relative(repoRoot, candidatePath).replaceAll(path8.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -33279,7 +30173,7 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   return [...normalized];
 }
 async function gitRemoteUrl(repoPath) {
-  const result = await runGit3(["-C", repoPath, "remote", "get-url", "origin"], {
+  const result = await runGit2(["-C", repoPath, "remote", "get-url", "origin"], {
     allowFailure: true
   });
   return result.success && result.stdout.length > 0 ? result.stdout : null;
@@ -33336,13 +30230,13 @@ function normalizePatchManifest(value, patchId) {
 }
 async function readPatchRegistryDocument(registryPath) {
   const indexPath = patchIndexPath(registryPath);
-  if (!await pathExists6(indexPath)) {
+  if (!await pathExists5(indexPath)) {
     return {
       version: PATCH_REGISTRY_VERSION,
       patches: []
     };
   }
-  const raw = await fs8.readFile(indexPath, "utf8");
+  const raw = await fs7.readFile(indexPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: indexPath
   });
@@ -33360,23 +30254,23 @@ async function readPatchRegistryDocument(registryPath) {
   };
 }
 async function writePatchRegistryDocument(registryPath, document) {
-  await fs8.mkdir(registryPath, { recursive: true });
+  await fs7.mkdir(registryPath, { recursive: true });
   await writeJsonFile(patchIndexPath(registryPath), document);
 }
 async function readPatchManifest(registryPath, patchId) {
   const manifestPath = patchManifestPath(registryPath, patchId);
-  if (!await pathExists6(manifestPath)) {
+  if (!await pathExists5(manifestPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const raw = await fs8.readFile(manifestPath, "utf8");
+  const raw = await fs7.readFile(manifestPath, "utf8");
   const parsed = safeJsonParseObject(raw, {
     label: manifestPath
   });
   return normalizePatchManifest(parsed, patchId);
 }
 async function appendPatchAuditEntry(registryPath, patchId, entry) {
-  await fs8.mkdir(registryPath, { recursive: true });
-  await fs8.appendFile(
+  await fs7.mkdir(registryPath, { recursive: true });
+  await fs7.appendFile(
     patchAuditPath(registryPath, patchId),
     `${JSON.stringify(entry)}
 `,
@@ -33390,10 +30284,10 @@ async function loadPatchContent(registryPath, patchId, manifest) {
     );
   }
   const contentPath = patchContentPath(registryPath, patchId);
-  if (!await pathExists6(contentPath)) {
+  if (!await pathExists5(contentPath)) {
     throw new Error(`Patch target is missing from the registry: ${patchId}`);
   }
-  const patch = await fs8.readFile(contentPath, "utf8");
+  const patch = await fs7.readFile(contentPath, "utf8");
   if (sha256(patch) !== manifest.patchHash) {
     throw new Error(
       `Patch registry is malformed for ${patchId}; recorded patch content does not match its manifest.`
@@ -33406,9 +30300,9 @@ function assertNotInstalledExtensionTarget(repoRoot) {
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path9.resolve(repoRoot);
-  const resolvedExtensionPath = path9.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path9.sep}`)) {
+  const resolvedRepoRoot = path8.resolve(repoRoot);
+  const resolvedExtensionPath = path8.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path8.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -33428,7 +30322,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path9.basename(repoRoot);
+  const repoName = path8.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -33482,21 +30376,21 @@ async function resolveDefaultWorkspaceRoot(cwd) {
     });
     const configuredRoot = config2.config.maintenance.workspace_root?.trim();
     if (configuredRoot) {
-      return expandHomePath3(configuredRoot);
+      return expandHomePath2(configuredRoot);
     }
   } catch (error2) {
     if (!(error2 instanceof Error && error2.message === "Blueprint commands must run from the repository root; no .git entry was found in the current directory.")) {
       throw error2;
     }
   }
-  return path9.join(os3.homedir(), "blueprint-workspaces");
+  return path8.join(os2.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path9.resolve(expandHomePath3(args.path));
+    return path8.resolve(expandHomePath2(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path9.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path8.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -33504,7 +30398,7 @@ async function validateWorkspaceBranchName(branch) {
   if (trimmed.startsWith("-")) {
     throw new Error(`Workspace branch name is invalid: ${trimmed}`);
   }
-  const result = await runGit3(["check-ref-format", "--branch", trimmed], {
+  const result = await runGit2(["check-ref-format", "--branch", trimmed], {
     allowFailure: true
   });
   if (!result.success || result.stdout.length === 0) {
@@ -33526,18 +30420,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath = path9.resolve(cwd ?? process.cwd(), expandHomePath3(repoInput));
+    const candidatePath = path8.resolve(cwd ?? process.cwd(), expandHomePath2(repoInput));
     const sourcePath = await resolveGitRepoRoot(candidatePath);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path9.basename(sourcePath)),
+      name: slugifyRepoName(path8.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists6(path9.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists5(path8.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -33553,16 +30447,16 @@ function ensureWorkspaceTargetIsSafe(workspacePath, sourceRepos) {
   }
 }
 async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
-  if (await pathExists6(workspacePath)) {
+  if (await pathExists5(workspacePath)) {
     throw new Error(`Workspace path already exists: ${workspacePath}`);
   }
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path9.resolve(cwd ?? process.cwd(), expandHomePath3(value));
+  return path8.resolve(cwd ?? process.cwd(), expandHomePath2(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path9.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path8.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
 function assertNotInstalledExtensionPath(candidatePath, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
@@ -33571,17 +30465,17 @@ function assertNotInstalledExtensionPath(candidatePath, label) {
   }
   if (isPathWithinRootSync(extensionPath, candidatePath)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path9.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path8.resolve(extensionPath)}`
     );
   }
 }
 async function rollbackPartialWorktreeAdd(sourceRepoPath, memberPath, createdSourceBranch) {
-  await runGit3(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
+  await runGit2(["-C", sourceRepoPath, "worktree", "remove", "--force", memberPath], {
     allowFailure: true
   });
-  await fs8.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
+  await fs7.rm(memberPath, { recursive: true, force: true }).catch(() => void 0);
   if (createdSourceBranch) {
-    await runGit3(
+    await runGit2(
       ["-C", sourceRepoPath, "branch", "--delete", "--force", createdSourceBranch],
       {
         allowFailure: true
@@ -33598,14 +30492,14 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path9.join(workspacePath, candidateName);
+  const memberPath = path8.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
     if (requestedBranch) {
       try {
         if (localBranchAlreadyExists) {
-          await runGit3([
+          await runGit2([
             "-C",
             sourceRepo.sourcePath,
             "worktree",
@@ -33614,7 +30508,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
             requestedBranch
           ]);
         } else if (await remoteBranchExists(sourceRepo.sourcePath, requestedBranch)) {
-          await runGit3([
+          await runGit2([
             "-C",
             sourceRepo.sourcePath,
             "worktree",
@@ -33627,7 +30521,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
           ]);
           createdSourceBranch = requestedBranch;
         } else {
-          await runGit3([
+          await runGit2([
             "-C",
             sourceRepo.sourcePath,
             "worktree",
@@ -33649,7 +30543,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
       }
     } else {
       try {
-        await runGit3([
+        await runGit2([
           "-C",
           sourceRepo.sourcePath,
           "worktree",
@@ -33664,10 +30558,10 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
       }
     }
   } else {
-    await runGit3(["clone", sourceRepo.sourcePath, memberPath]);
+    await runGit2(["clone", sourceRepo.sourcePath, memberPath]);
     if (requestedBranch) {
       if (await remoteBranchExists(memberPath, requestedBranch)) {
-        await runGit3([
+        await runGit2([
           "-C",
           memberPath,
           "checkout",
@@ -33677,7 +30571,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
           `origin/${requestedBranch}`
         ]);
       } else {
-        await runGit3(["-C", memberPath, "checkout", "-b", requestedBranch]);
+        await runGit2(["-C", memberPath, "checkout", "-b", requestedBranch]);
       }
     }
   }
@@ -33697,12 +30591,12 @@ async function rollbackCreatedMembers(createdMembers) {
   for (const member of [...createdMembers].reverse()) {
     try {
       if (member.rollbackStrategy === "worktree") {
-        await runGit3(["-C", member.sourcePath, "worktree", "remove", "--force", member.path], {
+        await runGit2(["-C", member.sourcePath, "worktree", "remove", "--force", member.path], {
           allowFailure: true
         });
       }
       if (member.createdSourceBranch) {
-        await runGit3(
+        await runGit2(
           ["-C", member.sourcePath, "branch", "--delete", "--force", member.createdSourceBranch],
           {
             allowFailure: true
@@ -33711,7 +30605,7 @@ async function rollbackCreatedMembers(createdMembers) {
       }
     } catch {
     }
-    await fs8.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+    await fs7.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   }
 }
 function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
@@ -33721,7 +30615,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path9.resolve(workspace.path) === workspacePath
+      (workspace) => path8.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -33745,22 +30639,22 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   return nameMatches[0];
 }
 async function ensurePathRemoved(targetPath, label) {
-  if (await pathExists6(targetPath)) {
+  if (await pathExists5(targetPath)) {
     throw new Error(`${label} still exists after removal: ${targetPath}`);
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path9.resolve(registryEntry.path) !== path9.resolve(manifestEntry.path) || path9.resolve(registryEntry.manifestPath) !== path9.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path8.resolve(registryEntry.path) !== path8.resolve(manifestEntry.path) || path8.resolve(registryEntry.manifestPath) !== path8.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path9.resolve(member.sourcePath) === path9.resolve(manifestMember.sourcePath) && path9.resolve(member.path) === path9.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path8.resolve(member.sourcePath) === path8.resolve(manifestMember.sourcePath) && path8.resolve(member.path) === path8.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
   try {
-    const raw = await fs8.readFile(manifestPath, "utf8");
+    const raw = await fs7.readFile(manifestPath, "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: manifestPath
     });
@@ -33773,21 +30667,21 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path9.resolve(entry.path);
-  const manifestPath = path9.resolve(entry.manifestPath);
-  const expectedManifestPath = path9.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path8.resolve(entry.path);
+  const manifestPath = path8.resolve(entry.manifestPath);
+  const expectedManifestPath = path8.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
       `Workspace registry drift detected for ${entry.name}; manifest path no longer matches the workspace root. Repair ${registryPath} before removal.`
     );
   }
-  if (!await pathExists6(workspacePath)) {
+  if (!await pathExists5(workspacePath)) {
     throw new Error(
       `Workspace registry drift detected for ${entry.name}; workspace path is missing on disk: ${workspacePath}`
     );
   }
-  if (!await pathExists6(manifestPath)) {
+  if (!await pathExists5(manifestPath)) {
     throw new Error(
       `Workspace registry drift detected for ${entry.name}; workspace manifest is missing on disk: ${manifestPath}`
     );
@@ -33799,11 +30693,11 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path9.resolve(member.path);
+    const memberPath = path8.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
-    if (!await pathExists6(memberPath)) {
+    if (!await pathExists5(memberPath)) {
       throw new Error(
         `Workspace registry drift detected for ${entry.name}; recorded repo member is missing on disk: ${memberPath}`
       );
@@ -33842,7 +30736,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
 }
 async function removeWorkspaceMember(member) {
   if (member.strategy === "worktree") {
-    const removal = await runGit3(
+    const removal = await runGit2(
       ["-C", member.sourcePath, "worktree", "remove", member.path],
       {
         allowFailure: true
@@ -33854,11 +30748,11 @@ async function removeWorkspaceMember(member) {
       );
     }
   }
-  await fs8.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
+  await fs7.rm(member.path, { recursive: true, force: true }).catch(() => void 0);
   await ensurePathRemoved(member.path, "Workspace repo member");
 }
 async function listGitWorktreePaths(repoPath) {
-  const result = await runGit3(["-C", repoPath, "worktree", "list", "--porcelain"], {
+  const result = await runGit2(["-C", repoPath, "worktree", "list", "--porcelain"], {
     allowFailure: true
   });
   if (!result.success) {
@@ -33880,7 +30774,7 @@ async function captureWorkspaceRemovalWorktreeSnapshot(member) {
   };
 }
 async function restoreWorkspaceRemovalWorktree(snapshot) {
-  if (await pathExists6(snapshot.member.path)) {
+  if (await pathExists5(snapshot.member.path)) {
     return;
   }
   const sourceRepoRoot = await resolveGitRepoRoot(snapshot.member.sourcePath);
@@ -33891,7 +30785,7 @@ async function restoreWorkspaceRemovalWorktree(snapshot) {
         `Unable to restore recorded worktree ${snapshot.member.path}; branch ${snapshot.branch} no longer exists in ${sourceRepoRoot}.`
       );
     }
-    await runGit3([
+    await runGit2([
       "-C",
       sourceRepoRoot,
       "worktree",
@@ -33900,7 +30794,7 @@ async function restoreWorkspaceRemovalWorktree(snapshot) {
       snapshot.branch
     ]);
   } else {
-    await runGit3([
+    await runGit2([
       "-C",
       sourceRepoRoot,
       "worktree",
@@ -33925,8 +30819,8 @@ async function rollbackWorkspaceRemoval({
   worktreeSnapshots
 }) {
   const rollbackErrors = [];
-  if (rollbackWorkspacePath && await pathExists6(rollbackWorkspacePath) && !await pathExists6(entry.path)) {
-    await fs8.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
+  if (rollbackWorkspacePath && await pathExists5(rollbackWorkspacePath) && !await pathExists5(entry.path)) {
+    await fs7.rename(rollbackWorkspacePath, entry.path).catch((error2) => {
       const reason = error2 instanceof Error ? error2.message : String(error2);
       rollbackErrors.push(
         `unable to restore workspace root ${entry.path} from ${rollbackWorkspacePath}: ${reason}`
@@ -33951,7 +30845,7 @@ async function rollbackWorkspaceRemoval({
   }
 }
 async function blueprintWorkspaceRegistryGet(_args = {}) {
-  const registryPath = expandHomePath3(
+  const registryPath = expandHomePath2(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
   );
   const registry2 = await readWorkspaceRegistryDocument(registryPath);
@@ -33964,7 +30858,7 @@ async function blueprintWorkspaceCreate(args) {
   const normalizedName = normalizeWorkspaceName(args.name);
   const requestedBranch = args.branch ? await validateWorkspaceBranchName(args.branch) : null;
   const strategy = args.strategy ?? "worktree";
-  const registryPath = expandHomePath3(
+  const registryPath = expandHomePath2(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
   );
   const workspacePath = await resolveWorkspacePath({
@@ -33987,7 +30881,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path9.resolve(workspace.path) === path9.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path8.resolve(workspace.path) === path8.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -33997,8 +30891,8 @@ async function blueprintWorkspaceCreate(args) {
     const usedTargetNames = /* @__PURE__ */ new Set();
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     try {
-      await fs8.mkdir(path9.dirname(workspacePath), { recursive: true });
-      await fs8.mkdir(workspacePath, { recursive: false });
+      await fs7.mkdir(path8.dirname(workspacePath), { recursive: true });
+      await fs7.mkdir(workspacePath, { recursive: false });
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
           workspacePath,
@@ -34032,7 +30926,7 @@ async function blueprintWorkspaceCreate(args) {
       };
     } catch (error2) {
       await rollbackCreatedMembers(createdMembers);
-      await fs8.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
+      await fs7.rm(workspacePath, { recursive: true, force: true }).catch(() => void 0);
       if (error2 instanceof Error) {
         throw error2;
       }
@@ -34043,7 +30937,7 @@ async function blueprintWorkspaceCreate(args) {
 async function blueprintWorkspaceRemove(args) {
   const normalizedName = normalizeWorkspaceName(args.name);
   const requestedWorkspacePath = args.path ? resolveWorkspaceTargetPath(args.path, args.cwd) : null;
-  const registryPath = expandHomePath3(
+  const registryPath = expandHomePath2(
     resolveBlueprintRuntimeHost().workspaceRegistryPath
   );
   return withWorkspaceRegistryLock(registryPath, async () => {
@@ -34070,11 +30964,11 @@ async function blueprintWorkspaceRemove(args) {
         await removeWorkspaceMember(member);
       }
       rollbackWorkspacePath = workspaceRemovalRollbackPath(entry.path);
-      await fs8.rename(entry.path, rollbackWorkspacePath);
+      await fs7.rename(entry.path, rollbackWorkspacePath);
       await maybeDelayWorkspaceRemoveForTest();
       await ensurePathRemoved(entry.path, "Workspace root");
       await writeWorkspaceRegistryDocument(registryPath, nextRegistryDocument);
-      await fs8.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
+      await fs7.rm(rollbackWorkspacePath, { recursive: true, force: true }).catch(() => void 0);
       await ensurePathRemoved(rollbackWorkspacePath, "Workspace removal rollback root");
       return {
         removedPath: entry.path,
@@ -34370,7 +31264,7 @@ async function blueprintWorkstreamMutate(args) {
   });
 }
 async function blueprintPatchList(args = {}) {
-  const registryPath = expandHomePath3(resolveBlueprintRuntimeHost().patchRegistryPath);
+  const registryPath = expandHomePath2(resolveBlueprintRuntimeHost().patchRegistryPath);
   const registry2 = await readPatchRegistryDocument(registryPath);
   const repoRoot = args.cwd ? await resolveGitRepoRoot(args.cwd) : null;
   const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
@@ -34402,7 +31296,7 @@ async function blueprintPatchList(args = {}) {
 async function blueprintPatchRecord(args) {
   const repoRoot = await resolvePatchReplayTarget(args.cwd);
   const runtimeHost = resolveBlueprintRuntimeHost();
-  const registryPath = expandHomePath3(runtimeHost.patchRegistryPath);
+  const registryPath = expandHomePath2(runtimeHost.patchRegistryPath);
   const patchId = normalizePatchId(args.patchId);
   const trackedFiles = normalizeTrackedFiles(repoRoot, args.trackedFiles);
   const registry2 = await readPatchRegistryDocument(registryPath);
@@ -34410,7 +31304,7 @@ async function blueprintPatchRecord(args) {
   const patchPath = patchContentPath(registryPath, patchId);
   const manifestPath = patchManifestPath(registryPath, patchId);
   const auditPath = patchAuditPath(registryPath, patchId);
-  const existingManifest = await pathExists6(manifestPath) ? await readPatchManifest(registryPath, patchId) : null;
+  const existingManifest = await pathExists5(manifestPath) ? await readPatchManifest(registryPath, patchId) : null;
   const updatingStoredPatch = existingManifest !== null;
   const hasNewPatchContent = typeof args.patch === "string" && args.patch.length > 0;
   const patch = hasNewPatchContent ? args.patch : existingManifest ? await loadPatchContent(registryPath, patchId, existingManifest) : null;
@@ -34433,7 +31327,7 @@ async function blueprintPatchRecord(args) {
     sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
     compatibility = {
       host: args.compatibility?.host ?? runtimeHost.host,
-      repoRootName: args.compatibility?.repoRootName ?? path9.basename(repoRoot),
+      repoRootName: args.compatibility?.repoRootName ?? path8.basename(repoRoot),
       remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
     };
   }
@@ -34443,17 +31337,17 @@ async function blueprintPatchRecord(args) {
     label: args.label?.trim() || null,
     createdAt: existingManifest?.createdAt ?? createdAt,
     sourceVersion,
-    repoRootName: path9.basename(repoRoot),
+    repoRootName: path8.basename(repoRoot),
     repoRemote,
-    patchFile: path9.basename(patchPath),
+    patchFile: path8.basename(patchPath),
     patchHash,
     trackedFiles,
     compatibility,
     lastAppliedAt: args.audit?.outcome === "applied" ? createdAt : existingManifest?.lastAppliedAt ?? null,
     lastOutcome: args.audit?.outcome ?? existingManifest?.lastOutcome ?? "recorded"
   };
-  await fs8.mkdir(registryPath, { recursive: true });
-  await fs8.writeFile(patchPath, normalizedPatch, "utf8");
+  await fs7.mkdir(registryPath, { recursive: true });
+  await fs7.writeFile(patchPath, normalizedPatch, "utf8");
   await writeJsonFile(manifestPath, manifest);
   if (!registry2.patches.includes(patchId)) {
     await writePatchRegistryDocument(registryPath, {
@@ -34466,7 +31360,7 @@ async function blueprintPatchRecord(args) {
     timestamp: createdAt,
     action: args.audit?.action ?? "record",
     outcome: args.audit?.outcome ?? "recorded",
-    cwd: path9.resolve(args.cwd ?? process.cwd()),
+    cwd: path8.resolve(args.cwd ?? process.cwd()),
     repoRoot,
     targetHead: args.audit?.targetHead ?? sourceVersion,
     trackedFiles,
@@ -34487,7 +31381,7 @@ async function blueprintPatchRecord(args) {
 }
 async function blueprintPatchReapply(args = {}) {
   const repoRoot = await resolvePatchReplayTarget(args.cwd);
-  const registryPath = expandHomePath3(resolveBlueprintRuntimeHost().patchRegistryPath);
+  const registryPath = expandHomePath2(resolveBlueprintRuntimeHost().patchRegistryPath);
   const registry2 = await readPatchRegistryDocument(registryPath);
   const requestedPatchIds = args.patchIds?.map((patchId) => normalizePatchId(patchId));
   const patchIds = await selectedPatchIdsForReplay(
@@ -34524,14 +31418,14 @@ async function blueprintPatchReapply(args = {}) {
     await loadPatchContent(registryPath, patchId, manifest);
     patchFiles.push(patchContentPath(registryPath, patchId));
   }
-  const checkResult = await runGit3(
+  const checkResult = await runGit2(
     ["-C", repoRoot, "apply", "--check", "--verbose", ...patchFiles],
     { allowFailure: true }
   );
   if (!checkResult.success) {
     for (const patchId of patchIds) {
       const patchFile = patchContentPath(registryPath, patchId);
-      const patchCheck = await runGit3(
+      const patchCheck = await runGit2(
         ["-C", repoRoot, "apply", "--check", "--verbose", patchFile],
         { allowFailure: true }
       );
@@ -34561,7 +31455,7 @@ async function blueprintPatchReapply(args = {}) {
       targetHead
     };
   }
-  const applyResult = await runGit3(
+  const applyResult = await runGit2(
     ["-C", repoRoot, "apply", "--verbose", "--whitespace=nowarn", ...patchFiles],
     { allowFailure: true }
   );
@@ -34589,7 +31483,7 @@ async function blueprintPatchReapply(args = {}) {
     targetHead
   };
 }
-var execFileAsync3, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
+var execFileAsync2, WORKSPACE_MANIFEST_FILE, WORKSPACE_REGISTRY_VERSION, WORKSPACE_STRATEGIES, PATCH_REGISTRY_VERSION, PATCH_MANIFEST_VERSION, PATCH_AUDIT_VERSION, PATCH_AUDIT_ACTIONS, PATCH_OUTCOMES, WORKSPACE_REGISTRY_LOCK_RETRY_MS, WORKSPACE_REGISTRY_LOCK_STALE_MS, WORKSPACE_REGISTRY_LOCK_OWNER_FILE, WORKSPACE_REGISTRY_LOCK_LEASE_FILE, WORKSTREAMS_ROOT_PATH, WORKSTREAMS_INDEX_PATH, WORKSTREAM_STATE_FILENAME, WORKSTREAM_STATE_VERSION, WORKSTREAM_STATUSES, WORKSTREAM_OPERATIONS, WORKSTREAMS_COMMAND, PROGRESS_COMMAND, workspaceRegistryGetInputSchema, workspaceCreateInputSchema, workspaceRemoveInputSchema, workstreamListInputSchema, workstreamMutateInputSchema, patchListInputSchema, patchRecordInputSchema, patchReapplyInputSchema, workspaceToolDefinitions;
 var init_workspace = __esm({
   "src/mcp/tools/workspace.ts"() {
     "use strict";
@@ -34598,7 +31492,7 @@ var init_workspace = __esm({
     init_config();
     init_runtime_host();
     init_security();
-    execFileAsync3 = promisify3(execFile3);
+    execFileAsync2 = promisify2(execFile2);
     WORKSPACE_MANIFEST_FILE = ".blueprint-workspace.json";
     WORKSPACE_REGISTRY_VERSION = 1;
     WORKSPACE_STRATEGIES = ["worktree", "clone"];
@@ -34721,6 +31615,3964 @@ var init_workspace = __esm({
         description: "Preview or replay recorded patches against a clean repo while enforcing host-global registry and compatibility guards.",
         inputSchema: patchReapplyInputSchema,
         handler: async (args) => blueprintPatchReapply(args)
+      }
+    ];
+  }
+});
+
+// src/mcp/tools/impact.ts
+import { execFile as execFile3 } from "node:child_process";
+import { createHash as createHash2 } from "node:crypto";
+import { promises as fs8 } from "node:fs";
+import os3 from "node:os";
+import path9 from "node:path";
+import { promisify as promisify3 } from "node:util";
+function stableHash(value) {
+  return createHash2("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+}
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+function placeholderImpactId(seed) {
+  return `impact-${stableHash(seed)}`;
+}
+function getBuiltInImpactConfig() {
+  return {
+    schemaVersion: IMPACT_SCHEMA_VERSION,
+    baseBranches: [...BUILT_IN_BASE_BRANCHES],
+    paths: {
+      include: ["**/*"],
+      ignore: ["node_modules/**", "coverage/**"],
+      generated: ["dist/**", "**/*.generated.*"],
+      docs: ["docs/**", "**/*.md"],
+      tests: ["tests/**", "**/*.test.ts"]
+    },
+    ownership: {
+      sources: [
+        "CODEOWNERS",
+        ".github/CODEOWNERS",
+        "docs/CODEOWNERS",
+        ".blueprint/impact/ownership.json"
+      ],
+      requiredOwnerMatch: false,
+      fallbackReviewers: []
+    },
+    dependencyGraph: {
+      sources: ["package-json", "package-lock", "ts-import-scan"],
+      customGraphFiles: [".blueprint/impact/dependency-graph.json"],
+      requireReverseDepsFor: ["runtime", "contract", "security", "compliance"]
+    },
+    risk: {
+      blockOnCritical: true,
+      blockOnBreakingContract: true,
+      blockOnSensitiveUnknownOwner: true,
+      warnBelowConfidence: 0.7,
+      blockBelowConfidenceForSensitiveAreas: 0.5
+    },
+    reporting: {
+      defaultVerbosity: "normal",
+      writeEvidenceLog: true,
+      redactPathPatterns: ["**/secrets/**"]
+    }
+  };
+}
+function isPlainObject6(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function compareImpactSurfaces(left, right) {
+  return IMPACT_SURFACE_PRIORITY[left] - IMPACT_SURFACE_PRIORITY[right];
+}
+function normalizeRepoPathForClassification(filePath) {
+  return filePath.trim().replaceAll("\\", "/").replace(/^\.\//u, "");
+}
+function addSurfaceRule(rules, surface, reason) {
+  if (!rules.some((rule) => rule.surface === surface)) {
+    rules.push({ surface, reason });
+  }
+}
+function hasPathSegment(filePath, segment) {
+  return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
+}
+function hasConfigName(filePath) {
+  const basename = path9.posix.basename(filePath);
+  return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
+}
+function isGeneratedPath(filePath) {
+  return GENERATED_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+}
+function isTestPath(filePath) {
+  return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+}
+function isDocsPath(filePath) {
+  const extension = path9.posix.extname(filePath).toLowerCase();
+  return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
+}
+function areaForSurface(surface) {
+  if ([
+    "command-catalog",
+    "command-manifest",
+    "command-doc",
+    "runtime-reference",
+    "mcp-server",
+    "mcp-tool",
+    "mcp-resource",
+    "artifact-contract",
+    "skill",
+    "agent",
+    "extension-manifest",
+    "hook",
+    "package-runtime",
+    "build-config"
+  ].includes(surface)) {
+    return "blueprint-runtime";
+  }
+  if (surface === "secret-sensitive" || surface === "env-config") {
+    return "sensitive-config";
+  }
+  if (surface === "test") {
+    return "tests";
+  }
+  if (surface === "docs") {
+    return "docs";
+  }
+  if (surface === "generated") {
+    return "generated";
+  }
+  if (surface === "config") {
+    return "config";
+  }
+  if (surface === "source") {
+    return "source";
+  }
+  if (surface === "repo-root") {
+    return "repo-root";
+  }
+  return "unknown";
+}
+function classifyImpactFile(filePath) {
+  const normalizedPath = normalizeRepoPathForClassification(filePath);
+  const basename = path9.posix.basename(normalizedPath);
+  const extension = path9.posix.extname(normalizedPath).toLowerCase();
+  const rules = [];
+  if (SECRET_PATH_PATTERN.test(normalizedPath)) {
+    addSurfaceRule(
+      rules,
+      "secret-sensitive",
+      "Path name indicates secret, token, or credential sensitivity."
+    );
+  }
+  if (basename === ".env" || basename.startsWith(".env.")) {
+    addSurfaceRule(rules, "env-config", "Environment file path matched .env*.");
+  }
+  if (normalizedPath === "docs/COMMAND-CATALOG.md") {
+    addSurfaceRule(rules, "command-catalog", "Command catalog documentation changed.");
+    addSurfaceRule(rules, "docs", "Command catalog is a documentation surface.");
+  }
+  if (normalizedPath === "docs/RUNTIME-REFERENCE.md") {
+    addSurfaceRule(rules, "runtime-reference", "Runtime reference contract documentation changed.");
+    addSurfaceRule(rules, "docs", "Runtime reference is a documentation surface.");
+  }
+  if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
+    addSurfaceRule(rules, "command-manifest", "Command manifest TOML changed.");
+    addSurfaceRule(rules, "config", "Command manifests are TOML configuration.");
+  }
+  if (hasPathSegment(normalizedPath, "docs/commands")) {
+    addSurfaceRule(rules, "command-doc", "Command specification documentation changed.");
+    addSurfaceRule(rules, "docs", "Command specifications are documentation surfaces.");
+  }
+  if (normalizedPath === "src/mcp/server.ts") {
+    addSurfaceRule(rules, "mcp-server", "MCP server registration surface changed.");
+    addSurfaceRule(rules, "source", "MCP server is TypeScript source.");
+  }
+  if (hasPathSegment(normalizedPath, "src/mcp/tools")) {
+    addSurfaceRule(rules, "mcp-tool", "MCP tool implementation surface changed.");
+    addSurfaceRule(rules, "source", "MCP tools are TypeScript source.");
+  }
+  if (normalizedPath === "src/mcp/command-resources.ts") {
+    addSurfaceRule(rules, "mcp-resource", "MCP command resource projection changed.");
+    addSurfaceRule(rules, "source", "MCP resources are TypeScript source.");
+  }
+  if (hasPathSegment(normalizedPath, "src/mcp/artifact-contracts")) {
+    addSurfaceRule(rules, "artifact-contract", "Artifact contract registry changed.");
+    addSurfaceRule(rules, "source", "Artifact contracts are TypeScript source.");
+  }
+  if (hasPathSegment(normalizedPath, "skills")) {
+    addSurfaceRule(rules, "skill", "Blueprint skill contract changed.");
+    if (isDocsPath(normalizedPath)) {
+      addSurfaceRule(rules, "docs", "Markdown skill files are documentation surfaces.");
+    }
+  }
+  if (hasPathSegment(normalizedPath, "agents")) {
+    addSurfaceRule(rules, "agent", "Blueprint agent contract changed.");
+    if (isDocsPath(normalizedPath)) {
+      addSurfaceRule(rules, "docs", "Markdown agent files are documentation surfaces.");
+    }
+  }
+  if (normalizedPath === "gemini-extension.json" || normalizedPath === "tabnine-extension.json") {
+    addSurfaceRule(rules, "extension-manifest", "Extension host manifest changed.");
+    addSurfaceRule(rules, "config", "Extension manifests are JSON configuration.");
+  }
+  if (hasPathSegment(normalizedPath, "hooks") || hasPathSegment(normalizedPath, "src/hooks")) {
+    addSurfaceRule(rules, "hook", "Blueprint advisory hook surface changed.");
+    if (hasPathSegment(normalizedPath, "src/hooks")) {
+      addSurfaceRule(rules, "source", "Hook runtime implementation is source code.");
+    }
+  }
+  if (normalizedPath === "package.json" || normalizedPath === "package-lock.json") {
+    addSurfaceRule(rules, "package-runtime", "Node package runtime metadata changed.");
+    addSurfaceRule(rules, "config", "Package metadata is JSON configuration.");
+  }
+  if (normalizedPath === "tsconfig.json" || normalizedPath === "scripts/build.mjs") {
+    addSurfaceRule(rules, "build-config", "Build configuration changed.");
+    addSurfaceRule(rules, "config", "Build configuration is runtime configuration.");
+  }
+  if (isTestPath(normalizedPath)) {
+    addSurfaceRule(rules, "test", "Path matched tests directory or test file suffix.");
+  }
+  if (isDocsPath(normalizedPath)) {
+    addSurfaceRule(rules, "docs", "Path matched docs directory or documentation file extension.");
+  }
+  if (isGeneratedPath(normalizedPath)) {
+    addSurfaceRule(rules, "generated", "Path matched generated output directory or suffix.");
+  }
+  if (CONFIG_FILE_EXTENSIONS.has(extension) || hasConfigName(normalizedPath)) {
+    addSurfaceRule(rules, "config", "Path matched configuration extension or naming convention.");
+  }
+  if (hasPathSegment(normalizedPath, "src") && SOURCE_FILE_EXTENSIONS.has(extension)) {
+    addSurfaceRule(rules, "source", "Path matched source tree and code extension.");
+  }
+  if (!normalizedPath.includes("/")) {
+    addSurfaceRule(rules, "repo-root", "Path is at the repository root.");
+  }
+  if (rules.length === 0) {
+    addSurfaceRule(rules, "unknown", "No impact surface rule matched this path.");
+  }
+  const sortedRules = rules.sort(
+    (left, right) => compareImpactSurfaces(left.surface, right.surface)
+  );
+  const surfaces = sortedRules.map((rule) => rule.surface);
+  const primarySurface = surfaces[0] ?? "unknown";
+  return {
+    path: normalizedPath,
+    surfaces,
+    primarySurface,
+    area: areaForSurface(primarySurface),
+    reasons: sortedRules.map((rule) => rule.reason)
+  };
+}
+function summarizeSurfaceRecords(records, selector, sortNames = (left, right) => left.localeCompare(right)) {
+  const summary = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    const key = selector(record2);
+    const files = summary.get(key) ?? /* @__PURE__ */ new Set();
+    files.add(record2.path);
+    summary.set(key, files);
+  }
+  return [...summary.entries()].sort(([left], [right]) => sortNames(left, right)).map(([name, files]) => {
+    const sortedFiles = [...files].sort();
+    return {
+      name,
+      files: sortedFiles,
+      count: sortedFiles.length
+    };
+  });
+}
+function buildAreaSummary(records) {
+  const areaOrder = [
+    "sensitive-config",
+    "blueprint-runtime",
+    "tests",
+    "docs",
+    "generated",
+    "config",
+    "source",
+    "repo-root",
+    "unknown"
+  ];
+  return summarizeSurfaceRecords(records, (record2) => record2.area, (left, right) => {
+    const leftIndex = areaOrder.indexOf(left);
+    const rightIndex = areaOrder.indexOf(right);
+    const normalizedLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+    const normalizedRightIndex = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+    return normalizedLeftIndex - normalizedRightIndex || left.localeCompare(right);
+  });
+}
+function buildSurfaceSummary(records) {
+  const surfaceFiles = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    for (const surface of record2.surfaces) {
+      const files = surfaceFiles.get(surface) ?? /* @__PURE__ */ new Set();
+      files.add(record2.path);
+      surfaceFiles.set(surface, files);
+    }
+  }
+  return [...surfaceFiles.entries()].sort(([left], [right]) => compareImpactSurfaces(left, right)).map(([name, files]) => {
+    const sortedFiles = [...files].sort();
+    return {
+      name,
+      files: sortedFiles,
+      count: sortedFiles.length
+    };
+  });
+}
+function uniqueSorted2(values) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))].sort();
+}
+function allRegisteredRuntimeToolNames() {
+  return uniqueSorted2([
+    ...PROJECT_RUNTIME_TOOL_NAMES,
+    ...configToolDefinitions.map((definition) => definition.name),
+    ...stateToolDefinitions.map((definition) => definition.name),
+    ...phaseToolDefinitions.map((definition) => definition.name),
+    ...reviewToolDefinitions.map((definition) => definition.name),
+    ...artifactToolDefinitions.map((definition) => definition.name),
+    ...impactToolDefinitions.map((definition) => definition.name),
+    ...updateToolDefinitions.map((definition) => definition.name),
+    ...workspaceToolDefinitions.map((definition) => definition.name)
+  ]);
+}
+function stableRecordId(prefix, seed) {
+  return `${prefix}.${stableHash(seed)}`;
+}
+function sanitizeIdentifier(value) {
+  const sanitized = value.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-+|-+$/gu, "");
+  return sanitized.length > 0 ? sanitized.slice(0, 80) : "unknown";
+}
+function sortEvidenceRecords(records) {
+  return [...records].sort((left, right) => left.id.localeCompare(right.id));
+}
+function sortUnknownRecords(records) {
+  return [...records].sort((left, right) => left.id.localeCompare(right.id));
+}
+function findingSeverityRank(value) {
+  return { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }[value];
+}
+function findingStatusRank(value) {
+  return { BLOCK: 0, WARN: 1, PASS: 2 }[value];
+}
+function sortFindings(records) {
+  return [...records].sort(
+    (left, right) => findingStatusRank(left.status) - findingStatusRank(right.status) || findingSeverityRank(left.severity) - findingSeverityRank(right.severity) || left.impactedAreas.join(",").localeCompare(right.impactedAreas.join(",")) || left.checkId.localeCompare(right.checkId) || left.id.localeCompare(right.id)
+  );
+}
+function sortObligations(records) {
+  const deduped = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    const existing = deduped.get(record2.id);
+    if (!existing) {
+      deduped.set(record2.id, {
+        ...record2,
+        impactedFiles: uniqueSorted2(record2.impactedFiles),
+        sourceSurfaces: [...new Set(record2.sourceSurfaces)].sort(compareImpactSurfaces),
+        requiredActions: uniqueSorted2(record2.requiredActions),
+        evidenceRefs: uniqueSorted2(record2.evidenceRefs)
+      });
+      continue;
+    }
+    deduped.set(record2.id, {
+      ...existing,
+      impactedFiles: uniqueSorted2([...existing.impactedFiles, ...record2.impactedFiles]),
+      sourceSurfaces: [.../* @__PURE__ */ new Set([...existing.sourceSurfaces, ...record2.sourceSurfaces])].sort(
+        compareImpactSurfaces
+      ),
+      requiredActions: uniqueSorted2([...existing.requiredActions, ...record2.requiredActions]),
+      evidenceRefs: uniqueSorted2([...existing.evidenceRefs, ...record2.evidenceRefs])
+    });
+  }
+  return [...deduped.values()].sort(
+    (left, right) => findingStatusRank(left.status) - findingStatusRank(right.status) || findingSeverityRank(left.severity) - findingSeverityRank(right.severity) || left.category.localeCompare(right.category) || left.title.localeCompare(right.title) || left.id.localeCompare(right.id)
+  );
+}
+function addEvidence(records, record2) {
+  const id = stableRecordId(`ev.${record2.kind}`, record2);
+  records.push({
+    id,
+    ...record2,
+    paths: uniqueSorted2(record2.paths)
+  });
+  return id;
+}
+function escapeRegExp2(value) {
+  return value.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
+}
+function globPatternToRegExp(pattern) {
+  const normalized = pattern.trim().replaceAll("\\", "/").replace(/^\//u, "");
+  let expression = "^";
+  for (let index = 0; index < normalized.length; index += 1) {
+    const character = normalized[index];
+    const next = normalized[index + 1];
+    if (character === "*" && next === "*") {
+      expression += ".*";
+      index += 1;
+    } else if (character === "*") {
+      expression += "[^/]*";
+    } else if (character === "?") {
+      expression += "[^/]";
+    } else {
+      expression += escapeRegExp2(character ?? "");
+    }
+  }
+  if (normalized.endsWith("/")) {
+    expression += ".*";
+  }
+  expression += "$";
+  return new RegExp(expression, "u");
+}
+function matchesRepoPattern(filePath, pattern) {
+  const normalizedPath = normalizeRepoPathForClassification(filePath);
+  const normalizedPattern = pattern.trim().replaceAll("\\", "/").replace(/^\//u, "");
+  if (normalizedPattern.length === 0) {
+    return false;
+  }
+  if (!normalizedPattern.includes("/")) {
+    return globPatternToRegExp(normalizedPattern).test(path9.posix.basename(normalizedPath));
+  }
+  return globPatternToRegExp(normalizedPattern).test(normalizedPath);
+}
+function isCodeownersCandidate(source) {
+  return CODEOWNERS_CANDIDATES.includes(source);
+}
+function hasSurface(record2, surface) {
+  return record2.surfaces.includes(surface);
+}
+function isContractLikeSurface(record2) {
+  return record2.surfaces.some(
+    (surface) => [
+      "command-catalog",
+      "command-manifest",
+      "command-doc",
+      "runtime-reference",
+      "mcp-server",
+      "mcp-tool",
+      "mcp-resource",
+      "artifact-contract",
+      "skill",
+      "agent",
+      "extension-manifest",
+      "hook"
+    ].includes(surface)
+  );
+}
+function isGeneratedOnlySurface(record2) {
+  return record2.surfaces.includes("generated") && !record2.surfaces.includes("source");
+}
+function isReverseDependencyRelevant(record2) {
+  return hasSurface(record2, "source") || hasSurface(record2, "package-runtime") || hasSurface(record2, "secret-sensitive") || isContractLikeSurface(record2);
+}
+function cloneConfig2(config2) {
+  return JSON.parse(JSON.stringify(config2));
+}
+function expandHomePath3(value) {
+  const trimmed = value.trim();
+  if (trimmed === "~") {
+    return os3.homedir();
+  }
+  if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
+    return path9.join(os3.homedir(), trimmed.slice(2));
+  }
+  return trimmed;
+}
+async function pathExists6(targetPath) {
+  try {
+    await fs8.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function resolveContainedInputPath(projectRoot, inputPath, label) {
+  const trimmed = inputPath.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`${label} must not be blank.`);
+  }
+  const candidatePath = path9.isAbsolute(trimmed) ? trimmed : path9.resolve(projectRoot, trimmed);
+  return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
+}
+function toRepoRelativeInputPath(projectRoot, inputPath, label) {
+  const absolutePath = resolveContainedInputPath(projectRoot, inputPath, label);
+  return toRepoRelativePath(projectRoot, absolutePath);
+}
+function extractStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item) => typeof item === "string");
+}
+function collectAnalyzeFileSources(args) {
+  return [
+    {
+      label: "changedFiles",
+      files: extractStringArray(args.changedFiles)
+    },
+    {
+      label: "files",
+      files: extractStringArray(args.files)
+    },
+    {
+      label: "scope.files",
+      files: extractStringArray(args.scope?.files)
+    },
+    {
+      label: "scope.changedFiles",
+      files: extractStringArray(args.scope?.changedFiles)
+    }
+  ].filter((source) => source.files.length > 0);
+}
+function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
+  const normalizedBySource = sources.map((source) => ({
+    label: source.label,
+    files: [
+      ...new Set(
+        source.files.map(
+          (file2) => toRepoRelativeInputPath(projectRoot, file2, `Impact analyze ${source.label} file`)
+        )
+      )
+    ].sort()
+  }));
+  const sourceFingerprints = [
+    ...new Set(normalizedBySource.map((source) => source.files.join("\n")))
+  ];
+  if (sourceFingerprints.length > 1) {
+    warnings.push(
+      `Impact analyze file inputs differed across ${normalizedBySource.map((source) => source.label).join(", ")}; using deterministic union.`
+    );
+  }
+  return [...new Set(normalizedBySource.flatMap((source) => source.files))].sort();
+}
+function getImpactDefaultsPath() {
+  const runtimeHost = resolveBlueprintRuntimeHost();
+  return path9.resolve(
+    expandHomePath3(
+      path9.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+    )
+  );
+}
+function isUnsafeRepoPattern(value) {
+  const normalized = value.trim().replaceAll("\\", "/");
+  return normalized.length === 0 || normalized.includes("\0") || path9.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+}
+function validateConfigPathArrays(config2) {
+  const errors = [];
+  const pathArrays = [
+    ["paths.include", config2.paths.include],
+    ["paths.ignore", config2.paths.ignore],
+    ["paths.generated", config2.paths.generated],
+    ["paths.docs", config2.paths.docs],
+    ["paths.tests", config2.paths.tests],
+    ["ownership.sources", config2.ownership.sources],
+    ["dependencyGraph.customGraphFiles", config2.dependencyGraph.customGraphFiles],
+    ["reporting.redactPathPatterns", config2.reporting.redactPathPatterns]
+  ];
+  for (const [label, values] of pathArrays) {
+    for (const value of values) {
+      if (isUnsafeRepoPattern(value)) {
+        errors.push(`${label} contains a path pattern that escapes the repository: ${value}`);
+      }
+    }
+  }
+  return errors;
+}
+function formatZodIssues(prefix, error2) {
+  return error2.issues.map((issue2) => {
+    const issuePath = issue2.path.length > 0 ? issue2.path.join(".") : "(root)";
+    return `${prefix} ${issuePath}: ${issue2.message}`;
+  });
+}
+function sanitizeConfigLayer(layer, label, strictConfig, warnings, errors) {
+  const sanitized = {};
+  const knownKeys = new Set(KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS);
+  for (const [key, value] of Object.entries(layer)) {
+    if (!knownKeys.has(key)) {
+      const message = `Unknown impact config key in ${label}: ${key}`;
+      if (strictConfig) {
+        errors.push(message);
+      } else {
+        warnings.push(message);
+      }
+      continue;
+    }
+    sanitized[key] = value;
+  }
+  return sanitized;
+}
+function mergeConfigLayer(target, source) {
+  for (const [key, value] of Object.entries(source)) {
+    if (isPlainObject6(value) && isPlainObject6(target[key])) {
+      mergeConfigLayer(target[key], value);
+    } else if (Array.isArray(value)) {
+      target[key] = [...value];
+    } else {
+      target[key] = value;
+    }
+  }
+}
+async function readConfigLayer(filePath, label, warnings, errors) {
+  if (!await pathExists6(filePath)) {
+    return null;
+  }
+  try {
+    return safeJsonParseObject(await fs8.readFile(filePath, "utf8"), { label });
+  } catch (error2) {
+    errors.push(error2 instanceof Error ? error2.message : `${label} could not be read.`);
+    return null;
+  }
+}
+function applyConfigLayer2(config2, layer, label, strictConfig, warnings, errors) {
+  const sanitized = sanitizeConfigLayer(layer, label, strictConfig, warnings, errors);
+  const parseResult = partialImpactConfigSchema.safeParse(sanitized);
+  if (!parseResult.success) {
+    errors.push(...formatZodIssues(`Invalid impact config in ${label}:`, parseResult.error));
+    return false;
+  }
+  mergeConfigLayer(config2, parseResult.data);
+  return Object.keys(sanitized).length > 0;
+}
+function validateFinalImpactConfig(config2, errors) {
+  const parseResult = impactConfigSchema.safeParse(config2);
+  if (!parseResult.success) {
+    errors.push(...formatZodIssues("Invalid effective impact config:", parseResult.error));
+    return getBuiltInImpactConfig();
+  }
+  errors.push(...validateConfigPathArrays(parseResult.data));
+  return parseResult.data;
+}
+function resolveAnalyzeImpactConfig(providedConfig, warnings) {
+  const config2 = cloneConfig2(getBuiltInImpactConfig());
+  const errors = [];
+  if (providedConfig && Object.keys(providedConfig).length > 0) {
+    applyConfigLayer2(config2, providedConfig, "analyze config", false, warnings, errors);
+  }
+  const effectiveConfig = validateFinalImpactConfig(config2, errors);
+  if (errors.length > 0) {
+    throw new Error(`Invalid impact analyze config: ${[...new Set(errors)].join(" ")}`);
+  }
+  return effectiveConfig;
+}
+function parseCodeownersRules(raw, sourcePath) {
+  const rules = [];
+  for (const [lineIndex, rawLine] of raw.split(/\r?\n/u).entries()) {
+    const line = rawLine.replace(/\s+#.*$/u, "").trim();
+    if (line.length === 0 || line.startsWith("#")) {
+      continue;
+    }
+    const [pattern, ...owners] = line.split(/\s+/u);
+    if (!pattern) {
+      continue;
+    }
+    rules.push({
+      source: "codeowners",
+      sourcePath,
+      pattern,
+      owners: uniqueSorted2(owners),
+      sensitive: false,
+      line: lineIndex + 1,
+      order: rules.length
+    });
+  }
+  return rules;
+}
+function matchLastCodeownersRule(filePath, rules) {
+  let matched = null;
+  for (const rule of rules) {
+    if (matchesRepoPattern(filePath, rule.pattern)) {
+      matched = rule;
+    }
+  }
+  return matched;
+}
+async function loadOwnershipAnalysis(projectRoot, files, surfaces, config2, warnings) {
+  const evidence = [];
+  const unknowns = [];
+  const findings = [];
+  const configuredSources = uniqueSorted2(config2.ownership.sources);
+  const sourcesUsed = [];
+  const metadataFallbackReviewers = [];
+  const metadataPaths = [];
+  const rules = [];
+  let codeownersPath = null;
+  for (const source of config2.ownership.sources) {
+    if (!isCodeownersCandidate(source)) {
+      continue;
+    }
+    const absolutePath = resolveContainedInputPath(
+      projectRoot,
+      source,
+      "Impact ownership CODEOWNERS source"
+    );
+    if (!await pathExists6(absolutePath)) {
+      continue;
+    }
+    codeownersPath = toRepoRelativePath(projectRoot, absolutePath);
+    const parsedRules = parseCodeownersRules(await fs8.readFile(absolutePath, "utf8"), codeownersPath);
+    rules.push(...parsedRules);
+    sourcesUsed.push(codeownersPath);
+    addEvidence(evidence, {
+      kind: "ownership",
+      source: codeownersPath,
+      summary: `Loaded ${parsedRules.length} CODEOWNERS ownership rules; last matching rule wins within this file.`,
+      paths: [codeownersPath],
+      data: { ruleCount: parsedRules.length }
+    });
+    break;
+  }
+  const metadataSources = config2.ownership.sources.filter((source) => !isCodeownersCandidate(source));
+  for (const source of metadataSources) {
+    const absolutePath = resolveContainedInputPath(
+      projectRoot,
+      source,
+      "Impact ownership metadata source"
+    );
+    if (!await pathExists6(absolutePath)) {
+      continue;
+    }
+    const relativePath = toRepoRelativePath(projectRoot, absolutePath);
+    try {
+      const parsed = safeJsonParseObject(await fs8.readFile(absolutePath, "utf8"), {
+        label: `Impact ownership metadata ${relativePath}`
+      });
+      const metadataResult = ownershipMetadataSchema.safeParse(parsed);
+      if (!metadataResult.success) {
+        throw new Error(
+          formatZodIssues(`Invalid impact ownership metadata ${relativePath}:`, metadataResult.error).join(
+            " "
+          )
+        );
+      }
+      const startIndex = rules.length;
+      for (const [index, rule] of metadataResult.data.rules.entries()) {
+        rules.push({
+          source: "metadata",
+          sourcePath: relativePath,
+          pattern: rule.pattern,
+          owners: uniqueSorted2(rule.owners),
+          sensitive: rule.sensitive,
+          line: null,
+          order: startIndex + index
+        });
+      }
+      metadataFallbackReviewers.push(...metadataResult.data.fallbackReviewers);
+      metadataPaths.push(relativePath);
+      sourcesUsed.push(relativePath);
+      addEvidence(evidence, {
+        kind: "ownership",
+        source: relativePath,
+        summary: `Loaded ${metadataResult.data.rules.length} optional ownership metadata rules.`,
+        paths: [relativePath],
+        data: {
+          ruleCount: metadataResult.data.rules.length,
+          fallbackReviewerCount: metadataResult.data.fallbackReviewers.length
+        }
+      });
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : `Impact ownership metadata ${relativePath} could not be parsed.`;
+      warnings.push(message);
+      const evidenceRef = addEvidence(evidence, {
+        kind: "metadata",
+        source: relativePath,
+        summary: "Optional ownership metadata could not be parsed; ownership analysis continued without it.",
+        paths: [relativePath]
+      });
+      unknowns.push({
+        id: `unknown.ownership.metadata.${sanitizeIdentifier(relativePath)}`,
+        category: "ownership",
+        title: "Optional ownership metadata is malformed",
+        severity: "MEDIUM",
+        impactedFiles: [],
+        reason: message,
+        resolution: `Repair ${relativePath} to match ${OWNERSHIP_SCHEMA_VERSION}.`,
+        evidenceRefs: [evidenceRef]
+      });
+    }
+  }
+  const effectiveMetadataFallback = uniqueSorted2(metadataFallbackReviewers);
+  const configuredFallback = uniqueSorted2(config2.ownership.fallbackReviewers);
+  const orderedFallbackReviewers = configuredFallback.length > 0 ? configuredFallback : effectiveMetadataFallback;
+  const matches = [];
+  const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
+  for (const file2 of files) {
+    const codeownersRule = matchLastCodeownersRule(file2, rules.filter((rule) => rule.source === "codeowners"));
+    const metadataRules = rules.filter(
+      (rule) => rule.source === "metadata" && matchesRepoPattern(file2, rule.pattern)
+    );
+    const matchedRules = [...codeownersRule ? [codeownersRule] : [], ...metadataRules].sort(
+      (left, right) => left.order - right.order
+    );
+    const explicitOwners = uniqueSorted2(matchedRules.flatMap((rule) => rule.owners));
+    const fallbackReviewers = explicitOwners.length === 0 ? orderedFallbackReviewers : [];
+    const owners = explicitOwners.length > 0 ? explicitOwners : fallbackReviewers;
+    const surface = surfaceByPath.get(file2);
+    const sensitive = surface?.surfaces.includes("secret-sensitive") === true || matchedRules.some((rule) => rule.sensitive);
+    const ownerMissing = owners.length === 0;
+    const evidenceRef = addEvidence(evidence, {
+      kind: "ownership",
+      source: matchedRules.length > 0 ? "ownership-rules" : "ownership-coverage",
+      summary: ownerMissing ? "No explicit owner or fallback reviewer matched this changed file." : fallbackReviewers.length > 0 ? "Fallback reviewers were applied because no specific ownership rule matched this changed file." : "Specific ownership rules matched this changed file.",
+      paths: [file2],
+      data: {
+        ownerCount: owners.length,
+        fallbackUsed: fallbackReviewers.length > 0,
+        sensitive
+      }
+    });
+    matches.push({
+      path: file2,
+      owners,
+      matchedRules,
+      fallbackReviewers,
+      fallbackUsed: fallbackReviewers.length > 0,
+      sensitive,
+      ownerMissing,
+      evidenceRefs: [evidenceRef]
+    });
+    if (ownerMissing) {
+      unknowns.push({
+        id: `unknown.ownership.${sanitizeIdentifier(file2)}`,
+        category: "ownership",
+        title: sensitive ? "Sensitive changed file has no owner" : "Changed file has no owner",
+        severity: sensitive ? "HIGH" : "MEDIUM",
+        impactedFiles: [file2],
+        reason: "No configured CODEOWNERS rule, ownership metadata rule, or fallback reviewer covered this changed file.",
+        resolution: "Add a CODEOWNERS or impact ownership metadata rule, or configure ownership.fallbackReviewers.",
+        evidenceRefs: [evidenceRef]
+      });
+    }
+    if (sensitive && ownerMissing && config2.risk.blockOnSensitiveUnknownOwner) {
+      findings.push({
+        id: `finding.ownership.sensitive-owner.${sanitizeIdentifier(file2)}`,
+        checkId: "ownership.sensitive-owner",
+        title: "Sensitive changed file has no accountable owner",
+        severity: "CRITICAL",
+        status: "BLOCK",
+        confidence: 0.86,
+        impactedFiles: [file2],
+        impactedAreas: [surface?.area ?? "sensitive-config"],
+        owners: [],
+        requiredActions: [
+          "Assign an explicit owner or fallback reviewer before relying on this impact report."
+        ],
+        evidenceRefs: [evidenceRef]
+      });
+    }
+  }
+  const filesWithOwners = matches.filter((match) => !match.ownerMissing).length;
+  const filesMissingOwners = matches.length - filesWithOwners;
+  const coverageStatus = matches.length === 0 || filesWithOwners === 0 ? "none" : filesMissingOwners === 0 ? "complete" : "partial";
+  return {
+    ownership: {
+      coverage: {
+        status: coverageStatus,
+        sourcesConfigured: configuredSources,
+        sourcesUsed: uniqueSorted2(sourcesUsed),
+        fallbackReviewers: orderedFallbackReviewers,
+        filesWithOwners,
+        filesMissingOwners,
+        gaps: matches.filter((match) => match.ownerMissing).map((match) => match.path).sort()
+      },
+      codeownersPath,
+      metadataPaths: metadataPaths.sort(),
+      rules: rules.sort((left, right) => left.sourcePath.localeCompare(right.sourcePath) || left.order - right.order),
+      matches: matches.sort((left, right) => left.path.localeCompare(right.path))
+    },
+    unknowns: sortUnknownRecords(unknowns),
+    findings: sortFindings(findings),
+    evidence: sortEvidenceRecords(evidence)
+  };
+}
+function addDependencyNode(nodes, node) {
+  const existing = nodes.get(node.id);
+  if (!existing) {
+    nodes.set(node.id, node);
+    return;
+  }
+  nodes.set(node.id, {
+    ...existing,
+    path: existing.path ?? node.path,
+    source: uniqueSorted2([...existing.source.split(","), node.source]).join(",")
+  });
+}
+function addDependencyEdge(edges, edge) {
+  const key = `${edge.from}\0${edge.to}\0${edge.type}\0${edge.source}`;
+  if (!edges.has(key)) {
+    edges.set(key, edge);
+  }
+}
+function dependencyNamesFromPackageJson(parsed) {
+  return uniqueSorted2(
+    ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].flatMap(
+      (key) => isPlainObject6(parsed[key]) ? Object.keys(parsed[key]) : []
+    )
+  );
+}
+function packageScriptsFromPackageJson(parsed) {
+  return isPlainObject6(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
+}
+function packageJsonWorkspaces(parsed) {
+  if (Array.isArray(parsed.workspaces)) {
+    return parsed.workspaces.filter((item) => typeof item === "string");
+  }
+  if (isPlainObject6(parsed.workspaces) && Array.isArray(parsed.workspaces.packages)) {
+    return parsed.workspaces.packages.filter((item) => typeof item === "string");
+  }
+  return [];
+}
+async function readJsonObjectIfPresent(filePath, label) {
+  if (!await pathExists6(filePath)) {
+    return null;
+  }
+  return safeJsonParseObject(await fs8.readFile(filePath, "utf8"), { label });
+}
+async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns) {
+  const directories = [];
+  for (const pattern of workspacePatterns) {
+    const normalizedPattern = pattern.trim().replaceAll("\\", "/").replace(/\/+$/u, "");
+    if (!["packages/*", "apps/*"].includes(normalizedPattern)) {
+      continue;
+    }
+    const root = normalizedPattern.split("/")[0];
+    const absoluteRoot = path9.join(projectRoot, root);
+    if (!await pathExists6(absoluteRoot)) {
+      continue;
+    }
+    const entries = await fs8.readdir(absoluteRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) {
+        continue;
+      }
+      const relativePath = `${root}/${entry.name}`;
+      if (await pathExists6(path9.join(projectRoot, relativePath, "package.json"))) {
+        directories.push(relativePath);
+      }
+    }
+  }
+  return uniqueSorted2(directories);
+}
+async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
+  const packagePath = path9.join(projectRoot, "package.json");
+  const parsed = await readJsonObjectIfPresent(packagePath, "Impact package.json");
+  const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
+  if (!parsed) {
+    return { used: false, packageNameByWorkspacePath };
+  }
+  const rootName = typeof parsed.name === "string" ? parsed.name : "root-package";
+  const rootNodeId = `package:${rootName}`;
+  addDependencyNode(nodes, {
+    id: rootNodeId,
+    path: ".",
+    kind: "package",
+    source: PACKAGE_JSON_SOURCE
+  });
+  for (const dependencyName of dependencyNamesFromPackageJson(parsed)) {
+    const dependencyNodeId = `external:${dependencyName}`;
+    addDependencyNode(nodes, {
+      id: dependencyNodeId,
+      path: null,
+      kind: "external",
+      source: PACKAGE_JSON_SOURCE
+    });
+    addDependencyEdge(edges, {
+      from: rootNodeId,
+      to: dependencyNodeId,
+      type: "package-dependency",
+      source: PACKAGE_JSON_SOURCE
+    });
+  }
+  const workspaceDirectories = await resolveSimpleWorkspaceDirectories(
+    projectRoot,
+    packageJsonWorkspaces(parsed)
+  );
+  const workspacePackageNames = /* @__PURE__ */ new Map();
+  for (const workspacePath of workspaceDirectories) {
+    try {
+      const workspacePackage = await readJsonObjectIfPresent(
+        path9.join(projectRoot, workspacePath, "package.json"),
+        `Impact workspace package ${workspacePath}/package.json`
+      );
+      if (!workspacePackage) {
+        continue;
+      }
+      const workspaceName = typeof workspacePackage.name === "string" ? workspacePackage.name : workspacePath;
+      const workspaceNodeId = `package:${workspaceName}`;
+      workspacePackageNames.set(workspaceName, workspaceNodeId);
+      packageNameByWorkspacePath.set(workspacePath, workspaceName);
+      addDependencyNode(nodes, {
+        id: workspaceNodeId,
+        path: workspacePath,
+        kind: "workspace",
+        source: PACKAGE_JSON_SOURCE
+      });
+      addDependencyEdge(edges, {
+        from: rootNodeId,
+        to: workspaceNodeId,
+        type: "workspace",
+        source: PACKAGE_JSON_SOURCE
+      });
+    } catch (error2) {
+      warnings.push(
+        `Could not read impact workspace package metadata at ${workspacePath}/package.json: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+  }
+  for (const workspacePath of workspaceDirectories) {
+    const workspacePackage = await readJsonObjectIfPresent(
+      path9.join(projectRoot, workspacePath, "package.json"),
+      `Impact workspace package ${workspacePath}/package.json`
+    );
+    if (!workspacePackage) {
+      continue;
+    }
+    const workspaceName = typeof workspacePackage.name === "string" ? workspacePackage.name : workspacePath;
+    const fromNodeId = `package:${workspaceName}`;
+    for (const dependencyName of dependencyNamesFromPackageJson(workspacePackage)) {
+      const workspaceTargetId = workspacePackageNames.get(dependencyName);
+      if (workspaceTargetId) {
+        addDependencyEdge(edges, {
+          from: fromNodeId,
+          to: workspaceTargetId,
+          type: "workspace-package-dependency",
+          source: PACKAGE_JSON_SOURCE
+        });
+      }
+    }
+  }
+  addEvidence(evidence, {
+    kind: "dependency",
+    source: "package.json",
+    summary: "Loaded package runtime dependencies, scripts, and simple packages/* or apps/* workspaces.",
+    paths: ["package.json", ...workspaceDirectories.map((entry) => `${entry}/package.json`)],
+    data: {
+      dependencyCount: dependencyNamesFromPackageJson(parsed).length,
+      scriptCount: packageScriptsFromPackageJson(parsed).length,
+      workspaceCount: workspaceDirectories.length
+    }
+  });
+  return { used: true, packageNameByWorkspacePath };
+}
+async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
+  const lockPath = path9.join(projectRoot, "package-lock.json");
+  if (!await pathExists6(lockPath)) {
+    return false;
+  }
+  try {
+    const parsed = safeJsonParseObject(await fs8.readFile(lockPath, "utf8"), {
+      label: "Impact package-lock.json"
+    });
+    const packages = isPlainObject6(parsed.packages) ? Object.entries(parsed.packages) : [];
+    for (const [packagePath] of packages.slice(0, 500)) {
+      if (packagePath.length === 0 || packagePath.startsWith("node_modules/")) {
+        continue;
+      }
+      addDependencyNode(nodes, {
+        id: `lock:${packagePath}`,
+        path: normalizeRepoPathForClassification(packagePath),
+        kind: "package",
+        source: PACKAGE_LOCK_SOURCE
+      });
+    }
+    addEvidence(evidence, {
+      kind: "dependency",
+      source: "package-lock.json",
+      summary: "Loaded package-lock package path hints for dependency coverage.",
+      paths: ["package-lock.json"],
+      data: { packageHintCount: packages.length }
+    });
+    return true;
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : "Impact package-lock.json could not be parsed.";
+    warnings.push(message);
+    const evidenceRef = addEvidence(evidence, {
+      kind: "metadata",
+      source: "package-lock.json",
+      summary: "package-lock metadata could not be parsed; dependency analysis continued without it.",
+      paths: ["package-lock.json"]
+    });
+    unknowns.push({
+      id: "unknown.dependency.package-lock-metadata",
+      category: "dependency",
+      title: "package-lock metadata is malformed",
+      severity: "LOW",
+      impactedFiles: [],
+      reason: message,
+      resolution: "Repair package-lock.json or disable the package-lock impact dependency source.",
+      evidenceRefs: [evidenceRef]
+    });
+    return false;
+  }
+}
+async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
+  const results = /* @__PURE__ */ new Set();
+  const queue = [];
+  for (const root of roots) {
+    if (await pathExists6(path9.join(projectRoot, root))) {
+      queue.push({ relativePath: root, depth: 0 });
+    }
+  }
+  while (queue.length > 0 && results.size < 600) {
+    const current = queue.shift();
+    if (!current || current.depth > 8) {
+      continue;
+    }
+    const absolutePath = path9.join(projectRoot, current.relativePath);
+    const entries = await fs8.readdir(absolutePath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (results.size >= 600) {
+        break;
+      }
+      if (entry.name.startsWith(".")) {
+        continue;
+      }
+      const relativePath = `${current.relativePath}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (["node_modules", "dist", "coverage", "build"].includes(entry.name)) {
+          continue;
+        }
+        queue.push({ relativePath, depth: current.depth + 1 });
+      } else if (SOURCE_FILE_EXTENSIONS.has(path9.posix.extname(relativePath).toLowerCase())) {
+        results.add(relativePath);
+      }
+    }
+  }
+  for (const file2 of changedFiles) {
+    if (SOURCE_FILE_EXTENSIONS.has(path9.posix.extname(file2).toLowerCase())) {
+      results.add(file2);
+    }
+  }
+  return [...results].sort();
+}
+function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPaths) {
+  if (!specifier.startsWith(".")) {
+    return null;
+  }
+  const base = path9.posix.normalize(path9.posix.join(path9.posix.dirname(importerPath), specifier));
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.js`,
+    `${base}.jsx`,
+    `${base}.mjs`,
+    `${base}.cjs`,
+    `${base}/index.ts`,
+    `${base}/index.tsx`,
+    `${base}/index.js`
+  ];
+  return candidates.find((candidate) => knownRepoPaths.has(candidate)) ?? candidates[0] ?? null;
+}
+function extractImportSpecifiers(sourceText) {
+  const specifiers = /* @__PURE__ */ new Set();
+  const importPattern = /\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']|\brequire\s*\(\s*["']([^"']+)["']\s*\)/gu;
+  for (const match of sourceText.matchAll(importPattern)) {
+    const specifier = match[1] ?? match[2];
+    if (specifier) {
+      specifiers.add(specifier);
+    }
+  }
+  return [...specifiers].sort();
+}
+function findWorkspaceNodeForPath(filePath, nodes) {
+  const workspaceNodes = [...nodes.values()].filter((node) => node.kind === "workspace" && node.path).sort((left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0));
+  return workspaceNodes.find(
+    (node) => node.path && (filePath === node.path || filePath.startsWith(`${node.path}/`))
+  ) ?? null;
+}
+async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfaceByPath, nodes, edges, evidence) {
+  const sourceFiles = await listBoundedSourceFiles(projectRoot, BOUNDED_SOURCE_ROOTS, changedFiles);
+  const sourceFileSet = new Set(sourceFiles);
+  let scannedCount = 0;
+  let skippedSecretCount = 0;
+  const workspaceNameToNode = new Map(
+    [...nodes.values()].filter((node) => node.kind === "workspace" && node.id.startsWith("package:")).map((node) => [node.id.slice("package:".length), node.id])
+  );
+  for (const file2 of sourceFiles) {
+    const classifiedSurface = surfaceByPath.get(file2) ?? classifyImpactFile(file2);
+    if (classifiedSurface.surfaces.includes("secret-sensitive")) {
+      skippedSecretCount += 1;
+      continue;
+    }
+    const absolutePath = path9.join(projectRoot, file2);
+    if (!await pathExists6(absolutePath)) {
+      continue;
+    }
+    const fileNodeId = `file:${file2}`;
+    addDependencyNode(nodes, {
+      id: fileNodeId,
+      path: file2,
+      kind: "file",
+      source: TS_IMPORT_SCAN_SOURCE
+    });
+    const workspaceNode = findWorkspaceNodeForPath(file2, nodes);
+    if (workspaceNode) {
+      addDependencyEdge(edges, {
+        from: workspaceNode.id,
+        to: fileNodeId,
+        type: "contains-file",
+        source: TS_IMPORT_SCAN_SOURCE
+      });
+    }
+    const rawSource = await fs8.readFile(absolutePath, "utf8");
+    scannedCount += 1;
+    for (const specifier of extractImportSpecifiers(rawSource)) {
+      const targetPath = resolveImportSpecifierToRepoPath(file2, specifier, sourceFileSet);
+      if (targetPath) {
+        const targetNodeId = `file:${targetPath}`;
+        addDependencyNode(nodes, {
+          id: targetNodeId,
+          path: targetPath,
+          kind: "file",
+          source: TS_IMPORT_SCAN_SOURCE
+        });
+        addDependencyEdge(edges, {
+          from: fileNodeId,
+          to: targetNodeId,
+          type: "ts-import",
+          source: TS_IMPORT_SCAN_SOURCE
+        });
+        continue;
+      }
+      const workspaceTargetId = workspaceNameToNode.get(specifier);
+      if (workspaceTargetId) {
+        addDependencyEdge(edges, {
+          from: fileNodeId,
+          to: workspaceTargetId,
+          type: "workspace-import",
+          source: TS_IMPORT_SCAN_SOURCE
+        });
+      }
+    }
+  }
+  addEvidence(evidence, {
+    kind: "dependency",
+    source: TS_IMPORT_SCAN_SOURCE,
+    summary: "Scanned bounded TypeScript/JavaScript roots and changed source files for dependency edges; secret-sensitive paths were skipped.",
+    paths: [],
+    data: {
+      scannedFileCount: scannedCount,
+      skippedSecretFileCount: skippedSecretCount
+    }
+  });
+  return scannedCount > 0 || skippedSecretCount > 0;
+}
+async function loadCustomDependencyGraphs(projectRoot, config2, nodes, edges, evidence, unknowns, warnings) {
+  let used = false;
+  for (const graphPath of config2.dependencyGraph.customGraphFiles) {
+    const absolutePath = resolveContainedInputPath(
+      projectRoot,
+      graphPath,
+      "Impact dependency graph source"
+    );
+    if (!await pathExists6(absolutePath)) {
+      continue;
+    }
+    const relativePath = toRepoRelativePath(projectRoot, absolutePath);
+    try {
+      const parsed = safeJsonParseObject(await fs8.readFile(absolutePath, "utf8"), {
+        label: `Impact dependency graph ${relativePath}`
+      });
+      const graphResult = dependencyGraphMetadataSchema.safeParse(parsed);
+      if (!graphResult.success) {
+        throw new Error(
+          formatZodIssues(`Invalid impact dependency graph ${relativePath}:`, graphResult.error).join(
+            " "
+          )
+        );
+      }
+      for (const node of graphResult.data.nodes) {
+        addDependencyNode(nodes, {
+          id: node.id,
+          path: node.path ? toRepoRelativeInputPath(projectRoot, node.path, "Impact dependency graph node path") : null,
+          kind: "custom",
+          source: relativePath
+        });
+      }
+      for (const edge of graphResult.data.edges) {
+        addDependencyEdge(edges, {
+          from: edge.from,
+          to: edge.to,
+          type: edge.type,
+          source: relativePath
+        });
+      }
+      addEvidence(evidence, {
+        kind: "dependency",
+        source: relativePath,
+        summary: "Loaded optional custom impact dependency graph metadata.",
+        paths: [relativePath],
+        data: {
+          nodeCount: graphResult.data.nodes.length,
+          edgeCount: graphResult.data.edges.length
+        }
+      });
+      used = true;
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : `Impact dependency graph ${relativePath} could not be parsed.`;
+      if (message.includes("escapes the allowed root")) {
+        throw error2;
+      }
+      warnings.push(message);
+      const evidenceRef = addEvidence(evidence, {
+        kind: "metadata",
+        source: relativePath,
+        summary: "Optional dependency graph metadata could not be parsed; dependency analysis continued without it.",
+        paths: [relativePath]
+      });
+      unknowns.push({
+        id: `unknown.dependency.metadata.${sanitizeIdentifier(relativePath)}`,
+        category: "dependency",
+        title: "Optional dependency graph metadata is malformed",
+        severity: "MEDIUM",
+        impactedFiles: [],
+        reason: message,
+        resolution: `Repair ${relativePath} to match ${DEPENDENCY_GRAPH_SCHEMA_VERSION}.`,
+        evidenceRefs: [evidenceRef]
+      });
+    }
+  }
+  return used;
+}
+function nodeMatchesChangedFile(node, filePath) {
+  if (!node.path) {
+    return false;
+  }
+  if (node.path === ".") {
+    return filePath === "package.json" || filePath === "package-lock.json";
+  }
+  return filePath === node.path || filePath.startsWith(`${node.path}/`) || node.path.startsWith(`${filePath}/`);
+}
+function buildReverseDependentsByPath(files, nodes, edges) {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const incoming = /* @__PURE__ */ new Map();
+  for (const edge of edges) {
+    const dependents = incoming.get(edge.to) ?? /* @__PURE__ */ new Set();
+    const fromNode = nodeById.get(edge.from);
+    dependents.add(fromNode?.path ?? edge.from);
+    incoming.set(edge.to, dependents);
+  }
+  const reverseDependentsByPath = {};
+  for (const file2 of files) {
+    const matchingNodeIds = nodes.filter((node) => nodeMatchesChangedFile(node, file2)).map((node) => node.id);
+    const dependents = uniqueSorted2(
+      matchingNodeIds.flatMap((nodeId) => [...incoming.get(nodeId) ?? /* @__PURE__ */ new Set()])
+    );
+    reverseDependentsByPath[file2] = dependents;
+  }
+  return Object.fromEntries(
+    Object.entries(reverseDependentsByPath).sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+function buildDependencyCoverage(files, surfaces, sourcesConfigured, sourcesUsed, nodes, reverseDependentsByPath) {
+  const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
+  const relevantFiles = files.filter((file2) => {
+    const surface = surfaceByPath.get(file2);
+    return surface ? isReverseDependencyRelevant(surface) : false;
+  });
+  const filesCovered = relevantFiles.filter(
+    (file2) => nodes.some((node) => nodeMatchesChangedFile(node, file2))
+  );
+  const reverseCovered = filesCovered.filter(
+    (file2) => (reverseDependentsByPath[file2]?.length ?? 0) > 0
+  );
+  const filesUncovered = relevantFiles.filter((file2) => !filesCovered.includes(file2));
+  const gaps = uniqueSorted2([
+    ...filesUncovered.map((file2) => `No dependency node covered ${file2}.`),
+    ...relevantFiles.filter((file2) => !reverseCovered.includes(file2)).map((file2) => `Reverse dependency coverage is absent for ${file2}.`)
+  ]);
+  const status = relevantFiles.length === 0 || sourcesUsed.length === 0 || filesCovered.length === 0 ? "none" : gaps.length === 0 ? "complete-ish" : "partial";
+  return {
+    status,
+    sourcesConfigured,
+    sourcesUsed,
+    filesCovered: filesCovered.sort(),
+    filesUncovered: filesUncovered.sort(),
+    gaps
+  };
+}
+function dependencyUnknownId(filePath, surface) {
+  if (surface.surfaces.includes("package-runtime")) {
+    return `unknown.reverseDependencies.package-runtime.${sanitizeIdentifier(filePath)}`;
+  }
+  if (surface.surfaces.includes("secret-sensitive")) {
+    return `unknown.reverseDependencies.security-sensitive.${sanitizeIdentifier(filePath)}`;
+  }
+  if (isContractLikeSurface(surface)) {
+    return `unknown.reverseDependencies.contract.${sanitizeIdentifier(filePath)}`;
+  }
+  return `unknown.reverseDependencies.source.${sanitizeIdentifier(filePath)}`;
+}
+async function loadDependencyAnalysis(projectRoot, files, surfaces, config2, warnings) {
+  const nodesById = /* @__PURE__ */ new Map();
+  const edgesByKey = /* @__PURE__ */ new Map();
+  const evidence = [];
+  const unknowns = [];
+  const sourcesConfigured = uniqueSorted2(config2.dependencyGraph.sources);
+  const sourcesUsed = [];
+  const surfaceByPath = new Map(surfaces.map((surface) => [surface.path, surface]));
+  if (config2.dependencyGraph.sources.includes(PACKAGE_JSON_SOURCE)) {
+    const packageJsonResult = await loadPackageJsonDependencySource(
+      projectRoot,
+      nodesById,
+      edgesByKey,
+      evidence,
+      warnings
+    );
+    if (packageJsonResult.used) {
+      sourcesUsed.push(PACKAGE_JSON_SOURCE);
+    }
+  }
+  if (config2.dependencyGraph.sources.includes(PACKAGE_LOCK_SOURCE)) {
+    const usedPackageLock = await loadPackageLockDependencySource(
+      projectRoot,
+      nodesById,
+      evidence,
+      unknowns,
+      warnings
+    );
+    if (usedPackageLock) {
+      sourcesUsed.push(PACKAGE_LOCK_SOURCE);
+    }
+  }
+  if (config2.dependencyGraph.sources.includes(CUSTOM_GRAPH_SOURCE) || config2.dependencyGraph.sources.includes("custom")) {
+    const usedCustomGraph = await loadCustomDependencyGraphs(
+      projectRoot,
+      config2,
+      nodesById,
+      edgesByKey,
+      evidence,
+      unknowns,
+      warnings
+    );
+    if (usedCustomGraph) {
+      sourcesUsed.push(CUSTOM_GRAPH_SOURCE);
+    }
+  }
+  if (config2.dependencyGraph.sources.includes(TS_IMPORT_SCAN_SOURCE)) {
+    const usedTsScan = await loadTsImportScanDependencySource(
+      projectRoot,
+      files,
+      surfaceByPath,
+      nodesById,
+      edgesByKey,
+      evidence
+    );
+    if (usedTsScan) {
+      sourcesUsed.push(TS_IMPORT_SCAN_SOURCE);
+    }
+  }
+  const nodes = [...nodesById.values()].sort((left, right) => left.id.localeCompare(right.id));
+  const edges = [...edgesByKey.values()].sort(
+    (left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to) || left.type.localeCompare(right.type) || left.source.localeCompare(right.source)
+  );
+  const reverseDependentsByPath = buildReverseDependentsByPath(files, nodes, edges);
+  const coverage = buildDependencyCoverage(
+    files,
+    surfaces,
+    sourcesConfigured,
+    uniqueSorted2(sourcesUsed),
+    nodes,
+    reverseDependentsByPath
+  );
+  for (const file2 of files) {
+    const surface = surfaceByPath.get(file2);
+    if (!surface || !isReverseDependencyRelevant(surface)) {
+      continue;
+    }
+    const hasReverseCoverage = coverage.filesCovered.includes(file2) && (reverseDependentsByPath[file2]?.length ?? 0) > 0;
+    if (!hasReverseCoverage) {
+      const evidenceRef = addEvidence(evidence, {
+        kind: "dependency",
+        source: "dependency-coverage",
+        summary: "Reverse dependency coverage is absent or partial for this changed file.",
+        paths: [file2],
+        data: {
+          coverageStatus: coverage.status,
+          reverseDependentCount: reverseDependentsByPath[file2]?.length ?? 0
+        }
+      });
+      unknowns.push({
+        id: dependencyUnknownId(file2, surface),
+        category: "dependency",
+        title: "Reverse dependency impact is not fully known",
+        severity: surface.surfaces.includes("secret-sensitive") || isContractLikeSurface(surface) ? "HIGH" : "MEDIUM",
+        impactedFiles: [file2],
+        reason: "The available dependency graph sources do not fully prove which downstream files, packages, or runtime surfaces depend on this change.",
+        resolution: "Add or repair dependency graph metadata, enable bounded import scanning, or review downstream dependents manually.",
+        evidenceRefs: [evidenceRef]
+      });
+    }
+  }
+  const hasGenerated = surfaces.some((surface) => surface.surfaces.includes("generated"));
+  const hasSource = surfaces.some((surface) => surface.surfaces.includes("source"));
+  if (hasGenerated && hasSource) {
+    const impactedFiles = surfaces.filter((surface) => surface.surfaces.includes("generated") || surface.surfaces.includes("source")).map((surface) => surface.path).sort();
+    const evidenceRef = addEvidence(evidence, {
+      kind: "dependency",
+      source: "surface-coverage",
+      summary: "Generated and source files changed together; source remains an impact driver.",
+      paths: impactedFiles
+    });
+    unknowns.push({
+      id: "unknown.reverseDependencies.mixed-generated-source",
+      category: "dependency",
+      title: "Generated and source changes need source-driven dependency review",
+      severity: "MEDIUM",
+      impactedFiles,
+      reason: "Generated output changed alongside source files, so analysis must not downgrade the scope to generated-only.",
+      resolution: "Review source-level dependency coverage and ensure generated output corresponds to the source change.",
+      evidenceRefs: [evidenceRef]
+    });
+  } else if (surfaces.some(isGeneratedOnlySurface)) {
+    addEvidence(evidence, {
+      kind: "dependency",
+      source: "surface-coverage",
+      summary: "Generated-only changed files were detected; dependency conclusions remain scoped to generated outputs.",
+      paths: surfaces.filter(isGeneratedOnlySurface).map((surface) => surface.path)
+    });
+  }
+  return {
+    dependencyGraph: {
+      coverage,
+      nodes,
+      edges,
+      reverseDependentsByPath
+    },
+    unknowns: sortUnknownRecords(unknowns),
+    evidence: sortEvidenceRecords(evidence)
+  };
+}
+function hasOwnContextKey(context, key) {
+  return Object.prototype.hasOwnProperty.call(context, key);
+}
+function catalogEntries(catalog) {
+  return Object.entries(catalog.commands ?? {}).filter(([, entry]) => isPlainObject6(entry)).sort(([left], [right]) => left.localeCompare(right));
+}
+function contextRequiresCatalog(surfaces) {
+  return surfaces.some(
+    (surface) => surface.surfaces.some(
+      (name) => [
+        "command-catalog",
+        "command-manifest",
+        "command-doc",
+        "runtime-reference",
+        "mcp-resource"
+      ].includes(name)
+    )
+  );
+}
+function contextRequiresRuntime(surfaces) {
+  return surfaces.some(
+    (surface) => surface.surfaces.some(
+      (name) => [
+        "command-catalog",
+        "command-manifest",
+        "command-doc",
+        "runtime-reference",
+        "mcp-server",
+        "mcp-tool",
+        "mcp-resource",
+        "extension-manifest"
+      ].includes(name)
+    )
+  );
+}
+function contextRequiresArtifactContracts(surfaces) {
+  return surfaces.some((surface) => surface.surfaces.includes("artifact-contract"));
+}
+function addContextUnknown(evidence, unknowns, warnings, options) {
+  warnings.push(options.reason);
+  const evidenceRef = addEvidence(evidence, {
+    kind: "contract",
+    source: "phase-6-context",
+    summary: options.reason,
+    paths: options.impactedFiles,
+    data: { contextKey: options.contextKey }
+  });
+  unknowns.push({
+    id: options.id,
+    category: "contract",
+    title: options.title,
+    severity: "HIGH",
+    impactedFiles: options.impactedFiles,
+    reason: options.reason,
+    resolution: options.resolution,
+    evidenceRefs: [evidenceRef]
+  });
+}
+async function resolvePhase6Context(projectRoot, providedContext, surfaces, evidence, unknowns, warnings) {
+  const contractFiles = surfaces.filter(isContractLikeSurface).map((surface) => surface.path);
+  const requireCatalog = contextRequiresCatalog(surfaces);
+  const requireRuntime = contextRequiresRuntime(surfaces);
+  const requireArtifactContracts = contextRequiresArtifactContracts(surfaces);
+  if (!providedContext) {
+    let catalog2 = null;
+    let commandAssets2 = null;
+    let artifactContracts2 = null;
+    const runtime2 = {
+      registeredTools: allRegisteredRuntimeToolNames(),
+      registeredImpactTools: [...IMPACT_TOOL_NAMES],
+      implementationPhase: 6,
+      readOnly: true,
+      includeRuntime: true,
+      includeCatalog: true,
+      includeArtifacts: true
+    };
+    try {
+      const loadedCatalog = await loadCommandCatalog();
+      if (isPlainObject6(loadedCatalog) && isPlainObject6(loadedCatalog.commands)) {
+        catalog2 = loadedCatalog;
+        commandAssets2 = buildCommandAssets(loadedCatalog);
+      } else if (requireCatalog) {
+        addContextUnknown(evidence, unknowns, warnings, {
+          id: "unknown.contract.catalog-context-malformed",
+          title: "Command catalog context is malformed",
+          reason: "Live command catalog context was loaded for Phase 6 analysis, but it did not expose a commands object.",
+          resolution: "Repair the command catalog projection before treating command contract safety as known.",
+          impactedFiles: contractFiles,
+          contextKey: "catalog"
+        });
+      }
+    } catch (error2) {
+      if (requireCatalog) {
+        addContextUnknown(evidence, unknowns, warnings, {
+          id: "unknown.contract.catalog-context-missing",
+          title: "Command catalog context is unavailable",
+          reason: `Live command catalog context could not be loaded for Phase 6 analysis: ${error2 instanceof Error ? error2.message : String(error2)}`,
+          resolution: "Load or provide command catalog context before treating command contract safety as known.",
+          impactedFiles: contractFiles,
+          contextKey: "catalog"
+        });
+      }
+    }
+    try {
+      artifactContracts2 = listArtifactContracts();
+    } catch (error2) {
+      if (requireArtifactContracts) {
+        addContextUnknown(evidence, unknowns, warnings, {
+          id: "unknown.contract.artifact-contract-context-missing",
+          title: "Artifact contract context is unavailable",
+          reason: `Live artifact contract context could not be loaded for Phase 6 analysis: ${error2 instanceof Error ? error2.message : String(error2)}`,
+          resolution: "Load artifact contract context before treating artifact compatibility as known.",
+          impactedFiles: surfaces.filter((surface) => surface.surfaces.includes("artifact-contract")).map((surface) => surface.path),
+          contextKey: "artifactContracts"
+        });
+      }
+    }
+    return {
+      catalog: catalog2,
+      commandAssets: commandAssets2,
+      runtime: runtime2,
+      artifactContracts: artifactContracts2,
+      provided: false
+    };
+  }
+  const catalogValue = providedContext.catalog;
+  const commandAssetsValue = providedContext.commandAssets;
+  const runtimeValue = providedContext.runtime;
+  const artifactContractsValue = providedContext.artifactContracts;
+  let catalog = null;
+  let commandAssets = null;
+  let runtime = null;
+  let artifactContracts = null;
+  if (isPlainObject6(catalogValue) && isPlainObject6(catalogValue.commands)) {
+    catalog = catalogValue;
+  } else if (requireCatalog) {
+    addContextUnknown(evidence, unknowns, warnings, {
+      id: hasOwnContextKey(providedContext, "catalog") ? "unknown.contract.catalog-context-malformed" : "unknown.contract.catalog-context-missing",
+      title: hasOwnContextKey(providedContext, "catalog") ? "Command catalog context is malformed" : "Command catalog context is missing",
+      reason: hasOwnContextKey(providedContext, "catalog") ? "Provided Phase 6 context.catalog did not expose a commands object." : "Provided Phase 6 context omitted catalog data for command-like changed surfaces.",
+      resolution: "Provide context.catalog from blueprint_command_catalog or omit context so live read-only catalog loading can run.",
+      impactedFiles: contractFiles,
+      contextKey: "catalog"
+    });
+  }
+  if (isPlainObject6(commandAssetsValue)) {
+    commandAssets = commandAssetsValue;
+  }
+  if (isPlainObject6(runtimeValue)) {
+    runtime = runtimeValue;
+  } else if (requireRuntime) {
+    addContextUnknown(evidence, unknowns, warnings, {
+      id: hasOwnContextKey(providedContext, "runtime") ? "unknown.contract.runtime-context-malformed" : "unknown.contract.runtime-context-missing",
+      title: hasOwnContextKey(providedContext, "runtime") ? "Runtime tool context is malformed" : "Runtime tool context is missing",
+      reason: hasOwnContextKey(providedContext, "runtime") ? "Provided Phase 6 context.runtime was not an object." : "Provided Phase 6 context omitted runtime data for command, MCP, or extension changed surfaces.",
+      resolution: "Provide runtime tool context or omit context so live read-only runtime loading can run.",
+      impactedFiles: contractFiles,
+      contextKey: "runtime"
+    });
+  }
+  if (Array.isArray(artifactContractsValue)) {
+    artifactContracts = artifactContractsValue;
+  } else if (requireArtifactContracts) {
+    addContextUnknown(evidence, unknowns, warnings, {
+      id: hasOwnContextKey(providedContext, "artifactContracts") ? "unknown.contract.artifact-contract-context-malformed" : "unknown.contract.artifact-contract-context-missing",
+      title: hasOwnContextKey(providedContext, "artifactContracts") ? "Artifact contract context is malformed" : "Artifact contract context is missing",
+      reason: hasOwnContextKey(providedContext, "artifactContracts") ? "Provided Phase 6 context.artifactContracts was not an array." : "Provided Phase 6 context omitted artifactContracts for artifact contract changed surfaces.",
+      resolution: "Provide context.artifactContracts from blueprint_artifact_contract_read/listArtifactContracts or omit context so live read-only artifact loading can run.",
+      impactedFiles: surfaces.filter((surface) => surface.surfaces.includes("artifact-contract")).map((surface) => surface.path),
+      contextKey: "artifactContracts"
+    });
+  }
+  return {
+    catalog,
+    commandAssets,
+    runtime,
+    artifactContracts,
+    provided: true
+  };
+}
+function extractBlockedBy(entry) {
+  return extractStringArray(entry.blockedBy);
+}
+function extractRequiredTools(entry) {
+  return extractStringArray(entry.requiredTools);
+}
+function stringValue(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+function pathFromBlockedBy(blockedBy, prefix) {
+  const row = blockedBy.find((item) => item.startsWith(prefix));
+  return row ? row.slice(prefix.length).trim() || null : null;
+}
+function expectedCommandManifestPath(commandName) {
+  return commandName === "blu" ? "commands/blu.toml" : `commands/blu-${commandName}.toml`;
+}
+function expectedCommandSpecPath(commandName) {
+  return commandName === "blu" ? "docs/commands/blu.md" : `docs/commands/${commandName}.md`;
+}
+function expectedSkillPath(entry) {
+  const primarySkill = stringValue(entry.primarySkill);
+  return primarySkill ? `skills/${primarySkill}/SKILL.md` : null;
+}
+function registeredRuntimeToolNames(runtime) {
+  if (!runtime) {
+    return null;
+  }
+  const keys = ["registeredTools", "toolNames", "availableTools", "registeredImpactTools"];
+  const names = keys.flatMap((key) => extractStringArray(runtime[key]));
+  return names.length > 0 ? new Set(names) : null;
+}
+function addCommandSubstrateFinding(findings, evidence, commandName, entry, asset, impactedFiles, requiredActions, extraData = {}) {
+  const blockedBy = extractBlockedBy(entry);
+  const evidenceRef = addEvidence(evidence, {
+    kind: "contract",
+    source: "command-substrate",
+    summary: "A command declared implemented is missing required runtime substrate according to catalog blockedBy evidence.",
+    paths: impactedFiles,
+    data: {
+      command: commandName,
+      asset,
+      declaredStatus: entry.declaredStatus,
+      status: entry.status,
+      implemented: entry.implemented,
+      blockedBy,
+      ...extraData
+    }
+  });
+  const titleByAsset = {
+    spec: "Implemented command missing command spec",
+    manifest: "Implemented command missing command manifest",
+    skill: "Implemented command missing primary skill",
+    "required-tools": "Implemented command missing required MCP tool"
+  };
+  findings.push({
+    id: `finding.contract.command-substrate.${sanitizeIdentifier(commandName)}.${asset}`,
+    checkId: `contract.command.${asset}`,
+    title: titleByAsset[asset],
+    severity: "CRITICAL",
+    status: "BLOCK",
+    confidence: 0.9,
+    impactedFiles,
+    impactedAreas: ["blueprint-runtime"],
+    owners: [],
+    requiredActions,
+    evidenceRefs: [evidenceRef]
+  });
+}
+function analyzeImplementedCommandSubstrate(catalog, runtime, findings, evidence) {
+  if (!catalog) {
+    return;
+  }
+  const runtimeToolNames = registeredRuntimeToolNames(runtime);
+  for (const [commandName, entry] of catalogEntries(catalog)) {
+    if (entry.declaredStatus !== "implemented") {
+      continue;
+    }
+    const blockedBy = extractBlockedBy(entry);
+    const specPath = stringValue(entry.specPath) ?? pathFromBlockedBy(blockedBy, "Missing command spec: ") ?? expectedCommandSpecPath(commandName);
+    const manifestPath = stringValue(entry.manifestPath) ?? pathFromBlockedBy(blockedBy, "Missing command manifest: ") ?? expectedCommandManifestPath(commandName);
+    const skillPath = stringValue(entry.skillPath) ?? pathFromBlockedBy(blockedBy, "Missing primary skill: ") ?? expectedSkillPath(entry);
+    const missingRequiredToolsFromBlockedBy = uniqueSorted2(
+      blockedBy.filter((item) => item.startsWith("Missing required MCP tool: ")).map((item) => item.slice("Missing required MCP tool: ".length).trim())
+    );
+    const missingRequiredToolsFromRuntime = runtimeToolNames && extractRequiredTools(entry).length > 0 ? extractRequiredTools(entry).filter((toolName) => !runtimeToolNames.has(toolName)) : [];
+    const missingRequiredTools = uniqueSorted2([
+      ...missingRequiredToolsFromBlockedBy,
+      ...missingRequiredToolsFromRuntime,
+      ...entry.requiredToolsSatisfied === false && missingRequiredToolsFromBlockedBy.length === 0 && missingRequiredToolsFromRuntime.length === 0 ? ["unknown-required-tool"] : []
+    ]);
+    if (!stringValue(entry.specPath) || blockedBy.some((item) => item.startsWith("Missing command spec: "))) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "spec",
+        [specPath],
+        [
+          `Restore ${specPath} before ${commandName} can remain declared implemented.`,
+          "Keep the command out of runnable routing until the catalog substrate is complete."
+        ]
+      );
+    }
+    if (!stringValue(entry.manifestPath) || blockedBy.some((item) => item.startsWith("Missing command manifest: "))) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "manifest",
+        [manifestPath],
+        [
+          `Restore ${manifestPath} before ${commandName} can remain declared implemented.`,
+          "Keep the command out of runnable routing until the catalog substrate is complete."
+        ]
+      );
+    }
+    if (!stringValue(entry.skillPath) || blockedBy.some((item) => item.startsWith("Missing primary skill: "))) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "skill",
+        skillPath ? [skillPath] : [],
+        [
+          "Restore the declared primary skill before this command can remain declared implemented.",
+          "Keep the command out of runnable routing until the catalog substrate is complete."
+        ]
+      );
+    }
+    if (missingRequiredTools.length > 0) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "required-tools",
+        [],
+        [
+          `Register or restore missing required MCP tools: ${missingRequiredTools.join(", ")}.`,
+          "Keep the command out of runnable routing until all required tools are present."
+        ],
+        { missingRequiredTools }
+      );
+    }
+  }
+}
+function nonImplementedCommandsFromContext(catalog, commandAssets) {
+  if (catalog) {
+    return catalogEntries(catalog).filter(([, entry]) => entry.implemented !== true || entry.status !== "implemented").map(([command]) => command).sort();
+  }
+  return commandAssets ? extractStringArray(commandAssets.nonRoutableCommands) : [];
+}
+function isRouterHelpProgressNextSurface(filePath) {
+  return /^(?:commands\/blu(?:-(?:help|progress|next))?\.toml)$/u.test(filePath) || /^docs\/commands\/(?:root-router|help|progress|next)\.md$/u.test(filePath) || filePath === "src/mcp/command-resources.ts" || filePath === "src/mcp/tools/project.ts";
+}
+function analyzePlannedCommandExposure(files, catalog, commandAssets, findings, evidence) {
+  const routerFiles = files.filter(isRouterHelpProgressNextSurface);
+  if (routerFiles.length === 0) {
+    return;
+  }
+  const nonImplementedCommands = nonImplementedCommandsFromContext(catalog, commandAssets);
+  if (nonImplementedCommands.length === 0) {
+    return;
+  }
+  const evidenceRef = addEvidence(evidence, {
+    kind: "contract",
+    source: "planned-command-exposure",
+    summary: "Router/help/progress/next surfaces changed while non-implemented commands exist in catalog context.",
+    paths: routerFiles,
+    data: {
+      nonImplementedCommands
+    }
+  });
+  findings.push({
+    id: "finding.contract.planned-command-exposure.requires-review",
+    checkId: "contract.planned-command-exposure",
+    title: "planned command exposure requires review",
+    severity: "HIGH",
+    status: "BLOCK",
+    confidence: 0.74,
+    impactedFiles: routerFiles,
+    impactedAreas: ["blueprint-runtime"],
+    owners: [],
+    requiredActions: [
+      "Verify router, help, progress, and next surfaces did not recommend or route non-implemented commands.",
+      "Keep planned commands non-routable until their catalog entry is implemented."
+    ],
+    evidenceRefs: [evidenceRef]
+  });
+}
+function addObligation(obligations, evidence, options) {
+  if (options.impactedFiles.length === 0) {
+    return;
+  }
+  const evidenceRef = addEvidence(evidence, {
+    kind: options.evidenceKind ?? "obligation",
+    source: options.source ?? "surface-obligation",
+    summary: options.title,
+    paths: options.impactedFiles,
+    data: {
+      category: options.category,
+      sourceSurfaces: options.sourceSurfaces
+    }
+  });
+  obligations.push({
+    id: `obligation.${options.category}.${sanitizeIdentifier(options.title)}`,
+    category: options.category,
+    title: options.title,
+    severity: options.severity,
+    status: options.status ?? "WARN",
+    impactedFiles: options.impactedFiles,
+    sourceSurfaces: options.sourceSurfaces,
+    requiredActions: options.requiredActions,
+    evidenceRefs: [evidenceRef]
+  });
+}
+function filesWithAnySurface(surfaces, surfaceNames) {
+  return surfaces.filter((surface) => surfaceNames.some((name) => surface.surfaces.includes(name))).map((surface) => surface.path).sort();
+}
+function addSurfaceObligations(surfaces, obligations, evidence) {
+  const commandFiles = filesWithAnySurface(surfaces, [
+    "command-catalog",
+    "command-manifest",
+    "command-doc",
+    "runtime-reference"
+  ]);
+  const mcpFiles = filesWithAnySurface(surfaces, ["mcp-server", "mcp-tool", "mcp-resource"]);
+  const artifactFiles = filesWithAnySurface(surfaces, ["artifact-contract"]);
+  const skillAgentFiles = filesWithAnySurface(surfaces, ["skill", "agent"]);
+  const extensionFiles = filesWithAnySurface(surfaces, ["extension-manifest"]);
+  const hookFiles = filesWithAnySurface(surfaces, ["hook"]);
+  const packageBuildFiles = filesWithAnySurface(surfaces, ["package-runtime", "build-config"]);
+  const sensitiveConfigFiles = filesWithAnySurface(surfaces, [
+    "secret-sensitive",
+    "env-config"
+  ]);
+  addObligation(obligations, evidence, {
+    category: "contract-review",
+    title: "Command contract review required",
+    severity: "HIGH",
+    impactedFiles: commandFiles,
+    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    requiredActions: [
+      "Review command manifest, command documentation, catalog status, and routing expectations together."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "docs",
+    title: "Command documentation and runtime reference must be reviewed",
+    severity: "MEDIUM",
+    impactedFiles: commandFiles,
+    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    requiredActions: [
+      "Verify command docs, MCP tool docs, and runtime reference remain aligned with the changed command surface."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "Command metadata tests must cover command contract changes",
+    severity: "MEDIUM",
+    impactedFiles: commandFiles,
+    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    requiredActions: [
+      "Add or update command catalog, routing, and metadata regression tests for the changed command surface."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "docs",
+    title: "MCP tool documentation must be reviewed",
+    severity: "MEDIUM",
+    impactedFiles: mcpFiles,
+    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    requiredActions: [
+      "Update docs/MCP-TOOLS.md and runtime-reference notes for changed MCP tools or resources."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "MCP registry and contract tests must cover runtime changes",
+    severity: "HIGH",
+    impactedFiles: mcpFiles,
+    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    requiredActions: [
+      "Run or add tests that prove MCP registration, tool schema, and resource contract behavior."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "build",
+    title: "Runtime source changes require generated dist review",
+    severity: "HIGH",
+    impactedFiles: mcpFiles,
+    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    requiredActions: ["Run the build and verify dist output provenance for runtime source changes."],
+    evidenceKind: "build"
+  });
+  addObligation(obligations, evidence, {
+    category: "docs",
+    title: "Artifact schema documentation must be reviewed",
+    severity: "MEDIUM",
+    impactedFiles: artifactFiles,
+    sourceSurfaces: ["artifact-contract"],
+    requiredActions: [
+      "Verify docs describe any artifact heading, template, or report contract compatibility changes."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "Artifact contract tests must cover schema changes",
+    severity: "HIGH",
+    impactedFiles: artifactFiles,
+    sourceSurfaces: ["artifact-contract"],
+    requiredActions: [
+      "Add or update artifact-contract tests for required headings, locked markers, and template compatibility."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "migration",
+    title: "Artifact compatibility and migration review required",
+    severity: "HIGH",
+    impactedFiles: artifactFiles,
+    sourceSurfaces: ["artifact-contract"],
+    requiredActions: [
+      "Review whether existing .blueprint artifacts need compatibility notes or migration guidance."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "contract-review",
+    title: "Skill and agent contract review required",
+    severity: "HIGH",
+    impactedFiles: skillAgentFiles,
+    sourceSurfaces: ["skill", "agent"],
+    requiredActions: [
+      "Review skill and agent frontmatter, tool boundaries, and command contract alignment."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "tests",
+    title: "Skill and agent metadata tests must cover contract changes",
+    severity: "MEDIUM",
+    impactedFiles: skillAgentFiles,
+    sourceSurfaces: ["skill", "agent"],
+    requiredActions: [
+      "Run or update metadata tests that validate skill and agent discoverability and contracts."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "deployment",
+    title: "Extension deployment install smoke required",
+    severity: "HIGH",
+    impactedFiles: extensionFiles,
+    sourceSurfaces: ["extension-manifest"],
+    requiredActions: [
+      "Run extension install or smoke coverage for changed Gemini/Tabnine extension manifests."
+    ]
+  });
+  addObligation(obligations, evidence, {
+    category: "build",
+    title: "Built entrypoint must be verified",
+    severity: "HIGH",
+    impactedFiles: extensionFiles,
+    sourceSurfaces: ["extension-manifest"],
+    requiredActions: ["Verify dist/mcp/server.js exists and matches the current runtime source."],
+    evidenceKind: "build"
+  });
+  for (const files of [hookFiles, packageBuildFiles, sensitiveConfigFiles]) {
+    const sourceSurfaces = files === hookFiles ? ["hook"] : files === packageBuildFiles ? ["package-runtime", "build-config"] : ["secret-sensitive", "env-config"];
+    addObligation(obligations, evidence, {
+      category: "security",
+      title: "Security review required for sensitive runtime surface",
+      severity: "HIGH",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Review changed secrets, environment, hook, package, or build behavior for unsafe execution or disclosure risk."
+      ]
+    });
+    addObligation(obligations, evidence, {
+      category: "deployment",
+      title: "Deployment readiness review required",
+      severity: "MEDIUM",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Verify deployment, install, or local runtime instructions remain accurate for this changed surface."
+      ]
+    });
+    addObligation(obligations, evidence, {
+      category: "release",
+      title: "Release notes review required",
+      severity: "MEDIUM",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Decide whether release notes or operator-facing change notes are required."
+      ]
+    });
+    addObligation(obligations, evidence, {
+      category: "tests",
+      title: "Targeted test coverage required for runtime-sensitive change",
+      severity: "HIGH",
+      impactedFiles: files,
+      sourceSurfaces,
+      requiredActions: [
+        "Run or add tests for the changed security, deployment, package, build, or hook behavior."
+      ]
+    });
+  }
+}
+function isRuntimeSourceOrExtensionSurface(surface) {
+  if (surface.surfaces.includes("generated")) {
+    return false;
+  }
+  return surface.surfaces.some(
+    (name) => [
+      "mcp-server",
+      "mcp-tool",
+      "mcp-resource",
+      "artifact-contract",
+      "hook",
+      "extension-manifest"
+    ].includes(name)
+  );
+}
+async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns, obligations, evidence, warnings) {
+  const runtimeOrExtensionFiles = surfaces.filter(isRuntimeSourceOrExtensionSurface).map((surface) => surface.path).sort();
+  const mcpOrExtensionFiles = surfaces.filter(
+    (surface) => surface.surfaces.some(
+      (name) => [
+        "mcp-server",
+        "mcp-tool",
+        "mcp-resource",
+        "artifact-contract",
+        "extension-manifest"
+      ].includes(name)
+    )
+  ).map((surface) => surface.path).sort();
+  const hookRuntimeFiles = surfaces.filter((surface) => surface.surfaces.includes("hook")).map((surface) => surface.path).sort();
+  const distFiles = surfaces.filter((surface) => surface.path.startsWith("dist/")).map((surface) => surface.path).sort();
+  const mcpRuntimeBundleFiles = distFiles.filter((filePath) => filePath === "dist/mcp/server.js").sort();
+  const hookRuntimeBundleFiles = distFiles.filter((filePath) => /^dist\/hooks\/[^/]+\.js$/u.test(filePath)).sort();
+  const hasRuntimeOrExtension = runtimeOrExtensionFiles.length > 0;
+  const hasDistFiles = distFiles.length > 0;
+  const missingMcpRuntimeBundleCoverage = mcpOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
+  const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
+  const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
+  if (hasRuntimeOrExtension && !await pathExists6(path9.join(projectRoot, "dist/mcp/server.js"))) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "build",
+      source: "dist-entrypoint",
+      summary: "dist/mcp/server.js is missing while extension or runtime source surfaces changed.",
+      paths: [...runtimeOrExtensionFiles, "dist/mcp/server.js"],
+      data: { missingPath: "dist/mcp/server.js" }
+    });
+    findings.push({
+      id: "finding.build.dist-entrypoint.missing",
+      checkId: "build.dist-entrypoint",
+      title: "Missing built entrypoint blocks extension runtime readiness",
+      severity: "CRITICAL",
+      status: "BLOCK",
+      confidence: 0.94,
+      impactedFiles: runtimeOrExtensionFiles,
+      impactedAreas: ["blueprint-runtime"],
+      owners: [],
+      requiredActions: [
+        "Run the build and restore dist/mcp/server.js before treating extension runtime readiness as known."
+      ],
+      evidenceRefs: [evidenceRef]
+    });
+  }
+  if (hasRuntimeOrExtension && !hasRuntimeDistBundleCoverage) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "build",
+      source: "dist-coverage",
+      summary: "Runtime source or extension manifest changed without corresponding dist/** runtime bundle coverage.",
+      paths: runtimeOrExtensionFiles,
+      data: {
+        changedDistFiles: distFiles,
+        changedMcpRuntimeBundleFiles: mcpRuntimeBundleFiles,
+        changedHookRuntimeBundleFiles: hookRuntimeBundleFiles,
+        missingMcpRuntimeBundleCoverage,
+        missingHookRuntimeBundleCoverage
+      }
+    });
+    const reason = "Runtime source or extension manifest changes are in scope without corresponding dist/** runtime bundle coverage.";
+    warnings.push(reason);
+    findings.push({
+      id: "finding.build.dist-coverage.missing",
+      checkId: "build.dist-coverage",
+      title: "Runtime changes require generated dist coverage",
+      severity: "HIGH",
+      status: "WARN",
+      confidence: 0.78,
+      impactedFiles: runtimeOrExtensionFiles,
+      impactedAreas: ["blueprint-runtime"],
+      owners: [],
+      requiredActions: [
+        "Run npm run build and include or verify generated dist output before relying on this impact report."
+      ],
+      evidenceRefs: [evidenceRef]
+    });
+    unknowns.push({
+      id: "unknown.obligation.build-dist-coverage",
+      category: "obligation",
+      title: "Generated dist coverage is not proven",
+      severity: "MEDIUM",
+      impactedFiles: runtimeOrExtensionFiles,
+      reason,
+      resolution: "Run the build and review generated dist output provenance; this is a coverage gap, not a stale-content claim.",
+      evidenceRefs: [evidenceRef]
+    });
+  }
+  if (hasDistFiles && !hasRuntimeOrExtension) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "build",
+      source: "generated-provenance",
+      summary: "dist/** changed without runtime source or extension manifest coverage.",
+      paths: distFiles
+    });
+    const reason = "Generated dist output changed without matching runtime source or extension manifest coverage in the analyzed scope.";
+    warnings.push(reason);
+    findings.push({
+      id: "finding.build.generated-only.provenance",
+      checkId: "build.generated-provenance",
+      title: "Generated-only dist change requires provenance review",
+      severity: "MEDIUM",
+      status: "WARN",
+      confidence: 0.76,
+      impactedFiles: distFiles,
+      impactedAreas: ["generated"],
+      owners: [],
+      requiredActions: [
+        "Verify generated output provenance and confirm the source change is present or intentionally outside scope."
+      ],
+      evidenceRefs: [evidenceRef]
+    });
+    unknowns.push({
+      id: "unknown.obligation.generated-dist-provenance",
+      category: "obligation",
+      title: "Generated dist provenance is not proven",
+      severity: "MEDIUM",
+      impactedFiles: distFiles,
+      reason,
+      resolution: "Review build provenance and source correspondence before relying on generated-only output.",
+      evidenceRefs: [evidenceRef]
+    });
+  }
+  if (hasDistFiles) {
+    addObligation(obligations, evidence, {
+      category: "build",
+      title: "Generated output provenance must be verified",
+      severity: "HIGH",
+      impactedFiles: uniqueSorted2([...runtimeOrExtensionFiles, ...distFiles]),
+      sourceSurfaces: ["generated"],
+      requiredActions: [
+        "Verify dist/** output was generated from the intended source and extension runtime inputs."
+      ],
+      evidenceKind: "build",
+      source: "generated-provenance"
+    });
+  }
+}
+async function analyzeContractAndObligations(projectRoot, files, surfaces, providedContext, warnings) {
+  const findings = [];
+  const obligations = [];
+  const unknowns = [];
+  const evidence = [];
+  const phase6Context = await resolvePhase6Context(
+    projectRoot,
+    providedContext,
+    surfaces,
+    evidence,
+    unknowns,
+    warnings
+  );
+  addEvidence(evidence, {
+    kind: "contract",
+    source: phase6Context.provided ? "provided-context" : "live-readonly-context",
+    summary: "Phase 6 contract and obligation analysis consumed catalog, runtime, command asset, and artifact context where available.",
+    paths: files.filter((file2) => isContractLikeSurface(classifyImpactFile(file2))),
+    data: {
+      catalogLoaded: phase6Context.catalog !== null,
+      commandAssetsLoaded: phase6Context.commandAssets !== null,
+      runtimeLoaded: phase6Context.runtime !== null,
+      artifactContractsLoaded: phase6Context.artifactContracts !== null,
+      contextProvided: phase6Context.provided
+    }
+  });
+  analyzeImplementedCommandSubstrate(
+    phase6Context.catalog,
+    phase6Context.runtime,
+    findings,
+    evidence
+  );
+  analyzePlannedCommandExposure(
+    files,
+    phase6Context.catalog,
+    phase6Context.commandAssets,
+    findings,
+    evidence
+  );
+  addSurfaceObligations(surfaces, obligations, evidence);
+  await addBuildAndDistFindings(
+    projectRoot,
+    surfaces,
+    findings,
+    unknowns,
+    obligations,
+    evidence,
+    warnings
+  );
+  return {
+    findings: sortFindings(findings),
+    obligations: sortObligations(obligations),
+    unknowns: sortUnknownRecords(unknowns),
+    evidence: sortEvidenceRecords(evidence)
+  };
+}
+async function runGit3(projectRoot, args, options = {}) {
+  try {
+    const { stdout, stderr } = await execFileAsync3("git", args, {
+      cwd: projectRoot,
+      timeout: GIT_COMMAND_TIMEOUT_MS2,
+      env: {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: "0"
+      }
+    });
+    return {
+      stdout,
+      stderr,
+      success: true
+    };
+  } catch (error2) {
+    if (!options.allowFailure) {
+      throw error2;
+    }
+    const stdout = error2 && typeof error2 === "object" && "stdout" in error2 ? String(error2.stdout ?? "") : "";
+    const stderr = error2 && typeof error2 === "object" && "stderr" in error2 ? String(error2.stderr ?? "") : error2 instanceof Error ? error2.message : "git command failed";
+    return {
+      stdout,
+      stderr,
+      success: false
+    };
+  }
+}
+async function isGitRepository(projectRoot) {
+  const result = await runGit3(projectRoot, ["rev-parse", "--is-inside-work-tree"], {
+    allowFailure: true
+  });
+  return result.success && result.stdout.trim() === "true";
+}
+function parseNullSeparatedPaths(stdout) {
+  return [...new Set(stdout.split("\0").map((value) => value.trim()).filter(Boolean))].sort();
+}
+function parseNumstat(stdout) {
+  let additions = 0;
+  let deletions = 0;
+  let sawBinary = false;
+  for (const line of stdout.split(/\r?\n/u)) {
+    const [rawAdditions, rawDeletions] = line.split("	");
+    if (!rawAdditions || !rawDeletions) {
+      continue;
+    }
+    if (rawAdditions === "-" || rawDeletions === "-") {
+      sawBinary = true;
+      continue;
+    }
+    additions += Number.parseInt(rawAdditions, 10);
+    deletions += Number.parseInt(rawDeletions, 10);
+  }
+  return {
+    additions: sawBinary ? null : additions,
+    deletions: sawBinary ? null : deletions
+  };
+}
+function parsePorcelainPaths(stdout) {
+  const paths = [];
+  for (const line of stdout.split(/\r?\n/u)) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+    const status = line.slice(0, 2);
+    const rawPath = line.slice(3).trim();
+    const normalizedPath = rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) ?? rawPath : rawPath;
+    if (status === "??" || status[1] !== " ") {
+      paths.push(normalizedPath.replace(/^"|"$/gu, ""));
+    }
+  }
+  return paths;
+}
+function assertSafeGitRevision(value, label) {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`${label} must not be blank.`);
+  }
+  if (trimmed.includes("\0") || trimmed.startsWith("-")) {
+    throw new Error(`${label} is not a safe git revision: ${value}`);
+  }
+  return trimmed;
+}
+async function resolveGitDiffMetadata(projectRoot, kind, diffArgs, hashSeed) {
+  const nameResult = await runGit3(
+    projectRoot,
+    ["diff", "--name-only", "-z", "--diff-filter=ACMRTUXB", ...diffArgs],
+    { allowFailure: true }
+  );
+  if (!nameResult.success) {
+    return {
+      changedFiles: [],
+      additions: null,
+      deletions: null,
+      patchHash: null
+    };
+  }
+  let changedFiles = parseNullSeparatedPaths(nameResult.stdout);
+  const numstatResult = await runGit3(projectRoot, ["diff", "--numstat", ...diffArgs], {
+    allowFailure: true
+  });
+  const stats = numstatResult.success ? parseNumstat(numstatResult.stdout) : { additions: null, deletions: null };
+  if (kind === "working-tree") {
+    const statusResult = await runGit3(projectRoot, ["status", "--porcelain=v1"], {
+      allowFailure: true
+    });
+    const workingTreeOnlyPaths = statusResult.success ? parsePorcelainPaths(statusResult.stdout) : [];
+    changedFiles = [.../* @__PURE__ */ new Set([...changedFiles, ...workingTreeOnlyPaths])].sort();
+  }
+  return {
+    changedFiles,
+    additions: stats.additions,
+    deletions: stats.deletions,
+    patchHash: changedFiles.length > 0 ? stableHash({
+      ...hashSeed,
+      changedFiles,
+      additions: stats.additions,
+      deletions: stats.deletions
+    }) : null
+  };
+}
+function parseDiffFilePaths(rawDiff) {
+  const paths = [];
+  for (const line of rawDiff.split(/\r?\n/u)) {
+    if (line.startsWith("diff --git ")) {
+      const match = /^diff --git "?a\/(.+?)"? "?b\/(.+?)"?$/u.exec(line);
+      if (match?.[2] && match[2] !== "/dev/null") {
+        paths.push(match[2]);
+      }
+      continue;
+    }
+    if (line.startsWith("+++ ")) {
+      const nextPath = line.slice(4).trim();
+      if (nextPath !== "/dev/null") {
+        paths.push(nextPath.replace(/^"?(?:b\/)?(.+?)"?$/u, "$1"));
+      }
+    }
+  }
+  return [...new Set(paths)].sort();
+}
+function parseDiffFileStats(rawDiff) {
+  let additions = 0;
+  let deletions = 0;
+  for (const line of rawDiff.split(/\r?\n/u)) {
+    if (line.startsWith("+++") || line.startsWith("---")) {
+      continue;
+    }
+    if (line.startsWith("+")) {
+      additions += 1;
+    } else if (line.startsWith("-")) {
+      deletions += 1;
+    }
+  }
+  return { additions, deletions };
+}
+function confidenceForScope(kind, changedFiles, warnings) {
+  if (kind === "description") {
+    return {
+      score: 0.2,
+      level: "low",
+      reasons: [
+        "Description-only impact scope has no proven file or git evidence.",
+        "Description-only scope cannot produce a high-confidence PASS."
+      ]
+    };
+  }
+  if (changedFiles.length === 0) {
+    return {
+      score: 0,
+      level: "low",
+      reasons: ["No changed files were resolved for impact analysis."]
+    };
+  }
+  if (warnings.length > 0) {
+    return {
+      score: 0.72,
+      level: "medium",
+      reasons: ["Scope is file-backed, but one or more resolution warnings remain."]
+    };
+  }
+  return {
+    score: kind === "files" ? 0.76 : 0.86,
+    level: "high",
+    reasons: kind === "files" ? ["Explicit file scope was provided and path-containment checks passed."] : ["Git-backed scope resolved changed files and deterministic diff metadata."]
+  };
+}
+function unresolvedScopeResult(mode, description, warnings, seed) {
+  return {
+    status: "unresolved",
+    scope: {
+      kind: "unresolved",
+      description,
+      files: [],
+      source: "unresolved"
+    },
+    changedFiles: [],
+    git: {
+      mode,
+      range: null,
+      base: null,
+      head: null
+    },
+    diffStats: {
+      filesChanged: 0,
+      additions: null,
+      deletions: null
+    },
+    patchHash: null,
+    scopeFingerprint: stableHash(seed),
+    confidence: confidenceForScope("unresolved", [], warnings),
+    warnings
+  };
+}
+async function detectDefaultBaseRef(projectRoot) {
+  for (const baseBranch of BUILT_IN_BASE_BRANCHES) {
+    const localResult = await runGit3(
+      projectRoot,
+      ["rev-parse", "--verify", `${baseBranch}^{commit}`],
+      { allowFailure: true }
+    );
+    if (localResult.success) {
+      return baseBranch;
+    }
+    const remoteResult = await runGit3(
+      projectRoot,
+      ["rev-parse", "--verify", `origin/${baseBranch}^{commit}`],
+      { allowFailure: true }
+    );
+    if (remoteResult.success) {
+      return `origin/${baseBranch}`;
+    }
+  }
+  const originHead = await runGit3(
+    projectRoot,
+    ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+    { allowFailure: true }
+  );
+  return originHead.success ? originHead.stdout.trim() : null;
+}
+async function resolveAutoGitScope(projectRoot) {
+  const staged = await resolveGitDiffMetadata(projectRoot, "staged", ["--cached", "--"], {
+    kind: "staged"
+  });
+  if (staged.changedFiles.length > 0) {
+    return {
+      kind: "staged",
+      diffArgs: ["--cached", "--"],
+      range: null,
+      base: null,
+      head: null,
+      source: "git-staged"
+    };
+  }
+  const workingTree = await resolveGitDiffMetadata(projectRoot, "working-tree", ["--"], {
+    kind: "working-tree"
+  });
+  if (workingTree.changedFiles.length > 0) {
+    return {
+      kind: "working-tree",
+      diffArgs: ["--"],
+      range: null,
+      base: null,
+      head: null,
+      source: "git-working-tree"
+    };
+  }
+  const currentBranch = await runGit3(projectRoot, ["branch", "--show-current"], {
+    allowFailure: true
+  });
+  const baseRef = await detectDefaultBaseRef(projectRoot);
+  const branchName = currentBranch.success ? currentBranch.stdout.trim() : "";
+  if (baseRef && branchName && !BUILT_IN_BASE_BRANCHES.includes(branchName)) {
+    return {
+      kind: "base-head",
+      diffArgs: [`${baseRef}..HEAD`, "--"],
+      range: null,
+      base: baseRef,
+      head: "HEAD",
+      source: "git-current-branch"
+    };
+  }
+  if (process.env.GITHUB_BASE_REF && process.env.GITHUB_HEAD_REF) {
+    return {
+      kind: "base-head",
+      diffArgs: [`${process.env.GITHUB_BASE_REF}..${process.env.GITHUB_HEAD_REF}`, "--"],
+      range: null,
+      base: process.env.GITHUB_BASE_REF,
+      head: process.env.GITHUB_HEAD_REF,
+      source: "ci-pr-refs"
+    };
+  }
+  if (process.env.CI && (await runGit3(projectRoot, ["rev-parse", "--verify", "HEAD^"], {
+    allowFailure: true
+  })).success) {
+    return {
+      kind: "range",
+      diffArgs: ["HEAD^..HEAD", "--"],
+      range: "HEAD^..HEAD",
+      base: null,
+      head: null,
+      source: "ci-head-parent"
+    };
+  }
+  return null;
+}
+async function loadSeededScopeArgs(projectRoot, args) {
+  if (!args.seedFile) {
+    return args;
+  }
+  const seedPath = resolveContainedInputPath(projectRoot, args.seedFile, "Impact seed file");
+  const parsed = safeJsonParseObject(await fs8.readFile(seedPath, "utf8"), {
+    label: "Impact seed file"
+  });
+  const seedResult = impactScopeSeedSchema.safeParse(parsed);
+  if (!seedResult.success) {
+    throw new Error(
+      formatZodIssues("Invalid impact seed file:", seedResult.error).join(" ")
+    );
+  }
+  return {
+    ...seedResult.data,
+    ...args,
+    meta: {
+      ...seedResult.data.meta ?? {},
+      ...args.meta ?? {}
+    }
+  };
+}
+async function blueprintImpactConfigGet(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const strictConfig = args.strictConfig ?? false;
+  const config2 = cloneConfig2(getBuiltInImpactConfig());
+  const warnings = [];
+  const errors = [];
+  const layersApplied = ["built-in"];
+  const defaultsPath = getImpactDefaultsPath();
+  const projectConfigPath = path9.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  let appliedDefaultsPath = null;
+  let appliedProjectPath = null;
+  let appliedInvocationPath = null;
+  const defaultsLayer = await readConfigLayer(
+    defaultsPath,
+    "Impact host-global defaults",
+    warnings,
+    errors
+  );
+  if (defaultsLayer) {
+    if (applyConfigLayer2(
+      config2,
+      defaultsLayer,
+      "host-global defaults",
+      strictConfig,
+      warnings,
+      errors
+    )) {
+      layersApplied.push("host-global-defaults");
+      appliedDefaultsPath = defaultsPath;
+    }
+  } else {
+    warnings.push(
+      `No host-global impact defaults found at ${defaultsPath}; using built-in safe defaults for that layer.`
+    );
+  }
+  const projectLayer = await readConfigLayer(
+    projectConfigPath,
+    "Project impact config",
+    warnings,
+    errors
+  );
+  if (projectLayer) {
+    if (applyConfigLayer2(config2, projectLayer, "project config", strictConfig, warnings, errors)) {
+      layersApplied.push("project");
+      appliedProjectPath = toRepoRelativePath(projectRoot, projectConfigPath);
+    }
+  } else {
+    warnings.push(
+      `No project impact config found at ${IMPACT_PROJECT_CONFIG_PATH}; using built-in safe defaults for that layer.`
+    );
+  }
+  if (args.configPath) {
+    const invocationPath = resolveContainedInputPath(
+      projectRoot,
+      args.configPath,
+      "Invocation impact config path"
+    );
+    const invocationLayer = await readConfigLayer(
+      invocationPath,
+      "Invocation impact config",
+      warnings,
+      errors
+    );
+    if (invocationLayer) {
+      if (applyConfigLayer2(
+        config2,
+        invocationLayer,
+        "invocation config",
+        strictConfig,
+        warnings,
+        errors
+      )) {
+        layersApplied.push("invocation");
+        appliedInvocationPath = toRepoRelativePath(projectRoot, invocationPath);
+      }
+    } else {
+      errors.push(`Invocation impact config was not found: ${args.configPath}`);
+    }
+  }
+  if (args.overrides && Object.keys(args.overrides).length > 0) {
+    if (applyConfigLayer2(
+      config2,
+      args.overrides,
+      "invocation overrides",
+      strictConfig,
+      warnings,
+      errors
+    )) {
+      layersApplied.push("overrides");
+    }
+  }
+  const effectiveConfig = validateFinalImpactConfig(config2, errors);
+  if (errors.length === 0) {
+    warnings.push("Impact config loaded successfully through the Phase 3 config resolver.");
+  }
+  return {
+    status: errors.length === 0 ? "ok" : "invalid",
+    config: effectiveConfig,
+    provenance: {
+      layersApplied,
+      defaultsPath: appliedDefaultsPath,
+      projectPath: appliedProjectPath,
+      invocationPath: appliedInvocationPath
+    },
+    warnings: [...new Set(warnings)],
+    errors: [...new Set(errors)],
+    configHash: stableHash(effectiveConfig)
+  };
+}
+async function resolveFilesScope(projectRoot, args, mode, description, warnings) {
+  const files = [
+    ...new Set(
+      (args.files ?? []).map(
+        (file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact file")
+      )
+    )
+  ].sort();
+  const nextWarnings = files.length > 0 ? warnings : [...warnings, "Explicit files mode did not include any files to analyze."];
+  return {
+    status: files.length > 0 ? "resolved" : "unresolved",
+    scope: {
+      kind: "files",
+      description,
+      files,
+      source: "explicit-files"
+    },
+    changedFiles: files,
+    git: {
+      mode,
+      range: null,
+      base: null,
+      head: null
+    },
+    diffStats: {
+      filesChanged: files.length,
+      additions: null,
+      deletions: null
+    },
+    patchHash: files.length > 0 ? stableHash({ mode: "files", files }) : null,
+    scopeFingerprint: stableHash({
+      mode: "files",
+      description,
+      files,
+      phase: args.phase ?? null,
+      roadmapItem: args.roadmapItem ?? null,
+      meta: args.meta ?? {}
+    }),
+    confidence: confidenceForScope("files", files, nextWarnings),
+    warnings: nextWarnings
+  };
+}
+async function resolveDiffFileScope(projectRoot, args, mode, description, warnings) {
+  if (!args.diffFile) {
+    return unresolvedScopeResult(
+      mode,
+      description,
+      [...warnings, "diff-file scope requires a diffFile path."],
+      { mode, description, reason: "missing-diff-file" }
+    );
+  }
+  const diffPath = resolveContainedInputPath(projectRoot, args.diffFile, "Impact diff file");
+  const rawDiff = await fs8.readFile(diffPath, "utf8");
+  const files = parseDiffFilePaths(rawDiff).map((file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact diff path")).sort();
+  const stats = parseDiffFileStats(rawDiff);
+  const diffFileRelativePath = toRepoRelativePath(projectRoot, diffPath);
+  const nextWarnings = files.length > 0 ? warnings : [...warnings, "Diff file did not expose changed file paths."];
+  return {
+    status: files.length > 0 ? "resolved" : "unresolved",
+    scope: {
+      kind: "diff-file",
+      description,
+      files,
+      source: diffFileRelativePath
+    },
+    changedFiles: files,
+    git: {
+      mode,
+      range: null,
+      base: null,
+      head: null
+    },
+    diffStats: {
+      filesChanged: files.length,
+      additions: stats.additions,
+      deletions: stats.deletions
+    },
+    patchHash: files.length > 0 ? stableHash({
+      mode: "diff-file",
+      diffFile: diffFileRelativePath,
+      byteLength: Buffer.byteLength(rawDiff, "utf8"),
+      files,
+      additions: stats.additions,
+      deletions: stats.deletions
+    }) : null,
+    scopeFingerprint: stableHash({
+      mode: "diff-file",
+      description,
+      diffFile: diffFileRelativePath,
+      files,
+      phase: args.phase ?? null,
+      roadmapItem: args.roadmapItem ?? null,
+      meta: args.meta ?? {}
+    }),
+    confidence: confidenceForScope("diff-file", files, nextWarnings),
+    warnings: nextWarnings
+  };
+}
+function resolveDescriptionScope(args, mode, description, warnings) {
+  const nextWarnings = [
+    ...warnings,
+    "Description-only impact scope is low confidence because no changed files or git evidence were resolved.",
+    "Description-only scope cannot be marked as a high-confidence PASS."
+  ];
+  const fingerprintSeed = {
+    mode: "description",
+    description,
+    phase: args.phase ?? null,
+    roadmapItem: args.roadmapItem ?? null,
+    meta: args.meta ?? {}
+  };
+  return {
+    status: "resolved",
+    scope: {
+      kind: "description",
+      description,
+      files: [],
+      source: "description-only"
+    },
+    changedFiles: [],
+    git: {
+      mode,
+      range: null,
+      base: null,
+      head: null
+    },
+    diffStats: {
+      filesChanged: 0,
+      additions: null,
+      deletions: null
+    },
+    patchHash: stableHash(fingerprintSeed),
+    scopeFingerprint: stableHash(fingerprintSeed),
+    confidence: confidenceForScope("description", [], nextWarnings),
+    warnings: nextWarnings
+  };
+}
+async function resolveGitBackedScope(projectRoot, args, mode, kind, diffArgs, git, source, description, warnings) {
+  const metadata = await resolveGitDiffMetadata(projectRoot, kind, diffArgs, {
+    kind,
+    git
+  });
+  const nextWarnings = metadata.changedFiles.length > 0 ? warnings : [...warnings, `No changed files were found for ${kind} scope.`];
+  return {
+    status: metadata.changedFiles.length > 0 ? "resolved" : "unresolved",
+    scope: {
+      kind,
+      description,
+      files: metadata.changedFiles,
+      source
+    },
+    changedFiles: metadata.changedFiles,
+    git: {
+      mode,
+      range: git.range,
+      base: git.base,
+      head: git.head
+    },
+    diffStats: {
+      filesChanged: metadata.changedFiles.length,
+      additions: metadata.additions,
+      deletions: metadata.deletions
+    },
+    patchHash: metadata.patchHash,
+    scopeFingerprint: stableHash({
+      mode,
+      kind,
+      source,
+      description,
+      files: metadata.changedFiles,
+      git,
+      phase: args.phase ?? null,
+      roadmapItem: args.roadmapItem ?? null,
+      meta: args.meta ?? {}
+    }),
+    confidence: confidenceForScope(kind, metadata.changedFiles, nextWarnings),
+    warnings: nextWarnings
+  };
+}
+async function resolveScopeWithGit(projectRoot, args, mode, description, warnings) {
+  if (mode === "staged") {
+    return resolveGitBackedScope(
+      projectRoot,
+      args,
+      mode,
+      "staged",
+      ["--cached", "--"],
+      { range: null, base: null, head: null },
+      "git-staged",
+      description,
+      warnings
+    );
+  }
+  if (mode === "working-tree") {
+    return resolveGitBackedScope(
+      projectRoot,
+      args,
+      mode,
+      "working-tree",
+      ["--"],
+      { range: null, base: null, head: null },
+      "git-working-tree",
+      description,
+      warnings
+    );
+  }
+  if (mode === "range") {
+    if (!args.range) {
+      return unresolvedScopeResult(
+        mode,
+        description,
+        [...warnings, "range scope requires a range value."],
+        { mode, description, reason: "missing-range" }
+      );
+    }
+    const range = assertSafeGitRevision(args.range, "Impact git range");
+    return resolveGitBackedScope(
+      projectRoot,
+      args,
+      mode,
+      "range",
+      [range, "--"],
+      { range, base: null, head: null },
+      "git-range",
+      description,
+      warnings
+    );
+  }
+  if (mode === "base-head") {
+    if (!args.base || !args.head) {
+      return unresolvedScopeResult(
+        mode,
+        description,
+        [...warnings, "base-head scope requires both base and head values."],
+        { mode, description, reason: "missing-base-head" }
+      );
+    }
+    const base = assertSafeGitRevision(args.base, "Impact base ref");
+    const head = assertSafeGitRevision(args.head, "Impact head ref");
+    return resolveGitBackedScope(
+      projectRoot,
+      args,
+      mode,
+      "base-head",
+      [`${base}..${head}`, "--"],
+      { range: null, base, head },
+      "git-base-head",
+      description,
+      warnings
+    );
+  }
+  const autoScope = await resolveAutoGitScope(projectRoot);
+  if (autoScope) {
+    return resolveGitBackedScope(
+      projectRoot,
+      args,
+      mode,
+      autoScope.kind,
+      autoScope.diffArgs,
+      {
+        range: autoScope.range,
+        base: autoScope.base,
+        head: autoScope.head
+      },
+      autoScope.source,
+      description,
+      warnings
+    );
+  }
+  if (description) {
+    return resolveDescriptionScope(args, mode, description, warnings);
+  }
+  return unresolvedScopeResult(
+    mode,
+    description,
+    [...warnings, "No staged, working-tree, branch, CI, or description scope could be resolved."],
+    { mode, description, reason: "no-auto-scope" }
+  );
+}
+async function blueprintImpactScopeResolve(args = {}) {
+  const initialProjectRoot = getProjectRoot(args.cwd);
+  const hasGit = await isGitRepository(initialProjectRoot);
+  const projectRoot = hasGit ? await ensureRepoRoot(args.cwd) : initialProjectRoot;
+  const seededArgs = await loadSeededScopeArgs(projectRoot, args);
+  const mode = seededArgs.mode ?? "auto";
+  const description = seededArgs.description?.trim() || null;
+  const warnings = [];
+  if (!hasGit) {
+    warnings.push("No git repository was detected for scope resolution.");
+  }
+  if (mode === "files" || mode === "auto" && seededArgs.files?.length) {
+    return resolveFilesScope(projectRoot, seededArgs, mode, description, warnings);
+  }
+  if (mode === "diff-file" || mode === "auto" && seededArgs.diffFile) {
+    return resolveDiffFileScope(projectRoot, seededArgs, mode, description, warnings);
+  }
+  if (mode === "description") {
+    return resolveDescriptionScope(seededArgs, mode, description, warnings);
+  }
+  if (!hasGit) {
+    if (description) {
+      return resolveDescriptionScope(seededArgs, mode, description, warnings);
+    }
+    return unresolvedScopeResult(
+      mode,
+      description,
+      [...warnings, "A git-backed scope was requested, but this directory is not a git repository."],
+      { mode, description, reason: "not-git-repository" }
+    );
+  }
+  if (mode === "auto" && seededArgs.range) {
+    return resolveScopeWithGit(projectRoot, seededArgs, "range", description, warnings);
+  }
+  if (mode === "auto" && seededArgs.base && seededArgs.head) {
+    return resolveScopeWithGit(projectRoot, seededArgs, "base-head", description, warnings);
+  }
+  return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
+}
+async function readPackageMetadata(projectRoot) {
+  const packageJsonPath = path9.join(projectRoot, "package.json");
+  if (!await pathExists6(packageJsonPath)) {
+    return {
+      loaded: false,
+      name: null,
+      version: null,
+      scripts: [],
+      packageManager: null,
+      warnings: ["No package.json found; package runtime hints are unavailable."],
+      partial: false
+    };
+  }
+  try {
+    const parsed = safeJsonParseObject(await fs8.readFile(packageJsonPath, "utf8"), {
+      label: "package.json"
+    });
+    const scripts = isPlainObject6(parsed.scripts) ? Object.keys(parsed.scripts).sort() : [];
+    return {
+      loaded: true,
+      name: typeof parsed.name === "string" ? parsed.name : null,
+      version: typeof parsed.version === "string" ? parsed.version : null,
+      scripts,
+      packageManager: typeof parsed.packageManager === "string" ? parsed.packageManager : null,
+      warnings: [],
+      partial: false
+    };
+  } catch (error2) {
+    return {
+      loaded: false,
+      name: null,
+      version: null,
+      scripts: [],
+      packageManager: null,
+      warnings: [
+        `Could not parse package.json for impact repo hints: ${error2 instanceof Error ? error2.message : String(error2)}`
+      ],
+      partial: true
+    };
+  }
+}
+async function listExistingTopLevelPaths(projectRoot, candidates) {
+  const existing = [];
+  for (const candidate of candidates) {
+    if (await pathExists6(path9.join(projectRoot, candidate))) {
+      existing.push(candidate);
+    }
+  }
+  return existing.sort();
+}
+async function loadRepoHints(projectRoot, artifactContractsLoaded) {
+  const packageMetadata = await readPackageMetadata(projectRoot);
+  const testPaths = await listExistingTopLevelPaths(projectRoot, [
+    "tests",
+    "test",
+    "src/__tests__"
+  ]);
+  const docsPaths = await listExistingTopLevelPaths(projectRoot, [
+    "docs",
+    "README.md",
+    "CHANGELOG.md"
+  ]);
+  const sourceRoots = await listExistingTopLevelPaths(projectRoot, [
+    "src",
+    "lib",
+    "packages",
+    "apps"
+  ]);
+  return {
+    repoHints: {
+      cwdAccepted: true,
+      packageMetadataLoaded: packageMetadata.loaded,
+      packageJsonPath: packageMetadata.loaded ? "package.json" : null,
+      packageName: packageMetadata.name,
+      packageVersion: packageMetadata.version,
+      packageScripts: packageMetadata.scripts,
+      packageManager: packageMetadata.packageManager,
+      testPaths,
+      docsPaths,
+      sourceRoots,
+      artifactContractsLoaded
+    },
+    warnings: packageMetadata.warnings,
+    partial: packageMetadata.partial
+  };
+}
+function normalizeRoadmapItem(value) {
+  return String(value).trim().toLowerCase();
+}
+function getRoadmapPhases(roadmap) {
+  return (roadmap?.phases ?? []).map((phase) => ({
+    phaseNumber: phase.phaseNumber,
+    phaseName: phase.phaseName,
+    requirements: phase.requirements
+  }));
+}
+function matchRoadmapItem(roadmap, roadmapItem) {
+  const normalizedItem = normalizeRoadmapItem(roadmapItem);
+  return getRoadmapPhases(roadmap).filter((phase) => {
+    if (normalizeRoadmapItem(phase.phaseNumber) === normalizedItem) {
+      return true;
+    }
+    if (normalizeRoadmapItem(phase.phaseName) === normalizedItem) {
+      return true;
+    }
+    return phase.requirements.some(
+      (requirement) => normalizeRoadmapItem(requirement) === normalizedItem
+    );
+  });
+}
+function comparePhaseNumbers3(left, right) {
+  const leftNumber = Number.parseFloat(left);
+  const rightNumber = Number.parseFloat(right);
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) {
+    return leftNumber - rightNumber;
+  }
+  return left.localeCompare(right, void 0, { numeric: true });
+}
+function mergePhaseContextEntry(entries, context, requestedBy) {
+  if (!context.phase) {
+    return;
+  }
+  const existing = entries.get(context.phase.phaseNumber);
+  if (existing) {
+    existing.requestedBy = [.../* @__PURE__ */ new Set([...existing.requestedBy, requestedBy])].sort();
+    existing.warnings = [.../* @__PURE__ */ new Set([...existing.warnings, ...context.warnings])].sort();
+    return;
+  }
+  entries.set(context.phase.phaseNumber, {
+    phaseNumber: context.phase.phaseNumber,
+    phaseName: context.phase.phaseName,
+    requestedBy: [requestedBy],
+    context,
+    warnings: [...new Set(context.warnings)].sort()
+  });
+}
+async function loadRequestedPhaseContexts(projectRoot, args, roadmap, warnings) {
+  const entries = /* @__PURE__ */ new Map();
+  let partial2 = false;
+  if (args.phase !== void 0) {
+    try {
+      const context = await blueprintPhaseContext({ cwd: projectRoot, phase: args.phase });
+      if (context.phase) {
+        mergePhaseContextEntry(entries, context, "phase");
+      } else {
+        partial2 = true;
+        warnings.push(
+          `Requested impact phase target could not be resolved: ${String(args.phase)}.`
+        );
+        warnings.push(...context.warnings);
+      }
+    } catch (error2) {
+      partial2 = true;
+      warnings.push(
+        `Requested impact phase target could not be loaded: ${String(args.phase)} (${error2 instanceof Error ? error2.message : String(error2)}).`
+      );
+    }
+  }
+  if (args.roadmapItem !== void 0) {
+    const matches = matchRoadmapItem(roadmap, args.roadmapItem);
+    if (matches.length === 0) {
+      partial2 = true;
+      warnings.push(
+        `Requested impact roadmapItem could not be resolved from phase number, phase name, or requirement id: ${args.roadmapItem}.`
+      );
+    }
+    for (const match of matches) {
+      try {
+        const context = await blueprintPhaseContext({
+          cwd: projectRoot,
+          phase: match.phaseNumber
+        });
+        if (context.phase) {
+          mergePhaseContextEntry(entries, context, "roadmapItem");
+        } else {
+          partial2 = true;
+          warnings.push(
+            `Requested impact roadmapItem matched phase ${match.phaseNumber}, but phase context could not be loaded.`
+          );
+          warnings.push(...context.warnings);
+        }
+      } catch (error2) {
+        partial2 = true;
+        warnings.push(
+          `Requested impact roadmapItem matched phase ${match.phaseNumber}, but phase context failed to load (${error2 instanceof Error ? error2.message : String(error2)}).`
+        );
+      }
+    }
+  }
+  return {
+    phases: [...entries.values()].sort(
+      (left, right) => comparePhaseNumbers3(left.phaseNumber, right.phaseNumber)
+    ),
+    partial: partial2
+  };
+}
+function buildCommandAssets(catalog) {
+  const commands = catalog.commands ?? {};
+  const entries = Object.entries(commands);
+  const manifestPaths = entries.map(([, entry]) => entry.manifestPath).filter((value) => typeof value === "string").sort();
+  const specPaths = entries.map(([, entry]) => entry.specPath).filter((value) => typeof value === "string").sort();
+  const skillPaths = entries.map(([, entry]) => entry.skillPath).filter((value) => typeof value === "string").sort();
+  const implementedCommands = entries.filter(([, entry]) => entry.implemented === true).map(([command]) => command).sort();
+  const nonRoutableCommands = entries.filter(([, entry]) => entry.implemented !== true).map(([command]) => command).sort();
+  const missingAssetCount = entries.reduce(
+    (count, [, entry]) => count + extractBlockedBy(entry).filter((blockedBy) => blockedBy.startsWith("Missing ")).length,
+    0
+  );
+  return {
+    commandCount: entries.length,
+    implementedCommands,
+    nonRoutableCommands,
+    manifestPaths,
+    specPaths,
+    skillPaths,
+    missingAssetCount,
+    impact: commands.impact ?? null
+  };
+}
+async function loadProjectStatus(projectRoot) {
+  const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+  return projectModule.blueprintProjectStatus({ cwd: projectRoot });
+}
+async function loadCommandCatalog() {
+  const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+  return projectModule.blueprintCommandCatalog();
+}
+async function blueprintImpactContextLoad(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const includeRuntime = args.includeRuntime ?? true;
+  const includeCatalog = args.includeCatalog ?? true;
+  const includeArtifacts = args.includeArtifacts ?? true;
+  const warnings = [];
+  let partial2 = false;
+  let project = null;
+  let config2 = null;
+  let roadmap = null;
+  let catalog;
+  let commandAssets;
+  let artifactContracts;
+  let runtime;
+  try {
+    project = await loadProjectStatus(projectRoot);
+  } catch (error2) {
+    partial2 = true;
+    warnings.push(
+      `Blueprint project status could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+    );
+  }
+  try {
+    config2 = await blueprintConfigGet({ cwd: projectRoot, scope: "effective" });
+    warnings.push(...config2.warnings);
+  } catch (error2) {
+    partial2 = true;
+    warnings.push(
+      `Blueprint config could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+    );
+  }
+  try {
+    roadmap = await blueprintRoadmapRead({ cwd: projectRoot });
+    warnings.push(...roadmap.warnings);
+  } catch (error2) {
+    partial2 = true;
+    warnings.push(
+      `Blueprint roadmap could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+    );
+  }
+  if (includeCatalog) {
+    try {
+      catalog = await loadCommandCatalog();
+      commandAssets = buildCommandAssets(catalog);
+    } catch (error2) {
+      partial2 = true;
+      warnings.push(
+        `Blueprint command catalog could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+  } else {
+    warnings.push(
+      "includeCatalog=false; command catalog and command asset context omitted by request."
+    );
+  }
+  if (includeArtifacts) {
+    try {
+      artifactContracts = listArtifactContracts();
+    } catch (error2) {
+      partial2 = true;
+      warnings.push(
+        `Blueprint artifact contracts could not be loaded for impact context: ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+    }
+  } else {
+    warnings.push("includeArtifacts=false; artifact contract context omitted by request.");
+  }
+  if (includeRuntime) {
+    runtime = {
+      registeredTools: allRegisteredRuntimeToolNames(),
+      registeredImpactTools: [...IMPACT_TOOL_NAMES],
+      implementationPhase: 6,
+      readOnly: true,
+      includeRuntime,
+      includeCatalog,
+      includeArtifacts
+    };
+  } else {
+    warnings.push("includeRuntime=false; runtime metadata omitted by request.");
+  }
+  const requestedPhases = await loadRequestedPhaseContexts(
+    projectRoot,
+    args,
+    roadmap,
+    warnings
+  );
+  partial2 ||= requestedPhases.partial;
+  const repoHintsResult = await loadRepoHints(projectRoot, artifactContracts !== void 0);
+  partial2 ||= repoHintsResult.partial;
+  warnings.push(...repoHintsResult.warnings);
+  return {
+    status: partial2 ? "partial" : "loaded",
+    project,
+    config: config2,
+    roadmap,
+    phases: requestedPhases.phases,
+    ...catalog !== void 0 ? { catalog } : {},
+    ...commandAssets !== void 0 ? { commandAssets } : {},
+    ...artifactContracts !== void 0 ? { artifactContracts } : {},
+    ...runtime !== void 0 ? { runtime } : {},
+    repoHints: repoHintsResult.repoHints,
+    warnings: [...new Set(warnings)].sort()
+  };
+}
+async function blueprintImpactAnalyze(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const warnings = [];
+  const config2 = resolveAnalyzeImpactConfig(args.config, warnings);
+  const sources = collectAnalyzeFileSources(args);
+  const files = normalizeAnalyzeFileSources(projectRoot, sources, warnings);
+  const surfaces = files.map((file2) => classifyImpactFile(file2));
+  const areaSummary = buildAreaSummary(surfaces);
+  const surfaceSummary = buildSurfaceSummary(surfaces);
+  const evidence = [];
+  if (sources.length === 0) {
+    warnings.push(
+      "No changed files were provided to impact analysis; Phase 6 ownership, dependency, contract, and obligation analysis has no file-backed surfaces."
+    );
+  }
+  addEvidence(evidence, {
+    kind: "surface",
+    source: "impact-surface-classifier",
+    summary: "Changed files were classified into deterministic multi-label impact surfaces.",
+    paths: files,
+    data: {
+      fileCount: files.length,
+      areaCount: areaSummary.length,
+      surfaceCount: surfaceSummary.length
+    }
+  });
+  addEvidence(evidence, {
+    kind: "config",
+    source: "impact-analyze-config",
+    summary: "Impact analysis resolved effective Phase 6 ownership and dependency configuration.",
+    paths: [],
+    data: {
+      ownershipSources: config2.ownership.sources,
+      dependencySources: config2.dependencyGraph.sources,
+      customGraphFiles: config2.dependencyGraph.customGraphFiles
+    }
+  });
+  const ownershipResult = await loadOwnershipAnalysis(
+    projectRoot,
+    files,
+    surfaces,
+    config2,
+    warnings
+  );
+  const dependencyResult = await loadDependencyAnalysis(
+    projectRoot,
+    files,
+    surfaces,
+    config2,
+    warnings
+  );
+  const contractResult = await analyzeContractAndObligations(
+    projectRoot,
+    files,
+    surfaces,
+    args.context,
+    warnings
+  );
+  const deferredEvidenceRef = addEvidence(evidence, {
+    kind: "metadata",
+    source: "phase-7-deferred-scoring",
+    summary: "Phase 6 analyzes ownership, dependencies, contract substrate, and path-level obligations; full scoring remains deferred to Phase 7.",
+    paths: []
+  });
+  const deferredUnknowns = [
+    {
+      id: "unknown.riskScoringDeferred",
+      category: "risk-scoring",
+      title: "Full risk scoring is deferred",
+      severity: "LOW",
+      impactedFiles: files,
+      reason: "Phase 7 full scoring is deferred; Phase 6 uses deterministic BLOCK/WARN rules for ownership, contract, build, and obligation signals.",
+      resolution: "Treat current risk and confidence as simple advisory signals until Phase 7 scoring lands.",
+      evidenceRefs: [deferredEvidenceRef]
+    }
+  ];
+  const findings = sortFindings([...ownershipResult.findings, ...contractResult.findings]);
+  const obligations = sortObligations(contractResult.obligations);
+  const unknowns = sortUnknownRecords([
+    ...ownershipResult.unknowns,
+    ...dependencyResult.unknowns,
+    ...contractResult.unknowns,
+    ...deferredUnknowns
+  ]);
+  const allEvidence = sortEvidenceRecords([
+    ...evidence,
+    ...ownershipResult.evidence,
+    ...dependencyResult.evidence,
+    ...contractResult.evidence
+  ]);
+  const status = findings.some((finding) => finding.status === "BLOCK") ? "BLOCK" : "WARN";
+  const impactId = placeholderImpactId({
+    files,
+    surfaces: surfaces.map((surface) => ({
+      path: surface.path,
+      surfaces: surface.surfaces
+    })),
+    ownership: {
+      coverage: ownershipResult.ownership.coverage,
+      matches: ownershipResult.ownership.matches.map((match) => ({
+        path: match.path,
+        owners: match.owners,
+        fallbackUsed: match.fallbackUsed,
+        sensitive: match.sensitive,
+        ownerMissing: match.ownerMissing
+      }))
+    },
+    dependencyGraph: {
+      coverage: dependencyResult.dependencyGraph.coverage,
+      nodes: dependencyResult.dependencyGraph.nodes,
+      edges: dependencyResult.dependencyGraph.edges,
+      reverseDependentsByPath: dependencyResult.dependencyGraph.reverseDependentsByPath
+    },
+    findings,
+    obligations,
+    unknowns
+  });
+  const confidenceScore = files.length === 0 ? 0.25 : status === "BLOCK" ? 0.66 : ownershipResult.ownership.coverage.status === "complete" && dependencyResult.dependencyGraph.coverage.status === "complete-ish" ? 0.68 : 0.56;
+  const confidenceLevel = confidenceScore >= 0.67 ? "high" : confidenceScore >= 0.45 ? "medium" : "low";
+  const risk = status === "BLOCK" ? {
+    level: "critical",
+    reasons: [
+      "At least one deterministic Phase 6 BLOCK finding was produced for ownership, command substrate, planned-command exposure, or build readiness.",
+      "Phase 7 full scoring is deferred; this critical risk reflects deterministic Phase 6 BLOCK rules."
+    ]
+  } : {
+    level: "unknown",
+    reasons: [
+      "Phase 6 analyzes ownership, dependency coverage, command contracts, build readiness, and path-level obligations.",
+      "Missing metadata remains visible as unknowns instead of proving low impact."
+    ]
+  };
+  const confidence = {
+    score: confidenceScore,
+    level: confidenceLevel,
+    reasons: files.length > 0 ? [
+      "Changed files were normalized and classified deterministically.",
+      "Ownership and dependency metadata were analyzed where configured and available.",
+      "Contract substrate and path-level obligations were analyzed where context was available.",
+      "Confidence remains capped until Phase 7 scoring lands."
+    ] : [
+      "No file-backed scope was available for deterministic ownership, dependency, contract, or obligation analysis.",
+      "Confidence remains low until a scope resolver supplies changed files."
+    ]
+  };
+  const summary = status === "BLOCK" ? "Impact analysis found a deterministic Phase 6 BLOCK finding that blocks advisory approval until resolved." : "Impact analysis classified changed file surfaces, ownership, dependency metadata, command contracts, build readiness, and path-level obligations; Phase 7 scoring remains an explicit unknown.";
+  return {
+    phaseStatus: "contract-obligations-analyzed",
+    impactId,
+    status,
+    impactStatus: status,
+    risk,
+    confidence,
+    surfaces,
+    areaSummary,
+    surfaceSummary,
+    ownership: ownershipResult.ownership,
+    dependencyGraph: dependencyResult.dependencyGraph,
+    findings,
+    obligations,
+    unknowns,
+    evidence: allEvidence,
+    report: {
+      schemaVersion: "blueprint.impact.report.v1",
+      impactId,
+      status,
+      summary,
+      files,
+      surfaces,
+      areaSummary,
+      surfaceSummary,
+      ownership: ownershipResult.ownership,
+      dependencyGraph: dependencyResult.dependencyGraph,
+      findings,
+      obligations,
+      unknowns,
+      evidence: allEvidence
+    },
+    warnings: [...new Set(warnings)].sort()
+  };
+}
+async function blueprintImpactReportWrite(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
+  return {
+    status: "disabled",
+    impactId,
+    impactDir: `.blueprint/impact/${impactId}`,
+    paths: {
+      impactMarkdown: null,
+      impactJson: null,
+      summaryJson: null,
+      evidenceJsonl: null,
+      reviewChecklist: null,
+      questions: null
+    },
+    written: false,
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "Impact report writing is intentionally disabled until Phase 8 adds validated report persistence."
+    ]
+  };
+}
+async function blueprintImpactOutputRender(args = {}) {
+  await ensureRepoRoot(args.cwd);
+  const mode = args.mode ?? "human";
+  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
+  const content = mode === "json" ? JSON.stringify(
+    {
+      impactId,
+      status: "WARN",
+      warning: IMPACT_PLACEHOLDER_WARNING
+    },
+    null,
+    2
+  ) : `Impact ${impactId}: WARN
+
+${IMPACT_PLACEHOLDER_WARNING}`;
+  return {
+    phaseStatus: "placeholder",
+    mode,
+    status: "WARN",
+    impactStatus: "WARN",
+    content,
+    impactId,
+    warnings: [
+      IMPACT_PLACEHOLDER_WARNING,
+      "Output rendering uses placeholder content until normalized report rendering lands in Phase 8."
+    ]
+  };
+}
+var IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_PLACEHOLDER_WARNING, IMPACT_SCHEMA_VERSION, PLACEHOLDER_IMPACT_ID, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
+var init_impact = __esm({
+  "src/mcp/tools/impact.ts"() {
+    "use strict";
+    init_v4();
+    init_artifacts();
+    init_config();
+    init_phase();
+    init_review();
+    init_state();
+    init_update();
+    init_workspace();
+    init_artifact_contracts();
+    init_runtime_host();
+    init_security();
+    IMPACT_TOOL_NAMES = [
+      "blueprint_impact_config_get",
+      "blueprint_impact_scope_resolve",
+      "blueprint_impact_context_load",
+      "blueprint_impact_analyze",
+      "blueprint_impact_report_write",
+      "blueprint_impact_output_render"
+    ];
+    PROJECT_RUNTIME_TOOL_NAMES = [
+      "blueprint_command_catalog",
+      "blueprint_project_init",
+      "blueprint_project_status"
+    ];
+    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 6 config, scope, context, surface, ownership, dependency, contract, and obligation analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
+    IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
+    PLACEHOLDER_IMPACT_ID = "impact-phase-6-placeholder";
+    OWNERSHIP_SCHEMA_VERSION = "blueprint.impact.ownership.v1";
+    DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
+    IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
+    IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
+    GIT_COMMAND_TIMEOUT_MS2 = 15e3;
+    CODEOWNERS_CANDIDATES = [
+      "CODEOWNERS",
+      ".github/CODEOWNERS",
+      "docs/CODEOWNERS"
+    ];
+    PACKAGE_JSON_SOURCE = "package-json";
+    PACKAGE_LOCK_SOURCE = "package-lock";
+    TS_IMPORT_SCAN_SOURCE = "ts-import-scan";
+    CUSTOM_GRAPH_SOURCE = "custom-graph";
+    BOUNDED_SOURCE_ROOTS = ["src", "lib", "packages", "apps"];
+    KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS = [
+      "schemaVersion",
+      "baseBranches",
+      "paths",
+      "ownership",
+      "dependencyGraph",
+      "risk",
+      "reporting"
+    ];
+    BUILT_IN_BASE_BRANCHES = ["main", "master"];
+    execFileAsync3 = promisify3(execFile3);
+    IMPACT_SURFACE_PRIORITY = {
+      "secret-sensitive": 1,
+      "env-config": 2,
+      "command-catalog": 3,
+      "command-manifest": 4,
+      "command-doc": 5,
+      "runtime-reference": 6,
+      "mcp-server": 7,
+      "mcp-tool": 8,
+      "mcp-resource": 9,
+      "artifact-contract": 10,
+      skill: 11,
+      agent: 12,
+      "extension-manifest": 13,
+      hook: 14,
+      "package-runtime": 15,
+      "build-config": 16,
+      test: 17,
+      docs: 18,
+      generated: 19,
+      config: 20,
+      source: 21,
+      "repo-root": 22,
+      unknown: 23
+    };
+    SOURCE_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
+      ".cjs",
+      ".cts",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".mts",
+      ".ts",
+      ".tsx"
+    ]);
+    CONFIG_FILE_EXTENSIONS = /* @__PURE__ */ new Set([".json", ".jsonc", ".toml", ".yaml", ".yml"]);
+    DOC_FILE_EXTENSIONS = /* @__PURE__ */ new Set([".md", ".mdx", ".markdown", ".rst", ".txt"]);
+    TEST_FILE_PATTERNS = [
+      /\.test\.[^.]+$/u,
+      /\.spec\.[^.]+$/u,
+      /(^|\/)__tests__\//u,
+      /(^|\/)tests?\//u
+    ];
+    GENERATED_FILE_PATTERNS = [
+      /(^|\/)dist\//u,
+      /\.generated\./u,
+      /\.gen\./u,
+      /\.d\.ts$/u
+    ];
+    SECRET_PATH_PATTERN = /(^|\/)(secrets?|credentials?|tokens?)(\/|$)|(^|[-_.])(secret|credential|token)([-_.]|$)/iu;
+    nonEmptyStringSchema = string2().trim().min(1);
+    impactModeSchema = _enum([
+      "auto",
+      "staged",
+      "working-tree",
+      "range",
+      "base-head",
+      "files",
+      "diff-file",
+      "description"
+    ]);
+    impactIdSchema = string2().trim().min(1).regex(/^impact-[a-z0-9][a-z0-9._-]*$/u);
+    outputModeSchema = _enum(["human", "json", "markdown", "pr-comment", "summary"]);
+    configVerbositySchema = _enum(["compact", "normal", "detailed"]);
+    impactConfigGetInputSchema = {
+      cwd: string2().optional(),
+      configPath: string2().optional(),
+      strictConfig: boolean2().optional(),
+      overrides: record(string2(), unknown()).optional()
+    };
+    impactScopeResolveInputSchema = {
+      cwd: string2().optional(),
+      mode: impactModeSchema.optional(),
+      description: string2().optional(),
+      range: nonEmptyStringSchema.optional(),
+      base: nonEmptyStringSchema.optional(),
+      head: nonEmptyStringSchema.optional(),
+      files: array(nonEmptyStringSchema).optional(),
+      diffFile: nonEmptyStringSchema.optional(),
+      phase: union([string2(), number2()]).optional(),
+      roadmapItem: nonEmptyStringSchema.optional(),
+      seedFile: nonEmptyStringSchema.optional(),
+      meta: record(string2(), string2()).optional()
+    };
+    impactContextLoadInputSchema = {
+      cwd: string2().optional(),
+      phase: union([string2(), number2()]).optional(),
+      roadmapItem: nonEmptyStringSchema.optional(),
+      includeRuntime: boolean2().optional(),
+      includeCatalog: boolean2().optional(),
+      includeArtifacts: boolean2().optional()
+    };
+    impactAnalyzeInputSchema = {
+      cwd: string2().optional(),
+      changedFiles: array(nonEmptyStringSchema).optional(),
+      files: array(nonEmptyStringSchema).optional(),
+      scope: record(string2(), unknown()).optional(),
+      context: record(string2(), unknown()).optional(),
+      config: record(string2(), unknown()).optional()
+    };
+    impactReportWriteInputSchema = {
+      cwd: string2().optional(),
+      impactId: impactIdSchema.optional(),
+      report: record(string2(), unknown()).optional(),
+      overwrite: boolean2().optional(),
+      writeEvidenceLog: boolean2().optional()
+    };
+    impactOutputRenderInputSchema = {
+      cwd: string2().optional(),
+      mode: outputModeSchema.optional(),
+      impactId: impactIdSchema.optional(),
+      report: record(string2(), unknown()).optional(),
+      verbosity: _enum(["compact", "normal", "detailed"]).optional()
+    };
+    stringArraySchema = array(nonEmptyStringSchema);
+    partialImpactConfigSchema = object2({
+      schemaVersion: literal(IMPACT_SCHEMA_VERSION).optional(),
+      baseBranches: stringArraySchema.optional(),
+      paths: object2({
+        include: stringArraySchema.optional(),
+        ignore: stringArraySchema.optional(),
+        generated: stringArraySchema.optional(),
+        docs: stringArraySchema.optional(),
+        tests: stringArraySchema.optional()
+      }).optional(),
+      ownership: object2({
+        sources: stringArraySchema.optional(),
+        requiredOwnerMatch: boolean2().optional(),
+        fallbackReviewers: stringArraySchema.optional()
+      }).optional(),
+      dependencyGraph: object2({
+        sources: stringArraySchema.optional(),
+        customGraphFiles: stringArraySchema.optional(),
+        requireReverseDepsFor: stringArraySchema.optional()
+      }).optional(),
+      risk: object2({
+        blockOnCritical: boolean2().optional(),
+        blockOnBreakingContract: boolean2().optional(),
+        blockOnSensitiveUnknownOwner: boolean2().optional(),
+        warnBelowConfidence: number2().min(0).max(1).optional(),
+        blockBelowConfidenceForSensitiveAreas: number2().min(0).max(1).optional()
+      }).optional(),
+      reporting: object2({
+        defaultVerbosity: configVerbositySchema.optional(),
+        writeEvidenceLog: boolean2().optional(),
+        redactPathPatterns: stringArraySchema.optional()
+      }).optional()
+    }).passthrough();
+    impactConfigSchema = object2({
+      schemaVersion: literal(IMPACT_SCHEMA_VERSION),
+      baseBranches: stringArraySchema,
+      paths: object2({
+        include: stringArraySchema,
+        ignore: stringArraySchema,
+        generated: stringArraySchema,
+        docs: stringArraySchema,
+        tests: stringArraySchema
+      }),
+      ownership: object2({
+        sources: stringArraySchema,
+        requiredOwnerMatch: boolean2(),
+        fallbackReviewers: stringArraySchema
+      }),
+      dependencyGraph: object2({
+        sources: stringArraySchema,
+        customGraphFiles: stringArraySchema,
+        requireReverseDepsFor: stringArraySchema
+      }),
+      risk: object2({
+        blockOnCritical: boolean2(),
+        blockOnBreakingContract: boolean2(),
+        blockOnSensitiveUnknownOwner: boolean2(),
+        warnBelowConfidence: number2().min(0).max(1),
+        blockBelowConfidenceForSensitiveAreas: number2().min(0).max(1)
+      }),
+      reporting: object2({
+        defaultVerbosity: configVerbositySchema,
+        writeEvidenceLog: boolean2(),
+        redactPathPatterns: stringArraySchema
+      })
+    });
+    impactScopeSeedSchema = object2({
+      mode: impactModeSchema.optional(),
+      description: string2().optional(),
+      range: nonEmptyStringSchema.optional(),
+      base: nonEmptyStringSchema.optional(),
+      head: nonEmptyStringSchema.optional(),
+      files: array(nonEmptyStringSchema).optional(),
+      diffFile: nonEmptyStringSchema.optional(),
+      phase: union([string2(), number2()]).optional(),
+      roadmapItem: nonEmptyStringSchema.optional(),
+      meta: record(string2(), string2()).optional()
+    }).passthrough();
+    ownershipMetadataSchema = object2({
+      schemaVersion: literal(OWNERSHIP_SCHEMA_VERSION),
+      rules: array(
+        object2({
+          pattern: nonEmptyStringSchema,
+          owners: stringArraySchema.optional().default([]),
+          sensitive: boolean2().optional().default(false)
+        })
+      ).optional().default([]),
+      fallbackReviewers: stringArraySchema.optional().default([])
+    });
+    dependencyGraphMetadataSchema = object2({
+      schemaVersion: literal(DEPENDENCY_GRAPH_SCHEMA_VERSION),
+      nodes: array(
+        object2({
+          id: nonEmptyStringSchema,
+          path: nonEmptyStringSchema.optional()
+        })
+      ).optional().default([]),
+      edges: array(
+        object2({
+          from: nonEmptyStringSchema,
+          to: nonEmptyStringSchema,
+          type: nonEmptyStringSchema.optional().default("depends-on")
+        })
+      ).optional().default([])
+    });
+    impactToolDefinitions = [
+      {
+        name: "blueprint_impact_config_get",
+        description: "Load Blueprint impact-analysis configuration provenance and validation signals without mutating repo state.",
+        inputSchema: impactConfigGetInputSchema,
+        handler: async (args) => blueprintImpactConfigGet(args)
+      },
+      {
+        name: "blueprint_impact_scope_resolve",
+        description: "Resolve the proposed impact-analysis scope from git, explicit files, diff input, or description-only seeds without reading secrets.",
+        inputSchema: impactScopeResolveInputSchema,
+        handler: async (args) => blueprintImpactScopeResolve(args)
+      },
+      {
+        name: "blueprint_impact_context_load",
+        description: "Load Blueprint and repository context for impact analysis while treating missing optional metadata as explicit warnings.",
+        inputSchema: impactContextLoadInputSchema,
+        handler: async (args) => blueprintImpactContextLoad(args)
+      },
+      {
+        name: "blueprint_impact_analyze",
+        description: "Analyze impact surfaces, findings, obligations, unknowns, risk, confidence, and advisory status from normalized scope and context.",
+        inputSchema: impactAnalyzeInputSchema,
+        handler: async (args) => blueprintImpactAnalyze(args)
+      },
+      {
+        name: "blueprint_impact_report_write",
+        description: "Persist a validated impact report bundle under .blueprint/impact/<impact-id>/ when the report-writing phase is implemented.",
+        inputSchema: impactReportWriteInputSchema,
+        handler: async (args) => blueprintImpactReportWrite(args)
+      },
+      {
+        name: "blueprint_impact_output_render",
+        description: "Render a normalized impact report or saved impact id as human, JSON, Markdown, PR-comment, or summary output.",
+        inputSchema: impactOutputRenderInputSchema,
+        handler: async (args) => blueprintImpactOutputRender(args)
       }
     ];
   }

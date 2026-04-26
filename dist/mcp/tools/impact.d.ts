@@ -141,7 +141,7 @@ type ImpactScopeResolveResult = {
     confidence: ImpactConfidence;
     warnings: string[];
 };
-type ImpactSurface = "secret-sensitive" | "env-config" | "command-catalog" | "command-manifest" | "command-doc" | "mcp-server" | "mcp-tool" | "mcp-resource" | "artifact-contract" | "skill" | "agent" | "extension-manifest" | "hook" | "package-runtime" | "build-config" | "test" | "docs" | "generated" | "config" | "source" | "repo-root" | "unknown";
+type ImpactSurface = "secret-sensitive" | "env-config" | "command-catalog" | "command-manifest" | "command-doc" | "runtime-reference" | "mcp-server" | "mcp-tool" | "mcp-resource" | "artifact-contract" | "skill" | "agent" | "extension-manifest" | "hook" | "package-runtime" | "build-config" | "test" | "docs" | "generated" | "config" | "source" | "repo-root" | "unknown";
 type ImpactSurfaceRecord = {
     path: string;
     surfaces: ImpactSurface[];
@@ -155,6 +155,7 @@ type ImpactSummaryRecord = {
     count: number;
 };
 type ImpactRuntimeContext = {
+    registeredTools: string[];
     registeredImpactTools: string[];
     implementationPhase: number;
     readOnly: boolean;
@@ -215,11 +216,12 @@ type ImpactAnalysisReport = Record<string, unknown> & {
     ownership: ImpactOwnershipAnalysis;
     dependencyGraph: ImpactDependencyAnalysis;
     findings: ImpactFindingRecord[];
+    obligations: ImpactObligationRecord[];
     unknowns: ImpactUnknownRecord[];
     evidence: ImpactEvidenceRecord[];
 };
 type ImpactAnalyzeResult = {
-    phaseStatus: "ownership-dependencies-analyzed";
+    phaseStatus: "contract-obligations-analyzed";
     impactId: string;
     status: ImpactStatus;
     impactStatus: ImpactStatus;
@@ -231,7 +233,7 @@ type ImpactAnalyzeResult = {
     ownership: ImpactOwnershipAnalysis;
     dependencyGraph: ImpactDependencyAnalysis;
     findings: ImpactFindingRecord[];
-    obligations: unknown[];
+    obligations: ImpactObligationRecord[];
     unknowns: ImpactUnknownRecord[];
     evidence: ImpactEvidenceRecord[];
     report: ImpactAnalysisReport;
@@ -239,7 +241,7 @@ type ImpactAnalyzeResult = {
 };
 type ImpactEvidenceRecord = {
     id: string;
-    kind: "scope" | "surface" | "ownership" | "dependency" | "metadata" | "config";
+    kind: "scope" | "surface" | "ownership" | "dependency" | "metadata" | "config" | "contract" | "obligation" | "build";
     source: string;
     summary: string;
     paths: string[];
@@ -266,6 +268,18 @@ type ImpactFindingRecord = {
     impactedFiles: string[];
     impactedAreas: string[];
     owners: string[];
+    requiredActions: string[];
+    evidenceRefs: string[];
+};
+type ImpactObligationCategory = "contract-review" | "docs" | "tests" | "release" | "migration" | "security" | "deployment" | "build";
+type ImpactObligationRecord = {
+    id: string;
+    category: ImpactObligationCategory;
+    title: string;
+    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    status: ImpactStatus;
+    impactedFiles: string[];
+    sourceSurfaces: ImpactSurface[];
     requiredActions: string[];
     evidenceRefs: string[];
 };
