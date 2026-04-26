@@ -191,10 +191,16 @@ Before treating the discussion as complete:
    returned issues and retry before claiming success.
 4. If a discussion log is written, apply the same contract-read,
    normalize, write, and repair loop for `phase.discussion-log`.
-5. Delete the checkpoint only after the final context artifact writes
-   successfully.
-6. Update `STATE.md` with the completed command and next safe implemented
-   action.
+5. After the final context artifact and any optional discussion log write
+   successfully, call `blueprint_state_update` with `base: "synced"`. Do not
+   treat the update response as the routing decision.
+6. Call `blueprint_state_load` after the synced update and report the refreshed
+   next safe action from the loaded state, falling back to `/blu-progress` when
+   routing is missing, blocked, or undecidable.
+7. Delete the checkpoint only after the context write, optional discussion-log
+   write, synced state update, and follow-up state load have all succeeded. If
+   any finalization step fails, leave the checkpoint in place and report the
+   exact continuation blocker.
 
 If validation cannot be repaired in the current run, leave the checkpoint in
 place and report the exact blocker plus the next safe continuation action.
