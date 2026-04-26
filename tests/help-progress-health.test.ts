@@ -1373,6 +1373,90 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
 });
 
+test("project status keeps execute-phase as the next action for partial and blocked summaries", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** PARTIAL
+
+## Outcome
+
+- Execution made progress but did not finish the full plan.
+
+## Changes Made
+
+- Captured the unfinished execution state in the summary artifact.
+
+## Verification
+
+- Re-ran the targeted execution slice and recorded the failing evidence.
+
+## Follow-Ups
+
+- Complete the remaining work before validation.
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+
+  const partialStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const partialState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(partialStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.match(partialState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(partialStatus.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(partialState.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** BLOCKED
+
+## Outcome
+
+- Execution stopped because a blocking dependency still needs repair.
+
+## Changes Made
+
+- Preserved the blocked execution state in the summary artifact.
+
+## Verification
+
+- Re-ran the targeted execution slice and confirmed the blocker remains.
+
+## Follow-Ups
+
+- Repair the blocker and rerun execution before validation.
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+
+  const blockedStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const blockedState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(blockedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.match(blockedState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(blockedStatus.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(blockedState.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
 test("project status ignores placeholder summaries when deciding validation readiness", async (t) => {
   const repoPath = await createExecutionReadyRepo();
   const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");

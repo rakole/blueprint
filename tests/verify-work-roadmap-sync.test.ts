@@ -63,14 +63,50 @@ wave: 1
 status: done
 objective: "Persist verification and UAT evidence."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - EXEC-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/verify-work-roadmap-sync.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 04: Validation - Plan 01
+
+## Goal
+
+Persist verification and UAT evidence.
+
+## Scope
+
+- Keep roadmap completion synced to saved verification and UAT outcomes.
+
+## Tasks
+
+### Task 1: Preserve roadmap sync from saved validation evidence
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Confirm invalid overwrite attempts still resync roadmap completion from the saved validation state.
+
+#### Acceptance Criteria
+
+- tests/verify-work-roadmap-sync.test.ts exits 0
+
+## Verification
+
+- Re-run the roadmap sync tests after exercising invalid overwrite flows.
+
+## Must Haves
+
+- Keep verification and UAT writes grounded in the saved summary artifact.
 `,
     "utf8"
   );
