@@ -383,22 +383,23 @@ type ImpactDependencyAnalysis = {
     reverseDependentsByPath: Record<string, string[]>;
 };
 type ImpactReportWriteResult = {
-    status: "disabled";
+    status: "written" | "reused" | "overwritten" | "invalid";
     impactId: string;
     impactDir: string;
     paths: {
-        impactMarkdown: string | null;
-        impactJson: string | null;
-        summaryJson: string | null;
+        impactMarkdown: string;
+        impactJson: string;
+        summaryJson: string;
         evidenceJsonl: string | null;
         reviewChecklist: string | null;
         questions: string | null;
     };
-    written: false;
+    written: boolean;
+    errors: string[];
     warnings: string[];
 };
 type ImpactOutputRenderResult = {
-    phaseStatus: "placeholder";
+    phaseStatus: "rendered";
     mode: ImpactOutputMode;
     status: ImpactStatus;
     impactStatus: ImpactStatus;

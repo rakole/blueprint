@@ -112,6 +112,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.ok(artifactContractIds.includes("phase.verification"));
   assert.ok(artifactContractIds.includes("review.code-review"));
   assert.ok(artifactContractIds.includes("report.pause-work"));
+  assert.ok(artifactContractIds.includes("report.impact"));
 
   const single = await blueprintArtifactContractRead({ artifactId: "phase.research" });
   const listed = await blueprintArtifactContractRead({});
@@ -130,6 +131,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const milestoneAuditContract = readArtifactContract("report.milestone-audit");
   const milestoneCompleteContract = readArtifactContract("report.milestone-complete");
   const milestoneSummaryContract = readArtifactContract("report.milestone-summary");
+  const impactContract = readArtifactContract("report.impact");
 
   assert.equal(single.artifactId, "phase.research");
   assert.match(single.contract.authoringTemplate, /^# Phase XX: <Phase Name> - Research$/m);
@@ -248,6 +250,25 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(uiContract.notes.join("\n"), /six UI dimensions/i);
   assert.match(summaryContract.notes.join("\n"), /`COMPLETED` is the only status that closes execution debt/);
   assert.match(summaryContract.notes.join("\n"), /`PARTIAL` and `BLOCKED` are truthful carry-forward evidence/);
+  assert.equal(impactContract.ownerTool, "blueprint_impact_report_write");
+  assert.equal(impactContract.pathOwner, "blueprint_impact_report_write");
+  assert.equal(impactContract.canonicalFilePattern, ".blueprint/impact/<impact-id>/IMPACT.md");
+  assert.deepEqual(impactContract.requiredHeadings, [
+    "Summary",
+    "Change Scope",
+    "Top Impacted Areas",
+    "Required Reviewers",
+    "Required Tests",
+    "Blocking Findings",
+    "Warnings",
+    "Contract And Compatibility Impact",
+    "Database, Config, Infra, And Deployment Impact",
+    "Unknowns And Missing Metadata",
+    "Evidence",
+    "Suggested Next Actions"
+  ]);
+  assert.match(impactContract.authoringTemplate, /^# Impact Report:/);
+  assert.match(impactContract.notes.join("\n"), /planned and non-routable/);
   assert.ok(
     uiContract.placeholderSignals.includes(
       "Spacing and layout: <grid, rhythm, or layout constraints>"

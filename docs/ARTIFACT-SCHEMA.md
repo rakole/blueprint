@@ -13,6 +13,7 @@ Blueprint-managed repositories store project state here:
   config.json
   mcp-write-failures.ndjson
   phases/
+  impact/
   reports/
   backlog/
   todos/
@@ -747,6 +748,49 @@ Used for non-phase-specific outputs and command logs:
 - cleanup reports
 - update and patch reports
 - quick-task reports
+
+### `impact/<impact-id>/`
+
+Purpose:
+- durable blast-radius report bundle for planned `/blu-impact`
+- human-readable `IMPACT.md` plus machine-readable `impact.json` and `summary.json`
+- optional evidence, reviewer/test checklist, and questions files derived from the validated report payload
+
+Canonical source-of-truth note:
+- The runtime contract registry under `src/mcp/artifact-contracts/` is canonical.
+  This section mirrors the `report.impact` contract and should stay aligned with it.
+- `/blu-impact` remains planned and non-routable until the command manifest and primary skill ship; the MCP writer is available for Phase 8 substrate coverage only.
+
+Required bundle files:
+- `IMPACT.md`
+- `impact.json`
+- `summary.json`
+
+Conditional bundle files:
+- `evidence.jsonl` when evidence records exist or evidence logging is requested
+- `review-checklist.md` when reviewers, tests, actions, or obligations exist
+- `QUESTIONS.md` when unknowns exist
+
+Minimum locked `IMPACT.md` sections:
+- `## Summary`
+- `## Change Scope`
+- `## Top Impacted Areas`
+- `## Required Reviewers`
+- `## Required Tests`
+- `## Blocking Findings`
+- `## Warnings`
+- `## Contract And Compatibility Impact`
+- `## Database, Config, Infra, And Deployment Impact`
+- `## Unknowns And Missing Metadata`
+- `## Evidence`
+- `## Suggested Next Actions`
+
+Impact report expectations:
+- `blueprint_impact_report_write` owns the bundle path and writes only under `.blueprint/impact/<impact-id>/`.
+- The structured payload must use `schemaVersion: blueprint.impact.report.v1`.
+- Missing ownership, dependency, compliance, test, or scope metadata must remain explicit unknowns rather than being described as safety.
+- Invalid payloads, empty required sections, unresolved placeholders, generic `N/A` without a reason, missing evidence refs, ungrounded reviewers/tests/actions, contradictory status signals, `PASS` with blocking unknowns, and high confidence without file-backed scope proof are rejected before any files are written.
+- Existing identical bundles are reused; changed existing bundles require explicit overwrite.
 
 ### `reports/add-tests-<phase>.md`
 

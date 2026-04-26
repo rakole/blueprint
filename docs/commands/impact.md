@@ -78,7 +78,7 @@
 - `blueprint_impact_scope_resolve` -> `{scope, changedFiles, git, diffStats, patchHash, scopeFingerprint, confidence, warnings}`
 - `blueprint_impact_context_load` -> `{status, project, config, roadmap, phases, catalog?, commandAssets?, artifactContracts?, runtime?, repoHints, warnings}`
 - `blueprint_impact_analyze` -> `{phaseStatus, impactId, status, impactStatus, risk, confidence, surfaces, areaSummary, surfaceSummary, ownership, dependencyGraph, findings, obligations, unknowns, evidence, report}`
-- `blueprint_impact_report_write` -> `{status, impactId, impactDir, paths, written, warnings}`
+- `blueprint_impact_report_write` -> `{status, impactId, impactDir, paths, written, errors, warnings}`
 - `blueprint_impact_output_render` -> `{phaseStatus, mode, status, impactStatus, content, impactId, warnings}`
 
 ## Scope Resolution Contract
@@ -106,8 +106,12 @@
 - Impact analysis conservatively blocks router/help/progress/next surfaces for planned-command exposure review only when those surfaces changed and catalog context contains non-implemented commands; benign guardrail text in non-router docs does not create that finding by itself.
 - Impact analysis creates typed obligations for command, MCP, artifact-contract, skill, agent, extension manifest, hook, package/build, environment, secret-sensitive, generated, and dist/build surfaces. Obligations include deterministic ids, category, severity, status, impacted files, source surfaces, required actions, and non-empty evidence references.
 - Impact analysis checks dist/build readiness: missing `dist/mcp/server.js` blocks extension/runtime source readiness, runtime or extension changes without changed `dist/**` coverage produce a build/dist warning and unknown, and generated-only `dist/**` changes produce provenance warnings and obligations without claiming stale content.
-- Phase 7 scoring produces advisory `PASS`, `WARN`, or `BLOCK` while keeping severity, status, risk level, confidence score, and confidence level separate. Unknowns lower confidence, no file-backed scope cannot pass, and configured risk thresholds can raise low-confidence high-assurance scopes to `BLOCK`.
-- The normalized report model includes scope fingerprint, status, risk, confidence, scoring metadata, top impacted areas, required reviewers, required tests, required actions, blocking findings, warning findings, surfaces, ownership, dependency graph, findings, obligations, unknowns, and evidence for Phase 8 writing/rendering.
+- Impact scoring produces advisory `PASS`, `WARN`, or `BLOCK` while keeping severity, status, risk level, confidence score, and confidence level separate. Unknowns lower confidence, no file-backed scope cannot pass, and configured risk thresholds can raise low-confidence high-assurance scopes to `BLOCK`.
+- The normalized report model includes scope fingerprint, status, risk, confidence, scoring metadata, top impacted areas, required reviewers, required tests, required actions, blocking findings, warning findings, surfaces, ownership, dependency graph, findings, obligations, unknowns, and evidence.
+- `blueprint_impact_report_write` validates `blueprint.impact.report.v1` structure plus report quality before persistence; invalid payloads return `status: invalid` with errors and write nothing.
+- Report writing always persists `IMPACT.md`, `impact.json`, and `summary.json`; it writes `evidence.jsonl` when evidence exists or evidence logging is requested, `review-checklist.md` when reviewers/tests/actions/obligations exist, and `QUESTIONS.md` when unknowns exist.
+- Existing identical bundles return `status: reused`; existing changed bundles require `overwrite: true` and otherwise return `status: invalid`.
+- `blueprint_impact_output_render` supports no-write rendering from an in-memory report and saved-id rendering by reading only `.blueprint/impact/<impact-id>/impact.json`.
 - Finding, obligation, unknown, evidence, impact-id, and report ordering stays stable for the same scope/config/repo state.
 - Agents may help narrative synthesis only when a future skill enables them; MCP tools own deterministic scope, findings, risk, confidence, status, and output paths.
 

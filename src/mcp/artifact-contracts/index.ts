@@ -40,7 +40,8 @@ export type ArtifactContractId =
   | "report.undo"
   | "report.cleanup"
   | "report.add-tests"
-  | "report.audit-fix";
+  | "report.audit-fix"
+  | "report.impact";
 
 export type ArtifactTemplateContext = {
   phaseLabel?: string;
@@ -1630,6 +1631,62 @@ function renderAuditFixTemplate(context?: ArtifactTemplateContext): string {
 - /blu-progress`;
 }
 
+function renderImpactTemplate(context?: ArtifactTemplateContext): string {
+  const name = reportName(context, "impact-<scope-fingerprint>");
+
+  return `# Impact Report: ${name}
+
+## Summary
+
+- Status, risk, confidence, and one concise evidence-backed outcome.
+- Confidence drivers and confidence reducers.
+
+## Change Scope
+
+- Scope kind, source, fingerprint, description, and repo-relative changed files.
+- Explain non-file-backed scope limitations when applicable.
+
+## Top Impacted Areas
+
+- Area summaries with file counts and file paths.
+
+## Required Reviewers
+
+- Reviewers derived from ownership evidence or an explicit reason no reviewer was derived.
+
+## Required Tests
+
+- Tests derived from test obligations or an explicit reason no test obligation was derived.
+
+## Blocking Findings
+
+- BLOCK findings with severity, evidence refs, and required actions, or an explicit reason none were found.
+
+## Warnings
+
+- WARN findings and non-blocking obligations with evidence refs, or an explicit reason none were found.
+
+## Contract And Compatibility Impact
+
+- Command, MCP, artifact-contract, skill, agent, extension, hook, or runtime-reference impact, or an explicit reason none was detected.
+
+## Database, Config, Infra, And Deployment Impact
+
+- Database, migration, config, infra, package, build, deployment, environment, and secret-sensitive impact, or an explicit reason none was detected.
+
+## Unknowns And Missing Metadata
+
+- Unknown ids with category, severity, why it matters, resolution, and evidence refs, or an explicit reason none remain.
+
+## Evidence
+
+- Evidence ids with kind, source, summary, paths, and relevant metadata.
+
+## Suggested Next Actions
+
+- Follow-up actions derived from findings, obligations, and unknowns, or an explicit reason no action remains.`;
+}
+
 const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition> = {
   "bootstrap.project": {
     id: "bootstrap.project",
@@ -2390,6 +2447,46 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     renderScaffoldTemplate: renderUiReviewTemplate,
     renderAuthoringTemplate: renderUiReviewTemplate
+  },
+  "report.impact": {
+    id: "report.impact",
+    scope: "report",
+    ownerTool: "blueprint_impact_report_write",
+    pathOwner: "blueprint_impact_report_write",
+    canonicalName: "Impact Report",
+    canonicalFilePattern: ".blueprint/impact/<impact-id>/IMPACT.md",
+    freehandPolicy: "locked-structure",
+    requiredHeadings: [
+      "Summary",
+      "Change Scope",
+      "Top Impacted Areas",
+      "Required Reviewers",
+      "Required Tests",
+      "Blocking Findings",
+      "Warnings",
+      "Contract And Compatibility Impact",
+      "Database, Config, Infra, And Deployment Impact",
+      "Unknowns And Missing Metadata",
+      "Evidence",
+      "Suggested Next Actions"
+    ],
+    lockedMarkers: ["# Impact Report:"],
+    placeholderSignals: [
+      "<impact-id>",
+      "<scope-fingerprint>",
+      "<owner>",
+      "<test command>",
+      "TBD",
+      "TODO",
+      "N/A"
+    ],
+    notes: [
+      "Impact reports are bounded bundles under .blueprint/impact/<impact-id>/ and are written only through blueprint_impact_report_write.",
+      "The writer validates the structured report payload plus rendered Markdown quality before persistence.",
+      "/blu-impact remains planned and non-routable until the command manifest and primary skill ship."
+    ],
+    renderScaffoldTemplate: renderImpactTemplate,
+    renderAuthoringTemplate: renderImpactTemplate
   },
   "report.pause-work": {
     id: "report.pause-work",

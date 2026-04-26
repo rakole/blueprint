@@ -5,6 +5,7 @@ import {
   access,
   mkdir,
   mkdtemp,
+  readFile,
   rm,
   writeFile
 } from "node:fs/promises";
@@ -86,6 +87,110 @@ function surfaceFor(
 
 type ImpactAnalysis = Awaited<ReturnType<typeof blueprintImpactAnalyze>>;
 
+function reportWithUnsafePaths(
+  report: ImpactAnalysis["report"],
+  unsafePath: string
+): ImpactAnalysis["report"] {
+  const next = structuredClone(report) as ImpactAnalysis["report"];
+  const evidenceRef = next.evidence[0]?.id ?? "ev.missing";
+  const unsafeRule = {
+    source: "metadata" as const,
+    sourcePath: unsafePath,
+    pattern: "**/*",
+    owners: [],
+    sensitive: false,
+    line: null,
+    order: 0
+  };
+
+  next.files = [unsafePath];
+  next.topImpactedAreas.unshift({ name: "unsafe", files: [unsafePath], count: 1 });
+  next.areaSummary.unshift({ name: "unsafe", files: [unsafePath], count: 1 });
+  next.surfaceSummary.unshift({ name: "source", files: [unsafePath], count: 1 });
+  next.surfaces.unshift({
+    path: unsafePath,
+    surfaces: ["source"],
+    primarySurface: "source",
+    area: "source",
+    reasons: ["Path validation regression fixture."]
+  });
+  next.ownership.codeownersPath = unsafePath;
+  next.ownership.metadataPaths = [unsafePath];
+  next.ownership.rules.unshift(unsafeRule);
+  next.ownership.matches.unshift({
+    path: unsafePath,
+    owners: [],
+    matchedRules: [unsafeRule],
+    fallbackReviewers: [],
+    fallbackUsed: false,
+    sensitive: false,
+    ownerMissing: true,
+    evidenceRefs: [evidenceRef]
+  });
+  next.dependencyGraph.coverage.filesCovered = [unsafePath];
+  next.dependencyGraph.coverage.filesUncovered = [unsafePath];
+  next.dependencyGraph.nodes.unshift({
+    id: `file:${unsafePath}`,
+    path: unsafePath,
+    kind: "file",
+    source: "path-validation-test"
+  });
+  next.dependencyGraph.reverseDependentsByPath = {
+    [unsafePath]: [unsafePath],
+    ...next.dependencyGraph.reverseDependentsByPath
+  };
+  next.obligations.unshift({
+    id: "obligation.path-validation",
+    category: "tests",
+    title: "Path validation fixture",
+    severity: "LOW",
+    status: "WARN",
+    impactedFiles: [unsafePath],
+    sourceSurfaces: ["source"],
+    requiredActions: ["Keep path validation fixtures repo-relative."],
+    evidenceRefs: [evidenceRef]
+  });
+  next.unknowns.unshift({
+    id: "unknown.path-validation",
+    category: "scope",
+    title: "Path validation fixture unknown",
+    severity: "LOW",
+    impactedFiles: [unsafePath],
+    reason: "The fixture injects an unsafe path to verify report validation.",
+    resolution: "Reject the unsafe path before writing or rendering the report.",
+    evidenceRefs: [evidenceRef]
+  });
+  next.evidence.unshift({
+    id: "ev.path-validation",
+    kind: "metadata",
+    source: "path-validation-test",
+    summary: "Path validation fixture evidence.",
+    paths: [unsafePath]
+  });
+
+  if (next.findings[0]) {
+    const updatedFinding = {
+      ...next.findings[0],
+      impactedFiles: [unsafePath]
+    };
+    next.findings[0] = updatedFinding;
+
+    if (updatedFinding.status === "BLOCK") {
+      next.blockingFindings = next.blockingFindings.map((finding) =>
+        finding.id === updatedFinding.id ? updatedFinding : finding
+      );
+    }
+
+    if (updatedFinding.status === "WARN") {
+      next.warningFindings = next.warningFindings.map((finding) =>
+        finding.id === updatedFinding.id ? updatedFinding : finding
+      );
+    }
+  }
+
+  return next;
+}
+
 function lowNoiseConfig(): Record<string, unknown> {
   return {
     ownership: {
@@ -96,6 +201,10 @@ function lowNoiseConfig(): Record<string, unknown> {
       sources: []
     }
   };
+}
+
+function scrubImpactIds(value: string): string {
+  return value.replace(/impact-[a-f0-9]{12}/gu, "impact-<id>");
 }
 
 function minimalPhase6Context(
@@ -480,6 +589,18 @@ test("impact context load honors toggles without marking omitted optional sectio
   assert.match(context.warnings.join("\n"), /includeArtifacts=false/);
 });
 
+test("impact context load reports Phase 8 runtime metadata", async () => {
+  const context = await blueprintImpactContextLoad({
+    cwd: repoRoot,
+    includeCatalog: false,
+    includeArtifacts: false
+  });
+
+  assert.equal(context.status, "loaded");
+  assert.equal(context.runtime?.implementationPhase, 8);
+  assert.equal(context.runtime?.readOnly, true);
+});
+
 test("impact context load returns partial for requested target failures and malformed package metadata", async () => {
   const phaseContext = await blueprintImpactContextLoad({
     cwd: repoRoot,
@@ -765,9 +886,9 @@ test("impact downstream handlers stay read-only while analysis classification is
     scope: scope.scope,
     config: config.config
   });
-  const write = await blueprintImpactReportWrite({
+  const rendered = await blueprintImpactOutputRender({
     cwd: repoRoot,
-    impactId: "impact-abc123",
+    mode: "summary",
     report: analysis.report
   });
 
@@ -782,20 +903,12 @@ test("impact downstream handlers stay read-only while analysis classification is
   assert.ok(
     analysis.unknowns.some((unknown) => unknown.id === "unknown.scope.file-backed")
   );
-  assert.equal(write.status, "disabled");
-  assert.equal(write.written, false);
-  assert.deepEqual(write.paths, {
-    impactMarkdown: null,
-    impactJson: null,
-    summaryJson: null,
-    evidenceJsonl: null,
-    reviewChecklist: null,
-    questions: null
-  });
+  assert.equal(rendered.phaseStatus, "rendered");
+  assert.match(rendered.content, /WARN/);
   await assert.rejects(access(path.join(repoRoot, ".blueprint", "impact", "impact-abc123")));
 });
 
-test("impact analyze can produce PASS with stable normalized Phase 7 report data", async () => {
+test("impact analyze can produce PASS with stable normalized report data", async () => {
   const first = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["tests/impact-tools.test.ts"],
@@ -820,9 +933,7 @@ test("impact analyze can produce PASS with stable normalized Phase 7 report data
   assert.deepEqual(first.report.blockingFindings, []);
   assert.deepEqual(first.report.warningFindings, []);
   assert.ok(first.report.scope.fingerprint.length > 0);
-  assert.ok(
-    first.evidence.some((evidence) => evidence.source === "phase-7-scoring")
-  );
+  assert.ok(first.evidence.some((evidence) => evidence.source === "impact-scoring"));
   assert.deepEqual(first.impactId, second.impactId);
   assert.deepEqual(first.report, second.report);
 });
@@ -1989,33 +2100,563 @@ test("impact analyze creates security, deployment, release, and test obligations
   assert.ok(categories.has("tests"));
 });
 
-test("impact report writer and output renderer remain disabled placeholders for Phase 7 reports", async () => {
-  const analysis = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["src/mcp/tools/impact.ts"],
-    config: {
-      ownership: {
-        fallbackReviewers: ["@reviewer"]
-      },
-      dependencyGraph: {
-        sources: []
-      }
-    }
-  });
-  const write = await blueprintImpactReportWrite({
-    cwd: repoRoot,
-    impactId: analysis.impactId,
-    report: analysis.report
-  });
-  const rendered = await blueprintImpactOutputRender({
-    cwd: repoRoot,
-    mode: "json",
-    impactId: analysis.impactId,
-    report: analysis.report
-  });
+test("impact report writer persists required and optional Phase 8 bundle files", async () => {
+  const repoPath = await createTempRepo();
 
-  assert.equal(write.status, "disabled");
-  assert.equal(write.written, false);
-  assert.equal(rendered.phaseStatus, "placeholder");
-  assert.match(rendered.content, /Phase 7/);
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: analysis.report
+    });
+
+    assert.equal(write.status, "written");
+    assert.equal(write.written, true);
+    assert.equal(write.errors.length, 0);
+    assert.match(write.paths.impactMarkdown, /\.blueprint\/impact\/impact-[^/]+\/IMPACT\.md/);
+    assert.match(write.paths.impactJson, /\.blueprint\/impact\/impact-[^/]+\/impact\.json/);
+    assert.match(write.paths.summaryJson, /\.blueprint\/impact\/impact-[^/]+\/summary\.json/);
+    assert.match(write.paths.evidenceJsonl ?? "", /evidence\.jsonl/);
+    assert.match(write.paths.reviewChecklist ?? "", /review-checklist\.md/);
+    assert.equal(write.paths.questions, null);
+
+    const markdown = await readFile(path.join(repoPath, write.paths.impactMarkdown), "utf8");
+    const payload = JSON.parse(await readFile(path.join(repoPath, write.paths.impactJson), "utf8"));
+    const summary = JSON.parse(await readFile(path.join(repoPath, write.paths.summaryJson), "utf8"));
+    const checklist = await readFile(path.join(repoPath, write.paths.reviewChecklist ?? ""), "utf8");
+
+    assert.match(markdown, /^# Impact Report: impact-/);
+    assert.match(markdown, /## Unknowns And Missing Metadata/);
+    assert.equal(payload.schemaVersion, "blueprint.impact.report.v1");
+    assert.equal(summary.impactId, analysis.impactId);
+    assert.match(checklist, /@reviewer/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer and renderer preserve golden output ordering", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: analysis.report
+    });
+    const markdown = scrubImpactIds(
+      await readFile(path.join(repoPath, write.paths.impactMarkdown), "utf8")
+    );
+    const jsonRaw = scrubImpactIds(
+      await readFile(path.join(repoPath, write.paths.impactJson), "utf8")
+    );
+    const rendered = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "human",
+      verbosity: "detailed",
+      report: analysis.report
+    });
+
+    assert.equal(
+      markdown,
+      `# Impact Report: impact-<id>
+
+## Summary
+
+Impact status PASS with low risk and high confidence (0.8) across 1 changed file; findings=0, obligations=0, unknowns=0.
+
+- Status: PASS
+- Risk: low
+- Confidence: high (0.8)
+- Confidence drivers: No blocking or warning impact signals remain above policy thresholds.; No findings, obligations, or unknowns remained after deterministic analysis.
+- Confidence reducers: No confidence reducers were recorded because no weakening signals were detected.
+
+## Change Scope
+
+- Kind: files
+- Source: No source recorded because scope resolution did not provide one.
+- Fingerprint: c8bf075289ad
+- Description: No description was provided because this report used file or git scope.
+
+- \`tests/impact-tools.test.ts\`
+
+## Top Impacted Areas
+
+- tests: 1
+  - \`tests/impact-tools.test.ts\`
+
+## Required Reviewers
+
+- @reviewer
+
+## Required Tests
+
+No required tests are listed because the analyzed signals did not produce test obligations.
+
+## Blocking Findings
+
+No blocking findings were detected because the report status did not include BLOCK findings.
+
+## Warnings
+
+No warning findings were detected because the report did not include WARN findings.
+
+## Contract And Compatibility Impact
+
+No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, extension, or runtime-reference surfaces produced contract signals.
+
+## Database, Config, Infra, And Deployment Impact
+
+No database, config, infra, or deployment impact was detected because the resolved scope contained no configured persistence, migration, config, infra, package, build, extension, hook, or secret-sensitive paths.
+
+## Unknowns And Missing Metadata
+
+No unknowns remain because scope, ownership, dependency, contract, and obligation metadata were sufficient for this advisory report.
+
+## Evidence
+
+- ev.config.26af3810df95: Impact analysis resolved effective ownership, dependency, risk, and reporting configuration.
+  - Kind: config
+  - Source: impact-analyze-config
+  - Paths: No paths because this evidence record describes configuration or aggregate metadata.
+- ev.contract.42f9fc9843a0: Impact contract and obligation analysis consumed catalog, runtime, command asset, and artifact context where available.
+  - Kind: contract
+  - Source: live-readonly-context
+  - Paths: No paths because this evidence record describes configuration or aggregate metadata.
+- ev.metadata.aa3323146d6d: Impact scoring separated impact status, risk level, confidence score, and confidence level.
+  - Kind: metadata
+  - Source: impact-scoring
+  - Paths: \`tests/impact-tools.test.ts\`
+- ev.ownership.62c2fbdee13c: Fallback reviewers were applied because no specific ownership rule matched this changed file.
+  - Kind: ownership
+  - Source: ownership-coverage
+  - Paths: \`tests/impact-tools.test.ts\`
+- ev.surface.e250dc884736: Changed files were classified into deterministic multi-label impact surfaces.
+  - Kind: surface
+  - Source: impact-surface-classifier
+  - Paths: \`tests/impact-tools.test.ts\`
+
+## Suggested Next Actions
+
+No suggested next actions are listed because no findings, obligations, or unknowns required follow-up.
+`
+    );
+    assert.ok(
+      jsonRaw.startsWith(`{
+  "areaSummary": [
+    {
+      "count": 1,
+      "files": [
+        "tests/impact-tools.test.ts"
+      ],
+      "name": "tests"
+    }
+  ],
+  "blockingFindings": [],
+  "confidence": {
+    "level": "high",
+    "reasons": [
+      "Changed files were normalized and classified deterministically.",
+      "Explicit file scope was provided and path-containment checks passed.",
+      "Ownership coverage is complete for the analyzed files."
+    ],
+    "score": 0.8
+  },
+  "dependencyGraph": {
+    "coverage": {
+      "filesCovered": [],
+      "filesUncovered": [],
+      "gaps": [],
+      "sourcesConfigured": [],
+      "sourcesUsed": [],
+      "status": "none"
+    },
+    "edges": [],
+    "nodes": [],
+    "reverseDependentsByPath": {
+      "tests/impact-tools.test.ts": []
+    }
+  },`)
+    );
+    assert.deepEqual(Object.keys(JSON.parse(jsonRaw)).slice(0, 12), [
+      "areaSummary",
+      "blockingFindings",
+      "confidence",
+      "dependencyGraph",
+      "evidence",
+      "files",
+      "findings",
+      "impactId",
+      "impactStatus",
+      "obligations",
+      "ownership",
+      "requiredActions"
+    ]);
+    assert.equal(
+      scrubImpactIds(rendered.content),
+      `Impact impact-<id>: PASS
+Risk low; confidence high (0.8).
+Impact status PASS with low risk and high confidence (0.8) across 1 changed file; findings=0, obligations=0, unknowns=0.
+Top areas: tests (1)
+Required reviewers: @reviewer
+Required tests: No tests because no test obligations were derived.
+Required actions: No actions because no findings, obligations, or unknowns required follow-up.
+Unknowns: No unknowns remain because metadata coverage was sufficient.
+`
+    );
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer rejects invalid report quality without writing", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const invalidReport = {
+      ...analysis.report,
+      requiredActions: ["Review an ungrounded action"]
+    };
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: invalidReport
+    });
+
+    assert.equal(write.status, "invalid");
+    assert.equal(write.written, false);
+    assert.match(write.errors.join("\n"), /not grounded/);
+    await assert.rejects(access(path.join(repoPath, write.paths.impactMarkdown)));
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer rejects unsafe diff-file scope source without writing", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      scope: {
+        kind: "diff-file",
+        source: "change.patch"
+      },
+      config: lowNoiseConfig()
+    });
+    const unsafeSources = ["../change.patch", "/tmp/change.patch", "change\0.patch"];
+
+    for (const unsafeSource of unsafeSources) {
+      const report = structuredClone(analysis.report);
+      report.scope.source = unsafeSource;
+      const write = await blueprintImpactReportWrite({
+        cwd: repoPath,
+        report
+      });
+
+      assert.equal(write.status, "invalid");
+      assert.equal(write.written, false);
+      assert.match(write.errors.join("\n"), /report\.scope\.source/);
+      await assert.rejects(access(path.join(repoPath, write.paths.impactMarkdown)));
+    }
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer and renderer reject unsafe report paths without writing", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts", "package.json"],
+      config: lowNoiseConfig()
+    });
+    const traversalReport = reportWithUnsafePaths(analysis.report, "../outside.ts");
+    const absoluteReport = reportWithUnsafePaths(analysis.report, "/etc/passwd");
+    const nullByteReport = reportWithUnsafePaths(analysis.report, "src/\0bad.ts");
+
+    const traversalWrite = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: traversalReport
+    });
+    const absoluteWrite = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: absoluteReport
+    });
+    const nullByteWrite = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: nullByteReport
+    });
+
+    assert.equal(traversalWrite.status, "invalid");
+    assert.equal(traversalWrite.written, false);
+    assert.match(traversalWrite.errors.join("\n"), /report\.files\[0\].*escapes the repository/);
+    assert.match(traversalWrite.errors.join("\n"), /report\.surfaces\[0\]\.path/);
+    assert.match(
+      traversalWrite.errors.join("\n"),
+      /report\.dependencyGraph\.reverseDependentsByPath key/
+    );
+    assert.equal(absoluteWrite.status, "invalid");
+    assert.equal(absoluteWrite.written, false);
+    assert.match(absoluteWrite.errors.join("\n"), /report\.files\[0\].*not absolute: \/etc\/passwd/);
+    assert.equal(nullByteWrite.status, "invalid");
+    assert.equal(nullByteWrite.written, false);
+    assert.match(nullByteWrite.errors.join("\n"), /report\.files\[0\].*null bytes/);
+
+    await assert.rejects(
+      blueprintImpactOutputRender({
+        cwd: repoPath,
+        mode: "summary",
+        report: traversalReport
+      }),
+      /report\.files\[0\].*escapes the repository/
+    );
+    await assert.rejects(access(path.join(repoPath, traversalWrite.paths.impactMarkdown)));
+    await assert.rejects(access(path.join(repoPath, absoluteWrite.paths.impactMarkdown)));
+    await assert.rejects(access(path.join(repoPath, nullByteWrite.paths.impactMarkdown)));
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer rejects inconsistent blocking and warning finding projections", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const blockingAnalysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["secrets/prod.token"],
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        },
+        risk: {
+          blockOnSensitiveUnknownOwner: true
+        }
+      }
+    });
+    const warningAnalysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/mcp/tools/impact.ts"],
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: ["@reviewer"]
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+    const hiddenBlockingReport = {
+      ...blockingAnalysis.report,
+      blockingFindings: []
+    };
+    const hiddenWarningReport = {
+      ...warningAnalysis.report,
+      warningFindings: []
+    };
+    const mismatchedEvidenceReport = structuredClone(
+      blockingAnalysis.report
+    ) as ImpactAnalysis["report"];
+
+    assert.ok(blockingAnalysis.report.blockingFindings.length > 0);
+    assert.ok(warningAnalysis.report.warningFindings.length > 0);
+    mismatchedEvidenceReport.blockingFindings[0] = {
+      ...mismatchedEvidenceReport.blockingFindings[0],
+      evidenceRefs: []
+    };
+
+    const hiddenBlocking = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: hiddenBlockingReport
+    });
+    const hiddenWarning = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: hiddenWarningReport
+    });
+    const mismatchedEvidence = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: mismatchedEvidenceReport
+    });
+
+    assert.equal(hiddenBlocking.status, "invalid");
+    assert.match(hiddenBlocking.errors.join("\n"), /blockingFindings ids must exactly match/);
+    assert.equal(hiddenWarning.status, "invalid");
+    assert.match(hiddenWarning.errors.join("\n"), /warningFindings ids must exactly match/);
+    assert.equal(mismatchedEvidence.status, "invalid");
+    assert.match(mismatchedEvidence.errors.join("\n"), /blockingFindings .* evidenceRefs/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer reuses identical bundles and requires overwrite for changed bundles", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const changedReport = {
+      ...analysis.report,
+      summary: `${analysis.report.summary} Additional reviewer-visible detail.`
+    };
+
+    const first = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+    const reused = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+    await writeFile(path.join(repoPath, first.impactDir, "unexpected.txt"), "stale\n");
+    const stale = await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+    const pruned = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: analysis.report,
+      overwrite: true
+    });
+    const blocked = await blueprintImpactReportWrite({ cwd: repoPath, report: changedReport });
+    const overwritten = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: changedReport,
+      overwrite: true
+    });
+
+    assert.equal(first.status, "written");
+    assert.equal(reused.status, "reused");
+    assert.equal(reused.written, false);
+    assert.equal(stale.status, "invalid");
+    assert.match(stale.errors.join("\n"), /already exists/);
+    assert.equal(pruned.status, "overwritten");
+    await assert.rejects(access(path.join(repoPath, first.impactDir, "unexpected.txt")));
+    assert.equal(blocked.status, "invalid");
+    assert.match(blocked.errors.join("\n"), /already exists/);
+    assert.equal(overwritten.status, "overwritten");
+    assert.equal(overwritten.written, true);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact output renderer supports in-memory and saved report modes without writes", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const reportWithDuplicateSummaryFiles = structuredClone(
+      analysis.report
+    ) as typeof analysis.report;
+    const areaSummary = reportWithDuplicateSummaryFiles.areaSummary[0];
+    const surfaceSummary = reportWithDuplicateSummaryFiles.surfaceSummary[0];
+
+    assert.ok(areaSummary);
+    assert.ok(surfaceSummary);
+    areaSummary.files.push(areaSummary.files[0]);
+    surfaceSummary.files.push(surfaceSummary.files[0]);
+    const normalizedJson = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "json",
+      report: reportWithDuplicateSummaryFiles
+    });
+    const normalizedReport = JSON.parse(normalizedJson.content);
+
+    assert.equal(
+      normalizedReport.areaSummary[0].count,
+      normalizedReport.areaSummary[0].files.length
+    );
+    assert.equal(
+      normalizedReport.surfaceSummary[0].count,
+      normalizedReport.surfaceSummary[0].files.length
+    );
+
+    const human = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "human",
+      report: analysis.report
+    });
+    const json = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "json",
+      report: analysis.report
+    });
+
+    assert.equal(human.phaseStatus, "rendered");
+    assert.match(human.content, new RegExp(`Impact ${analysis.impactId}: PASS`));
+    assert.equal(JSON.parse(json.content).impactId, analysis.impactId);
+    await assert.rejects(access(path.join(repoPath, ".blueprint", "impact", analysis.impactId)));
+
+    await blueprintImpactReportWrite({ cwd: repoPath, report: analysis.report });
+
+    const markdown = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "markdown",
+      impactId: analysis.impactId
+    });
+    const prComment = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "pr-comment",
+      impactId: analysis.impactId
+    });
+    const summary = await blueprintImpactOutputRender({
+      cwd: repoPath,
+      mode: "summary",
+      impactId: analysis.impactId
+    });
+
+    assert.match(markdown.content, /# Impact Report:/);
+    assert.match(prComment.content, /## Blueprint Impact: PASS/);
+    assert.match(summary.content, /^PASS impact-/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer emits questions for structured unknowns", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const scope = await blueprintImpactScopeResolve({
+      cwd: repoPath,
+      mode: "description",
+      description: "Plan checkout retry behavior"
+    });
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      scope,
+      config: lowNoiseConfig()
+    });
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: analysis.report
+    });
+
+    assert.equal(write.status, "written");
+    assert.match(write.paths.questions ?? "", /QUESTIONS\.md/);
+    const questions = await readFile(path.join(repoPath, write.paths.questions ?? ""), "utf8");
+    assert.match(questions, /Impact scope is not file-backed/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
 });

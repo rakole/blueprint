@@ -403,6 +403,7 @@ export declare const artifactToolDefinitions: ({
             "report.cleanup": "report.cleanup";
             "report.add-tests": "report.add-tests";
             "report.audit-fix": "report.audit-fix";
+            "report.impact": "report.impact";
         }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ArtifactContractReadResult>;

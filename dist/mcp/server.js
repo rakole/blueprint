@@ -15756,6 +15756,60 @@ function renderAuditFixTemplate(context) {
 
 - /blu-progress`;
 }
+function renderImpactTemplate(context) {
+  const name = reportName(context, "impact-<scope-fingerprint>");
+  return `# Impact Report: ${name}
+
+## Summary
+
+- Status, risk, confidence, and one concise evidence-backed outcome.
+- Confidence drivers and confidence reducers.
+
+## Change Scope
+
+- Scope kind, source, fingerprint, description, and repo-relative changed files.
+- Explain non-file-backed scope limitations when applicable.
+
+## Top Impacted Areas
+
+- Area summaries with file counts and file paths.
+
+## Required Reviewers
+
+- Reviewers derived from ownership evidence or an explicit reason no reviewer was derived.
+
+## Required Tests
+
+- Tests derived from test obligations or an explicit reason no test obligation was derived.
+
+## Blocking Findings
+
+- BLOCK findings with severity, evidence refs, and required actions, or an explicit reason none were found.
+
+## Warnings
+
+- WARN findings and non-blocking obligations with evidence refs, or an explicit reason none were found.
+
+## Contract And Compatibility Impact
+
+- Command, MCP, artifact-contract, skill, agent, extension, hook, or runtime-reference impact, or an explicit reason none was detected.
+
+## Database, Config, Infra, And Deployment Impact
+
+- Database, migration, config, infra, package, build, deployment, environment, and secret-sensitive impact, or an explicit reason none was detected.
+
+## Unknowns And Missing Metadata
+
+- Unknown ids with category, severity, why it matters, resolution, and evidence refs, or an explicit reason none remain.
+
+## Evidence
+
+- Evidence ids with kind, source, summary, paths, and relevant metadata.
+
+## Suggested Next Actions
+
+- Follow-up actions derived from findings, obligations, and unknowns, or an explicit reason no action remains.`;
+}
 function getArtifactContract(contractId) {
   return ARTIFACT_CONTRACTS[contractId];
 }
@@ -16634,6 +16688,46 @@ var init_artifact_contracts = __esm({
         ],
         renderScaffoldTemplate: renderUiReviewTemplate,
         renderAuthoringTemplate: renderUiReviewTemplate
+      },
+      "report.impact": {
+        id: "report.impact",
+        scope: "report",
+        ownerTool: "blueprint_impact_report_write",
+        pathOwner: "blueprint_impact_report_write",
+        canonicalName: "Impact Report",
+        canonicalFilePattern: ".blueprint/impact/<impact-id>/IMPACT.md",
+        freehandPolicy: "locked-structure",
+        requiredHeadings: [
+          "Summary",
+          "Change Scope",
+          "Top Impacted Areas",
+          "Required Reviewers",
+          "Required Tests",
+          "Blocking Findings",
+          "Warnings",
+          "Contract And Compatibility Impact",
+          "Database, Config, Infra, And Deployment Impact",
+          "Unknowns And Missing Metadata",
+          "Evidence",
+          "Suggested Next Actions"
+        ],
+        lockedMarkers: ["# Impact Report:"],
+        placeholderSignals: [
+          "<impact-id>",
+          "<scope-fingerprint>",
+          "<owner>",
+          "<test command>",
+          "TBD",
+          "TODO",
+          "N/A"
+        ],
+        notes: [
+          "Impact reports are bounded bundles under .blueprint/impact/<impact-id>/ and are written only through blueprint_impact_report_write.",
+          "The writer validates the structured report payload plus rendered Markdown quality before persistence.",
+          "/blu-impact remains planned and non-routable until the command manifest and primary skill ship."
+        ],
+        renderScaffoldTemplate: renderImpactTemplate,
+        renderAuthoringTemplate: renderImpactTemplate
       },
       "report.pause-work": {
         id: "report.pause-work",
@@ -33637,7 +33731,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     const runtime2 = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 7,
+      implementationPhase: 8,
       readOnly: true,
       includeRuntime: true,
       includeCatalog: true,
@@ -35420,7 +35514,7 @@ async function blueprintImpactContextLoad(args = {}) {
     runtime = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 7,
+      implementationPhase: 8,
       readOnly: true,
       includeRuntime,
       includeCatalog,
@@ -35560,8 +35654,8 @@ async function blueprintImpactAnalyze(args = {}) {
   });
   addEvidence(evidence, {
     kind: "metadata",
-    source: "phase-7-scoring",
-    summary: "Phase 7 scoring separated impact status, risk level, confidence score, and confidence level.",
+    source: "impact-scoring",
+    summary: "Impact scoring separated impact status, risk level, confidence score, and confidence level.",
     paths: files,
     data: {
       status: scoringResult.status,
@@ -35652,57 +35746,1051 @@ async function blueprintImpactAnalyze(args = {}) {
     warnings: [...new Set(warnings)].sort()
   };
 }
-async function blueprintImpactReportWrite(args = {}) {
-  await ensureRepoRoot(args.cwd);
-  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
+function normalizeImpactReportForPersistence(rawReport, requestedImpactId, projectRoot) {
+  const fallbackImpactId = requestedImpactId ?? (isPlainObject6(rawReport) && typeof rawReport.impactId === "string" ? rawReport.impactId : "impact-invalid");
+  const impactIdParse = impactIdSchema.safeParse(fallbackImpactId);
+  const impactId = impactIdParse.success ? impactIdParse.data : "impact-invalid";
+  const errors = [];
+  const warnings = [];
+  if (!impactIdParse.success) {
+    errors.push(`Invalid impact id: ${fallbackImpactId}`);
+  }
+  if (!rawReport) {
+    errors.push("Impact report payload is required.");
+    return { impactId, report: null, errors, warnings };
+  }
+  const parsedReport = impactReportSchema.safeParse(rawReport);
+  if (!parsedReport.success) {
+    errors.push(
+      ...parsedReport.error.issues.map((issue2) => {
+        const issuePath = issue2.path.length > 0 ? issue2.path.join(".") : "report";
+        return `${issuePath}: ${issue2.message}`;
+      })
+    );
+    return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
+  }
+  const report = normalizeParsedImpactReport(parsedReport.data);
+  if (requestedImpactId && requestedImpactId !== report.impactId) {
+    errors.push(
+      `Requested impactId ${requestedImpactId} does not match report impactId ${report.impactId}.`
+    );
+  }
+  const quality = validateImpactReportQuality(report, projectRoot);
+  errors.push(...quality.errors);
+  warnings.push(...quality.warnings);
   return {
-    status: "disabled",
-    impactId,
-    impactDir: `.blueprint/impact/${impactId}`,
-    paths: {
-      impactMarkdown: null,
-      impactJson: null,
-      summaryJson: null,
-      evidenceJsonl: null,
-      reviewChecklist: null,
-      questions: null
+    impactId: report.impactId,
+    report,
+    errors: uniqueSorted2(errors),
+    warnings: uniqueSorted2(warnings)
+  };
+}
+function normalizeParsedImpactReport(report) {
+  return {
+    ...report,
+    files: uniqueSorted2(report.files),
+    topImpactedAreas: sortSummaryRecords(report.topImpactedAreas),
+    requiredReviewers: uniqueSorted2(report.requiredReviewers),
+    requiredTests: uniqueSorted2(report.requiredTests),
+    requiredActions: uniqueSorted2(report.requiredActions),
+    blockingFindings: sortFindings(report.blockingFindings),
+    warningFindings: sortFindings(report.warningFindings),
+    surfaces: [...report.surfaces].map((surface) => ({
+      ...surface,
+      surfaces: [...new Set(surface.surfaces)].sort(compareImpactSurfaces),
+      reasons: uniqueSorted2(surface.reasons)
+    })).sort((left, right) => left.path.localeCompare(right.path)),
+    areaSummary: sortSummaryRecords(report.areaSummary),
+    surfaceSummary: sortSummaryRecords(report.surfaceSummary),
+    ownership: {
+      ...report.ownership,
+      rules: [...report.ownership.rules].sort(
+        (left, right) => left.order - right.order || left.sourcePath.localeCompare(right.sourcePath) || left.pattern.localeCompare(right.pattern)
+      ),
+      matches: [...report.ownership.matches].sort(
+        (left, right) => left.path.localeCompare(right.path)
+      )
     },
-    written: false,
-    warnings: [
-      IMPACT_PLACEHOLDER_WARNING,
-      "Impact report writing is intentionally disabled until Phase 8 adds validated report persistence."
-    ]
+    dependencyGraph: {
+      ...report.dependencyGraph,
+      nodes: [...report.dependencyGraph.nodes].sort(
+        (left, right) => left.id.localeCompare(right.id)
+      ),
+      edges: [...report.dependencyGraph.edges].sort(
+        (left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to) || left.type.localeCompare(right.type)
+      ),
+      reverseDependentsByPath: Object.fromEntries(
+        Object.entries(report.dependencyGraph.reverseDependentsByPath).sort(([left], [right]) => left.localeCompare(right)).map(([key, values]) => [key, uniqueSorted2(values)])
+      )
+    },
+    findings: sortFindings(report.findings),
+    obligations: sortObligations(report.obligations),
+    unknowns: sortUnknownRecords(report.unknowns),
+    evidence: sortEvidenceRecords(report.evidence)
+  };
+}
+function sortSummaryRecords(records) {
+  return [...records].map((record2) => {
+    const files = uniqueSorted2(record2.files);
+    return {
+      ...record2,
+      files,
+      count: files.length
+    };
+  }).sort(
+    (left, right) => right.count - left.count || left.name.localeCompare(right.name)
+  );
+}
+function validateImpactReportQuality(report, projectRoot) {
+  const errors = [];
+  const warnings = [];
+  const evidenceIds = new Set(report.evidence.map((evidence) => evidence.id));
+  validateImpactReportRepoPaths(report, projectRoot, errors);
+  validateEvidenceBackedRecords(report, evidenceIds, errors);
+  validateRequiredSignalGrounding(report, errors);
+  validateReportContradictions(report, errors);
+  validateConfidenceGrounding(report, errors);
+  if (report.confidence.reasons.length === 0) {
+    errors.push("Impact report confidence requires at least one explanation.");
+  }
+  if (report.risk.reasons.length === 0) {
+    errors.push("Impact report risk requires at least one explanation.");
+  }
+  const markdown = renderImpactMarkdown(report);
+  validateRenderedImpactMarkdown(markdown, errors, warnings);
+  return {
+    errors: uniqueSorted2(errors),
+    warnings: uniqueSorted2(warnings)
+  };
+}
+function validateReportRepoRelativePath(projectRoot, value, label, errors) {
+  const trimmed = value.trim();
+  const slashNormalized = trimmed.replaceAll("\\", "/");
+  if (trimmed.length === 0) {
+    errors.push(`${label} must not be blank.`);
+    return;
+  }
+  if (trimmed.includes("\0")) {
+    errors.push(`${label} must not contain null bytes.`);
+    return;
+  }
+  if (path9.isAbsolute(trimmed) || path9.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+    errors.push(`${label} must be repo-relative, not absolute: ${value}`);
+    return;
+  }
+  const normalizedPath = path9.posix.normalize(slashNormalized);
+  if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
+    errors.push(`${label} escapes the repository: ${value}`);
+    return;
+  }
+  try {
+    ensurePathWithinRootSync(projectRoot, path9.resolve(projectRoot, normalizedPath), {
+      label
+    });
+  } catch (error2) {
+    errors.push(error2 instanceof Error ? error2.message : `${label} escapes the repository.`);
+  }
+}
+function validateReportRepoRelativePaths(projectRoot, values, label, errors) {
+  values.forEach(
+    (value, index) => validateReportRepoRelativePath(projectRoot, value, `${label}[${index}]`, errors)
+  );
+}
+function hasPathTraversalSegment(value) {
+  return value.replaceAll("\\", "/").split("/").some((segment) => segment === "..");
+}
+function shouldValidateReportScopeSource(scope) {
+  if (scope.source === null) {
+    return scope.kind === "diff-file";
+  }
+  const trimmed = scope.source.trim();
+  const slashNormalized = trimmed.replaceAll("\\", "/");
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path9.isAbsolute(trimmed) || path9.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+}
+function validateReportScopeSource(projectRoot, scope, errors) {
+  if (!shouldValidateReportScopeSource(scope)) {
+    return;
+  }
+  if (scope.source === null) {
+    errors.push("report.scope.source is required for diff-file scope.");
+    return;
+  }
+  if (hasPathTraversalSegment(scope.source)) {
+    errors.push(`report.scope.source must not contain traversal segments: ${scope.source}`);
+    return;
+  }
+  validateReportRepoRelativePath(projectRoot, scope.source, "report.scope.source", errors);
+}
+function shouldValidateDependencyRepoPathValue(value) {
+  const trimmed = value.trim();
+  return trimmed.includes("\0") || trimmed.startsWith("/") || trimmed.startsWith("../") || trimmed.includes("/../") || /^[A-Za-z]:[\\/]/u.test(trimmed) || !/^[a-z][a-z0-9+.-]*:/iu.test(trimmed);
+}
+function validateDependencyRepoPathValue(projectRoot, value, label, errors) {
+  if (shouldValidateDependencyRepoPathValue(value)) {
+    validateReportRepoRelativePath(projectRoot, value, label, errors);
+  }
+}
+function validateImpactReportRepoPaths(report, projectRoot, errors) {
+  validateReportScopeSource(projectRoot, report.scope, errors);
+  validateReportRepoRelativePaths(projectRoot, report.files, "report.files", errors);
+  for (const [summaryLabel, records] of [
+    ["report.topImpactedAreas", report.topImpactedAreas],
+    ["report.areaSummary", report.areaSummary],
+    ["report.surfaceSummary", report.surfaceSummary]
+  ]) {
+    records.forEach(
+      (record2, index) => validateReportRepoRelativePaths(
+        projectRoot,
+        record2.files,
+        `${summaryLabel}[${index}].files`,
+        errors
+      )
+    );
+  }
+  report.surfaces.forEach(
+    (surface, index) => validateReportRepoRelativePath(projectRoot, surface.path, `report.surfaces[${index}].path`, errors)
+  );
+  for (const [findingLabel, findings] of [
+    ["report.findings", report.findings],
+    ["report.blockingFindings", report.blockingFindings],
+    ["report.warningFindings", report.warningFindings]
+  ]) {
+    findings.forEach(
+      (finding, index) => validateReportRepoRelativePaths(
+        projectRoot,
+        finding.impactedFiles,
+        `${findingLabel}[${index}].impactedFiles`,
+        errors
+      )
+    );
+  }
+  report.obligations.forEach(
+    (obligation, index) => validateReportRepoRelativePaths(
+      projectRoot,
+      obligation.impactedFiles,
+      `report.obligations[${index}].impactedFiles`,
+      errors
+    )
+  );
+  report.unknowns.forEach(
+    (unknown2, index) => validateReportRepoRelativePaths(
+      projectRoot,
+      unknown2.impactedFiles,
+      `report.unknowns[${index}].impactedFiles`,
+      errors
+    )
+  );
+  report.evidence.forEach(
+    (evidence, index) => validateReportRepoRelativePaths(
+      projectRoot,
+      evidence.paths,
+      `report.evidence[${index}].paths`,
+      errors
+    )
+  );
+  if (report.ownership.codeownersPath !== null) {
+    validateReportRepoRelativePath(
+      projectRoot,
+      report.ownership.codeownersPath,
+      "report.ownership.codeownersPath",
+      errors
+    );
+  }
+  validateReportRepoRelativePaths(
+    projectRoot,
+    report.ownership.metadataPaths,
+    "report.ownership.metadataPaths",
+    errors
+  );
+  report.ownership.rules.forEach(
+    (rule, index) => validateReportRepoRelativePath(
+      projectRoot,
+      rule.sourcePath,
+      `report.ownership.rules[${index}].sourcePath`,
+      errors
+    )
+  );
+  report.ownership.matches.forEach((match, matchIndex) => {
+    validateReportRepoRelativePath(
+      projectRoot,
+      match.path,
+      `report.ownership.matches[${matchIndex}].path`,
+      errors
+    );
+    match.matchedRules.forEach(
+      (rule, ruleIndex) => validateReportRepoRelativePath(
+        projectRoot,
+        rule.sourcePath,
+        `report.ownership.matches[${matchIndex}].matchedRules[${ruleIndex}].sourcePath`,
+        errors
+      )
+    );
+  });
+  validateReportRepoRelativePaths(
+    projectRoot,
+    report.dependencyGraph.coverage.filesCovered,
+    "report.dependencyGraph.coverage.filesCovered",
+    errors
+  );
+  validateReportRepoRelativePaths(
+    projectRoot,
+    report.dependencyGraph.coverage.filesUncovered,
+    "report.dependencyGraph.coverage.filesUncovered",
+    errors
+  );
+  report.dependencyGraph.nodes.forEach((node, index) => {
+    if (node.path !== null) {
+      validateReportRepoRelativePath(
+        projectRoot,
+        node.path,
+        `report.dependencyGraph.nodes[${index}].path`,
+        errors
+      );
+    }
+  });
+  Object.entries(report.dependencyGraph.reverseDependentsByPath).forEach(
+    ([filePath, dependents], pathIndex) => {
+      validateReportRepoRelativePath(
+        projectRoot,
+        filePath,
+        `report.dependencyGraph.reverseDependentsByPath key[${pathIndex}]`,
+        errors
+      );
+      dependents.forEach(
+        (dependent, dependentIndex) => validateDependencyRepoPathValue(
+          projectRoot,
+          dependent,
+          `report.dependencyGraph.reverseDependentsByPath[${filePath}][${dependentIndex}]`,
+          errors
+        )
+      );
+    }
+  );
+}
+function validateEvidenceBackedRecords(report, evidenceIds, errors) {
+  for (const finding of report.findings) {
+    if (finding.evidenceRefs.length === 0) {
+      errors.push(`Finding ${finding.id} is missing evidence refs.`);
+    }
+    for (const evidenceRef of finding.evidenceRefs) {
+      if (!evidenceIds.has(evidenceRef)) {
+        errors.push(`Finding ${finding.id} references unknown evidence ${evidenceRef}.`);
+      }
+    }
+  }
+  for (const obligation of report.obligations) {
+    if (obligation.evidenceRefs.length === 0) {
+      errors.push(`Obligation ${obligation.id} is missing evidence refs.`);
+    }
+    for (const evidenceRef of obligation.evidenceRefs) {
+      if (!evidenceIds.has(evidenceRef)) {
+        errors.push(`Obligation ${obligation.id} references unknown evidence ${evidenceRef}.`);
+      }
+    }
+  }
+  for (const unknown2 of report.unknowns) {
+    if (unknown2.evidenceRefs.length === 0) {
+      errors.push(`Unknown ${unknown2.id} is missing evidence refs.`);
+    }
+    if (isGenericFiller(unknown2.reason) || isGenericFiller(unknown2.resolution)) {
+      errors.push(`Unknown ${unknown2.id} must include a specific reason and resolution.`);
+    }
+    for (const evidenceRef of unknown2.evidenceRefs) {
+      if (!evidenceIds.has(evidenceRef)) {
+        errors.push(`Unknown ${unknown2.id} references unknown evidence ${evidenceRef}.`);
+      }
+    }
+  }
+}
+function validateRequiredSignalGrounding(report, errors) {
+  const groundedReviewers = /* @__PURE__ */ new Set([
+    ...report.ownership.coverage.fallbackReviewers,
+    ...report.ownership.matches.flatMap((match) => match.owners),
+    ...report.ownership.matches.flatMap((match) => match.fallbackReviewers)
+  ]);
+  const groundedTests = new Set(
+    report.obligations.filter((obligation) => obligation.category === "tests").flatMap((obligation) => obligation.requiredActions)
+  );
+  const groundedActions = /* @__PURE__ */ new Set([
+    ...report.findings.flatMap((finding) => finding.requiredActions),
+    ...report.obligations.flatMap((obligation) => obligation.requiredActions),
+    ...report.unknowns.map((unknown2) => unknown2.resolution)
+  ]);
+  for (const reviewer of report.requiredReviewers) {
+    if (!groundedReviewers.has(reviewer)) {
+      errors.push(`Required reviewer ${reviewer} is not grounded in ownership evidence.`);
+    }
+  }
+  for (const test of report.requiredTests) {
+    if (!groundedTests.has(test)) {
+      errors.push(`Required test ${test} is not grounded in a test obligation.`);
+    }
+  }
+  for (const action of report.requiredActions) {
+    if (!groundedActions.has(action)) {
+      errors.push(`Required action ${action} is not grounded in findings, obligations, or unknowns.`);
+    }
+  }
+}
+function validateReportContradictions(report, errors) {
+  const hasBlockingSignals = report.findings.some((finding) => finding.status === "BLOCK") || report.obligations.some((obligation) => obligation.status === "BLOCK") || report.unknowns.some(
+    (unknown2) => unknown2.severity === "HIGH" || unknown2.severity === "CRITICAL"
+  );
+  if (report.status !== report.impactStatus || report.status !== report.scoring.status) {
+    errors.push("Impact report status, impactStatus, and scoring.status must agree.");
+  }
+  if (report.status === "PASS" && hasBlockingSignals) {
+    errors.push("Impact report cannot be PASS while blocking findings, obligations, or unknowns remain.");
+  }
+  if (report.status === "BLOCK" && !hasBlockingSignals && !report.scoring.blocking) {
+    errors.push("Impact report cannot be BLOCK without a blocking signal or scoring.blocking=true.");
+  }
+  validateFindingProjection(
+    report.findings,
+    report.blockingFindings,
+    "BLOCK",
+    "blockingFindings",
+    errors
+  );
+  validateFindingProjection(
+    report.findings,
+    report.warningFindings,
+    "WARN",
+    "warningFindings",
+    errors
+  );
+}
+function validateFindingProjection(findings, projectedFindings, status, label, errors) {
+  const expected = findings.filter((finding) => finding.status === status);
+  const expectedById = new Map(expected.map((finding) => [finding.id, finding]));
+  const projectedById = new Map(projectedFindings.map((finding) => [finding.id, finding]));
+  const missingIds = expected.filter((finding) => !projectedById.has(finding.id)).map((finding) => finding.id);
+  const extraIds = projectedFindings.filter((finding) => !expectedById.has(finding.id)).map((finding) => finding.id);
+  if (missingIds.length > 0 || extraIds.length > 0) {
+    errors.push(
+      `${label} ids must exactly match findings with status ${status}; missing: ${missingIds.join(", ") || "none"}; extra: ${extraIds.join(", ") || "none"}.`
+    );
+  }
+  for (const finding of projectedFindings) {
+    const canonical = expectedById.get(finding.id);
+    if (finding.status !== status) {
+      errors.push(`${label} ${finding.id} status ${finding.status} does not match ${status}.`);
+    }
+    if (!canonical) {
+      continue;
+    }
+    if (stableStringify(canonical.evidenceRefs) !== stableStringify(finding.evidenceRefs)) {
+      errors.push(`${label} ${finding.id} evidenceRefs do not match canonical finding evidence.`);
+    }
+    if (stableStringify(canonical) !== stableStringify(finding)) {
+      errors.push(`${label} ${finding.id} details do not match canonical finding.`);
+    }
+  }
+}
+function validateConfidenceGrounding(report, errors) {
+  const highConfidence = report.confidence.level === "high" || report.confidence.score >= 0.75;
+  const scopeProofed = report.files.length > 0 && report.scope.kind !== "description" && report.scope.kind !== "unresolved" && report.evidence.some(
+    (evidence) => evidence.kind === "scope" || evidence.paths.some((file2) => report.files.includes(file2))
+  );
+  if (highConfidence && !scopeProofed) {
+    errors.push("High confidence requires file-backed scope proof and scope evidence.");
+  }
+}
+function validateRenderedImpactMarkdown(markdown, errors, warnings) {
+  const sections = parseMarkdownSections(markdown);
+  for (const heading of IMPACT_REPORT_REQUIRED_HEADINGS) {
+    const section = sections.get(heading);
+    if (!section) {
+      errors.push(`IMPACT.md is missing required heading: ${heading}.`);
+      continue;
+    }
+    if (section.trim().length === 0) {
+      errors.push(`IMPACT.md section ${heading} is empty.`);
+    } else if (isGenericFiller(section)) {
+      errors.push(`IMPACT.md section ${heading} contains generic filler.`);
+    }
+  }
+  const placeholderMatches = markdown.match(/<[^>\n]+>|\bTBD\b|\bTODO\b/giu) ?? [];
+  for (const match of placeholderMatches) {
+    errors.push(`IMPACT.md contains unresolved placeholder text: ${match}.`);
+  }
+  for (const line of markdown.split(/\r?\n/u)) {
+    if (/\bN\/A\b/iu.test(line) && !/\b(because|reason|not applicable)\b/iu.test(line)) {
+      errors.push(`IMPACT.md contains generic N/A without an explicit reason: ${line.trim()}`);
+    }
+  }
+  if (!markdown.includes("Confidence drivers") || !markdown.includes("Confidence reducers")) {
+    warnings.push("IMPACT.md should include confidence drivers and reducers.");
+  }
+}
+function parseMarkdownSections(markdown) {
+  const sections = /* @__PURE__ */ new Map();
+  let current = null;
+  let content = [];
+  for (const line of markdown.split(/\r?\n/u)) {
+    const match = /^## ([^\n#]+)$/u.exec(line);
+    if (match) {
+      if (current) {
+        sections.set(current, content.join("\n").trim());
+      }
+      current = match[1].trim();
+      content = [];
+      continue;
+    }
+    if (current) {
+      content.push(line);
+    }
+  }
+  if (current) {
+    sections.set(current, content.join("\n").trim());
+  }
+  return sections;
+}
+function isGenericFiller(value) {
+  const normalized = value.trim().toLowerCase();
+  return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "not applicable" || normalized === "todo" || normalized === "tbd" || normalized === "-" || normalized === "no impact" || normalized === "no warnings";
+}
+function impactBundleRelativePaths(impactId, report, writeEvidenceLog) {
+  const base = `${IMPACT_REPORT_ROOT}/${impactId}`;
+  const shouldWriteEvidence = Boolean(writeEvidenceLog) || Boolean(report && report.evidence.length > 0);
+  const shouldWriteChecklist = Boolean(
+    report && (report.requiredReviewers.length > 0 || report.requiredTests.length > 0 || report.requiredActions.length > 0 || report.obligations.length > 0)
+  );
+  const shouldWriteQuestions = Boolean(report && report.unknowns.length > 0);
+  return {
+    impactMarkdown: `${base}/IMPACT.md`,
+    impactJson: `${base}/impact.json`,
+    summaryJson: `${base}/summary.json`,
+    evidenceJsonl: shouldWriteEvidence ? `${base}/evidence.jsonl` : null,
+    reviewChecklist: shouldWriteChecklist ? `${base}/review-checklist.md` : null,
+    questions: shouldWriteQuestions ? `${base}/QUESTIONS.md` : null
+  };
+}
+function buildImpactReportBundle(report, options) {
+  const paths = impactBundleRelativePaths(report.impactId, report, options.writeEvidenceLog);
+  const files = /* @__PURE__ */ new Map();
+  files.set("IMPACT.md", renderImpactMarkdown(report));
+  files.set("impact.json", `${stableJson(report)}
+`);
+  files.set("summary.json", `${stableJson(buildImpactSummaryJson(report, paths))}
+`);
+  if (paths.evidenceJsonl) {
+    files.set(
+      "evidence.jsonl",
+      report.evidence.map((evidence) => stableJson(evidence)).join("\n") + "\n"
+    );
+  }
+  if (paths.reviewChecklist) {
+    files.set("review-checklist.md", renderImpactReviewChecklist(report));
+  }
+  if (paths.questions) {
+    files.set("QUESTIONS.md", renderImpactQuestions(report));
+  }
+  return { files };
+}
+function buildImpactSummaryJson(report, paths) {
+  return {
+    schemaVersion: IMPACT_REPORT_SCHEMA_VERSION,
+    impactId: report.impactId,
+    status: report.status,
+    impactStatus: report.impactStatus,
+    risk: report.risk,
+    confidence: report.confidence,
+    scope: report.scope,
+    counts: {
+      files: report.files.length,
+      findings: report.findings.length,
+      obligations: report.obligations.length,
+      unknowns: report.unknowns.length,
+      evidence: report.evidence.length
+    },
+    topImpactedAreas: report.topImpactedAreas,
+    requiredReviewers: report.requiredReviewers,
+    requiredTests: report.requiredTests,
+    requiredActions: report.requiredActions,
+    paths
+  };
+}
+function stableJson(value) {
+  return JSON.stringify(sortJsonValue(value), null, 2);
+}
+function sortJsonValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => sortJsonValue(item));
+  }
+  if (isPlainObject6(value)) {
+    return Object.fromEntries(
+      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => [key, sortJsonValue(item)])
+    );
+  }
+  return value;
+}
+function renderImpactOutput(report, mode, verbosity = "normal") {
+  switch (mode) {
+    case "json":
+      return `${stableJson(report)}
+`;
+    case "markdown":
+      return renderImpactMarkdown(report);
+    case "pr-comment":
+      return renderImpactPrComment(report);
+    case "summary":
+      return renderImpactSummaryText(report);
+    case "human":
+    default:
+      return renderImpactHumanText(report, verbosity);
+  }
+}
+function renderImpactMarkdown(report) {
+  return `# Impact Report: ${report.impactId}
+
+## Summary
+
+${report.summary}
+
+- Status: ${report.status}
+- Risk: ${report.risk.level}
+- Confidence: ${report.confidence.level} (${report.confidence.score})
+- Confidence drivers: ${sentenceList(report.scoring.drivers, "No positive confidence drivers were recorded because the analyzer found no strengthening signals.")}
+- Confidence reducers: ${sentenceList(report.scoring.reducers, "No confidence reducers were recorded because no weakening signals were detected.")}
+
+## Change Scope
+
+${renderChangeScope(report)}
+
+## Top Impacted Areas
+
+${renderSummaryRecords(report.topImpactedAreas, "No impacted areas were detected because the resolved scope contained no changed files.")}
+
+## Required Reviewers
+
+${renderStringList(report.requiredReviewers, "No required reviewers are listed because ownership metadata did not identify owners or fallback reviewers for this scope.")}
+
+## Required Tests
+
+${renderStringList(report.requiredTests, "No required tests are listed because the analyzed signals did not produce test obligations.")}
+
+## Blocking Findings
+
+${renderFindings(report.blockingFindings, "No blocking findings were detected because the report status did not include BLOCK findings.")}
+
+## Warnings
+
+${renderWarningsSection(report)}
+
+## Contract And Compatibility Impact
+
+${renderContractImpact(report)}
+
+## Database, Config, Infra, And Deployment Impact
+
+${renderOperationalImpact(report)}
+
+## Unknowns And Missing Metadata
+
+${renderUnknowns(report)}
+
+## Evidence
+
+${renderEvidence(report)}
+
+## Suggested Next Actions
+
+${renderStringList(report.requiredActions, "No suggested next actions are listed because no findings, obligations, or unknowns required follow-up.")}
+`;
+}
+function renderChangeScope(report) {
+  const fileLines = report.files.length > 0 ? report.files.map((file2) => `- \`${file2}\``).join("\n") : "- No changed files were included because the resolved scope was not file-backed.";
+  return [
+    `- Kind: ${report.scope.kind}`,
+    `- Source: ${report.scope.source ?? "No source recorded because scope resolution did not provide one."}`,
+    `- Fingerprint: ${report.scope.fingerprint}`,
+    `- Description: ${report.scope.description ?? "No description was provided because this report used file or git scope."}`,
+    "",
+    fileLines
+  ].join("\n");
+}
+function renderSummaryRecords(records, emptyReason) {
+  if (records.length === 0) {
+    return emptyReason;
+  }
+  return records.map((record2) => {
+    const files = record2.files.length > 0 ? record2.files.map((file2) => `  - \`${file2}\``).join("\n") : "  - No files listed because the summary count was zero.";
+    return `- ${record2.name}: ${record2.count}
+${files}`;
+  }).join("\n");
+}
+function renderStringList(values, emptyReason) {
+  if (values.length === 0) {
+    return emptyReason;
+  }
+  return values.map((value) => `- ${value}`).join("\n");
+}
+function renderFindings(findings, emptyReason) {
+  if (findings.length === 0) {
+    return emptyReason;
+  }
+  return findings.map(
+    (finding) => `- ${finding.id}: ${finding.title}
+  - Status: ${finding.status}
+  - Severity: ${finding.severity}
+  - Evidence: ${finding.evidenceRefs.join(", ")}
+  - Actions: ${sentenceList(finding.requiredActions, "No action was required because this finding is informational.")}`
+  ).join("\n");
+}
+function renderWarningsSection(report) {
+  const warningFindings = renderFindings(
+    report.warningFindings,
+    "No warning findings were detected because the report did not include WARN findings."
+  );
+  const warningObligations = report.obligations.filter((obligation) => obligation.status === "WARN");
+  if (warningObligations.length === 0) {
+    return warningFindings;
+  }
+  return `${warningFindings}
+
+Obligations:
+${warningObligations.map(
+    (obligation) => `- ${obligation.id}: ${obligation.title}
+  - Category: ${obligation.category}
+  - Evidence: ${obligation.evidenceRefs.join(", ")}
+  - Actions: ${sentenceList(obligation.requiredActions, "No action was required because this obligation is informational.")}`
+  ).join("\n")}`;
+}
+function renderContractImpact(report) {
+  const contractSignals = [
+    ...report.findings.filter((finding) => finding.checkId.startsWith("contract.")),
+    ...report.findings.filter((finding) => finding.checkId.includes("routing"))
+  ];
+  const contractObligations = report.obligations.filter(
+    (obligation) => obligation.category === "contract-review" || obligation.category === "docs"
+  );
+  if (contractSignals.length === 0 && contractObligations.length === 0) {
+    return "No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, extension, or runtime-reference surfaces produced contract signals.";
+  }
+  return [
+    renderFindings(contractSignals, "No contract findings were detected because contract checks did not produce findings."),
+    renderStringList(
+      contractObligations.map((obligation) => `${obligation.title} (${obligation.id})`),
+      "No contract obligations were produced because contract surfaces did not require follow-up."
+    )
+  ].join("\n\n");
+}
+function renderOperationalImpact(report) {
+  const operationalObligations = report.obligations.filter(
+    (obligation) => ["deployment", "migration", "security", "build", "release"].includes(obligation.category)
+  );
+  const operationalFiles = report.surfaces.filter(
+    (surface) => surface.surfaces.some(
+      (name) => [
+        "secret-sensitive",
+        "env-config",
+        "config",
+        "package-runtime",
+        "build-config",
+        "extension-manifest",
+        "hook"
+      ].includes(name)
+    )
+  );
+  if (operationalObligations.length === 0 && operationalFiles.length === 0) {
+    return "No database, config, infra, or deployment impact was detected because the resolved scope contained no configured persistence, migration, config, infra, package, build, extension, hook, or secret-sensitive paths.";
+  }
+  return [
+    renderStringList(
+      operationalFiles.map((surface) => `\`${surface.path}\` (${surface.surfaces.join(", ")})`),
+      "No operational files were listed because only obligations were detected."
+    ),
+    renderStringList(
+      operationalObligations.map((obligation) => `${obligation.title} (${obligation.id})`),
+      "No operational obligations were listed because operational files did not require follow-up."
+    )
+  ].join("\n\n");
+}
+function renderUnknowns(report) {
+  if (report.unknowns.length === 0) {
+    return "No unknowns remain because scope, ownership, dependency, contract, and obligation metadata were sufficient for this advisory report.";
+  }
+  return report.unknowns.map(
+    (unknown2) => `- ${unknown2.id}: ${unknown2.title}
+  - Category: ${unknown2.category}
+  - Severity: ${unknown2.severity}
+  - Reason: ${unknown2.reason}
+  - Resolution: ${unknown2.resolution}
+  - Evidence: ${unknown2.evidenceRefs.join(", ")}`
+  ).join("\n");
+}
+function renderEvidence(report) {
+  if (report.evidence.length === 0) {
+    return "No evidence records were included because the report payload did not provide evidence; this should be treated as invalid for persisted impact reports.";
+  }
+  return report.evidence.map(
+    (evidence) => `- ${evidence.id}: ${evidence.summary}
+  - Kind: ${evidence.kind}
+  - Source: ${evidence.source}
+  - Paths: ${sentenceList(evidence.paths.map((file2) => `\`${file2}\``), "No paths because this evidence record describes configuration or aggregate metadata.")}`
+  ).join("\n");
+}
+function sentenceList(values, fallback) {
+  return values.length > 0 ? values.join("; ") : fallback;
+}
+function renderImpactReviewChecklist(report) {
+  return `# Impact Review Checklist: ${report.impactId}
+
+## Reviewers
+
+${renderChecklistItems(report.requiredReviewers, "No reviewer checkbox because no required reviewers were derived.")}
+
+## Tests
+
+${renderChecklistItems(report.requiredTests, "No test checkbox because no required tests were derived.")}
+
+## Actions
+
+${renderChecklistItems(report.requiredActions, "No action checkbox because no required actions were derived.")}
+
+## Obligations
+
+${renderChecklistItems(
+    report.obligations.map((obligation) => `${obligation.title} (${obligation.id})`),
+    "No obligation checkbox because no obligations were derived."
+  )}
+`;
+}
+function renderChecklistItems(values, emptyReason) {
+  if (values.length === 0) {
+    return emptyReason;
+  }
+  return values.map((value) => `- [ ] ${value}`).join("\n");
+}
+function renderImpactQuestions(report) {
+  return `# Impact Questions: ${report.impactId}
+
+${report.unknowns.map(
+    (unknown2) => `## ${unknown2.title}
+
+- Unknown ID: ${unknown2.id}
+- Severity: ${unknown2.severity}
+- Why it matters: ${unknown2.reason}
+- Suggested resolution: ${unknown2.resolution}
+- Evidence: ${unknown2.evidenceRefs.join(", ")}
+`
+  ).join("\n")}`;
+}
+function renderImpactPrComment(report) {
+  return `## Blueprint Impact: ${report.status}
+
+- Impact ID: \`${report.impactId}\`
+- Risk: ${report.risk.level}
+- Confidence: ${report.confidence.level} (${report.confidence.score})
+- Files: ${report.files.length}
+- Findings: ${report.findings.length}
+- Obligations: ${report.obligations.length}
+- Unknowns: ${report.unknowns.length}
+
+${renderStringList(report.requiredActions.slice(0, 8), "No next actions are required because no follow-up signals were produced.")}
+`;
+}
+function renderImpactSummaryText(report) {
+  return [
+    `${report.status} ${report.impactId}`,
+    `Risk: ${report.risk.level}`,
+    `Confidence: ${report.confidence.level} (${report.confidence.score})`,
+    `Files: ${report.files.length}`,
+    `Findings: ${report.findings.length}`,
+    `Obligations: ${report.obligations.length}`,
+    `Unknowns: ${report.unknowns.length}`
+  ].join("\n");
+}
+function renderImpactHumanText(report, verbosity) {
+  const lines = [
+    `Impact ${report.impactId}: ${report.status}`,
+    `Risk ${report.risk.level}; confidence ${report.confidence.level} (${report.confidence.score}).`,
+    report.summary
+  ];
+  if (verbosity !== "compact") {
+    lines.push(
+      `Top areas: ${sentenceList(
+        report.topImpactedAreas.map((area) => `${area.name} (${area.count})`),
+        "No impacted areas because the scope had no changed files."
+      )}`,
+      `Required reviewers: ${sentenceList(
+        report.requiredReviewers,
+        "No reviewers because ownership metadata did not derive required owners."
+      )}`,
+      `Required tests: ${sentenceList(
+        report.requiredTests,
+        "No tests because no test obligations were derived."
+      )}`
+    );
+  }
+  if (verbosity === "detailed") {
+    lines.push(
+      `Required actions: ${sentenceList(
+        report.requiredActions,
+        "No actions because no findings, obligations, or unknowns required follow-up."
+      )}`,
+      `Unknowns: ${sentenceList(
+        report.unknowns.map((unknown2) => `${unknown2.id}: ${unknown2.title}`),
+        "No unknowns remain because metadata coverage was sufficient."
+      )}`
+    );
+  }
+  return `${lines.join("\n")}
+`;
+}
+function ensureImpactBundleDir(projectRoot, impactId) {
+  const impactRoot = ensurePathWithinRootSync(projectRoot, path9.join(projectRoot, IMPACT_REPORT_ROOT), {
+    label: "impact report root"
+  });
+  const impactDir = ensurePathWithinRootSync(impactRoot, path9.join(impactRoot, impactId), {
+    label: "impact report directory"
+  });
+  ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
+  return impactDir;
+}
+async function compareImpactBundle(projectRoot, impactDir, files) {
+  const existing = await pathExists6(impactDir);
+  if (!existing) {
+    return { existing: false, identical: false };
+  }
+  for (const [fileName, content] of files) {
+    const filePath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, fileName), {
+      label: "impact report file"
+    });
+    ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
+    if (!await pathExists6(filePath)) {
+      return { existing: true, identical: false };
+    }
+    if (await fs8.readFile(filePath, "utf8") !== content) {
+      return { existing: true, identical: false };
+    }
+  }
+  const existingEntries = await fs8.readdir(impactDir, { withFileTypes: true });
+  for (const entry of existingEntries) {
+    if (!IMPACT_ALLOWED_BUNDLE_FILES.has(entry.name) || !files.has(entry.name)) {
+      return { existing: true, identical: false };
+    }
+  }
+  return { existing: true, identical: true };
+}
+async function pruneImpactStaleBundleFiles(projectRoot, impactDir, files) {
+  if (!await pathExists6(impactDir)) {
+    return;
+  }
+  const entries = await fs8.readdir(impactDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!files.has(entry.name)) {
+      const stalePath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, entry.name), {
+        label: "stale impact report file"
+      });
+      ensurePathWithinRootSync(projectRoot, stalePath, { label: "stale impact report file" });
+      await fs8.rm(stalePath, { recursive: entry.isDirectory(), force: true });
+    }
+  }
+}
+async function writeImpactBundleFilesAtomically(projectRoot, impactDir, files) {
+  for (const [fileName, content] of files) {
+    const filePath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, fileName), {
+      label: "impact report file"
+    });
+    ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
+    const tempPath = `${filePath}.tmp-${process.pid}-${stableHash({ fileName, content })}`;
+    await fs8.writeFile(tempPath, content, "utf8");
+    await fs8.rename(tempPath, filePath);
+  }
+}
+async function readSavedImpactReport(projectRoot, impactId) {
+  const impactDir = ensureImpactBundleDir(projectRoot, impactId);
+  const reportPath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, "impact.json"), {
+    label: "saved impact report"
+  });
+  if (!await pathExists6(reportPath)) {
+    throw new Error(`${IMPACT_REPORT_ROOT}/${impactId}/impact.json does not exist.`);
+  }
+  return safeJsonParseObject(await fs8.readFile(reportPath, "utf8"), {
+    label: `${IMPACT_REPORT_ROOT}/${impactId}/impact.json`
+  });
+}
+async function blueprintImpactReportWrite(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot);
+  const impactId = parsed.impactId;
+  const paths = impactBundleRelativePaths(impactId, parsed.report, args.writeEvidenceLog);
+  if (parsed.errors.length > 0 || !parsed.report) {
+    return {
+      status: "invalid",
+      impactId,
+      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+      paths,
+      written: false,
+      errors: parsed.errors,
+      warnings: parsed.warnings
+    };
+  }
+  const bundle = buildImpactReportBundle(parsed.report, {
+    writeEvidenceLog: args.writeEvidenceLog
+  });
+  const impactDir = ensureImpactBundleDir(projectRoot, impactId);
+  const comparison = await compareImpactBundle(projectRoot, impactDir, bundle.files);
+  if (comparison.existing && comparison.identical) {
+    return {
+      status: "reused",
+      impactId,
+      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+      paths,
+      written: false,
+      errors: [],
+      warnings: parsed.warnings
+    };
+  }
+  if (comparison.existing && !args.overwrite) {
+    return {
+      status: "invalid",
+      impactId,
+      impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+      paths,
+      written: false,
+      errors: [
+        `Impact report bundle ${IMPACT_REPORT_ROOT}/${impactId} already exists with different content; pass overwrite=true to replace it.`
+      ],
+      warnings: parsed.warnings
+    };
+  }
+  await fs8.mkdir(impactDir, { recursive: true });
+  await pruneImpactStaleBundleFiles(projectRoot, impactDir, bundle.files);
+  await writeImpactBundleFilesAtomically(projectRoot, impactDir, bundle.files);
+  return {
+    status: comparison.existing ? "overwritten" : "written",
+    impactId,
+    impactDir: `${IMPACT_REPORT_ROOT}/${impactId}`,
+    paths,
+    written: true,
+    errors: [],
+    warnings: parsed.warnings
   };
 }
 async function blueprintImpactOutputRender(args = {}) {
-  await ensureRepoRoot(args.cwd);
+  const projectRoot = await ensureRepoRoot(args.cwd);
   const mode = args.mode ?? "human";
-  const impactId = args.impactId ?? PLACEHOLDER_IMPACT_ID;
-  const content = mode === "json" ? JSON.stringify(
-    {
-      impactId,
-      status: "WARN",
-      warning: IMPACT_PLACEHOLDER_WARNING
-    },
-    null,
-    2
-  ) : `Impact ${impactId}: WARN
-
-${IMPACT_PLACEHOLDER_WARNING}`;
+  const rawReport = args.report ?? (args.impactId ? await readSavedImpactReport(projectRoot, args.impactId) : void 0);
+  const parsed = normalizeImpactReportForPersistence(rawReport, args.impactId, projectRoot);
+  if (!parsed.report || parsed.errors.length > 0) {
+    throw new Error(
+      `Impact report cannot be rendered: ${parsed.errors.join("; ") || "report is required"}`
+    );
+  }
   return {
-    phaseStatus: "placeholder",
+    phaseStatus: "rendered",
     mode,
-    status: "WARN",
-    impactStatus: "WARN",
-    content,
-    impactId,
-    warnings: [
-      IMPACT_PLACEHOLDER_WARNING,
-      "Output rendering uses placeholder content until normalized report rendering lands in Phase 8."
-    ]
+    status: parsed.report.status,
+    impactStatus: parsed.report.impactStatus,
+    content: renderImpactOutput(parsed.report, mode, args.verbosity),
+    impactId: parsed.report.impactId,
+    warnings: parsed.warnings
   };
 }
-var IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_PLACEHOLDER_WARNING, IMPACT_SCHEMA_VERSION, PLACEHOLDER_IMPACT_ID, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
+var IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactStatusSchema, impactRiskLevelSchema, impactConfidenceLevelSchema, impactSeveritySchema, impactSurfaceSchema, impactConfidenceSchema, impactRiskSchema, impactReportScopeSchema, impactScoringSchema, impactSummaryRecordSchema, impactEvidenceSchema, impactFindingSchema, impactObligationSchema, impactUnknownSchema, impactSurfaceRecordSchema, impactOwnershipRuleSchema, impactOwnershipSchema, impactDependencySchema, impactReportSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
@@ -35730,12 +36818,12 @@ var init_impact = __esm({
       "blueprint_project_init",
       "blueprint_project_status"
     ];
-    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 7 config, scope, context, surface, ownership, dependency, contract, obligation, scoring, and report-model analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
     IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
-    PLACEHOLDER_IMPACT_ID = "impact-phase-7-placeholder";
+    IMPACT_REPORT_SCHEMA_VERSION = "blueprint.impact.report.v1";
     OWNERSHIP_SCHEMA_VERSION = "blueprint.impact.ownership.v1";
     DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
     IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
+    IMPACT_REPORT_ROOT = ".blueprint/impact";
     IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
     GIT_COMMAND_TIMEOUT_MS2 = 15e3;
     CODEOWNERS_CANDIDATES = [
@@ -35809,6 +36897,42 @@ var init_impact = __esm({
       /\.d\.ts$/u
     ];
     SECRET_PATH_PATTERN = /(^|\/)(secrets?|credentials?|tokens?)(\/|$)|(^|[-_.])(secret|credential|token)([-_.]|$)/iu;
+    IMPACT_REPORT_REQUIRED_HEADINGS = [
+      "Summary",
+      "Change Scope",
+      "Top Impacted Areas",
+      "Required Reviewers",
+      "Required Tests",
+      "Blocking Findings",
+      "Warnings",
+      "Contract And Compatibility Impact",
+      "Database, Config, Infra, And Deployment Impact",
+      "Unknowns And Missing Metadata",
+      "Evidence",
+      "Suggested Next Actions"
+    ];
+    IMPACT_OPTIONAL_BUNDLE_FILES = [
+      "evidence.jsonl",
+      "review-checklist.md",
+      "QUESTIONS.md"
+    ];
+    IMPACT_REQUIRED_BUNDLE_FILES = ["IMPACT.md", "impact.json", "summary.json"];
+    IMPACT_ALLOWED_BUNDLE_FILES = /* @__PURE__ */ new Set([
+      ...IMPACT_REQUIRED_BUNDLE_FILES,
+      ...IMPACT_OPTIONAL_BUNDLE_FILES
+    ]);
+    NON_PATH_SCOPE_SOURCES = /* @__PURE__ */ new Set([
+      "git-staged",
+      "git-working-tree",
+      "git-range",
+      "git-base-head",
+      "git-current-branch",
+      "ci-pr-refs",
+      "ci-head-parent",
+      "explicit-files",
+      "description-only",
+      "unresolved"
+    ]);
     nonEmptyStringSchema = string2().trim().min(1);
     impactModeSchema = _enum([
       "auto",
@@ -35979,6 +37103,230 @@ var init_impact = __esm({
         })
       ).optional().default([])
     });
+    impactStatusSchema = _enum(["PASS", "WARN", "BLOCK"]);
+    impactRiskLevelSchema = _enum(["low", "medium", "high", "critical", "unknown"]);
+    impactConfidenceLevelSchema = _enum(["low", "medium", "high"]);
+    impactSeveritySchema = _enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+    impactSurfaceSchema = _enum([
+      "secret-sensitive",
+      "env-config",
+      "command-catalog",
+      "command-manifest",
+      "command-doc",
+      "runtime-reference",
+      "mcp-server",
+      "mcp-tool",
+      "mcp-resource",
+      "artifact-contract",
+      "skill",
+      "agent",
+      "extension-manifest",
+      "hook",
+      "package-runtime",
+      "build-config",
+      "test",
+      "docs",
+      "generated",
+      "config",
+      "source",
+      "repo-root",
+      "unknown"
+    ]);
+    impactConfidenceSchema = object2({
+      score: number2().min(0).max(1),
+      level: impactConfidenceLevelSchema,
+      reasons: stringArraySchema
+    }).strict();
+    impactRiskSchema = object2({
+      level: impactRiskLevelSchema,
+      reasons: stringArraySchema
+    }).strict();
+    impactReportScopeSchema = object2({
+      kind: nonEmptyStringSchema,
+      source: string2().nullable(),
+      description: string2().nullable(),
+      fingerprint: nonEmptyStringSchema,
+      confidence: impactConfidenceSchema
+    }).strict();
+    impactScoringSchema = object2({
+      status: impactStatusSchema,
+      riskLevel: impactRiskLevelSchema,
+      confidenceScore: number2().min(0).max(1),
+      confidenceLevel: impactConfidenceLevelSchema,
+      maxSeverity: impactSeveritySchema.nullable(),
+      blocking: boolean2(),
+      drivers: array(string2()),
+      reducers: array(string2()),
+      policy: object2({
+        blockOnCritical: boolean2(),
+        blockOnBreakingContract: boolean2(),
+        blockOnSensitiveUnknownOwner: boolean2(),
+        warnBelowConfidence: number2().min(0).max(1),
+        blockBelowConfidenceForSensitiveAreas: number2().min(0).max(1)
+      }).strict()
+    }).strict();
+    impactSummaryRecordSchema = object2({
+      name: nonEmptyStringSchema,
+      files: array(nonEmptyStringSchema),
+      count: number2().int().min(0)
+    }).strict();
+    impactEvidenceSchema = object2({
+      id: nonEmptyStringSchema,
+      kind: _enum([
+        "scope",
+        "surface",
+        "ownership",
+        "dependency",
+        "metadata",
+        "config",
+        "contract",
+        "obligation",
+        "build"
+      ]),
+      source: nonEmptyStringSchema,
+      summary: nonEmptyStringSchema,
+      paths: array(nonEmptyStringSchema),
+      data: record(string2(), unknown()).optional()
+    }).strict();
+    impactFindingSchema = object2({
+      id: nonEmptyStringSchema,
+      checkId: nonEmptyStringSchema,
+      title: nonEmptyStringSchema,
+      severity: impactSeveritySchema,
+      status: impactStatusSchema,
+      confidence: number2().min(0).max(1),
+      impactedFiles: array(nonEmptyStringSchema),
+      impactedAreas: array(nonEmptyStringSchema),
+      owners: array(nonEmptyStringSchema),
+      requiredActions: array(nonEmptyStringSchema),
+      evidenceRefs: array(nonEmptyStringSchema)
+    }).strict();
+    impactObligationSchema = object2({
+      id: nonEmptyStringSchema,
+      category: _enum([
+        "contract-review",
+        "docs",
+        "tests",
+        "release",
+        "migration",
+        "security",
+        "deployment",
+        "build"
+      ]),
+      title: nonEmptyStringSchema,
+      severity: impactSeveritySchema,
+      status: impactStatusSchema,
+      impactedFiles: array(nonEmptyStringSchema),
+      sourceSurfaces: array(impactSurfaceSchema),
+      requiredActions: array(nonEmptyStringSchema),
+      evidenceRefs: array(nonEmptyStringSchema)
+    }).strict();
+    impactUnknownSchema = object2({
+      id: nonEmptyStringSchema,
+      category: _enum(["scope", "ownership", "dependency", "contract", "obligation"]),
+      title: nonEmptyStringSchema,
+      severity: impactSeveritySchema,
+      impactedFiles: array(nonEmptyStringSchema),
+      reason: nonEmptyStringSchema,
+      resolution: nonEmptyStringSchema,
+      evidenceRefs: array(nonEmptyStringSchema)
+    }).strict();
+    impactSurfaceRecordSchema = object2({
+      path: nonEmptyStringSchema,
+      surfaces: array(impactSurfaceSchema).min(1),
+      primarySurface: impactSurfaceSchema,
+      area: nonEmptyStringSchema,
+      reasons: stringArraySchema
+    }).strict();
+    impactOwnershipRuleSchema = object2({
+      source: _enum(["codeowners", "metadata"]),
+      sourcePath: nonEmptyStringSchema,
+      pattern: nonEmptyStringSchema,
+      owners: array(nonEmptyStringSchema),
+      sensitive: boolean2(),
+      line: number2().int().min(1).nullable(),
+      order: number2().int().min(0)
+    }).strict();
+    impactOwnershipSchema = object2({
+      coverage: object2({
+        status: _enum(["none", "partial", "complete"]),
+        sourcesConfigured: array(nonEmptyStringSchema),
+        sourcesUsed: array(nonEmptyStringSchema),
+        fallbackReviewers: array(nonEmptyStringSchema),
+        filesWithOwners: number2().int().min(0),
+        filesMissingOwners: number2().int().min(0),
+        gaps: array(string2())
+      }).strict(),
+      codeownersPath: string2().nullable(),
+      metadataPaths: array(nonEmptyStringSchema),
+      rules: array(impactOwnershipRuleSchema),
+      matches: array(
+        object2({
+          path: nonEmptyStringSchema,
+          owners: array(nonEmptyStringSchema),
+          matchedRules: array(impactOwnershipRuleSchema),
+          fallbackReviewers: array(nonEmptyStringSchema),
+          fallbackUsed: boolean2(),
+          sensitive: boolean2(),
+          ownerMissing: boolean2(),
+          evidenceRefs: array(nonEmptyStringSchema)
+        }).strict()
+      )
+    }).strict();
+    impactDependencySchema = object2({
+      coverage: object2({
+        status: _enum(["none", "partial", "complete-ish"]),
+        sourcesConfigured: array(nonEmptyStringSchema),
+        sourcesUsed: array(nonEmptyStringSchema),
+        filesCovered: array(nonEmptyStringSchema),
+        filesUncovered: array(nonEmptyStringSchema),
+        gaps: array(string2())
+      }).strict(),
+      nodes: array(
+        object2({
+          id: nonEmptyStringSchema,
+          path: string2().nullable(),
+          kind: _enum(["package", "workspace", "file", "external", "custom"]),
+          source: nonEmptyStringSchema
+        }).strict()
+      ),
+      edges: array(
+        object2({
+          from: nonEmptyStringSchema,
+          to: nonEmptyStringSchema,
+          type: nonEmptyStringSchema,
+          source: nonEmptyStringSchema
+        }).strict()
+      ),
+      reverseDependentsByPath: record(string2(), array(nonEmptyStringSchema))
+    }).strict();
+    impactReportSchema = object2({
+      schemaVersion: literal(IMPACT_REPORT_SCHEMA_VERSION),
+      impactId: impactIdSchema,
+      status: impactStatusSchema,
+      impactStatus: impactStatusSchema,
+      summary: nonEmptyStringSchema,
+      scope: impactReportScopeSchema,
+      files: array(nonEmptyStringSchema),
+      risk: impactRiskSchema,
+      confidence: impactConfidenceSchema,
+      scoring: impactScoringSchema,
+      topImpactedAreas: array(impactSummaryRecordSchema),
+      requiredReviewers: array(nonEmptyStringSchema),
+      requiredTests: array(nonEmptyStringSchema),
+      requiredActions: array(nonEmptyStringSchema),
+      blockingFindings: array(impactFindingSchema),
+      warningFindings: array(impactFindingSchema),
+      surfaces: array(impactSurfaceRecordSchema),
+      areaSummary: array(impactSummaryRecordSchema),
+      surfaceSummary: array(impactSummaryRecordSchema),
+      ownership: impactOwnershipSchema,
+      dependencyGraph: impactDependencySchema,
+      findings: array(impactFindingSchema),
+      obligations: array(impactObligationSchema),
+      unknowns: array(impactUnknownSchema),
+      evidence: array(impactEvidenceSchema)
+    }).strict();
     impactToolDefinitions = [
       {
         name: "blueprint_impact_config_get",
@@ -36006,7 +37354,7 @@ var init_impact = __esm({
       },
       {
         name: "blueprint_impact_report_write",
-        description: "Persist a validated impact report bundle under .blueprint/impact/<impact-id>/ when the report-writing phase is implemented.",
+        description: "Persist a validated impact report bundle under .blueprint/impact/<impact-id>/ with reuse and overwrite protection.",
         inputSchema: impactReportWriteInputSchema,
         handler: async (args) => blueprintImpactReportWrite(args)
       },
