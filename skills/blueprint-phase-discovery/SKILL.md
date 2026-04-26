@@ -157,10 +157,10 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 Before running the command flow, read `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`. It locks the retained research behavior that is easy to dilute: phase validation, existing research reuse/update gates, actual saved context reads, planner-consumed research sections, repo-versus-external provenance, capability-gated researcher use, a single-agent no-subagent fallback, checkpointed inconclusive strands, validation repair, and implemented-only routing.
 
 1. Confirm phase readiness with `blueprint_phase_context` and `blueprint_phase_research_status`.
-2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in the saved discovery context, not only status metadata.
-3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement and force an explicit `view`, `skip`, or `update` decision when research already exists.
+2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in the saved discovery context, not only status metadata. If that read reports `found: false`, stop and route back to `/blu-discuss-phase <phase>` instead of drafting from status-only signals.
+3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement. Force repair when saved research is invalid, and force an explicit `view`, `skip`, or `update` decision only when the saved research is already valid.
 4. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
-5. Use `blueprint_artifact_scaffold` only to seed a missing research file.
+5. Draft directly from `contract.authoringTemplate`. Use `blueprint_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
 6. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated.
 7. Keep the resolved scope explicit as the selected phase, current context and research reuse-versus-update posture, codebase-bundle availability, the topic strand currently in progress, and whether the run is repo-evidence-only or also checking external truth.
 8. Ground repo truth first in `blueprint_phase_context`, the actual saved `XX-CONTEXT.md` body, any existing research, and saved `.blueprint/codebase/` summaries before consulting external sources.
@@ -178,6 +178,7 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 20. If no suitable Blueprint research or code-analysis subagent is available, use the runtime contract's single-agent fallback: handle one topic strand at a time, compress carry-forward evidence before moving on, normalize the draft section-by-section to the canonical template, and checkpoint pauses or inconclusive evidence without lowering output richness.
 21. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for codebase and workflow analysis. External references may support claims, but they do not replace repo evidence or the saved Blueprint artifacts.
 22. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-research-phase` as complete. If repair cannot finish safely, leave or refresh the checkpoint and report the blocker.
+23. After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load` so `STATE.md` and the reported next safe action advance without mutating the research artifact.
 
 ### `list-phase-assumptions`
 

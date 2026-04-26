@@ -4148,8 +4148,31 @@ export async function blueprintPhaseArtifactWrite(
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
+    const existingValidation = validatePhaseArtifactContent(existingContent, args.artifact);
 
     if (existingContent === normalizedContent) {
+      if (!validation.valid) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: validation.issues,
+            warnings: validation.warnings,
+            suggestedRepairs: []
+          },
+          warnings: [...warnings, ...validation.warnings]
+        };
+      }
+
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
 
       return {
@@ -4169,11 +4192,15 @@ export async function blueprintPhaseArtifactWrite(
           warnings: validation.warnings,
           suggestedRepairs: []
         },
-        warnings
+        warnings: [...warnings, ...validation.warnings]
       };
     }
 
-    if (!(args.overwrite ?? false)) {
+    if (!existingValidation.valid && !(args.overwrite ?? false)) {
+      warnings.push(
+        `Replacing the existing scaffold or non-canonical ${args.artifact} artifact with authored content.`
+      );
+    } else if (!(args.overwrite ?? false)) {
       throw new Error(
         `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
       );
@@ -4209,7 +4236,7 @@ export async function blueprintPhaseArtifactWrite(
         warnings: validation.warnings,
         suggestedRepairs
       },
-      warnings: []
+      warnings: [...warnings, ...validation.warnings]
     };
   }
 

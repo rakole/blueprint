@@ -59,6 +59,9 @@ helpers when available, or concise progress recaps when they are not.
   UI-spec, validity, stale paths, and suggested repair posture.
 - `blueprint_phase_artifact_read` with `artifact: "context"`: loads the actual
   saved discovery decisions that constrain research.
+- If the `context` read returns `found: false`, stop and route back to
+  `/blu-discuss-phase <phase>` before drafting research. Do not continue from
+  status-only signals.
 - `blueprint_phase_artifact_read` with `artifact: "research"`: supports
   view, skip, update, and revision paths.
 - `blueprint_phase_checkpoint_get`: detects resumable in-progress research and
@@ -70,8 +73,10 @@ helpers when available, or concise progress recaps when they are not.
 - `blueprint_artifact_contract_read` with `artifactId: "phase.research"`:
   supplies `contract.authoringTemplate`, required headings, locked markers,
   placeholder signals, and freehand policy. This is the schema authority.
-- `blueprint_artifact_scaffold`: seeds only a missing research path. The
-  scaffold is never completed research.
+- `blueprint_artifact_scaffold`: reserve this for deliberate placeholder
+  creation only. Default drafting should start from
+  `contract.authoringTemplate`, and scaffold output is never completed
+  research.
 - `blueprint_phase_checkpoint_put`: persists inconclusive or paused strand
   state using the structured checkpoint shape with
   `ownerCommand: "/blu-research-phase"` and `resumeMeta.mode: "research"`.
@@ -85,9 +90,9 @@ helpers when available, or concise progress recaps when they are not.
 
 ## Artifact Authoring Rules
 
-Use `contract.authoringTemplate` as the heading and marker authority. Populate
-every required section with substantive, phase-specific content before
-persistence.
+Use `contract.authoringTemplate` as the heading, marker, and direct drafting
+authority. Populate every required section with substantive, phase-specific
+content before persistence.
 
 Quality rules for `XX-RESEARCH.md`:
 
@@ -174,7 +179,11 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 
 - If phase resolution fails, stop with the tool reason and recovery guidance.
 - If existing research is present, default to reuse unless the user chooses
-  view or update. Replacement requires explicit confirmation.
+  view or update, but only when the saved research is already valid.
+  Replacement requires explicit confirmation.
+- If existing research is invalid, do not allow skip, default reuse, or an
+  unchanged invalid write result to count as successful completion. Surface the
+  validation issues, repair the artifact, or stop with the blocker.
 - If a checkpoint exists, resume by default unless the user explicitly discards
   it.
 - If evidence conflicts or a critical claim cannot be verified, lower
@@ -186,6 +195,10 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 - If repair cannot be completed safely, leave or refresh the checkpoint and
   report the exact validation blocker plus the next safe continuation action.
 - Delete the checkpoint only after final research writes successfully.
+- After a successful research write or a valid `view`/`skip`/`reuse` exit,
+  sync `STATE.md` through `blueprint_state_update` with `base: "synced"`, then
+  re-load routing through `blueprint_state_load` without mutating the research
+  artifact.
 
 ## Output Quality Criteria
 
@@ -207,7 +220,7 @@ and planner-ready:
 
 - the selected phase and artifact paths are resolved through MCP
 - existing research was viewed, reused, skipped, updated, or replaced through an
-  explicit path
+  explicit path, and invalid research never completed through a silent reuse
 - the final artifact was normalized to the canonical `phase.research`
   authoring template
 - strict MCP write validation passed, or a validation blocker was checkpointed

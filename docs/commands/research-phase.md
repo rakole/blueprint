@@ -44,16 +44,16 @@
 
 
 - User-facing result: a concise summary of whether existing research was viewed, reused, created, or updated, plus the next logical action when applicable.
-- Repo side effects: writes validated `XX-RESEARCH.md` content and updates `.blueprint/STATE.md`.
+- Repo side effects: writes validated `XX-RESEARCH.md` content when research changes, may refresh the research checkpoint during pauses or inconclusive runs, and updates `.blueprint/STATE.md`.
 - In-flight research should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible until the run concludes, pauses on a checkpoint, or stops on a confirmation or validation gate.
 
 ## Behavior Stages
 
 1. `Resolve`: resolve the target phase, confirm current artifact posture, and stop early when the phase is ambiguous or Blueprint prerequisites are missing.
-2. `Read`: inspect phase context, current `XX-CONTEXT.md`, existing `XX-RESEARCH.md`, checkpoint state, saved codebase summaries, and refreshed state before any drafting or overwrite path.
-3. `Decide`: keep `view`/`skip`/`update`, resume-versus-discard checkpoint posture, overwrite posture, and repo-only versus repo-plus-external verification mode explicit before branching.
+2. `Read`: inspect phase context, current `XX-CONTEXT.md`, existing `XX-RESEARCH.md`, checkpoint state, saved codebase summaries, and refreshed state before any drafting or overwrite path. Missing `XX-CONTEXT.md` is a visible gate, not a silent fallback.
+3. `Decide`: keep invalid-research repair posture, valid `view`/`skip`/`update`, resume-versus-discard checkpoint posture, overwrite posture, and repo-only versus repo-plus-external verification mode explicit before branching.
 4. `Execute`: work one topic-sized strand at a time, compare repo evidence against any needed external references, and give short progress recaps while the session is live.
-5. `Persist`: scaffold only a missing research file, persist resumable checkpoint state when the run pauses or remains inconclusive, and write final research plus `STATE.md` through MCP only.
+5. `Persist`: draft directly from the canonical `authoringTemplate`, reserve scaffolding for deliberate placeholder creation only, persist resumable checkpoint state when the run pauses or remains inconclusive, write final research through MCP only, and still refresh `STATE.md` on valid non-writing exits.
 6. `Validate`: normalize the draft to the canonical `phase.research` template, block on missing required sections or placeholders, and keep unresolved evidence gaps explicit instead of faking certainty.
 7. `Route`: summarize viewed versus reused versus updated research, checkpoint disposition, warnings, and the next safe implemented action.
 
@@ -102,7 +102,10 @@
 - Pass `phase` to `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, and treat checkpoint `path` values as authoritative instead of hand-building checkpoint filenames.
 - Persist the final research body through `blueprint_phase_artifact_write` with `artifact: "research"` and treat the returned `path` as authoritative instead of deriving filenames from the phase slug.
 - `blueprint_phase_artifact_write` keeps research validation strict by default. Do not force a warn-only save just to bypass missing sections, citations, or other schema issues unless the user explicitly accepted that tradeoff.
+- If the current `XX-CONTEXT.md` read returns `found: false`, stop and route back to `/blu-discuss-phase <phase>` before drafting research.
+- If existing research is invalid, force repair or stop with the blocker; do not treat `view`, `skip`, default reuse, or an unchanged invalid write result as successful completion.
 - Normalize the final research draft to `contract.authoringTemplate` after drafting and before persistence.
+- Draft directly from `contract.authoringTemplate`; use `blueprint_artifact_scaffold` only when a deliberate placeholder file is explicitly requested before final research exists.
 - Keep the contract's required section names and locked markers unchanged.
 - Replace every placeholder signal before persistence.
 - Allow extra top-level headings only when `contract.freehandPolicy` is `additional-top-level-headings`.
@@ -110,6 +113,7 @@
 - Read checkpoints with `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`, then honor `safeToResume` and `warnings` before using saved state.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured checkpoint shape with `ownerCommand: "/blu-research-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. Keep resumability details inside `resumeMeta` with `mode: "research"` plus fields such as `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`.
 - Delete the saved checkpoint through `blueprint_phase_checkpoint_delete` after a successful final research write so later runs do not resume stale continuation state.
+- After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load` so `STATE.md` and the reported next safe action both reflect live artifact inventory without rewriting the research artifact.
 - Keep the section names unchanged and replace every angle-bracket placeholder before writing.
 - Use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the output-quality and recovery authority: it requires planner-consumed sections, repo-versus-external provenance, capability-gated `blueprint-researcher` use, a single-agent topic-strand fallback when subagents are unavailable, and validation repair/retry before completion.
 
@@ -146,13 +150,15 @@
 
 ## Shell Risk Profile
 
-- Low: writes research artifacts only.
+- Low: writes phase research artifacts when needed, may refresh the resumable research checkpoint, and syncs `.blueprint/STATE.md`.
 
 ## User Prompts And Confirmation Gates
 
 
 - Confirm overwrite when research already exists.
 - Force an explicit `view`, `skip`, or `update` path when `XX-RESEARCH.md` already exists.
+- Treat missing `XX-CONTEXT.md` as a blocking gate before drafting research.
+- Treat invalid existing research as repair-only; do not allow it to complete through `skip` or default reuse.
 - Prefer Gemini CLI's built-in `ask_user` dialog for the `view`/`skip`/`update` choice and overwrite confirmation instead of a plain-text menu.
 - Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
 - During non-trivial multi-strand research runs on Gemini, keep the active stage and next safe action visible with `update_topic` and `write_todos` while leaving persistence to MCP artifacts, checkpoints, and `STATE.md`.
@@ -184,11 +190,14 @@
 - Updates `STATE.md` whenever the next-step signal changes.
 - Creates or updates only the declared artifacts for this command.
 - Reads the actual saved context content before drafting or revising research instead of relying on status-only readiness signals.
+- Stops on missing context until the user repairs or confirms the recovery route.
 - Keeps topic-strand progress visible while research is in flight and uses checkpoints only as resumable continuation state.
 - Persists populated research content through MCP rather than raw prompt-side file writes.
+- Uses `contract.authoringTemplate` as the direct drafting seed and reserves scaffold for deliberate placeholder creation only.
 - Uses a research schema with citations, confidence, recommendations, and planner-friendly sections.
 - Keeps repo truth explicit and distinguishes it from any official-doc or user-supplied external evidence instead of blending the two into one unstated source pool.
 - Handles long-running or inconclusive research through checkpointed continuation rather than a single all-or-nothing pass.
+- Does not treat invalid unchanged research as accepted merely because the saved file was reused.
 - Reports the next safe action from refreshed runtime state instead of assuming `blueprint_state_update` returned it.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -201,4 +210,7 @@
 - Missing-artifact recovery fixture.
 - Direct `research-phase` happy-path fixture.
 - Existing research `view`, `skip`, and `update` fixture.
+- Existing invalid research repair fixture.
+- Missing-context gate fixture.
+- Reuse plus `STATE.md` sync fixture.
 - Invalid research-content rejection fixture.
