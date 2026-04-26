@@ -201,6 +201,8 @@ Before treating the discussion as complete:
 3. Call `blueprint_phase_artifact_write` in strict mode. If it returns
    `status: "invalid"` or validation issues, repair the same draft from the
    returned issues and retry before claiming success.
+   Treat the returned `path` as the authoritative saved filename instead of
+   rebuilding it from the phase slug or scaffold result.
 4. If a discussion log is written, apply the same contract-read,
    normalize, write, and repair loop for `phase.discussion-log`.
 5. After the final context artifact and any optional discussion log write

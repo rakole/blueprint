@@ -137,21 +137,12 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, new RegExp(runtimeContractPath));
   assert.match(commandFile, new RegExp(sharedProfilePath));
   assert.match(commandFile, /contract\.authoringTemplate.*schema authority/i);
-  assert.match(commandFile, /base: "synced"/);
-  assert.match(commandFile, /mcp_blueprint_blueprint_state_load[\s\S]*refreshed state/i);
-  assert.match(
-    commandFile,
-    /Delete any saved checkpoint[\s\S]*context write[\s\S]*optional discussion-log write[\s\S]*synced state update[\s\S]*follow-up state load/i
-  );
-  assert.match(commandFile, /expectedOwnerCommand: "\/blu-discuss-phase"/);
-  assert.match(commandFile, /expectedMode: "discuss"/);
-  assert.match(
-    commandFile,
-    /phase_checkpoint_delete[\s\S]*expectedOwnerCommand: "\/blu-discuss-phase"[\s\S]*expectedMode: "discuss"/i
-  );
-  assert.match(commandFile, /resumeMeta\.mode.*"discuss"/);
+  assert.match(commandFile, /referenced runtime contract as the source of truth/i);
+  assert.match(commandFile, /substantive user-authored artifacts/i);
   assert.match(commandFile, /host-supported structured choices/i);
   assert.doesNotMatch(commandFile, /type:\s*"choice"|2-4 labeled options|Type your own answer/i);
+  assert.doesNotMatch(commandFile, /Follow this flow exactly/i);
+  assert.doesNotMatch(commandFile, /\n1\. Resolve the target phase/i);
   assert.doesNotMatch(commandFile, /Map the discovery flow onto the shared stages/i);
   assert.doesNotMatch(commandFile, /power mode|chain mode|auto mode|auto-advance/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/.+\.md/);
@@ -216,14 +207,7 @@ test("discuss-phase command references only registered phase-discovery tool name
 
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docFile, new RegExp(sharedProfilePath));
-  assert.match(docFile, /## Behavior Stages/);
-  assert.match(docFile, /answer validation and retry/i);
   assert.match(docFile, new RegExp(runtimeContractPath));
-  assert.match(docFile, /contract\.authoringTemplate/);
-  assert.match(docFile, /capability-gated sidecar research/i);
-  assert.match(docFile, /single-agent fallback/i);
-  assert.match(docFile, /repair.*validation issues/i);
-  assert.match(docFile, /checkpoint-per-area/i);
   assert.match(docFile, /Writes only declared `\.blueprint\/` phase artifacts, checkpoints, and `STATE\.md`/);
   assert.doesNotMatch(docFile, /may also mutate code or git state/i);
 
@@ -694,6 +678,72 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
   assert.match(invalidContext.validation.warnings.join("\n"), /\/blu-plan-phase refresh warning/i);
   assert.equal(retained.found, true);
   assert.deepEqual(retained.checkpoint?.remainingAreas, ["Plan inventory warning"]);
+});
+
+test("discuss-phase write keeps overwrite explicit for authored invalid artifacts", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contextPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+  );
+  await writeFile(
+    contextPath,
+    `# Phase 03 Context
+
+## Phase Boundary
+- User-authored but incomplete context.
+`,
+    "utf8"
+  );
+
+  await assert.rejects(
+    () =>
+      blueprintPhaseArtifactWrite({
+        cwd: repoPath,
+        phase: "3",
+        artifact: "context",
+        content: `# Phase 03 Context
+
+## Phase Boundary
+- Repair the incomplete context after confirmation.
+
+## Discovery Grounding
+- Project brief - keep the repair phase scoped.
+- Requirements grounding - preserve saved requirements.
+- Workflow posture - use discuss-phase only.
+- Confirmed decisions - repair after explicit confirmation.
+
+## Implementation Decisions
+- Decision 1 - keep overwrite explicit for authored invalid artifacts.
+- Tradeoffs or constraints - scaffold replacement remains the only implicit replace path.
+
+## Specific Ideas
+- Specific idea 1 - retain validated repair behavior.
+
+## Existing Code Insights
+- Existing code insight 1 - the phase artifact writer owns overwrite protection.
+
+## Dependencies
+- Prior phase artifacts - existing context.
+- External constraints - explicit confirmation.
+- Required follow-up reads - roadmap and phase context.
+
+## Open Questions
+- Which details still need user confirmation?
+
+## Deferred Ideas
+- Later follow-up - revisit after planning.
+
+## Canonical References
+- .blueprint/ROADMAP.md
+`
+      }),
+    /already exists/
+  );
 });
 
 test("discuss-phase discussion-log validation blocks dropped follow-ups and mode claims", async (t) => {

@@ -25637,11 +25637,30 @@ function checkpointOwnerCommand(record2) {
 function checkpointResumeMode(record2) {
   return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
 }
+function isScaffoldGeneratedPhaseArtifact(content) {
+  return content.includes(SCAFFOLD_GENERATED_MARKER);
+}
 function isKnownCheckpointOwnerCommand(value) {
   return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
 }
 function isKnownCheckpointResumeMode(value) {
   return value !== null && PHASE_CHECKPOINT_RESUME_MODES.includes(value);
+}
+function checkpointExpectedOwnerFromMode(value) {
+  switch (value) {
+    case "discuss":
+      return "/blu-discuss-phase";
+    case "research":
+      return "/blu-research-phase";
+    case "uat":
+      return "/blu-verify-work";
+    default:
+      return null;
+  }
+}
+function checkpointOwnershipBlockerReason(checkpointPath, warnings, action) {
+  const details = warnings.join(" ");
+  return `Refusing to ${action} ${checkpointPath} because ${details}`;
 }
 function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwnerCommand, expectedMode) {
   const ownerCommand = checkpointOwnerCommand(checkpoint);
@@ -26634,10 +26653,13 @@ async function blueprintPhaseArtifactWrite(args) {
         warnings: [...warnings, ...validation.warnings]
       };
     }
-    if (!existingValidation.valid && !(args.overwrite ?? false)) {
-      warnings.push(
-        `Replacing the existing scaffold or non-canonical ${args.artifact} artifact with authored content.`
+    if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
+      throw new Error(
+        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
       );
+    }
+    if (!(args.overwrite ?? false) && !existingValidation.valid) {
+      warnings.push(`Replacing the existing scaffold ${args.artifact} artifact with authored content.`);
     } else if (!(args.overwrite ?? false)) {
       throw new Error(
         `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
@@ -27576,7 +27598,7 @@ async function blueprintPhaseCheckpointPut(args) {
   if (await pathExists2(absolutePath)) {
     const existingRaw = await fs4.readFile(absolutePath, "utf8");
     if (existingRaw === nextRaw) {
-      warnings.push(`Preserved existing discussion checkpoint because the content was unchanged.`);
+      warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -27587,6 +27609,29 @@ async function blueprintPhaseCheckpointPut(args) {
         warnings
       };
     }
+    const existingCheckpoint = ensureCheckpointObject(
+      safeJsonParseObject(existingRaw, {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
+    const ownershipSafety = evaluateCheckpointResumeSafety(
+      existingCheckpoint,
+      checkpointPath,
+      args.checkpoint.ownerCommand,
+      args.checkpoint.resumeMeta.mode
+    );
+    if (!ownershipSafety.safeToResume) {
+      throw new Error(
+        checkpointOwnershipBlockerReason(
+          checkpointPath,
+          ownershipSafety.warnings,
+          "overwrite"
+        )
+      );
+    }
+    warnings.push(...ownershipSafety.warnings);
   }
   await writeJsonFile(absolutePath, nextCheckpoint);
   return {
@@ -27629,6 +27674,39 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
       reason: `${checkpointPath} did not exist.`
     };
   }
+  if (args.expectedOwnerCommand || args.expectedMode) {
+    const parsed = ensureCheckpointObject(
+      safeJsonParseObject(await fs4.readFile(absolutePath, "utf8"), {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
+    const expectedOwnerCommand = args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
+    const expectedMode = args.expectedMode ?? (expectedOwnerCommand ? PHASE_CHECKPOINT_OWNER_MODES[expectedOwnerCommand] : void 0);
+    const ownershipSafety = evaluateCheckpointResumeSafety(
+      parsed,
+      checkpointPath,
+      expectedOwnerCommand ?? void 0,
+      expectedMode
+    );
+    if (!ownershipSafety.safeToResume) {
+      return {
+        phaseFound: true,
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        path: checkpointPath,
+        deleted: false,
+        reason: checkpointOwnershipBlockerReason(
+          checkpointPath,
+          ownershipSafety.warnings,
+          "delete"
+        )
+      };
+    }
+  }
   await fs4.rm(absolutePath, { force: true });
   return {
     phaseFound: true,
@@ -27641,7 +27719,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseToolDefinitions;
+var SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -27651,6 +27729,7 @@ var init_phase = __esm({
     init_state();
     init_state();
     init_security();
+    SCAFFOLD_GENERATED_MARKER = "*Generated by `blueprint_artifact_scaffold`*";
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
@@ -27844,6 +27923,12 @@ var init_phase = __esm({
       phase: numericBlueprintInputSchema.optional(),
       checkpoint: phaseCheckpointWriteSchema
     };
+    phaseCheckpointDeleteInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
+      expectedMode: phaseCheckpointResumeModeSchema.optional()
+    };
     phaseToolDefinitions = [
       {
         name: "blueprint_roadmap_read",
@@ -27967,8 +28052,8 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_checkpoint_delete",
-        description: "Delete the saved discuss-phase checkpoint for a phase after successful completion.",
-        inputSchema: phaseLookupInputSchema,
+        description: "Delete the saved phase continuation checkpoint for a phase, optionally guarding on the expected command owner and resume mode.",
+        inputSchema: phaseCheckpointDeleteInputSchema,
         handler: async (args) => blueprintPhaseCheckpointDelete(args)
       }
     ];
