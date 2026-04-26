@@ -2483,7 +2483,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Impact reports are bounded bundles under .blueprint/impact/<impact-id>/ and are written only through blueprint_impact_report_write.",
       "The writer validates the structured report payload plus rendered Markdown quality before persistence.",
-      "/blu-impact remains planned and non-routable until the command manifest and primary skill ship."
+      "/blu-impact is implemented as an advisory command; report writes stay bounded to the impact bundle and do not mutate source, roadmap, PR, deployment, command-catalog, or installed-extension state."
     ],
     renderScaffoldTemplate: renderImpactTemplate,
     renderAuthoringTemplate: renderImpactTemplate

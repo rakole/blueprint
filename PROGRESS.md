@@ -6,12 +6,11 @@ Ordering policy: incomplete commands are bubbled up; completed commands are bubb
 
 ## Incomplete Commands (Priority Up)
 
-Total: 2
+Total: 1
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
 | 1 | `do` | ❌ | `planned` | 3 | `Capture And Lightweight Execution` | Low |
-| 2 | `impact` | ❌ | `planned` | 4 | `Quality And Shipping` | Low |
 
 ## Parallel Batches (3 Worktrees / 3 Agents)
 
@@ -19,15 +18,15 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `do` | `impact` | `none` | `/blu-do` remains the retained planned control-plane slice and is still non-routable until its dedicated manifest lands. `/blu-impact` is the active additive command rollout; Phase 7 has landed deterministic scoring and normalized report modeling in the MCP tool family, but it remains non-routable until its manifest and primary skill land. |
+| 1 | `do` | `none` | `none` | `/blu-do` remains the retained planned control-plane slice and is still non-routable until its dedicated manifest lands. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
-None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline; docs keep its control-plane status at `planned`, while the live runtime must remain non-routable until the dedicated manifest, primary skill, registered impact MCP tools, tests, docs, and built assets align. Phase 7 now covers command-substrate checks, planned-command exposure review gates, typed obligations, dist/build provenance, advisory scoring, and normalized report modeling inside the registered impact analysis tool without adding the command manifest or primary skill.
+None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline and is now implemented with its manifest, primary skill, registered impact MCP tools, tests, docs, and built assets aligned.
 
 ## Completed Commands (Bubbled Down)
 
-Total: 52
+Total: 53
 
 | Priority | Command | Done | Status | Wave | Family | Risk |
 |---:|---|---|---|---:|---|---|
@@ -72,14 +71,15 @@ Total: 52
 | 39 | `code-review-fix` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
 | 40 | `review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
 | 41 | `docs-update` | ✅ | `implemented` | 4 | `Quality And Shipping` | Medium |
-| 42 | `pr-branch` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 43 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
-| 44 | `ui-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
-| 45 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 46 | `undo` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
-| 47 | `new-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 48 | `remove-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 49 | `workstreams` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Medium |
-| 50 | `update` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Low |
-| 51 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
-| 52 | `reapply-patches` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 42 | `impact` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 43 | `pr-branch` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 44 | `secure-phase` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 45 | `ui-review` | ✅ | `implemented` | 4 | `Quality And Shipping` | Low |
+| 46 | `ship` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 47 | `undo` | ✅ | `implemented` | 4 | `Quality And Shipping` | High |
+| 48 | `new-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 49 | `remove-workspace` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 50 | `workstreams` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Medium |
+| 51 | `update` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | Low |
+| 52 | `cleanup` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |
+| 53 | `reapply-patches` | ✅ | `implemented` | 5 | `Workspace And Maintenance` | High |

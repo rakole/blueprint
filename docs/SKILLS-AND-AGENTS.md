@@ -22,14 +22,9 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-debug` | `implemented` | Debug investigations and recovery plans | `debug` |
 | `blueprint-docs` | `implemented` | Documentation generation and verification | `docs-update` |
 | `blueprint-review` | `implemented` | Reviews, bounded remediation, security, UI, peer review | `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` |
+| `blueprint-impact` | `implemented` | Advisory blast-radius analysis and impact report orchestration | `impact` |
 | `blueprint-roadmap-admin` | `implemented` | Roadmap append, milestone audits, and future roadmap/milestone mutations | `add-phase`, `insert-phase`, `remove-phase`, `plan-milestone-gaps`, `audit-milestone`, `complete-milestone`, `milestone-summary`, `new-milestone` |
 | `blueprint-maintenance` | `implemented` | Git, review-branch prep, workspace, cleanup, update, and patch operations | `pr-branch`, `ship`, `undo`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, `reapply-patches` |
-
-## Planned Skill Families
-
-| Skill | Status | Purpose | Primary Commands |
-|---|---|---|---|
-| `blueprint-impact` | `planned` | Advisory blast-radius analysis and impact report orchestration | `impact` |
 
 ## Shipped Agent Contracts
 
@@ -82,7 +77,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `code-review-fix` may use `blueprint-reviewer`.
 - `audit-fix` may use `blueprint-reviewer` for read-only saved-evidence classification and `blueprint-verifier` for bounded post-fix verification; it must preserve the single-agent fallback from `skills/blueprint-review/references/audit-fix-runtime-contract.md` when suitable subagents are unavailable.
 - `audit-fix` keeps mutation confirmation-gated and report-backed; non-trivial fixes and todo capture should use Gemini CLI `ask_user` confirmation before persistence, browser/web-search/shell-only or generic agents are not substitutes, and planned-only `blueprint-fixer` remains non-routable.
-- `impact` is planned on `blueprint-impact`; V1 analysis must keep deterministic scope, findings, risk, confidence, status, and output paths in MCP tools, with no required subagent path and no source, roadmap, PR, deployment, command-catalog, or installed-extension mutation.
+- `impact` is skill-led on `blueprint-impact`; V1 analysis keeps deterministic scope, findings, risk, confidence, status, and output paths in MCP tools, with no required subagent path and no source, roadmap, PR, deployment, command-catalog, or installed-extension mutation.
 - `debug` uses `blueprint-debugger`.
 - `docs-update` uses `blueprint-doc-writer` and `blueprint-doc-verifier`.
 - `new-workspace` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps workspace creation confirmation-gated, and routes host-global registry plus workspace bootstrap writes through the dedicated workspace MCP tools.

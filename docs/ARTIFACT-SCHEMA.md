@@ -752,14 +752,14 @@ Used for non-phase-specific outputs and command logs:
 ### `impact/<impact-id>/`
 
 Purpose:
-- durable blast-radius report bundle for planned `/blu-impact`
+- durable blast-radius report bundle for implemented `/blu-impact`
 - human-readable `IMPACT.md` plus machine-readable `impact.json` and `summary.json`
 - optional evidence, reviewer/test checklist, and questions files derived from the validated report payload
 
 Canonical source-of-truth note:
 - The runtime contract registry under `src/mcp/artifact-contracts/` is canonical.
   This section mirrors the `report.impact` contract and should stay aligned with it.
-- `/blu-impact` remains planned and non-routable until the command manifest and primary skill ship; the MCP writer is available for Phase 8 substrate coverage only.
+- `/blu-impact` is implemented as an advisory report command. The MCP writer owns only the bounded impact bundle and does not mutate source files, roadmap state, PR state, deployment state, command-catalog state, or the installed extension directory.
 
 Required bundle files:
 - `IMPACT.md`

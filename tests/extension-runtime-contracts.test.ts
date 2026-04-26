@@ -61,6 +61,7 @@ const REPAIRED_DIRECT_COMMANDS = [
   "code-review",
   "code-review-fix",
   "audit-fix",
+  "impact",
   "secure-phase",
   "ui-review",
   "add-phase",
