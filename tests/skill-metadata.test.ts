@@ -57,6 +57,29 @@ test("structured multi-command skills return shared-only inputs for unknown comm
   assert.deepEqual(inputs.effective, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
 });
 
+test("structured input bundles resolve command-specific execution inputs", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-phase-execution",
+    "/blu-execute-phase",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-phase-execution");
+  assert.deepEqual(inputs.shared, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
+  assert.deepEqual(inputs.commandSpecific, [
+    "docs/commands/execute-phase.md",
+    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "docs/ARTIFACT-SCHEMA.md",
+    "docs/MCP-TOOLS.md",
+    "docs/commands/execute-phase.md",
+    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+  ]);
+});
+
 test("legacy required-input sections remain the fallback for unmigrated skills", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-phase-planning",

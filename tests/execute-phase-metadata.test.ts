@@ -7,9 +7,18 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
 
-test("execute-phase manifest references the execution gates, summary tools, and safe routing contract", async () => {
-  const commandFile = await readFile(path.join(repoRoot, "commands/blu-execute-phase.toml"), "utf8");
-  const docsFile = await readFile(path.join(repoRoot, "docs/commands/execute-phase.md"), "utf8");
+async function readRepoFile(relativePath: string): Promise<string> {
+  return readFile(path.join(repoRoot, relativePath), "utf8");
+}
+
+function assertMatchesAll(content: string, patterns: RegExp[]): void {
+  for (const pattern of patterns) {
+    assert.match(content, pattern);
+  }
+}
+
+test("execute-phase manifest stays thin while keeping the core execution invariants explicit", async () => {
+  const commandFile = await readRepoFile("commands/blu-execute-phase.toml");
 
   assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
   assert.match(commandFile, /`long-running-mutation`/);
@@ -19,134 +28,120 @@ test("execute-phase manifest references the execution gates, summary tools, and 
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
   assert.match(commandFile, /ask_user/);
-  assert.match(commandFile, /`update_topic`/);
-  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /`update_topic` tool plus `write_todos`/);
   assert.match(commandFile, /`blueprint-executor` subagent/);
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_execution_targets")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_write")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_validate")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_load")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
-  assert.match(commandFile, /artifactId: "phase\.summary"/);
-  assert.match(commandFile, /workflow\.use_worktrees/);
-  assert.match(commandFile, /parallelization\./);
-  assert.match(commandFile, /git\.branching_strategy/);
-  assert.match(commandFile, /base: "synced"/);
-  assert.match(commandFile, /one `XX-YY-SUMMARY\.md` artifact per plan/i);
-  assert.match(commandFile, /lower-wave debt/i);
-  assert.match(commandFile, /review, skip, or stop/i);
-  assert.match(commandFile, /shared file set/i);
-  assert.match(commandFile, /code-review, regression, or schema-drift/i);
-  assert.match(commandFile, /pre-persistence gates/i);
-  assert.match(commandFile, /post-execution checks/i);
-  assert.match(commandFile, /disjoint write ownership/i);
-  assert.match(commandFile, /single-agent fallback|execute sequentially inline/i);
-  assert.match(commandFile, /test\/repair loop|repair loop/i);
-  assert.match(commandFile, /PARTIAL` or `BLOCKED`/);
-  assert.match(commandFile, /failed tests/i);
-  assert.match(commandFile, /stale plan metadata|invalid saved plan/i);
-  assert.match(commandFile, /rerun `mcp_blueprint_blueprint_phase_summary_index`/);
-  assert.match(commandFile, /phase-level completion claim/i);
-  assert.match(commandFile, /\/blu-validate-phase/);
-  assert.match(commandFile, /\/blu-verify-work/);
-  assert.match(commandFile, /gap-closure/i);
-  assert.match(commandFile, /gapClosurePlans/);
-  assert.match(commandFile, /selectedPlanIds/);
-  assert.match(commandFile, /lowerWavePendingPlans/);
-  assert.match(commandFile, /Existing summaries only count as durable execution evidence when they are valid/i);
-  assert.match(commandFile, /repair or replace target/i);
-  assert.match(commandFile, /ask the same focused decision in prose/i);
-  assert.doesNotMatch(commandFile, /Existing summaries mean that plan already has durable execution evidence/i);
-  assert.match(commandFile, /\/blu-progress/);
-  assert.match(docsFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docsFile, /## Shared Runtime Contract/);
-  assert.match(docsFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
-  assert.match(
-    docsFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(docsFile, /shared long-running-mutation posture/i);
-  assert.match(docsFile, /`update_topic`/);
-  assert.match(docsFile, /`write_todos`/);
-  assert.match(docsFile, /## In-Flight Progress Contract/);
-  assert.match(docsFile, /Existing summary files only count as completed evidence when summary validation passes/i);
-  assert.match(docsFile, /malformed summaries remain repair or replace targets/i);
-  assert.match(docsFile, /blueprint_phase_execution_targets/i);
-  assert.match(docsFile, /Pre-persistence gates/i);
-  assert.match(docsFile, /Ownership gates/i);
-  assert.match(docsFile, /Verification gates/i);
-  assert.match(docsFile, /State timing/i);
-  assert.match(docsFile, /Subagent-capable runs/i);
-  assert.match(docsFile, /Single-agent fallback runs/i);
-  assert.match(docsFile, /`COMPLETED` is the only summary status that closes execution debt/i);
-  assert.match(docsFile, /base: "synced"/);
-  assert.match(docsFile, /Verifier handoff/i);
-  assert.match(docsFile, /phase-level completion claim/i);
+
+  const requiredTools = [
+    "blueprint_phase_locate",
+    "blueprint_phase_plan_index",
+    "blueprint_phase_execution_targets",
+    "blueprint_phase_plan_read",
+    "blueprint_phase_summary_index",
+    "blueprint_phase_summary_read",
+    "blueprint_phase_summary_write",
+    "blueprint_artifact_contract_read",
+    "blueprint_config_get",
+    "blueprint_artifact_validate",
+    "blueprint_state_load",
+    "blueprint_state_update"
+  ];
+
+  for (const tool of requiredTools) {
+    assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(tool)));
+  }
+
+  assertMatchesAll(commandFile, [
+    /gapClosurePlans/,
+    /lowerWavePendingPlans/,
+    /shared file set/i,
+    /artifactId: "phase\.summary"/,
+    /parallelization\.\*/,
+    /workflow\.use_worktrees/,
+    /git\.branching_strategy/,
+    /base: "synced"/,
+    /PARTIAL` or `BLOCKED`/,
+    /Do not persist execute-phase reports/i,
+    /phase-level completion claim/i,
+    /\/blu-validate-phase/,
+    /\/blu-verify-work/,
+    /\/blu-progress/
+  ]);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md|agents\/blueprint-executor\.md/);
 });
 
-test("execute-phase skill captures wave-based execution and summary generation rules", async () => {
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"),
-    "utf8"
-  );
+test("execute-phase skill bundle points the command at execute-specific references instead of quick or fast detail", async () => {
+  const skillFile = await readRepoFile("skills/blueprint-phase-execution/SKILL.md");
 
   assert.match(skillFile, /status: implemented/);
-  assert.match(skillFile, /\/blu-execute-phase/);
-  assert.match(skillFile, /`long-running-mutation`/);
-  assert.match(skillFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
+  assert.match(skillFile, /input_bundles:/);
+  assert.match(skillFile, /"\/blu-execute-phase":/);
   assert.match(
     skillFile,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/
   );
-  assert.match(skillFile, /wave-aware order/i);
-  assert.match(skillFile, /ask_user/);
-  assert.match(skillFile, /`update_topic`/);
-  assert.match(skillFile, /`write_todos`/);
-  assert.match(skillFile, /blueprint-executor/);
-  assert.match(skillFile, /summary/i);
-  assert.match(skillFile, /blueprint_phase_execution_targets/);
-  assert.match(skillFile, /blueprint_phase_summary_write/);
-  assert.match(skillFile, /blueprint_artifact_contract_read/);
-  assert.match(skillFile, /workflow\.use_worktrees/);
-  assert.match(skillFile, /git\.branching_strategy/);
-  assert.match(skillFile, /sequential and checkpointed/i);
-  assert.match(skillFile, /review, skip, or stop/i);
-  assert.match(skillFile, /valid durable summary artifact/i);
-  assert.match(skillFile, /malformed summaries are repair or replace targets/i);
-  assert.match(skillFile, /plans without valid summaries are pending work/i);
-  assert.match(skillFile, /Existing valid summaries require explicit overwrite confirmation/i);
-  assert.match(skillFile, /Refuse to execute stale or invalid plans/i);
-  assert.match(skillFile, /disjoint write ownership/i);
-  assert.match(skillFile, /single-agent fallback/i);
-  assert.match(skillFile, /persist a summary through MCP/i);
-  assert.match(skillFile, /durable checkpoint evidence/i);
-  assert.match(skillFile, /test\/repair loop/i);
-  assert.match(skillFile, /PARTIAL` or `BLOCKED` summaries/i);
-  assert.match(skillFile, /rerun `blueprint_phase_summary_index`/i);
-  assert.match(skillFile, /base: "synced"/);
-  assert.match(skillFile, /failed tests/i);
-  assert.match(skillFile, /pre-persistence gates/i);
-  assert.match(skillFile, /post-execution checks/i);
-  assert.match(skillFile, /phase-level completion claim/i);
-  assert.match(skillFile, /\/blu-validate-phase/);
-  assert.match(skillFile, /\/blu-verify-work/);
-  assert.match(skillFile, /lower-wave debt/i);
-  assert.match(skillFile, /gapClosurePlans/);
-  assert.match(skillFile, /shared file set/i);
-  assert.match(skillFile, /ask the same focused question in prose/i);
-  assert.match(skillFile, /\/blu-progress/);
+  assert.match(
+    skillFile,
+    /skills\/blueprint-phase-execution\/references\/long-running-execution-profile\.md/
+  );
+  assert.match(
+    skillFile,
+    /not inline[\s\S]*`\/blu-quick`[\s\S]*`\/blu-fast`[\s\S]*`\/blu-execute-phase` context/i
+  );
 });
 
-test("execute-phase MCP docs include the deterministic execution-target helper", async () => {
-  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
+test("execute-phase command docs point at the rich runtime contract and keep the important invariants concise", async () => {
+  const docsFile = await readRepoFile("docs/commands/execute-phase.md");
+
+  assert.match(docsFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(docsFile, /## Shared Runtime Contract/);
+  assert.match(
+    docsFile,
+    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/
+  );
+  assertMatchesAll(docsFile, [
+    /blueprint_phase_execution_targets/i,
+    /gapClosurePlans/,
+    /lowerWavePendingPlans/,
+    /Pre-persistence gates/i,
+    /Post-execution checks/i,
+    /Verifier handoff/i,
+    /does not persist reports/i,
+    /## Summary Persistence Contract/,
+    /Do not pass summary filenames, phase slugs, phase directories/i,
+    /`COMPLETED` is the only summary status that closes execution debt/i,
+    /base: "synced"/
+  ]);
+});
+
+test("execute-phase runtime contract carries the rich execution sequencing and carry-forward rules", async () => {
+  const runtimeContract = await readRepoFile(
+    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md"
+  );
+
+  assertMatchesAll(runtimeContract, [
+    /This reference is the rich behavior contract for `\/blu-execute-phase`/i,
+    /blueprint_phase_execution_targets/,
+    /gapClosurePlans/,
+    /lowerWavePendingPlans/,
+    /absolute\s+blocker/i,
+    /PARTIAL` and `BLOCKED` summaries/i,
+    /carry-forward evidence/i,
+    /one `XX-YY-SUMMARY\.md` artifact per executed plan/i,
+    /Do not persist execute-phase reports/i,
+    /code-review, regression, or schema-drift warnings/i,
+    /post-execution checks/i,
+    /base: "synced"/,
+    /summary-backed carry-forward evidence/i,
+    /one-plan-at-a-time\s+inline execution/i,
+    /phase-level completion claim/i,
+    /\/blu-validate-phase/,
+    /\/blu-verify-work/
+  ]);
+});
+
+test("execute-phase MCP docs include the deterministic execution-target helper and the rich runtime-contract pointer", async () => {
+  const mcpToolsDoc = await readRepoFile("docs/MCP-TOOLS.md");
+  const runtimeReference = await readRepoFile("docs/RUNTIME-REFERENCE.md");
 
   assert.match(
     mcpToolsDoc,
@@ -155,6 +150,12 @@ test("execute-phase MCP docs include the deterministic execution-target helper",
   assert.match(mcpToolsDoc, /`execute-phase` uses `blueprint_phase_execution_targets`/);
   assert.match(
     mcpToolsDoc,
-    /It derives candidate and selected plan ids for the default case plus `--wave` and `--gaps-only`, keeps any lower-wave pending plan as an absolute blocker for later-wave work/i
+    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/
+  );
+
+  assert.match(runtimeReference, /`execute-phase`[\s\S]*never persist execute-phase reports/i);
+  assert.match(
+    runtimeReference,
+    /`execute-phase`[\s\S]*skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/i
   );
 });

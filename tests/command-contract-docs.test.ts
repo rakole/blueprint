@@ -535,8 +535,12 @@ test("execute-phase runtime references keep the topic/todo contract, summary con
   );
   assert.match(runtimeReference, /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration/i);
   assert.match(runtimeReference, /pair Gemini-native `update_topic` and `write_todos` for long execution runs without turning them into persistence/i);
-  assert.match(runtimeReference, /reads the canonical `phase\.summary` contract before any summary write or replacement/i);
-  assert.match(runtimeReference, /stop later-wave execution whenever any lower-wave pending plan remains/i);
+  assert.match(runtimeReference, /read the canonical `phase\.summary` contract before any summary write or replacement/i);
+  assert.match(runtimeReference, /keep later-wave work blocked until any lower-wave pending plan is closed/i);
+  assert.match(
+    runtimeReference,
+    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/i
+  );
   assert.match(
     migrationMarkdown,
     /\| `execute-phase` \| `commands\/gsd\/execute-phase\.md` \| GSD has an upstream workflow file \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
