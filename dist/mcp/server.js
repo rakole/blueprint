@@ -31945,10 +31945,43 @@ function sanitizeIdentifier(value) {
   return sanitized.length > 0 ? sanitized.slice(0, 80) : "unknown";
 }
 function sortEvidenceRecords(records) {
-  return [...records].sort((left, right) => left.id.localeCompare(right.id));
+  const deduped = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    const existing = deduped.get(record2.id);
+    if (!existing) {
+      deduped.set(record2.id, {
+        ...record2,
+        paths: uniqueSorted2(record2.paths)
+      });
+      continue;
+    }
+    deduped.set(record2.id, {
+      ...existing,
+      paths: uniqueSorted2([...existing.paths, ...record2.paths])
+    });
+  }
+  return [...deduped.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 function sortUnknownRecords(records) {
-  return [...records].sort((left, right) => left.id.localeCompare(right.id));
+  const deduped = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    const existing = deduped.get(record2.id);
+    if (!existing) {
+      deduped.set(record2.id, {
+        ...record2,
+        impactedFiles: uniqueSorted2(record2.impactedFiles),
+        evidenceRefs: uniqueSorted2(record2.evidenceRefs)
+      });
+      continue;
+    }
+    deduped.set(record2.id, {
+      ...existing,
+      severity: moreSevere(existing.severity, record2.severity),
+      impactedFiles: uniqueSorted2([...existing.impactedFiles, ...record2.impactedFiles]),
+      evidenceRefs: uniqueSorted2([...existing.evidenceRefs, ...record2.evidenceRefs])
+    });
+  }
+  return [...deduped.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 function findingSeverityRank(value) {
   return { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }[value];
@@ -31956,8 +31989,40 @@ function findingSeverityRank(value) {
 function findingStatusRank(value) {
   return { BLOCK: 0, WARN: 1, PASS: 2 }[value];
 }
+function moreSevere(left, right) {
+  return findingSeverityRank(left) <= findingSeverityRank(right) ? left : right;
+}
+function higherImpactStatus(left, right) {
+  return findingStatusRank(left) <= findingStatusRank(right) ? left : right;
+}
 function sortFindings(records) {
-  return [...records].sort(
+  const deduped = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    const existing = deduped.get(record2.id);
+    if (!existing) {
+      deduped.set(record2.id, {
+        ...record2,
+        impactedFiles: uniqueSorted2(record2.impactedFiles),
+        impactedAreas: uniqueSorted2(record2.impactedAreas),
+        owners: uniqueSorted2(record2.owners),
+        requiredActions: uniqueSorted2(record2.requiredActions),
+        evidenceRefs: uniqueSorted2(record2.evidenceRefs)
+      });
+      continue;
+    }
+    deduped.set(record2.id, {
+      ...existing,
+      severity: moreSevere(existing.severity, record2.severity),
+      status: higherImpactStatus(existing.status, record2.status),
+      confidence: Math.max(existing.confidence, record2.confidence),
+      impactedFiles: uniqueSorted2([...existing.impactedFiles, ...record2.impactedFiles]),
+      impactedAreas: uniqueSorted2([...existing.impactedAreas, ...record2.impactedAreas]),
+      owners: uniqueSorted2([...existing.owners, ...record2.owners]),
+      requiredActions: uniqueSorted2([...existing.requiredActions, ...record2.requiredActions]),
+      evidenceRefs: uniqueSorted2([...existing.evidenceRefs, ...record2.evidenceRefs])
+    });
+  }
+  return [...deduped.values()].sort(
     (left, right) => findingStatusRank(left.status) - findingStatusRank(right.status) || findingSeverityRank(left.severity) - findingSeverityRank(right.severity) || left.impactedAreas.join(",").localeCompare(right.impactedAreas.join(",")) || left.checkId.localeCompare(right.checkId) || left.id.localeCompare(right.id)
   );
 }
@@ -31997,6 +32062,356 @@ function addEvidence(records, record2) {
     paths: uniqueSorted2(record2.paths)
   });
   return id;
+}
+function clampConfidenceScore(value) {
+  return Math.min(0.95, Math.max(0.05, Math.round(value * 100) / 100));
+}
+function confidenceLevelForScore(score) {
+  return score >= 0.75 ? "high" : score >= 0.45 ? "medium" : "low";
+}
+function parseImpactConfidence(value) {
+  if (!isPlainObject6(value)) {
+    return null;
+  }
+  const score = typeof value.score === "number" ? value.score : null;
+  const level = value.level === "low" || value.level === "medium" || value.level === "high" ? value.level : null;
+  if (score === null || level === null) {
+    return null;
+  }
+  return {
+    score: clampConfidenceScore(score),
+    level,
+    reasons: extractStringArray(value.reasons)
+  };
+}
+function nestedScopeRecord(args) {
+  return isPlainObject6(args.scope?.scope) ? args.scope.scope : args.scope;
+}
+function buildReportScope(args, files, warnings) {
+  const scopeRecord = args.scope;
+  const scopePayload = nestedScopeRecord(args);
+  const providedConfidence = parseImpactConfidence(scopeRecord?.confidence) ?? parseImpactConfidence(scopePayload?.confidence);
+  const kind = stringValue(scopePayload?.kind) ?? (files.length > 0 ? "files" : "unresolved");
+  const source = stringValue(scopePayload?.source);
+  const description = stringValue(scopePayload?.description);
+  const fingerprint = stringValue(scopeRecord?.scopeFingerprint) ?? stringValue(scopePayload?.scopeFingerprint) ?? stableHash({
+    kind,
+    source,
+    description,
+    files
+  });
+  const inferredConfidence = providedConfidence ?? (kind === "description" ? confidenceForScope("description", [], warnings) : confidenceForScope(files.length > 0 ? "files" : "unresolved", files, warnings));
+  return {
+    kind,
+    source,
+    description,
+    fingerprint,
+    confidence: inferredConfidence
+  };
+}
+function reverseDependencyCoverageRelevant(surfaces) {
+  return surfaces.some(
+    (surface) => surface.surfaces.some(
+      (name) => [
+        "package-runtime",
+        "source",
+        "secret-sensitive",
+        "mcp-server",
+        "mcp-tool",
+        "mcp-resource",
+        "artifact-contract",
+        "hook"
+      ].includes(name)
+    )
+  );
+}
+function highAssuranceSurfacePresent(surfaces) {
+  return surfaces.some(
+    (surface) => surface.surfaces.some(
+      (name) => [
+        "secret-sensitive",
+        "env-config",
+        "command-catalog",
+        "command-manifest",
+        "command-doc",
+        "runtime-reference",
+        "mcp-server",
+        "mcp-tool",
+        "mcp-resource",
+        "artifact-contract",
+        "extension-manifest",
+        "hook",
+        "package-runtime",
+        "build-config"
+      ].includes(name)
+    )
+  );
+}
+function maxSeverityFromRecords(findings, obligations, unknowns) {
+  const severities = [
+    ...findings.map((finding) => finding.severity),
+    ...obligations.map((obligation) => obligation.severity),
+    ...unknowns.map((unknown2) => unknown2.severity)
+  ];
+  return severities.reduce(
+    (current, severity) => current === null ? severity : moreSevere(current, severity),
+    null
+  );
+}
+function confidencePenaltyForUnknown(unknown2) {
+  return {
+    LOW: 0.03,
+    MEDIUM: 0.07,
+    HIGH: 0.11,
+    CRITICAL: 0.16
+  }[unknown2.severity];
+}
+function buildConfidenceScore(options) {
+  const reducers = [];
+  const drivers = [...options.scope.confidence.reasons];
+  let score = options.scope.confidence.score;
+  if (options.files.length === 0) {
+    score = Math.min(score, 0.25);
+    reducers.push("No file-backed scope was available to prove blast radius.");
+  } else {
+    drivers.push("Changed files were normalized and classified deterministically.");
+  }
+  if (options.ownership.coverage.status === "complete") {
+    score += 0.04;
+    drivers.push("Ownership coverage is complete for the analyzed files.");
+  } else if (options.files.length > 0 && options.ownership.coverage.status === "partial") {
+    score -= 0.06;
+    reducers.push("Ownership coverage is partial.");
+  } else if (options.files.length > 0) {
+    score -= 0.1;
+    reducers.push("Ownership coverage is missing.");
+  }
+  if (reverseDependencyCoverageRelevant(options.surfaces)) {
+    if (options.dependencyGraph.coverage.status === "complete-ish") {
+      score += 0.04;
+      drivers.push("Reverse dependency coverage is present for relevant impact drivers.");
+    } else if (options.dependencyGraph.coverage.status === "partial") {
+      score -= 0.07;
+      reducers.push("Reverse dependency coverage is partial.");
+    } else {
+      score -= 0.12;
+      reducers.push("Reverse dependency coverage is missing for relevant impact drivers.");
+    }
+  }
+  const unknownPenalty = Math.min(
+    0.35,
+    options.unknowns.reduce((total, unknown2) => total + confidencePenaltyForUnknown(unknown2), 0)
+  );
+  if (unknownPenalty > 0) {
+    score -= unknownPenalty;
+    reducers.push(
+      `${options.unknowns.length} structured unknown${options.unknowns.length === 1 ? "" : "s"} reduced confidence.`
+    );
+  }
+  if (options.warnings.length > 0) {
+    score -= Math.min(0.08, options.warnings.length * 0.01);
+    reducers.push("Analysis warnings remain and were reflected in confidence.");
+  }
+  const roundedScore = clampConfidenceScore(score);
+  return {
+    score: roundedScore,
+    level: confidenceLevelForScore(roundedScore),
+    reasons: uniqueSorted2([...drivers, ...reducers])
+  };
+}
+function hasBreakingContractSignal(findings, _obligations, unknowns) {
+  return findings.some(
+    (finding) => finding.checkId.startsWith("contract.") && (finding.status === "BLOCK" || finding.severity === "CRITICAL")
+  ) || unknowns.some(
+    (unknown2) => unknown2.category === "contract" && unknown2.severity === "CRITICAL"
+  );
+}
+function buildImpactStatus(options) {
+  const drivers = [];
+  const reducers = [];
+  let status = "PASS";
+  const hasBlockingFinding = options.findings.some((finding) => finding.status === "BLOCK") || options.obligations.some((obligation) => obligation.status === "BLOCK");
+  const hasCriticalSignal = [...options.findings, ...options.obligations, ...options.unknowns].some(
+    (record2) => record2.severity === "CRITICAL"
+  );
+  if (hasBlockingFinding) {
+    status = "BLOCK";
+    drivers.push("At least one deterministic finding or obligation has BLOCK status.");
+  }
+  if (options.config.risk.blockOnCritical && hasCriticalSignal) {
+    status = "BLOCK";
+    drivers.push("risk.blockOnCritical is enabled and a CRITICAL signal is present.");
+  }
+  if (options.config.risk.blockOnBreakingContract && hasBreakingContractSignal(options.findings, options.obligations, options.unknowns)) {
+    status = "BLOCK";
+    drivers.push("risk.blockOnBreakingContract is enabled and contract impact is high.");
+  }
+  if (highAssuranceSurfacePresent(options.surfaces) && options.confidence.score < options.config.risk.blockBelowConfidenceForSensitiveAreas) {
+    status = "BLOCK";
+    drivers.push(
+      "High-assurance surfaces are in scope and confidence is below the configured sensitive-area blocking threshold."
+    );
+  }
+  if (status !== "BLOCK") {
+    if (options.files.length === 0) {
+      status = "WARN";
+      reducers.push("Scope is not file-backed, so PASS is not allowed.");
+    } else if (options.findings.length > 0) {
+      status = "WARN";
+      reducers.push("Non-blocking findings require reviewer attention.");
+    } else if (options.obligations.length > 0) {
+      status = "WARN";
+      reducers.push("Review, test, documentation, release, migration, security, deployment, or build obligations remain.");
+    } else if (options.unknowns.length > 0) {
+      status = "WARN";
+      reducers.push("Structured unknowns remain and cannot be treated as safety.");
+    } else if (options.confidence.score < options.config.risk.warnBelowConfidence) {
+      status = "WARN";
+      reducers.push("Confidence is below risk.warnBelowConfidence.");
+    } else {
+      drivers.push("No blocking or warning impact signals remain above policy thresholds.");
+    }
+  }
+  return {
+    status,
+    drivers: uniqueSorted2(drivers),
+    reducers: uniqueSorted2(reducers)
+  };
+}
+function buildImpactRisk(options) {
+  const reasons = [];
+  const highAssurance = highAssuranceSurfacePresent(options.surfaces);
+  let level = "low";
+  if (options.files.length === 0) {
+    level = "unknown";
+    reasons.push("No file-backed scope was available, so risk cannot be proven low.");
+  } else if (options.status === "BLOCK" && options.maxSeverity === "CRITICAL") {
+    level = "critical";
+    reasons.push("A CRITICAL signal produced or reinforced an advisory BLOCK.");
+  } else if (options.status === "BLOCK") {
+    level = "high";
+    reasons.push("A deterministic BLOCK signal requires review before approval.");
+  } else if (options.maxSeverity === "CRITICAL" || options.maxSeverity === "HIGH") {
+    level = highAssurance ? "high" : "medium";
+    reasons.push(
+      highAssurance ? "High-severity signals affect high-assurance surfaces." : "High-severity signals are present but not blocking."
+    );
+  } else if (options.maxSeverity === "MEDIUM") {
+    level = "medium";
+    reasons.push("Medium-severity findings, obligations, or unknowns require reviewer attention.");
+  } else if (options.findings.length + options.obligations.length + options.unknowns.length > 0) {
+    level = "low";
+    reasons.push("Only low-severity non-blocking impact signals remain.");
+  } else {
+    level = "low";
+    reasons.push("No findings, obligations, or unknowns remained after deterministic analysis.");
+  }
+  if (highAssurance) {
+    reasons.push("The scope includes runtime, contract, config, package, build, extension, or secret-sensitive surfaces.");
+  }
+  return {
+    level,
+    reasons: uniqueSorted2(reasons)
+  };
+}
+function requiredReviewersFromOwnership(ownership) {
+  return uniqueSorted2(
+    ownership.matches.flatMap(
+      (match) => match.owners.length > 0 ? match.owners : match.fallbackReviewers
+    )
+  );
+}
+function requiredTestsFromObligations(obligations) {
+  return uniqueSorted2(
+    obligations.filter((obligation) => obligation.category === "tests").flatMap((obligation) => obligation.requiredActions)
+  );
+}
+function requiredActionsFromSignals(findings, obligations, unknowns) {
+  return uniqueSorted2([
+    ...findings.flatMap((finding) => finding.requiredActions),
+    ...obligations.flatMap((obligation) => obligation.requiredActions),
+    ...unknowns.map((unknown2) => unknown2.resolution)
+  ]);
+}
+function buildAnalysisSummary(options) {
+  const scopeText = options.files.length === 0 ? "no file-backed scope" : `${options.files.length} changed file${options.files.length === 1 ? "" : "s"}`;
+  return `Impact status ${options.status} with ${options.risk.level} risk and ${options.confidence.level} confidence (${options.confidence.score}) across ${scopeText}; findings=${options.findings.length}, obligations=${options.obligations.length}, unknowns=${options.unknowns.length}.`;
+}
+function scoreImpactAnalysis(options) {
+  const confidence = buildConfidenceScore({
+    scope: options.scope,
+    files: options.files,
+    warnings: options.warnings,
+    surfaces: options.surfaces,
+    ownership: options.ownership,
+    dependencyGraph: options.dependencyGraph,
+    unknowns: options.unknowns
+  });
+  const statusResult = buildImpactStatus({
+    config: options.config,
+    findings: options.findings,
+    obligations: options.obligations,
+    unknowns: options.unknowns,
+    confidence,
+    surfaces: options.surfaces,
+    files: options.files
+  });
+  const maxSeverity = maxSeverityFromRecords(
+    options.findings,
+    options.obligations,
+    options.unknowns
+  );
+  const risk = buildImpactRisk({
+    status: statusResult.status,
+    maxSeverity,
+    surfaces: options.surfaces,
+    findings: options.findings,
+    obligations: options.obligations,
+    unknowns: options.unknowns,
+    files: options.files
+  });
+  const summary = buildAnalysisSummary({
+    status: statusResult.status,
+    risk,
+    confidence,
+    files: options.files,
+    findings: options.findings,
+    obligations: options.obligations,
+    unknowns: options.unknowns
+  });
+  return {
+    status: statusResult.status,
+    risk,
+    confidence,
+    scoring: {
+      status: statusResult.status,
+      riskLevel: risk.level,
+      confidenceScore: confidence.score,
+      confidenceLevel: confidence.level,
+      maxSeverity,
+      blocking: statusResult.status === "BLOCK",
+      drivers: uniqueSorted2([...statusResult.drivers, ...risk.reasons]),
+      reducers: uniqueSorted2(statusResult.reducers),
+      policy: {
+        blockOnCritical: options.config.risk.blockOnCritical,
+        blockOnBreakingContract: options.config.risk.blockOnBreakingContract,
+        blockOnSensitiveUnknownOwner: options.config.risk.blockOnSensitiveUnknownOwner,
+        warnBelowConfidence: options.config.risk.warnBelowConfidence,
+        blockBelowConfidenceForSensitiveAreas: options.config.risk.blockBelowConfidenceForSensitiveAreas
+      }
+    },
+    summary,
+    topImpactedAreas: options.areaSummary.slice(0, 5),
+    requiredReviewers: requiredReviewersFromOwnership(options.ownership),
+    requiredTests: requiredTestsFromObligations(options.obligations),
+    requiredActions: requiredActionsFromSignals(
+      options.findings,
+      options.obligations,
+      options.unknowns
+    ),
+    blockingFindings: options.findings.filter((finding) => finding.status === "BLOCK"),
+    warningFindings: options.findings.filter((finding) => finding.status === "WARN")
+  };
 }
 function escapeRegExp2(value) {
   return value.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
@@ -32105,6 +32520,7 @@ function extractStringArray(value) {
   return value.filter((item) => typeof item === "string");
 }
 function collectAnalyzeFileSources(args) {
+  const nestedScope = isPlainObject6(args.scope?.scope) ? args.scope.scope : void 0;
   return [
     {
       label: "changedFiles",
@@ -32121,6 +32537,14 @@ function collectAnalyzeFileSources(args) {
     {
       label: "scope.changedFiles",
       files: extractStringArray(args.scope?.changedFiles)
+    },
+    {
+      label: "scope.scope.files",
+      files: extractStringArray(nestedScope?.files)
+    },
+    {
+      label: "scope.scope.changedFiles",
+      files: extractStringArray(nestedScope?.changedFiles)
     }
   ].filter((source) => source.files.length > 0);
 }
@@ -33185,7 +33609,7 @@ function addContextUnknown(evidence, unknowns, warnings, options) {
   warnings.push(options.reason);
   const evidenceRef = addEvidence(evidence, {
     kind: "contract",
-    source: "phase-6-context",
+    source: "impact-context",
     summary: options.reason,
     paths: options.impactedFiles,
     data: { contextKey: options.contextKey }
@@ -33213,7 +33637,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     const runtime2 = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 6,
+      implementationPhase: 7,
       readOnly: true,
       includeRuntime: true,
       includeCatalog: true,
@@ -33228,7 +33652,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
         addContextUnknown(evidence, unknowns, warnings, {
           id: "unknown.contract.catalog-context-malformed",
           title: "Command catalog context is malformed",
-          reason: "Live command catalog context was loaded for Phase 6 analysis, but it did not expose a commands object.",
+          reason: "Live command catalog context was loaded for impact analysis, but it did not expose a commands object.",
           resolution: "Repair the command catalog projection before treating command contract safety as known.",
           impactedFiles: contractFiles,
           contextKey: "catalog"
@@ -33239,7 +33663,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
         addContextUnknown(evidence, unknowns, warnings, {
           id: "unknown.contract.catalog-context-missing",
           title: "Command catalog context is unavailable",
-          reason: `Live command catalog context could not be loaded for Phase 6 analysis: ${error2 instanceof Error ? error2.message : String(error2)}`,
+          reason: `Live command catalog context could not be loaded for impact analysis: ${error2 instanceof Error ? error2.message : String(error2)}`,
           resolution: "Load or provide command catalog context before treating command contract safety as known.",
           impactedFiles: contractFiles,
           contextKey: "catalog"
@@ -33253,7 +33677,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
         addContextUnknown(evidence, unknowns, warnings, {
           id: "unknown.contract.artifact-contract-context-missing",
           title: "Artifact contract context is unavailable",
-          reason: `Live artifact contract context could not be loaded for Phase 6 analysis: ${error2 instanceof Error ? error2.message : String(error2)}`,
+          reason: `Live artifact contract context could not be loaded for impact analysis: ${error2 instanceof Error ? error2.message : String(error2)}`,
           resolution: "Load artifact contract context before treating artifact compatibility as known.",
           impactedFiles: surfaces.filter((surface) => surface.surfaces.includes("artifact-contract")).map((surface) => surface.path),
           contextKey: "artifactContracts"
@@ -33282,7 +33706,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     addContextUnknown(evidence, unknowns, warnings, {
       id: hasOwnContextKey(providedContext, "catalog") ? "unknown.contract.catalog-context-malformed" : "unknown.contract.catalog-context-missing",
       title: hasOwnContextKey(providedContext, "catalog") ? "Command catalog context is malformed" : "Command catalog context is missing",
-      reason: hasOwnContextKey(providedContext, "catalog") ? "Provided Phase 6 context.catalog did not expose a commands object." : "Provided Phase 6 context omitted catalog data for command-like changed surfaces.",
+      reason: hasOwnContextKey(providedContext, "catalog") ? "Provided impact context.catalog did not expose a commands object." : "Provided impact context omitted catalog data for command-like changed surfaces.",
       resolution: "Provide context.catalog from blueprint_command_catalog or omit context so live read-only catalog loading can run.",
       impactedFiles: contractFiles,
       contextKey: "catalog"
@@ -33297,7 +33721,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     addContextUnknown(evidence, unknowns, warnings, {
       id: hasOwnContextKey(providedContext, "runtime") ? "unknown.contract.runtime-context-malformed" : "unknown.contract.runtime-context-missing",
       title: hasOwnContextKey(providedContext, "runtime") ? "Runtime tool context is malformed" : "Runtime tool context is missing",
-      reason: hasOwnContextKey(providedContext, "runtime") ? "Provided Phase 6 context.runtime was not an object." : "Provided Phase 6 context omitted runtime data for command, MCP, or extension changed surfaces.",
+      reason: hasOwnContextKey(providedContext, "runtime") ? "Provided impact context.runtime was not an object." : "Provided impact context omitted runtime data for command, MCP, or extension changed surfaces.",
       resolution: "Provide runtime tool context or omit context so live read-only runtime loading can run.",
       impactedFiles: contractFiles,
       contextKey: "runtime"
@@ -33309,7 +33733,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     addContextUnknown(evidence, unknowns, warnings, {
       id: hasOwnContextKey(providedContext, "artifactContracts") ? "unknown.contract.artifact-contract-context-malformed" : "unknown.contract.artifact-contract-context-missing",
       title: hasOwnContextKey(providedContext, "artifactContracts") ? "Artifact contract context is malformed" : "Artifact contract context is missing",
-      reason: hasOwnContextKey(providedContext, "artifactContracts") ? "Provided Phase 6 context.artifactContracts was not an array." : "Provided Phase 6 context omitted artifactContracts for artifact contract changed surfaces.",
+      reason: hasOwnContextKey(providedContext, "artifactContracts") ? "Provided impact context.artifactContracts was not an array." : "Provided impact context omitted artifactContracts for artifact contract changed surfaces.",
       resolution: "Provide context.artifactContracts from blueprint_artifact_contract_read/listArtifactContracts or omit context so live read-only artifact loading can run.",
       impactedFiles: surfaces.filter((surface) => surface.surfaces.includes("artifact-contract")).map((surface) => surface.path),
       contextKey: "artifactContracts"
@@ -33903,7 +34327,7 @@ async function analyzeContractAndObligations(projectRoot, files, surfaces, provi
   addEvidence(evidence, {
     kind: "contract",
     source: phase6Context.provided ? "provided-context" : "live-readonly-context",
-    summary: "Phase 6 contract and obligation analysis consumed catalog, runtime, command asset, and artifact context where available.",
+    summary: "Impact contract and obligation analysis consumed catalog, runtime, command asset, and artifact context where available.",
     paths: files.filter((file2) => isContractLikeSurface(classifyImpactFile(file2))),
     data: {
       catalogLoaded: phase6Context.catalog !== null,
@@ -34996,7 +35420,7 @@ async function blueprintImpactContextLoad(args = {}) {
     runtime = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 6,
+      implementationPhase: 7,
       readOnly: true,
       includeRuntime,
       includeCatalog,
@@ -35039,10 +35463,35 @@ async function blueprintImpactAnalyze(args = {}) {
   const areaSummary = buildAreaSummary(surfaces);
   const surfaceSummary = buildSurfaceSummary(surfaces);
   const evidence = [];
+  const analysisUnknowns = [];
   if (sources.length === 0) {
     warnings.push(
-      "No changed files were provided to impact analysis; Phase 6 ownership, dependency, contract, and obligation analysis has no file-backed surfaces."
+      "No changed files were provided to impact analysis; ownership, dependency, contract, obligation, and scoring analysis has no file-backed surfaces."
     );
+  }
+  const reportScope = buildReportScope(args, files, warnings);
+  if (files.length === 0) {
+    const evidenceRef = addEvidence(evidence, {
+      kind: "scope",
+      source: "impact-analyze-scope",
+      summary: "No file-backed scope was provided to impact analysis.",
+      paths: [],
+      data: {
+        scopeKind: reportScope.kind,
+        scopeSource: reportScope.source,
+        scopeFingerprint: reportScope.fingerprint
+      }
+    });
+    analysisUnknowns.push({
+      id: "unknown.scope.file-backed",
+      category: "scope",
+      title: "Impact scope is not file-backed",
+      severity: "HIGH",
+      impactedFiles: [],
+      reason: "Impact analysis did not receive changed files from git, explicit files, a diff file, or another file-backed seed.",
+      resolution: "Resolve scope with --staged, --working-tree, --range, --base/--head, --files, --diff-file, or a seed containing changed files.",
+      evidenceRefs: [evidenceRef]
+    });
   }
   addEvidence(evidence, {
     kind: "surface",
@@ -35058,12 +35507,13 @@ async function blueprintImpactAnalyze(args = {}) {
   addEvidence(evidence, {
     kind: "config",
     source: "impact-analyze-config",
-    summary: "Impact analysis resolved effective Phase 6 ownership and dependency configuration.",
+    summary: "Impact analysis resolved effective ownership, dependency, risk, and reporting configuration.",
     paths: [],
     data: {
       ownershipSources: config2.ownership.sources,
       dependencySources: config2.dependencyGraph.sources,
-      customGraphFiles: config2.dependencyGraph.customGraphFiles
+      customGraphFiles: config2.dependencyGraph.customGraphFiles,
+      risk: config2.risk
     }
   });
   const ownershipResult = await loadOwnershipAnalysis(
@@ -35087,40 +35537,49 @@ async function blueprintImpactAnalyze(args = {}) {
     args.context,
     warnings
   );
-  const deferredEvidenceRef = addEvidence(evidence, {
-    kind: "metadata",
-    source: "phase-7-deferred-scoring",
-    summary: "Phase 6 analyzes ownership, dependencies, contract substrate, and path-level obligations; full scoring remains deferred to Phase 7.",
-    paths: []
-  });
-  const deferredUnknowns = [
-    {
-      id: "unknown.riskScoringDeferred",
-      category: "risk-scoring",
-      title: "Full risk scoring is deferred",
-      severity: "LOW",
-      impactedFiles: files,
-      reason: "Phase 7 full scoring is deferred; Phase 6 uses deterministic BLOCK/WARN rules for ownership, contract, build, and obligation signals.",
-      resolution: "Treat current risk and confidence as simple advisory signals until Phase 7 scoring lands.",
-      evidenceRefs: [deferredEvidenceRef]
-    }
-  ];
   const findings = sortFindings([...ownershipResult.findings, ...contractResult.findings]);
   const obligations = sortObligations(contractResult.obligations);
   const unknowns = sortUnknownRecords([
+    ...analysisUnknowns,
     ...ownershipResult.unknowns,
     ...dependencyResult.unknowns,
-    ...contractResult.unknowns,
-    ...deferredUnknowns
+    ...contractResult.unknowns
   ]);
+  const scoringResult = scoreImpactAnalysis({
+    config: config2,
+    scope: reportScope,
+    files,
+    warnings,
+    surfaces,
+    areaSummary,
+    ownership: ownershipResult.ownership,
+    dependencyGraph: dependencyResult.dependencyGraph,
+    findings,
+    obligations,
+    unknowns
+  });
+  addEvidence(evidence, {
+    kind: "metadata",
+    source: "phase-7-scoring",
+    summary: "Phase 7 scoring separated impact status, risk level, confidence score, and confidence level.",
+    paths: files,
+    data: {
+      status: scoringResult.status,
+      riskLevel: scoringResult.risk.level,
+      confidenceScore: scoringResult.confidence.score,
+      confidenceLevel: scoringResult.confidence.level,
+      maxSeverity: scoringResult.scoring.maxSeverity,
+      blocking: scoringResult.scoring.blocking
+    }
+  });
   const allEvidence = sortEvidenceRecords([
     ...evidence,
     ...ownershipResult.evidence,
     ...dependencyResult.evidence,
     ...contractResult.evidence
   ]);
-  const status = findings.some((finding) => finding.status === "BLOCK") ? "BLOCK" : "WARN";
   const impactId = placeholderImpactId({
+    scope: reportScope,
     files,
     surfaces: surfaces.map((surface) => ({
       path: surface.path,
@@ -35144,44 +35603,16 @@ async function blueprintImpactAnalyze(args = {}) {
     },
     findings,
     obligations,
-    unknowns
+    unknowns,
+    scoring: scoringResult.scoring
   });
-  const confidenceScore = files.length === 0 ? 0.25 : status === "BLOCK" ? 0.66 : ownershipResult.ownership.coverage.status === "complete" && dependencyResult.dependencyGraph.coverage.status === "complete-ish" ? 0.68 : 0.56;
-  const confidenceLevel = confidenceScore >= 0.67 ? "high" : confidenceScore >= 0.45 ? "medium" : "low";
-  const risk = status === "BLOCK" ? {
-    level: "critical",
-    reasons: [
-      "At least one deterministic Phase 6 BLOCK finding was produced for ownership, command substrate, planned-command exposure, or build readiness.",
-      "Phase 7 full scoring is deferred; this critical risk reflects deterministic Phase 6 BLOCK rules."
-    ]
-  } : {
-    level: "unknown",
-    reasons: [
-      "Phase 6 analyzes ownership, dependency coverage, command contracts, build readiness, and path-level obligations.",
-      "Missing metadata remains visible as unknowns instead of proving low impact."
-    ]
-  };
-  const confidence = {
-    score: confidenceScore,
-    level: confidenceLevel,
-    reasons: files.length > 0 ? [
-      "Changed files were normalized and classified deterministically.",
-      "Ownership and dependency metadata were analyzed where configured and available.",
-      "Contract substrate and path-level obligations were analyzed where context was available.",
-      "Confidence remains capped until Phase 7 scoring lands."
-    ] : [
-      "No file-backed scope was available for deterministic ownership, dependency, contract, or obligation analysis.",
-      "Confidence remains low until a scope resolver supplies changed files."
-    ]
-  };
-  const summary = status === "BLOCK" ? "Impact analysis found a deterministic Phase 6 BLOCK finding that blocks advisory approval until resolved." : "Impact analysis classified changed file surfaces, ownership, dependency metadata, command contracts, build readiness, and path-level obligations; Phase 7 scoring remains an explicit unknown.";
   return {
-    phaseStatus: "contract-obligations-analyzed",
+    phaseStatus: "scored-report-modeled",
     impactId,
-    status,
-    impactStatus: status,
-    risk,
-    confidence,
+    status: scoringResult.status,
+    impactStatus: scoringResult.status,
+    risk: scoringResult.risk,
+    confidence: scoringResult.confidence,
     surfaces,
     areaSummary,
     surfaceSummary,
@@ -35194,9 +35625,20 @@ async function blueprintImpactAnalyze(args = {}) {
     report: {
       schemaVersion: "blueprint.impact.report.v1",
       impactId,
-      status,
-      summary,
+      status: scoringResult.status,
+      impactStatus: scoringResult.status,
+      summary: scoringResult.summary,
+      scope: reportScope,
       files,
+      risk: scoringResult.risk,
+      confidence: scoringResult.confidence,
+      scoring: scoringResult.scoring,
+      topImpactedAreas: scoringResult.topImpactedAreas,
+      requiredReviewers: scoringResult.requiredReviewers,
+      requiredTests: scoringResult.requiredTests,
+      requiredActions: scoringResult.requiredActions,
+      blockingFindings: scoringResult.blockingFindings,
+      warningFindings: scoringResult.warningFindings,
       surfaces,
       areaSummary,
       surfaceSummary,
@@ -35288,9 +35730,9 @@ var init_impact = __esm({
       "blueprint_project_init",
       "blueprint_project_status"
     ];
-    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 6 config, scope, context, surface, ownership, dependency, contract, and obligation analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
+    IMPACT_PLACEHOLDER_WARNING = "/blu-impact Phase 7 config, scope, context, surface, ownership, dependency, contract, obligation, scoring, and report-model analysis are registered; report writing and output rendering remain disabled placeholders for later impact phases.";
     IMPACT_SCHEMA_VERSION = "blueprint.impact.config.v1";
-    PLACEHOLDER_IMPACT_ID = "impact-phase-6-placeholder";
+    PLACEHOLDER_IMPACT_ID = "impact-phase-7-placeholder";
     OWNERSHIP_SCHEMA_VERSION = "blueprint.impact.ownership.v1";
     DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
     IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";

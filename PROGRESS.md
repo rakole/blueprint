@@ -1,6 +1,6 @@
 # Blueprint Progress
 
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 Ordering policy: incomplete commands are bubbled up; completed commands are bubbled down. Importance is prioritized by active rollout intent, then by Wave 3 execution-path risk, then by Wave 4 quality-and-shipping risk, then by Wave 5 git/workspace risk.
 
@@ -19,11 +19,11 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 | Batch | Slot A | Slot B | Slot C | Notes |
 |---:|---|---|---|---|
-| 1 | `do` | `impact` | `none` | `/blu-do` remains the retained planned control-plane slice and is still non-routable until its dedicated manifest lands. `/blu-impact` is the active additive command rollout; Phase 6 has landed contract/obligation analysis in the MCP tool family, but it remains non-routable until its manifest and primary skill land. |
+| 1 | `do` | `impact` | `none` | `/blu-do` remains the retained planned control-plane slice and is still non-routable until its dedicated manifest lands. `/blu-impact` is the active additive command rollout; Phase 7 has landed deterministic scoring and normalized report modeling in the MCP tool family, but it remains non-routable until its manifest and primary skill land. |
 
 Blocked commands (not schedulable until substrate/status changes):
 
-None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline; docs keep its control-plane status at `planned`, while the live runtime must remain non-routable until the dedicated manifest, primary skill, registered impact MCP tools, tests, docs, and built assets align. Phase 6 now covers command-substrate checks, planned-command exposure review gates, typed obligations, and dist/build provenance inside the registered impact analysis tool without adding the command manifest or primary skill.
+None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline; docs keep its control-plane status at `planned`, while the live runtime must remain non-routable until the dedicated manifest, primary skill, registered impact MCP tools, tests, docs, and built assets align. Phase 7 now covers command-substrate checks, planned-command exposure review gates, typed obligations, dist/build provenance, advisory scoring, and normalized report modeling inside the registered impact analysis tool without adding the command manifest or primary skill.
 
 ## Completed Commands (Bubbled Down)
 
