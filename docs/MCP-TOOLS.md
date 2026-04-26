@@ -65,8 +65,8 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_phase_summary_write` | Persist substantive phase-scoped summary content for an existing plan | `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}` |
 | `blueprint_phase_validation_read` | Read a phase-scoped validation artifact and its execution-summary coverage | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}` |
 | `blueprint_phase_validation_write` | Persist a phase-scoped `VERIFICATION` or `UAT` artifact with overwrite protection and execution-aware prerequisite checks | `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}` |
-| `blueprint_phase_checkpoint_get` | Read the saved `discuss-phase` checkpoint for a phase | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}` |
-| `blueprint_phase_checkpoint_put` | Persist a `discuss-phase` checkpoint JSON object for a phase using the richer resumability shape | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
+| `blueprint_phase_checkpoint_get` | Read the saved phase checkpoint and report ownership/mode resume safety | `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, ownerCommand, resumeMode, safeToResume, warnings, reason}` |
+| `blueprint_phase_checkpoint_put` | Persist an owned phase checkpoint JSON object using the richer resumability shape | `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}` |
 | `blueprint_phase_checkpoint_delete` | Delete a saved `discuss-phase` checkpoint after successful completion | `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}` |
 
 ### Artifact Management
@@ -245,7 +245,8 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - When normalizing authored phase artifacts, prefer `blueprint_artifact_contract_read` over copied prompt-local templates.
 - Research writes validate in `strict` mode by default. Use `validationMode: "warn"` only when the command intentionally wants warnings without blocking the write attempt.
 - Research writes should be normalized to Blueprint's exact `XX-RESEARCH.md` template before calling the tool, and angle-bracket placeholders must be replaced with real content.
-- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object that includes `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. The tool owns the checkpoint filename and location, and legacy saved checkpoints remain readable.
+- `blueprint_phase_checkpoint_get` accepts optional `expectedOwnerCommand` and `expectedMode` fields so commands can deterministically avoid resuming stale or foreign continuation state. Legacy saved checkpoints remain readable, but reads include `warnings` and `safeToResume`.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object that includes `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. `ownerCommand` must match `resumeMeta.mode` (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`, `/blu-verify-work` -> `uat`). The tool owns the checkpoint filename and location.
 - Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative for artifact and checkpoint persistence.
 
 ### Plan, Summary, And Validation Artifacts

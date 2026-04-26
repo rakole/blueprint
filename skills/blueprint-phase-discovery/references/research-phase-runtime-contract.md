@@ -62,7 +62,9 @@ helpers when available, or concise progress recaps when they are not.
 - `blueprint_phase_artifact_read` with `artifact: "research"`: supports
   view, skip, update, and revision paths.
 - `blueprint_phase_checkpoint_get`: detects resumable in-progress research and
-  controls resume-versus-discard branching.
+  controls resume-versus-discard branching. Pass
+  `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`,
+  then honor `safeToResume` and `warnings` before using saved state.
 - `blueprint_state_load`: grounds workflow posture before and after writes.
 - `blueprint_command_catalog`: gates every next-command recommendation.
 - `blueprint_artifact_contract_read` with `artifactId: "phase.research"`:
@@ -71,7 +73,8 @@ helpers when available, or concise progress recaps when they are not.
 - `blueprint_artifact_scaffold`: seeds only a missing research path. The
   scaffold is never completed research.
 - `blueprint_phase_checkpoint_put`: persists inconclusive or paused strand
-  state using the structured checkpoint shape.
+  state using the structured checkpoint shape with
+  `ownerCommand: "/blu-research-phase"` and `resumeMeta.mode: "research"`.
 - `blueprint_phase_artifact_write`: persists final research with the resolved
   numeric `phase`, `artifact: "research"`, full markdown body, and strict
   validation unless the user explicitly accepts a warned save.

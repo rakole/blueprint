@@ -86,7 +86,7 @@
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
-- `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}`
+- `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, ownerCommand, resumeMode, safeToResume, warnings, reason}`
 - `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
 - `blueprint_phase_checkpoint_delete` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
@@ -101,7 +101,8 @@
 - Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
 - Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
 - Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
-- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
+- Read checkpoints with `expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"`, then honor `safeToResume` and `warnings` before using saved state.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `ownerCommand: "/blu-discuss-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`; for discuss checkpoints, `mode` must be `"discuss"`. Treat the returned checkpoint `path` as authoritative, and do not try to serialize resumable state into markdown fields.
 - Rich context authoring should preserve evidence behind decisions: options considered, selected answer or assumption, rationale, repo paths or saved artifacts used as evidence, consequences if an assumption is wrong, canonical refs, and deferred ideas. This density is required even when the command falls back to a single main agent with no subagent support.
 
 
