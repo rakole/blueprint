@@ -2788,7 +2788,13 @@ function checkpointPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "ph
 }
 
 function normalizePlanId(value: NumericInput): string {
-  return normalizeNumericArtifactId(normalizeBlueprintInput(value), "Plan id");
+  const normalizedInput = normalizeBlueprintInput(value).trim();
+
+  if (/^0+$/.test(normalizedInput)) {
+    throw new Error("Plan id must be greater than zero.");
+  }
+
+  return normalizeNumericArtifactId(normalizedInput, "Plan id");
 }
 
 function parsePlanArtifactPath(
