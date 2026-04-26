@@ -316,6 +316,8 @@ type PhaseLocateResult = {
   warnings: string[];
 };
 
+type ResearchExternalSourcesMode = "off" | "ask" | "auto";
+
 type PhaseContextResult = {
   phase: {
     phaseNumber: string;
@@ -378,6 +380,9 @@ type PhaseContextResult = {
       discussMode: string;
       skipDiscuss: boolean;
       useWorktrees: boolean;
+    };
+    research: {
+      externalSources: ResearchExternalSourcesMode;
     };
     summary: string;
     warnings: string[];
@@ -2302,6 +2307,8 @@ async function readPhaseContextGrounding(
   );
 
   const workflow = configResult.config.workflow;
+  const researchConfig = configResult.config.research;
+  workflowWarnings.push(...configResult.warnings);
   const workflowSummary = summarizeContextPieces(
     [
       stateResult.derivedStatus.projectStatus
@@ -2318,6 +2325,7 @@ async function readPhaseContextGrounding(
       workflow.research_before_questions
         ? "research_before_questions enabled"
         : "research_before_questions disabled",
+      `external sources: ${researchConfig.external_sources}`,
       stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
     ].filter((piece): piece is string => piece !== null),
     "Workflow posture is unavailable."
@@ -2368,6 +2376,9 @@ async function readPhaseContextGrounding(
         discussMode: workflow.discuss_mode,
         skipDiscuss: workflow.skip_discuss,
         useWorktrees: workflow.use_worktrees
+      },
+      research: {
+        externalSources: researchConfig.external_sources
       },
       summary: workflowSummary,
       warnings: workflowWarnings

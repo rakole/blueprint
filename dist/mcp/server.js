@@ -14834,7 +14834,7 @@ function renderResearchTemplate(context) {
 
 ## State Of The Art
 
-- <current ecosystem or repo update>
+- <current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>
 
 ## Common Pitfalls
 
@@ -16342,7 +16342,7 @@ var init_artifact_contracts = __esm({
           "<durable implementation pattern>",
           "<existing tool, helper, or platform feature>",
           "<anti-pattern detail or implementation to avoid>",
-          "<current ecosystem or repo update>",
+          "<current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>",
           "<failure mode or regression risk>",
           "<open question that still needs an answer>",
           "<topic>",
@@ -16355,7 +16355,8 @@ var init_artifact_contracts = __esm({
           "Research writes validate in strict mode by default.",
           "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
           "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
+          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
+          "State Of The Art should cite explicit source dates for freshness-sensitive claims, or say that external currency was not checked."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
@@ -19169,6 +19170,14 @@ function hasSubstantiveResearchSection(section, heading) {
   }
   return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
 }
+function hasExplicitFreshnessDate(section) {
+  return /\b\d{4}-\d{2}-\d{2}\b/.test(section) || /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]* \d{1,2}, \d{4}\b/.test(
+    section
+  );
+}
+function marksExternalCurrencyUnchecked(section) {
+  return /not externally checked|external currency (?:was )?not checked/i.test(section);
+}
 function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
@@ -19220,6 +19229,12 @@ function validateResearchArtifactContent(content) {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+    );
+  }
+  const stateOfTheArt = extractMarkdownSection(content, "State Of The Art");
+  if (!marksExternalCurrencyUnchecked(stateOfTheArt) && !hasExplicitFreshnessDate(stateOfTheArt)) {
+    issues.push(
+      "Research artifact section State Of The Art must include an explicit source date for freshness-sensitive claims or say that external currency was not checked."
     );
   }
   const codeExamples = extractMarkdownSection(content, "Code Examples");
@@ -25180,6 +25195,8 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase) {
     requirementsContent ? "REQUIREMENTS.md is present but does not yet provide reusable grounding." : "REQUIREMENTS.md is missing."
   );
   const workflow = configResult.config.workflow;
+  const researchConfig = configResult.config.research;
+  workflowWarnings.push(...configResult.warnings);
   const workflowSummary = summarizeContextPieces(
     [
       stateResult.derivedStatus.projectStatus ? `project status: ${stateResult.derivedStatus.projectStatus}` : null,
@@ -25188,6 +25205,7 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase) {
       workflow.discuss_mode ? `discuss_mode: ${workflow.discuss_mode}` : null,
       workflow.skip_discuss ? "skip_discuss enabled" : "skip_discuss disabled",
       workflow.research_before_questions ? "research_before_questions enabled" : "research_before_questions disabled",
+      `external sources: ${researchConfig.external_sources}`,
       stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
     ].filter((piece) => piece !== null),
     "Workflow posture is unavailable."
@@ -25237,6 +25255,9 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase) {
         discussMode: workflow.discuss_mode,
         skipDiscuss: workflow.skip_discuss,
         useWorktrees: workflow.use_worktrees
+      },
+      research: {
+        externalSources: researchConfig.external_sources
       },
       summary: workflowSummary,
       warnings: workflowWarnings
@@ -25642,6 +25663,22 @@ function isKnownCheckpointOwnerCommand(value) {
 }
 function isKnownCheckpointResumeMode(value) {
   return value !== null && PHASE_CHECKPOINT_RESUME_MODES.includes(value);
+}
+function checkpointExpectedOwnerFromMode(value) {
+  switch (value) {
+    case "discuss":
+      return "/blu-discuss-phase";
+    case "research":
+      return "/blu-research-phase";
+    case "uat":
+      return "/blu-verify-work";
+    default:
+      return null;
+  }
+}
+function checkpointOwnershipBlockerReason(checkpointPath, warnings, action) {
+  const details = warnings.join(" ");
+  return `Refusing to ${action} ${checkpointPath} because ${details}`;
 }
 function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwnerCommand, expectedMode) {
   const ownerCommand = checkpointOwnerCommand(checkpoint);
@@ -27576,7 +27613,7 @@ async function blueprintPhaseCheckpointPut(args) {
   if (await pathExists2(absolutePath)) {
     const existingRaw = await fs4.readFile(absolutePath, "utf8");
     if (existingRaw === nextRaw) {
-      warnings.push(`Preserved existing discussion checkpoint because the content was unchanged.`);
+      warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -27587,6 +27624,29 @@ async function blueprintPhaseCheckpointPut(args) {
         warnings
       };
     }
+    const existingCheckpoint = ensureCheckpointObject(
+      safeJsonParseObject(existingRaw, {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
+    const ownershipSafety = evaluateCheckpointResumeSafety(
+      existingCheckpoint,
+      checkpointPath,
+      args.checkpoint.ownerCommand,
+      args.checkpoint.resumeMeta.mode
+    );
+    if (!ownershipSafety.safeToResume) {
+      throw new Error(
+        checkpointOwnershipBlockerReason(
+          checkpointPath,
+          ownershipSafety.warnings,
+          "overwrite"
+        )
+      );
+    }
+    warnings.push(...ownershipSafety.warnings);
   }
   await writeJsonFile(absolutePath, nextCheckpoint);
   return {
@@ -27629,6 +27689,39 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
       reason: `${checkpointPath} did not exist.`
     };
   }
+  if (args.expectedOwnerCommand || args.expectedMode) {
+    const parsed = ensureCheckpointObject(
+      safeJsonParseObject(await fs4.readFile(absolutePath, "utf8"), {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
+    const expectedOwnerCommand = args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
+    const expectedMode = args.expectedMode ?? (expectedOwnerCommand ? PHASE_CHECKPOINT_OWNER_MODES[expectedOwnerCommand] : void 0);
+    const ownershipSafety = evaluateCheckpointResumeSafety(
+      parsed,
+      checkpointPath,
+      expectedOwnerCommand ?? void 0,
+      expectedMode
+    );
+    if (!ownershipSafety.safeToResume) {
+      return {
+        phaseFound: true,
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        path: checkpointPath,
+        deleted: false,
+        reason: checkpointOwnershipBlockerReason(
+          checkpointPath,
+          ownershipSafety.warnings,
+          "delete"
+        )
+      };
+    }
+  }
   await fs4.rm(absolutePath, { force: true });
   return {
     phaseFound: true,
@@ -27641,7 +27734,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseToolDefinitions;
+var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -27844,6 +27937,12 @@ var init_phase = __esm({
       phase: numericBlueprintInputSchema.optional(),
       checkpoint: phaseCheckpointWriteSchema
     };
+    phaseCheckpointDeleteInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
+      expectedMode: phaseCheckpointResumeModeSchema.optional()
+    };
     phaseToolDefinitions = [
       {
         name: "blueprint_roadmap_read",
@@ -27967,8 +28066,8 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_checkpoint_delete",
-        description: "Delete the saved discuss-phase checkpoint for a phase after successful completion.",
-        inputSchema: phaseLookupInputSchema,
+        description: "Delete the saved phase continuation checkpoint for a phase, optionally guarding on the expected command owner and resume mode.",
+        inputSchema: phaseCheckpointDeleteInputSchema,
         handler: async (args) => blueprintPhaseCheckpointDelete(args)
       }
     ];

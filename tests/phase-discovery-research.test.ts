@@ -14,6 +14,7 @@ import {
 import {
   blueprintPhaseArtifactRead,
   blueprintPhaseArtifactWrite,
+  blueprintPhaseContext,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
 import {
@@ -121,7 +122,7 @@ function validResearchContent(summary: string): string {
 
 ## State Of The Art
 
-- Template-driven research generation keeps drafting aligned with the MCP-owned schema.
+- Repo-local guidance is current as of 2026-04-11; external currency not externally checked.
 
 ## Common Pitfalls
 
@@ -185,6 +186,7 @@ test("research-phase command references only registered tool names and safe rout
   );
   const requiredTools = [
     "blueprint_command_catalog",
+    "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_phase_research_status",
@@ -235,8 +237,16 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /write_todos/);
   assert.match(commandFile, /inconclusive/i);
   assert.match(commandFile, /Keep repo truth explicit/i);
+  assert.match(commandFile, /Honor the effective `research\.external_sources` policy/i);
+  assert.match(commandFile, /`off` means do not perform external lookup and mark freshness-sensitive claims as not externally checked/i);
+  assert.match(commandFile, /`ask` means stop for confirmation before any external check/i);
+  assert.match(commandFile, /`auto` allows official-doc or external verification/i);
   assert.match(commandFile, /official docs or explicitly supplied external references/i);
   assert.match(commandFile, /distinct from repo-derived evidence/i);
+  assert.match(commandFile, /source title, date, URL, excerpt, claim, and evidence class/i);
+  assert.match(commandFile, /must not imply it fetched official docs itself/i);
+  assert.match(commandFile, /`## State Of The Art` freshness claims explicit/i);
+  assert.match(commandFile, /not externally checked/i);
   assert.match(commandFile, /single-agent fallback/i);
   assert.match(commandFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(commandFile, /PROJECT\.md/);
@@ -259,6 +269,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(docFile, /update_topic/);
   assert.match(docFile, /write_todos/);
   assert.match(docFile, /repo truth/i);
+  assert.match(docFile, /research\.external_sources/i);
+  assert.match(docFile, /workflowPosture\.research\.externalSources/i);
+  assert.match(docFile, /source title, source date, URL, excerpt, claim/i);
+  assert.match(docFile, /not externally checked/i);
   assert.match(docFile, /official docs or explicitly supplied external references/i);
   assert.match(docFile, /Missing `XX-CONTEXT\.md` is a visible gate/i);
   assert.match(docFile, /invalid existing research as repair-only/i);
@@ -269,6 +283,9 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeReference, /Long-running-mutation profile for topic-strand phase research/i);
   assert.match(runtimeReference, /update_topic/);
   assert.match(runtimeReference, /write_todos/);
+  assert.match(runtimeReference, /blueprint_config_get/);
+  assert.match(runtimeReference, /research\.external_sources/);
+  assert.match(runtimeReference, /not externally checked/i);
   assert.match(runtimeReference, /repo truth/i);
   assert.match(runtimeReference, /external truth/i);
   assert.match(runtimeReference, /stop on missing `XX-CONTEXT\.md`/i);
@@ -277,9 +294,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeReference, /sync `STATE\.md` even on valid non-writing reuse paths/i);
   assert.match(
     mcpToolsDoc,
-    /`research-phase` uses phase location\/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate scaffolding, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
+    /`research-phase` uses phase location\/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate scaffolding, `blueprint_config_get`, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
   );
   assert.match(mcpToolsDoc, /research-phase-runtime-contract\.md/);
+  assert.match(mcpToolsDoc, /workflowPosture\.research\.externalSources/);
+  assert.match(mcpToolsDoc, /off`\/`ask`\/`auto`/i);
+  assert.match(mcpToolsDoc, /not externally checked/i);
   assert.match(mcpToolsDoc, /single-agent topic-strand fallback/i);
   assert.match(mcpToolsDoc, /reject browser\/web-search\/shell-only or generic agents/i);
   assert.match(mcpToolsDoc, /stop on missing `XX-CONTEXT\.md`/i);
@@ -290,8 +310,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /research-phase-runtime-contract\.md/);
   assert.match(skillFile, /update_topic/);
   assert.match(skillFile, /write_todos/);
+  assert.match(skillFile, /blueprint_config_get/);
+  assert.match(skillFile, /research\.external_sources/);
   assert.match(skillFile, /official docs or explicitly supplied external references/i);
   assert.match(skillFile, /repo-derived evidence distinct from external or web-derived evidence/i);
+  assert.match(skillFile, /source title, date, URL, excerpt, claim/i);
+  assert.match(skillFile, /not externally checked/i);
   assert.match(skillFile, /single-agent fallback/i);
   assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /repair the same normalized draft/i);
@@ -326,10 +350,21 @@ test("research-phase command references only registered tool names and safe rout
   );
 
   assert.match(researcherAgent, /comparing repo evidence against official docs with clear provenance/i);
+  assert.match(researcherAgent, /parent-supplied official-doc evidence/i);
   assert.match(researcherAgent, /repo-root `AGENTS\.md`/i);
-  assert.match(researcherAgent, /official docs or explicitly supplied external references/i);
+  assert.match(
+    researcherAgent,
+    /official-doc or explicitly supplied external references|official docs or supplied external references/i
+  );
   assert.match(researcherAgent, /provenance\s+captured at the claim level/i);
-  assert.match(researcherAgent, /comparison\s+notes when official docs are part of the evidence set/i);
+  assert.match(
+    researcherAgent,
+    /comparison\s+notes when official-doc or external evidence packets are part of the evidence set/i
+  );
+  assert.match(researcherAgent, /does not fetch official docs itself/i);
+  assert.match(researcherAgent, /return the claim as unverified/i);
+  assert.match(researcherAgent, /source title, date, URL,[\s\S]*excerpt, and claim/i);
+  assert.match(researcherAgent, /not externally checked/i);
   assert.match(researcherAgent, /Keep citations, provenance, and repo-path evidence in `## Sources`/i);
   assert.match(researcherAgent, /Output Quality Expectations/);
   assert.match(researcherAgent, /what does `\/blu-plan-phase` need to know/i);
@@ -346,6 +381,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /blueprint_config_get/);
+  assert.match(runtimeContract, /workflowPosture\.research\.externalSources/);
+  assert.match(runtimeContract, /`off` means no live external lookup/i);
+  assert.match(runtimeContract, /`ask` means confirm[\s\S]*first/i);
+  assert.match(runtimeContract, /explicit source dates/i);
+  assert.match(runtimeContract, /not externally checked|external currency was not checked/i);
   assert.match(runtimeContract, /stop and route back to\s+`\/blu-discuss-phase <phase>`/i);
   assert.match(runtimeContract, /Default drafting should start from\s+`contract\.authoringTemplate`/i);
   assert.match(runtimeContract, /do not allow skip, default reuse, or an\s+unchanged invalid write result/i);
@@ -353,6 +394,33 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
   assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
+});
+
+test("phase context surfaces the effective external-source policy for research", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        research: {
+          external_sources: "ask"
+        }
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
+
+  assert.equal(context.workflowPosture.research.externalSources, "ask");
+  assert.match(context.workflowPosture.summary, /external sources: ask/);
 });
 
 test("research scaffold seeds the exact research template shape", async (t) => {
@@ -380,6 +448,10 @@ test("research scaffold seeds the exact research template shape", async (t) => {
   assert.match(scaffold, /## Alternatives Considered/);
   assert.match(scaffold, /## Anti-Patterns/);
   assert.match(scaffold, /## State Of The Art/);
+  assert.match(
+    scaffold,
+    /current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked/
+  );
   assert.match(scaffold, /## Open Questions/);
   assert.match(scaffold, /## Confidence Breakdown/);
   assert.match(scaffold, /## Recommendations/);
@@ -524,6 +596,37 @@ test("invalid existing research must be repaired instead of being treated as reu
   assert.equal(repaired.written, true);
   assert.match(repaired.warnings.join("\n"), /Replacing the existing scaffold or non-canonical research artifact/i);
   assert.equal(statusAfter.researchValid, true);
+});
+
+test("research validation requires dated freshness claims or an explicit unchecked marker", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Create research that forgets to date the State Of The Art section."
+    ).replace(
+      "- Repo-local guidance is current as of 2026-04-11; external currency not externally checked.",
+      "- Template-driven research generation keeps drafting aligned with the MCP-owned schema."
+    ),
+    overwrite: true
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    invalid.validation.issues.join("\n"),
+    /State Of The Art must include an explicit source date|not externally checked/i
+  );
 });
 
 test("missing context keeps research routing pointed at discuss-phase", async (t) => {
