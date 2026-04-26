@@ -23,6 +23,11 @@ Use `AGENTS.md` for durable repo instructions and use this file for current stat
 - Command inventory: `docs/COMMAND-CATALOG.md`
 - Current handoff: `docs/HANDOFF.md`
 
+## Operational Notes (Worktrees + GitHub Writes)
+
+- New `git worktree` checkouts do not share `node_modules`. Always run `npm ci` in the active worktree before any verification (`npm run build`, `npm run typecheck`, `npm test`), otherwise missing `esbuild`/`tsc` invalidates the pass.
+- Treat the Codex GitHub plugin as read-only; avoid spending tokens attempting PR creation/merge through it. Use `gh` CLI (or plain `git push` and create/merge the PR manually).
+
 ## Current Architecture Snapshot
 
 - Blueprint uses MCP as the deterministic state engine for structured reads and writes
