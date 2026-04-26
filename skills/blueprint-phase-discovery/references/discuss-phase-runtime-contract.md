@@ -82,11 +82,14 @@ Suitable uses:
   need a deeper repo pass than the main session should carry
 
 Agent prompts must be bounded to one area or one assumptions pass and must pass
-the canonical `phase.context` contract requirements when returned content will
-feed the context draft. Ask the agent for concrete options, tradeoffs,
-complexity or impact surface, recommendation rationale, and citations or repo
-paths. The parent command owns synthesis, user-facing questions, checkpoints,
-artifact writes, and state updates.
+the compact phase boundary, relevant saved context, and canonical references
+needed for that area. Ask `blueprint-researcher` for gray-area memo mode: a
+lightweight read-only options and tradeoffs memo with concrete options,
+complexity or impact surface, recommendation rationale, confidence, and
+citations or repo paths. Do not ask it to populate `phase.research` or draft
+`XX-RESEARCH.md` for `/blu-discuss-phase`; artifact-grade research belongs to
+`/blu-research-phase`. The parent command owns synthesis, user-facing
+questions, checkpoints, artifact writes, and state updates.
 
 If no suitable subagent exists, or if the host disallows subagents, use the
 single-agent fallback below without lowering artifact quality.
