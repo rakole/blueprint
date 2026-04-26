@@ -189,6 +189,12 @@ type PhasePlanReadArgs = PhaseLookupArgs & {
   planId: NumericInput;
 };
 
+type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
+  wave?: number;
+  gapsOnly?: boolean;
+  includeConflicts?: boolean;
+};
+
 type PhasePlanWriteArgs = PhaseLookupArgs & {
   planId?: NumericInput;
   content: string;
@@ -639,6 +645,89 @@ type PhaseSummaryWriteResult = {
   warnings: string[];
 };
 
+type PhaseExecutionTargetSummary = {
+  found: boolean;
+  path: string;
+  linkedPlanPath: string | null;
+  status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
+  valid: boolean | null;
+  issues: string[];
+  warnings: string[];
+  overwriteCandidate: boolean;
+};
+
+type PhaseExecutionTargetPlan = PhasePlanRecord & {
+  missingDependencyPlans: string[];
+  summary: PhaseExecutionTargetSummary;
+};
+
+type PhaseExecutionTargetConflictSurface = {
+  value: string;
+  kinds: Array<"files_modified" | "read_first" | "generated_artifact" | "other">;
+};
+
+type PhaseExecutionTargetConflictGroup = {
+  planIds: string[];
+  planPaths: string[];
+  selectedPlanIds: string[];
+  sharedSurfaces: PhaseExecutionTargetConflictSurface[];
+  existingSummaryPaths: string[];
+  warnings: string[];
+};
+
+type PhaseExecutionTargetsResult = {
+  phaseFound: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  requestedWave: number | null;
+  gapsOnly: boolean;
+  includeConflicts: boolean;
+  pendingPlanIds: string[];
+  gapClosurePlans: string[];
+  candidatePlanIds: string[];
+  candidatePlanPaths: string[];
+  selectedPlanIds: string[];
+  selectedPlanPaths: string[];
+  selectedWave: number | null;
+  lowerWavePendingPlans: Array<{
+    planId: string;
+    path: string;
+    wave: number | null;
+  }>;
+  overwriteCandidatePlanIds: string[];
+  overlapPlanIds: string[];
+  candidatePlans: PhaseExecutionTargetPlan[];
+  selectedPlans: PhaseExecutionTargetPlan[];
+  overlapPlans: PhaseExecutionTargetPlan[];
+  existingSummaries: Array<{
+    planId: string;
+    path: string;
+    linkedPlanPath: string | null;
+    status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
+    valid: boolean | null;
+    issues: string[];
+    warnings: string[];
+    overwriteCandidate: boolean;
+  }>;
+  blockers: {
+    executionBlocked: boolean;
+    reasons: string[];
+    invalidPlanIds: string[];
+    stalePlanIds: string[];
+    lowerWavePendingPlanIds: string[];
+    missingPlanPaths: string[];
+    planIndexWarnings: string[];
+    summaryIndexWarnings: string[];
+  };
+  conflicts: {
+    groups: PhaseExecutionTargetConflictGroup[];
+    warnings: string[];
+  } | null;
+  warnings: string[];
+};
+
 type RoadmapReadResult = {
   roadmap: {
     path: string;
@@ -753,6 +842,13 @@ const phaseValidationArtifactInputSchema = {
 const phasePlanInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional()
+};
+const phaseExecutionTargetsInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  wave: z.number().int().positive().optional(),
+  gapsOnly: z.boolean().optional(),
+  includeConflicts: z.boolean().optional()
 };
 
 const phaseArtifactWriteInputSchema = {
@@ -2753,6 +2849,114 @@ function summaryPathFor(
     located.phaseDir,
     located.phasePrefix,
     `-${normalizePlanId(planId)}-SUMMARY.md`
+  );
+}
+
+function normalizeExecutionSurfacePath(value: string): string {
+  const normalized = value.replaceAll("\\", "/").trim();
+  const withoutDotPrefix = normalized.replace(/^\.\//, "");
+  const collapsed = path.posix.normalize(withoutDotPrefix);
+
+  if (collapsed === ".") {
+    return withoutDotPrefix.replace(/\/+$/u, "");
+  }
+
+  return collapsed.replace(/\/+$/u, "");
+}
+
+function classifyExecutionSurfaceKind(
+  source: "files_modified" | "read_first",
+  value: string
+): "files_modified" | "read_first" | "generated_artifact" | "other" {
+  const normalized = normalizeExecutionSurfacePath(value);
+
+  if (source === "files_modified" && (/^\.blueprint\//u.test(normalized) || /^dist\//u.test(normalized))) {
+    return "generated_artifact";
+  }
+
+  return source;
+}
+
+function executionSurfacePathsOverlap(left: string, right: string): boolean {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+}
+
+function executionSurfaceSharedValue(left: string, right: string): string {
+  if (left === right) {
+    return left;
+  }
+
+  return left.startsWith(`${right}/`) ? right : left;
+}
+
+function uniqueSortedStrings(values: string[]): string[] {
+  return [...new Set(values.filter((value) => value.trim().length > 0))].sort((left, right) =>
+    left.localeCompare(right)
+  );
+}
+
+function planExecutionSurfaces(
+  plan: PhasePlanRecord
+): Array<{
+  kind: "files_modified" | "read_first" | "generated_artifact" | "other";
+  value: string;
+}> {
+  const surfaces = [
+    ...plan.filesModified.map((value) => ({
+      kind: classifyExecutionSurfaceKind("files_modified", value),
+      value: normalizeExecutionSurfacePath(value)
+    })),
+    ...plan.readFirst.map((value) => ({
+      kind: classifyExecutionSurfaceKind("read_first", value),
+      value: normalizeExecutionSurfacePath(value)
+    }))
+  ];
+  const seen = new Set<string>();
+
+  return surfaces.filter((surface) => {
+    if (surface.value.length === 0) {
+      return false;
+    }
+
+    const key = `${surface.kind}:${surface.value}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function sharedExecutionSurfaces(
+  left: PhasePlanRecord,
+  right: PhasePlanRecord
+): PhaseExecutionTargetConflictSurface[] {
+  const shared = new Map<string, PhaseExecutionTargetConflictSurface>();
+  const leftSurfaces = planExecutionSurfaces(left);
+  const rightSurfaces = planExecutionSurfaces(right);
+
+  for (const leftSurface of leftSurfaces) {
+    for (const rightSurface of rightSurfaces) {
+      if (!executionSurfacePathsOverlap(leftSurface.value, rightSurface.value)) {
+        continue;
+      }
+
+      const value = executionSurfaceSharedValue(leftSurface.value, rightSurface.value);
+      const kinds = uniqueSortedStrings([leftSurface.kind, rightSurface.kind]) as Array<
+        "files_modified" | "read_first" | "generated_artifact" | "other"
+      >;
+      const key = `${value}:${kinds.join(",")}`;
+
+      if (!shared.has(key)) {
+        shared.set(key, { value, kinds });
+      }
+    }
+  }
+
+  return [...shared.values()].sort((leftSurface, rightSurface) =>
+    leftSurface.value.localeCompare(rightSurface.value)
   );
 }
 
@@ -5114,6 +5318,398 @@ export async function blueprintPhaseSummaryRead(
   };
 }
 
+export async function blueprintPhaseExecutionTargets(
+  args: PhaseExecutionTargetsArgs = {}
+): Promise<PhaseExecutionTargetsResult> {
+  if (
+    args.wave !== undefined &&
+    (!Number.isInteger(args.wave) || args.wave < 1)
+  ) {
+    throw new Error("Wave must be a positive integer.");
+  }
+
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      requestedWave: args.wave ?? null,
+      gapsOnly: args.gapsOnly ?? false,
+      includeConflicts: args.includeConflicts ?? true,
+      pendingPlanIds: [],
+      gapClosurePlans: [],
+      candidatePlanIds: [],
+      candidatePlanPaths: [],
+      selectedPlanIds: [],
+      selectedPlanPaths: [],
+      selectedWave: args.wave ?? null,
+      lowerWavePendingPlans: [],
+      overwriteCandidatePlanIds: [],
+      overlapPlanIds: [],
+      candidatePlans: [],
+      selectedPlans: [],
+      overlapPlans: [],
+      existingSummaries: [],
+      blockers: {
+        executionBlocked: true,
+        reasons: located.reason ? [located.reason] : ["Phase could not be resolved."],
+        invalidPlanIds: [],
+        stalePlanIds: [],
+        lowerWavePendingPlanIds: [],
+        missingPlanPaths: [],
+        planIndexWarnings: [],
+        summaryIndexWarnings: located.reason ? [located.reason] : []
+      },
+      conflicts: null,
+      warnings: located.reason ? [located.reason] : []
+    };
+  }
+
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const requestedWave = args.wave ?? null;
+  const gapsOnly = args.gapsOnly ?? false;
+  const includeConflicts = args.includeConflicts ?? true;
+  const [planIndex, summaryIndex] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    }),
+    blueprintPhaseSummaryIndex({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    })
+  ]);
+  const pendingPlanIds = summaryIndex.pendingPlans;
+  const pendingPlanIdSet = new Set(pendingPlanIds);
+  const gapClosurePlanIdSet = new Set(planIndex.gapClosurePlans);
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
+  const summaryReads = await Promise.all(
+    planIndex.plans.map((plan) =>
+      blueprintPhaseSummaryRead({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        planId: plan.planId
+      })
+    )
+  );
+  const executionPlans = planIndex.plans.map((plan, index) => {
+    const summaryRead = summaryReads[index];
+    const summary = {
+      found: summaryRead.found,
+      path: summaryRead.path ?? summaryPathFor(resolved, plan.planId),
+      linkedPlanPath: summaryRead.metadata?.linkedPlanPath ?? null,
+      status: summaryRead.metadata?.status ?? null,
+      valid: summaryRead.validation?.valid ?? null,
+      issues: summaryRead.validation?.issues ?? [],
+      warnings: summaryRead.validation?.warnings ?? [],
+      overwriteCandidate: summaryRead.found && pendingPlanIdSet.has(plan.planId)
+    } satisfies PhaseExecutionTargetSummary;
+    const missingDependencyPlans = collectMissingDependencyPlanPaths(
+      plan.dependsOn,
+      knownPlanIds,
+      resolved
+    );
+
+    return {
+      ...plan,
+      missingDependencyPlans,
+      summary
+    } satisfies PhaseExecutionTargetPlan;
+  });
+  const planOrder = new Map(executionPlans.map((plan, index) => [plan.planId, index]));
+  const planById = new Map(executionPlans.map((plan) => [plan.planId, plan]));
+
+  let candidatePlanIds = executionPlans
+    .map((plan) => plan.planId)
+    .filter((planId) => pendingPlanIdSet.has(planId));
+
+  if (gapsOnly) {
+    candidatePlanIds = candidatePlanIds.filter((planId) => gapClosurePlanIdSet.has(planId));
+  }
+
+  if (requestedWave !== null) {
+    candidatePlanIds = candidatePlanIds.filter(
+      (planId) => planById.get(planId)?.wave === requestedWave
+    );
+  }
+
+  const candidatePlans = candidatePlanIds
+    .map((planId) => planById.get(planId))
+    .filter((plan): plan is PhaseExecutionTargetPlan => plan !== undefined);
+  const selectedWave =
+    requestedWave ??
+    candidatePlans
+      .map((plan) => plan.wave)
+      .filter((wave): wave is number => typeof wave === "number")
+      .sort((left, right) => left - right)[0] ??
+    null;
+  const selectedPlans =
+    requestedWave !== null || selectedWave === null
+      ? candidatePlans
+      : candidatePlans.filter((plan) => plan.wave === selectedWave);
+  const lowerWavePendingPlans =
+    selectedWave === null
+      ? []
+      : executionPlans.filter(
+          (plan) =>
+            pendingPlanIdSet.has(plan.planId) &&
+            typeof plan.wave === "number" &&
+            plan.wave < selectedWave
+        );
+  const invalidPlanIds = selectedPlans.filter((plan) => !plan.valid).map((plan) => plan.planId);
+  const stalePlanIds = selectedPlans
+    .filter((plan) => plan.missingDependencyPlans.length > 0)
+    .map((plan) => plan.planId);
+  const blockers: string[] = [];
+
+  if (candidatePlans.length === 0) {
+    if (requestedWave !== null && gapsOnly) {
+      blockers.push(
+        `No pending explicit gap-closure plans remain in wave ${requestedWave} for phase ${resolved.phaseNumber}.`
+      );
+    } else if (requestedWave !== null) {
+      blockers.push(
+        `No pending plans remain in wave ${requestedWave} for phase ${resolved.phaseNumber}.`
+      );
+    } else if (gapsOnly) {
+      blockers.push(
+        `No pending explicit gap-closure plans remain for phase ${resolved.phaseNumber}.`
+      );
+    } else {
+      blockers.push(`No pending plans remain for phase ${resolved.phaseNumber}.`);
+    }
+  }
+
+  if (lowerWavePendingPlans.length > 0 && selectedWave !== null) {
+    blockers.push(
+      `Lower-wave pending plans still block wave ${selectedWave}: ${lowerWavePendingPlans
+        .map((plan) => `${plan.planId} (${plan.path})`)
+        .join(", ")}.`
+    );
+  }
+
+  if (invalidPlanIds.length > 0) {
+    blockers.push(
+      `Selected plans are invalid and must be repaired before execution: ${invalidPlanIds.join(", ")}.`
+    );
+  }
+
+  if (stalePlanIds.length > 0) {
+    blockers.push(
+      `Selected plans are stale because dependency plan artifacts are missing: ${stalePlanIds.join(", ")}.`
+    );
+  }
+
+  const pairConflicts: Array<{
+    leftPlanId: string;
+    rightPlanId: string;
+    sharedSurfaces: PhaseExecutionTargetConflictSurface[];
+    warning: string;
+  }> = [];
+
+  if (includeConflicts) {
+    for (let leftIndex = 0; leftIndex < executionPlans.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < executionPlans.length; rightIndex += 1) {
+        const left = executionPlans[leftIndex];
+        const right = executionPlans[rightIndex];
+        const sharedSurfaces = sharedExecutionSurfaces(left, right);
+
+        if (sharedSurfaces.length === 0) {
+          continue;
+        }
+
+        pairConflicts.push({
+          leftPlanId: left.planId,
+          rightPlanId: right.planId,
+          sharedSurfaces,
+          warning: `${left.path} and ${right.path} overlap on ${sharedSurfaces
+            .map((surface) => `${surface.value} (${surface.kinds.join("/")})`)
+            .join(", ")}.`
+        });
+      }
+    }
+  }
+
+  const selectedPlanIdSet = new Set(selectedPlans.map((plan) => plan.planId));
+  const parent = new Map<string, string>();
+  const find = (planId: string): string => {
+    const current = parent.get(planId) ?? planId;
+
+    if (current === planId) {
+      parent.set(planId, planId);
+      return planId;
+    }
+
+    const root = find(current);
+    parent.set(planId, root);
+    return root;
+  };
+  const union = (left: string, right: string): void => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+
+    if (leftRoot !== rightRoot) {
+      parent.set(rightRoot, leftRoot);
+    }
+  };
+
+  for (const pair of pairConflicts) {
+    union(pair.leftPlanId, pair.rightPlanId);
+  }
+
+  const componentPairs = new Map<string, typeof pairConflicts>();
+
+  for (const pair of pairConflicts) {
+    const root = find(pair.leftPlanId);
+    const entries = componentPairs.get(root) ?? [];
+    entries.push(pair);
+    componentPairs.set(root, entries);
+  }
+
+  const conflictGroups: PhaseExecutionTargetConflictGroup[] = [];
+
+  for (const pairs of componentPairs.values()) {
+    const componentPlanIds = uniqueSortedStrings(
+      pairs.flatMap((pair) => [pair.leftPlanId, pair.rightPlanId])
+    );
+
+    if (!componentPlanIds.some((planId) => selectedPlanIdSet.has(planId))) {
+      continue;
+    }
+
+    const sharedSurfaces = new Map<string, PhaseExecutionTargetConflictSurface>();
+
+    for (const pair of pairs) {
+      for (const surface of pair.sharedSurfaces) {
+        const key = `${surface.value}:${surface.kinds.join(",")}`;
+
+        if (!sharedSurfaces.has(key)) {
+          sharedSurfaces.set(key, surface);
+        }
+      }
+    }
+
+    const componentPlans = componentPlanIds
+      .map((planId) => planById.get(planId))
+      .filter((plan): plan is PhaseExecutionTargetPlan => plan !== undefined)
+      .sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
+
+    conflictGroups.push({
+      planIds: componentPlans.map((plan) => plan.planId),
+      planPaths: componentPlans.map((plan) => plan.path),
+      selectedPlanIds: componentPlans
+        .map((plan) => plan.planId)
+        .filter((planId) => selectedPlanIdSet.has(planId)),
+      sharedSurfaces: [...sharedSurfaces.values()].sort((left, right) =>
+        left.value.localeCompare(right.value)
+      ),
+      existingSummaryPaths: componentPlans
+        .filter((plan) => plan.summary.found)
+        .map((plan) => plan.summary.path),
+      warnings: uniqueSortedStrings(pairs.map((pair) => pair.warning))
+    });
+  }
+
+  const overlapPlanIds = uniqueSortedStrings(
+    conflictGroups.flatMap((group) =>
+      group.planIds.filter((planId) => !selectedPlanIdSet.has(planId))
+    )
+  );
+  const overlapPlans = overlapPlanIds
+    .map((planId) => planById.get(planId))
+    .filter((plan): plan is PhaseExecutionTargetPlan => plan !== undefined)
+    .sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
+  const existingSummaryPlanIds = uniqueSortedStrings([
+    ...candidatePlanIds,
+    ...overlapPlanIds
+  ]).filter((planId) => planById.get(planId)?.summary.found === true);
+  const existingSummaries = existingSummaryPlanIds
+    .map((planId) => {
+      const plan = planById.get(planId);
+
+      if (!plan) {
+        return null;
+      }
+
+      return {
+        planId,
+        path: plan.summary.path,
+        linkedPlanPath: plan.summary.linkedPlanPath,
+        status: plan.summary.status,
+        valid: plan.summary.valid,
+        issues: plan.summary.issues,
+        warnings: plan.summary.warnings,
+        overwriteCandidate: plan.summary.overwriteCandidate
+      };
+    })
+    .filter(
+      (
+        summary
+      ): summary is PhaseExecutionTargetsResult["existingSummaries"][number] => summary !== null
+    );
+  const warnings = uniqueSortedStrings([
+    ...planIndex.warnings,
+    ...summaryIndex.warnings,
+    ...blockers,
+    ...conflictGroups.flatMap((group) => group.warnings)
+  ]);
+
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    requestedWave,
+    gapsOnly,
+    includeConflicts,
+    pendingPlanIds,
+    gapClosurePlans: planIndex.gapClosurePlans,
+    candidatePlanIds,
+    candidatePlanPaths: candidatePlans.map((plan) => plan.path),
+    selectedPlanIds: selectedPlans.map((plan) => plan.planId),
+    selectedPlanPaths: selectedPlans.map((plan) => plan.path),
+    selectedWave,
+    lowerWavePendingPlans: lowerWavePendingPlans.map((plan) => ({
+      planId: plan.planId,
+      path: plan.path,
+      wave: plan.wave
+    })),
+    overwriteCandidatePlanIds: candidatePlans
+      .filter((plan) => plan.summary.overwriteCandidate)
+      .map((plan) => plan.planId),
+    overlapPlanIds,
+    candidatePlans,
+    selectedPlans,
+    overlapPlans,
+    existingSummaries,
+    blockers: {
+      executionBlocked: blockers.length > 0,
+      reasons: blockers,
+      invalidPlanIds,
+      stalePlanIds,
+      lowerWavePendingPlanIds: lowerWavePendingPlans.map((plan) => plan.planId),
+      missingPlanPaths: uniqueSortedStrings(
+        selectedPlans.flatMap((plan) => plan.missingDependencyPlans)
+      ),
+      planIndexWarnings: planIndex.warnings,
+      summaryIndexWarnings: summaryIndex.warnings
+    },
+    conflicts: includeConflicts
+      ? {
+          groups: conflictGroups,
+          warnings: uniqueSortedStrings(conflictGroups.flatMap((group) => group.warnings))
+        }
+      : null,
+    warnings
+  };
+}
+
 export async function blueprintPhaseSummaryWrite(
   args: PhaseSummaryWriteArgs
 ): Promise<PhaseSummaryWriteResult> {
@@ -5578,6 +6174,14 @@ export const phaseToolDefinitions = [
     inputSchema: phasePlanInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhasePlanIndex(args as PlanIndexArgs)
+  },
+  {
+    name: "blueprint_phase_execution_targets",
+    description:
+      "Resolve deterministic execute-phase targets, lower-wave blockers, overwrite candidates, and overlap warnings without mutating repo state.",
+    inputSchema: phaseExecutionTargetsInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseExecutionTargets(args as PhaseExecutionTargetsArgs)
   },
   {
     name: "blueprint_phase_artifact_read",

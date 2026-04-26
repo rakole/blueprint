@@ -116,6 +116,11 @@ type PhaseCheckpointDeleteArgs = PhaseLookupArgs & {
 type PhasePlanReadArgs = PhaseLookupArgs & {
     planId: NumericInput;
 };
+type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
+    wave?: number;
+    gapsOnly?: boolean;
+    includeConflicts?: boolean;
+};
 type PhasePlanWriteArgs = PhaseLookupArgs & {
     planId?: NumericInput;
     content: string;
@@ -521,6 +526,84 @@ type PhaseSummaryWriteResult = {
     issues: string[];
     warnings: string[];
 };
+type PhaseExecutionTargetSummary = {
+    found: boolean;
+    path: string;
+    linkedPlanPath: string | null;
+    status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
+    valid: boolean | null;
+    issues: string[];
+    warnings: string[];
+    overwriteCandidate: boolean;
+};
+type PhaseExecutionTargetPlan = PhasePlanRecord & {
+    missingDependencyPlans: string[];
+    summary: PhaseExecutionTargetSummary;
+};
+type PhaseExecutionTargetConflictSurface = {
+    value: string;
+    kinds: Array<"files_modified" | "read_first" | "generated_artifact" | "other">;
+};
+type PhaseExecutionTargetConflictGroup = {
+    planIds: string[];
+    planPaths: string[];
+    selectedPlanIds: string[];
+    sharedSurfaces: PhaseExecutionTargetConflictSurface[];
+    existingSummaryPaths: string[];
+    warnings: string[];
+};
+type PhaseExecutionTargetsResult = {
+    phaseFound: boolean;
+    phaseNumber: string | null;
+    phasePrefix: string | null;
+    phaseName: string | null;
+    phaseDir: string | null;
+    requestedWave: number | null;
+    gapsOnly: boolean;
+    includeConflicts: boolean;
+    pendingPlanIds: string[];
+    gapClosurePlans: string[];
+    candidatePlanIds: string[];
+    candidatePlanPaths: string[];
+    selectedPlanIds: string[];
+    selectedPlanPaths: string[];
+    selectedWave: number | null;
+    lowerWavePendingPlans: Array<{
+        planId: string;
+        path: string;
+        wave: number | null;
+    }>;
+    overwriteCandidatePlanIds: string[];
+    overlapPlanIds: string[];
+    candidatePlans: PhaseExecutionTargetPlan[];
+    selectedPlans: PhaseExecutionTargetPlan[];
+    overlapPlans: PhaseExecutionTargetPlan[];
+    existingSummaries: Array<{
+        planId: string;
+        path: string;
+        linkedPlanPath: string | null;
+        status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
+        valid: boolean | null;
+        issues: string[];
+        warnings: string[];
+        overwriteCandidate: boolean;
+    }>;
+    blockers: {
+        executionBlocked: boolean;
+        reasons: string[];
+        invalidPlanIds: string[];
+        stalePlanIds: string[];
+        lowerWavePendingPlanIds: string[];
+        missingPlanPaths: string[];
+        planIndexWarnings: string[];
+        summaryIndexWarnings: string[];
+    };
+    conflicts: {
+        groups: PhaseExecutionTargetConflictGroup[];
+        warnings: string[];
+    } | null;
+    warnings: string[];
+};
 type RoadmapReadResult = {
     roadmap: {
         path: string;
@@ -557,6 +640,7 @@ export declare function blueprintPhasePlanRead(args: PhasePlanReadArgs): Promise
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
 export declare function blueprintPhaseSummaryRead(args: PhaseSummaryReadArgs): Promise<PhaseSummaryReadResult>;
+export declare function blueprintPhaseExecutionTargets(args?: PhaseExecutionTargetsArgs): Promise<PhaseExecutionTargetsResult>;
 export declare function blueprintPhaseSummaryWrite(args: PhaseSummaryWriteArgs): Promise<PhaseSummaryWriteResult>;
 export declare function blueprintPhaseCheckpointGet(args?: PhaseCheckpointGetArgs): Promise<PhaseCheckpointGetResult>;
 export declare function blueprintPhaseCheckpointPut(args: PhaseCheckpointPutArgs): Promise<PhaseCheckpointPutResult>;
@@ -656,6 +740,17 @@ export declare const phaseToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhasePlanIndexResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        wave: z.ZodOptional<z.ZodNumber>;
+        gapsOnly: z.ZodOptional<z.ZodBoolean>;
+        includeConflicts: z.ZodOptional<z.ZodBoolean>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseExecutionTargetsResult>;
 } | {
     name: string;
     description: string;
