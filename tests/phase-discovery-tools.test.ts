@@ -101,6 +101,7 @@ async function createPhaseRepo(): Promise<string> {
 
 ### Phase 3: Phase Discovery
 **Goal**: Add discovery tooling.
+**Success Criteria**: Planner sees roadmap goal and readiness gates before writing.
 **Requirements**: LIFE-01, LIFE-02, LIFE-03
 `,
     "utf8"
@@ -363,6 +364,12 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
   assert.ok(
     located.artifacts.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
   );
+  assert.deepEqual(context.phase?.roadmap, {
+    completed: false,
+    summary: "Add the discovery command slice",
+    goal: "Add discovery tooling.",
+    successCriteria: "Planner sees roadmap goal and readiness gates before writing."
+  });
   assert.equal(context.projectBrief.found, true);
   assert.equal(context.projectBrief.title, "Project: Blueprint Phase Discovery");
   assert.ok(context.projectBrief.summary.includes("Capture durable phase context"));
@@ -459,11 +466,25 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.equal(before.hasContext, false);
   assert.equal(before.hasResearch, false);
   assert.equal(before.hasUiSpec, false);
+  assert.equal(before.hasUsableContext, false);
+  assert.equal(before.hasUsableResearch, false);
+  assert.equal(before.hasUsableUiSpec, false);
+  assert.equal(before.contextValid, null);
+  assert.equal(before.uiSpecValid, null);
   assert.equal(after.hasContext, true);
   assert.equal(after.hasResearch, true);
   assert.equal(after.hasUiSpec, true);
+  assert.equal(after.hasUsableContext, false);
+  assert.equal(after.hasUsableResearch, false);
+  assert.equal(after.hasUsableUiSpec, false);
+  assert.equal(after.contextValid, false);
   assert.equal(after.researchValid, false);
+  assert.equal(after.uiSpecValid, false);
+  assert.match(after.contextIssues.join("\n"), /placeholder/i);
   assert.match(after.researchIssues.join("\n"), /placeholder/i);
+  assert.match(after.uiSpecIssues.join("\n"), /placeholder|Outcome Mode/i);
+  assert.match(after.suggestedRepairs.join("\n"), /discuss-phase/i);
+  assert.match(after.suggestedRepairs.join("\n"), /ui-phase/i);
   assert.match(uiSpec, /Outcome Mode/);
 });
 

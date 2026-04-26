@@ -230,6 +230,12 @@ type PhaseContextResult = {
         phasePrefix: string;
         phaseName: string;
         phaseDir: string;
+        roadmap: {
+            completed: boolean;
+            summary: string | null;
+            goal: string | null;
+            successCriteria: string | null;
+        };
         artifacts: {
             all: string[];
             context: string | null;
@@ -312,11 +318,18 @@ type PhaseResearchStatusResult = {
     hasContext: boolean;
     hasResearch: boolean;
     hasUiSpec: boolean;
+    hasUsableContext: boolean;
+    hasUsableResearch: boolean;
+    hasUsableUiSpec: boolean;
     contextPath: string | null;
     researchPath: string | null;
     uiSpecPath: string | null;
+    contextValid: boolean | null;
+    contextIssues: string[];
     researchValid: boolean | null;
     researchIssues: string[];
+    uiSpecValid: boolean | null;
+    uiSpecIssues: string[];
     suggestedRepairs: string[];
     warnings: string[];
 };
@@ -642,6 +655,7 @@ type RoadmapReadResult = {
         completed: boolean;
         summary: string | null;
         goal: string | null;
+        successCriteria: string | null;
         requirements: string[];
         phaseDir: string | null;
     }>;

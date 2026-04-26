@@ -25,8 +25,12 @@ Blueprint-native.
 - Read `mcp_blueprint_blueprint_phase_research_status` for context, research,
   and UI readiness.
 - Read `mcp_blueprint_blueprint_phase_artifact_read` for actual current
-  context, research, UI, validation, review, and other relevant discovery
-  artifact content that exists. Status metadata alone is not enough.
+  context, research, UI, and other relevant discovery artifact content that
+  exists. Status metadata alone is not enough.
+- Read `mcp_blueprint_blueprint_phase_validation_read` for saved verification
+  or UAT evidence when present.
+- Read `mcp_blueprint_blueprint_review_load_findings` for saved review findings
+  when present.
 - Read `mcp_blueprint_blueprint_phase_plan_index` and
   `mcp_blueprint_blueprint_phase_plan_read` before any reuse, revision, or
   replacement decision.
