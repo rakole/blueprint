@@ -489,6 +489,7 @@ test("phase plan indexing and checkpoint persistence accept numeric inputs with 
     cwd: repoPath,
     phase: 3,
     checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
       completedAreas: ["Phase boundary and discovery grounding"],
       remainingAreas: ["Dependency scan", "Open questions"],
       decisions: [

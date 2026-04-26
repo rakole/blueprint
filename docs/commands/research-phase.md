@@ -81,7 +81,7 @@
 - `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, contextPath, researchPath, uiSpecPath, researchValid, researchIssues, suggestedRepairs, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, status, validation, warnings}`
-- `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, reason}`
+- `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, ownerCommand, resumeMode, safeToResume, warnings, reason}`
 - `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
 - `blueprint_phase_checkpoint_delete` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}`
@@ -107,7 +107,8 @@
 - Replace every placeholder signal before persistence.
 - Allow extra top-level headings only when `contract.freehandPolicy` is `additional-top-level-headings`.
 - Use checkpoint persistence only as a resumability aid for long-running or inconclusive research, not as a second research artifact.
-- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured checkpoint shape with `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. Keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`.
+- Read checkpoints with `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`, then honor `safeToResume` and `warnings` before using saved state.
+- `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured checkpoint shape with `ownerCommand: "/blu-research-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. Keep resumability details inside `resumeMeta` with `mode: "research"` plus fields such as `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`.
 - Delete the saved checkpoint through `blueprint_phase_checkpoint_delete` after a successful final research write so later runs do not resume stale continuation state.
 - Keep the section names unchanged and replace every angle-bracket placeholder before writing.
 - Use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the output-quality and recovery authority: it requires planner-consumed sections, repo-versus-external provenance, capability-gated `blueprint-researcher` use, a single-agent topic-strand fallback when subagents are unavailable, and validation repair/retry before completion.

@@ -106,9 +106,10 @@ at a time:
 5. Record a rich decision with the question, selected answer, options considered,
    rationale, evidence paths, assumptions made, consequences if wrong, and any
    canonical references.
-6. Write or refresh the structured checkpoint with `completedAreas`,
-   `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and
-   `resumeMeta`.
+6. Write or refresh the structured checkpoint with
+   `ownerCommand: "/blu-discuss-phase"`, `completedAreas`, `remainingAreas`,
+   `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`.
+   Use `resumeMeta.mode: "discuss"`.
 7. Summarize progress briefly, then move to the next area or ask whether more
    questions are needed for the current area.
 

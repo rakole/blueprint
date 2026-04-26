@@ -82,8 +82,10 @@ type PhaseCheckpointReferenceRecord = {
     target: string;
     note?: string;
 };
+type PhaseCheckpointOwnerCommand = "/blu-discuss-phase" | "/blu-research-phase" | "/blu-verify-work";
+type PhaseCheckpointResumeMode = "discuss" | "research" | "uat";
 type PhaseCheckpointResumeMetaRecord = {
-    mode: string;
+    mode: PhaseCheckpointResumeMode;
     pendingTopics: string[];
     completedTopics: string[];
     currentQuestion?: string;
@@ -92,12 +94,17 @@ type PhaseCheckpointResumeMetaRecord = {
     updatedAt: string;
 };
 type PhaseCheckpointWriteRecord = PhaseCheckpointRecord & {
+    ownerCommand: PhaseCheckpointOwnerCommand;
     completedAreas: string[];
     remainingAreas: string[];
     decisions: PhaseCheckpointDecisionRecord[];
     deferredIdeas: PhaseCheckpointDeferredIdeaRecord[];
     canonicalReferences: PhaseCheckpointReferenceRecord[];
     resumeMeta: PhaseCheckpointResumeMetaRecord;
+};
+type PhaseCheckpointGetArgs = PhaseLookupArgs & {
+    expectedOwnerCommand?: PhaseCheckpointOwnerCommand;
+    expectedMode?: PhaseCheckpointResumeMode;
 };
 type PhaseCheckpointPutArgs = PhaseLookupArgs & {
     checkpoint: PhaseCheckpointWriteRecord;
@@ -367,6 +374,10 @@ type PhaseCheckpointGetResult = {
     phaseDir: string | null;
     path: string | null;
     checkpoint: Record<string, unknown> | null;
+    ownerCommand: string | null;
+    resumeMode: string | null;
+    safeToResume: boolean;
+    warnings: string[];
     reason: string | null;
 };
 type PhaseCheckpointPutResult = {
@@ -543,7 +554,7 @@ export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promi
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
 export declare function blueprintPhaseSummaryRead(args: PhaseSummaryReadArgs): Promise<PhaseSummaryReadResult>;
 export declare function blueprintPhaseSummaryWrite(args: PhaseSummaryWriteArgs): Promise<PhaseSummaryWriteResult>;
-export declare function blueprintPhaseCheckpointGet(args?: PhaseLookupArgs): Promise<PhaseCheckpointGetResult>;
+export declare function blueprintPhaseCheckpointGet(args?: PhaseCheckpointGetArgs): Promise<PhaseCheckpointGetResult>;
 export declare function blueprintPhaseCheckpointPut(args: PhaseCheckpointPutArgs): Promise<PhaseCheckpointPutResult>;
 export declare function blueprintPhaseCheckpointDelete(args?: PhaseLookupArgs): Promise<PhaseCheckpointDeleteResult>;
 export declare const phaseToolDefinitions: ({
@@ -759,6 +770,16 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        expectedOwnerCommand: z.ZodOptional<z.ZodEnum<{
+            "/blu-discuss-phase": "/blu-discuss-phase";
+            "/blu-research-phase": "/blu-research-phase";
+            "/blu-verify-work": "/blu-verify-work";
+        }>>;
+        expectedMode: z.ZodOptional<z.ZodEnum<{
+            research: "research";
+            uat: "uat";
+            discuss: "discuss";
+        }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointGetResult>;
 } | {
@@ -768,6 +789,11 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         checkpoint: z.ZodObject<{
+            ownerCommand: z.ZodEnum<{
+                "/blu-discuss-phase": "/blu-discuss-phase";
+                "/blu-research-phase": "/blu-research-phase";
+                "/blu-verify-work": "/blu-verify-work";
+            }>;
             completedAreas: z.ZodArray<z.ZodString>;
             remainingAreas: z.ZodArray<z.ZodString>;
             decisions: z.ZodArray<z.ZodObject<{
@@ -786,7 +812,11 @@ export declare const phaseToolDefinitions: ({
                 note: z.ZodOptional<z.ZodString>;
             }, z.core.$catchall<z.ZodUnknown>>>;
             resumeMeta: z.ZodObject<{
-                mode: z.ZodString;
+                mode: z.ZodEnum<{
+                    research: "research";
+                    uat: "uat";
+                    discuss: "discuss";
+                }>;
                 pendingTopics: z.ZodArray<z.ZodString>;
                 completedTopics: z.ZodArray<z.ZodString>;
                 currentQuestion: z.ZodOptional<z.ZodString>;

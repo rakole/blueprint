@@ -319,6 +319,7 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     cwd: repoPath,
     phase: "3",
     checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
       completedAreas: [],
       remainingAreas: ["Scope boundaries", "UI expectations"],
       decisions: [],
@@ -341,6 +342,7 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     cwd: repoPath,
     phase: "3",
     checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
       completedAreas: ["Scope boundaries"],
       remainingAreas: ["UI expectations"],
       decisions: [
@@ -480,12 +482,15 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   ]);
   assert.equal(checkpointCreated.updated, true);
   assert.equal(checkpointResumed.found, true);
+  assert.equal(checkpointResumed.safeToResume, true);
   assert.deepEqual(checkpointResumed.checkpoint?.resumeMeta?.pendingTopics, [
     "Scope boundaries",
     "UI expectations"
   ]);
   assert.equal(checkpointAreaRefreshed.updated, true);
   assert.equal(checkpointAreaLoaded.found, true);
+  assert.equal(checkpointAreaLoaded.ownerCommand, "/blu-discuss-phase");
+  assert.equal(checkpointAreaLoaded.resumeMode, "discuss");
   assert.deepEqual(checkpointAreaLoaded.checkpoint?.completedAreas, ["Scope boundaries"]);
   assert.deepEqual(checkpointAreaLoaded.checkpoint?.resumeMeta?.completedTopics, ["Scope boundaries"]);
   assert.equal(
@@ -522,6 +527,7 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
     cwd: repoPath,
     phase: "3",
     checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
       completedAreas: ["Scope boundaries"],
       remainingAreas: ["UI expectations"],
       decisions: [
@@ -625,5 +631,147 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
   assert.equal(
     retained.checkpoint?.resumeMeta?.resumeHint,
     "Repair STATE.md, then resume finalization."
+  );
+});
+
+test("discuss-phase checkpoint reads flag research-owned continuation state as unsafe", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      ownerCommand: "/blu-research-phase",
+      completedAreas: ["Dependency scan"],
+      remainingAreas: ["Recommendation synthesis"],
+      decisions: [
+        {
+          topic: "Research strand",
+          decision: "Continue bounded research before drafting",
+          rationale: "The evidence pass is not complete enough for the research artifact."
+        }
+      ],
+      deferredIdeas: [],
+      canonicalReferences: [
+        {
+          label: "Context",
+          target: ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+        }
+      ],
+      resumeMeta: {
+        mode: "research",
+        pendingTopics: ["Recommendation synthesis"],
+        completedTopics: ["Dependency scan"],
+        currentQuestion: "Which recommendation should the research artifact preserve?",
+        notes: ["This is research continuation state, not discuss-phase state."],
+        updatedAt: "2026-04-19T00:00:03.000Z"
+      }
+    }
+  });
+
+  const checkpoint = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3",
+    expectedOwnerCommand: "/blu-discuss-phase",
+    expectedMode: "discuss"
+  });
+
+  assert.equal(checkpoint.found, true);
+  assert.equal(checkpoint.ownerCommand, "/blu-research-phase");
+  assert.equal(checkpoint.resumeMode, "research");
+  assert.equal(checkpoint.safeToResume, false);
+  assert.match(checkpoint.warnings.join("\n"), /belongs to \/blu-research-phase/i);
+  assert.match(checkpoint.warnings.join("\n"), /not "discuss"/i);
+});
+
+test("discuss-phase checkpoint reads warn instead of crashing on legacy foreign checkpoints", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  const legacyResearchCheckpoint = {
+    mode: "research",
+    pendingTopics: ["Recommendation synthesis"],
+    currentQuestion: "Which source remains unverified?",
+    updatedAt: "2026-04-19T00:00:04.000Z"
+  };
+
+  await writeFile(
+    checkpointPath,
+    `${JSON.stringify(legacyResearchCheckpoint, null, 2)}\n`,
+    "utf8"
+  );
+
+  const checkpoint = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3",
+    expectedOwnerCommand: "/blu-discuss-phase",
+    expectedMode: "discuss"
+  });
+
+  assert.equal(checkpoint.found, true);
+  assert.deepEqual(checkpoint.checkpoint, legacyResearchCheckpoint);
+  assert.equal(checkpoint.ownerCommand, null);
+  assert.equal(checkpoint.resumeMode, "research");
+  assert.equal(checkpoint.safeToResume, false);
+  assert.match(checkpoint.warnings.join("\n"), /legacy checkpoint/i);
+  assert.match(checkpoint.warnings.join("\n"), /not "discuss"/i);
+});
+
+test("checkpoint persistence rejects unknown resume modes and owner-mode mismatches", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const baseCheckpoint = {
+    ownerCommand: "/blu-discuss-phase",
+    completedAreas: [],
+    remainingAreas: ["Scope boundaries"],
+    decisions: [],
+    deferredIdeas: [],
+    canonicalReferences: [],
+    resumeMeta: {
+      mode: "discuss",
+      pendingTopics: ["Scope boundaries"],
+      completedTopics: [],
+      notes: [],
+      updatedAt: "2026-04-19T00:00:05.000Z"
+    }
+  };
+
+  await assert.rejects(
+    blueprintPhaseCheckpointPut({
+      cwd: repoPath,
+      phase: "3",
+      checkpoint: {
+        ...baseCheckpoint,
+        resumeMeta: {
+          ...baseCheckpoint.resumeMeta,
+          mode: "sidequest"
+        }
+      } as Parameters<typeof blueprintPhaseCheckpointPut>[0]["checkpoint"]
+    }),
+    /Invalid option|structured discuss checkpoint/i
+  );
+
+  await assert.rejects(
+    blueprintPhaseCheckpointPut({
+      cwd: repoPath,
+      phase: "3",
+      checkpoint: {
+        ...baseCheckpoint,
+        ownerCommand: "/blu-research-phase"
+      } as Parameters<typeof blueprintPhaseCheckpointPut>[0]["checkpoint"]
+    }),
+    /must use resumeMeta\.mode "research"/i
   );
 });
