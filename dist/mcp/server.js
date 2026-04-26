@@ -23236,10 +23236,10 @@ async function collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts,
       linkedPlanPath: knownPlanPaths.get(summaryId) ?? null
     });
     if (validation.valid) {
-      summaryPaths.push(summaryPath2);
       const summaryStatus = extractSummaryStatus(content);
       if (summaryStatus === "COMPLETED") {
         summaryIds.push(summaryId);
+        summaryPaths.push(summaryPath2);
       } else if (summaryStatus) {
         warnings.push(
           `${summaryPath2}: summary status is ${summaryStatus}, so it remains pending execution debt.`
@@ -23787,13 +23787,13 @@ async function deriveNextAction(args) {
   if (args.workflow.researchEnabled && args.phaseArtifacts.hasContext && !args.phaseArtifacts.hasResearch && implementedCommands.has(researchPhaseCommand)) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to capture phase research`;
   }
-  if (args.workflow.researchEnabled && args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === false && implementedCommands.has(researchPhaseCommand)) {
+  if (args.workflow.researchEnabled && args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === false && !args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasSummaries && !args.phaseArtifacts.hasVerification && !args.phaseArtifacts.hasUat && implementedCommands.has(researchPhaseCommand)) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to repair invalid phase research`;
   }
   if (!args.workflow.researchEnabled && args.phaseArtifacts.hasContext && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
-  if (args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === true && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
+  if (args.phaseArtifacts.hasResearch && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
   const researchReady = !args.workflow.researchEnabled || args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid !== false;
