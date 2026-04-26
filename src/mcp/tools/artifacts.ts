@@ -3684,6 +3684,160 @@ function isExplicitUiSkipRationale(content: string): boolean {
   );
 }
 
+const UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS: Array<{
+  mode: string;
+  pattern: RegExp;
+}> = [
+  { mode: "power mode", pattern: /\bpower[\s-]?mode\b/i },
+  { mode: "chain mode", pattern: /\bchain[\s-]?mode\b/i },
+  { mode: "auto mode", pattern: /\bauto[\s-]?mode\b/i },
+  { mode: "batch mode", pattern: /\bbatch[\s-]?mode\b/i },
+  { mode: "auto-advance", pattern: /\bauto[\s-]?advance(?:ment|s|d)?\b/i }
+];
+
+const UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN =
+  /\b(?:supports?|supported|implements?|implemented|ships?|shipped|available|enabled|routable|provides?|offers?|runs?)\b/i;
+
+const UNSUPPORTED_MODE_NEGATION_PATTERN =
+  /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
+
+function validateUnsupportedDiscussModeClaims(content: string, artifactLabel: string): string[] {
+  const issues: string[] = [];
+  const flaggedModes = new Set<string>();
+
+  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+    if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line)) {
+      continue;
+    }
+
+    if (!UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN.test(line)) {
+      continue;
+    }
+
+    for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
+      if (pattern.test(line) && !flaggedModes.has(mode)) {
+        issues.push(
+          `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`
+        );
+        flaggedModes.add(mode);
+      }
+    }
+  }
+
+  return issues;
+}
+
+function markdownSectionLines(section: string): string[] {
+  return section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
+}
+
+function hasConcreteCanonicalReference(section: string): boolean {
+  return markdownSectionLines(section)
+    .filter(
+      (line) =>
+        !/^(?:none|n\/a|na|not applicable|no canonical references?|no saved references?)\b/i.test(
+          line
+        )
+    )
+    .some((line) =>
+      /https?:\/\/\S+|(?:^|[\s`])(?:\.blueprint|src|tests|docs|commands|skills|agents|hooks|scripts|dist)\/[^\s`,)]+|\b(?:ROADMAP|STATE|PROJECT|REQUIREMENTS|MEMORY|AGENTS|README|CHANGELOG)\.md\b|\b(?:roadmap|requirements?|project brief|state|saved phase artifacts?|phase artifacts?|context artifact|discussion log)\b|\b[\w.-]+\.(?:ts|tsx|js|mjs|json|toml|md|yaml|yml)\b/i.test(
+        line
+      )
+    );
+}
+
+function hasDeferredIdeaSignal(section: string): boolean {
+  return /\b(?:deferred ideas?|later follow-?ups?|future follow-?ups?|follow-?up ideas?|scope creep|revisit|after this phase|next phase|backlog|parking lot)\b/i.test(
+    section
+  );
+}
+
+function hasConcreteDeferredIdeas(section: string): boolean {
+  return markdownSectionLines(section)
+    .filter(
+      (line) =>
+        !/^(?:none|n\/a|na|not applicable|no\b.*(?:deferred|follow-?up|ideas?)|nothing deferred)\b/i.test(
+          line
+        )
+    )
+    .some((line) => countMeaningfulWords(line) >= 3);
+}
+
+function validateDiscussPhaseContextAntiPatterns(content: string): {
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const canonicalReferences = extractMarkdownSection(content, "Canonical References");
+  const deferredIdeas = extractMarkdownSection(content, "Deferred Ideas");
+  const deferredSourceSections = [
+    "Discovery Grounding",
+    "Implementation Decisions",
+    "Specific Ideas",
+    "Existing Code Insights",
+    "Dependencies",
+    "Open Questions"
+  ]
+    .map((heading) => extractMarkdownSection(content, heading))
+    .join("\n");
+
+  issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+
+  if (!hasConcreteCanonicalReference(canonicalReferences)) {
+    issues.push(
+      "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL."
+    );
+  }
+
+  if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
+    issues.push(
+      "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
+    );
+  }
+
+  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
+    warnings.push(
+      "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
+    );
+  }
+
+  return { issues, warnings };
+}
+
+function validateDiscussPhaseDiscussionLogAntiPatterns(content: string): {
+  issues: string[];
+  warnings: string[];
+} {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const followUps = extractMarkdownSection(content, "Follow-Ups");
+  const discussionSections = ["Summary", "Notes"]
+    .map((heading) => extractMarkdownSection(content, heading))
+    .join("\n");
+
+  issues.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
+
+  if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
+    issues.push(
+      "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section."
+    );
+  }
+
+  if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
+    warnings.push(
+      "Discussion log artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
+    );
+  }
+
+  return { issues, warnings };
+}
+
 export function validatePhaseArtifactContent(
   content: string,
   artifact: "context" | "discussion-log" | "research" | "ui-spec"
@@ -3763,6 +3917,16 @@ export function validatePhaseArtifactContent(
         );
       }
     }
+
+    const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
+    issues.push(...discussValidation.issues);
+    warnings.push(...discussValidation.warnings);
+  }
+
+  if (artifact === "discussion-log") {
+    const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
+    issues.push(...discussValidation.issues);
+    warnings.push(...discussValidation.warnings);
   }
 
   if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {

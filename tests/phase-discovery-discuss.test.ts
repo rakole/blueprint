@@ -634,6 +634,129 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
   );
 });
 
+test("discuss-phase context validation blocks runtime anti-patterns and preserves checkpoint", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
+      completedAreas: ["Scope boundaries"],
+      remainingAreas: ["Plan inventory warning"],
+      decisions: [
+        {
+          topic: "Scope boundaries",
+          decision: "Keep validation repair resumable",
+          rationale: "The checkpoint must survive a failed artifact repair attempt."
+        }
+      ],
+      deferredIdeas: [
+        {
+          idea: "Revisit plan inventory after context repair",
+          revisitWhen: "After the validation issues are fixed"
+        }
+      ],
+      canonicalReferences: [
+        {
+          label: "ROADMAP.md",
+          target: ".blueprint/ROADMAP.md"
+        }
+      ],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["Plan inventory warning"],
+        completedTopics: ["Scope boundaries"],
+        currentQuestion: "Which warning must be preserved in repaired context?",
+        notes: ["Validation repair is still in progress."],
+        updatedAt: "2026-04-20T00:00:00.000Z"
+      }
+    }
+  });
+
+  const invalidContext = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Keep discovery scoped to phase 3 and preserve resumability.
+
+## Discovery Grounding
+- Project brief and requirements grounding are available in saved Blueprint artifacts.
+
+## Implementation Decisions
+- Auto mode is shipped and power mode is available for this command.
+
+## Specific Ideas
+- Later follow-up: revisit plan inventory after the context is repaired.
+
+## Existing Code Insights
+- Artifact validation runs through the phase artifact write tool.
+
+## Dependencies
+- Existing plans already cover this phase and should be mentioned in the closeout.
+
+## Open Questions
+- Which validation repair should happen before finalization?
+
+## Deferred Ideas
+- No deferred ideas.
+
+## Canonical References
+- No canonical references identified yet.
+`,
+    overwrite: true
+  });
+
+  const retained = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(invalidContext.status, "invalid");
+  assert.equal(invalidContext.written, false);
+  assert.match(invalidContext.validation.issues.join("\n"), /unsupported discuss-phase behavior/i);
+  assert.match(invalidContext.validation.issues.join("\n"), /Canonical References/i);
+  assert.match(invalidContext.validation.issues.join("\n"), /Deferred Ideas section/i);
+  assert.match(invalidContext.validation.warnings.join("\n"), /\/blu-plan-phase refresh warning/i);
+  assert.equal(retained.found, true);
+  assert.deepEqual(retained.checkpoint?.remainingAreas, ["Plan inventory warning"]);
+});
+
+test("discuss-phase discussion-log validation blocks dropped follow-ups and mode claims", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidDiscussion = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "discussion-log",
+    content: `# Phase 03 Discussion Log
+
+## Summary
+- Chain mode is supported for this command.
+
+## Notes
+- The discussion raised a later follow-up for reviewer routing.
+
+## Follow-Ups
+- none
+`,
+    overwrite: true
+  });
+
+  assert.equal(invalidDiscussion.status, "invalid");
+  assert.match(invalidDiscussion.validation.issues.join("\n"), /chain mode/i);
+  assert.match(invalidDiscussion.validation.issues.join("\n"), /Follow-Ups section/i);
+});
+
 test("discuss-phase checkpoint reads flag research-owned continuation state as unsafe", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
