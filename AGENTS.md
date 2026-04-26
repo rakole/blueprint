@@ -74,6 +74,8 @@ dedicated manifest exists.
 - Do not recommend planned-only commands from `/blu`, `/blu-help`, or `/blu-progress`
 - Do not treat documented Phase 3+ commands as runnable until their runtime catalog entry is `implemented`
 - When starting any new code change(fresh context) create a new worktree, post work completion, push to origin, PR to main, merge, pull into main local
+- In a fresh worktree, always run `npm ci` (lockfile install) before any `npm run build`, `npm run typecheck`, or `npm test` (worktrees do not share `node_modules`, and missing `esbuild`/`tsc` will invalidate verification).
+- Treat the Codex GitHub plugin as read-only; do not attempt PR creation/merge through it. Use `gh` CLI (or plain `git push` + open PR manually) for GitHub write operations.
 
 ## Preferred Read Order
 
