@@ -74,6 +74,10 @@ export type CodebaseArtifactDiagnostics = {
     warnings: string[];
 };
 export declare const DURABLE_REQUIREMENT_ID_PATTERN: RegExp;
+export type NormalizedBootstrapRequirementRow = Required<BootstrapRequirementRow>;
+export type NormalizedBootstrapSeed = Omit<Required<BootstrapSeed>, "requirements"> & {
+    requirements: NormalizedBootstrapRequirementRow[];
+};
 type ArtifactScaffoldArgs = {
     cwd?: string;
     artifacts?: string[];
@@ -266,6 +270,7 @@ export declare function parseCaptureIndexDocument(content: string, target: Artif
     malformed: boolean;
     recoveryContent: string | null;
 };
+export declare function buildDefaultBootstrapSeed(projectName: string, assessment: BootstrapAssessment, seed?: BootstrapSeed): NormalizedBootstrapSeed;
 export declare function normalizeReportSlug(value: string): string;
 export declare function buildBlueprintReportPath(reportName: string): string;
 export declare function toPosixPath(relativePath: string): string;

@@ -276,13 +276,24 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
       `${contract.commandName} should not reference agent markdown paths`
     );
 
+    const runtimeToolReferenceText =
+      contract.commandName === "new-project"
+        ? [
+            raw,
+            await readRelativePath(blueprintDiscoverableSkillPath(contract.primarySkill)),
+            await readRelativePath(
+              "skills/blueprint-bootstrap/references/runtime-guardrails.md"
+            )
+          ].join("\n")
+        : raw;
+
     for (const toolName of contract.requiredTools) {
       assert.ok(
         blueprintToolNames.includes(toolName),
         `${contract.commandName} depends on an unregistered tool: ${toolName}`
       );
       assert.match(
-        raw,
+        runtimeToolReferenceText,
         new RegExp(
           escapeRegExp(`\`${blueprintRuntimeToolFqn(toolName as `blueprint_${string}`)}\``)
         ),
@@ -306,28 +317,31 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
   }
 });
 
-test("new-project manifest forbids shell execution and tool-name drift", async () => {
-  const raw = await readRelativePath("commands/blu-new-project.toml");
+test("new-project canonical guardrails forbid shell execution and tool-name drift", async () => {
+  const [manifest, raw] = await Promise.all([
+    readRelativePath("commands/blu-new-project.toml"),
+    readRelativePath("skills/blueprint-bootstrap/references/runtime-guardrails.md")
+  ]);
 
   assert.match(
-    raw,
-    /When you name a Blueprint MCP tool explicitly in the current CLI host, use the runtime FQN form `mcp_blueprint_<toolName>`\./
+    manifest,
+    /runtime-guardrails\.md` as the canonical host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrail source/
   );
   assert.match(
     raw,
-    /Translate any shorthand `blueprint_\*` ids from older docs into their `mcp_blueprint_\*` runtime FQNs before calling them\./
+    /Call Blueprint MCP tools only through runtime FQNs such as\s+`mcp_blueprint_blueprint_project_init`/
   );
   assert.match(
     raw,
-    /Never try to invoke Blueprint MCP tools through shell commands such as `mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts\./
+    /Translate shorthand `blueprint_\*` ids from older docs into their\s+`mcp_blueprint_\*` runtime FQNs before calling them\./
   );
   assert.match(
     raw,
-    /Do not try to re-activate Blueprint skills as tools inside this command/
+    /Never try to invoke Blueprint MCP tools through shell wrappers such as\s+`mcp use`, `blueprint-mcp`, or ad-hoc `node -e` MCP SDK scripts\./
   );
   assert.match(
     raw,
-    /do not run `\/blu-new-project` in the shell; it is a host CLI slash command, not a shell executable\./i
+    /Never run `\/blu-new-project` in the shell/i
   );
 });
 

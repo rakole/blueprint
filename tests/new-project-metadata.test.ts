@@ -8,9 +8,14 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 const repoRoot = process.cwd();
 
 test("new-project manifest stays thin while delegating runtime depth to the bootstrap skill package", async () => {
-  const [commandFile, docFile] = await Promise.all([
+  const [commandFile, docFile, skillFile, guardrailsRef] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
+      "utf8"
+    )
   ]);
 
   assert.ok(
@@ -22,30 +27,23 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(commandFile, /skills\/blueprint-bootstrap\/references\/questioning\.md/);
   assert.match(commandFile, /skills\/blueprint-bootstrap\/references\/bootstrap-runtime-contract\.md/);
   assert.match(commandFile, /skills\/blueprint-bootstrap\/references\/runtime-guardrails\.md/);
-  assert.match(commandFile, /`ask_user`/);
-  assert.match(commandFile, /`write_todos`/);
-  assert.match(commandFile, /`update_topic`/);
-  assert.match(commandFile, /task-tracker tools/i);
-  assert.match(commandFile, /`get_internal_docs`/);
-  assert.match(commandFile, /Never use shell output, hidden tool panes, or collapsed subagent results as the approval surface/i);
-  assert.match(commandFile, /render the project brief and roadmap preview directly in the main Gemini CLI conversation/i);
-  assert.match(commandFile, /visible structured approval packet/i);
+  assert.match(commandFile, /canonical host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrail source/i);
   assert.match(commandFile, /`blueprint-project-researcher`/);
   assert.match(commandFile, /`blueprint-roadmapper`/);
   assert.match(commandFile, /capability-gated project research and roadmapping paths/i);
   assert.match(commandFile, /sequential no-subagent fallback/i);
   assert.match(commandFile, /browser, web-search, or shell-only helpers/i);
-  assert.match(commandFile, /Blueprint MCP server is disconnected or undiscovered/i);
   assert.match(commandFile, /project instruction files such as `CLAUDE\.md` or `AGENTS\.md`/);
   assert.match(commandFile, /invented auto-advance chaining|slash-command self-invocation/i);
   assert.match(commandFile, /Do not require `docs\/commands\/new-project\.md`/);
   assert.match(commandFile, /`--auto`/);
+  assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
+  assert.doesNotMatch(commandFile, /Never use shell output, hidden tool panes, or collapsed subagent results/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/i);
   assert.match(docFile, /## Gemini-Native Internal Tool Guidance/);
   assert.match(docFile, /Approval must be reviewable in the main Gemini CLI conversation/i);
-  assert.match(docFile, /structured project brief and roadmap preview as normal assistant Markdown/i);
-  assert.match(docFile, /The final pre-write decision gate must be preceded by a visible approval packet/i);
-  assert.match(docFile, /must not ask the user to approve content that appeared only in shell output/i);
+  assert.match(docFile, /runtime-guardrails\.md` is the canonical source/i);
+  assert.match(docFile, /visible project brief and roadmap preview in the main conversation/i);
   assert.match(docFile, /Interactive bootstrap shows the reviewable project brief and roadmap preview/i);
   assert.match(docFile, /## Research, Requirements, And Roadmap Quality/);
   assert.match(docFile, /stack, features, architecture, and pitfalls/i);
@@ -90,7 +88,10 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
     "blueprint_artifact_validate",
     "blueprint_artifact_scaffold"
   ] as const) {
-    assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
+    assert.match(
+      `${skillFile}\n${guardrailsRef}`,
+      new RegExp(blueprintRuntimeToolFqn(toolName))
+    );
   }
 
   assert.doesNotMatch(commandFile, /\/gsd-/);
@@ -121,16 +122,10 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /references\/questioning\.md/);
   assert.match(skillFile, /references\/bootstrap-runtime-contract\.md/);
   assert.match(skillFile, /references\/runtime-guardrails\.md/);
-  assert.match(skillFile, /`ask_user`/);
-  assert.match(skillFile, /`write_todos`/);
-  assert.match(skillFile, /`update_topic`/);
-  assert.match(skillFile, /`tracker_create_task`/);
-  assert.match(skillFile, /`get_internal_docs`/);
+  assert.match(skillFile, /canonical host-entrypoint,\s+shell, MCP FQN, approval-surface, and Gemini-helper rules/i);
   assert.match(skillFile, /## Visible Approval Surface/);
-  assert.match(skillFile, /reviewable in the main Gemini CLI conversation/i);
-  assert.match(skillFile, /not\s+in shell output, hidden tool output, or a collapsed subagent pane/i);
+  assert.match(skillFile, /Follow the approval-surface rules in `references\/runtime-guardrails\.md`/);
   assert.match(skillFile, /private synthesis inputs/i);
-  assert.match(skillFile, /structured Markdown\s+preview/i);
   assert.match(skillFile, /Execution profile: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -239,16 +234,10 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(questioningRef, /never rely on shell output,\s*temporary files, or collapsed agent\/tool panes/i);
   assert.match(questioningRef, /Discovery Boundaries/);
   assert.match(questioningRef, /Anti-Patterns/);
-  assert.match(runtimeReference, /Long-running-mutation profile for Gemini-native bootstrap/i);
-  assert.match(runtimeReference, /`Resolve`\/`Read`\/`Decide`\/`Execute`\/`Persist`\/`Validate`\/`Route`/);
-  assert.match(runtimeReference, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
-  assert.match(runtimeReference, /Gemini-native topic and todo coordination/i);
-  assert.match(runtimeReference, /`get_internal_docs` self-correction/i);
-  assert.match(runtimeReference, /contract\.authoringTemplate/);
-  assert.match(runtimeReference, /capability-gated through `blueprint-project-researcher` and `blueprint-roadmapper`/i);
-  assert.match(runtimeReference, /browser, web-search, shell-only, or generic helpers are not substitutes/i);
-  assert.match(runtimeReference, /no-subagent fallback sequentially across stack\/features\/architecture\/pitfalls/i);
-  assert.match(runtimeReference, /every committed requirement to map exactly once/i);
-  assert.match(runtimeReference, /repair the seed and retry through MCP/i);
-  assert.match(runtimeReference, /manifest stays thin while the self-sufficient runtime contract lives under `skills\/blueprint-bootstrap\/references\/`/i);
+  assert.match(runtimeReference, /Long-running-mutation Gemini-native bootstrap/i);
+  assert.match(runtimeReference, /bootstrap-runtime-contract\.md/i);
+  assert.match(runtimeReference, /runtime-guardrails\.md/i);
+  assert.match(runtimeReference, /unmapped or `mapping-incomplete` states route to `map-codebase`/i);
+  assert.match(runtimeReference, /valid `mapped-only` states may run `new-project`/i);
+  assert.doesNotMatch(runtimeReference, /no-subagent fallback sequentially across stack\/features\/architecture\/pitfalls/i);
 });

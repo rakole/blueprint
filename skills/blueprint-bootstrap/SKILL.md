@@ -30,45 +30,22 @@ This skill package is the runtime source of truth for `/blu-new-project`.
 
 ## Runtime Call Rules
 
+- Load `references/runtime-guardrails.md` for the canonical host-entrypoint,
+  shell, MCP FQN, approval-surface, and Gemini-helper rules.
 - Call Blueprint MCP tools only through runtime FQNs such as
   `mcp_blueprint_blueprint_project_status`.
-- Translate any shorthand tool ids like `blueprint_project_status` from older
-  Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Only invoke
-  optional subagents when the current command contract explicitly allows them.
+- Translate any shorthand tool ids like `blueprint_project_status` before
+  calling them.
+- Treat Blueprint skills as loaded guidance, not callable tools.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI
   entrypoints, not shell executables.
-- For structured interactive choices, confirmations, or short clarifications,
-  prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
-- Use `update_topic` to keep long bootstrap runs anchored on the active stage.
-- Use `write_todos` to maintain a compact visible bootstrap checklist whenever
-  the session spans multiple stages.
-- Use Gemini CLI task-tracking tools such as `tracker_create_task`,
-  `tracker_add_dependency`, and `tracker_update_task` when bootstrap work has
-  real dependencies across repo classification, optional research, revision
-  loops, and validation.
-- Treat Gemini-native todos, topic narration, and task tracking as session-local
-  coordination only; they do not replace Blueprint MCP persistence or
-  `.blueprint/STATE.md`.
-- If you are unsure how a Gemini-native tool or host behavior works, use
-  `get_internal_docs` instead of guessing.
 
 ## Visible Approval Surface
 
-- The approval gate must be reviewable in the main Gemini CLI conversation, not
-  in shell output, hidden tool output, or a collapsed subagent pane.
-- Treat `blueprint-project-researcher` and `blueprint-roadmapper` results as
-  private synthesis inputs. After they return, rewrite the proposal into a
-  visible approval packet before asking the user to approve.
-- Never use shell commands such as `echo`, `cat`, `printf`, pagers, temporary
-  files, or terminal renderers to display the project brief or roadmap for
-  approval.
-- Immediately before the approval `ask_user` call, send a structured Markdown
-  preview in the normal assistant response with the project brief, requirement
-  groups, roadmap phases, assumptions, deferred or out-of-scope items, defaults
-  provenance, and any brownfield confidence notes.
-- The `ask_user` prompt should refer to the visible preview above; it must not
-  be the first place the user learns what they are approving.
+- Follow the approval-surface rules in `references/runtime-guardrails.md`.
+- Treat `blueprint-project-researcher` and `blueprint-roadmapper` outputs as
+  private synthesis inputs until their conclusions are rewritten into the main
+  conversation as the visible approval packet.
 
 ## Local Runtime References
 
