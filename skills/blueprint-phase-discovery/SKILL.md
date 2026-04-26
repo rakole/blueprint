@@ -43,12 +43,9 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
+- Load only the active command's `input_bundles.commands[...]` inputs plus the shared inputs for that invocation. Do not preload sibling discovery command runtime references unless the active command contract explicitly calls for them.
 - Execution profile for `/blu-discuss-phase`: `long-running-mutation`; read `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for the shared stage, in-flight status, and session-local helper contract.
 - Execution profile for `/blu-research-phase`: `long-running-mutation`.
-- Keep the shared stage vocabulary explicit during non-trivial `/blu-research-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
-- Keep the in-flight status contract visible during non-trivial `/blu-research-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
-- On Gemini, use `update_topic` and `write_todos` only as session-local visibility aids during non-trivial `/blu-research-phase` runs; do not let them replace MCP-backed artifacts, checkpoints, or `STATE.md`.
-- When a host does not expose `update_topic` or `write_todos`, keep the same stage and next-safe-action visibility in short progress recaps plus MCP-backed checkpoints and `STATE.md` instead of claiming those helpers ran.
 - Execution profile for `/blu-ui-phase`: `long-running-mutation`.
 - Keep the shared stage vocabulary explicit during non-trivial `/blu-ui-phase` runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the in-flight status contract visible during non-trivial `/blu-ui-phase` runs: resolved scope, active stage, pending gate, execution mode, next safe action.
@@ -77,6 +74,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - `docs/MCP-TOOLS.md`
 
 Command-specific inputs are resolved from the structured `input_bundles` frontmatter for the invoking discovery command.
+Treat the active command's runtime reference as the detailed behavior authority so this shared skill can stay command-selective instead of carrying every discovery flow inline.
 
 ## Command-Scoped Required MCP Tools
 
@@ -190,33 +188,18 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 
 ### `research-phase`
 
-Before running the command flow, read `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`. It locks the retained research behavior that is easy to dilute: phase validation, existing research reuse/update gates, actual saved context reads, planner-consumed research sections, repo-versus-external provenance, official docs or explicitly supplied external references, capability-gated researcher use, a single-agent no-subagent fallback, checkpointed inconclusive strands, validation repair, implemented-only routing, and rejection of browser-only, web-search-only, shell-only, or generic substitute agents. Do not inline the full research workflow into `/blu-discuss-phase` context.
+Before running the command flow, read `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md`. That file is the detailed authority for research-specific flow, evidence depth, checkpoint ownership, validation repair, and routing, so keep this shared skill focused on the active command boundary instead of restating the whole workflow inline.
 
 1. Confirm phase readiness with `blueprint_phase_context`, `blueprint_phase_research_status`, and `blueprint_config_get`.
-2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in the saved discovery context, not only status metadata. If that read reports `found: false`, stop and route back to `/blu-discuss-phase <phase>` instead of drafting from status-only signals.
-3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement. Force repair when saved research is invalid, and force an explicit `view`, `skip`, or `update` decision only when the saved research is already valid.
-4. Prefer a one-question `ask_user` dialog for the `view`/`skip`/`update` choice and for overwrite confirmation when replacement is requested.
-5. Draft directly from `contract.authoringTemplate`. Use `blueprint_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
-6. Honor `research.external_sources` before any external verification step: `off` means stay repo-only and mark freshness-sensitive claims as not externally checked, `ask` means stop for confirmation before official-doc or external verification, and `auto` allows official-doc or external verification only when repo evidence cannot settle the claim.
-7. Use `blueprint-researcher` for bounded sidecar research when the artifact needs to be created or updated. The parent must supply any external evidence packet itself, with source title, date, URL, excerpt, claim, and whether it is an official reference or supplied reference. Do not ask the subagent to fetch official docs on its own.
-8. Keep the resolved scope explicit as the selected phase, current context and research reuse-versus-update posture, codebase-bundle availability, the topic strand currently in progress, and whether the run is repo-evidence-only or also checking external truth.
-9. Ground repo truth first in `blueprint_phase_context`, the actual saved `XX-CONTEXT.md` body, any existing research, and saved `.blueprint/codebase/` summaries before consulting external sources.
-10. Use official docs or explicitly supplied external references only when the repo cannot settle a claim, and keep repo-derived evidence distinct from external or web-derived evidence in the draft, recommendations, and `## Sources`. If external verification is skipped or unavailable, say so plainly instead of implying it happened.
-11. Require `## State Of The Art` freshness claims to include explicit source dates or a clear `not externally checked` marker.
-12. During non-trivial multi-strand research on Gemini, use `update_topic` and `write_todos` to keep the active stage and next safe action visible without turning either tool into persistence. When a host does not expose those helpers, keep the same visibility through short progress recaps plus MCP-backed checkpoints and `STATE.md`.
-13. Normalize the final research draft to the canonical `phase.research` authoring template before calling `blueprint_phase_artifact_write`.
-14. Persist only validated research content through `blueprint_phase_artifact_write`; do not leave `research-phase` with a scaffold-only placeholder.
-15. Require explicit overwrite confirmation before replacing existing research.
-16. Use `blueprint_command_catalog` before recommending `/blu-ui-phase`; otherwise route toward `/blu-progress`.
-17. Keep the research branch read-heavy and phase-scoped; do not mutate unrelated repo files.
-18. Break long-running research into topic-sized strands instead of forcing a single linear pass. Re-check the phase context and saved research status between strands so the command can continue from the last durable checkpoint instead of redoing settled work.
-19. When a strand reaches a natural pause, write or refresh the phase checkpoint with the completed topics, remaining topics, open questions, and a resume hint that stays inside the implemented Blueprint surface. Treat the checkpoint as the continuation point for the next run.
-20. If evidence stays incomplete or conflicts remain unresolved after a reasonable pass, mark the result as inconclusive rather than stretching the draft. Summarize what was verified, what remains unknown, and the next safe action within the implemented surface, such as continuing research, revisiting context, or moving to `/blu-progress` when planning is no longer appropriate.
-21. Do not imply auto-chaining or power-mode continuation. Any continuation path must be explicit, checkpointed, and resumable through the shipped discovery workflow.
-22. If no suitable Blueprint research or code-analysis subagent is available, use the runtime contract's single-agent fallback: handle one topic strand at a time, compress carry-forward evidence before moving on, normalize the draft section-by-section to the canonical template, and checkpoint pauses or inconclusive evidence without lowering output richness.
-23. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes for codebase and workflow analysis. External references may support claims, but they do not replace repo evidence or the saved Blueprint artifacts.
-24. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-research-phase` as complete. If repair cannot finish safely, leave or refresh the checkpoint and report the blocker.
-25. After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load` so `STATE.md` and the reported next safe action advance without mutating the research artifact.
+2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in saved discovery context, not only status metadata. If that read reports `found: false`, stop and route back to `/blu-discuss-phase <phase>`.
+3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement. Force repair when saved research is invalid. When saved research is already valid, prefer a one-question `ask_user` dialog for `view`/`skip`/`update`; choosing `update` is the overwrite gate.
+4. Draft directly from `contract.authoringTemplate`. Use `blueprint_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
+5. Honor `research.external_sources` before any external verification step: `off` stays repo-only, `ask` stops for confirmation, and `auto` allows official-doc or external verification only when repo evidence cannot settle the claim. Keep repo-derived evidence distinct from external evidence, and say `not externally checked` when live verification did not happen.
+6. Use `blueprint-researcher` only when a suitable Blueprint research or code-analysis agent is available and a bounded sidecar pass materially helps. The parent must supply any external evidence packet itself, with source title, date, URL, excerpt, claim, and whether it is an official reference or supplied reference. Do not ask the subagent to fetch official docs on its own.
+7. During non-trivial multi-strand research on Gemini, use `update_topic` and `write_todos` only as session-local visibility aids. When a host does not expose those helpers, keep the same stage and next-safe-action visibility through short progress recaps plus MCP-backed checkpoints and `STATE.md`.
+8. Break long-running research into topic-sized strands, checkpoint paused or inconclusive work, and use the runtime contract's single-agent fallback when no suitable subagent is available. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes.
+9. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-research-phase` as complete.
+10. After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load` so `STATE.md` and the reported next safe action advance without mutating the research artifact.
 
 ### `list-phase-assumptions`
 

@@ -1,9 +1,11 @@
 # Research Phase Runtime Contract
 
-This reference is the rich behavior contract for `/blu-research-phase`. The
-canonical artifact schema still comes from `blueprint_artifact_contract_read`
-with `artifactId: "phase.research"`. Treat this file as orchestration,
-evidence-depth, and recovery guidance, not a competing markdown schema.
+This reference is the rich behavior contract for `/blu-research-phase`. Load it
+on demand for research runs instead of copying its details into the shared
+discovery skill or command manifest. The canonical artifact schema still comes
+from `blueprint_artifact_contract_read` with `artifactId: "phase.research"`.
+Treat this file as orchestration, evidence-depth, and recovery guidance, not a
+competing markdown schema.
 
 ## Parity Target
 
@@ -198,8 +200,9 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 
 - If phase resolution fails, stop with the tool reason and recovery guidance.
 - If existing research is present, default to reuse unless the user chooses
-  view or update, but only when the saved research is already valid.
-  Replacement requires explicit confirmation.
+  view or update, but only when the saved research is already valid. Treat an
+  explicit `update` selection as the overwrite gate; do not default overwrite
+  or ask for a second confirmation unless the user's intent remains ambiguous.
 - If `research.external_sources` is `off`, do not perform live external lookup.
   Keep the run repo-only and mark freshness-sensitive claims as not externally
   checked.
