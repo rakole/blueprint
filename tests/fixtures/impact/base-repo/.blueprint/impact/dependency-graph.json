@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "blueprint.impact.dependency-graph.v1",
+  "nodes": [
+    {
+      "id": "file:src/app.ts",
+      "path": "src/app.ts"
+    },
+    {
+      "id": "file:src/consumer.ts",
+      "path": "src/consumer.ts"
+    }
+  ],
+  "edges": [
+    {
+      "from": "file:src/consumer.ts",
+      "to": "file:src/app.ts",
+      "type": "imports"
+    }
+  ]
+}

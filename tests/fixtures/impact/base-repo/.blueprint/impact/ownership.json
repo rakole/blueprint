@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "blueprint.impact.ownership.v1",
+  "rules": [
+    {
+      "pattern": "src/app.ts",
+      "owners": ["@fixture/app"],
+      "sensitive": false
+    },
+    {
+      "pattern": "src/mcp/**",
+      "owners": ["@fixture/runtime"],
+      "sensitive": false
+    },
+    {
+      "pattern": "commands/**",
+      "owners": ["@fixture/commands"],
+      "sensitive": false
+    }
+  ],
+  "fallbackReviewers": ["@fixture/fallback"]
+}

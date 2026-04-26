@@ -1,0 +1,10 @@
+src/** @fixture/source
+src/mcp/** @fixture/runtime
+commands/** @fixture/commands
+docs/** @fixture/docs
+skills/** @fixture/skills
+agents/** @fixture/agents
+hooks/** @fixture/hooks
+config/** @fixture/config
+package.json @fixture/runtime
+dist/** @fixture/generated

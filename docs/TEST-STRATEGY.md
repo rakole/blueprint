@@ -33,6 +33,11 @@ One fixture suite per retained command:
 - idempotent rerun behavior
 - risky-operation confirmation path when applicable
 
+For `/blu-impact`, `tests/fixtures/impact/scenarios.json` is the durable
+scenario manifest. The fixture suite copies the bounded base repo into temp
+repos so scope resolution, surface classification, missing metadata, and report
+rerun behavior are covered without writing impact bundles into the workspace.
+
 ### 3. Hook fixture tests
 
 For the shipped advisory hooks:
