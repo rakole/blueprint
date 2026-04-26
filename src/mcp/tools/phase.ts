@@ -2853,6 +2853,22 @@ function extractPlanIdFromFrontmatterLine(line: string): string | null {
   }
 }
 
+function extractPlanSlotLabelFromFrontmatterLine(line: string): string | null {
+  const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
+  const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+  const trimmed = rawValue?.trim() ?? "";
+
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  if (/^0+$/.test(trimmed)) {
+    return trimmed.padStart(2, "0");
+  }
+
+  return normalizePlanId(trimmed);
+}
+
 function reconcilePlanTitleLine(
   line: string,
   fromPlanId: string | null,
@@ -2903,7 +2919,7 @@ function reconcileAutoAssignedPlanContent(content: string, planId: string): stri
   const frontmatter = frontmatterMatch[1] ?? "";
   const updatedFrontmatterLines = frontmatter.split("\n");
   const sourcePlanId = updatedFrontmatterLines
-    .map((line) => extractPlanIdFromFrontmatterLine(line))
+    .map((line) => extractPlanSlotLabelFromFrontmatterLine(line))
     .find((value): value is string => value !== null)
     ?? null;
   const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
