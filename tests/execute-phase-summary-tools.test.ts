@@ -9,7 +9,7 @@ import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseContext,
-  blueprintPhasePlanIndex,
+  blueprintPhaseExecutionTargets,
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead,
   blueprintPhaseSummaryWrite,
@@ -319,6 +319,7 @@ Ship the plan-phase runtime.
 
 test("execute-phase summary tools are registered in the Blueprint server", () => {
   for (const toolName of [
+    "blueprint_phase_execution_targets",
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_summary_write"
@@ -819,7 +820,7 @@ test("phase summary indexing ignores malformed summaries when computing completi
   );
 });
 
-test("execute-phase targeting keeps --gaps-only on explicit gap plans and preserves lower-wave debt", async (t) => {
+test("phase execution targets select the earliest runnable wave, expose overlap summaries, and block later gap-only work behind lower-wave debt", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -832,7 +833,10 @@ test("execute-phase targeting keeps --gaps-only on explicit gap plans and preser
   );
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-03-PLAN.md"),
-    executionPlanContent("03", 2, true),
+    executionPlanContent("03", 2, true).replace(
+      "  - src/mcp/tools/phase.ts",
+      "  - tests/execute-phase-summary-tools.test.ts"
+    ),
     "utf8"
   );
   await blueprintPhaseSummaryWrite({
@@ -841,21 +845,91 @@ test("execute-phase targeting keeps --gaps-only on explicit gap plans and preser
     planId: "01",
     content: validSummaryContent("01")
   });
-
-  const planIndex = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
-  const summaryIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
-  const gapsOnlyTargets = summaryIndex.pendingPlans.filter((planId) =>
-    planIndex.gapClosurePlans.includes(planId)
-  );
-  const lowerWaveDebt = summaryIndex.pendingPlans.filter((planId) => {
-    const wave = planIndex.plans.find((plan) => plan.planId === planId)?.wave;
-    return typeof wave === "number" && wave < 2;
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "03",
+    content: validSummaryContent("03", "PARTIAL")
   });
 
-  assert.deepEqual(summaryIndex.pendingPlans, ["02", "03"]);
-  assert.deepEqual(planIndex.gapClosurePlans, ["03"]);
-  assert.deepEqual(gapsOnlyTargets, ["03"]);
-  assert.deepEqual(lowerWaveDebt, ["02"]);
+  const defaultTargets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const gapsOnlyTargets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3",
+    gapsOnly: true
+  });
+  const waveTwoTargets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3",
+    wave: 2
+  });
+
+  assert.deepEqual(defaultTargets.pendingPlanIds, ["02", "03"]);
+  assert.deepEqual(defaultTargets.candidatePlanIds, ["02", "03"]);
+  assert.deepEqual(defaultTargets.selectedPlanIds, ["02"]);
+  assert.equal(defaultTargets.selectedWave, 1);
+  assert.deepEqual(defaultTargets.overlapPlanIds, ["01", "03"]);
+  assert.deepEqual(defaultTargets.overwriteCandidatePlanIds, ["03"]);
+  assert.equal(defaultTargets.blockers.executionBlocked, false);
+  assert.equal(defaultTargets.conflicts?.groups.length, 1);
+  assert.deepEqual(defaultTargets.conflicts?.groups[0]?.planIds, ["01", "02", "03"]);
+  assert.match(defaultTargets.conflicts?.warnings.join("\n") ?? "", /src\/mcp\/tools\/phase\.ts/);
+  assert.deepEqual(
+    defaultTargets.existingSummaries.map((summary) => summary.planId),
+    ["01", "03"]
+  );
+  assert.equal(
+    defaultTargets.existingSummaries.find((summary) => summary.planId === "03")?.status,
+    "PARTIAL"
+  );
+  assert.equal(
+    defaultTargets.existingSummaries.find((summary) => summary.planId === "03")?.overwriteCandidate,
+    true
+  );
+
+  assert.deepEqual(gapsOnlyTargets.candidatePlanIds, ["03"]);
+  assert.deepEqual(gapsOnlyTargets.selectedPlanIds, ["03"]);
+  assert.deepEqual(
+    gapsOnlyTargets.lowerWavePendingPlans.map((plan) => plan.planId),
+    ["02"]
+  );
+  assert.equal(gapsOnlyTargets.blockers.executionBlocked, true);
+  assert.match(gapsOnlyTargets.blockers.reasons.join("\n"), /Lower-wave pending plans still block wave 2/i);
+
+  assert.deepEqual(waveTwoTargets.candidatePlanIds, ["03"]);
+  assert.deepEqual(waveTwoTargets.selectedPlanIds, ["03"]);
+  assert.equal(waveTwoTargets.blockers.executionBlocked, true);
+  assert.match(waveTwoTargets.blockers.reasons.join("\n"), /Lower-wave pending plans still block wave 2/i);
+});
+
+test("phase execution targets surface stale selected plans and plan-index warnings as blockers", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1).replace("depends_on: []", "depends_on:\n  - \"09\""),
+    "utf8"
+  );
+
+  const targets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.deepEqual(targets.selectedPlanIds, ["01", "02"]);
+  assert.equal(targets.blockers.executionBlocked, true);
+  assert.deepEqual(targets.blockers.stalePlanIds, ["02"]);
+  assert.deepEqual(
+    targets.blockers.missingPlanPaths,
+    [".blueprint/phases/03-phase-discovery/03-09-PLAN.md"]
+  );
+  assert.match(targets.blockers.reasons.join("\n"), /Selected plans are stale/i);
 });
 
 test("phase validation writes require a valid execution summary before verification", async (t) => {

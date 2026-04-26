@@ -25420,10 +25420,18 @@ function planPathFor(located, planId2) {
   return buildArtifactPath(located.phaseDir, located.phasePrefix, `-${normalizePlanId(planId2)}-PLAN.md`);
 }
 function replacePlanSlotLabel(value, fromPlanId, toPlanId) {
-  return value.replace(
-    new RegExp(`\\bPlan\\s+${fromPlanId}\\b`, "g"),
-    `Plan ${toPlanId}`
-  );
+  const candidates = /* @__PURE__ */ new Set(["YY"]);
+  if (fromPlanId) {
+    candidates.add(fromPlanId);
+  }
+  let updated = value;
+  for (const candidate of candidates) {
+    updated = updated.replace(
+      new RegExp(`\\bPlan\\s+${escapeForRegex(candidate)}\\b`, "g"),
+      `Plan ${toPlanId}`
+    );
+  }
+  return updated;
 }
 function extractPlanIdFromFrontmatterLine(line) {
   const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
@@ -25468,7 +25476,7 @@ function reconcileAutoAssignedPlanContent(content, planId2) {
   }
   const frontmatter = frontmatterMatch[1] ?? "";
   const updatedFrontmatterLines = frontmatter.split("\n");
-  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanIdFromFrontmatterLine(line)).find((value) => value !== null);
+  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanIdFromFrontmatterLine(line)).find((value) => value !== null) ?? null;
   const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
   if (planIdLineIndex >= 0) {
     updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
@@ -25480,22 +25488,20 @@ function reconcileAutoAssignedPlanContent(content, planId2) {
       updatedFrontmatterLines.unshift(`plan_id: "${normalizedPlanId}"`);
     }
   }
-  if (sourcePlanId && sourcePlanId !== normalizedPlanId) {
-    const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
-    if (titleLineIndex >= 0) {
-      const updatedTitleLine = reconcilePlanTitleLine(
-        updatedFrontmatterLines[titleLineIndex] ?? "",
-        sourcePlanId,
-        normalizedPlanId
-      );
-      if (updatedTitleLine) {
-        updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
-      }
+  const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
+  if (titleLineIndex >= 0) {
+    const updatedTitleLine = reconcilePlanTitleLine(
+      updatedFrontmatterLines[titleLineIndex] ?? "",
+      sourcePlanId,
+      normalizedPlanId
+    );
+    if (updatedTitleLine) {
+      updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
     }
   }
   const contentStart = frontmatterMatch.index;
   const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
-  const reconciledBody = sourcePlanId && sourcePlanId !== normalizedPlanId ? (() => {
+  const reconciledBody = (() => {
     let headingRewritten = false;
     return contentAfterFrontmatter.split("\n").map((line) => {
       if (headingRewritten || !/^#\s+/.test(line)) {
@@ -25504,7 +25510,7 @@ function reconcileAutoAssignedPlanContent(content, planId2) {
       headingRewritten = true;
       return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
     }).join("\n");
-  })() : contentAfterFrontmatter;
+  })();
   return `---
 ${updatedFrontmatterLines.join("\n")}
 ---${reconciledBody}`;
@@ -25520,6 +25526,294 @@ function collectInvalidPlanDependencyIssues(planPath, dependsOn) {
   }
   return issues;
 }
+function normalizeMaybePlanId(value) {
+  if (!value || !/^\d+$/.test(value)) {
+    return null;
+  }
+  return normalizePlanId(value);
+}
+function extractHeadingText(content) {
+  return content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
+}
+function extractReferencedPlanId(value) {
+  if (!value) {
+    return null;
+  }
+  const placeholderMatch = value.match(/\bPlan\s+(YY)\b/i);
+  if (placeholderMatch) {
+    return placeholderMatch[1].toUpperCase();
+  }
+  const numericMatch = value.match(/\bPlan\s+(\d+)\b/i);
+  if (!numericMatch) {
+    return null;
+  }
+  try {
+    return normalizePlanId(numericMatch[1]);
+  } catch {
+    return null;
+  }
+}
+function extractHeadingPhaseDetails(heading) {
+  if (!heading) {
+    return {
+      phaseNumber: null,
+      phaseName: null
+    };
+  }
+  const match = heading.match(/^Phase\s+(\d+(?:\.\d+)?):\s+(.+?)\s+-\s+Plan\s+\S+\s*$/);
+  if (!match) {
+    return {
+      phaseNumber: null,
+      phaseName: null
+    };
+  }
+  return {
+    phaseNumber: normalizePhaseNumber3(match[1]),
+    phaseName: match[2]?.trim() ?? null
+  };
+}
+async function readPhaseRoadmapRequirements(projectRoot, phaseNumber) {
+  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  if (!await pathExists2(roadmapPath)) {
+    return [];
+  }
+  const roadmap = parseRoadmapDocument(await fs4.readFile(roadmapPath, "utf8"));
+  const matchedPhase = roadmap.phases.find(
+    (phase) => normalizePhaseNumber3(phase.phaseNumber) === normalizePhaseNumber3(phaseNumber)
+  );
+  return matchedPhase?.requirements ?? [];
+}
+async function collectPhasePlanArtifacts(projectRoot, resolved, overrides = /* @__PURE__ */ new Map()) {
+  const phaseRoot = resolveBlueprintPath(projectRoot, resolved.phaseDir);
+  const planPaths = /* @__PURE__ */ new Set();
+  if (await pathExists2(phaseRoot)) {
+    const entries = await fs4.readdir(phaseRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith("-PLAN.md")) {
+        continue;
+      }
+      planPaths.add(`${resolved.phaseDir}/${entry.name}`);
+    }
+  }
+  for (const planPath of overrides.keys()) {
+    if (planPath.endsWith("-PLAN.md")) {
+      planPaths.add(planPath);
+    }
+  }
+  const plans = [];
+  const nonCanonicalPlanPaths = [];
+  for (const planPath of [...planPaths].sort((left, right) => left.localeCompare(right))) {
+    const planIdFromPath = parsePlanArtifactPath(planPath, resolved.phasePrefix);
+    if (!planIdFromPath) {
+      nonCanonicalPlanPaths.push(planPath);
+      continue;
+    }
+    const content = overrides.get(planPath) ?? await fs4.readFile(resolveBlueprintPath(projectRoot, planPath), "utf8");
+    const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
+    plans.push({
+      path: planPath,
+      planIdFromPath,
+      content,
+      heading: extractHeadingText(content),
+      metadata: validation.metadata,
+      validation,
+      normalizedFrontmatterPlanId: normalizeMaybePlanId(validation.metadata.planId)
+    });
+  }
+  return {
+    plans,
+    nonCanonicalPlanPaths
+  };
+}
+function detectDependencyCycles(graph) {
+  const cycles = /* @__PURE__ */ new Set();
+  const state = /* @__PURE__ */ new Map();
+  const stack = [];
+  const visit = (planId2) => {
+    const currentState = state.get(planId2);
+    if (currentState === "visiting") {
+      const cycleStart = stack.indexOf(planId2);
+      if (cycleStart >= 0) {
+        const cycle = [...stack.slice(cycleStart), planId2];
+        cycles.add(cycle.join("->"));
+      }
+      return;
+    }
+    if (currentState === "visited") {
+      return;
+    }
+    state.set(planId2, "visiting");
+    stack.push(planId2);
+    for (const dependency of graph.get(planId2) ?? []) {
+      if (!graph.has(dependency)) {
+        continue;
+      }
+      visit(dependency);
+    }
+    stack.pop();
+    state.set(planId2, "visited");
+  };
+  for (const planId2 of graph.keys()) {
+    visit(planId2);
+  }
+  return [...cycles].map((cycle) => cycle.split("->")).sort((left, right) => left.join("->").localeCompare(right.join("->")));
+}
+async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
+  const coverageSeverity = options.roadmapCoverageSeverity ?? "issue";
+  const { plans, nonCanonicalPlanPaths } = await collectPhasePlanArtifacts(
+    projectRoot,
+    resolved,
+    options.overrides
+  );
+  const issues = [];
+  const warnings = [];
+  const roadmapRequirementIds = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const coveredRequirementIds = /* @__PURE__ */ new Set();
+  const unexpectedRequirementIds = /* @__PURE__ */ new Set();
+  const missingDependencyIds = /* @__PURE__ */ new Set();
+  const dependencyGraph = /* @__PURE__ */ new Map();
+  const plansById = /* @__PURE__ */ new Map();
+  const frontmatterPlanPaths = /* @__PURE__ */ new Map();
+  for (const planPath of nonCanonicalPlanPaths) {
+    issues.push(
+      `${planPath}: plan artifact path must match ${resolved.phasePrefix}-YY-PLAN.md for Phase ${resolved.phaseNumber}.`
+    );
+  }
+  for (const plan of plans) {
+    dependencyGraph.set(plan.planIdFromPath, []);
+    plansById.set(plan.planIdFromPath, plan);
+    for (const requirementId of plan.metadata.requirements) {
+      coveredRequirementIds.add(requirementId);
+      if (roadmapRequirementIds.length > 0 && !roadmapRequirementIds.includes(requirementId)) {
+        unexpectedRequirementIds.add(requirementId);
+      }
+    }
+    if (plan.normalizedFrontmatterPlanId) {
+      frontmatterPlanPaths.set(plan.normalizedFrontmatterPlanId, [
+        ...frontmatterPlanPaths.get(plan.normalizedFrontmatterPlanId) ?? [],
+        plan.path
+      ]);
+    }
+    for (const issue2 of plan.validation.issues) {
+      issues.push(`${plan.path}: ${issue2}`);
+    }
+    for (const warning of plan.validation.warnings) {
+      warnings.push(`${plan.path}: ${warning}`);
+    }
+    if (plan.normalizedFrontmatterPlanId && plan.normalizedFrontmatterPlanId !== plan.planIdFromPath) {
+      issues.push(
+        `${plan.path}: frontmatter plan_id "${plan.metadata.planId}" must match the path plan id "${plan.planIdFromPath}".`
+      );
+    }
+    const titlePlanId = extractReferencedPlanId(plan.metadata.title);
+    if (titlePlanId === "YY") {
+      issues.push(
+        `${plan.path}: frontmatter title must replace placeholder plan id YY with "${plan.planIdFromPath}".`
+      );
+    } else if (titlePlanId && titlePlanId !== plan.planIdFromPath) {
+      issues.push(
+        `${plan.path}: frontmatter title references plan ${titlePlanId}, which does not match path plan id "${plan.planIdFromPath}".`
+      );
+    }
+    const headingPlanId = extractReferencedPlanId(plan.heading);
+    if (headingPlanId === "YY") {
+      issues.push(
+        `${plan.path}: plan heading must replace placeholder plan id YY with "${plan.planIdFromPath}".`
+      );
+    } else if (headingPlanId && headingPlanId !== plan.planIdFromPath) {
+      issues.push(
+        `${plan.path}: plan heading references plan ${headingPlanId}, which does not match path plan id "${plan.planIdFromPath}".`
+      );
+    }
+    const headingPhase = extractHeadingPhaseDetails(plan.heading);
+    if (headingPhase.phaseNumber && normalizePhaseNumber3(headingPhase.phaseNumber) !== normalizePhaseNumber3(resolved.phaseNumber)) {
+      issues.push(
+        `${plan.path}: plan heading phase ${headingPhase.phaseNumber} must match Phase ${resolved.phaseNumber}.`
+      );
+    }
+    if (headingPhase.phaseName && headingPhase.phaseName !== resolved.phaseName) {
+      issues.push(
+        `${plan.path}: plan heading phase name "${headingPhase.phaseName}" must match "${resolved.phaseName}".`
+      );
+    }
+  }
+  for (const [frontmatterPlanId, planPaths] of frontmatterPlanPaths) {
+    if (planPaths.length > 1) {
+      issues.push(
+        `Frontmatter plan_id "${frontmatterPlanId}" is declared by multiple plan files: ${planPaths.join(", ")}.`
+      );
+    }
+  }
+  for (const plan of plans) {
+    const dependencyIds = plan.metadata.dependsOn.map((dependency) => normalizeMaybePlanId(dependency)).filter((dependency) => dependency !== null);
+    dependencyGraph.set(plan.planIdFromPath, dependencyIds);
+    for (const dependencyId of dependencyIds) {
+      const dependencyPlan = plansById.get(dependencyId);
+      if (!dependencyPlan) {
+        missingDependencyIds.add(dependencyId);
+        issues.push(
+          `${plan.path}: depends_on references missing plan "${dependencyId}".`
+        );
+        continue;
+      }
+      if (typeof plan.metadata.wave === "number" && typeof dependencyPlan.metadata.wave === "number" && dependencyPlan.metadata.wave >= plan.metadata.wave) {
+        issues.push(
+          `${plan.path}: wave ${plan.metadata.wave} must come after dependency ${dependencyId} in wave ${dependencyPlan.metadata.wave}.`
+        );
+      }
+    }
+  }
+  const cyclicDependencyPlanIds = detectDependencyCycles(dependencyGraph);
+  for (const cycle of cyclicDependencyPlanIds) {
+    issues.push(`Plan dependency cycle detected: ${cycle.join(" -> ")}.`);
+  }
+  const uncoveredRequirementIds = roadmapRequirementIds.filter(
+    (requirementId) => !coveredRequirementIds.has(requirementId)
+  );
+  if (uncoveredRequirementIds.length > 0) {
+    const message = `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
+    if (coverageSeverity === "issue") {
+      issues.push(message);
+    } else if (coverageSeverity === "warning") {
+      warnings.push(message);
+    }
+  }
+  if (unexpectedRequirementIds.size > 0) {
+    warnings.push(
+      `Phase ${resolved.phaseNumber} plans reference requirements not declared for this roadmap phase: ${[...unexpectedRequirementIds].sort((left, right) => left.localeCompare(right)).join(", ")}.`
+    );
+  }
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    status: issues.length === 0 ? "valid" : "invalid",
+    issues,
+    warnings,
+    planCount: plans.length,
+    planIds: plans.map((plan) => plan.planIdFromPath),
+    roadmapRequirementIds,
+    coveredRequirementIds: [...coveredRequirementIds].sort((left, right) => left.localeCompare(right)),
+    uncoveredRequirementIds,
+    unexpectedRequirementIds: [...unexpectedRequirementIds].sort((left, right) => left.localeCompare(right)),
+    missingDependencyIds: [...missingDependencyIds].sort((left, right) => left.localeCompare(right)),
+    cyclicDependencyPlanIds
+  };
+}
+function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
+  return validation.issues.filter((issue2) => {
+    if (issue2.startsWith(`${pathValue}:`) || issue2.includes(pathValue)) {
+      return true;
+    }
+    if (issue2.startsWith("Plan dependency cycle detected:")) {
+      const cycle = issue2.replace(/^Plan dependency cycle detected:\s*/, "").replace(/\.$/, "").split(/\s*->\s*/);
+      return cycle.includes(planId2);
+    }
+    return issue2.includes(`dependency ${planId2} `) || issue2.includes(`plan "${planId2}"`) || issue2.includes(`plan ${planId2}`) || issue2.includes(`plan_id "${planId2}"`) || issue2.includes(`path plan id "${planId2}"`);
+  });
+}
 function parseSummaryArtifactPath(pathValue, phasePrefix2) {
   const match = pathValue.match(
     new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-SUMMARY\\.md$`)
@@ -25531,6 +25825,81 @@ function summaryPathFor(located, planId2) {
     located.phaseDir,
     located.phasePrefix,
     `-${normalizePlanId(planId2)}-SUMMARY.md`
+  );
+}
+function normalizeExecutionSurfacePath(value) {
+  const normalized = value.replaceAll("\\", "/").trim();
+  const withoutDotPrefix = normalized.replace(/^\.\//, "");
+  const collapsed = path5.posix.normalize(withoutDotPrefix);
+  if (collapsed === ".") {
+    return withoutDotPrefix.replace(/\/+$/u, "");
+  }
+  return collapsed.replace(/\/+$/u, "");
+}
+function classifyExecutionSurfaceKind(source, value) {
+  const normalized = normalizeExecutionSurfacePath(value);
+  if (source === "files_modified" && (/^\.blueprint\//u.test(normalized) || /^dist\//u.test(normalized))) {
+    return "generated_artifact";
+  }
+  return source;
+}
+function executionSurfacePathsOverlap(left, right) {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+}
+function executionSurfaceSharedValue(left, right) {
+  if (left === right) {
+    return left;
+  }
+  return left.startsWith(`${right}/`) ? right : left;
+}
+function uniqueSortedStrings(values) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))].sort(
+    (left, right) => left.localeCompare(right)
+  );
+}
+function planExecutionSurfaces(plan) {
+  const surfaces = [
+    ...plan.filesModified.map((value) => ({
+      kind: classifyExecutionSurfaceKind("files_modified", value),
+      value: normalizeExecutionSurfacePath(value)
+    })),
+    ...plan.readFirst.map((value) => ({
+      kind: classifyExecutionSurfaceKind("read_first", value),
+      value: normalizeExecutionSurfacePath(value)
+    }))
+  ];
+  const seen = /* @__PURE__ */ new Set();
+  return surfaces.filter((surface) => {
+    if (surface.value.length === 0) {
+      return false;
+    }
+    const key = `${surface.kind}:${surface.value}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+function sharedExecutionSurfaces(left, right) {
+  const shared = /* @__PURE__ */ new Map();
+  const leftSurfaces = planExecutionSurfaces(left);
+  const rightSurfaces = planExecutionSurfaces(right);
+  for (const leftSurface of leftSurfaces) {
+    for (const rightSurface of rightSurfaces) {
+      if (!executionSurfacePathsOverlap(leftSurface.value, rightSurface.value)) {
+        continue;
+      }
+      const value = executionSurfaceSharedValue(leftSurface.value, rightSurface.value);
+      const kinds = uniqueSortedStrings([leftSurface.kind, rightSurface.kind]);
+      const key = `${value}:${kinds.join(",")}`;
+      if (!shared.has(key)) {
+        shared.set(key, { value, kinds });
+      }
+    }
+  }
+  return [...shared.values()].sort(
+    (leftSurface, rightSurface) => leftSurface.value.localeCompare(rightSurface.value)
   );
 }
 function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
@@ -25657,6 +26026,9 @@ function checkpointOwnerCommand(record2) {
 }
 function checkpointResumeMode(record2) {
   return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
+}
+function isScaffoldGeneratedPhaseArtifact(content) {
+  return content.includes(SCAFFOLD_GENERATED_MARKER);
 }
 function isKnownCheckpointOwnerCommand(value) {
   return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
@@ -26671,10 +27043,13 @@ async function blueprintPhaseArtifactWrite(args) {
         warnings: [...warnings, ...validation.warnings]
       };
     }
-    if (!existingValidation.valid && !(args.overwrite ?? false)) {
-      warnings.push(
-        `Replacing the existing scaffold or non-canonical ${args.artifact} artifact with authored content.`
+    if (!(args.overwrite ?? false) && !isScaffoldGeneratedPhaseArtifact(existingContent)) {
+      throw new Error(
+        `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
       );
+    }
+    if (!(args.overwrite ?? false) && !existingValidation.valid) {
+      warnings.push(`Replacing the existing scaffold ${args.artifact} artifact with authored content.`);
     } else if (!(args.overwrite ?? false)) {
       throw new Error(
         `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
@@ -27093,6 +27468,35 @@ async function blueprintPhasePlanRead(args) {
     reason: null
   };
 }
+async function blueprintPhasePlanValidate(args = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      status: "invalid",
+      issues: [],
+      warnings: [
+        ...located.warnings,
+        ...located.reason ? [located.reason] : []
+      ],
+      planCount: 0,
+      planIds: [],
+      roadmapRequirementIds: [],
+      coveredRequirementIds: [],
+      uncoveredRequirementIds: [],
+      unexpectedRequirementIds: [],
+      missingDependencyIds: [],
+      cyclicDependencyPlanIds: []
+    };
+  }
+  return validatePhasePlanSet(projectRoot, resolved);
+}
 async function blueprintPhasePlanWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const normalizedContent = normalizeTextContent2(args.content);
@@ -27183,6 +27587,35 @@ async function blueprintPhasePlanWrite(args) {
         warnings: []
       };
     }
+    const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
+      overrides: /* @__PURE__ */ new Map([[pathValue, preparedContent.content]]),
+      roadmapCoverageSeverity: "warning"
+    });
+    const blockingIssues = selectRelevantPlanValidationIssues(
+      prospectiveValidation,
+      pathValue,
+      planId2
+    );
+    if (blockingIssues.length > 0 && strictValidation) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: blockingIssues,
+          warnings: prospectiveValidation.warnings
+        },
+        warnings: [...warnings, ...prospectiveValidation.warnings]
+      };
+    }
     const exists = await pathExists2(absolutePath);
     const normalizePersistedText = (value) => value.replace(/\r\n/g, "\n").replace(/^---\n([\s\S]*?)\n---\n+/, "---\n$1\n---\n").trimEnd();
     if (exists) {
@@ -27201,11 +27634,11 @@ async function blueprintPhasePlanWrite(args) {
           overwritten: false,
           status: "reused",
           validation: {
-            valid: validation.valid && dependencyIssues.length === 0,
-            issues: validationIssues,
-            warnings: validation.warnings
+            valid: prospectiveValidation.status === "valid",
+            issues: prospectiveValidation.issues,
+            warnings: prospectiveValidation.warnings
           },
-          warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+          warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
       if (!(args.overwrite ?? false)) {
@@ -27234,11 +27667,11 @@ async function blueprintPhasePlanWrite(args) {
       overwritten: exists,
       status: exists ? "updated" : "created",
       validation: {
-        valid: validation.valid && dependencyIssues.length === 0,
-        issues: validationIssues,
-        warnings: validation.warnings
+        valid: prospectiveValidation.status === "valid",
+        issues: prospectiveValidation.issues,
+        warnings: prospectiveValidation.warnings
       },
-      warnings: [...warnings, ...dependencyIssues, ...validation.warnings]
+      warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });
 }
@@ -27393,6 +27826,309 @@ async function blueprintPhaseSummaryRead(args) {
     },
     validation,
     reason: null
+  };
+}
+async function blueprintPhaseExecutionTargets(args = {}) {
+  if (args.wave !== void 0 && (!Number.isInteger(args.wave) || args.wave < 1)) {
+    throw new Error("Wave must be a positive integer.");
+  }
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      requestedWave: args.wave ?? null,
+      gapsOnly: args.gapsOnly ?? false,
+      includeConflicts: args.includeConflicts ?? true,
+      pendingPlanIds: [],
+      gapClosurePlans: [],
+      candidatePlanIds: [],
+      candidatePlanPaths: [],
+      selectedPlanIds: [],
+      selectedPlanPaths: [],
+      selectedWave: args.wave ?? null,
+      lowerWavePendingPlans: [],
+      overwriteCandidatePlanIds: [],
+      overlapPlanIds: [],
+      candidatePlans: [],
+      selectedPlans: [],
+      overlapPlans: [],
+      existingSummaries: [],
+      blockers: {
+        executionBlocked: true,
+        reasons: located.reason ? [located.reason] : ["Phase could not be resolved."],
+        invalidPlanIds: [],
+        stalePlanIds: [],
+        lowerWavePendingPlanIds: [],
+        missingPlanPaths: [],
+        planIndexWarnings: [],
+        summaryIndexWarnings: located.reason ? [located.reason] : []
+      },
+      conflicts: null,
+      warnings: located.reason ? [located.reason] : []
+    };
+  }
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const requestedWave = args.wave ?? null;
+  const gapsOnly = args.gapsOnly ?? false;
+  const includeConflicts = args.includeConflicts ?? true;
+  const [planIndex, summaryIndex] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    }),
+    blueprintPhaseSummaryIndex({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    })
+  ]);
+  const pendingPlanIds = summaryIndex.pendingPlans;
+  const pendingPlanIdSet = new Set(pendingPlanIds);
+  const gapClosurePlanIdSet = new Set(planIndex.gapClosurePlans);
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
+  const summaryReads = await Promise.all(
+    planIndex.plans.map(
+      (plan) => blueprintPhaseSummaryRead({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        planId: plan.planId
+      })
+    )
+  );
+  const executionPlans = planIndex.plans.map((plan, index) => {
+    const summaryRead = summaryReads[index];
+    const summary = {
+      found: summaryRead.found,
+      path: summaryRead.path ?? summaryPathFor(resolved, plan.planId),
+      linkedPlanPath: summaryRead.metadata?.linkedPlanPath ?? null,
+      status: summaryRead.metadata?.status ?? null,
+      valid: summaryRead.validation?.valid ?? null,
+      issues: summaryRead.validation?.issues ?? [],
+      warnings: summaryRead.validation?.warnings ?? [],
+      overwriteCandidate: summaryRead.found && pendingPlanIdSet.has(plan.planId)
+    };
+    const missingDependencyPlans = collectMissingDependencyPlanPaths(
+      plan.dependsOn,
+      knownPlanIds,
+      resolved
+    );
+    return {
+      ...plan,
+      missingDependencyPlans,
+      summary
+    };
+  });
+  const planOrder = new Map(executionPlans.map((plan, index) => [plan.planId, index]));
+  const planById = new Map(executionPlans.map((plan) => [plan.planId, plan]));
+  let candidatePlanIds = executionPlans.map((plan) => plan.planId).filter((planId2) => pendingPlanIdSet.has(planId2));
+  if (gapsOnly) {
+    candidatePlanIds = candidatePlanIds.filter((planId2) => gapClosurePlanIdSet.has(planId2));
+  }
+  if (requestedWave !== null) {
+    candidatePlanIds = candidatePlanIds.filter(
+      (planId2) => planById.get(planId2)?.wave === requestedWave
+    );
+  }
+  const candidatePlans = candidatePlanIds.map((planId2) => planById.get(planId2)).filter((plan) => plan !== void 0);
+  const selectedWave = requestedWave ?? candidatePlans.map((plan) => plan.wave).filter((wave) => typeof wave === "number").sort((left, right) => left - right)[0] ?? null;
+  const selectedPlans = requestedWave !== null || selectedWave === null ? candidatePlans : candidatePlans.filter((plan) => plan.wave === selectedWave);
+  const lowerWavePendingPlans = selectedWave === null ? [] : executionPlans.filter(
+    (plan) => pendingPlanIdSet.has(plan.planId) && typeof plan.wave === "number" && plan.wave < selectedWave
+  );
+  const invalidPlanIds = selectedPlans.filter((plan) => !plan.valid).map((plan) => plan.planId);
+  const stalePlanIds = selectedPlans.filter((plan) => plan.missingDependencyPlans.length > 0).map((plan) => plan.planId);
+  const blockers = [];
+  if (candidatePlans.length === 0) {
+    if (requestedWave !== null && gapsOnly) {
+      blockers.push(
+        `No pending explicit gap-closure plans remain in wave ${requestedWave} for phase ${resolved.phaseNumber}.`
+      );
+    } else if (requestedWave !== null) {
+      blockers.push(
+        `No pending plans remain in wave ${requestedWave} for phase ${resolved.phaseNumber}.`
+      );
+    } else if (gapsOnly) {
+      blockers.push(
+        `No pending explicit gap-closure plans remain for phase ${resolved.phaseNumber}.`
+      );
+    } else {
+      blockers.push(`No pending plans remain for phase ${resolved.phaseNumber}.`);
+    }
+  }
+  if (lowerWavePendingPlans.length > 0 && selectedWave !== null) {
+    blockers.push(
+      `Lower-wave pending plans still block wave ${selectedWave}: ${lowerWavePendingPlans.map((plan) => `${plan.planId} (${plan.path})`).join(", ")}.`
+    );
+  }
+  if (invalidPlanIds.length > 0) {
+    blockers.push(
+      `Selected plans are invalid and must be repaired before execution: ${invalidPlanIds.join(", ")}.`
+    );
+  }
+  if (stalePlanIds.length > 0) {
+    blockers.push(
+      `Selected plans are stale because dependency plan artifacts are missing: ${stalePlanIds.join(", ")}.`
+    );
+  }
+  const pairConflicts = [];
+  if (includeConflicts) {
+    for (let leftIndex = 0; leftIndex < executionPlans.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < executionPlans.length; rightIndex += 1) {
+        const left = executionPlans[leftIndex];
+        const right = executionPlans[rightIndex];
+        const sharedSurfaces = sharedExecutionSurfaces(left, right);
+        if (sharedSurfaces.length === 0) {
+          continue;
+        }
+        pairConflicts.push({
+          leftPlanId: left.planId,
+          rightPlanId: right.planId,
+          sharedSurfaces,
+          warning: `${left.path} and ${right.path} overlap on ${sharedSurfaces.map((surface) => `${surface.value} (${surface.kinds.join("/")})`).join(", ")}.`
+        });
+      }
+    }
+  }
+  const selectedPlanIdSet = new Set(selectedPlans.map((plan) => plan.planId));
+  const parent = /* @__PURE__ */ new Map();
+  const find = (planId2) => {
+    const current = parent.get(planId2) ?? planId2;
+    if (current === planId2) {
+      parent.set(planId2, planId2);
+      return planId2;
+    }
+    const root = find(current);
+    parent.set(planId2, root);
+    return root;
+  };
+  const union2 = (left, right) => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot !== rightRoot) {
+      parent.set(rightRoot, leftRoot);
+    }
+  };
+  for (const pair of pairConflicts) {
+    union2(pair.leftPlanId, pair.rightPlanId);
+  }
+  const componentPairs = /* @__PURE__ */ new Map();
+  for (const pair of pairConflicts) {
+    const root = find(pair.leftPlanId);
+    const entries = componentPairs.get(root) ?? [];
+    entries.push(pair);
+    componentPairs.set(root, entries);
+  }
+  const conflictGroups = [];
+  for (const pairs of componentPairs.values()) {
+    const componentPlanIds = uniqueSortedStrings(
+      pairs.flatMap((pair) => [pair.leftPlanId, pair.rightPlanId])
+    );
+    if (!componentPlanIds.some((planId2) => selectedPlanIdSet.has(planId2))) {
+      continue;
+    }
+    const sharedSurfaces = /* @__PURE__ */ new Map();
+    for (const pair of pairs) {
+      for (const surface of pair.sharedSurfaces) {
+        const key = `${surface.value}:${surface.kinds.join(",")}`;
+        if (!sharedSurfaces.has(key)) {
+          sharedSurfaces.set(key, surface);
+        }
+      }
+    }
+    const componentPlans = componentPlanIds.map((planId2) => planById.get(planId2)).filter((plan) => plan !== void 0).sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
+    conflictGroups.push({
+      planIds: componentPlans.map((plan) => plan.planId),
+      planPaths: componentPlans.map((plan) => plan.path),
+      selectedPlanIds: componentPlans.map((plan) => plan.planId).filter((planId2) => selectedPlanIdSet.has(planId2)),
+      sharedSurfaces: [...sharedSurfaces.values()].sort(
+        (left, right) => left.value.localeCompare(right.value)
+      ),
+      existingSummaryPaths: componentPlans.filter((plan) => plan.summary.found).map((plan) => plan.summary.path),
+      warnings: uniqueSortedStrings(pairs.map((pair) => pair.warning))
+    });
+  }
+  const overlapPlanIds = uniqueSortedStrings(
+    conflictGroups.flatMap(
+      (group) => group.planIds.filter((planId2) => !selectedPlanIdSet.has(planId2))
+    )
+  );
+  const overlapPlans = overlapPlanIds.map((planId2) => planById.get(planId2)).filter((plan) => plan !== void 0).sort((left, right) => (planOrder.get(left.planId) ?? 0) - (planOrder.get(right.planId) ?? 0));
+  const existingSummaryPlanIds = uniqueSortedStrings([
+    ...candidatePlanIds,
+    ...overlapPlanIds
+  ]).filter((planId2) => planById.get(planId2)?.summary.found === true);
+  const existingSummaries = existingSummaryPlanIds.map((planId2) => {
+    const plan = planById.get(planId2);
+    if (!plan) {
+      return null;
+    }
+    return {
+      planId: planId2,
+      path: plan.summary.path,
+      linkedPlanPath: plan.summary.linkedPlanPath,
+      status: plan.summary.status,
+      valid: plan.summary.valid,
+      issues: plan.summary.issues,
+      warnings: plan.summary.warnings,
+      overwriteCandidate: plan.summary.overwriteCandidate
+    };
+  }).filter(
+    (summary) => summary !== null
+  );
+  const warnings = uniqueSortedStrings([
+    ...planIndex.warnings,
+    ...summaryIndex.warnings,
+    ...blockers,
+    ...conflictGroups.flatMap((group) => group.warnings)
+  ]);
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    requestedWave,
+    gapsOnly,
+    includeConflicts,
+    pendingPlanIds,
+    gapClosurePlans: planIndex.gapClosurePlans,
+    candidatePlanIds,
+    candidatePlanPaths: candidatePlans.map((plan) => plan.path),
+    selectedPlanIds: selectedPlans.map((plan) => plan.planId),
+    selectedPlanPaths: selectedPlans.map((plan) => plan.path),
+    selectedWave,
+    lowerWavePendingPlans: lowerWavePendingPlans.map((plan) => ({
+      planId: plan.planId,
+      path: plan.path,
+      wave: plan.wave
+    })),
+    overwriteCandidatePlanIds: candidatePlans.filter((plan) => plan.summary.overwriteCandidate).map((plan) => plan.planId),
+    overlapPlanIds,
+    candidatePlans,
+    selectedPlans,
+    overlapPlans,
+    existingSummaries,
+    blockers: {
+      executionBlocked: blockers.length > 0,
+      reasons: blockers,
+      invalidPlanIds,
+      stalePlanIds,
+      lowerWavePendingPlanIds: lowerWavePendingPlans.map((plan) => plan.planId),
+      missingPlanPaths: uniqueSortedStrings(
+        selectedPlans.flatMap((plan) => plan.missingDependencyPlans)
+      ),
+      planIndexWarnings: planIndex.warnings,
+      summaryIndexWarnings: summaryIndex.warnings
+    },
+    conflicts: includeConflicts ? {
+      groups: conflictGroups,
+      warnings: uniqueSortedStrings(conflictGroups.flatMap((group) => group.warnings))
+    } : null,
+    warnings
   };
 }
 async function blueprintPhaseSummaryWrite(args) {
@@ -27734,7 +28470,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
+var SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -27744,6 +28480,7 @@ var init_phase = __esm({
     init_state();
     init_state();
     init_security();
+    SCAFFOLD_GENERATED_MARKER = "*Generated by `blueprint_artifact_scaffold`*";
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
@@ -27827,6 +28564,13 @@ var init_phase = __esm({
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional()
     };
+    phaseExecutionTargetsInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      wave: number2().int().positive().optional(),
+      gapsOnly: boolean2().optional(),
+      includeConflicts: boolean2().optional()
+    };
     phaseArtifactWriteInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
@@ -27846,6 +28590,10 @@ var init_phase = __esm({
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
       planId: numericBlueprintInputSchema
+    };
+    phasePlanValidateInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional()
     };
     phasePlanWriteInputSchema = {
       cwd: string2().optional(),
@@ -27999,6 +28747,12 @@ var init_phase = __esm({
         handler: async (args) => blueprintPhasePlanIndex(args)
       },
       {
+        name: "blueprint_phase_execution_targets",
+        description: "Resolve deterministic execute-phase targets, lower-wave blockers, overwrite candidates, and overlap warnings without mutating repo state.",
+        inputSchema: phaseExecutionTargetsInputSchema,
+        handler: async (args) => blueprintPhaseExecutionTargets(args)
+      },
+      {
         name: "blueprint_phase_artifact_read",
         description: "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
         inputSchema: phaseArtifactInputSchema,
@@ -28027,6 +28781,12 @@ var init_phase = __esm({
         description: "Read a phase-scoped PLAN artifact together with parsed metadata and validation signals.",
         inputSchema: phasePlanReadInputSchema,
         handler: async (args) => blueprintPhasePlanRead(args)
+      },
+      {
+        name: "blueprint_phase_plan_validate",
+        description: "Validate the full saved PLAN set for one phase, including dependency coherence, plan-slot consistency, and roadmap coverage.",
+        inputSchema: phasePlanValidateInputSchema,
+        handler: async (args) => blueprintPhasePlanValidate(args)
       },
       {
         name: "blueprint_phase_plan_write",

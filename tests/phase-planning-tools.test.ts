@@ -10,6 +10,7 @@ import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhasePlanIndex,
   blueprintPhasePlanRead,
+  blueprintPhasePlanValidate,
   blueprintPhasePlanWrite
 } from "../src/mcp/tools/phase.js";
 
@@ -314,6 +315,19 @@ function hollowPlanContent(planId: string, wave: number): string {
   return hollowPlanContentWithOptions(planId, wave);
 }
 
+function placeholderPlanContent(wave: number): string {
+  return validPlanContent("YY", wave);
+}
+
+function planWithPlaceholderTitleAndHeading(planId: string, wave: number): string {
+  return validPlanContent(planId, wave)
+    .replace(`title: "Plan ${planId}"`, 'title: "Plan YY"')
+    .replace(
+      `# Phase 03: Phase Discovery - Plan ${planId}`,
+      "# Phase 03: Phase Discovery - Plan YY"
+    );
+}
+
 function hollowPlanContentWithOptions(
   planId: string,
   wave: number,
@@ -382,6 +396,7 @@ test("phase planning MCP tools are registered in the Blueprint server", () => {
   for (const toolName of [
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
+    "blueprint_phase_plan_validate",
     "blueprint_phase_plan_write"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
@@ -514,6 +529,35 @@ test("phase planning strict writes reject hollow verification and must-have sect
   assert.match(rejected.validation?.issues.join("\n") ?? "", /Must Haves/);
 });
 
+test("phase planning validation reports missing dependencies, cycles, wave order, coverage gaps, and YY placeholders", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(path.join(phaseDir, "03-01-PLAN.md"), validPlanContent("01", 1, { dependsOn: ["03"] }), "utf8");
+  await writeFile(path.join(phaseDir, "03-02-PLAN.md"), planWithPlaceholderTitleAndHeading("02", 2).replace("depends_on: []", "depends_on: [99]"), "utf8");
+  await writeFile(path.join(phaseDir, "03-03-PLAN.md"), validPlanContent("03", 1, { dependsOn: ["01"] }), "utf8");
+
+  const result = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(result.phaseFound, true);
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.missingDependencyIds, ["99"]);
+  assert.deepEqual(result.uncoveredRequirementIds, ["LIFE-02"]);
+  assert.deepEqual(result.cyclicDependencyPlanIds, [["01", "03", "01"]]);
+  assert.match(result.issues.join("\n"), /depends_on references missing plan "99"/);
+  assert.match(result.issues.join("\n"), /Plan dependency cycle detected: 01 -> 03 -> 01/);
+  assert.match(result.issues.join("\n"), /wave 1 must come after dependency 03 in wave 1/);
+  assert.match(result.issues.join("\n"), /frontmatter title must replace placeholder plan id YY with "02"/);
+  assert.match(result.issues.join("\n"), /plan heading must replace placeholder plan id YY with "02"/);
+  assert.match(result.issues.join("\n"), /does not cover roadmap requirements: LIFE-02/);
+});
+
 test("phase planning writes reject plan_id values that disagree with the target plan slot", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -548,6 +592,73 @@ test("phase planning writes reject plan_id values that disagree with the target 
   assert.match(mismatchedReuse.validation?.issues.join("\n") ?? "", /must match the requested planId/i);
 });
 
+test("phase planning strict writes validate the prospective plan set but allow incomplete roadmap coverage during incremental authoring", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const first = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    overwrite: true
+  });
+  const seededInvalid = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1, { dependsOn: ["02"] }),
+    overwrite: true,
+    validationMode: "warn"
+  });
+  const rejected = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validPlanContent("02", 1, { dependsOn: ["01"] }),
+    overwrite: true
+  });
+
+  assert.equal(first.status, "created");
+  assert.equal(first.validation.valid, true);
+  assert.deepEqual(first.validation.issues, []);
+  assert.match(first.validation.warnings.join("\n"), /does not cover roadmap requirements: LIFE-02/);
+  assert.equal(seededInvalid.status, "updated");
+  assert.equal(seededInvalid.validation.valid, false);
+  assert.match(seededInvalid.validation.issues.join("\n"), /depends_on references missing plan "02"/);
+  assert.equal(rejected.status, "invalid");
+  assert.equal(rejected.written, false);
+  assert.match(rejected.validation.issues.join("\n"), /Plan dependency cycle detected: 01 -> 02 -> 01/);
+  assert.match(rejected.validation.issues.join("\n"), /wave 1 must come after dependency 01 in wave 1/);
+});
+
+test("phase planning auto-assignment replaces YY in plan_id, title, and heading", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    content: placeholderPlanContent(1),
+    overwrite: true
+  });
+  const writtenBody = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
+    "utf8"
+  );
+
+  assert.equal(created.status, "created");
+  assert.equal(created.planId, "01");
+  assert.match(writtenBody, /plan_id: "01"/);
+  assert.match(writtenBody, /title: "Plan 01"/);
+  assert.match(writtenBody, /# Phase 03: Phase Discovery - Plan 01/);
+  assert.doesNotMatch(writtenBody, /\bPlan YY\b/);
+});
+
 test("phase planning tools accept numeric phase and plan identifiers from runtime callers", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -574,4 +685,21 @@ test("phase planning tools accept numeric phase and plan identifiers from runtim
   assert.equal(read.planId, "01");
   assert.equal(read.metadata?.gapClosure, true);
   assert.deepEqual(index.plans.map((plan) => plan.planId), ["01"]);
+});
+
+test("phase plan validation reports missing phases as invalid warnings instead of throwing", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "9"
+  });
+
+  assert.equal(result.phaseFound, false);
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.issues, []);
+  assert.match(result.warnings.join("\n"), /Phase 9 was not found/);
 });

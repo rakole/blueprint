@@ -18,7 +18,7 @@
 ## Purpose
 
 
-`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write tools so it can read existing plans, read the actual current context and relevant discovery artifact content, run a requirements-coverage check before finalization, persist real `XX-YY-PLAN.md` content, and update state deterministically while staying host-native.
+`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write/validate tools so it can read existing plans, read the actual current context and relevant discovery artifact content, run a requirements-coverage check before finalization, persist real `XX-YY-PLAN.md` content, validate the saved plan set in phase scope, and update state deterministically while staying host-native.
 
 Interactive planning UX rules:
 - Prefer Gemini CLI's built-in `ask_user` dialog over plain assistant prose whenever you need overwrite confirmation or a structured reuse/revise/replace decision about an existing plan.
@@ -74,10 +74,9 @@ Interactive planning UX rules:
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_plan_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}`
+- `blueprint_phase_plan_validate` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, status, issues, warnings, planCount, planIds, roadmapRequirementIds, coveredRequirementIds, uncoveredRequirementIds, unexpectedRequirementIds, missingDependencyIds, cyclicDependencyPlanIds}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
-- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
-- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Plan Persistence Contract
@@ -85,6 +84,8 @@ Interactive planning UX rules:
 
 - Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` before drafting or revising `XX-YY-PLAN.md`, and normalize the final draft to `contract.authoringTemplate`. Use the live contract object as the source of truth for the plan shape and required wording rather than a copied local template.
 - Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly.
+- Do not seed `XX-YY-PLAN.md` with scaffold placeholders; draft the finished plan body before the first write.
+- `/blu-plan-phase` writes must use `validationMode: "strict"`; do not use warn-mode writes from this command.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone.
 - Before finalization, map every declared phase requirement and must-have to explicit plan coverage or a named blocker. If the phase is too broad for one coherent plan, split/prioritize it into smaller dependency-aware waves before writing.
 - Author plans at execution-prompt quality, not outline quality: concrete repo-relative `Read First` entries, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, goal-backward must-haves with observable truths/artifacts/key links, and full-fidelity coverage of locked context decisions.
@@ -92,7 +93,8 @@ Interactive planning UX rules:
 - Use `blueprint-planner` and `blueprint-checker` only when suitable planning/workflow analysis agents are available; otherwise follow the runtime contract's sequential no-subagent fallback, drafting and validating one plan or topic at a time with compressed carry-forward context.
 - Do not use browser, web-search-only, or generic browsing agents as substitutes for codebase or workflow planning agents.
 - If planner/checker revisions keep failing after a bounded number of passes, stop the loop, preserve the best coherent draft, and report the exact unresolved requirement or split point instead of looping indefinitely.
-- If `blueprint_phase_plan_write` or final artifact validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
+- After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion.
+- If `blueprint_phase_plan_write` or final scoped plan validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
@@ -165,7 +167,8 @@ Interactive planning UX rules:
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes and prefers synced recomputation after persistence with `base: "synced"` so routing follows the updated artifact inventory.
 - Creates or updates only the declared artifacts for this command.
-- Uses the plan index plus dedicated plan read/write tools to persist actual plan content instead of scaffold-only placeholders.
+- Uses the plan index plus dedicated plan read/write/validate tools to persist actual plan content instead of scaffold-only placeholders.
+- Uses the scoped plan validation tool to validate the saved plan set instead of relying on a global artifact sweep.
 - Reads actual current context content and relevant discovery artifact content before drafting or revising plans instead of relying on status-only discovery signals.
 - Reads the canonical `phase.plan` contract and normalizes the final draft to `contract.authoringTemplate` before writing.
 - Uses only documented MCP tools for persistent state changes.

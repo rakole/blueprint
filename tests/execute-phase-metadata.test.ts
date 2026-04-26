@@ -133,3 +133,17 @@ test("execute-phase skill captures wave-based execution and summary generation r
   assert.match(skillFile, /shared file set/i);
   assert.match(skillFile, /\/blu-progress/);
 });
+
+test("execute-phase MCP docs include the deterministic execution-target helper", async () => {
+  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
+
+  assert.match(
+    mcpToolsDoc,
+    /\| `blueprint_phase_execution_targets` \| Resolve deterministic execute-phase plan targets, lower-wave blockers, overwrite candidates, and overlap warnings from saved plan and summary state \|/
+  );
+  assert.match(mcpToolsDoc, /`execute-phase` uses `blueprint_phase_execution_targets`/);
+  assert.match(
+    mcpToolsDoc,
+    /It derives candidate and selected plan ids for the default case plus `--wave` and `--gaps-only`, keeps any lower-wave pending plan as an absolute blocker for later-wave work/i
+  );
+});

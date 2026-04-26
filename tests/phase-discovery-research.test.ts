@@ -553,7 +553,7 @@ test("research scaffold can be replaced by substantive content without explicit 
   assert.equal(written.status, "updated");
   assert.equal(written.written, true);
   assert.equal(written.overwritten, true);
-  assert.match(written.warnings.join("\n"), /Replacing the existing scaffold or non-canonical research artifact/i);
+  assert.match(written.warnings.join("\n"), /Replacing the existing scaffold research artifact/i);
   assert.equal(finalStatus.researchValid, true);
 });
 
@@ -578,11 +578,22 @@ test("invalid existing research must be repaired instead of being treated as reu
     artifact: "research",
     content: invalidContent
   });
+  await assert.rejects(
+    () =>
+      blueprintPhaseArtifactWrite({
+        cwd: repoPath,
+        phase: "3",
+        artifact: "research",
+        content: validResearchContent("Repair the invalid research artifact in place.")
+      }),
+    /already exists/
+  );
   const repaired = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
     artifact: "research",
-    content: validResearchContent("Repair the invalid research artifact in place.")
+    content: validResearchContent("Repair the invalid research artifact in place."),
+    overwrite: true
   });
   const statusAfter = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
 
@@ -594,7 +605,6 @@ test("invalid existing research must be repaired instead of being treated as reu
   assert.match(unchanged.validation?.issues.join("\n") ?? "", /required section|Confidence|source/i);
   assert.equal(repaired.status, "updated");
   assert.equal(repaired.written, true);
-  assert.match(repaired.warnings.join("\n"), /Replacing the existing scaffold or non-canonical research artifact/i);
   assert.equal(statusAfter.researchValid, true);
 });
 

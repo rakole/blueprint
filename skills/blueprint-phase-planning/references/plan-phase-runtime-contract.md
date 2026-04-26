@@ -72,9 +72,11 @@ Blueprint-native.
 
 ### Persist
 
-- Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing path
-  before first write. Scaffold text is never final content.
+- Do not seed `XX-YY-PLAN.md` with scaffold placeholders. Draft the finalized
+  body first, then persist it directly.
 - Persist only through `mcp_blueprint_blueprint_phase_plan_write`.
+- Use `validationMode: "strict"` for `/blu-plan-phase`; `validationMode:
+  "warn"` is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `content` as the full plan
   body. Omit `planId` to auto-assign, or pass only a numeric plan id when
   targeting an existing plan.
@@ -84,10 +86,12 @@ Blueprint-native.
 
 ### Validate
 
-- Call `mcp_blueprint_blueprint_artifact_validate` after the final write path.
-- If `phase_plan_write` returns `status: "invalid"` or validation issues, do
-  not present the plan as complete. Repair the draft against the live contract,
-  rerun the targeted planner/checker path if needed, then write again.
+- Call `mcp_blueprint_blueprint_phase_plan_validate` after the final write
+  path.
+- If `phase_plan_write` returns `status: "invalid"` or scoped plan-validation
+  issues appear, do not present the plan as complete. Repair the draft against
+  the live contract, rerun the targeted planner/checker path if needed, then
+  write again.
 - If validation or checker repair stalls, preserve the best coherent draft
   only when it is saved truthfully, report the remaining blocker or split point,
   and route to `/blu-progress`.
@@ -193,6 +197,8 @@ When planner/checker agents are unavailable, continue sequentially:
   overwrite confirmation.
 - Invalid write: repair the content using validation issues, then retry the
   same MCP write. Do not bypass validation with raw file writes.
+- Scoped plan validation failure: repair only the affected plan ids or split
+  point, then rerun the same scoped validation before completion.
 - Checker `REVISE`: revise only affected plan ids unless the whole plan set is
   unsound.
 - Checker `BLOCK`: stop or split unless the missing substrate can be produced
@@ -224,8 +230,9 @@ When planner/checker agents are unavailable, continue sequentially:
 - All enabled config gates were honored or explicitly routed.
 - Final plan bodies were persisted through
   `mcp_blueprint_blueprint_phase_plan_write`.
-- Saved plans were validated and checker-reviewed when `workflow.plan_check` is
-  enabled, or the config-disabled skip is stated.
+- Saved plans were validated through
+  `mcp_blueprint_blueprint_phase_plan_validate` and checker-reviewed when
+  `workflow.plan_check` is enabled, or the config-disabled skip is stated.
 - `.blueprint/STATE.md` was refreshed through synced state update.
 - The final response names the phase, gates, plan ids, revision/checker result,
   warnings or blockers, and the next safe implemented action.
