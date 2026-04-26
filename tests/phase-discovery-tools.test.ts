@@ -12,6 +12,7 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import {
   phaseToolDefinitions,
+  blueprintPhaseCheckpointDelete,
   blueprintPhaseCheckpointGet,
   blueprintPhaseContext,
   blueprintPhaseCheckpointPut,
@@ -582,6 +583,137 @@ test("checkpoint reads remain compatible with legacy object-shaped saves", async
 
   assert.equal(checkpoint.found, true);
   assert.deepEqual(checkpoint.checkpoint, legacyCheckpoint);
+});
+
+test("checkpoint writes refuse to overwrite a foreign shared checkpoint", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: 3,
+    checkpoint: {
+      ownerCommand: "/blu-discuss-phase",
+      completedAreas: ["Scope boundaries"],
+      remainingAreas: ["Open questions"],
+      decisions: [],
+      deferredIdeas: [],
+      canonicalReferences: [],
+      resumeMeta: {
+        mode: "discuss",
+        pendingTopics: ["Open questions"],
+        completedTopics: ["Scope boundaries"],
+        notes: [],
+        updatedAt: "2026-04-19T00:00:06.000Z"
+      }
+    }
+  });
+
+  await assert.rejects(
+    blueprintPhaseCheckpointPut({
+      cwd: repoPath,
+      phase: 3,
+      checkpoint: {
+        ownerCommand: "/blu-research-phase",
+        completedAreas: ["Dependency scan"],
+        remainingAreas: ["Recommendation synthesis"],
+        decisions: [],
+        deferredIdeas: [],
+        canonicalReferences: [],
+        resumeMeta: {
+          mode: "research",
+          pendingTopics: ["Recommendation synthesis"],
+          completedTopics: ["Dependency scan"],
+          notes: [],
+          updatedAt: "2026-04-19T00:00:07.000Z"
+        }
+      }
+    }),
+    /Refusing to overwrite .*belongs to \/blu-discuss-phase, not \/blu-research-phase/i
+  );
+});
+
+test("checkpoint delete refuses to remove a foreign shared checkpoint when owner or mode is expected", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: 3,
+    checkpoint: {
+      ownerCommand: "/blu-research-phase",
+      completedAreas: ["Dependency scan"],
+      remainingAreas: ["Recommendation synthesis"],
+      decisions: [],
+      deferredIdeas: [],
+      canonicalReferences: [],
+      resumeMeta: {
+        mode: "research",
+        pendingTopics: ["Recommendation synthesis"],
+        completedTopics: ["Dependency scan"],
+        notes: [],
+        updatedAt: "2026-04-19T00:00:08.000Z"
+      }
+    }
+  });
+
+  const deleted = await blueprintPhaseCheckpointDelete({
+    cwd: repoPath,
+    phase: 3,
+    expectedOwnerCommand: "/blu-discuss-phase",
+    expectedMode: "discuss"
+  });
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(deleted.deleted, false);
+  assert.match(
+    deleted.reason ?? "",
+    /Refusing to delete .*belongs to \/blu-research-phase, not \/blu-discuss-phase/i
+  );
+  assert.equal(checkpoint.found, true);
+  assert.equal(checkpoint.ownerCommand, "/blu-research-phase");
+});
+
+test("checkpoint delete remains compatible with legacy mode-owned checkpoints", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  await writeFile(
+    checkpointPath,
+    `${JSON.stringify(
+      {
+        mode: "research",
+        pendingTopics: ["Recommendation synthesis"],
+        completedTopics: ["Dependency scan"],
+        currentQuestion: "Which recommendation is still unverified?",
+        updatedAt: "2026-04-19T00:00:09.000Z"
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+
+  const deleted = await blueprintPhaseCheckpointDelete({
+    cwd: repoPath,
+    phase: 3,
+    expectedOwnerCommand: "/blu-research-phase",
+    expectedMode: "research"
+  });
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(deleted.deleted, true);
+  assert.equal(checkpoint.found, false);
 });
 
 test("phase locate returns structured recovery when ROADMAP.md is missing", async (t) => {

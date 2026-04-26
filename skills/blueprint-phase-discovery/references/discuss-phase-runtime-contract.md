@@ -210,9 +210,11 @@ Before treating the discussion as complete:
    next safe action from the loaded state, falling back to `/blu-progress` when
    routing is missing, blocked, or undecidable.
 7. Delete the checkpoint only after the context write, optional discussion-log
-   write, synced state update, and follow-up state load have all succeeded. If
-   any finalization step fails, leave the checkpoint in place and report the
-   exact continuation blocker.
+   write, synced state update, and follow-up state load have all succeeded.
+   Pass `expectedOwnerCommand: "/blu-discuss-phase"` and
+   `expectedMode: "discuss"` so cleanup cannot delete another command's shared
+   checkpoint. If any finalization step fails, leave the checkpoint in place
+   and report the exact continuation blocker.
 
 If validation cannot be repaired in the current run, leave the checkpoint in
 place and report the exact blocker plus the next safe continuation action.

@@ -44,7 +44,7 @@
 
 
 - User-facing result: a concise summary of whether existing research was viewed, reused, created, or updated, plus the next logical action when applicable.
-- Repo side effects: writes validated `XX-RESEARCH.md` content when research changes, may refresh the research checkpoint during pauses or inconclusive runs, and updates `.blueprint/STATE.md`.
+- Repo side effects: writes validated `XX-RESEARCH.md` content when research changes, may refresh the shared phase checkpoint with research-owned continuation state during pauses or inconclusive runs, and updates `.blueprint/STATE.md`.
 - In-flight research should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible until the run concludes, pauses on a checkpoint, or stops on a confirmation or validation gate.
 
 ## Behavior Stages
@@ -69,7 +69,7 @@
 
 
 - `phase XX-RESEARCH.md`
-- `optional phase research checkpoint JSON`
+- `optional shared phase checkpoint JSON owned by research-phase`
 - `.blueprint/STATE.md`
 
 
@@ -99,7 +99,7 @@
 - Ground repo truth in `blueprint_phase_context`, the actual saved `XX-CONTEXT.md` body, existing `XX-RESEARCH.md`, and any saved `.blueprint/codebase/` summaries before consulting external sources.
 - Use official docs or explicitly supplied external references only for claims the repo cannot settle, and keep repo-derived evidence distinct from external or web-derived evidence in the draft, recommendations, and `## Sources`.
 - If external verification is skipped, unavailable, or still inconclusive, state that explicitly instead of implying the command confirmed it.
-- Pass `phase` to `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, and treat checkpoint `path` values as authoritative instead of hand-building checkpoint filenames.
+- Pass `phase` to `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, and treat checkpoint `path` values as authoritative instead of hand-building checkpoint filenames. The MCP tool keeps a shared phase checkpoint path, so ownership comes from `ownerCommand` and `resumeMeta.mode`, not from a research-specific filename.
 - Persist the final research body through `blueprint_phase_artifact_write` with `artifact: "research"` and treat the returned `path` as authoritative instead of deriving filenames from the phase slug.
 - `blueprint_phase_artifact_write` keeps research validation strict by default. Do not force a warn-only save just to bypass missing sections, citations, or other schema issues unless the user explicitly accepted that tradeoff.
 - If the current `XX-CONTEXT.md` read returns `found: false`, stop and route back to `/blu-discuss-phase <phase>` before drafting research.
@@ -112,7 +112,7 @@
 - Use checkpoint persistence only as a resumability aid for long-running or inconclusive research, not as a second research artifact.
 - Read checkpoints with `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`, then honor `safeToResume` and `warnings` before using saved state.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured checkpoint shape with `ownerCommand: "/blu-research-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. Keep resumability details inside `resumeMeta` with `mode: "research"` plus fields such as `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`.
-- Delete the saved checkpoint through `blueprint_phase_checkpoint_delete` after a successful final research write so later runs do not resume stale continuation state.
+- Delete the saved checkpoint through `blueprint_phase_checkpoint_delete` with `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"` after a successful final research write so later runs do not resume stale continuation state and cleanup cannot remove another command's checkpoint.
 - After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load` so `STATE.md` and the reported next safe action both reflect live artifact inventory without rewriting the research artifact.
 - Keep the section names unchanged and replace every angle-bracket placeholder before writing.
 - Use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the output-quality and recovery authority: it requires planner-consumed sections, repo-versus-external provenance, capability-gated `blueprint-researcher` use, a single-agent topic-strand fallback when subagents are unavailable, and validation repair/retry before completion.
@@ -150,7 +150,7 @@
 
 ## Shell Risk Profile
 
-- Low: writes phase research artifacts when needed, may refresh the resumable research checkpoint, and syncs `.blueprint/STATE.md`.
+- Low: writes phase research artifacts when needed, may refresh the resumable research-owned shared checkpoint, and syncs `.blueprint/STATE.md`.
 
 ## User Prompts And Confirmation Gates
 

@@ -145,6 +145,10 @@ test("discuss-phase command references only registered phase-discovery tool name
   );
   assert.match(commandFile, /expectedOwnerCommand: "\/blu-discuss-phase"/);
   assert.match(commandFile, /expectedMode: "discuss"/);
+  assert.match(
+    commandFile,
+    /phase_checkpoint_delete[\s\S]*expectedOwnerCommand: "\/blu-discuss-phase"[\s\S]*expectedMode: "discuss"/i
+  );
   assert.match(commandFile, /resumeMeta\.mode.*"discuss"/);
   assert.match(commandFile, /host-supported structured choices/i);
   assert.doesNotMatch(commandFile, /type:\s*"choice"|2-4 labeled options|Type your own answer/i);
@@ -424,7 +428,9 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   const loadedState = await blueprintStateLoad({ cwd: repoPath });
   const checkpointDeleted = await blueprintPhaseCheckpointDelete({
     cwd: repoPath,
-    phase: "3"
+    phase: "3",
+    expectedOwnerCommand: "/blu-discuss-phase",
+    expectedMode: "discuss"
   });
   const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
   const listed = await blueprintArtifactList({ cwd: repoPath });

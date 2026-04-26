@@ -180,6 +180,11 @@ type PhaseCheckpointPutArgs = PhaseLookupArgs & {
   checkpoint: PhaseCheckpointWriteRecord;
 };
 
+type PhaseCheckpointDeleteArgs = PhaseLookupArgs & {
+  expectedOwnerCommand?: PhaseCheckpointOwnerCommand;
+  expectedMode?: PhaseCheckpointResumeMode;
+};
+
 type PhasePlanReadArgs = PhaseLookupArgs & {
   planId: NumericInput;
 };
@@ -879,6 +884,12 @@ const phaseCheckpointPutInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   checkpoint: phaseCheckpointWriteSchema
+};
+const phaseCheckpointDeleteInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
+  expectedMode: phaseCheckpointResumeModeSchema.optional()
 };
 
 function normalizeBlueprintInput(value: NumericInput): string {
@@ -2957,6 +2968,31 @@ function isKnownCheckpointOwnerCommand(value: string | null): value is PhaseChec
 
 function isKnownCheckpointResumeMode(value: string | null): value is PhaseCheckpointResumeMode {
   return value !== null && PHASE_CHECKPOINT_RESUME_MODES.includes(value as PhaseCheckpointResumeMode);
+}
+
+function checkpointExpectedOwnerFromMode(
+  value: string | null
+): PhaseCheckpointOwnerCommand | null {
+  switch (value) {
+    case "discuss":
+      return "/blu-discuss-phase";
+    case "research":
+      return "/blu-research-phase";
+    case "uat":
+      return "/blu-verify-work";
+    default:
+      return null;
+  }
+}
+
+function checkpointOwnershipBlockerReason(
+  checkpointPath: string,
+  warnings: string[],
+  action: "overwrite" | "delete"
+): string {
+  const details = warnings.join(" ");
+
+  return `Refusing to ${action} ${checkpointPath} because ${details}`;
 }
 
 function evaluateCheckpointResumeSafety(
@@ -5319,7 +5355,7 @@ export async function blueprintPhaseCheckpointPut(
     const existingRaw = await fs.readFile(absolutePath, "utf8");
 
     if (existingRaw === nextRaw) {
-      warnings.push(`Preserved existing discussion checkpoint because the content was unchanged.`);
+      warnings.push(`Preserved existing phase checkpoint because the content was unchanged.`);
 
       return {
         phaseNumber: resolved.phaseNumber,
@@ -5331,6 +5367,32 @@ export async function blueprintPhaseCheckpointPut(
         warnings
       };
     }
+
+    const existingCheckpoint = ensureCheckpointObject(
+      safeJsonParseObject(existingRaw, {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
+    const ownershipSafety = evaluateCheckpointResumeSafety(
+      existingCheckpoint,
+      checkpointPath,
+      args.checkpoint.ownerCommand,
+      args.checkpoint.resumeMeta.mode
+    );
+
+    if (!ownershipSafety.safeToResume) {
+      throw new Error(
+        checkpointOwnershipBlockerReason(
+          checkpointPath,
+          ownershipSafety.warnings,
+          "overwrite"
+        )
+      );
+    }
+
+    warnings.push(...ownershipSafety.warnings);
   }
 
   await writeJsonFile(absolutePath, nextCheckpoint);
@@ -5347,7 +5409,7 @@ export async function blueprintPhaseCheckpointPut(
 }
 
 export async function blueprintPhaseCheckpointDelete(
-  args: PhaseLookupArgs = {}
+  args: PhaseCheckpointDeleteArgs = {}
 ): Promise<PhaseCheckpointDeleteResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate(args);
@@ -5380,6 +5442,44 @@ export async function blueprintPhaseCheckpointDelete(
       deleted: false,
       reason: `${checkpointPath} did not exist.`
     };
+  }
+
+  if (args.expectedOwnerCommand || args.expectedMode) {
+    const parsed = ensureCheckpointObject(
+      safeJsonParseObject(await fs.readFile(absolutePath, "utf8"), {
+        label: checkpointPath,
+        maxBytes: 256 * 1024
+      }),
+      checkpointPath
+    );
+    const expectedOwnerCommand =
+      args.expectedOwnerCommand ?? checkpointExpectedOwnerFromMode(args.expectedMode ?? null);
+    const expectedMode =
+      args.expectedMode ??
+      (expectedOwnerCommand ? PHASE_CHECKPOINT_OWNER_MODES[expectedOwnerCommand] : undefined);
+    const ownershipSafety = evaluateCheckpointResumeSafety(
+      parsed,
+      checkpointPath,
+      expectedOwnerCommand ?? undefined,
+      expectedMode
+    );
+
+    if (!ownershipSafety.safeToResume) {
+      return {
+        phaseFound: true,
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        path: checkpointPath,
+        deleted: false,
+        reason: checkpointOwnershipBlockerReason(
+          checkpointPath,
+          ownershipSafety.warnings,
+          "delete"
+        )
+      };
+    }
   }
 
   await fs.rm(absolutePath, { force: true });
@@ -5560,9 +5660,9 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_checkpoint_delete",
     description:
-      "Delete the saved discuss-phase checkpoint for a phase after successful completion.",
-    inputSchema: phaseLookupInputSchema,
+      "Delete the saved phase continuation checkpoint for a phase, optionally guarding on the expected command owner and resume mode.",
+    inputSchema: phaseCheckpointDeleteInputSchema,
     handler: async (args: Record<string, unknown>) =>
-      blueprintPhaseCheckpointDelete(args as PhaseLookupArgs)
+      blueprintPhaseCheckpointDelete(args as PhaseCheckpointDeleteArgs)
   }
 ];

@@ -7,9 +7,9 @@ This file describes the intended artifact flow through a single Blueprint phase 
 ## Happy-Path Sequence
 
 1. `discuss-phase`
-   Writes `XX-CONTEXT.md`, may persist `XX-DISCUSS-CHECKPOINT.json` during long discovery, and should delete that checkpoint after successful context capture.
+   Writes `XX-CONTEXT.md`, may persist the shared `XX-DISCUSS-CHECKPOINT.json` continuation artifact during long discovery, and should delete only discuss-owned checkpoint state after successful context capture.
 2. `research-phase`
-   Writes `XX-RESEARCH.md` when technical uncertainty or integration risk exists.
+   Writes `XX-RESEARCH.md` when technical uncertainty or integration risk exists, and may reuse the shared `XX-DISCUSS-CHECKPOINT.json` continuation artifact with `ownerCommand: "/blu-research-phase"` during pauses or inconclusive research.
 3. `ui-phase`
    Writes `XX-UI-SPEC.md` for frontend-heavy work, or records an explicit UI-skip rationale in `XX-UI-SPEC.md` when UI work is intentionally out of scope.
 4. `plan-phase`
