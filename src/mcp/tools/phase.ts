@@ -2771,6 +2771,24 @@ function toPhasePlanRecord(
   };
 }
 
+function collectMissingDependencyPlanPaths(
+  dependsOn: string[],
+  availablePlanIds: ReadonlySet<string>,
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): string[] {
+  return dependsOn.flatMap((dependency) => {
+    try {
+      const normalizedDependency = normalizePlanId(dependency);
+
+      return availablePlanIds.has(normalizedDependency)
+        ? []
+        : [planPathFor(resolved, normalizedDependency)];
+    } catch {
+      return [];
+    }
+  });
+}
+
 function normalizeTextContent(content: string): string {
   return content.endsWith("\n") ? content : `${content}\n`;
 }
@@ -4583,17 +4601,7 @@ export async function blueprintPhasePlanIndex(
     plans.length === 0
       ? [planPathFor(resolved, "01")]
       : plans.flatMap((plan) =>
-          plan.dependsOn.flatMap((dependency) => {
-            try {
-              const normalizedDependency = normalizePlanId(dependency);
-
-              return knownPlanIds.has(normalizedDependency)
-                ? []
-                : [planPathFor(resolved, normalizedDependency)];
-            } catch {
-              return [];
-            }
-          })
+          collectMissingDependencyPlanPaths(plan.dependsOn, knownPlanIds, resolved)
         );
 
   for (const plan of plans) {
@@ -4910,7 +4918,9 @@ export async function blueprintPhaseSummaryIndex(
   const summaries: PhaseSummaryRecord[] = [];
   const completedPlans = new Set<string>();
   const warnings = [...planIndex.warnings];
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
   const knownPlanPaths = new Map(planIndex.plans.map((plan) => [plan.planId, plan.path]));
+  const planRecordsById = new Map(planIndex.plans.map((plan) => [plan.planId, plan]));
 
   for (const summaryPath of summaryPaths) {
     const planId = parseSummaryArtifactPath(summaryPath, resolved.phasePrefix);
@@ -4929,9 +4939,27 @@ export async function blueprintPhaseSummaryIndex(
     summaries.push(toPhaseSummaryRecord(planId, summaryPath, content, linkedPlanPath));
 
     const summaryStatus = extractSummaryStatus(content);
+    const linkedPlan = planRecordsById.get(planId);
+    const missingDependencyPlans = linkedPlan
+      ? collectMissingDependencyPlanPaths(linkedPlan.dependsOn, knownPlanIds, resolved)
+      : [];
 
     if (validation.valid && summaryStatus === "COMPLETED") {
-      completedPlans.add(planId);
+      if (!linkedPlan) {
+        warnings.push(
+          `${summaryPath}: no matching plan artifact exists for this summary, so it does not close execution coverage.`
+        );
+      } else if (!linkedPlan.valid) {
+        warnings.push(
+          `${summaryPath}: linked plan ${linkedPlan.path} is invalid, so this summary does not close execution coverage.`
+        );
+      } else if (missingDependencyPlans.length > 0) {
+        warnings.push(
+          `${summaryPath}: linked plan ${linkedPlan.path} is missing dependency plan artifacts (${missingDependencyPlans.join(", ")}), so this summary does not close execution coverage.`
+        );
+      } else {
+        completedPlans.add(planId);
+      }
     } else if (validation.valid && summaryStatus) {
       warnings.push(
         `${summaryPath}: summary status is ${summaryStatus}, so it remains pending execution debt.`
@@ -4944,7 +4972,7 @@ export async function blueprintPhaseSummaryIndex(
       warnings.push(...validation.warnings.map((warning) => `${summaryPath}: ${warning}`));
     }
 
-    if (!knownPlanPaths.has(planId)) {
+    if (!knownPlanPaths.has(planId) && !(validation.valid && summaryStatus === "COMPLETED")) {
       warnings.push(`${summaryPath}: no matching plan artifact exists for this summary.`);
     }
   }
@@ -5075,6 +5103,38 @@ export async function blueprintPhaseSummaryWrite(
       overwritten: false,
       status: "invalid",
       issues: planIssues.map((issue) => `${plan.path}: ${issue}`),
+      warnings: plan.validation?.warnings ?? []
+    };
+  }
+
+  const planIndex = await blueprintPhasePlanIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId) ?? null;
+  const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
+  const missingDependencyPlans = collectMissingDependencyPlanPaths(
+    indexedPlan?.dependsOn ?? plan.metadata?.dependsOn ?? [],
+    knownPlanIds,
+    resolved
+  );
+
+  if (missingDependencyPlans.length > 0) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId,
+      path: summaryPathFor(resolved, planId),
+      linkedPlanPath: plan.path,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues: [
+        `${plan.path}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
+      ],
       warnings: plan.validation?.warnings ?? []
     };
   }

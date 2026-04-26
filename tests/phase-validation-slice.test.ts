@@ -81,14 +81,50 @@ wave: 1
 status: done
 objective: "Exercise verification and UAT handoff."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - EXEC-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/phase-validation-slice.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 03: Execution - Plan 01
+
+## Goal
+
+Exercise verification and UAT handoff.
+
+## Scope
+
+- Preserve completed execution evidence for downstream validation and UAT writes.
+
+## Tasks
+
+### Task 1: Keep completed execution evidence durable
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Confirm the saved execution summary remains usable input for validation and UAT artifacts.
+
+#### Acceptance Criteria
+
+- tests/phase-validation-slice.test.ts exits 0
+
+## Verification
+
+- Re-run the validation slice after persisting verification and UAT artifacts.
+
+## Must Haves
+
+- Keep downstream validation grounded in the completed execution summary.
 `,
     "utf8"
   );
@@ -232,14 +268,50 @@ wave: 1
 status: planned
 objective: "Exercise validation artifact routing."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - EXEC-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/phase-validation-slice.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 04: Validation - Plan 01
+
+## Goal
+
+Exercise validation artifact routing.
+
+## Scope
+
+- Persist verification and UAT artifacts for the validation phase.
+
+## Tasks
+
+### Task 1: Write validation artifacts from saved summaries
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Confirm the validation phase can persist verification and UAT artifacts from saved summary evidence.
+
+#### Acceptance Criteria
+
+- tests/phase-validation-slice.test.ts exits 0
+
+## Verification
+
+- Re-run the validation slice after persisting the phase 4 artifacts.
+
+## Must Haves
+
+- Keep the validation routing grounded in saved summary evidence.
 `,
     "utf8"
   );

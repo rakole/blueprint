@@ -186,10 +186,14 @@ wave: 1
 status: done
 objective: "Exercise validation routing."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - VAL-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/validate-phase-tools.test.ts exits 0
 autonomous: true
 ---
 
@@ -198,6 +202,34 @@ autonomous: true
 ## Goal
 
 Exercise validation routing.
+
+## Scope
+
+- Persist verification and UAT artifacts from completed execution evidence.
+
+## Tasks
+
+### Task 1: Validate the saved execution evidence
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Confirm the completed summary stays linked to the saved plan before writing validation artifacts.
+
+#### Acceptance Criteria
+
+- tests/validate-phase-tools.test.ts exits 0
+
+## Verification
+
+- Re-run the validation tool tests after writing verification and UAT artifacts.
+
+## Must Haves
+
+- Keep validation evidence grounded in the saved summary artifact.
 `,
     "utf8"
   );
@@ -1115,6 +1147,63 @@ test("validation tools mark ROADMAP phase completion after UAT closes", async (t
 ## Evidence
 
 - \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    `---
+phase: 3
+plan_id: "02"
+title: "Validation Plan 02"
+wave: 1
+status: done
+objective: "Capture the second completed validation summary."
+depends_on: []
+requirements:
+  - VAL-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/validate-phase-tools.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan 02
+
+## Goal
+
+Capture the second completed validation summary.
+
+## Scope
+
+- Keep additional completed execution evidence linked to a saved plan.
+
+## Tasks
+
+### Task 1: Preserve the second completed summary
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Persist the second saved execution summary against a matching plan artifact.
+
+#### Acceptance Criteria
+
+- tests/validate-phase-tools.test.ts exits 0
+
+## Verification
+
+- Re-run the validation tool tests after adding the second completed plan.
+
+## Must Haves
+
+- Keep every completed summary linked to a matching plan artifact.
 `,
     "utf8"
   );

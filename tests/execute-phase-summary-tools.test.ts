@@ -640,6 +640,33 @@ test("partial and blocked summaries are valid evidence but do not close executio
   assert.match(index.warnings.join("\n"), /status is BLOCKED, so it remains pending execution debt/);
 });
 
+test("completed summaries linked to stale plans do not close execution debt", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1).replace("depends_on: []", "depends_on:\n  - \"09\""),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
+    validSummaryContent("02"),
+    "utf8"
+  );
+
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.deepEqual(index.completedPlans, []);
+  assert.deepEqual(index.pendingPlans, ["01", "02"]);
+  assert.match(
+    index.warnings.join("\n"),
+    /03-02-SUMMARY\.md: linked plan .*03-02-PLAN\.md is missing dependency plan artifacts/i
+  );
+});
+
 test("phase summary writes reject invalid summary status markers", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -681,6 +708,37 @@ test("phase summary writes reject execution evidence for invalid saved plans", a
   assert.equal(rejected.written, false);
   assert.match(rejected.issues.join("\n"), /03-02-PLAN\.md/);
   assert.match(rejected.issues.join("\n"), /invalid depends_on reference/i);
+});
+
+test("phase summary writes reject execution evidence when linked dependency plans are missing", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1).replace("depends_on: []", "depends_on:\n  - \"09\""),
+    "utf8"
+  );
+
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validSummaryContent("02")
+  });
+  const summaryRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+
+  assert.equal(rejected.status, "invalid");
+  assert.equal(rejected.written, false);
+  assert.match(rejected.issues.join("\n"), /missing dependency plan artifacts/i);
+  assert.match(rejected.issues.join("\n"), /03-09-PLAN\.md/);
+  assert.equal(summaryRead.found, false);
 });
 
 test("phase summary writes reject untouched scaffold prose in the summary sections", async (t) => {

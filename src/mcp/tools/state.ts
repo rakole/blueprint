@@ -10,6 +10,7 @@ import {
   blueprintPathExists,
   BLUEPRINT_STATE_PATH,
   ensureRepoRoot,
+  extractSummaryStatus,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
   extractMarkdownTableRows,
@@ -713,7 +714,17 @@ async function collectValidatedSummaryPathsForPhase(
 
     if (validation.valid) {
       summaryPaths.push(summaryPath);
-      summaryIds.push(summaryId);
+
+      const summaryStatus = extractSummaryStatus(content);
+
+      if (summaryStatus === "COMPLETED") {
+        summaryIds.push(summaryId);
+      } else if (summaryStatus) {
+        warnings.push(
+          `${summaryPath}: summary status is ${summaryStatus}, so it remains pending execution debt.`
+        );
+      }
+
       continue;
     }
 
