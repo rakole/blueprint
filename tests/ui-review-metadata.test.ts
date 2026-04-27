@@ -56,11 +56,7 @@ test("blueprint-review skill captures MCP-owned ui-review rules", async () => {
   assert.match(skillFile, /ui-review-runtime-contract\.md/);
   assert.match(
     skillFile,
-    /Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    skillFile,
-    /In-flight status fields for `ui-review`: resolved scope, active stage, pending gate, execution mode, next safe action/
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /### `ui-review`/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);

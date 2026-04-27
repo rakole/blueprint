@@ -95,13 +95,7 @@ non-routable until their extra MCP substrate lands.
 - Execution profile for `secure-phase`: `long-running-mutation`
 - Execution profile for `review`: `long-running-mutation`
 - Execution profile for `ui-review`: `long-running-mutation`
-- Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
-- In-flight status fields for `code-review`: resolved scope, active stage, pending gate, execution mode, next safe action
-- In-flight status fields for `code-review-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
-- In-flight status fields for `audit-fix`: resolved scope, active stage, pending gate, execution mode, next safe action
-- In-flight status fields for `secure-phase`: resolved scope, active stage, pending gate, execution mode, next safe action
-- In-flight status fields for `review`: resolved scope, active stage, pending gate, execution mode, next safe action
-- In-flight status fields for `ui-review`: resolved scope, active stage, pending gate, execution mode, next safe action
+- Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics for that surface.
 
 ## Shared MCP Contracts
 
@@ -127,9 +121,7 @@ non-routable until their extra MCP substrate lands.
 4. Use `blueprint_review_scope` to derive the deterministic repo file list from
    executed plan metadata or explicit file arguments; do not guess from git
    diff alone.
-5. Keep the active stage visible as the run moves through `Resolve`, `Read`,
-   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
-   resolved scope, pending gate, execution mode, and next safe action legible
+5. Keep the shared review posture from the local runtime contract legible
    throughout the run.
 6. For non-trivial code-review runs, prefer update_topic plus `write_todos` so
    evidence review, scope resolution, scope confirmation, bounded findings

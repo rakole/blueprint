@@ -18,14 +18,7 @@ test("code-review manifest references the review tools, canonical contract, and 
   );
   assert.match(commandFile, /`blueprint-reviewer` subagent/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
-  assert.match(
-    commandFile,
-    /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    commandFile,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action/
-  );
+  assert.match(commandFile, /runtime contract's shared review posture/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(
@@ -60,11 +53,7 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /Execution profile for `code-review`: `long-running-mutation`/);
   assert.match(
     skillFile,
-    /Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    skillFile,
-    /resolved scope, active stage, pending gate, execution mode, next safe action/
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /### `code-review`/);
   assert.match(skillFile, /references\/code-review-runtime-contract\.md/);
@@ -127,6 +116,7 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(reviewerAgent, /## Depth-Aware Review Expectations/);
   assert.match(reviewerAgent, /severity is\s+`critical\|high\|medium\|low\|unknown`/i);
   assert.match(reviewerAgent, /file:line evidence plus concrete fix or verification guidance/i);
+  assert.doesNotMatch(reviewerAgent, /\/blu-code-review-fix|\/blu-audit-fix|peer-review/i);
 
   assert.match(commandDoc, /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/);
   assert.match(commandDoc, /## Depth And Output Quality Contract/);

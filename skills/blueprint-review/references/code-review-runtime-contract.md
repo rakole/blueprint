@@ -19,6 +19,8 @@ evidence, not merely valid markdown.
 
 ## Shared Runtime Contract
 
+- This reference is the single detailed source for `/blu-code-review` stage labels,
+  in-flight status fields, and progress semantics.
 - Execution profile: `long-running-mutation`.
 - Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`,
   `Validate`, `Route`.

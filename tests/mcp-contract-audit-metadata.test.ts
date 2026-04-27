@@ -507,24 +507,14 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(codeReviewCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
   assert.match(codeReviewCommand, /review\.code-review/i);
   assert.match(codeReviewCommand, /Execution profile: `long-running-mutation`/);
-  assert.match(
-    codeReviewCommand,
-    /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/i
-  );
-  assert.match(
-    codeReviewCommand,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
-  );
+  assert.match(codeReviewCommand, /runtime contract's shared review posture/i);
   assert.match(codeReviewCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/i);
   assert.match(codeReviewCommand, /returned repo file list as the deterministic review scope/i);
   assert.match(codeReviewDoc, /## Review Scope Contract/);
   assert.match(codeReviewDoc, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(codeReviewDoc, /## Shared Runtime Contract/);
   assert.match(codeReviewDoc, /## In-Flight Progress Contract/);
-  assert.match(
-    codeReviewDoc,
-    /rolling finding counts or severity buckets, artifact status, and next safe action/i
-  );
+  assert.match(codeReviewDoc, /shared review posture from the runtime contract/i);
   assert.match(codeReviewDoc, /Directories, wildcards, `?\.blueprint\/\*\*`?, and absolute paths are invalid/i);
 
   assert.match(codeReviewFixCommand, /authoritative remediation baseline/i);
@@ -559,11 +549,7 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(reviewSkill, /Execution profile for `code-review`: `long-running-mutation`/i);
   assert.match(
     reviewSkill,
-    /Stage vocabulary for visible review posture: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/i
-  );
-  assert.match(
-    reviewSkill,
-    /resolved scope, active stage, pending gate, execution mode, next safe action/i
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/i
   );
   assert.match(reviewSkill, /update_topic plus `write_todos`/i);
   assert.match(reviewSkill, /Read the canonical review-fix contract through\s+`blueprint_artifact_contract_read` before drafting `XX-REVIEW-FIX\.md`/i);

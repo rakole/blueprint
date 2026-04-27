@@ -23592,6 +23592,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      reviewPath: null,
+      reviewNextSafeAction: null,
       verificationPath: null,
       uatPath: null,
       planIds: [],
@@ -23638,6 +23640,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      reviewPath: null,
+      reviewNextSafeAction: null,
       verificationPath: null,
       uatPath: null,
       planIds: [],
@@ -23670,6 +23674,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      reviewPath: null,
+      reviewNextSafeAction: null,
       verificationPath: null,
       uatPath: null,
       planIds: [],
@@ -23695,11 +23701,13 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix2}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix2}-UI-SPEC.md`;
+  const reviewPath = `${phaseRoot}/${phasePrefix2}-REVIEW.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix2}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix2}-UAT.md`;
   const hasContext = phaseArtifacts.includes(contextPath);
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
+  const hasReview = phaseArtifacts.includes(reviewPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix2, "PLAN");
   const {
@@ -23726,6 +23734,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     (artifact) => artifact.endsWith(`${phasePrefix2}-DISCUSSION-LOG.md`) || artifact.endsWith(`${phasePrefix2}-DISCUSS-CHECKPOINT.json`) || artifact.endsWith(`${phasePrefix2}-RESEARCH.md`) || artifact.endsWith(`${phasePrefix2}-UI-SPEC.md`) || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`) || artifact.endsWith("-PLAN.md") || artifact.endsWith("-SUMMARY.md") || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`)
   );
   let researchValid = null;
+  let reviewNextSafeAction = null;
   if (hasResearch) {
     try {
       const raw = await fs3.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
@@ -23739,6 +23748,14 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       warnings.push(`${researchPath}: ${message}`);
       researchValid = false;
     }
+  }
+  if (hasReview) {
+    const reviewRouting = await readReviewArtifactNextSafeAction({
+      projectRoot,
+      artifactPath: reviewPath
+    });
+    reviewNextSafeAction = reviewRouting.nextAction;
+    warnings.push(...reviewRouting.warnings);
   }
   if (!hasContext && hasLaterArtifacts) {
     warnings.push(
@@ -23780,6 +23797,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     contextPath,
     researchPath,
     uiSpecPath,
+    reviewPath,
+    reviewNextSafeAction,
     verificationPath,
     uatPath,
     planIds,
@@ -23917,6 +23936,30 @@ function isNoneLikeReportSignal(line) {
 function extractBlueprintCommand(line) {
   const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
   return match?.[0]?.trim() ?? null;
+}
+async function readReviewArtifactNextSafeAction(args) {
+  try {
+    const raw = await fs3.readFile(
+      resolveBlueprintPath(args.projectRoot, args.artifactPath),
+      "utf8"
+    );
+    const nextSafeAction = extractMarkdownSectionLines(raw, "Next Safe Action").map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    if (nextSafeAction) {
+      return { nextAction: nextSafeAction, warnings: [] };
+    }
+    return {
+      nextAction: null,
+      warnings: [
+        `${args.artifactPath}: Next Safe Action does not contain a Blueprint command; state routing will fall back to derived phase status.`
+      ]
+    };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      nextAction: null,
+      warnings: [`${args.artifactPath}: ${message}`]
+    };
+  }
 }
 function parseMilestoneAuditGapSection(section) {
   return extractMarkdownTableRows(section).flatMap((row) => {
@@ -24058,6 +24101,12 @@ async function deriveNextAction(args) {
   }
   if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && !args.phaseArtifacts.hasUat && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
+  }
+  if (args.phaseArtifacts.reviewNextSafeAction) {
+    const reviewNextCommand = args.phaseArtifacts.reviewNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+    if (reviewNextCommand && implementedCommands.has(reviewNextCommand)) {
+      return args.phaseArtifacts.reviewNextSafeAction;
+    }
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;

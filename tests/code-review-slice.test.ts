@@ -13,6 +13,7 @@ import {
   blueprintReviewRecord,
   blueprintReviewScope
 } from "../src/mcp/tools/review.js";
+import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 const execFileAsync = promisify(execFileCallback);
@@ -42,10 +43,12 @@ async function createCodeReviewRepo(
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-code-review-"));
   const repoPath = path.join(tempRoot, "repo");
   const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-scope");
+  const codebaseDir = path.join(repoPath, ".blueprint/codebase");
 
   await mkdir(path.join(repoPath, "src"), { recursive: true });
   await mkdir(path.join(repoPath, "tests"), { recursive: true });
   await mkdir(phaseDir, { recursive: true });
+  await mkdir(codebaseDir, { recursive: true });
   await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
@@ -91,6 +94,17 @@ async function createCodeReviewRepo(
     `${JSON.stringify({ version: 2, ...configPatch }, null, 2)}\n`,
     "utf8"
   );
+  for (const artifact of [
+    "STACK.md",
+    "ARCHITECTURE.md",
+    "STRUCTURE.md",
+    "CONVENTIONS.md",
+    "TESTING.md",
+    "INTEGRATIONS.md",
+    "CONCERNS.md"
+  ]) {
+    await writeFile(path.join(codebaseDir, artifact), `# ${artifact.replace(/\.md$/, "")}\n\n- mapped\n`, "utf8");
+  }
   await writeFile(
     path.join(repoPath, "src/feature.ts"),
     "export function calculateValue(input: number) {\n  return input * 2;\n}\n",
@@ -212,6 +226,306 @@ ${summaryChanges}
   return repoPath;
 }
 
+test("state load follows the saved code-review next safe action once review evidence exists", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    configPatch: {
+      workflow: {
+        research: false,
+        ui_phase: false
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-scope");
+
+  await writeFile(
+    path.join(phaseDir, "05-CONTEXT.md"),
+    `# Phase 05: Code Review Scope - Context
+
+## Goal
+
+- Review the changed feature slice with saved Blueprint evidence.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-01-PLAN.md"),
+    `---
+phase: 5
+plan_id: "01"
+title: "Code Review Plan 01"
+wave: 1
+status: done
+objective: "Exercise code-review follow-up routing."
+depends_on: []
+requirements:
+  - REV-01
+files_modified:
+  - src/feature.ts
+  - tests/feature.test.ts
+read_first:
+  - src/feature.ts
+acceptance_criteria:
+  - tests/code-review-slice.test.ts exits 0
+autonomous: true
+---
+
+# Phase 05: Code Review Scope - Plan 01
+
+## Goal
+
+Exercise code-review follow-up routing.
+
+## Scope
+
+- Persist saved review evidence for the completed feature slice.
+
+## Tasks
+
+### Task 1: Capture review-ready evidence
+
+#### Read First
+
+- src/feature.ts
+
+#### Action
+
+- Keep the completed review scope grounded in the saved repo files and evidence.
+
+#### Acceptance Criteria
+
+- tests/code-review-slice.test.ts exits 0
+
+## Verification
+
+- Re-run the code-review slice after writing the saved review evidence.
+
+## Must Haves
+
+- Keep review routing grounded in the saved review artifact.
+`,
+    "utf8"
+  );
+
+  await writeFile(
+    path.join(phaseDir, "05-VERIFICATION.md"),
+    `# Phase 05: Code Review Scope - Verification
+
+**Coverage:** Reviewed \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PASS
+**Sign-off:** validation lead
+
+## Validation Summary
+
+- Execution evidence matches the expected phase outcome.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| REV-01 | Confirm execution evidence exists | .blueprint/phases/05-review-scope/05-01-SUMMARY.md | PASS | Saved summaries back the verification pass. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | .blueprint/phases/05-review-scope/05-01-SUMMARY.md | none |
+
+## Gaps Found
+
+- none
+
+## Suggested Repairs
+
+- none
+
+## Next Safe Action
+
+- Continue with conversational UAT through \`/blu-verify-work 5\`.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-01-SUMMARY.md"),
+    `# Phase 05: Code Review Scope - Summary 01
+
+**Plan:** \`05-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Added the review-ready feature slice.
+
+## Verification
+
+- Ran the saved summary tooling slice.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-UAT.md"),
+    `# Phase 05: Code Review Scope - UAT
+
+**Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
+
+## UAT Summary
+
+- UAT closed without blocking issues against \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`
+- Current session step: Close the initial UAT pass.
+- Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
+
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the validated summary-backed behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Review scope UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/05-review-scope/05-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
+## Questions Asked
+
+- Did the delivered behavior match the saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
+`,
+    "utf8"
+  );
+
+  await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    content: `# Phase 05: Code Review Scope - Review
+
+**Verdict:** FOLLOW_UP
+
+## Review Summary
+
+- Phase 5 standard review over one source file and one test file with two follow-up findings.
+
+## Scope Reviewed
+
+- src/feature.ts
+- tests/feature.test.ts
+
+## Evidence Reviewed
+
+- .blueprint/phases/05-review-scope/05-01-PLAN.md
+- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
+- .blueprint/phases/05-review-scope/05-VERIFICATION.md
+- .blueprint/phases/05-review-scope/05-UAT.md
+
+## Positive Signals
+
+- Summary and plan evidence agree on the bounded review scope.
+
+## Severity Summary
+
+- critical: 0
+- high: 1
+- medium: 1
+- low: 0
+- unknown: 0
+
+## Findings
+
+- [high][follow-up] \`src/feature.ts:1\` - Negative-input behavior is undocumented and untested.
+- [medium][observation] \`tests/feature.test.ts:1\` - The saved evidence does not prove edge-case coverage.
+
+## Follow-Ups
+
+- Add a negative-input regression test before shipping.
+
+## Next Safe Action
+
+- /blu-code-review-fix 5
+`,
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+  });
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(state.derivedStatus.nextAction, /\/blu-code-review-fix 5/);
+});
+
 test("code-review docs and catalog metadata promote the review scope slice to implemented", async () => {
   const [catalogMarkdown, skillsMarkdown, commandDoc] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
@@ -237,10 +551,7 @@ test("code-review docs and catalog metadata promote the review scope slice to im
   assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
   assert.match(commandDoc, /## Depth And Output Quality Contract/);
   assert.match(commandDoc, /## Subagent And Fallback Contract/);
-  assert.match(
-    commandDoc,
-    /resolved scope, active stage, pending gate, execution mode, rolling finding counts or severity buckets, artifact status, and next safe action/i
-  );
+  assert.match(commandDoc, /shared review posture from the runtime contract/i);
   assert.match(commandDoc, /`update_topic` tool and keep a compact review checklist with `write_todos`/);
 });
 

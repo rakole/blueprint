@@ -78,7 +78,7 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
   assert.match(skillFile, /Execution profile for `code-review-fix`: `long-running-mutation`/);
   assert.match(
     skillFile,
-    /In-flight status fields for `code-review-fix`: resolved scope, active stage, pending gate, execution mode, next safe action/
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /blueprint_review_load_findings/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
@@ -145,19 +145,16 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
   assert.match(referenceFile, /No public command surface, catalog status semantics, hook ownership, hidden git\s+automation, or `.planning\/` runtime dependency was introduced/i);
 });
 
-test("blueprint-reviewer agent supports read-only code-review-fix reclassification without becoming a fixer", async () => {
+test("blueprint-reviewer agent stays code-review-focused while remaining safe for explicit reuse", async () => {
   const agentFile = await readFile(
     path.join(repoRoot, "agents/blueprint-reviewer.md"),
     "utf8"
   );
 
-  assert.match(agentFile, /\/blu-code-review-fix/);
-  assert.match(agentFile, /read-only\s+reclassification/i);
-  assert.match(agentFile, /fix\/defer\/skip\s+recommendations/i);
-  assert.match(agentFile, /selected finding ids or summaries/i);
-  assert.match(agentFile, /defer\/skip reasons/i);
-  assert.match(agentFile, /suggested narrow verification/i);
-  assert.match(agentFile, /Do not act as a fixer agent/i);
-  assert.match(agentFile, /no source edits, no commits, no rollback steps/i);
+  assert.match(agentFile, /\/blu-code-review/);
+  assert.match(agentFile, /non-code-review reuse contract/i);
+  assert.match(agentFile, /follow[\s\S]*parent-provided output contract[\s\S]*stay read-only/i);
+  assert.match(agentFile, /Do not act as a fixer or executor agent/i);
   assert.match(agentFile, /browser-only\s+analysis/i);
+  assert.doesNotMatch(agentFile, /\/blu-code-review-fix|fix\/defer\/skip|selected finding ids or summaries/i);
 });
