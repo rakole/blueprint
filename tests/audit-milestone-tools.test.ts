@@ -474,6 +474,28 @@ autonomous: true
 - Current session step: none
 - Continuity notes: none
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the accepted behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Execution milestone UAT smoke | Keep the accepted behavior stable. | .blueprint/phases/03-execution/03-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - none
@@ -485,6 +507,12 @@ autonomous: true
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 
@@ -733,6 +761,28 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 - Current session step: none
 - Continuity notes: none
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the accepted behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Release readiness UAT smoke | Keep the accepted behavior stable. | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - none
@@ -744,6 +794,12 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 

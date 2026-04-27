@@ -303,6 +303,14 @@ export declare function validateVerificationArtifactContent(content: string, sum
     warnings: string[];
 };
 export declare function isVerificationArtifactReadyForUat(content: string): boolean;
+type UatArtifactStatus = "PASS" | "FAIL" | "PARTIAL";
+type UatArtifactResumeState = "RESUMED" | "NEW" | "CONTINUED";
+export declare function readUatArtifactState(content: string): {
+    status: UatArtifactStatus | null;
+    resumeState: UatArtifactResumeState | null;
+    checkpoint: string | null;
+    complete: boolean;
+};
 export declare function validateUatArtifactContent(content: string, summaryPaths?: string[]): {
     valid: boolean;
     issues: string[];

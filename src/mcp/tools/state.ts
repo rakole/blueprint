@@ -15,6 +15,7 @@ import {
   inspectBootstrapArtifacts,
   extractMarkdownTableRows,
   isVerificationArtifactReadyForUat,
+  readUatArtifactState,
   resolveBlueprintPath,
   toRepoRelativePath,
   validatePlanArtifactContent,
@@ -803,7 +804,15 @@ async function inspectValidatedPhaseValidationArtifacts(
           );
         }
       } else {
-        hasUat = true;
+        const uatState = readUatArtifactState(content);
+
+        if (uatState.complete) {
+          hasUat = true;
+        } else {
+          warnings.push(
+            `${artifactPath}: UAT artifact is valid but remains incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so it does not count toward milestone closeout yet.`
+          );
+        }
       }
       continue;
     }

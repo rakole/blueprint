@@ -330,9 +330,13 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.deepEqual(uatContract.requiredHeadings, [
     "UAT Summary",
     "Session State",
+    "Current Test",
+    "Test Matrix",
+    "Result Summary",
     "Questions Asked",
     "Observed Behavior",
     "Unresolved Gaps",
+    "Structured Gaps",
     "Follow-Up Fixes",
     "Next Safe Action"
   ]);
@@ -556,6 +560,28 @@ test("canonical lifecycle contracts allow additional top-level headings without 
 - Current session step: Confirm the accepted behavior still holds after a pause.
 - Continuity notes: Keep the same summary-backed outcome when the session resumes.
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the accepted summary-backed behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Discovery UAT smoke | Keep the accepted summary-backed behavior stable. | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - none
@@ -567,6 +593,12 @@ test("canonical lifecycle contracts allow additional top-level headings without 
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 

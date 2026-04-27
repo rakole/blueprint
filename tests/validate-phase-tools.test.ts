@@ -817,6 +817,28 @@ test("validation tools do not re-check roadmap completion when a plan summary is
 - Current session step: Close the initial UAT pass.
 - Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the validated summary-backed behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Discovery UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - Did the delivered behavior match the saved execution summary?
@@ -828,6 +850,12 @@ test("validation tools do not re-check roadmap completion when a plan summary is
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 
@@ -1290,6 +1318,28 @@ Capture the second completed validation summary.
 - Current session step: Close the initial UAT pass.
 - Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the validated summary-backed behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Discovery UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - Did the delivered behavior match the saved execution summary?
@@ -1301,6 +1351,12 @@ Capture the second completed validation summary.
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 

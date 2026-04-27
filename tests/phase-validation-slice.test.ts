@@ -236,6 +236,28 @@ Exercise verification and UAT handoff.
 - Current session step: none
 - Continuity notes: none
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the accepted behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Execution UAT smoke | Keep the accepted behavior stable. | .blueprint/phases/03-execution/03-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - none
@@ -247,6 +269,12 @@ Exercise verification and UAT handoff.
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 
@@ -867,6 +895,28 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 - Current session step: Close the initial UAT pass.
 - Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the validated summary-backed behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Validation UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - Did the validated feature behave as expected for the saved execution summary?
@@ -878,6 +928,12 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 
@@ -911,6 +967,9 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.deepEqual(verificationRead.summaryPaths, [
     ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"
   ]);
+  assert.equal(verificationRead.validation?.valid, true);
+  assert.equal(verificationRead.verificationReadyForUat, true);
+  assert.equal(verificationRead.complete, true);
   assert.match(verificationRead.content ?? "", /Requirement \/ Task Coverage/);
   assert.match(verificationRead.content ?? "", /Gate State/);
   assert.equal(verificationReused.status, "reused");
@@ -990,6 +1049,11 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.equal(uatCreated.status, "created");
   assert.equal(uatRead.found, true);
   assert.match(uatRead.content ?? "", /user acceptance run passed/i);
+  assert.equal(uatRead.validation?.valid, true);
+  assert.equal(uatRead.uatStatus, "PASS");
+  assert.equal(uatRead.resumeState, "NEW");
+  assert.equal(uatRead.checkpoint, "none");
+  assert.equal(uatRead.complete, true);
   assert.equal(phaseLocate.found, true);
   assert.ok(
     phaseLocate.artifacts.includes(".blueprint/phases/04-phase-validation/04-VERIFICATION.md")

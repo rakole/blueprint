@@ -11,7 +11,7 @@ bounded read-only UAT analysis when a suitable agent is available.
 | Stage | Purpose | Required Control Signal |
 |-------|---------|-------------------------|
 | Resolve | Identify the target phase and phase directory. | `blueprint_phase_locate.found`, `phaseNumber`, `phaseDir`, and recovery `reason`. |
-| Read | Gather saved execution evidence, ready verification evidence, existing UAT state, effective config, artifact health, and current state. | Summary index, every completed summary body, `verification` read, `uat` read, config, artifact validation, and state load results. |
+| Read | Gather saved execution evidence, ready verification evidence, existing UAT state, effective config, artifact health, and current state. | Summary index, every completed valid summary body, `verification` read, `uat` read, config, artifact validation, and state load results. |
 | Decide | Select view, resume, update, create, or stop behavior. | Missing prerequisites, existing UAT decision, overwrite gate, verifier and Nyquist config, active checkpoint, and next safe action. |
 | Execute | Run bounded conversational UAT over user-observable outcomes. | Test queue, current test, response classification, result counts, structured gaps, blocked prerequisites, and verifier result. |
 | Persist | Normalize and write only the canonical UAT artifact. | `phase.uat` authoring template, locked markers, self-check result, and `blueprint_phase_validation_write` response. |
@@ -27,9 +27,9 @@ the authority for control flow.
 |------|----------|
 | `blueprint_phase_locate` | Target phase resolution, unresolved-phase recovery, and phase-scoped write boundaries. |
 | `blueprint_phase_summary_index` | Input state, completed versus pending execution evidence, and summary list for detailed reads. |
-| `blueprint_phase_summary_read` | Source evidence for every completed summary; never build UAT from chat memory alone. |
-| `blueprint_phase_validation_read` with `artifact: "verification"` | Required validation baseline and ready-for-UAT gate. |
-| `blueprint_phase_validation_read` with `artifact: "uat"` | Existing session state, view/resume/update decision, and overwrite gate. |
+| `blueprint_phase_summary_read` | Source evidence for every completed valid summary; never build UAT from chat memory alone. |
+| `blueprint_phase_validation_read` with `artifact: "verification"` | Required validation baseline plus typed `validation`, `verificationReadyForUat`, and `complete` truth. |
+| `blueprint_phase_validation_read` with `artifact: "uat"` | Existing session state plus typed `validation`, `uatStatus`, `resumeState`, `checkpoint`, and `complete` truth for view/resume/update decisions. |
 | `blueprint_config_get` with `scope: "effective"` | Whether verifier and Nyquist-style gap expectations are active or informational. |
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
@@ -48,8 +48,11 @@ the shared phase checkpoint JSON tools for UAT continuation.
   `/blu-validate-phase <phase>`.
 - Invalid verification or verification not ready for UAT: stop without writing
   and route to `/blu-validate-phase <phase>` for repair.
-- Existing UAT: default to view or resume. Replacement requires an explicit
-  user update path plus overwrite confirmation before persistence.
+- Existing invalid UAT: summarize the validation issues and treat it as view or
+  explicit replacement only; do not resume malformed saved UAT blindly.
+- Existing valid incomplete UAT: default to view or resume. Replacement
+  requires an explicit user update path plus overwrite confirmation before
+  persistence.
 - No existing UAT and prerequisites are ready: create a new summary-grounded UAT
   pass.
 
@@ -57,7 +60,7 @@ the shared phase checkpoint JSON tools for UAT continuation.
 
 Build a concrete UAT queue before asking the user anything.
 
-1. Read every completed summary.
+1. Read every completed valid summary.
 2. Extract user-observable accomplishments and workflow changes from sections
    such as outcome, changes made, verification, follow-ups, evidence, and saved
    file references.
@@ -120,7 +123,8 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
 4. Treat `**Checkpoint:**` as the current in-artifact checkpoint label or
    `none`, not as a separate checkpoint file path.
 5. Fill every required section with concrete evidence. Do not leave scaffold
-   placeholders or generic "none" rows where gaps exist.
+   placeholders or omit the richer current-test, test-matrix, result-summary,
+   or structured-gap sections.
 6. Keep saved summary paths or filenames in `## UAT Summary`,
    `## Session State`, or `## Observed Behavior`.
 7. Keep the current test or completion state in the saved artifact so the run
@@ -192,9 +196,14 @@ This fallback must preserve the same output quality bar as the subagent path.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
   `written: false` because validation failed, report the issues, repair the
   draft against the canonical contract, and retry once before stopping.
-- If `blueprint_artifact_validate` reports invalid artifacts after a write, use
-  `suggestedRepairs` to revise the draft and retry once when the repair is
-  phase-scoped and does not require external state.
+- Re-read the saved UAT through `blueprint_phase_validation_read` after a
+  write and use its typed `validation`, `uatStatus`, `resumeState`,
+  `checkpoint`, and `complete` fields as the artifact-scoped truth.
+- If the write result or the post-write UAT re-read says the saved UAT artifact
+  is invalid, repair it once against the canonical contract before stopping.
+- If `blueprint_artifact_validate` reports unrelated repo issues after a write,
+  surface them as broader repo-health follow-ups instead of rewriting the UAT
+  draft.
 - If overwrite confirmation is denied, preserve the existing artifact, report
   any newly discovered UAT findings as unsaved findings, and keep the next safe
   action on `/blu-verify-work <phase>` or `/blu-progress` based on implemented

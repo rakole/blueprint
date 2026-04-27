@@ -739,6 +739,28 @@ autonomous: true
 - Current session step: none
 - Continuity notes: none
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the accepted behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Validation hardening UAT smoke | Keep the accepted behavior stable. | .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - none
@@ -750,6 +772,12 @@ autonomous: true
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 
@@ -1031,6 +1059,28 @@ Close the milestone.
 - Current session step: none
 - Continuity notes: none
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the accepted behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Milestone closeout UAT smoke | Keep the accepted behavior stable. | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - none
@@ -1042,6 +1092,12 @@ Close the milestone.
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 

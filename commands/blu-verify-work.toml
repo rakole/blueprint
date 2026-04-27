@@ -17,14 +17,15 @@ Follow this flow exactly:
 
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason` plus any recovery guidance.
-3. Read `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "verification"`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "uat"`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the execution evidence, existing validation and UAT state, normalized validation gates, repo artifact health, and the current safe follow-up state.
+3. Read `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "verification"`, `mcp_blueprint_blueprint_phase_validation_read` with `artifact: "uat"`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, `mcp_blueprint_blueprint_artifact_validate`, and `mcp_blueprint_blueprint_state_load` so you know the execution evidence, per-artifact validation truth, ready-for-UAT or resume state, broader repo artifact health, and the current safe follow-up state.
 4. Treat execution summaries as the prerequisite evidence for conversational UAT. If the target phase has no execution summaries yet, stop and route to `/blu-execute-phase` first.
 5. If the phase does not have a `XX-VERIFICATION.md` artifact yet, or if the verification artifact is not ready for UAT, stop and route to `/blu-validate-phase` first.
-6. Read every available execution summary through `mcp_blueprint_blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
+6. Read every completed valid execution summary through `mcp_blueprint_blueprint_phase_summary_read` so conversational UAT stays grounded in saved execution evidence instead of chat history.
 7. If `XX-UAT.md` already exists, inspect it and take an explicit path:
+   - If `mcp_blueprint_blueprint_phase_validation_read` reports the saved UAT artifact is invalid, summarize the validation issues and treat the artifact as view-or-update only until it is repaired or explicitly replaced.
    - Use Gemini CLI `ask_user` to capture a focused structured decision: `view` (`view current UAT`), `resume` (`resume saved UAT`), or `update` (`replace UAT`)
    - `view`: summarize the existing UAT state and stop without mutating files
-   - `resume`: continue the conversational UAT from the saved artifact without replacing it
+   - `resume`: continue the conversational UAT from the saved valid incomplete artifact without the replace path
    - `update`: continue to replacement only after `ask_user` explicitly confirms the overwrite
    Reuse and resume are the default when the user does not ask for a replacement.
 8. Report in-flight progress while UAT is running. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`. At minimum surface the resolved phase, how many summaries were reviewed, whether the verification artifact is ready for UAT, whether the current UAT artifact is being viewed, resumed, created, or updated, the current checkpoint or resume state, the pending gate, and the next safe implemented action.
@@ -54,7 +55,7 @@ Follow this flow exactly:
    - Additional top-level headings are allowed only when the returned contract policy says they are.
 16. Self-check the normalized draft against the returned contract before writing so the final body, required headings, summary citations, test matrix, counts, structured gaps, and checkpoint state match the persisted shape.
 17. Persist the actual UAT content through `mcp_blueprint_blueprint_phase_validation_write` with the resolved numeric `phase`, `artifact: "uat"`, and the full final markdown body. Saved execution summaries and an existing verification artifact are required, and that verification artifact must be both valid and ready for UAT; the returned `path` plus `summaryPaths` are authoritative. Do not write `XX-UAT.md` directly.
-18. If `mcp_blueprint_blueprint_phase_validation_write` returns invalid or post-write validation fails, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
+18. Re-read the saved UAT through `mcp_blueprint_blueprint_phase_validation_read` after persistence and treat its returned `validation`, `uatStatus`, `resumeState`, `checkpoint`, and `complete` fields as the artifact-scoped truth. If the write result or the re-read says the UAT artifact itself is invalid, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs. If post-write `mcp_blueprint_blueprint_artifact_validate` reports unrelated repo issues, surface them as broader repo health instead of rewriting the UAT draft.
 19. If conversational UAT reveals issues, persist the user-reported behavior, structured gaps, and blocked prerequisites as UAT evidence without extra confirmation. Only ask for confirmation before persisting an explicit follow-up-fix capture or later state update; do not silently mutate unrelated code.
 20. Call `mcp_blueprint_blueprint_artifact_validate` after the write path, then `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` reflects the active phase, the verify-work command, and the next safe implemented action derived from the updated artifact inventory. Keep the next safe action on `/blu-verify-work <phase>` while UAT remains checkpointed or intentionally stopped mid-pass; route to a later implemented command only when the saved artifact and current prerequisites justify that transition.
 21. Return a concise summary covering the phase, which summaries were used, whether UAT was viewed, resumed, checkpointed, created, or updated, which config gates shaped the pass, result counts, blocked prerequisites, structured gaps or follow-up captures, and the next safe implemented action.
@@ -64,7 +65,7 @@ Response requirements:
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Use `ask_user` for review, skip, or stop checkpoint choices and for overwrite confirmation of existing UAT evidence.
-- Keep conversational UAT phase-scoped and summary-aware; do not validate unrelated repo files.
+- Keep conversational UAT phase-scoped and summary-aware; use `mcp_blueprint_blueprint_phase_validation_read` as the per-artifact truth for ready, resume, and completion state instead of re-parsing prompts or treating unrelated repo validation failures as UAT-draft failures.
 - Use only the validation artifact enums that the tool owns, and do not hand-build UAT filenames or summary links manually.
 - Do not present planned-only lifecycle commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
 """
