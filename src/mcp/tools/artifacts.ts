@@ -4346,11 +4346,234 @@ export function validateReviewArtifactContent(
   issues: string[];
   warnings: string[];
 } {
-  return validateContractBackedMarkdown(
+  const validation = validateContractBackedMarkdown(
     content,
     resolveReviewArtifactContractId(artifact),
     "Review artifact"
   );
+
+  if (!validation.valid || artifact !== "code-review") {
+    return validation;
+  }
+
+  const issues = [...validation.issues, ...validateCodeReviewArtifactCoreQuality(content)];
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings: validation.warnings
+  };
+}
+
+type ReviewArtifactSeverity = "critical" | "high" | "medium" | "low" | "unknown";
+
+const REVIEW_ARTIFACT_SEVERITIES = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+  "unknown"
+] as const satisfies readonly ReviewArtifactSeverity[];
+
+function collectMarkdownListItems(section: string): string[] {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .flatMap((line) => {
+      const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
+
+      if (checklistMatch) {
+        return [checklistMatch[1].trim()];
+      }
+
+      const bulletMatch = line.match(/^[-*+]\s+(.+)$/);
+
+      if (bulletMatch) {
+        return [bulletMatch[1].trim()];
+      }
+
+      const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+
+      return numberedMatch ? [numberedMatch[1].trim()] : [];
+    })
+    .filter((item) => item.length > 0);
+}
+
+function normalizeReviewArtifactItem(item: string): string {
+  return item
+    .replace(/^`+|`+$/g, "")
+    .replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isPlaceholderReviewArtifactItem(item: string): boolean {
+  const normalized = normalizeReviewArtifactItem(item);
+
+  return (
+    normalized.length === 0 ||
+    normalized === "none" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "not applicable" ||
+    normalized === "no finding" ||
+    normalized === "no findings" ||
+    normalized === "no follow up" ||
+    normalized === "no follow ups" ||
+    normalized === "no follow-up" ||
+    normalized === "no follow-ups"
+  );
+}
+
+function extractScopeReviewedPaths(section: string): string[] {
+  const paths = new Set<string>();
+  const pathPattern = /(?:^|[\s(])`?((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)`?(?=$|[\s),.;:!?])/g;
+
+  for (const item of collectMarkdownListItems(section)) {
+    for (const match of item.matchAll(pathPattern)) {
+      paths.add(match[1]);
+    }
+  }
+
+  for (const row of extractMarkdownTableRows(section)) {
+    const candidate = row[0]?.trim();
+
+    if (!candidate) {
+      continue;
+    }
+
+    const unwrapped = candidate.replace(/^`|`$/g, "");
+    if (/^(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?$/.test(unwrapped)) {
+      paths.add(unwrapped);
+    }
+  }
+
+  return [...paths].sort((left, right) => left.localeCompare(right));
+}
+
+function inferReviewArtifactSeverity(item: string): ReviewArtifactSeverity {
+  const source = item.toLowerCase();
+
+  if (/\b(?:critical|p0)\b/.test(source)) {
+    return "critical";
+  }
+
+  if (/\b(?:high|p1)\b/.test(source)) {
+    return "high";
+  }
+
+  if (/\b(?:medium|p2)\b/.test(source)) {
+    return "medium";
+  }
+
+  if (/\b(?:low|p3)\b/.test(source)) {
+    return "low";
+  }
+
+  return "unknown";
+}
+
+function containsLineBackedRepoFileEvidence(item: string): boolean {
+  return /(?:^|[\s(])`?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?:\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
+    item
+  );
+}
+
+function parseSeveritySummaryCounts(section: string): Partial<Record<ReviewArtifactSeverity, number>> {
+  const counts: Partial<Record<ReviewArtifactSeverity, number>> = {};
+
+  for (const line of section.split("\n")) {
+    const match = line.trim().match(
+      /^[-*+]\s*(critical|high|medium|low|unknown)\s*:\s*(\d+)\s*$/i
+    );
+
+    if (!match) {
+      continue;
+    }
+
+    counts[match[1].toLowerCase() as ReviewArtifactSeverity] = Number(match[2]);
+  }
+
+  return counts;
+}
+
+function validateCodeReviewArtifactCoreQuality(content: string): string[] {
+  const issues: string[] = [];
+  const scopeReviewed = extractMarkdownSection(content, "Scope Reviewed");
+  const scopedPaths = extractScopeReviewedPaths(scopeReviewed);
+
+  if (scopedPaths.length === 0) {
+    issues.push(
+      "Review artifact section Scope Reviewed must cite at least one repo-relative reviewed file."
+    );
+  }
+
+  const findingsSection = extractMarkdownSection(content, "Findings");
+  const findingItems = collectMarkdownListItems(findingsSection).filter(
+    (item) => !isPlaceholderReviewArtifactItem(item)
+  );
+  const actualCounts = REVIEW_ARTIFACT_SEVERITIES.reduce(
+    (acc, severity) => {
+      acc[severity] = 0;
+      return acc;
+    },
+    {} as Record<ReviewArtifactSeverity, number>
+  );
+
+  for (const item of findingItems) {
+    actualCounts[inferReviewArtifactSeverity(item)] += 1;
+
+    if (!containsLineBackedRepoFileEvidence(item)) {
+      issues.push(
+        `Review artifact finding must include repo-relative file:line evidence: ${item}`
+      );
+    }
+  }
+
+  const severitySummary = extractMarkdownSection(content, "Severity Summary");
+  const declaredCounts = parseSeveritySummaryCounts(severitySummary);
+
+  for (const severity of REVIEW_ARTIFACT_SEVERITIES) {
+    if (declaredCounts[severity] === undefined) {
+      issues.push(
+        `Review artifact section Severity Summary must include a ${severity}: <count> line.`
+      );
+      continue;
+    }
+
+    if (declaredCounts[severity] !== actualCounts[severity]) {
+      issues.push(
+        `Review artifact section Severity Summary reports ${severity}: ${declaredCounts[severity]}, but Findings contains ${actualCounts[severity]} ${severity} item(s).`
+      );
+    }
+  }
+
+  return issues;
+}
+
+export function validateReviewArtifactScopeCoverage(
+  content: string,
+  scopeFiles: string[]
+): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+} {
+  const scopeReviewed = extractScopeReviewedPaths(extractMarkdownSection(content, "Scope Reviewed"));
+  const reviewed = new Set(scopeReviewed);
+  const missingScopeFiles = [...new Set(scopeFiles)].filter((scopeFile) => !reviewed.has(scopeFile));
+  const issues =
+    missingScopeFiles.length === 0
+      ? []
+      : [
+          `Review artifact section Scope Reviewed must list every resolved scoped file. Missing: ${missingScopeFiles.join(", ")}.`
+        ];
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings: []
+  };
 }
 
 export function validateReportArtifactContent(

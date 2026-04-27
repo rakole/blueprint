@@ -162,8 +162,9 @@ Do not replace the missing subagent with browser/web/search-only analysis.
   the exact `reason` and useful warnings. If implicit scope is missing saved
   execution evidence, route to `/blu-execute-phase <phase>` or ask for explicit
   `--files`.
-- If a broad, multi-plan, or deep scope needs confirmation, pause before
-  writing and keep the waiting state visible as `scope-confirmation`.
+- If `blueprint_review_scope.confirmationRecommended.recommended` is true,
+  pause before writing, use the returned reasons plus thresholds in the user
+  question, and keep the waiting state visible as `scope-confirmation`.
 - If `XX-REVIEW.md` already exists and the new body differs, require explicit
   overwrite confirmation before passing `overwrite: true`.
 - If `blueprint_review_record` returns `status: "invalid"`, repair the authored
@@ -182,6 +183,8 @@ The review is strong enough to persist only when:
   visible before persistence
 - every reviewed file appears in `Scope Reviewed`
 - every saved artifact that influenced the review appears in `Evidence Reviewed`
+- the persisted review keeps `Scope Reviewed` aligned to the resolved
+  `blueprint_review_scope.files` list
 - each material finding has severity, disposition, file:line evidence, impact,
   and fix or verification guidance
 - test gaps are called out only when behavior changed and coverage evidence is

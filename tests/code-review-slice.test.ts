@@ -102,18 +102,14 @@ async function createCodeReviewRepo(
     "utf8"
   );
 
-  for (const candidateFile of summaryChangedFiles) {
+  for (const candidateFile of new Set([...summaryChangedFiles, ...planFilesModified])) {
     if (candidateFile.startsWith(".blueprint/")) {
       continue;
     }
 
     const absolutePath = path.join(repoPath, candidateFile);
     await mkdir(path.dirname(absolutePath), { recursive: true });
-    await writeFile(
-      absolutePath,
-      `export const ${path.basename(candidateFile, path.extname(candidateFile)).replace(/[^a-zA-Z0-9_]/g, "_")} = true;\n`,
-      "utf8"
-    );
+    await writeFile(absolutePath, `export const ${path.basename(candidateFile, path.extname(candidateFile)).replace(/[^a-zA-Z0-9_]/g, "_")} = true;\n`, "utf8");
   }
 
   if (withPlan) {
@@ -248,7 +244,7 @@ test("code-review docs and catalog metadata promote the review scope slice to im
   assert.match(commandDoc, /`update_topic` tool and keep a compact review checklist with `write_todos`/);
 });
 
-test("blueprint_review_scope prefers summary changed files over plan files when no explicit scope is provided", async (t) => {
+test("blueprint_review_scope merges summary and plan evidence when no explicit scope is provided", async (t) => {
   const repoPath = await createCodeReviewRepo({
     summaryChangedFiles: ["src/summary.ts"],
     planFilesModified: [
@@ -268,9 +264,10 @@ test("blueprint_review_scope prefers summary changed files over plan files when 
 
   assert.equal(scoped.status, "ready");
   assert.equal(scoped.phase?.phaseNumber, "5");
-  assert.deepEqual(scoped.files, ["src/summary.ts"]);
+  assert.deepEqual(scoped.files, ["src/plan.ts", "src/summary.ts", "tests/plan.test.ts"]);
   assert.equal(scoped.reviewMode.depth, "standard");
-  assert.equal(scoped.reviewMode.source, "phase-plans");
+  assert.equal(scoped.reviewMode.source, "phase-evidence");
+  assert.equal(scoped.confirmationRecommended.recommended, false);
   assert.deepEqual(scoped.artifacts.plans, [".blueprint/phases/05-review-scope/05-01-PLAN.md"]);
   assert.deepEqual(scoped.artifacts.summaries, [
     ".blueprint/phases/05-review-scope/05-01-SUMMARY.md"
@@ -279,6 +276,25 @@ test("blueprint_review_scope prefers summary changed files over plan files when 
     scoped.artifacts.verification,
     ".blueprint/phases/05-review-scope/05-VERIFICATION.md"
   );
+});
+
+test("blueprint_review_scope reports phase-summaries when summary evidence alone defines the scope", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    withPlan: false,
+    summaryChangedFiles: ["src/summary.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5"
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.deepEqual(scoped.files, ["src/summary.ts"]);
+  assert.equal(scoped.reviewMode.source, "phase-summaries");
 });
 
 test("blueprint_review_scope keeps explicit files scoped exactly to the explicit list", async (t) => {
@@ -325,6 +341,49 @@ test("blueprint_review_scope rejects explicit scope when any requested file path
   assert.match(scoped.warnings.join("\n"), /\.blueprint artifacts are not reviewable repo files/i);
 });
 
+test("blueprint_review_scope ignores file-looking paths under summary Evidence sections", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    planFilesModified: ["src/plan.ts"]
+  });
+  const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-scope");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, "tests/evidence.test.ts"),
+    "export const evidence_test = true;\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-01-SUMMARY.md"),
+    `# Phase 05: Code Review Scope - Summary 01
+
+## Result
+
+- Completed the review-ready feature slice.
+
+## Changes Made
+
+- Updated scope bookkeeping only.
+
+## Evidence
+
+- \`tests/evidence.test.ts\`
+`,
+    "utf8"
+  );
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5"
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.deepEqual(scoped.files, ["src/plan.ts"]);
+  assert.doesNotMatch(scoped.files.join("\n"), /tests\/evidence\.test\.ts/);
+});
+
 test("blueprint_review_scope honors workflow.code_review and workflow.code_review_depth from config", async (t) => {
   const disabledRepoPath = await createCodeReviewRepo({
     configPatch: { workflow: { code_review: false } }
@@ -351,6 +410,119 @@ test("blueprint_review_scope honors workflow.code_review and workflow.code_revie
   assert.match(disabled.reason ?? "", /workflow\.code_review is disabled/i);
   assert.equal(deepDefault.status, "ready");
   assert.equal(deepDefault.reviewMode.depth, "deep");
+});
+
+test("blueprint_review_scope surfaces deterministic confirmation metadata for broad, multi-plan, and deep scopes", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    summaryChangedFiles: ["src/one.ts", "src/two.ts", "src/three.ts"],
+    planFilesModified: ["src/four.ts", "src/five.ts"]
+  });
+  const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-scope");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, "src/six.ts"),
+    "export const six = true;\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-02-PLAN.md"),
+    `---
+phase: 5
+plan_id: "02"
+title: "Additional Review Scope"
+wave: 4
+status: done
+objective: "Expand the changed repo files."
+depends_on: []
+requirements:
+  - REV-01
+files_modified:
+  - src/six.ts
+read_first:
+  - src/six.ts
+acceptance_criteria:
+  - rg "six" src/six.ts
+autonomous: true
+---
+
+# Phase 05: Code Review Scope - Plan 02
+
+## Goal
+
+Expand the changed repo files.
+
+## Scope
+
+- Additional source file.
+
+## Tasks
+
+### Task 1
+
+#### Read First
+
+- src/six.ts
+
+#### Action
+
+- Review the additional file.
+
+#### Acceptance Criteria
+
+- rg "six" src/six.ts
+
+## Verification
+
+- Confirm the extra file is represented in saved scope evidence.
+
+## Must Haves
+
+- Keep review scope deterministic.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-02-SUMMARY.md"),
+    `# Phase 05: Code Review Scope - Summary 02
+
+## Result
+
+- Added a second executed plan for scope confirmation coverage.
+
+## Changes Made
+
+- \`src/six.ts\`
+
+## Evidence
+
+- Saved scope evidence remains deterministic.
+`,
+    "utf8"
+  );
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5",
+    depth: "deep"
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.equal(scoped.confirmationRecommended.recommended, true);
+  assert.equal(scoped.confirmationRecommended.pendingGate, "scope-confirmation");
+  assert.deepEqual(scoped.confirmationRecommended.thresholds, {
+    broadFileCount: 5,
+    multiPlanCount: 2,
+    deepFileCount: 3
+  });
+  assert.equal(scoped.confirmationRecommended.signals.fileCount, 6);
+  assert.equal(scoped.confirmationRecommended.signals.summaryCount, 2);
+  assert.equal(scoped.confirmationRecommended.signals.matchedPlanCount, 2);
+  assert.match(scoped.confirmationRecommended.reasons.join("\n"), /broad-scope confirmation threshold/i);
+  assert.match(scoped.confirmationRecommended.reasons.join("\n"), /multi-plan confirmation threshold/i);
+  assert.match(scoped.confirmationRecommended.reasons.join("\n"), /deep-review confirmation threshold/i);
 });
 
 test("blueprint_review_record persists code-review artifacts, strips disposition markers, and tracks overwrite status", async (t) => {
@@ -412,7 +584,8 @@ test("blueprint_review_record persists code-review artifacts, strips disposition
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: initialContent
+    content: initialContent,
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
 
   assert.equal(created.status, "created");
@@ -530,6 +703,131 @@ test("blueprint_review_record rejects code-review scaffold prose even after the 
   assert.match(
     invalid.warnings.join("\n"),
     /Repo-relative file path reviewed|path\/to\/file\.ts:42|Phase, effective depth, scope source, file count/i
+  );
+});
+
+test("blueprint_review_record rejects code-review findings without line evidence or matching severity counts", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    content: `# Phase 05: Code Review Scope - Code Review
+
+**Verdict:** FOLLOW_UP
+
+## Review Summary
+
+- Phase 5 standard review over one source file with one follow-up finding.
+
+## Scope Reviewed
+
+- src/feature.ts
+
+## Evidence Reviewed
+
+- .blueprint/phases/05-review-scope/05-01-PLAN.md
+- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
+
+## Positive Signals
+
+- Existing saved evidence narrowed the review to one source file.
+
+## Severity Summary
+
+- critical: 0
+- high: 0
+- medium: 0
+- low: 0
+- unknown: 0
+
+## Findings
+
+- [high][follow-up] Negative-input behavior is undocumented and untested.
+
+## Follow-Ups
+
+- Add a negative-input regression test before shipping.
+
+## Next Safe Action
+
+- /blu-code-review-fix 5
+`
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    invalid.warnings.join("\n"),
+    /must include repo-relative file:line evidence/i
+  );
+  assert.match(
+    invalid.warnings.join("\n"),
+    /Severity Summary reports high: 0, but Findings contains 1 high item/i
+  );
+});
+
+test("blueprint_review_record rejects code-review artifacts that omit resolved scoped files", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    content: `# Phase 05: Code Review Scope - Code Review
+
+**Verdict:** FOLLOW_UP
+
+## Review Summary
+
+- Phase 5 standard review over one source file with one follow-up finding.
+
+## Scope Reviewed
+
+- src/feature.ts
+
+## Evidence Reviewed
+
+- .blueprint/phases/05-review-scope/05-01-PLAN.md
+- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
+
+## Positive Signals
+
+- Saved evidence narrowed the review to the expected source file group.
+
+## Severity Summary
+
+- critical: 0
+- high: 1
+- medium: 0
+- low: 0
+- unknown: 0
+
+## Findings
+
+- [high][follow-up] \`src/feature.ts:1\` - Negative-input behavior is undocumented and untested.
+
+## Follow-Ups
+
+- Add a negative-input regression test before shipping.
+
+## Next Safe Action
+
+- /blu-code-review-fix 5
+`
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    invalid.warnings.join("\n"),
+    /must list every resolved scoped file\. Missing: tests\/feature\.test\.ts/i
   );
 });
 

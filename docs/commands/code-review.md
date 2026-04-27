@@ -68,19 +68,19 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, notes}`
-- `blueprint_review_scope` -> `{status, phase, files, reviewMode, artifacts, reason, warnings}`
+- `blueprint_review_scope` -> `{status, phase, files, reviewMode, confirmationRecommended, artifacts, reason, warnings}`
 - `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
 ## Review Scope Contract
 
-- Call `blueprint_review_scope` with the resolved numeric `phase` and treat it as the authoritative source for effective review depth, whether review is enabled, saved evidence inventory, and the deterministic repo-file scope.
+- Call `blueprint_review_scope` with the resolved numeric `phase` and treat it as the authoritative source for effective review depth, whether review is enabled, saved evidence inventory, the deterministic repo-file scope, and deterministic scope-confirmation guidance.
 - When explicit files are needed, pass only repo-relative file paths. Directories, wildcards, `.blueprint/**`, and absolute paths are invalid review-scope inputs. Missing files and non-file entries are also invalid, and any invalid explicit entry must fail the whole explicit scope instead of silently narrowing it.
 - Omit `files` to let Blueprint derive scope from executed plans and summaries, then treat the returned `files` list as authoritative instead of widening scope from chat memory or git drift.
 - If explicit files were supplied, review only those exact repo-relative paths even if the phase has broader execution evidence or saved summaries.
-- If the derived scope is broad, multi-plan, or deep enough that the user should explicitly approve it, pause for a structured confirmation before any replacement write.
+- If `blueprint_review_scope.confirmationRecommended.recommended` is true, pause for a structured confirmation before any replacement write and ground that prompt in the returned reasons and thresholds.
 - If a prior `XX-REVIEW.md` exists, load its structured findings through `blueprint_review_load_findings` before replacement, and use read-only file access for full-body comparison only when needed.
-- Persist the final review through `blueprint_review_record` with `artifact: "code-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`.
+- Persist the final review through `blueprint_review_record` with `artifact: "code-review"` plus the resolved `scopeFiles`, and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`.
 
 ## Depth And Output Quality Contract
 

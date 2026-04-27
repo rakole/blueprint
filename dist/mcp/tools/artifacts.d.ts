@@ -321,6 +321,11 @@ export declare function validateReviewArtifactContent(content: string, artifact:
     issues: string[];
     warnings: string[];
 };
+export declare function validateReviewArtifactScopeCoverage(content: string, scopeFiles: string[]): {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+};
 export declare function validateReportArtifactContent(content: string, reportName: string): {
     valid: boolean;
     issues: string[];

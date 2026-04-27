@@ -72,7 +72,7 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_review_scope` -> `{status, phase, files, reviewMode, artifacts, reason, warnings}`
+- `blueprint_review_scope` -> `{status, phase, files, reviewMode, confirmationRecommended, artifacts, reason, warnings}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`

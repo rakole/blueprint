@@ -2371,7 +2371,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
       "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
-      "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance."
+      "Scope Reviewed must list every repo-relative file in the resolved review scope before the artifact can persist.",
+      "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance.",
+      "Severity Summary counts must match the persisted Findings section."
     ],
     renderScaffoldTemplate: renderCodeReviewTemplate,
     renderAuthoringTemplate: renderCodeReviewTemplate
