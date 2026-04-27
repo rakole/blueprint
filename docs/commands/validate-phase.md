@@ -94,8 +94,8 @@
 - `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
 - Keep the contract's required section names and locked markers unchanged, and allow extra top-level headings only when the returned contract policy says they are supported.
 - If `blueprint_phase_validation_write` returns `status: "invalid"`, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs. Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome.
-- Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS` and readiness is ready for UAT; otherwise keep the next safe action on `/blu-validate-phase <phase>` for repair.
-- Prefer `blueprint_state_update` with `base: "synced"` after persistence so `STATE.md` derives the next safe action from the updated artifact inventory instead of leaving stale routing behind.
+- Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS` and readiness is ready for UAT. When the saved artifact makes test-generation gaps the main remaining follow-up, route to `/blu-add-tests <phase>` instead of looping back through validation.
+- Prefer `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` after persistence so `STATE.md` derives the next safe action from the updated artifact inventory without losing the active validation command.
 
 
 ## Skills And Subagents

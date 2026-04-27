@@ -40,6 +40,8 @@ test("validate-phase manifest references the validation tools, config gates, and
   assert.match(commandFile, /authoringTemplate/);
   assert.match(commandFile, /Read every completed execution summary/i);
   assert.match(commandFile, /every completed saved summary citation inside the contract's evidence section/i);
+  assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
+  assert.match(commandFile, /explicit test-generation gaps.*\/blu-add-tests <phase>/i);
   assert.match(
     commandFile,
     /only after .*written: true.*status: "reused".*or after the single repair retry succeeds/i
@@ -85,6 +87,7 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(skillFile, /every completed summary artifact first/i);
   assert.match(skillFile, /every completed summary filename or path in the contract-defined evidence section/i);
   assert.match(skillFile, /Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome/i);
+  assert.match(skillFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /retry once before stopping/i);
@@ -100,6 +103,8 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(docFile, /Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome/i);
   assert.match(docFile, /no-subagent fallback/i);
   assert.match(docFile, /retry once/i);
+  assert.match(docFile, /test-generation gaps.*\/blu-add-tests <phase>/i);
+  assert.match(docFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(
     runtimeReference,
     /`validate-phase`[\s\S]*validate-phase-runtime-contract\.md[\s\S]*classify State A\/B\/C[\s\S]*sequential no-subagent fallback/i
@@ -116,6 +121,7 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(validateReference, /## Retry And Repair Behavior/);
   assert.match(validateReference, /retry once/i);
   assert.match(validateReference, /Keep every completed saved summary path or filename under `## Evidence Reviewed`/i);
+  assert.match(validateReference, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(
     validateReference,
     /Do not\s+run post-write artifact validation or state sync until the write succeeds/i

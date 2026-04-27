@@ -34,7 +34,7 @@ the authority for control flow.
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
 | `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, and authoring-template authority. |
 | `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`. |
-| `blueprint_state_update` with `base: "synced"` | Final state sync and next-action derivation. |
+| `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` | Final state sync, active-command capture, and next-action derivation. |
 
 ## Input State Model
 

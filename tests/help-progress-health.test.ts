@@ -240,10 +240,14 @@ wave: 1
 status: planned
 objective: "Exercise the execute-phase router."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - EXEC-01
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
 autonomous: true
 ---
 
@@ -252,6 +256,34 @@ autonomous: true
 ## Goal
 
 Exercise the execute-phase router.
+
+## Scope
+
+- Keep next-action routing grounded in saved phase artifacts.
+
+## Tasks
+
+### Task 1: Review current phase readiness
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Confirm progress routing stays on execute-phase until execution coverage is complete.
+
+#### Acceptance Criteria
+
+- tests/help-progress-health.test.ts exits 0
+
+## Verification
+
+- Re-run the help/progress routing tests after updating saved phase artifacts.
+
+## Must Haves
+
+- Keep lifecycle routing limited to implemented commands.
 `,
     "utf8"
   );
@@ -623,14 +655,50 @@ wave: 1
 status: done
 objective: "Exercise milestone closeout routing."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - CLOSE-01
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 02: Validation Hardening - Plan 01
+
+## Goal
+
+Exercise milestone closeout routing.
+
+## Scope
+
+- Preserve earlier completed-phase evidence for milestone closeout.
+
+## Tasks
+
+### Task 1: Keep earlier milestone evidence durable
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Ensure earlier completed-phase evidence remains available during closeout routing.
+
+#### Acceptance Criteria
+
+- tests/help-progress-health.test.ts exits 0
+
+## Verification
+
+- Re-run milestone closeout routing tests after persisting evidence.
+
+## Must Haves
+
+- Keep earlier milestone validation evidence reviewable.
 `,
     "utf8"
   );
@@ -645,14 +713,50 @@ wave: 1
 status: planned
 objective: "Exercise milestone closeout summary coverage."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - CLOSE-02
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 02: Validation Hardening - Plan 02
+
+## Goal
+
+Exercise milestone closeout summary coverage.
+
+## Scope
+
+- Keep missing summary coverage visible during milestone closeout.
+
+## Tasks
+
+### Task 1: Detect missing summary coverage
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Leave this plan pending so closeout routing stays blocked on summary evidence.
+
+#### Acceptance Criteria
+
+- tests/help-progress-health.test.ts exits 0
+
+## Verification
+
+- Re-run milestone closeout routing tests after leaving summary coverage incomplete.
+
+## Must Haves
+
+- Keep pending summary debt visible in routing.
 `,
       "utf8"
     );
@@ -908,10 +1012,14 @@ wave: 1
 status: done
 objective: "Close the milestone."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - CLOSE-03
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
 autonomous: true
 ---
 
@@ -927,7 +1035,7 @@ Close the milestone.
 
 ## Tasks
 
-### Task 1
+### Task 1: Generate closeout routing evidence
 
 #### Read First
 
@@ -939,7 +1047,7 @@ Close the milestone.
 
 #### Acceptance Criteria
 
-- Routing advances to the next closeout step.
+- tests/help-progress-health.test.ts exits 0
 
 ## Verification
 
@@ -1427,6 +1535,110 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-validate-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
+test("project status keeps execute-phase as the next action when completed summaries link to plans with missing dependencies", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-PLAN.md"),
+    `---
+phase: 3
+plan_id: "01"
+title: "Execution Plan 01"
+wave: 1
+status: planned
+objective: "Exercise the execute-phase router."
+depends_on: ["02"]
+requirements:
+  - EXEC-01
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan 01
+
+## Goal
+
+Exercise the execute-phase router.
+
+## Scope
+
+- Keep summary completion blocked when a dependency plan artifact is missing.
+
+## Tasks
+
+### Task 1: Detect missing dependency plans
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Preserve the missing dependency so routing stays on execute-phase despite a completed summary body.
+
+#### Acceptance Criteria
+
+- tests/help-progress-health.test.ts exits 0
+
+## Verification
+
+- Re-run the help/progress routing tests after preserving the missing dependency.
+
+## Must Haves
+
+- Missing dependency plan artifacts must keep execution coverage open.
+`,
+    "utf8"
+  );
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-execute-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
 });
 
 test("project status keeps execute-phase as the next action for partial and blocked summaries", async (t) => {

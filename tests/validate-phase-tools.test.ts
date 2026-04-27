@@ -274,14 +274,50 @@ wave: 1
 status: planned
 objective: "Exercise invalid summary indexing."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - VAL-02
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/validate-phase-tools.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 03: Phase Discovery - Plan 02
+
+## Goal
+
+Exercise invalid summary indexing.
+
+## Scope
+
+- Keep incomplete execution evidence from closing validation readiness.
+
+## Tasks
+
+### Task 1: Preserve pending execution debt
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Leave the paired summary partial until the validation-ready flow explicitly completes it.
+
+#### Acceptance Criteria
+
+- tests/validate-phase-tools.test.ts exits 0
+
+## Verification
+
+- Re-run the validate-phase tool tests after preserving the partial summary.
+
+## Must Haves
+
+- Partial summaries must not close execution coverage.
 `,
     "utf8"
   );
@@ -773,7 +809,7 @@ test("validate-phase manifest flow reads all completed summaries, repairs once, 
   });
 
   assert.equal(seeded.status, "created");
-  assert.deepEqual(summaryIndex.completedPlans, ["01"]);
+  assert.deepEqual(summaryIndex.completedPlans, ["01", "02"]);
   assert.equal(completedReads.length, 2);
   assert.ok(completedReads.every((summary) => summary.found));
   assert.equal(baselineRead.found, true);

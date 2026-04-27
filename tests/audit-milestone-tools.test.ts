@@ -355,14 +355,50 @@ wave: 1
 status: done
 objective: "Preserve earlier milestone execution evidence."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements:
+  - MILESTONE-00
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/audit-milestone-tools.test.ts exits 0
 autonomous: true
 ---
 
 # Phase 03: Execution - Plan 01
+
+## Goal
+
+Preserve earlier milestone execution evidence.
+
+## Scope
+
+- Keep the earlier milestone phase fully closed before release-readiness audit routing.
+
+## Tasks
+
+### Task 1: Preserve earlier milestone evidence
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Keep the saved summary, verification, and UAT evidence aligned for the earlier milestone phase.
+
+#### Acceptance Criteria
+
+- tests/audit-milestone-tools.test.ts exits 0
+
+## Verification
+
+- Re-run the milestone audit routing tests after preserving earlier evidence.
+
+## Must Haves
+
+- Earlier milestone closeout evidence must remain reviewable.
 `,
     "utf8"
   );
@@ -535,9 +571,12 @@ status: done
 objective: "Prepare the milestone for the final audit."
 depends_on: []
 requirements: ["MILESTONE-01"]
-files_modified: []
-read_first: []
-acceptance_criteria: []
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/audit-milestone-tools.test.ts exits 0
 autonomous: true
 ---
 
@@ -546,6 +585,34 @@ autonomous: true
 ## Goal
 
 Prepare the milestone for the final audit.
+
+## Scope
+
+- Close release-readiness validation evidence so milestone audit routing can begin.
+
+## Tasks
+
+### Task 1: Prepare release-readiness audit evidence
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Keep the completed summary, verification, and UAT evidence aligned for milestone audit routing.
+
+#### Acceptance Criteria
+
+- tests/audit-milestone-tools.test.ts exits 0
+
+## Verification
+
+- Re-run the milestone audit routing tests after preserving release-readiness evidence.
+
+## Must Haves
+
+- Release-readiness evidence must be durable enough for milestone audit routing.
 `,
     "utf8"
   );
