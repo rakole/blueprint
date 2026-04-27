@@ -10,7 +10,6 @@ import {
   blueprintPathExists,
   BLUEPRINT_STATE_PATH,
   ensureRepoRoot,
-  extractSummaryStatus,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
   extractMarkdownTableRows,
@@ -20,7 +19,6 @@ import {
   toRepoRelativePath,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
-  validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
   writeTextFile
@@ -166,6 +164,18 @@ type CommandCatalogEntry = {
 
 type CommandCatalogResult = {
   commands: Record<string, CommandCatalogEntry>;
+};
+
+type PhaseSummaryIndexSnapshot = {
+  phaseFound: boolean;
+  summaries: {
+    planId: string;
+    path: string;
+    status: "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
+  }[];
+  completedPlans: string[];
+  pendingPlans: string[];
+  warnings: string[];
 };
 
 type CurrentPhaseArtifactStatus = {
@@ -679,72 +689,34 @@ function phaseArtifactPathsForDirectory(artifacts: string[], phaseDir: string | 
 
 async function collectValidatedSummaryPathsForPhase(
   projectRoot: string,
-  phaseArtifacts: string[],
-  phasePrefix: string
+  phaseNumber: string
 ): Promise<{
   summaryIds: string[];
   summaryPaths: string[];
   pendingPlanIds: string[];
   warnings: string[];
 }> {
-  const warnings: string[] = [];
-  const summaryPaths: string[] = [];
-  const summaryIds: string[] = [];
-  const phaseSummaryPaths = phaseArtifacts
-    .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
-    .sort((left, right) => left.localeCompare(right));
-  const knownPlanPaths = new Map(
-    phaseArtifacts
-      .filter((artifact) => artifact.endsWith("-PLAN.md"))
-      .map((artifact) => [extractPhasePlanIds([artifact], phasePrefix, "PLAN")[0] ?? null, artifact] as const)
-      .filter((entry): entry is readonly [string, string] => entry[0] !== null)
-  );
+  const phaseModule = (await import("./phase.js")) as {
+    blueprintPhaseSummaryIndex: (args: {
+      cwd?: string;
+      phase?: string;
+    }) => Promise<PhaseSummaryIndexSnapshot>;
+  };
+  const summaryIndex = await phaseModule.blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: phaseNumber
+  });
+  const completedPlanIds = new Set(summaryIndex.completedPlans);
 
-  for (const summaryPath of phaseSummaryPaths) {
-    const summaryId = extractPhasePlanIds([summaryPath], phasePrefix, "SUMMARY")[0] ?? null;
-
-    if (!summaryId) {
-      warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath}`);
-      continue;
-    }
-
-    const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
-    const validation = validateStrictSummaryArtifactContent(content, {
-      linkedPlanPath: knownPlanPaths.get(summaryId) ?? null
-    });
-
-    if (validation.valid) {
-      const summaryStatus = extractSummaryStatus(content);
-
-      if (summaryStatus === "COMPLETED") {
-        summaryIds.push(summaryId);
-        summaryPaths.push(summaryPath);
-      } else if (summaryStatus) {
-        warnings.push(
-          `${summaryPath}: summary status is ${summaryStatus}, so it remains pending execution debt.`
-        );
-      }
-
-      continue;
-    }
-
-    warnings.push(
-      `${summaryPath}: summary artifact is invalid and does not count as completed execution evidence.`
-    );
-    warnings.push(...validation.issues.map((issue) => `${summaryPath}: ${issue}`));
-    warnings.push(...validation.warnings.map((warning) => `${summaryPath}: ${warning}`));
-
-    if (!knownPlanPaths.has(summaryId)) {
-      warnings.push(`${summaryPath}: no matching plan artifact exists for this summary.`);
-    }
-  }
-
-  const pendingPlanIds = phaseArtifacts
-    .filter((artifact) => artifact.endsWith("-PLAN.md"))
-    .map((artifact) => extractPhasePlanIds([artifact], phasePrefix, "PLAN")[0] ?? null)
-    .filter((planId): planId is string => planId !== null && !summaryIds.includes(planId));
-
-  return { summaryIds, summaryPaths, pendingPlanIds, warnings };
+  return {
+    summaryIds: [...completedPlanIds].sort(),
+    summaryPaths: summaryIndex.summaries
+      .filter((summary) => summary.status === "COMPLETED" && completedPlanIds.has(summary.planId))
+      .map((summary) => summary.path)
+      .sort((left, right) => left.localeCompare(right)),
+    pendingPlanIds: [...summaryIndex.pendingPlans],
+    warnings: [...summaryIndex.warnings]
+  };
 }
 
 async function inspectValidatedPhaseValidationArtifacts(
@@ -1007,8 +979,9 @@ async function inspectCurrentPhaseArtifacts(
   const {
     summaryIds,
     summaryPaths,
+    pendingPlanIds,
     warnings: summaryWarnings
-  } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix);
+  } = await collectValidatedSummaryPathsForPhase(projectRoot, normalizedPhase);
   const {
     hasVerification,
     verificationReadyForUat,
@@ -1022,7 +995,7 @@ async function inspectCurrentPhaseArtifacts(
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
-  const hasPendingExecution = planIds.some((planId) => !summaryIds.includes(planId));
+  const hasPendingExecution = pendingPlanIds.length > 0;
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) =>
       artifact.endsWith(`${phasePrefix}-DISCUSSION-LOG.md`) ||
@@ -1181,7 +1154,7 @@ async function inspectMilestoneEvidence(
       summaryPaths,
       pendingPlanIds,
       warnings: summaryWarnings
-    } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseScopedArtifacts, phasePrefix);
+    } = await collectValidatedSummaryPathsForPhase(projectRoot, phase.phaseNumber);
 
     if (pendingPlanIds.length > 0) {
       pendingSummaryCoveragePhases.push(phase.phaseNumber);

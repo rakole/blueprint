@@ -23327,47 +23327,19 @@ function phaseArtifactPathsForDirectory(artifacts, phaseDir) {
   const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir}/`;
   return artifacts.filter((artifact) => artifact.startsWith(prefix));
 }
-async function collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix2) {
-  const warnings = [];
-  const summaryPaths = [];
-  const summaryIds = [];
-  const phaseSummaryPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right));
-  const knownPlanPaths = new Map(
-    phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).map((artifact) => [extractPhasePlanIds([artifact], phasePrefix2, "PLAN")[0] ?? null, artifact]).filter((entry) => entry[0] !== null)
-  );
-  for (const summaryPath2 of phaseSummaryPaths) {
-    const summaryId = extractPhasePlanIds([summaryPath2], phasePrefix2, "SUMMARY")[0] ?? null;
-    if (!summaryId) {
-      warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
-      continue;
-    }
-    const content = await fs3.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
-    const validation = validateStrictSummaryArtifactContent(content, {
-      linkedPlanPath: knownPlanPaths.get(summaryId) ?? null
-    });
-    if (validation.valid) {
-      const summaryStatus = extractSummaryStatus(content);
-      if (summaryStatus === "COMPLETED") {
-        summaryIds.push(summaryId);
-        summaryPaths.push(summaryPath2);
-      } else if (summaryStatus) {
-        warnings.push(
-          `${summaryPath2}: summary status is ${summaryStatus}, so it remains pending execution debt.`
-        );
-      }
-      continue;
-    }
-    warnings.push(
-      `${summaryPath2}: summary artifact is invalid and does not count as completed execution evidence.`
-    );
-    warnings.push(...validation.issues.map((issue2) => `${summaryPath2}: ${issue2}`));
-    warnings.push(...validation.warnings.map((warning) => `${summaryPath2}: ${warning}`));
-    if (!knownPlanPaths.has(summaryId)) {
-      warnings.push(`${summaryPath2}: no matching plan artifact exists for this summary.`);
-    }
-  }
-  const pendingPlanIds = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).map((artifact) => extractPhasePlanIds([artifact], phasePrefix2, "PLAN")[0] ?? null).filter((planId2) => planId2 !== null && !summaryIds.includes(planId2));
-  return { summaryIds, summaryPaths, pendingPlanIds, warnings };
+async function collectValidatedSummaryPathsForPhase(projectRoot, phaseNumber) {
+  const phaseModule = await Promise.resolve().then(() => (init_phase(), phase_exports));
+  const summaryIndex = await phaseModule.blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: phaseNumber
+  });
+  const completedPlanIds = new Set(summaryIndex.completedPlans);
+  return {
+    summaryIds: [...completedPlanIds].sort(),
+    summaryPaths: summaryIndex.summaries.filter((summary) => summary.status === "COMPLETED" && completedPlanIds.has(summary.planId)).map((summary) => summary.path).sort((left, right) => left.localeCompare(right)),
+    pendingPlanIds: [...summaryIndex.pendingPlans],
+    warnings: [...summaryIndex.warnings]
+  };
 }
 async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifacts, phasePrefix2, summaryPaths) {
   const warnings = [];
@@ -23577,8 +23549,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const {
     summaryIds,
     summaryPaths,
+    pendingPlanIds,
     warnings: summaryWarnings
-  } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseArtifacts, phasePrefix2);
+  } = await collectValidatedSummaryPathsForPhase(projectRoot, normalizedPhase);
   const {
     hasVerification,
     verificationReadyForUat,
@@ -23592,7 +23565,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
-  const hasPendingExecution = planIds.some((planId2) => !summaryIds.includes(planId2));
+  const hasPendingExecution = pendingPlanIds.length > 0;
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) => artifact.endsWith(`${phasePrefix2}-DISCUSSION-LOG.md`) || artifact.endsWith(`${phasePrefix2}-DISCUSS-CHECKPOINT.json`) || artifact.endsWith(`${phasePrefix2}-RESEARCH.md`) || artifact.endsWith(`${phasePrefix2}-UI-SPEC.md`) || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`) || artifact.endsWith("-PLAN.md") || artifact.endsWith("-SUMMARY.md") || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`)
   );
@@ -23713,7 +23686,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
       summaryPaths,
       pendingPlanIds,
       warnings: summaryWarnings
-    } = await collectValidatedSummaryPathsForPhase(projectRoot, phaseScopedArtifacts, phasePrefix2);
+    } = await collectValidatedSummaryPathsForPhase(projectRoot, phase.phaseNumber);
     if (pendingPlanIds.length > 0) {
       pendingSummaryCoveragePhases.push(phase.phaseNumber);
       warnings.push(
@@ -24391,6 +24364,33 @@ var init_state = __esm({
 });
 
 // src/mcp/tools/phase.ts
+var phase_exports = {};
+__export(phase_exports, {
+  blueprintPhaseArtifactRead: () => blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactWrite: () => blueprintPhaseArtifactWrite,
+  blueprintPhaseCheckpointDelete: () => blueprintPhaseCheckpointDelete,
+  blueprintPhaseCheckpointGet: () => blueprintPhaseCheckpointGet,
+  blueprintPhaseCheckpointPut: () => blueprintPhaseCheckpointPut,
+  blueprintPhaseContext: () => blueprintPhaseContext,
+  blueprintPhaseExecutionTargets: () => blueprintPhaseExecutionTargets,
+  blueprintPhaseLocate: () => blueprintPhaseLocate,
+  blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
+  blueprintPhasePlanRead: () => blueprintPhasePlanRead,
+  blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
+  blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
+  blueprintPhaseResearchStatus: () => blueprintPhaseResearchStatus,
+  blueprintPhaseSummaryIndex: () => blueprintPhaseSummaryIndex,
+  blueprintPhaseSummaryRead: () => blueprintPhaseSummaryRead,
+  blueprintPhaseSummaryWrite: () => blueprintPhaseSummaryWrite,
+  blueprintPhaseValidationRead: () => blueprintPhaseValidationRead,
+  blueprintPhaseValidationWrite: () => blueprintPhaseValidationWrite,
+  blueprintRoadmapAddPhase: () => blueprintRoadmapAddPhase,
+  blueprintRoadmapInsertPhase: () => blueprintRoadmapInsertPhase,
+  blueprintRoadmapPromoteBacklog: () => blueprintRoadmapPromoteBacklog,
+  blueprintRoadmapRead: () => blueprintRoadmapRead,
+  blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
+  phaseToolDefinitions: () => phaseToolDefinitions
+});
 import { promises as fs4 } from "node:fs";
 import path5 from "node:path";
 function normalizeBlueprintInput(value) {
