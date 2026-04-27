@@ -82,8 +82,8 @@ type PhaseCheckpointReferenceRecord = {
     target: string;
     note?: string;
 };
-type PhaseCheckpointOwnerCommand = "/blu-discuss-phase" | "/blu-research-phase" | "/blu-verify-work";
-type PhaseCheckpointResumeMode = "discuss" | "research" | "uat";
+type PhaseCheckpointOwnerCommand = "/blu-discuss-phase" | "/blu-research-phase";
+type PhaseCheckpointResumeMode = "discuss" | "research";
 type PhaseCheckpointResumeMetaRecord = {
     mode: PhaseCheckpointResumeMode;
     pendingTopics: string[];
@@ -918,11 +918,9 @@ export declare const phaseToolDefinitions: ({
         expectedOwnerCommand: z.ZodOptional<z.ZodEnum<{
             "/blu-discuss-phase": "/blu-discuss-phase";
             "/blu-research-phase": "/blu-research-phase";
-            "/blu-verify-work": "/blu-verify-work";
         }>>;
         expectedMode: z.ZodOptional<z.ZodEnum<{
             research: "research";
-            uat: "uat";
             discuss: "discuss";
         }>>;
     };
@@ -937,7 +935,6 @@ export declare const phaseToolDefinitions: ({
             ownerCommand: z.ZodEnum<{
                 "/blu-discuss-phase": "/blu-discuss-phase";
                 "/blu-research-phase": "/blu-research-phase";
-                "/blu-verify-work": "/blu-verify-work";
             }>;
             completedAreas: z.ZodArray<z.ZodString>;
             remainingAreas: z.ZodArray<z.ZodString>;
@@ -959,7 +956,6 @@ export declare const phaseToolDefinitions: ({
             resumeMeta: z.ZodObject<{
                 mode: z.ZodEnum<{
                     research: "research";
-                    uat: "uat";
                     discuss: "discuss";
                 }>;
                 pendingTopics: z.ZodArray<z.ZodString>;
@@ -981,11 +977,9 @@ export declare const phaseToolDefinitions: ({
         expectedOwnerCommand: z.ZodOptional<z.ZodEnum<{
             "/blu-discuss-phase": "/blu-discuss-phase";
             "/blu-research-phase": "/blu-research-phase";
-            "/blu-verify-work": "/blu-verify-work";
         }>>;
         expectedMode: z.ZodOptional<z.ZodEnum<{
             research: "research";
-            uat: "uat";
             discuss: "discuss";
         }>>;
     };

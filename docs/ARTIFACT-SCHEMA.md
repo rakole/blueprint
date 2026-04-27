@@ -327,8 +327,8 @@ actual owner is declared inside the checkpoint body.
 Structured persistence expectations:
 - top-level JSON value must be an object
 - persisted checkpoints must use the richer resumability shape with `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`
-- `ownerCommand` identifies the command that owns the continuation state; current values are `/blu-discuss-phase`, `/blu-research-phase`, and `/blu-verify-work`
-- `resumeMeta.mode` is enum-like ownership metadata; current values are `discuss`, `research`, and `uat`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`, `/blu-verify-work` -> `uat`)
+- `ownerCommand` identifies the command that owns the continuation state; current values are `/blu-discuss-phase` and `/blu-research-phase`
+- `resumeMeta.mode` is enum-like ownership metadata; current values are `discuss` and `research`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`)
 - `resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`
 - the MCP tool owns the shared checkpoint path; callers must treat returned `path` values as authoritative instead of hand-building mode-specific filenames
 - legacy object-shaped checkpoints may still be read for compatibility, and matching legacy mode-only checkpoints may still be updated or deleted by the owning command, but `blueprint_phase_checkpoint_get` reports ownership/mode warnings and a `safeToResume` signal when the caller supplies expected ownership
@@ -488,7 +488,7 @@ Validation expectations:
 Minimum expected structure:
 - `**Status:** PASS|FAIL|PARTIAL`
 - `**Resume State:** RESUMED|NEW|CONTINUED`
-- `**Checkpoint:** <saved checkpoint path or none>`
+- `**Checkpoint:** <current checkpoint label or none>`
 - `## UAT Summary`
 - `## Session State`
 - `## Questions Asked`
@@ -506,8 +506,10 @@ Richer authoring template sections:
 UAT expectations:
 - must be grounded in the saved execution summaries for the phase
 - should preserve resumable conversational state rather than acting like a one-shot transcript
+- should keep resumability inside `XX-UAT.md` itself rather than inventing a separate checkpoint file for `/blu-verify-work`
 - should preserve a concrete user-observable test queue with expected behavior, saved evidence, result state, and notes
 - should separate blocked prerequisites from code gaps, preserve verbatim issue reports, and infer severity without asking the user to classify it manually
+- should preserve user-reported issues, blocked prerequisites, and structured gaps as UAT evidence without an extra confirmation gate
 - should include structured gaps that can feed later explicit follow-up capture or repair planning
 - should be normalized to the canonical `phase.uat` authoring template before persistence
 - should keep explicit follow-up fixes visible in the artifact instead of hiding them in chat history
@@ -532,7 +534,7 @@ Exact persistence template:
 
 **Status:** PASS|FAIL|PARTIAL
 **Resume State:** RESUMED|NEW|CONTINUED
-**Checkpoint:** <saved checkpoint path or none>
+**Checkpoint:** <current checkpoint label or none>
 
 ## UAT Summary
 
@@ -540,7 +542,7 @@ Exact persistence template:
 
 ## Session State
 
-- Resume source: <saved summary path, checkpoint, or none>
+- Resume source: <saved summary path, in-artifact checkpoint, or none>
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 
@@ -549,7 +551,7 @@ Exact persistence template:
 - Number: <active test number or testing complete>
 - Name: <active user-observable test name or none>
 - Expected: <what the user should observe>
-- Awaiting: <user response, next checkpoint, or none>
+- Awaiting: <explicit user response, checkpoint review choice, or none>
 
 ## Test Matrix
 
@@ -572,7 +574,7 @@ Exact persistence template:
 
 ## Observed Behavior
 
-- Observed behavior tied to saved summary evidence.
+- User-reported observed behavior tied to saved summary evidence.
 
 ## Unresolved Gaps
 
@@ -590,15 +592,16 @@ Exact persistence template:
 
 ## Next Safe Action
 
-- `/blu-progress`
+- <implemented next action such as `/blu-verify-work <phase>` while checkpointed, or `/blu-progress` when completed>
 ```
 
 Contract notes:
 - Keep the `**Status:**`, `**Resume State:**`, and `**Checkpoint:**` markers exactly as written.
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
+- Treat `**Checkpoint:**` as the current in-artifact checkpoint label rather than a separate checkpoint file path.
 - Reference at least one saved summary path or filename inside `## UAT Summary`, `## Session State`, or `## Observed Behavior`.
 - Fill the richer authoring sections when creating or updating UAT; existing artifacts without those sections remain validation-compatible, but new output should include current test state, the test matrix, result counts, and structured gaps.
-- Keep follow-up-fix captures explicit enough that the parent command can ask for confirmation before persistence.
+- Preserve user-reported issues and blocked prerequisites as UAT evidence by default. Keep follow-up-fix captures explicit enough that the parent command can ask for confirmation before persistence.
 
 ### `XX-REVIEW-FIX.md`
 

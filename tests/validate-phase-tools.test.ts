@@ -672,7 +672,7 @@ test("validation tools reject scaffold placeholder evidence for verification and
 
 **Status:** PASS|FAIL|PARTIAL
 **Resume State:** RESUMED|NEW|CONTINUED
-**Checkpoint:** <saved checkpoint path or none>
+**Checkpoint:** <current checkpoint label or none>
 
 ## UAT Summary
 
@@ -680,7 +680,7 @@ test("validation tools reject scaffold placeholder evidence for verification and
 
 ## Session State
 
-- Resume source: <saved summary path, checkpoint, or none>
+- Resume source: <saved summary path, in-artifact checkpoint, or none>
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 

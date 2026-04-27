@@ -4124,7 +4124,7 @@ const REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings
 const UAT_PLACEHOLDER_BODIES = [
   "Concise user-facing result grounded in the saved summaries and verification artifact.",
   "Question asked during the UAT pass, or `none`.",
-  "Observed behavior tied to saved summary evidence such as",
+  "User-reported observed behavior tied to saved summary evidence such as",
   "Explicit blocker, follow-up, or `none`.",
   "Explicit follow-up fix, acceptance note, or `none`.",
   "<active test number or testing complete>",
@@ -4166,12 +4166,10 @@ export function validateUatArtifactContent(
   }
 
   if (
-    !/^\*\*Checkpoint:\*\*\s*(?:none|(?:\.blueprint\/phases\/[^\s/]+\/)?[^\s]+-DISCUSS-CHECKPOINT\.json)\s*$/m.test(
-      content
-    )
+    !/^\*\*Checkpoint:\*\*[^\S\r\n]*(?:none|[^\r\n]*\S[^\r\n]*)[^\S\r\n]*$/m.test(content)
   ) {
     issues.push(
-      "UAT artifact must declare **Checkpoint:** with `none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT.json`."
+      "UAT artifact must declare **Checkpoint:** with `none` or a non-empty in-artifact checkpoint label."
     );
   }
 

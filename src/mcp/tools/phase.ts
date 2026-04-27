@@ -146,10 +146,9 @@ type PhaseCheckpointReferenceRecord = {
 
 type PhaseCheckpointOwnerCommand =
   | "/blu-discuss-phase"
-  | "/blu-research-phase"
-  | "/blu-verify-work";
+  | "/blu-research-phase";
 
-type PhaseCheckpointResumeMode = "discuss" | "research" | "uat";
+type PhaseCheckpointResumeMode = "discuss" | "research";
 
 type PhaseCheckpointResumeMetaRecord = {
   mode: PhaseCheckpointResumeMode;
@@ -812,17 +811,15 @@ const PHASE_VALIDATION_ARTIFACT_SUFFIXES: Record<PhaseValidationArtifactKind, st
 const PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
 const PHASE_CHECKPOINT_OWNER_COMMANDS = [
   "/blu-discuss-phase",
-  "/blu-research-phase",
-  "/blu-verify-work"
+  "/blu-research-phase"
 ] as const;
-const PHASE_CHECKPOINT_RESUME_MODES = ["discuss", "research", "uat"] as const;
+const PHASE_CHECKPOINT_RESUME_MODES = ["discuss", "research"] as const;
 const PHASE_CHECKPOINT_OWNER_MODES: Record<
   PhaseCheckpointOwnerCommand,
   PhaseCheckpointResumeMode
 > = {
   "/blu-discuss-phase": "discuss",
-  "/blu-research-phase": "research",
-  "/blu-verify-work": "uat"
+  "/blu-research-phase": "research"
 };
 
 const roadmapReadInputSchema = {
@@ -3756,8 +3753,6 @@ function checkpointExpectedOwnerFromMode(
       return "/blu-discuss-phase";
     case "research":
       return "/blu-research-phase";
-    case "uat":
-      return "/blu-verify-work";
     default:
       return null;
   }

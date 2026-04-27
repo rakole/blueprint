@@ -934,7 +934,7 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
 
 **Status:** PASS|FAIL|PARTIAL
 **Resume State:** RESUMED|NEW|CONTINUED
-**Checkpoint:** <saved checkpoint path or none>
+**Checkpoint:** <current checkpoint label or none>
 
 ## UAT Summary
 
@@ -942,7 +942,7 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
 
 ## Session State
 
-- Resume source: <saved summary path, checkpoint, or none>
+- Resume source: <saved summary path, in-artifact checkpoint, or none>
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 
@@ -951,7 +951,7 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
 - Number: <active test number or testing complete>
 - Name: <active user-observable test name or none>
 - Expected: <what the user should observe>
-- Awaiting: <user response, next checkpoint, or none>
+- Awaiting: <explicit user response, checkpoint review choice, or none>
 
 ## Test Matrix
 
@@ -974,7 +974,7 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
 
 ## Observed Behavior
 
-- Observed behavior tied to saved summary evidence such as \`${summaryFile(context)}\`.
+- User-reported observed behavior tied to saved summary evidence such as \`${summaryFile(context)}\`.
 
 ## Unresolved Gaps
 
@@ -992,7 +992,7 @@ function renderUatTemplate(context?: ArtifactTemplateContext): string {
 
 ## Next Safe Action
 
-- /blu-progress`;
+- <implemented next action such as /blu-verify-work ${phasePrefix(context)} while checkpointed, or /blu-progress when completed>`;
 }
 
 function renderCodeReviewTemplate(context?: ArtifactTemplateContext): string {

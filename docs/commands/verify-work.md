@@ -36,13 +36,14 @@
 - The target phase must already have a `XX-VERIFICATION.md` artifact from `validate-phase`, and that verification must be ready for UAT.
 - Existing UAT artifacts should be resumed or reused unless the user explicitly asks for a replacement.
 - Non-trivial interactive UAT should stay checkpointed and bounded: after each major evidence block, the user may `review`, `skip`, or `stop`.
-- Confirm any follow-up-fix capture before it is written into the UAT artifact.
+- User-reported issues, blocked prerequisites, and structured gaps are UAT evidence and should be preserved in `XX-UAT.md` without a separate confirmation gate.
+- Confirm any explicit follow-up-fix capture before it is written into the UAT artifact or a later state update.
 
 
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: writes `XX-UAT.md` through MCP, validates the saved artifact after the write, updates `.blueprint/ROADMAP.md` when valid execution, verification, and UAT evidence make completion durable, may record explicit follow-up fix capture in the same artifact after confirmation, and updates `.blueprint/STATE.md` when the next safe action changes.
+- Repo side effects: writes `XX-UAT.md` through MCP, validates the saved artifact after the write, updates `.blueprint/ROADMAP.md` when valid execution, verification, and UAT evidence make completion durable, preserves user-reported issues and structured gaps as UAT evidence, may record explicit follow-up fix capture in the same artifact after confirmation, and updates `.blueprint/STATE.md` when the next safe action changes.
 - In-flight UAT should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
 
 ## In-Flight Progress Contract
@@ -59,7 +60,8 @@
 - Skip internal-only implementation details unless they affect visible startup, command behavior, generated artifacts, routing, or errors.
 - Add a cold-start smoke test when saved evidence touches startup, server or CLI entrypoints, database, seed, migration, Docker, or first-run surfaces.
 - Present one expected behavior at a time and classify the user's plain response without asking them for severity:
-  - pass: empty response, `yes`, `y`, `ok`, `pass`, `next`, or `approved`
+  - no answer: empty response; restate the current test once and ask for an explicit answer instead of counting it as a pass
+  - pass: `yes`, `y`, `ok`, `pass`, `next`, or `approved`
   - skipped: `skip`, `can't test`, or `n/a`, preserving reason when given
   - blocked: prerequisite language such as server, not running, physical device, release build, third-party setup, or prior phase
   - issue: any other response, preserving the verbatim report and inferring blocker, major, minor, or cosmetic severity
@@ -105,10 +107,10 @@
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
 - Self-check the normalized draft against the returned contract before writing so the final body matches the persisted shape.
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
-- Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume without inventing a second checkpoint file.
+- Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume inside `XX-UAT.md` without inventing a second checkpoint file.
 - New or updated UAT artifacts should also preserve the current test, test matrix, result counts, blocked prerequisites, structured gaps, and follow-up fix candidates from the canonical authoring template.
 - If the verification artifact is valid but not ready for UAT, route back to `/blu-validate-phase <phase>` for repair before attempting UAT persistence.
-- Keep follow-up fixes or remaining gaps inside the saved UAT content or later explicit state updates; confirm follow-up-fix capture before persistence and do not invent separate tool-owned artifacts.
+- Keep user-reported issues and remaining gaps inside the saved UAT content by default. Confirm follow-up-fix capture before persistence or later explicit state updates, and do not invent separate tool-owned artifacts.
 - Keep the next safe action on `/blu-verify-work <phase>` while the saved UAT artifact still reflects an in-progress or intentionally stopped checkpoint; route onward only when the saved evidence and current prerequisites support that follow-up.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or post-write `blueprint_artifact_validate` fails, repair the normalized draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
 

@@ -37,6 +37,9 @@ the authority for control flow.
 | `blueprint_phase_validation_write` with `artifact: "uat"` | The only allowed persistence path for `XX-UAT.md`. |
 | `blueprint_state_update` with `base: "synced"` | Final state sync and next-action derivation. |
 
+Checkpoint state for `/blu-verify-work` lives in `XX-UAT.md` itself. Do not use
+the shared phase checkpoint JSON tools for UAT continuation.
+
 ## Input State Model
 
 - Missing summaries: stop without writing and route to `/blu-execute-phase
@@ -77,7 +80,8 @@ severity or internal implementation guesses.
 
 Response classification:
 
-- Empty response, `yes`, `y`, `ok`, `pass`, `next`, or `approved` -> `pass`
+- Empty response -> `no-answer`; restate the current test once and ask again
+- `yes`, `y`, `ok`, `pass`, `next`, or `approved` -> `pass`
 - `skip`, `can't test`, or `n/a` -> `skipped`, preserving the reason when given
 - Responses that mention blocked prerequisites such as server, not running,
   physical device, release build, third-party configuration, or prior phase ->
@@ -113,21 +117,25 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
    `freehandPolicy` as schema authority.
 3. Preserve all locked markers exactly, including `**Status:**`,
    `**Resume State:**`, and `**Checkpoint:**`.
-4. Fill every required section with concrete evidence. Do not leave scaffold
+4. Treat `**Checkpoint:**` as the current in-artifact checkpoint label or
+   `none`, not as a separate checkpoint file path.
+5. Fill every required section with concrete evidence. Do not leave scaffold
    placeholders or generic "none" rows where gaps exist.
-5. Keep saved summary paths or filenames in `## UAT Summary`,
+6. Keep saved summary paths or filenames in `## UAT Summary`,
    `## Session State`, or `## Observed Behavior`.
-6. Keep the current test or completion state in the saved artifact so the run
+7. Keep the current test or completion state in the saved artifact so the run
    survives context reset.
-7. Include a test matrix with name, expected behavior, evidence, result, and
+8. Include a test matrix with name, expected behavior, evidence, result, and
    notes for every generated test.
-8. Include result counts for total, passed, issues, pending, skipped, and
+9. Include result counts for total, passed, issues, pending, skipped, and
    blocked.
-9. Include structured gaps with truth, status, reason, severity, test number,
+10. Include structured gaps with truth, status, reason, severity, test number,
    artifacts, missing work, and follow-up status when issues are found.
-10. Keep follow-up fixes explicit enough for the parent command to ask for
-    confirmation before persisting or acting on them.
-11. Self-check the final markdown against the returned contract before calling
+11. Persist user-reported issues, blocked prerequisites, and structured gaps as
+    UAT evidence without an extra confirmation gate. Keep follow-up-fix entries
+    explicit enough for the parent command to ask for confirmation before
+    persisting or acting on them.
+12. Self-check the final markdown against the returned contract before calling
     `blueprint_phase_validation_write`.
 
 ## Capability-Gated Subagent Path
@@ -143,13 +151,16 @@ Pass the verifier:
 - existing UAT artifact when present
 - effective config values for verifier and Nyquist gates
 - canonical `phase.uat` authoring rules
-- requested output shape: `READY`, `GAPS`, or `BLOCKED`, plus test queue,
-  response-classification-ready UAT prompts, structured gaps, result counts,
-  follow-up-fix candidates, and a UAT draft
+- requested output shape: `READY`, `GAPS`, or `BLOCKED`, plus a prepared test
+  queue, response-classification-ready UAT prompts, saved-evidence-only gap
+  hypotheses, pending-state scaffold content, and optional follow-up-fix
+  candidates
 
 The verifier must remain read-only. It may recommend explicit follow-up capture
 or a later implemented repair command, but it must not mutate implementation
-files or write Blueprint state.
+files or write Blueprint state. It must not invent observed user behavior,
+completed result counts, or a final acceptance-ready UAT draft before the
+parent has collected user responses.
 
 Do not substitute browser, web-search-only, shell-only, or generic agents for
 `blueprint-verifier`. If the suitable verifier is unavailable, use the fallback
@@ -201,7 +212,7 @@ A high-quality UAT artifact:
 - names every reviewed saved summary
 - includes a concrete user-observable test queue
 - shows expected behavior and evidence for each test
-- preserves current test, result counts, checkpoint, and resume state
+- preserves current test, result counts, checkpoint label, and resume state
 - distinguishes pass, issue, skipped, blocked, pending, and partial outcomes
 - preserves verbatim user issue reports and inferred severity
 - separates blocked prerequisites from code gaps
