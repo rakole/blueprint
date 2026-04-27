@@ -693,7 +693,7 @@ test("review and report contracts validate canonical sections while keeping extr
 
 ## Findings
 
-- [high] Missing contract validation would let malformed review artifacts persist.
+- [high] \`src/mcp/tools/review.ts:1\` - Missing contract validation would let malformed review artifacts persist.
 
 ## Follow-Ups
 

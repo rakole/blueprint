@@ -14,6 +14,7 @@ type ReviewRecordArgs = {
     artifact: ReviewArtifactKind;
     content: string;
     overwrite?: boolean;
+    scopeFiles?: string[];
 };
 type ReviewRecordResult = {
     phaseNumber: string;
@@ -35,7 +36,24 @@ type ReviewRecordResult = {
     warnings: string[];
 };
 type ReviewDepth = "quick" | "standard" | "deep";
-type ReviewModeSource = "explicit-files" | "phase-plans";
+type ReviewModeSource = "explicit-files" | "phase-plans" | "phase-summaries" | "phase-evidence";
+type ReviewScopeConfirmation = {
+    recommended: boolean;
+    pendingGate: "none" | "scope-confirmation";
+    reasons: string[];
+    thresholds: {
+        broadFileCount: number;
+        multiPlanCount: number;
+        deepFileCount: number;
+    };
+    signals: {
+        fileCount: number;
+        summaryCount: number;
+        matchedPlanCount: number;
+        depth: ReviewDepth;
+        source: ReviewModeSource;
+    };
+};
 type ReviewScopeArgs = {
     cwd?: string;
     phase?: NumericInput;
@@ -56,6 +74,7 @@ type ReviewScopeResult = {
         depth: ReviewDepth;
         source: ReviewModeSource;
     };
+    confirmationRecommended: ReviewScopeConfirmation;
     artifacts: {
         plans: string[];
         summaries: string[];
@@ -134,6 +153,7 @@ export declare const reviewToolDefinitions: ({
         }>;
         content: z.ZodString;
         overwrite: z.ZodOptional<z.ZodBoolean>;
+        scopeFiles: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewRecordResult>;
 })[];

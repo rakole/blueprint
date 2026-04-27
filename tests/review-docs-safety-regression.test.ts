@@ -123,7 +123,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     reviewSkill,
-    /Keep the scope confirmation gate explicit for broad, multi-plan, or deep\s+reviews/i
+    /Keep the scope confirmation gate explicit when\s+`blueprint_review_scope\.confirmationRecommended`\s+says the resolved review\s+crossed deterministic thresholds/i
   );
   assert.match(
     reviewSkill,

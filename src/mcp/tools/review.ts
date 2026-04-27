@@ -11,6 +11,7 @@ import {
   toRepoRelativePath,
   validatePlanArtifactContent,
   validateReviewArtifactContent,
+  validateReviewArtifactScopeCoverage,
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
@@ -40,6 +41,7 @@ type ReviewRecordArgs = {
   artifact: ReviewArtifactKind;
   content: string;
   overwrite?: boolean;
+  scopeFiles?: string[];
 };
 
 type ReviewRecordResult = {
@@ -63,7 +65,29 @@ type ReviewRecordResult = {
 };
 
 type ReviewDepth = "quick" | "standard" | "deep";
-type ReviewModeSource = "explicit-files" | "phase-plans";
+type ReviewModeSource =
+  | "explicit-files"
+  | "phase-plans"
+  | "phase-summaries"
+  | "phase-evidence";
+
+type ReviewScopeConfirmation = {
+  recommended: boolean;
+  pendingGate: "none" | "scope-confirmation";
+  reasons: string[];
+  thresholds: {
+    broadFileCount: number;
+    multiPlanCount: number;
+    deepFileCount: number;
+  };
+  signals: {
+    fileCount: number;
+    summaryCount: number;
+    matchedPlanCount: number;
+    depth: ReviewDepth;
+    source: ReviewModeSource;
+  };
+};
 
 type ReviewScopeArgs = {
   cwd?: string;
@@ -86,6 +110,7 @@ type ReviewScopeResult = {
     depth: ReviewDepth;
     source: ReviewModeSource;
   };
+  confirmationRecommended: ReviewScopeConfirmation;
   artifacts: {
     plans: string[];
     summaries: string[];
@@ -146,7 +171,8 @@ const reviewRecordInputSchema = {
     "ui-review"
   ]),
   content: z.string(),
-  overwrite: z.boolean().optional()
+  overwrite: z.boolean().optional(),
+  scopeFiles: z.array(z.string()).optional()
 };
 
 const reviewScopeInputSchema = {
@@ -649,6 +675,12 @@ async function normalizeExplicitReviewFiles(
   return normalizeReviewFiles(projectRoot, files, warnings, "explicit review");
 }
 
+const REVIEW_SCOPE_CONFIRMATION_THRESHOLDS = {
+  broadFileCount: 5,
+  multiPlanCount: 2,
+  deepFileCount: 3
+} as const;
+
 async function normalizeReviewFiles(
   projectRoot: string,
   files: string[],
@@ -754,7 +786,10 @@ async function deriveReviewFilesFromSummaries(
     artifacts: string[];
   },
   warnings: string[]
-): Promise<string[]> {
+): Promise<{
+  files: string[];
+  summaryCount: number;
+}> {
   const summaryFiles = located.artifacts.filter((artifact) =>
     artifact.endsWith("-SUMMARY.md")
   );
@@ -777,7 +812,7 @@ async function deriveReviewFilesFromSummaries(
 
     const summaryEntries = extractMarkdownSectionEntries(
       content,
-      /^(changes made|evidence)$/i
+      /^changes made$/i
     );
 
     for (const entry of summaryEntries) {
@@ -827,7 +862,10 @@ async function deriveReviewFilesFromSummaries(
     }
   }
 
-  return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
+  return {
+    files: [...resolvedFiles].sort((left, right) => left.localeCompare(right)),
+    summaryCount: summaryFiles.length
+  };
 }
 
 async function deriveReviewFilesFromPlans(
@@ -838,7 +876,10 @@ async function deriveReviewFilesFromPlans(
     artifacts: string[];
   },
   warnings: string[]
-): Promise<string[]> {
+): Promise<{
+  files: string[];
+  matchedPlanCount: number;
+}> {
   const summaryPlanIds = new Set(
     located.artifacts
       .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
@@ -851,7 +892,10 @@ async function deriveReviewFilesFromPlans(
       "No execution summaries were found for the selected phase, so Blueprint could not derive a review scope from executed plans."
     );
 
-    return [];
+    return {
+      files: [],
+      matchedPlanCount: 0
+    };
   }
 
   const planPaths = located.artifacts.filter((artifact) => {
@@ -868,7 +912,10 @@ async function deriveReviewFilesFromPlans(
       "Execution summaries exist, but the matching plan artifacts were missing, so Blueprint could not derive changed repo files for review."
     );
 
-    return [];
+    return {
+      files: [],
+      matchedPlanCount: 0
+    };
   }
 
   const resolvedFiles = new Set<string>();
@@ -947,7 +994,78 @@ async function deriveReviewFilesFromPlans(
     }
   }
 
-  return [...resolvedFiles].sort((left, right) => left.localeCompare(right));
+  return {
+    files: [...resolvedFiles].sort((left, right) => left.localeCompare(right)),
+    matchedPlanCount: planPaths.length
+  };
+}
+
+function determineReviewModeSource(
+  explicitFiles: string[],
+  summaryFiles: string[],
+  planFiles: string[]
+): ReviewModeSource {
+  if (explicitFiles.length > 0) {
+    return "explicit-files";
+  }
+
+  if (summaryFiles.length > 0 && planFiles.length > 0) {
+    return "phase-evidence";
+  }
+
+  if (summaryFiles.length > 0) {
+    return "phase-summaries";
+  }
+
+  return "phase-plans";
+}
+
+function buildReviewScopeConfirmation(args: {
+  fileCount: number;
+  summaryCount: number;
+  matchedPlanCount: number;
+  depth: ReviewDepth;
+  source: ReviewModeSource;
+}): ReviewScopeConfirmation {
+  const reasons: string[] = [];
+
+  if (args.fileCount >= REVIEW_SCOPE_CONFIRMATION_THRESHOLDS.broadFileCount) {
+    reasons.push(
+      `Resolved scope includes ${args.fileCount} files, meeting the broad-scope confirmation threshold of ${REVIEW_SCOPE_CONFIRMATION_THRESHOLDS.broadFileCount}.`
+    );
+  }
+
+  if (
+    args.source !== "explicit-files" &&
+    args.summaryCount >= REVIEW_SCOPE_CONFIRMATION_THRESHOLDS.multiPlanCount
+  ) {
+    reasons.push(
+      `Resolved scope includes evidence from ${args.summaryCount} executed plans, meeting the multi-plan confirmation threshold of ${REVIEW_SCOPE_CONFIRMATION_THRESHOLDS.multiPlanCount}.`
+    );
+  }
+
+  if (
+    args.depth === "deep" &&
+    args.fileCount >= REVIEW_SCOPE_CONFIRMATION_THRESHOLDS.deepFileCount
+  ) {
+    reasons.push(
+      `Deep review over ${args.fileCount} files meets the deep-review confirmation threshold of ${REVIEW_SCOPE_CONFIRMATION_THRESHOLDS.deepFileCount}.`
+    );
+  }
+
+  return {
+    recommended: reasons.length > 0,
+    pendingGate: reasons.length > 0 ? "scope-confirmation" : "none",
+    reasons,
+    thresholds: { ...REVIEW_SCOPE_CONFIRMATION_THRESHOLDS },
+    signals: {
+      fileCount: args.fileCount,
+      summaryCount: args.summaryCount,
+      matchedPlanCount: args.matchedPlanCount,
+      depth: args.depth,
+      source: args.source
+    }
+  };
 }
 
 function resolveConfiguredReviewDepth(
@@ -1032,6 +1150,13 @@ export async function blueprintReviewScope(
         depth: reviewSettings.depth,
         source: explicitScopeRequested ? "explicit-files" : "phase-plans"
       },
+      confirmationRecommended: buildReviewScopeConfirmation({
+        fileCount: 0,
+        summaryCount: artifacts.summaries.length,
+        matchedPlanCount: 0,
+        depth: reviewSettings.depth,
+        source: explicitScopeRequested ? "explicit-files" : "phase-plans"
+      }),
       artifacts,
       reason: located.reason ?? "Phase could not be resolved for review scoping.",
       warnings: [...located.warnings, ...reviewSettings.warnings]
@@ -1055,6 +1180,13 @@ export async function blueprintReviewScope(
         depth: reviewSettings.depth,
         source: explicitScopeRequested ? "explicit-files" : "phase-plans"
       },
+      confirmationRecommended: buildReviewScopeConfirmation({
+        fileCount: 0,
+        summaryCount: artifacts.summaries.length,
+        matchedPlanCount: 0,
+        depth: reviewSettings.depth,
+        source: explicitScopeRequested ? "explicit-files" : "phase-plans"
+      }),
       artifacts,
       reason: "workflow.code_review is disabled in the effective Blueprint config.",
       warnings: [...located.warnings, ...reviewSettings.warnings]
@@ -1086,6 +1218,13 @@ export async function blueprintReviewScope(
         depth: reviewSettings.depth,
         source: "explicit-files"
       },
+      confirmationRecommended: buildReviewScopeConfirmation({
+        fileCount: 0,
+        summaryCount: artifacts.summaries.length,
+        matchedPlanCount: 0,
+        depth: reviewSettings.depth,
+        source: "explicit-files"
+      }),
       artifacts,
       reason:
         "Explicit review scope contained invalid `--files` entries. Re-run with only repo-relative file paths to existing repo files.",
@@ -1094,30 +1233,34 @@ export async function blueprintReviewScope(
   }
   let files: string[] = [];
   let source: ReviewModeSource = "phase-plans";
+  let summaryCount = artifacts.summaries.length;
+  let matchedPlanCount = 0;
 
   if (explicitFiles.length > 0) {
     files = explicitFiles;
     source = "explicit-files";
   } else {
-    const summaryFiles = await deriveReviewFilesFromSummaries(
+    const summaryScope = await deriveReviewFilesFromSummaries(
       projectRoot,
       { artifacts: located.artifacts },
       warnings
     );
+    const planScope = await deriveReviewFilesFromPlans(
+      projectRoot,
+      {
+        phaseNumber: located.phaseNumber,
+        phasePrefix: located.phasePrefix,
+        artifacts: located.artifacts
+      },
+      warnings
+    );
 
-    if (summaryFiles.length > 0) {
-      files = summaryFiles;
-    } else {
-      files = await deriveReviewFilesFromPlans(
-        projectRoot,
-        {
-          phaseNumber: located.phaseNumber,
-          phasePrefix: located.phasePrefix,
-          artifacts: located.artifacts
-        },
-        warnings
-      );
-    }
+    files = [...new Set([...summaryScope.files, ...planScope.files])].sort((left, right) =>
+      left.localeCompare(right)
+    );
+    summaryCount = summaryScope.summaryCount;
+    matchedPlanCount = planScope.matchedPlanCount;
+    source = determineReviewModeSource(explicitFiles, summaryScope.files, planScope.files);
   }
   if (files.length === 0) {
     const missingSummaries = artifacts.summaries.length === 0;
@@ -1151,6 +1294,13 @@ export async function blueprintReviewScope(
         depth: reviewSettings.depth,
         source
       },
+      confirmationRecommended: buildReviewScopeConfirmation({
+        fileCount: files.length,
+        summaryCount,
+        matchedPlanCount,
+        depth: reviewSettings.depth,
+        source
+      }),
       artifacts,
       reason:
         explicitScopeRequested
@@ -1178,10 +1328,17 @@ export async function blueprintReviewScope(
       resolvedFrom: located.resolvedFrom
     },
     files,
-    reviewMode: {
+      reviewMode: {
       depth: reviewSettings.depth,
       source
     },
+    confirmationRecommended: buildReviewScopeConfirmation({
+      fileCount: files.length,
+      summaryCount,
+      matchedPlanCount,
+      depth: reviewSettings.depth,
+      source
+    }),
     artifacts,
     reason: null,
     warnings: [...warnings, ...reviewSettings.warnings]
@@ -1218,6 +1375,10 @@ export async function blueprintReviewRecord(
   const exists = await pathExists(absolutePath);
   const warnings: string[] = [...prepared.warnings];
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
+  const normalizedScopeFiles =
+    args.artifact === "code-review"
+      ? await normalizeReviewFiles(projectRoot, args.scopeFiles ?? [], warnings, "review scope")
+      : { files: [], rejected: false };
 
   if (normalizedContent.trim().length === 0) {
     return {
@@ -1253,6 +1414,52 @@ export async function blueprintReviewRecord(
       followUps,
       warnings: [...warnings, ...validation.issues]
     };
+  }
+
+  if (args.artifact === "code-review" && normalizedScopeFiles.rejected) {
+    return {
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
+      phaseDir: located.phaseDir,
+      artifact: args.artifact,
+      reportPath,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      counts,
+      followUps,
+      warnings: [
+        ...warnings,
+        "Code-review persistence received invalid scoped repo files. Re-run with the repo-relative `files` returned by blueprint_review_scope."
+      ]
+    };
+  }
+
+  if (args.artifact === "code-review" && normalizedScopeFiles.files.length > 0) {
+    const scopedValidation = validateReviewArtifactScopeCoverage(
+      normalizedContent,
+      normalizedScopeFiles.files
+    );
+
+    if (!scopedValidation.valid) {
+      return {
+        phaseNumber: located.phaseNumber,
+        phasePrefix: located.phasePrefix,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
+        phaseDir: located.phaseDir,
+        artifact: args.artifact,
+        reportPath,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        counts,
+        followUps,
+        warnings: [...warnings, ...scopedValidation.issues]
+      };
+    }
   }
 
   if (exists) {

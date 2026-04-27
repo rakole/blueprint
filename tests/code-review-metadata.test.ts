@@ -37,6 +37,8 @@ test("code-review manifest references the review tools, canonical contract, and 
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, /review\.code-review/);
   assert.match(commandFile, /XX-REVIEW\.md/);
+  assert.match(commandFile, /confirmationRecommended/);
+  assert.match(commandFile, /scopeFiles/);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-secure-phase/);
   assert.match(commandFile, /\/blu-code-review-fix/);
@@ -68,11 +70,13 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /references\/code-review-runtime-contract\.md/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /blueprint_review_scope/);
+  assert.match(skillFile, /confirmationRecommended/);
   assert.match(skillFile, /update_topic plus `write_todos`/);
   assert.match(skillFile, /blueprint-reviewer/);
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /retry once\s+through MCP/i);
   assert.match(skillFile, /XX-REVIEW\.md/);
+  assert.match(skillFile, /scopeFiles/);
   assert.match(skillFile, /\/blu-secure-phase <phase>/);
   assert.match(skillFile, /\/blu-code-review-fix <phase>/);
   assert.match(skillFile, /\/blu-progress/);
@@ -117,6 +121,7 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(runtimeContract, /compress carry-forward context/i);
   assert.match(runtimeContract, /## Retry And Repair/);
   assert.match(runtimeContract, /retry once through `blueprint_review_record`/i);
+  assert.match(runtimeContract, /confirmationRecommended/);
   assert.match(runtimeContract, /line or line range, evidence, impact, and a\s+concrete fix or verification suggestion/i);
 
   assert.match(reviewerAgent, /## Depth-Aware Review Expectations/);
@@ -127,6 +132,8 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(commandDoc, /## Depth And Output Quality Contract/);
   assert.match(commandDoc, /## Subagent And Fallback Contract/);
   assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
+  assert.match(commandDoc, /confirmationRecommended/);
+  assert.match(mcpToolsDoc, /confirmationRecommended/);
   assert.match(runtimeReference, /code-review[\s\S]*code-review-runtime-contract\.md/);
   assert.match(mcpToolsDoc, /code-review-runtime-contract\.md/);
 });
@@ -140,6 +147,6 @@ test("code-review authoring contract requires line-backed fix guidance", () => {
   assert.match(contract.authoringTemplate, /concrete fix or verification guidance/i);
   assert.match(
     contract.notes.join("\n"),
-    /repo-relative file:line evidence, impact, and concrete fix or verification guidance/i
+    /Scope Reviewed must list every repo-relative file|repo-relative file:line evidence, impact, and concrete fix or verification guidance|Severity Summary counts must match/i
   );
 });
