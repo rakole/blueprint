@@ -1,0 +1,533 @@
+<mxfile host="app.diagrams.net" modified="2026-04-28T00:00:00.000Z" agent="codex" version="24.7.8">
+  <diagram id="discuss-phase-workflow-end-to-end" name="discuss-phase workflow end-to-end">
+    <mxGraphModel dx="3120" dy="7900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3120" pageHeight="7900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="canvas" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="3120" height="7900" as="geometry" />
+        </mxCell>
+        <mxCell id="title" value="&lt;div style=&quot;font-size:32px;font-weight:700;&quot;&gt;/blu-discuss-phase end-to-end workflow&lt;/div&gt;&lt;br&gt;&lt;div style=&quot;font-size:15px;margin-top:8px;&quot;&gt;Detailed presentation map from the user trigger through contract loading, MCP-owned reads, adaptive discovery, checkpointing, artifact persistence, validation repair, state refresh, checkpoint cleanup, and final routing. Every internal name is paired with a plain-English explanation.&lt;/div&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#0f172a;gradientColor=#1e293b;strokeColor=#0f172a;fontColor=#ffffff;align=center;verticalAlign=middle;shadow=1;spacing=18;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="28" width="3040" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-map-type" value="&lt;b&gt;Diagram type: swimlane activity map with decision loops&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Read left to right inside each horizontal stage, then follow the blue arrows down. Purple cards are MCP tool calls. Green cards are saved artifacts or returned state. Orange diamonds/cards are user or safety gates. Dashed yellow cards are optional capability-gated paths.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;fontColor=#0f172a;spacing=14;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="178" width="760" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-names" value="&lt;b&gt;Name pattern used below&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;b&gt;Runtime FQN:&lt;/b&gt; mcp_blueprint_blueprint_phase_locate&lt;br&gt;&lt;b&gt;Registered tool:&lt;/b&gt; blueprint_phase_locate&lt;br&gt;&lt;b&gt;TypeScript handler:&lt;/b&gt; blueprintPhaseLocate(args)&lt;br&gt;&lt;b&gt;Plain English:&lt;/b&gt; resolve the phase number to its directory and artifacts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="178" width="670" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-invariant" value="&lt;b&gt;Core invariant&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The slash command and skill shape the conversation. MCP tools own all durable state reads/writes. The runtime source of truth is &lt;code&gt;.blueprint/&lt;/code&gt;. Session helpers and subagents never replace MCP persistence.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#10b981;fontColor=#064e3b;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1550" y="178" width="710" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-complete" value="&lt;b&gt;Completion means&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The phase context and optional discussion log are real authored artifacts, final state was refreshed from synced runtime truth, and the old discuss-owned checkpoint was deleted only after every finalization step succeeded.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;fontColor=#1e3a8a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2300" y="178" width="780" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="col-user" value="User and Gemini host" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#1e3a8a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="330" width="340" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-command" value="Command manifest and skill" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#f1f5f9;strokeColor=#64748b;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="460" y="330" width="420" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-helper" value="Session helpers and optional agents" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="920" y="330" width="390" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-mcp" value="Blueprint MCP tool calls" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#3b0764;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="330" width="560" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-runtime" value="Runtime internals and decisions" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="330" width="500" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-artifacts" value="Artifacts, output, and next action" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#14532d;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="330" width="510" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-entry" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="3040" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-entry-label" value="Entry and contract loading" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#1d4ed8;strokeColor=#1d4ed8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="440" width="240" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-resolve" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="820" width="3040" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-resolve-label" value="1. Resolve" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#0f766e;strokeColor=#0f766e;" vertex="1" parent="1">
+          <mxGeometry x="60" y="840" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-read" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1580" width="3040" height="930" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-read-label" value="2. Read and prior-context sweep" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#7c3aed;strokeColor=#7c3aed;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1600" width="270" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-decide" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2550" width="3040" height="980" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-decide-label" value="3. Decide gates and mode" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#d97706;strokeColor=#d97706;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2570" width="260" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-execute" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="3570" width="3040" height="1020" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-execute-label" value="4. Execute adaptive discovery" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#0284c7;strokeColor=#0284c7;" vertex="1" parent="1">
+          <mxGeometry x="60" y="3590" width="270" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-persist" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="4630" width="3040" height="920" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-persist-label" value="5. Persist artifacts and checkpoints" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#16a34a;strokeColor=#16a34a;" vertex="1" parent="1">
+          <mxGeometry x="60" y="4650" width="310" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-validate" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="5590" width="3040" height="790" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-validate-label" value="6. Validate, repair, and final state sync" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#9333ea;strokeColor=#9333ea;" vertex="1" parent="1">
+          <mxGeometry x="60" y="5610" width="340" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-route" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="6420" width="3040" height="540" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-route-label" value="7. Route and report" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#047857;strokeColor=#047857;" vertex="1" parent="1">
+          <mxGeometry x="60" y="6440" width="220" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-guardrails" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fed7aa;" vertex="1" parent="1">
+          <mxGeometry x="40" y="7000" width="3040" height="760" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-guardrails-label" value="Always-on guardrails and tool glossary" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;fillColor=#ea580c;strokeColor=#ea580c;" vertex="1" parent="1">
+          <mxGeometry x="60" y="7020" width="350" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-user-trigger" value="&lt;b&gt;User trigger&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;User enters &lt;code&gt;/blu-discuss-phase &amp;lt;phase&amp;gt;&lt;/code&gt; or root-router form &lt;code&gt;/blu discuss-phase&lt;/code&gt;. The phase may be explicit, omitted for inference, or ambiguous.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="506" width="340" height="136" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-manifest" value="&lt;b&gt;commands/blu-discuss-phase.toml&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: the host entrypoint stays thin. It tells the model to use the phase-discovery skill, load the runtime contract/profile, keep persistence on the allowed MCP tools, and keep the final response concise.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="486" width="420" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-skill" value="&lt;b&gt;Primary skill: blueprint-phase-discovery&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: orchestration policy for discuss, research, UI-spec, and assumption review. For this command it narrows the allowed tool set and forces prior-context sweep, one-question branching, checkpointing, and validation repair.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;strokeWidth=2;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="486" width="390" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-refs" value="&lt;b&gt;Required local references&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;docs/commands/discuss-phase.md&lt;/code&gt;: command spec.&lt;br&gt;&lt;code&gt;discuss-phase-runtime-contract.md&lt;/code&gt;: rich behavior contract.&lt;br&gt;&lt;code&gt;long-running-phase-discovery-profile.md&lt;/code&gt;: shared stage/status vocabulary.&lt;br&gt;&lt;code&gt;docs/ARTIFACT-SCHEMA.md&lt;/code&gt; and &lt;code&gt;docs/MCP-TOOLS.md&lt;/code&gt;: artifact and tool contracts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="486" width="560" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-catalog" value="&lt;b&gt;Catalog exposure is already gated&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The command is routable only when its catalog entry is &lt;code&gt;implemented&lt;/code&gt;: command manifest exists, primary skill exists, and required MCP tools are registered. Planned-only commands stay hidden from router/help/progress.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="486" width="500" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-no-write" value="&lt;b&gt;No durable writes yet&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;At entry the model has loaded instructions only. The first durable mutation is either a checkpoint write during discovery or a scaffold/artifact write during persistence, all inside &lt;code&gt;.blueprint/&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="486" width="510" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-visible-status" value="&lt;b&gt;Show in-flight posture&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: keep the user oriented with the shared fields: resolved scope, active stage, pending gate, execution mode, and next safe action. Stage is &lt;code&gt;Resolve&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="902" width="340" height="162" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-arg" value="&lt;b&gt;Normalize the phase request&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use only numeric phase references like &lt;code&gt;3&lt;/code&gt; or &lt;code&gt;3.1&lt;/code&gt;. Do not pass phase directories, slugs, artifact filenames, or combined plan ids where the tool expects &lt;code&gt;phase&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="902" width="420" height="162" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-locate" value="&lt;b&gt;Runtime FQN&lt;/b&gt; &lt;code&gt;mcp_blueprint_blueprint_phase_locate&lt;/code&gt;&lt;br&gt;&lt;b&gt;Tool&lt;/b&gt; &lt;code&gt;blueprint_phase_locate&lt;/code&gt;&lt;br&gt;&lt;b&gt;Handler&lt;/b&gt; &lt;code&gt;blueprintPhaseLocate(args)&lt;/code&gt;&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt; Resolve the requested or inferred phase to the roadmap row, phase prefix, phase directory, and known artifacts." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="868" width="560" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-internals" value="&lt;b&gt;Inside the handler&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;ensureRepoRoot&lt;/code&gt;: find the repo safely.&lt;br&gt;&lt;code&gt;readRoadmap&lt;/code&gt;: load &lt;code&gt;.blueprint/ROADMAP.md&lt;/code&gt;.&lt;br&gt;&lt;code&gt;resolveRequestedPhase&lt;/code&gt;: use argument, state, or roadmap inference.&lt;br&gt;&lt;code&gt;findPhaseDirectory&lt;/code&gt;: match &lt;code&gt;.blueprint/phases/&amp;lt;phase-slug&amp;gt;/&lt;/code&gt;.&lt;br&gt;&lt;code&gt;listPhaseArtifacts&lt;/code&gt;: return existing phase files.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="868" width="500" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-output" value="&lt;b&gt;Resolve result&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Returns &lt;code&gt;found&lt;/code&gt;, &lt;code&gt;phaseNumber&lt;/code&gt;, &lt;code&gt;phasePrefix&lt;/code&gt;, &lt;code&gt;phaseName&lt;/code&gt;, &lt;code&gt;phaseDir&lt;/code&gt;, &lt;code&gt;artifacts&lt;/code&gt;, &lt;code&gt;milestone&lt;/code&gt;, &lt;code&gt;resolvedFrom&lt;/code&gt;, plus recovery guidance when blocked.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="868" width="510" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-gate" value="&lt;b&gt;Phase found?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;If missing, ambiguous, or directory conflict: stop and explain exact recovery.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1144" width="260" height="154" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-stop" value="&lt;b&gt;Blocked Resolve outcome&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;No artifact writes. Explain which prerequisite is missing, which phase reference failed, or why the directory is ambiguous. Keep follow-up inside implemented commands, usually &lt;code&gt;/blu-progress&lt;/code&gt; or the corrected &lt;code&gt;/blu-discuss-phase &amp;lt;phase&amp;gt;&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1340" width="800" height="124" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-continue" value="&lt;b&gt;Resolved phase continues&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Scope is now the selected phase only. The command may read broader supporting artifacts, but writes must remain in the selected phase directory and &lt;code&gt;.blueprint/STATE.md&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="1328" width="1050" height="136" as="geometry" />
+        </mxCell>
+        <mxCell id="read-prior-sweep" value="&lt;b&gt;Prior-context sweep before fresh questions&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: build an evidence packet first so the user is not asked to repeat facts already saved in Blueprint artifacts, codebase summaries, roadmap rows, or previous phase context.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1670" width="340" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="read-stage-status" value="&lt;b&gt;Stage/status contract&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Active stage is &lt;code&gt;Read&lt;/code&gt;. Pending gates may be checkpoint resume, gray-area selection, overwrite confirmation, phase ambiguity, or validation blockers. Session helpers such as &lt;code&gt;update_topic&lt;/code&gt; or &lt;code&gt;write_todos&lt;/code&gt; are optional visibility only.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1670" width="420" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="read-tool-bundle-1" value="&lt;b&gt;MCP read bundle: phase and project context&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_context&lt;/code&gt; / &lt;code&gt;blueprintPhaseContext(args)&lt;/code&gt;: summarize phase boundary, project brief, requirements grounding, workflow posture, mapped codebase context, missing artifacts, and warnings.&lt;br&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_roadmap_read&lt;/code&gt; / &lt;code&gt;blueprintRoadmapRead(args)&lt;/code&gt;: read milestone, phase objective, success criteria, requirement links, and roadmap canonical refs.&lt;br&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_artifact_list&lt;/code&gt; / &lt;code&gt;blueprintArtifactList(args)&lt;/code&gt;: list existing core, phase, codebase, and report artifacts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1642" width="560" height="306" as="geometry" />
+        </mxCell>
+        <mxCell id="read-runtime-bundle-1" value="&lt;b&gt;Runtime work behind the bundle&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;blueprintPhaseContext&lt;/code&gt; internally calls &lt;code&gt;blueprintStateLoad&lt;/code&gt;, reuses &lt;code&gt;blueprintPhaseLocate&lt;/code&gt;, reads mapped &lt;code&gt;.blueprint/codebase/*.md&lt;/code&gt; summaries, and evaluates whether &lt;code&gt;XX-CONTEXT.md&lt;/code&gt;, &lt;code&gt;XX-RESEARCH.md&lt;/code&gt;, and &lt;code&gt;XX-UI-SPEC.md&lt;/code&gt; are present.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="1642" width="500" height="306" as="geometry" />
+        </mxCell>
+        <mxCell id="read-evidence-1" value="&lt;b&gt;Evidence packet part 1&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Phase boundary, objective, success criteria, requirement ids, current milestone, next action, blockers, codebase summaries, missing artifact warnings, and current artifact inventory.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="1642" width="510" height="306" as="geometry" />
+        </mxCell>
+        <mxCell id="read-tool-bundle-2" value="&lt;b&gt;MCP read bundle: config, plans, contracts, saved text&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_config_get&lt;/code&gt; / &lt;code&gt;blueprintConfigGet(args)&lt;/code&gt;: read effective config such as &lt;code&gt;workflow.discuss_mode&lt;/code&gt;, &lt;code&gt;workflow.skip_discuss&lt;/code&gt;, and research-before-question posture.&lt;br&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_plan_index&lt;/code&gt; / &lt;code&gt;blueprintPhasePlanIndex(args)&lt;/code&gt;: inspect saved plans and warn that context refresh does not rewrite them.&lt;br&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_artifact_contract_read&lt;/code&gt; / &lt;code&gt;blueprintArtifactContractRead(args)&lt;/code&gt;: read &lt;code&gt;phase.context&lt;/code&gt; and, if needed, &lt;code&gt;phase.discussion-log&lt;/code&gt; templates.&lt;br&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_artifact_read&lt;/code&gt; / &lt;code&gt;blueprintPhaseArtifactRead(args)&lt;/code&gt;: read existing context, discussion log, research/UI clues, and materially relevant earlier context.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1984" width="560" height="414" as="geometry" />
+        </mxCell>
+        <mxCell id="read-runtime-bundle-2" value="&lt;b&gt;Normalization decisions from reads&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The live &lt;code&gt;contract.authoringTemplate&lt;/code&gt; is treated as schema authority. Existing artifacts are classified as reusable, scaffold-only, stale, or requiring explicit overwrite. Plan inventory becomes a warning, not an automatic plan rewrite.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="1984" width="500" height="414" as="geometry" />
+        </mxCell>
+        <mxCell id="read-evidence-2" value="&lt;b&gt;Evidence packet part 2&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Effective workflow mode, saved plan ids/waves/missing plans, current artifact contents, canonical authoring templates, placeholder/validation signals, and prior decisions that should not be re-elicited.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="1984" width="510" height="414" as="geometry" />
+        </mxCell>
+        <mxCell id="read-checkpoint" value="&lt;b&gt;Checkpoint read&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_checkpoint_get&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_phase_checkpoint_get&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintPhaseCheckpointGet(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: read saved continuation state for this phase and report whether it is safe for &lt;code&gt;/blu-discuss-phase&lt;/code&gt; with mode &lt;code&gt;discuss&lt;/code&gt; to resume.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="2026" width="800" height="258" as="geometry" />
+        </mxCell>
+        <mxCell id="read-checkpoint-output" value="&lt;b&gt;Checkpoint safety result&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Returns &lt;code&gt;found&lt;/code&gt;, &lt;code&gt;checkpoint&lt;/code&gt;, &lt;code&gt;ownerCommand&lt;/code&gt;, &lt;code&gt;resumeMode&lt;/code&gt;, &lt;code&gt;safeToResume&lt;/code&gt;, warnings, reason, and the authoritative checkpoint path. Foreign-owner checkpoints are not reused casually.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2026" width="390" height="258" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-resume-gate" value="&lt;b&gt;Resume or discard checkpoint?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;Default is resume when safe, unless user explicitly discards.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="2670" width="250" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-resume-details" value="&lt;b&gt;Structured user choice&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use host-supported &lt;code&gt;ask_user&lt;/code&gt; when available. Plain English: ask whether to resume saved completed/remaining areas or discard the discuss-owned checkpoint and restart discovery for the phase.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="2648" width="510" height="202" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-mode-gate" value="&lt;b&gt;Workflow mode?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;discuss&lt;/code&gt;, &lt;code&gt;assumptions&lt;/code&gt;, or shortened skip-discuss path.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2670" width="250" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-mode-details" value="&lt;b&gt;Mode from effective config&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;workflow.discuss_mode=&quot;discuss&quot;&lt;/code&gt;: interview-style, one focused question at a time.&lt;br&gt;&lt;code&gt;workflow.discuss_mode=&quot;assumptions&quot;&lt;/code&gt;: evidence-first assumptions with user correction for uncertain/high-impact items.&lt;br&gt;&lt;code&gt;workflow.skip_discuss=true&lt;/code&gt;: shorten the path but still capture enough context; do not pretend context is unnecessary.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1208" y="2628" width="702" height="244" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-overwrite-gate" value="&lt;b&gt;Existing authored artifact?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;Replacing real user-authored context or discussion log requires explicit confirmation.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="2670" width="260" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-overwrite-details" value="&lt;b&gt;Overwrite posture&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Scaffold placeholders may be replaced by real authored content. Substantive existing artifacts require confirmation. Unchanged content may be reused. Invalid existing artifacts can be repaired, but the tool still owns overwrite behavior.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2248" y="2648" width="752" height="202" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-gray-areas" value="&lt;b&gt;Generate phase-specific gray areas&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use the evidence packet to name decisions that would change implementation, not generic categories. Useful lenses: scope boundary, user-visible behavior, interface contract, reuse, dependencies, risk/failure handling, and methodology.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="2924" width="800" height="188" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-gray-choice" value="&lt;b&gt;User chooses next area&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use a focused structured choice when useful. Recommended option can come first when evidence clearly points there. Always allow a custom/freeform escape for nuance.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2924" width="390" height="188" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-agent-gate" value="&lt;b&gt;Need bounded sidecar evidence?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;Only if suitable Blueprint agent exists and one gray area benefits.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="2938" width="260" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-agent-details" value="&lt;b&gt;Optional &lt;code&gt;blueprint-researcher&lt;/code&gt;&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Allowed only as read-only gray-area memo or assumptions pass: options, tradeoffs, complexity/impact surface, recommendation, confidence, and repo paths/citations. It must not draft &lt;code&gt;XX-RESEARCH.md&lt;/code&gt; or own persistence.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fefce8;strokeColor=#ca8a04;strokeWidth=2;fontColor=#713f12;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1650" y="2924" width="800" height="188" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-ready" value="&lt;b&gt;Ready for execution loop&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The active gray area, current question, execution mode, checkpoint posture, overwrite posture, plan-inventory warning, and next safe action are explicit before the command asks new questions.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="2924" width="510" height="188" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-loop-start" value="&lt;b&gt;Area loop begins&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: discuss one selected gray area at a time, then either continue within that area, move to the next area, or proceed to write artifacts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="3654" width="340" height="164" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-carry-forward" value="&lt;b&gt;Carry-forward packet&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Compress the minimum useful context: phase boundary, prior decisions, evidence paths, canonical refs, completed decisions, deferred ideas, and the current unanswered question.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="3654" width="420" height="164" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-agent-path" value="&lt;b&gt;Optional sidecar memo path&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If capability-gated agent use is justified, the parent passes one bounded question plus the compact evidence packet. Parent command owns synthesis, user questions, checkpoints, writes, and routing.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fefce8;strokeColor=#ca8a04;strokeWidth=2;fontColor=#713f12;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="3654" width="390" height="164" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-question" value="&lt;b&gt;Ask one focused question&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use &lt;code&gt;ask_user&lt;/code&gt; for concrete tradeoffs, gray-area choices, and readiness-to-write gates when available. Avoid broad checklists. Ask the thing that changes implementation.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="3868" width="340" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-answer-check" value="&lt;b&gt;Validate the answer&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If empty, vague, incomplete, or conflicting with saved context, retry once with a narrower question or ask a focused follow-up before treating it as final.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="3868" width="420" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-decision-record" value="&lt;b&gt;Record a rich decision&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;For each decision capture: question, selected answer or assumption, options considered, rationale, evidence paths, consequences if wrong, canonical references, and any deferred idea.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="3868" width="390" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-assumptions" value="&lt;b&gt;Assumptions-mode branch&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;State assumptions as downstream-useful decisions, cite repo or saved-artifact evidence, mark confidence as &lt;code&gt;Confident&lt;/code&gt;, &lt;code&gt;Likely&lt;/code&gt;, or &lt;code&gt;Unclear&lt;/code&gt;, and ask the user to correct only uncertain/high-impact assumptions.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="3772" width="560" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-single-agent" value="&lt;b&gt;Required single-agent fallback&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If no suitable agent exists, the main agent still completes the full workflow one area at a time. This is not a degraded path; it must preserve the same artifact richness, checkpointing, and final validation.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="3772" width="500" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-loop-result" value="&lt;b&gt;Loop output after each area&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Completed area, remaining areas, decisions, deferred ideas, canonical references, current question/resume hint, and a short progress recap for the user.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="3772" width="510" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-continue-gate" value="&lt;b&gt;More needed?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;Next area, more questions, or ready to persist?&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="4176" width="240" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-loop-note" value="&lt;b&gt;Loop rule&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Move through &lt;code&gt;next area&lt;/code&gt; or &lt;code&gt;more questions&lt;/code&gt; loops while keeping progress recaps short and checkpointing area progress. Preserve later ideas as deferred, not dropped.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="4210" width="800" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-ready-persist" value="&lt;b&gt;Ready to author final artifacts&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The command has enough evidence-backed decisions for downstream &lt;code&gt;/blu-research-phase&lt;/code&gt;, &lt;code&gt;/blu-ui-phase&lt;/code&gt;, and &lt;code&gt;/blu-plan-phase&lt;/code&gt; to consume without asking the same questions again.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="4200" width="1050" height="152" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-checkpoint" value="&lt;b&gt;Per-area checkpoint write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_checkpoint_put&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_phase_checkpoint_put&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintPhaseCheckpointPut(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: save resumable progress after each major area so the command can recover without losing decisions if the session pauses.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="4716" width="800" height="242" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-checkpoint-shape" value="&lt;b&gt;Checkpoint JSON shape&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;ownerCommand: &quot;/blu-discuss-phase&quot;&lt;/code&gt;&lt;br&gt;&lt;code&gt;completedAreas&lt;/code&gt;, &lt;code&gt;remainingAreas&lt;/code&gt;&lt;br&gt;&lt;code&gt;decisions&lt;/code&gt;, &lt;code&gt;deferredIdeas&lt;/code&gt;&lt;br&gt;&lt;code&gt;canonicalReferences&lt;/code&gt;&lt;br&gt;&lt;code&gt;resumeMeta.mode: &quot;discuss&quot;&lt;/code&gt;, pending/completed topics, current question, notes, resume hint, updatedAt.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="4716" width="390" height="242" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-scaffold" value="&lt;b&gt;Seed missing artifacts only when needed&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_artifact_scaffold&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_artifact_scaffold&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintArtifactScaffold(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: create or reuse supported repo-relative phase artifact paths like &lt;code&gt;.blueprint/phases/03-auth/03-CONTEXT.md&lt;/code&gt;. Scaffold text is starter material, never final context.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="4716" width="560" height="242" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-scaffold-internals" value="&lt;b&gt;Inside scaffold&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;normalizeRequestedArtifacts&lt;/code&gt;: reject bare/absolute paths.&lt;br&gt;&lt;code&gt;parsePhaseArtifactRequest&lt;/code&gt;: detect phase artifact type.&lt;br&gt;&lt;code&gt;renderPhaseArtifact&lt;/code&gt;: render placeholders from contract registry.&lt;br&gt;&lt;code&gt;writeTextFile&lt;/code&gt;: write inside &lt;code&gt;.blueprint/&lt;/code&gt; with containment checks.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="4716" width="500" height="242" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-draft" value="&lt;b&gt;Draft from live templates&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Compose &lt;code&gt;XX-CONTEXT.md&lt;/code&gt; from the &lt;code&gt;phase.context&lt;/code&gt; authoring template. Compose optional &lt;code&gt;XX-DISCUSSION-LOG.md&lt;/code&gt; from &lt;code&gt;phase.discussion-log&lt;/code&gt; only when durable notes add value.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="4716" width="510" height="242" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-context-write" value="&lt;b&gt;Context artifact write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_artifact_write&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_phase_artifact_write&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintPhaseArtifactWrite(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: persist the complete, normalized, substantive context body with &lt;code&gt;artifact: &quot;context&quot;&lt;/code&gt;. The tool owns the final path and validation result.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="5044" width="800" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-log-write" value="&lt;b&gt;Optional discussion log write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_artifact_write&lt;/code&gt;&lt;br&gt;&lt;code&gt;artifact: &quot;discussion-log&quot;&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: save durable notes, assumptions corrections, follow-ups, or comparison-table details that would clutter the main context but should not disappear.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="5044" width="390" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-write-internals" value="&lt;b&gt;Inside artifact write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;resolveLocatedPhaseForMutation&lt;/code&gt;: re-resolve phase safely.&lt;br&gt;&lt;code&gt;artifactPathFor&lt;/code&gt;: derive canonical path.&lt;br&gt;&lt;code&gt;validatePhaseArtifactContent&lt;/code&gt;: reject placeholders or missing sections.&lt;br&gt;&lt;code&gt;isScaffoldGeneratedPhaseArtifact&lt;/code&gt;: allow replacing scaffold placeholders without treating them as authored content.&lt;br&gt;&lt;code&gt;writeTextFile&lt;/code&gt;: persist normalized text.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="5044" width="560" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-artifacts" value="&lt;b&gt;Durable outputs&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;.blueprint/phases/&amp;lt;phase&amp;gt;/XX-CONTEXT.md&lt;/code&gt;: required discuss-phase output.&lt;br&gt;&lt;code&gt;.blueprint/phases/&amp;lt;phase&amp;gt;/XX-DISCUSSION-LOG.md&lt;/code&gt;: optional supporting log.&lt;br&gt;&lt;code&gt;.blueprint/phases/&amp;lt;phase&amp;gt;/XX-DISCUSS-CHECKPOINT.json&lt;/code&gt;: temporary continuation source until successful finalization.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="5044" width="1050" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-self-check" value="&lt;b&gt;Normalize and self-check before claiming success&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: ensure final markdown follows the live template and contains real decisions. Block placeholders, empty required sections, contradictions with saved context, missing canonical refs, unsupported mode claims, dropped deferred ideas, and missing plan-inventory warning.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="5682" width="800" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-write-result" value="&lt;b&gt;Write result gate&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;Did &lt;code&gt;blueprint_phase_artifact_write&lt;/code&gt; return &lt;code&gt;status: &quot;invalid&quot;&lt;/code&gt; or validation issues?&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="5708" width="250" height="154" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-repair-loop" value="&lt;b&gt;Repair and retry loop&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use the returned validation issues to revise the same normalized draft, then retry through the MCP write tool. Do not hand-edit &lt;code&gt;.blueprint/&lt;/code&gt; directly. If repair cannot finish safely, leave the checkpoint in place and report the exact blocker.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="5682" width="700" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-state-update" value="&lt;b&gt;State sync write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_state_update&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_state_update&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintStateUpdate(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: after context and optional discussion-log writes succeed, update &lt;code&gt;.blueprint/STATE.md&lt;/code&gt; using &lt;code&gt;base: &quot;synced&quot;&lt;/code&gt; so runtime-derived status is refreshed before patching.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="5948" width="800" height="218" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-state-load" value="&lt;b&gt;Follow-up state read&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_state_load&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_state_load&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintStateLoad(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: reload &lt;code&gt;STATE.md&lt;/code&gt; plus derived project status and next safe action. The final route comes from this read, not from guessing after the write.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="5948" width="390" height="218" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-delete-checkpoint" value="&lt;b&gt;Checkpoint cleanup after all finalization succeeds&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;mcp_blueprint_blueprint_phase_checkpoint_delete&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprint_phase_checkpoint_delete&lt;/code&gt;&lt;br&gt;&lt;code&gt;blueprintPhaseCheckpointDelete(args)&lt;/code&gt;&lt;br&gt;&lt;br&gt;Plain English: delete only the discuss-owned checkpoint after context write, optional log write, synced state update, and state load all succeed. Pass &lt;code&gt;expectedOwnerCommand: &quot;/blu-discuss-phase&quot;&lt;/code&gt; and &lt;code&gt;expectedMode: &quot;discuss&quot;&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="5948" width="560" height="218" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-state-internals" value="&lt;b&gt;Inside state tools&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;buildSyncedState&lt;/code&gt;: derive runtime truth from current artifacts.&lt;br&gt;&lt;code&gt;renderStateDocument&lt;/code&gt;: write legible &lt;code&gt;STATE.md&lt;/code&gt;.&lt;br&gt;&lt;code&gt;deriveNextAction&lt;/code&gt;: choose implemented next safe action based on artifacts, blockers, config, and phase state.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="5948" width="500" height="218" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-final-condition" value="&lt;b&gt;Finalization condition&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Only now can the command treat discovery as complete. If state update/load or checkpoint delete fails, report partial completion and keep continuation state honest.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="5948" width="510" height="218" as="geometry" />
+        </mxCell>
+        <mxCell id="route-summary" value="&lt;b&gt;Final user response&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Concise but complete: phase, reused versus replaced artifacts, checkpoint behavior, validation/repair outcome, plan-inventory warning if saved plans exist, deferred ideas, progress recap, and next safe action.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="6510" width="800" height="196" as="geometry" />
+        </mxCell>
+        <mxCell id="route-next-action" value="&lt;b&gt;Route from refreshed state&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Use &lt;code&gt;state.derivedStatus.nextAction&lt;/code&gt; from &lt;code&gt;blueprint_state_load&lt;/code&gt;. If routing is missing, blocked, or undecidable, fall back to &lt;code&gt;/blu-progress&lt;/code&gt;. Keep recommendations inside commands whose catalog entry is &lt;code&gt;implemented&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="6510" width="990" height="196" as="geometry" />
+        </mxCell>
+        <mxCell id="route-plan-warning" value="&lt;b&gt;Plan inventory warning&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If &lt;code&gt;blueprint_phase_plan_index&lt;/code&gt; found saved plans, explicitly say refreshed context does not rewrite existing plans. User must rerun &lt;code&gt;/blu-plan-phase &amp;lt;phase&amp;gt;&lt;/code&gt; if updated discovery should affect planning.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="6510" width="500" height="196" as="geometry" />
+        </mxCell>
+        <mxCell id="route-downstream" value="&lt;b&gt;Typical next safe actions&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;/blu-research-phase &amp;lt;phase&amp;gt;&lt;/code&gt; when research is enabled and context is ready.&lt;br&gt;&lt;code&gt;/blu-ui-phase &amp;lt;phase&amp;gt;&lt;/code&gt; when UI contract is needed.&lt;br&gt;&lt;code&gt;/blu-plan-phase &amp;lt;phase&amp;gt;&lt;/code&gt; when discovery inputs are ready.&lt;br&gt;&lt;code&gt;/blu-progress&lt;/code&gt; when uncertain.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="6510" width="510" height="196" as="geometry" />
+        </mxCell>
+        <mxCell id="guardrails-persistence" value="&lt;b&gt;Persistence guardrails&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Writes are allowed only through MCP tools, inside the selected &lt;code&gt;.blueprint/phases/&amp;lt;phase&amp;gt;/&lt;/code&gt; directory plus &lt;code&gt;.blueprint/STATE.md&lt;/code&gt;. The command never shell-writes or directly edits Blueprint runtime state. It must pass numeric &lt;code&gt;phase&lt;/code&gt; values and use returned paths as authoritative.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="7090" width="800" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="guardrails-artifact-contracts" value="&lt;b&gt;Artifact contract meanings&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;phase.context&lt;/code&gt; controls &lt;code&gt;XX-CONTEXT.md&lt;/code&gt;: Phase Boundary, Discovery Grounding, Implementation Decisions, Specific Ideas, Existing Code Insights, Dependencies, Open Questions, Deferred Ideas, Canonical References.&lt;br&gt;&lt;code&gt;phase.discussion-log&lt;/code&gt; controls &lt;code&gt;XX-DISCUSSION-LOG.md&lt;/code&gt;: Summary, Notes, Follow-Ups.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="7090" width="990" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="guardrails-checkpoints" value="&lt;b&gt;Checkpoint ownership safety&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The filename &lt;code&gt;XX-DISCUSS-CHECKPOINT.json&lt;/code&gt; is shared legacy-compatible continuation storage. Real ownership lives in JSON: &lt;code&gt;ownerCommand&lt;/code&gt; and &lt;code&gt;resumeMeta.mode&lt;/code&gt;. Reads and deletes must pass expected discuss ownership so research-owned checkpoints are not resumed or deleted by mistake.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontColor=#0c4a6e;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="7090" width="1050" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="glossary-reads" value="&lt;b&gt;Read tools glossary&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;phase_locate&lt;/code&gt;: find phase directory/artifacts.&lt;br&gt;&lt;code&gt;phase_context&lt;/code&gt;: gather roadmap, requirements, codebase, and workflow posture.&lt;br&gt;&lt;code&gt;roadmap_read&lt;/code&gt;: read milestone and phase rows.&lt;br&gt;&lt;code&gt;artifact_list&lt;/code&gt;: list core/phase/codebase/report artifacts.&lt;br&gt;&lt;code&gt;config_get&lt;/code&gt;: read effective workflow settings.&lt;br&gt;&lt;code&gt;phase_plan_index&lt;/code&gt;: list plans and warn about unchanged plans.&lt;br&gt;&lt;code&gt;artifact_contract_read&lt;/code&gt;: fetch live templates/contracts.&lt;br&gt;&lt;code&gt;phase_artifact_read&lt;/code&gt;: read saved context/log/research/UI text.&lt;br&gt;&lt;code&gt;phase_checkpoint_get&lt;/code&gt;: read safe resumability state.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="7330" width="800" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="glossary-writes" value="&lt;b&gt;Write tools glossary&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;code&gt;phase_checkpoint_put&lt;/code&gt;: save per-area resumability JSON.&lt;br&gt;&lt;code&gt;artifact_scaffold&lt;/code&gt;: seed missing supported artifact files; not final content.&lt;br&gt;&lt;code&gt;phase_artifact_write&lt;/code&gt;: persist final context/log content with validation and overwrite protection.&lt;br&gt;&lt;code&gt;state_update&lt;/code&gt;: refresh/write &lt;code&gt;STATE.md&lt;/code&gt;, preferably from &lt;code&gt;base: &quot;synced&quot;&lt;/code&gt; after artifacts are valid.&lt;br&gt;&lt;code&gt;state_load&lt;/code&gt;: read final route from derived runtime state.&lt;br&gt;&lt;code&gt;phase_checkpoint_delete&lt;/code&gt;: delete only discuss-owned checkpoint after all finalization succeeds.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=12;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="7330" width="990" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="glossary-failure" value="&lt;b&gt;Failure and recovery rules&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If phase resolution fails, stop before writes. If checkpoint ownership is unsafe, ask or stop instead of resuming. If validation cannot be repaired, leave the checkpoint intact. If final state update/load/delete fails, report the exact continuation blocker. Deferred ideas are folded into context/log rather than lost.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="7330" width="1050" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="entry-user-trigger" target="entry-manifest">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="entry-manifest" target="entry-skill">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="entry-skill" target="entry-refs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="entry-refs" target="entry-catalog">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="entry-catalog" target="entry-no-write">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="entry-no-write" target="resolve-visible-status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="resolve-arg" target="resolve-locate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="resolve-locate" target="resolve-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="resolve-internals" target="resolve-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="resolve-output" target="resolve-gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f97316;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="resolve-gate" target="resolve-stop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="resolve-gate" target="resolve-continue">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="resolve-continue" target="read-prior-sweep">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-prior-sweep" target="read-stage-status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-stage-status" target="read-tool-bundle-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-tool-bundle-1" target="read-runtime-bundle-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-runtime-bundle-1" target="read-evidence-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-evidence-1" target="read-tool-bundle-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-tool-bundle-2" target="read-runtime-bundle-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-runtime-bundle-2" target="read-evidence-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-checkpoint" target="read-checkpoint-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="read-evidence-2" target="decide-resume-gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-resume-gate" target="decide-resume-details">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-resume-details" target="decide-mode-gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-mode-gate" target="decide-mode-details">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-mode-details" target="decide-overwrite-gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-overwrite-gate" target="decide-overwrite-details">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-overwrite-details" target="decide-gray-areas">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-gray-areas" target="decide-gray-choice">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-gray-choice" target="decide-agent-gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f97316;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="decide-agent-gate" target="decide-agent-details">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e32" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-agent-details" target="decide-ready">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-agent-gate" target="decide-ready">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="decide-ready" target="execute-loop-start">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-loop-start" target="execute-carry-forward">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e36" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f97316;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="execute-carry-forward" target="execute-agent-path">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e37" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-carry-forward" target="execute-question">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e38" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-question" target="execute-answer-check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e39" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-answer-check" target="execute-decision-record">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e40" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-decision-record" target="execute-loop-result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e41" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f97316;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="execute-assumptions" target="execute-loop-result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e42" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f97316;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="execute-single-agent" target="execute-loop-result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e43" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-loop-result" target="execute-continue-gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e44" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16a34a;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="execute-continue-gate" target="execute-question">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-continue-gate" target="execute-ready-persist">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e46" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="execute-ready-persist" target="persist-checkpoint">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e47" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-checkpoint" target="persist-checkpoint-shape">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e48" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-checkpoint-shape" target="persist-scaffold">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e49" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-scaffold" target="persist-scaffold-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e50" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-scaffold-internals" target="persist-draft">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e51" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-draft" target="persist-context-write">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e52" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-context-write" target="persist-log-write">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e53" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-log-write" target="persist-write-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e54" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-write-internals" target="persist-artifacts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e55" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="persist-artifacts" target="validate-self-check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e56" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-self-check" target="validate-write-result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e57" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f97316;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="validate-write-result" target="validate-repair-loop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e58" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16a34a;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="validate-repair-loop" target="persist-context-write">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e59" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-write-result" target="validate-state-update">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e60" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-state-update" target="validate-state-load">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e61" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-state-load" target="validate-delete-checkpoint">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e62" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-delete-checkpoint" target="validate-state-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e63" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-state-internals" target="validate-final-condition">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e64" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="validate-final-condition" target="route-summary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e65" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="route-summary" target="route-next-action">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e66" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="route-next-action" target="route-plan-warning">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e67" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="route-plan-warning" target="route-downstream">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e68" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="route-downstream" target="guardrails-persistence">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e69" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="guardrails-persistence" target="guardrails-artifact-contracts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e70" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563eb;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="guardrails-artifact-contracts" target="guardrails-checkpoints">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
