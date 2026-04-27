@@ -1114,6 +1114,10 @@ test("review and report contracts validate canonical sections while keeping extr
 `;
   const reviewValidation = validateReviewArtifactContent(review, "code-review");
   const thinReviewValidation = validateReviewArtifactContent(thinReview, "code-review");
+  const reviewScaffoldValidation = validateReviewArtifactContent(
+    readArtifactContract("review.code-review").authoringTemplate,
+    "code-review"
+  );
   const milestoneAuditScaffoldValidation = validateReportArtifactContent(
     milestoneAuditContract.authoringTemplate,
     "milestone-audit-v2"
@@ -1226,6 +1230,11 @@ test("review and report contracts validate canonical sections while keeping extr
 
   assert.equal(reviewValidation.valid, true, reviewValidation.issues.join("\n"));
   assert.equal(thinReviewValidation.valid, false);
+  assert.equal(reviewScaffoldValidation.valid, false, reviewScaffoldValidation.issues.join("\n"));
+  assert.match(
+    reviewScaffoldValidation.issues.join("\n"),
+    /PASS\|FOLLOW_UP\|BLOCKED|Repo-relative file path reviewed|path\/to\/file\.ts:42/
+  );
   assert.match(thinReviewValidation.issues.join("\n"), /Review Summary/);
   assert.match(thinReviewValidation.issues.join("\n"), /Evidence Reviewed/);
   assert.match(thinReviewValidation.issues.join("\n"), /Positive Signals/);

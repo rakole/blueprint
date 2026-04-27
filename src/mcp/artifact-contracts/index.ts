@@ -2362,7 +2362,12 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Next Safe Action"
     ],
     lockedMarkers: ["**Verdict:**"],
-    placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
+    placeholderSignals: [
+      "PASS|FOLLOW_UP|BLOCKED",
+      "Phase, effective depth, scope source, file count, verdict rationale, and severity counts.",
+      "Repo-relative file path reviewed, one per bullet or table row.",
+      "path/to/file.ts:42"
+    ],
     notes: [
       "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
       "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",

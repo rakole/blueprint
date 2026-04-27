@@ -67,20 +67,19 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, notes}`
 - `blueprint_review_scope` -> `{status, phase, files, reviewMode, artifacts, reason, warnings}`
+- `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
-- `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 
 ## Review Scope Contract
 
-- Read `blueprint_config_get` with `scope: "effective"` before choosing the default depth so the command honors the surfaced review settings.
-- Call `blueprint_review_scope` with the resolved numeric `phase`.
-- When explicit files are needed, pass only repo-relative file paths. Directories, wildcards, `.blueprint/**`, and absolute paths are invalid review-scope inputs.
+- Call `blueprint_review_scope` with the resolved numeric `phase` and treat it as the authoritative source for effective review depth, whether review is enabled, saved evidence inventory, and the deterministic repo-file scope.
+- When explicit files are needed, pass only repo-relative file paths. Directories, wildcards, `.blueprint/**`, and absolute paths are invalid review-scope inputs. Missing files and non-file entries are also invalid, and any invalid explicit entry must fail the whole explicit scope instead of silently narrowing it.
 - Omit `files` to let Blueprint derive scope from executed plans and summaries, then treat the returned `files` list as authoritative instead of widening scope from chat memory or git drift.
 - If explicit files were supplied, review only those exact repo-relative paths even if the phase has broader execution evidence or saved summaries.
 - If the derived scope is broad, multi-plan, or deep enough that the user should explicitly approve it, pause for a structured confirmation before any replacement write.
+- If a prior `XX-REVIEW.md` exists, load its structured findings through `blueprint_review_load_findings` before replacement, and use read-only file access for full-body comparison only when needed.
 - Persist the final review through `blueprint_review_record` with `artifact: "code-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`.
 
 ## Depth And Output Quality Contract
@@ -122,8 +121,7 @@
 ## External Shell Or Git Dependencies
 
 
-- External dependencies:
-- git
+- None for the normal review path. The command should stay grounded in saved Blueprint evidence and the resolved repo files instead of git drift or external CLIs.
 
 
 ## Shell Risk Profile
@@ -142,24 +140,24 @@
 
 
 - The command scope does not match the currently changed files, branch, or phase artifacts.
-- External tooling such as `git`, `gh`, or peer-review CLIs is missing or only partially available.
+- An explicit `--files` request contains even one invalid path and must be rejected instead of narrowed.
 
 
 ## Failure Modes And Recovery
 
 
-- Preserve generated reports when git or external CLI steps fail.
-- Fall back to explicit file selection or manual shipping guidance instead of guessing.
+- Preserve generated reports when review persistence needs overwrite confirmation or artifact repair.
+- Fall back to explicit file selection or saved-evidence recovery guidance instead of guessing.
 - If `blueprint_review_record` returns `status: "invalid"`, repair the authored markdown against the canonical `authoringTemplate` and returned warnings, retry once through MCP, and stop with the invalid reasons if the retry still fails.
 
 
 ## Acceptance Criteria
 
 
-- Produces a durable artifact for review, security, UI, or shipping work.
-- Honors the surfaced `workflow.code_review` and `workflow.code_review_depth` settings.
+- Produces a durable `phase XX-REVIEW.md` artifact for `/blu-code-review`.
+- Honors the review enablement, depth defaults, and evidence inventory surfaced through `blueprint_review_scope`.
 - Keeps the review stages, pending gates, execution mode, finding posture, and next safe action explicit while code review is in flight.
-- Never hides destructive git behavior behind an implicit step.
+- Rejects any explicit `--files` scope that contains invalid entries instead of silently narrowing it.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Never widens explicit `--files` scope beyond the user-selected files.
@@ -169,6 +167,6 @@
 ## Test Cases
 
 
-- Phase review or shipping fixture.
-- Git or external CLI availability fixture.
+- Phase review fixture with saved summary or plan evidence.
+- Explicit `--files` rejection fixture with invalid paths.
 - Direct `code-review` happy-path fixture.

@@ -28,10 +28,11 @@ evidence, not merely valid markdown.
 Map `/blu-code-review` to those stages:
 
 1. `Resolve`: locate the target phase, parse `--depth`, parse optional
-   `--files`, and resolve effective review configuration.
-2. `Read`: load artifact inventory, canonical `review.code-review` contract,
-   saved execution summaries, matching plans when present, validation or UAT
-   evidence when present, and the scoped repo files.
+   `--files`, and resolve the effective review posture through
+   `blueprint_review_scope`.
+2. `Read`: load the canonical `review.code-review` contract, saved execution
+   summaries, matching plans when present, validation or UAT evidence when
+   present, any existing review findings, and the scoped repo files.
 3. `Decide`: decide whether the command is enabled, whether scope is valid,
    whether a broad/deep scope needs confirmation, whether an existing review is
    reused or overwritten, and whether to use `blueprint-reviewer`.
@@ -52,23 +53,23 @@ Call these tools in this order unless the command must stop early:
    - Controls target phase, phase directory, phase prefix, and missing-phase
      recovery.
    - Stop on unresolved phase and surface the tool reason.
-2. `mcp_blueprint_blueprint_config_get` with `scope: "effective"`
-   - Controls `workflow.code_review` and default
-     `workflow.code_review_depth`.
-   - If code review is disabled, stop after phase resolution with a clear skip.
-3. `mcp_blueprint_blueprint_artifact_list`
-   - Controls saved-evidence inventory and whether prior review, security,
-     validation, or UAT artifacts exist.
-4. `mcp_blueprint_blueprint_artifact_contract_read` for
+2. `mcp_blueprint_blueprint_artifact_contract_read` for
    `review.code-review`
    - Controls the required headings, locked markers, and authoring template.
    - Treat the returned `authoringTemplate` as the shape to repair toward.
-5. `mcp_blueprint_blueprint_review_scope`
-   - Controls exact repo files, scope source, review depth, and scope warnings.
-   - Explicit `files` must be repo-relative file paths only.
+3. `mcp_blueprint_blueprint_review_scope`
+   - Controls whether review is enabled, the exact repo files, scope source,
+     effective review depth, saved evidence inventory, and scope warnings.
+   - Explicit `files` must be repo-relative file paths only, and any invalid
+     explicit entry must fail the whole explicit scope.
    - Do not add siblings, generated files, `.blueprint/**`, directories,
      wildcards, absolute paths, git drift, or chat-memory files after this call.
-6. `mcp_blueprint_blueprint_review_record`
+4. `mcp_blueprint_blueprint_review_load_findings` when an existing
+   `XX-REVIEW.md` is present
+   - Controls structured baseline findings, follow-ups, severity counts, and
+     the saved review path before overwrite decisions.
+   - Use read-only repo file access only if full-body comparison is needed.
+5. `mcp_blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
    - Never write `XX-REVIEW.md` directly.
