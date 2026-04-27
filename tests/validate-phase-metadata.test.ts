@@ -7,7 +7,23 @@ import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
 
-test("validate-phase manifest references the validation tools, config gates, and safe routing contract", async () => {
+function headingSection(markdown: string, heading: string): string {
+  const marker = `## ${heading}`;
+  const start = markdown.indexOf(marker);
+  assert.notEqual(start, -1, `Missing section: ${marker}`);
+  const next = markdown.indexOf("\n## ", start + marker.length);
+  return markdown.slice(start, next === -1 ? undefined : next);
+}
+
+function subheadingSection(markdown: string, heading: string): string {
+  const marker = `#### ${heading}`;
+  const start = markdown.indexOf(marker);
+  assert.notEqual(start, -1, `Missing section: ${marker}`);
+  const next = markdown.indexOf("\n#### ", start + marker.length);
+  return markdown.slice(start, next === -1 ? undefined : next);
+}
+
+test("validate-phase manifest stays thin while referencing the validation tools and routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
@@ -37,20 +53,18 @@ test("validate-phase manifest references the validation tools, config gates, and
   assert.match(commandFile, /browser, web-search-only, shell-only, or generic agents/);
   assert.match(commandFile, /XX-VERIFICATION\.md/);
   assert.match(commandFile, /artifactId: "phase\.verification"/);
-  assert.match(commandFile, /authoringTemplate/);
-  assert.match(commandFile, /Read every completed execution summary/i);
-  assert.match(commandFile, /every completed saved summary citation inside the contract's evidence section/i);
   assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
-  assert.match(commandFile, /explicit test-generation gaps.*\/blu-add-tests <phase>/i);
-  assert.match(
-    commandFile,
-    /only after .*written: true.*status: "reused".*or after the single repair retry succeeds/i
-  );
-  assert.match(commandFile, /locked markers and required section names unchanged/i);
+  assert.match(commandFile, /explicit test-generation gaps[\s\S]*\/blu-add-tests <phase>/i);
+  assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
+  assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /saved-summary-first/i);
+  assert.match(commandFile, /Route only to implemented commands/i);
+  assert.doesNotMatch(commandFile, /Follow this flow exactly:/);
+  assert.doesNotMatch(commandFile, /every completed saved summary citation inside the contract's evidence section/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
 });
 
-test("validate-phase skill captures summary-backed validation and verifier usage rules", async () => {
+test("validate-phase skill scopes required inputs to the active command and keeps detailed validation rules in the runtime contract", async () => {
   const [skillFile, docFile, runtimeReference, validateReference] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8"),
     readFile(path.join(repoRoot, "docs/commands/validate-phase.md"), "utf8"),
@@ -63,6 +77,8 @@ test("validate-phase skill captures summary-backed validation and verifier usage
       "utf8"
     )
   ]);
+  const requiredInputs = headingSection(skillFile, "Required Inputs");
+  const validateInputs = subheadingSection(requiredInputs, "`validate-phase`");
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-validate-phase/);
@@ -82,24 +98,27 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(skillFile, /artifactId: "phase\.verification"/);
   assert.match(skillFile, /locked markers and required section names unchanged/i);
   assert.match(skillFile, /references\/validate-phase-runtime-contract\.md/);
-  assert.match(skillFile, /State A\/B\/C model/);
-  assert.match(skillFile, /requirement\/task coverage map/i);
-  assert.match(skillFile, /every completed summary artifact first/i);
-  assert.match(skillFile, /every completed summary filename or path in the contract-defined evidence section/i);
+  assert.match(skillFile, /Load the shared validation inputs first, then load only the command-specific inputs/i);
+  assert.match(requiredInputs, /### Shared validation inputs/);
+  assert.match(requiredInputs, /### Command-specific inputs/);
+  assert.match(validateInputs, /validate-phase-runtime-contract\.md/);
+  assert.match(validateInputs, /docs\/commands\/validate-phase\.md/);
+  assert.doesNotMatch(validateInputs, /verify-work-runtime-contract|add-tests-runtime-contract/);
+  assert.match(skillFile, /State A\/B\/C handling/i);
+  assert.match(skillFile, /saved-summary-first, phase-scoped, and MCP-owned/i);
   assert.match(skillFile, /Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome/i);
   assert.match(skillFile, /patch\.activeCommand: "\/blu-validate-phase"/);
-  assert.match(skillFile, /no-subagent fallback/i);
-  assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents/i);
-  assert.match(skillFile, /retry once before stopping/i);
+  assert.match(skillFile, /Route explicit test-generation gaps to `\/blu-add-tests <phase>` only when the saved artifact makes that follow-up necessary/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docFile, /## Shared Runtime Contract/);
   assert.match(docFile, /## In-Flight Progress Contract/);
+  assert.match(docFile, /Detailed runtime reference: `skills\/blueprint-phase-validation\/references\/validate-phase-runtime-contract\.md`/);
   assert.match(docFile, /saved-summary-first contract explicit/i);
   assert.match(docFile, /pending gate, execution mode, and next safe action/i);
   assert.match(docFile, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(docFile, /State A\/B\/C/);
-  assert.match(docFile, /requirement\/task coverage map/i);
   assert.match(docFile, /cite every completed saved summary under `## Evidence Reviewed`/i);
+  assert.match(docFile, /Build the concrete requirement\/task coverage map[\s\S]*detailed runtime reference instead of duplicating that step-by-step contract/i);
   assert.match(docFile, /Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome/i);
   assert.match(docFile, /no-subagent fallback/i);
   assert.match(docFile, /retry once/i);
@@ -131,7 +150,7 @@ test("validate-phase skill captures summary-backed validation and verifier usage
   assert.match(validateReference, /blueprint_phase_validation_write/);
 });
 
-test("validate-phase verifier and MCP docs preserve richer evidence expectations", async () => {
+test("validate-phase verifier and MCP docs preserve contract-driven evidence expectations without placeholder scaffolds", async () => {
   const [agentFile, mcpTools] = await Promise.all([
     readFile(path.join(repoRoot, "agents/blueprint-verifier.md"), "utf8"),
     readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8")
@@ -139,12 +158,13 @@ test("validate-phase verifier and MCP docs preserve richer evidence expectations
 
   assert.match(agentFile, /requirement\/task coverage map/i);
   assert.match(agentFile, /manual-only, deferred, partial, and blocked coverage/i);
-  assert.match(agentFile, /## Requirement \/ Task Coverage/);
-  assert.match(agentFile, /## Test Infrastructure \/ Evidence Metadata/);
-  assert.match(agentFile, /## Manual-Only or Deferred Coverage/);
-  assert.match(agentFile, /## Gap Classification/);
-  assert.match(agentFile, /Gate: PASS\|PARTIAL\|BLOCKED/);
-  assert.match(agentFile, /Readiness: <ready for UAT or not ready>/);
+  assert.match(agentFile, /live `phase\.verification` contract returned by[\s\S]*`blueprint_artifact_contract_read`/i);
+  assert.match(agentFile, /never emit scaffold literals or placeholder-grade text/i);
+  assert.match(
+    agentFile,
+    /structured[\s\S]*draft-ready section content instead of inventing a full[\s\S]*markdown artifact/i
+  );
+  assert.doesNotMatch(agentFile, /# Phase XX: <Phase Name> - Verification/);
   assert.match(
     mcpTools,
     /validate-phase[\s\S]*validate-phase-runtime-contract\.md[\s\S]*State A\/B\/C[\s\S]*requirement\/task coverage map[\s\S]*sequential no-subagent fallback/i

@@ -27494,7 +27494,9 @@ async function blueprintPhaseValidationWrite(args) {
         };
       }
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
-      warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
+      if (args.artifact === "uat") {
+        warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
+      }
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -27548,7 +27550,9 @@ async function blueprintPhaseValidationWrite(args) {
   if (exists) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
   }
-  warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
+  if (args.artifact === "uat") {
+    warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
+  }
   return {
     phaseNumber: resolved.phaseNumber,
     phasePrefix: resolved.phasePrefix,

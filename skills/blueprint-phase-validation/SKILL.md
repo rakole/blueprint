@@ -48,6 +48,8 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 ## Required Inputs
 
+Load the shared validation inputs first, then load only the command-specific inputs for the command that was actually invoked. Do not preload sibling runtime contracts or command docs from this bundle by default.
+
 ### Shared validation inputs
 
 - `docs/COMMAND-CATALOG.md`
@@ -116,21 +118,11 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 ### `validate-phase`
 
-1. Resolve the target phase and require execution summaries before validation begins.
-2. Read summary index and every completed summary artifact first so validation is grounded in the full saved execution evidence set.
-3. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
-4. Inspect any existing `XX-VERIFICATION.md` before proposing replacement and default to reuse unless the user explicitly asks for an update. When the saved artifact would change, keep the overwrite confirmation gate explicit instead of treating replacement as the default.
-5. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when describing validation depth and coverage expectations.
-6. Apply the State A/B/C model from `references/validate-phase-runtime-contract.md`: existing verification is an audit baseline, missing verification plus completed summaries is reconstruction, and missing completed summaries stops without writing.
-7. Build an explicit requirement/task coverage map before authoring. Include reviewed summaries, completed and pending plan ids, requirement or task ids, cited implementation or artifact surfaces, test or evidence metadata, coverage state (`PASS`, `MANUAL`, `DEFERRED`, `BLOCKED`), and gap class.
-8. Use `blueprint-verifier` to assess coverage, gaps, and repair suggestions against the saved summaries only when the suitable Blueprint verifier is available and `workflow.verifier=true`.
-9. When the verifier is unavailable or disabled, use the no-subagent fallback from the runtime contract: read one completed summary at a time, extract evidence, compress each summary into carry-forward rows, classify gaps, and draft from the final map.
-10. Never substitute browser, web-search-only, shell-only, or generic agents for codebase or workflow validation analysis.
-11. Keep the validation pass saved-summary-first: `Execute` means bounded validation analysis over saved summaries plus any existing verification artifact, not direct repo mutation or fabrication from chat history.
-12. Normalize the final validation draft to the canonical `phase.verification` authoring template before calling `blueprint_phase_validation_write`. Keep every completed summary filename or path in the contract-defined evidence section, keep all required section names unchanged, fill every richer evidence section, and self-check the normalized draft against the returned contract before writing.
-13. If `blueprint_phase_validation_write` returns `status: "invalid"`, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs. Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome, and sync `STATE.md` only after that validation step succeeds.
-14. Persist finished validation evidence through `blueprint_phase_validation_write` with the `verification` artifact, and use the returned `summaryPaths` plus `written` or `status` to report whether the evidence was newly saved, preserved unchanged, or rejected as invalid.
-15. Update `STATE.md` with the validation result through `blueprint_state_update` using `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"`. Route valid ready-for-UAT verification to `/blu-verify-work <phase>`, route explicit test-generation gaps to `/blu-add-tests <phase>` only when that command is implemented and the artifact states the need, and route PARTIAL or BLOCKED verification back to `/blu-validate-phase <phase>` for repair.
+1. Load `references/validate-phase-runtime-contract.md` and treat it as the canonical detailed contract for stage mapping, State A/B/C handling, verifier use, the no-subagent fallback, retry behavior, and output quality.
+2. Keep validation saved-summary-first, phase-scoped, and MCP-owned: execution summaries are the baseline, existing `XX-VERIFICATION.md` is the audit baseline when present, and direct repo mutation is out of scope.
+3. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when deciding whether verifier analysis runs and whether Nyquist-style gap language is active or informational.
+4. Read `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization, keep every completed summary filename or path in the contract-defined evidence section, and persist only through `blueprint_phase_validation_write` with the `verification` artifact.
+5. Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome, then sync `STATE.md` through `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"`. Route explicit test-generation gaps to `/blu-add-tests <phase>` only when the saved artifact makes that follow-up necessary and implemented routing allows it.
 
 ### `verify-work`
 

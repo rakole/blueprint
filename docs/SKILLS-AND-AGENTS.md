@@ -2,7 +2,7 @@
 
 Implemented Blueprint skills are host-discoverable bundles at `skills/<name>/SKILL.md`. Legacy flat `skills/*.md` mirrors may remain as repo-local compatibility docs during repair, but they are not runtime activation handles. Implemented Blueprint agents are host subagent definition files under `agents/*.md`.
 
-When one skill owns multiple commands, its bundle metadata should keep shared inputs separate from command-specific inputs. Loaders and runtime-contract consumers should resolve only the effective bundle for the invoking command rather than loading every sibling command doc by default.
+When one skill owns multiple commands, its bundle metadata should keep shared inputs separate from command-specific inputs. Loaders and runtime-contract consumers should resolve only the effective bundle for the invoking command rather than loading every sibling command doc by default. For example, `/blu-validate-phase` should load the shared `blueprint-phase-validation` inputs plus the validate-phase runtime contract, not the `verify-work` or `add-tests` references unless the active command actually needs them.
 
 ## Shipped Skills
 

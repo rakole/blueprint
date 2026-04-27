@@ -1627,7 +1627,7 @@ Capture the second completed validation summary.
   assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
 });
 
-test("validation tools reopen stale completed roadmap details even when the checkbox is already unchecked", async (t) => {
+test("verification writes do not rewrite roadmap completion state before UAT closes", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1721,9 +1721,8 @@ test("validation tools reopen stale completed roadmap details even when the chec
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
 
   assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
-  assert.match(verification.warnings.join("\n"), /Reopened Phase 3 in \.blueprint\/ROADMAP\.md/);
-  assert.doesNotMatch(roadmapBody, /\*\*Status\*\*:\s*completed/);
-  assert.match(roadmapBody, /\*\*Status\*\*:\s*in_progress/);
+  assert.doesNotMatch(verification.warnings.join("\n"), /ROADMAP\.md/);
+  assert.match(roadmapBody, /\*\*Status\*\*:\s*completed/);
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Phase Discovery\*\*/);
 });
 
