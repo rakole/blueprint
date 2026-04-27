@@ -11,6 +11,7 @@
 - Shared profile reference: `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
 - Command behavior reference: `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`
 - Saved artifact schema authority: the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`
+- Detailed Draw.io workflow: [`docs/diagrams/discuss-phase-workflow-end-to-end.drawio`](../diagrams/discuss-phase-workflow-end-to-end.drawio)
 
 ## Purpose
 
