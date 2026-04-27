@@ -82,7 +82,7 @@ artifact makes the need explicit.
    `**Gate State:**`, and `**Sign-off:**`.
 4. Fill every required section with concrete evidence. Do not leave scaffold
    placeholders or generic "none" rows where gaps exist.
-5. Keep saved summary paths or filenames under `## Evidence Reviewed`.
+5. Keep every completed saved summary path or filename under `## Evidence Reviewed`.
 6. Put requirement/task coverage under `## Requirement / Task Coverage`.
 7. Put harness, command, evidence source, and confidence notes under
    `## Test Infrastructure / Evidence Metadata`.
@@ -137,8 +137,11 @@ This fallback must preserve the same output quality bar as the subagent path.
 
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
   `written: false` because validation failed, report the issues, repair the
-  draft against the canonical contract, and retry once before stopping.
-- If `blueprint_artifact_validate` reports invalid artifacts after a write,
+  draft against the canonical contract, and retry once before stopping. Do not
+  run post-write artifact validation or state sync until the write succeeds
+  with `written: true` or `status: "reused"`.
+- If `blueprint_artifact_validate` reports invalid artifacts after a successful
+  write or reuse outcome,
   use `suggestedRepairs` to revise the draft and retry once when the repair is
   phase-scoped and does not require external state.
 - If overwrite confirmation is denied, preserve the existing artifact, report

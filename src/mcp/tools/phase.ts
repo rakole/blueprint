@@ -1979,7 +1979,7 @@ async function syncRoadmapPhaseCompletion(
   });
   const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
     projectRoot,
-    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+    completedSummaryRecords(summaryIndex.summaries)
   );
   const validationWarnings: string[] = [];
   let hasValidVerification = false;
@@ -3667,6 +3667,10 @@ async function collectValidatedSummaryPaths(
   return { summaryPaths, warnings };
 }
 
+function completedSummaryRecords(summaries: PhaseSummaryRecord[]): PhaseSummaryRecord[] {
+  return summaries.filter((summary) => summary.status === "COMPLETED");
+}
+
 function collectReferencedValidatedSummaryPaths(
   content: string,
   summaries: PhaseSummaryRecord[],
@@ -5224,10 +5228,13 @@ export async function blueprintPhaseValidationRead(
     cwd: projectRoot,
     phase: resolved.phaseNumber
   });
+  const completedSummaryPlanIds = new Set(
+    completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId)
+  );
   const summaryPaths = collectReferencedValidatedSummaryPaths(
     content,
     summaryIndex.summaries,
-    new Set(summaryIndex.completedPlans)
+    completedSummaryPlanIds
   );
   const validation =
     args.artifact === "verification"
@@ -5281,7 +5288,7 @@ export async function blueprintPhaseValidationWrite(
 
   const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
     projectRoot,
-    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+    completedSummaryRecords(summaryIndex.summaries)
   );
   const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
   const warnings: string[] = [...summaryWarnings];
@@ -5296,10 +5303,11 @@ export async function blueprintPhaseValidationWrite(
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const normalizedContent = normalizeTextContent(args.content);
   const exists = await pathExists(absolutePath);
+  const completedSummaryPaths = summaryPaths;
   const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
     normalizedContent,
     summaryIndex.summaries,
-    new Set(summaryIndex.completedPlans)
+    new Set(completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId))
   );
   const validation =
     normalizedContent.trim().length === 0
@@ -5309,7 +5317,7 @@ export async function blueprintPhaseValidationWrite(
           warnings: [] as string[]
         }
       : args.artifact === "verification"
-        ? validateVerificationArtifactContent(normalizedContent, referencedSummaryPaths)
+        ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths)
         : validateUatArtifactContent(normalizedContent, referencedSummaryPaths);
 
   if (args.artifact === "uat") {
@@ -5326,7 +5334,7 @@ export async function blueprintPhaseValidationWrite(
     const verificationSummaryPaths = collectReferencedValidatedSummaryPaths(
       verificationContent,
       summaryIndex.summaries,
-      new Set(summaryIndex.completedPlans)
+      new Set(completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId))
     );
     const verificationValidation = validateVerificationArtifactContent(
       verificationContent,
@@ -5421,8 +5429,6 @@ export async function blueprintPhaseValidationWrite(
   }
 
   if (!validation.valid) {
-    warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
-
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,

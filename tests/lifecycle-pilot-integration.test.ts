@@ -323,7 +323,7 @@ function validVerificationContent(options: {
 
 | Requirement | Task or Check | Evidence | Coverage State | Notes |
 |-------------|---------------|----------|----------------|-------|
-| LIFE-01 | Keep plan, execute, validate, verify, and add-tests grounded in saved artifacts. | .blueprint/phases/03-lifecycle-pilot/${summaryFile} | COVERED | The lifecycle handoff stays anchored to the saved summary. |
+| LIFE-01 | Keep plan, execute, validate, verify, and add-tests grounded in saved artifacts. | .blueprint/phases/03-lifecycle-pilot/${summaryFile} | PASS | The lifecycle handoff stays anchored to the saved summary. |
 
 ## Evidence Reviewed
 
@@ -340,7 +340,7 @@ function validVerificationContent(options: {
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| none | none | none | COMPLETE |
+| none | none | none | NONE |
 
 ## Gate State
 
@@ -625,7 +625,7 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
     phase: "3",
     artifact: "verification",
     content: validVerificationContent({
-      nextSafeAction: "Continue with `/blu-audit-milestone v1`.",
+      nextSafeAction: "Continue with `/blu-verify-work 3`.",
       extraCoverageNote:
         "The add-tests follow-up kept the refreshed verification note anchored to the same saved summary."
     }),

@@ -2356,17 +2356,21 @@ export function validateResearchArtifactContent(content: string): {
   };
 }
 
-function containsReferencedSummaryPath(section: string, summaryPaths: string[]): boolean {
+function collectReferencedSummaryPaths(section: string, summaryPaths: string[]): string[] {
   const normalizedSection = section.trim();
 
   if (normalizedSection.length === 0 || summaryPaths.length === 0) {
-    return false;
+    return [];
   }
 
-  return summaryPaths.some((summaryPath) => {
+  return summaryPaths.filter((summaryPath) => {
     const fileName = summaryPath.split("/").pop() ?? summaryPath;
     return normalizedSection.includes(summaryPath) || normalizedSection.includes(fileName);
   });
+}
+
+function containsReferencedSummaryPath(section: string, summaryPaths: string[]): boolean {
+  return collectReferencedSummaryPaths(section, summaryPaths).length > 0;
 }
 
 function validateRequiredMarkdownSections(
@@ -2797,13 +2801,28 @@ function isMarkdownTableHeaderRow(line: string): boolean {
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
     ["requirement", "task or check", "evidence", "coverage state"],
-    ["gap id", "surface", "evidence", "repair"]
+    ["gap id", "surface", "evidence", "repair"],
+    ["item", "why manual or deferred", "follow-up", "status"],
+    ["gap class", "scope", "evidence", "repair"]
   ];
 
   return headerPatterns.some(
     (pattern) =>
       pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
   );
+}
+
+function extractMarkdownTableDataRows(section: string): string[][] {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line))
+    .map((line) => parseMarkdownTableCells(line))
+    .filter((cells) => cells.some((cell) => cell.length > 0));
+}
+
+function extractBlueprintCommands(section: string): string[] {
+  return [...new Set(section.match(/\/blu-[a-z0-9]+(?:-[a-z0-9]+)*/gi) ?? [])];
 }
 
 function summarizeMarkdownTableRow(line: string): string {
@@ -3986,6 +4005,16 @@ const VERIFICATION_PLACEHOLDER_BODIES = [
 ] as const;
 type VerificationGateState = "PASS" | "PARTIAL" | "BLOCKED";
 type VerificationReadinessState = "ready for UAT" | "not ready for UAT";
+const VALID_VERIFICATION_COVERAGE_STATES = new Set(["PASS", "MANUAL", "DEFERRED", "BLOCKED"]);
+const VALID_VERIFICATION_MANUAL_COVERAGE_STATES = new Set(["MANUAL", "DEFERRED", "NONE"]);
+const VALID_VERIFICATION_GAP_CLASSES = new Set([
+  "missing-evidence",
+  "partial-coverage",
+  "manual-only",
+  "deferred-test",
+  "contradiction",
+  "none"
+]);
 
 function parseVerificationGateState(
   content: string
@@ -4095,11 +4124,92 @@ export function validateVerificationArtifactContent(
       "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
     );
   }
+  for (const cells of extractMarkdownTableDataRows(requirementCoverage)) {
+    if (cells.length < 4) {
+      issues.push(
+        "Verification artifact section Requirement / Task Coverage must keep Requirement, Task or Check, Evidence, and Coverage State columns populated."
+      );
+      continue;
+    }
+
+    const coverageState = (cells[3] ?? "").trim().toUpperCase();
+    if (!VALID_VERIFICATION_COVERAGE_STATES.has(coverageState)) {
+      issues.push(
+        `Verification artifact section Requirement / Task Coverage uses an unsupported coverage state: ${cells[3] ?? ""}.`
+      );
+    }
+  }
 
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
-  if (!containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+  const citedSummaries = new Set(collectReferencedSummaryPaths(evidenceReviewed, summaryPaths));
+  const missingSummaryCitations = summaryPaths.filter((summaryPath) => !citedSummaries.has(summaryPath));
+  if (summaryPaths.length > 0 && citedSummaries.size === 0) {
     issues.push(
       "Verification artifact must cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    );
+  }
+  if (missingSummaryCitations.length > 0) {
+    issues.push(
+      `Verification artifact must cite every saved execution summary under ## Evidence Reviewed. Missing: ${missingSummaryCitations
+        .map((summaryPath) => summaryPath.split("/").pop() ?? summaryPath)
+        .join(", ")}.`
+    );
+  }
+
+  const manualCoverage = extractMarkdownSection(content, "Manual-Only or Deferred Coverage");
+  for (const cells of extractMarkdownTableDataRows(manualCoverage)) {
+    if (cells.length < 4) {
+      issues.push(
+        "Verification artifact section Manual-Only or Deferred Coverage must keep Item, Why manual or deferred, Follow-Up, and Status columns populated."
+      );
+      continue;
+    }
+
+    const status = (cells[3] ?? "").trim().toUpperCase();
+    if (!VALID_VERIFICATION_MANUAL_COVERAGE_STATES.has(status)) {
+      issues.push(
+        `Verification artifact section Manual-Only or Deferred Coverage uses an unsupported status: ${cells[3] ?? ""}.`
+      );
+    }
+  }
+
+  const gapClassification = extractMarkdownSection(content, "Gap Classification");
+  const gapRows = extractMarkdownTableDataRows(gapClassification);
+  if (gapRows.length === 0) {
+    issues.push(
+      "Verification artifact section Gap Classification must include at least one populated gap row."
+    );
+  }
+  for (const cells of gapRows) {
+    if (cells.length < 4) {
+      issues.push(
+        "Verification artifact section Gap Classification must keep Gap class, Scope, Evidence, and Repair columns populated."
+      );
+      continue;
+    }
+
+    const gapClass = (cells[0] ?? "").trim().toLowerCase();
+    if (!VALID_VERIFICATION_GAP_CLASSES.has(gapClass)) {
+      issues.push(
+        `Verification artifact section Gap Classification uses an unsupported gap class: ${cells[0] ?? ""}.`
+      );
+    }
+  }
+
+  const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
+  const nextActionCommands = extractBlueprintCommands(nextSafeAction);
+  const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
+  if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToVerifyWork) {
+    issues.push(
+      "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
+    );
+  }
+  if (
+    (gateState === "PARTIAL" || gateState === "BLOCKED" || readinessState === "not ready for UAT") &&
+    routesToVerifyWork
+  ) {
+    issues.push(
+      "Verification artifact must not route PARTIAL or BLOCKED validation to /blu-verify-work under ## Next Safe Action."
     );
   }
 
