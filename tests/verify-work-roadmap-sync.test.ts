@@ -167,7 +167,7 @@ const validVerification = `# Phase 04: Validation - Verification
 
 | Requirement | Task or Check | Evidence | Coverage State | Notes |
 |-------------|---------------|----------|----------------|-------|
-| EXEC-01 | Persist verification and UAT evidence after execution. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | COVERED | Validation evidence is grounded in the saved summary. |
+| EXEC-01 | Persist verification and UAT evidence after execution. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | PASS | Validation evidence is grounded in the saved summary. |
 
 ## Evidence Reviewed
 
@@ -184,7 +184,7 @@ const validVerification = `# Phase 04: Validation - Verification
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| none | none | none | COMPLETE |
+| none | none | none | NONE |
 
 ## Gate State
 
@@ -338,7 +338,7 @@ const partialUat = validUat
   .replace("- none\n\n## Next Safe Action", "- Repair the remaining validation follow-up, then resume `/blu-verify-work 4`.\n\n## Next Safe Action")
   .replace("- Return to `/blu-progress` for the next safe implemented action.", "- Continue with `/blu-verify-work 4`.");
 
-test("invalid verification overwrite still resyncs roadmap completion", async () => {
+test("invalid verification overwrite does not resync roadmap completion", async () => {
   const repoPath = await createRepoFixture({
     verificationContent: validVerification,
     uatContent: weakUat
@@ -357,15 +357,15 @@ test("invalid verification overwrite still resyncs roadmap completion", async ()
     assert.equal(result.status, "invalid");
     assert.equal(result.written, false);
     assert.match(result.issues.join("\n"), /must declare \*\*Coverage:\*\*/);
-    assert.match(result.warnings.join("\n"), /Reopened Phase 4 in \.blueprint\/ROADMAP\.md/);
-    assert.match(roadmap, /- \[ \] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
-    assert.match(roadmap, /\*\*Status\*\*: in_progress/);
+    assert.equal(result.warnings.join("\n"), "");
+    assert.match(roadmap, /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+    assert.match(roadmap, /\*\*Status\*\*: completed/);
   } finally {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   }
 });
 
-test("invalid UAT overwrite still resyncs roadmap completion", async () => {
+test("invalid UAT overwrite does not resync roadmap completion", async () => {
   const repoPath = await createRepoFixture({
     verificationContent: validVerification,
     uatContent: validUat
@@ -387,7 +387,7 @@ test("invalid UAT overwrite still resyncs roadmap completion", async () => {
       result.issues.join("\n"),
       /must cite at least one saved execution summary path or filename/
     );
-    assert.match(result.warnings.join("\n"), /Marked Phase 4 completed in \.blueprint\/ROADMAP\.md/);
+    assert.equal(result.warnings.join("\n"), "");
     assert.match(roadmap, /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
     assert.match(roadmap, /\*\*Status\*\*: completed/);
   } finally {

@@ -10,7 +10,7 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `validate-phase` uses the shared long-running-mutation posture: resolve the target phase, read saved execution evidence and any existing verification artifact, decide whether validation can reuse or revise the current artifact, execute bounded verifier analysis, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
+- `validate-phase` uses the shared long-running-mutation posture: resolve the target phase, read every completed saved execution summary plus any existing verification artifact, decide whether validation can reuse or revise the current artifact, execute bounded verifier analysis, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
 - Keep the saved-summary-first contract explicit throughout the run: execution summaries are the validation baseline, overwrite confirmation is the pending gate when an existing `XX-VERIFICATION.md` would change, and the next safe action stays on `/blu-validate-phase <phase>` until the saved verification artifact is ready for `/blu-verify-work`.
 - Detailed runtime contract: `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`. The command manifest should point Gemini at this reference so the State A/B/C input model, requirement/task coverage map, capability-gated verifier path, no-subagent fallback, retry/repair behavior, and output quality criteria stay loaded together.
 
@@ -87,13 +87,13 @@
 - Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
 - Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
-- Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, and self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`.
+- Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, cite every completed saved summary under `## Evidence Reviewed`, and self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`.
 - Before writing, build a concrete requirement/task coverage map with reviewed summaries, completed and pending plan ids, requirement or task ids, cited surfaces, test or evidence metadata, coverage state, and gap class.
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required validation-tool shape or heading structure is derived from the contract.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
 - `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
 - Keep the contract's required section names and locked markers unchanged, and allow extra top-level headings only when the returned contract policy says they are supported.
-- If `blueprint_phase_validation_write` returns `status: "invalid"` or post-write `blueprint_artifact_validate` reports failures, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
+- If `blueprint_phase_validation_write` returns `status: "invalid"`, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs. Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome.
 - Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS` and readiness is ready for UAT; otherwise keep the next safe action on `/blu-validate-phase <phase>` for repair.
 - Prefer `blueprint_state_update` with `base: "synced"` after persistence so `STATE.md` derives the next safe action from the updated artifact inventory instead of leaving stale routing behind.
 
@@ -163,7 +163,7 @@
 
 
 - Reads and writes only the selected phase scope.
-- Reads completed execution summaries and any existing validation artifact before replacement.
+- Reads every completed execution summary and any existing validation artifact before replacement.
 - Classifies State A/B/C and stops cleanly without writing when completed summaries are missing.
 - Produces a requirement/task coverage map with evidence metadata, manual-only or deferred coverage, gap classification, and repair guidance.
 - Uses a capability-gated `blueprint-verifier` path or the explicit sequential no-subagent fallback.

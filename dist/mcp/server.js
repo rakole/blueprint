@@ -19253,15 +19253,18 @@ function validateResearchArtifactContent(content) {
     warnings
   };
 }
-function containsReferencedSummaryPath(section, summaryPaths) {
+function collectReferencedSummaryPaths(section, summaryPaths) {
   const normalizedSection = section.trim();
   if (normalizedSection.length === 0 || summaryPaths.length === 0) {
-    return false;
+    return [];
   }
-  return summaryPaths.some((summaryPath2) => {
+  return summaryPaths.filter((summaryPath2) => {
     const fileName = summaryPath2.split("/").pop() ?? summaryPath2;
     return normalizedSection.includes(summaryPath2) || normalizedSection.includes(fileName);
   });
+}
+function containsReferencedSummaryPath(section, summaryPaths) {
+  return collectReferencedSummaryPaths(section, summaryPaths).length > 0;
 }
 function validateRequiredMarkdownSections(content, artifactLabel, headings) {
   const issues = [];
@@ -19537,11 +19540,19 @@ function isMarkdownTableHeaderRow(line) {
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
     ["requirement", "task or check", "evidence", "coverage state"],
-    ["gap id", "surface", "evidence", "repair"]
+    ["gap id", "surface", "evidence", "repair"],
+    ["item", "why manual or deferred", "follow-up", "status"],
+    ["gap class", "scope", "evidence", "repair"]
   ];
   return headerPatterns.some(
     (pattern) => pattern.length === cells.length && pattern.every((cell, index) => cells[index] === cell)
   );
+}
+function extractMarkdownTableDataRows(section) {
+  return section.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)).map((line) => parseMarkdownTableCells(line)).filter((cells) => cells.some((cell) => cell.length > 0));
+}
+function extractBlueprintCommands(section) {
+  return [...new Set(section.match(/\/blu-[a-z0-9]+(?:-[a-z0-9]+)*/gi) ?? [])];
 }
 function summarizeMarkdownTableRow(line) {
   const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
@@ -20400,10 +20411,80 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
       "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
     );
   }
+  for (const cells of extractMarkdownTableDataRows(requirementCoverage)) {
+    if (cells.length < 4) {
+      issues.push(
+        "Verification artifact section Requirement / Task Coverage must keep Requirement, Task or Check, Evidence, and Coverage State columns populated."
+      );
+      continue;
+    }
+    const coverageState = (cells[3] ?? "").trim().toUpperCase();
+    if (!VALID_VERIFICATION_COVERAGE_STATES.has(coverageState)) {
+      issues.push(
+        `Verification artifact section Requirement / Task Coverage uses an unsupported coverage state: ${cells[3] ?? ""}.`
+      );
+    }
+  }
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
-  if (!containsReferencedSummaryPath(evidenceReviewed, summaryPaths)) {
+  const citedSummaries = new Set(collectReferencedSummaryPaths(evidenceReviewed, summaryPaths));
+  const missingSummaryCitations = summaryPaths.filter((summaryPath2) => !citedSummaries.has(summaryPath2));
+  if (summaryPaths.length > 0 && citedSummaries.size === 0) {
     issues.push(
       "Verification artifact must cite at least one saved execution summary path or filename under ## Evidence Reviewed."
+    );
+  }
+  if (missingSummaryCitations.length > 0) {
+    issues.push(
+      `Verification artifact must cite every saved execution summary under ## Evidence Reviewed. Missing: ${missingSummaryCitations.map((summaryPath2) => summaryPath2.split("/").pop() ?? summaryPath2).join(", ")}.`
+    );
+  }
+  const manualCoverage = extractMarkdownSection(content, "Manual-Only or Deferred Coverage");
+  for (const cells of extractMarkdownTableDataRows(manualCoverage)) {
+    if (cells.length < 4) {
+      issues.push(
+        "Verification artifact section Manual-Only or Deferred Coverage must keep Item, Why manual or deferred, Follow-Up, and Status columns populated."
+      );
+      continue;
+    }
+    const status = (cells[3] ?? "").trim().toUpperCase();
+    if (!VALID_VERIFICATION_MANUAL_COVERAGE_STATES.has(status)) {
+      issues.push(
+        `Verification artifact section Manual-Only or Deferred Coverage uses an unsupported status: ${cells[3] ?? ""}.`
+      );
+    }
+  }
+  const gapClassification = extractMarkdownSection(content, "Gap Classification");
+  const gapRows = extractMarkdownTableDataRows(gapClassification);
+  if (gapRows.length === 0) {
+    issues.push(
+      "Verification artifact section Gap Classification must include at least one populated gap row."
+    );
+  }
+  for (const cells of gapRows) {
+    if (cells.length < 4) {
+      issues.push(
+        "Verification artifact section Gap Classification must keep Gap class, Scope, Evidence, and Repair columns populated."
+      );
+      continue;
+    }
+    const gapClass = (cells[0] ?? "").trim().toLowerCase();
+    if (!VALID_VERIFICATION_GAP_CLASSES.has(gapClass)) {
+      issues.push(
+        `Verification artifact section Gap Classification uses an unsupported gap class: ${cells[0] ?? ""}.`
+      );
+    }
+  }
+  const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
+  const nextActionCommands = extractBlueprintCommands(nextSafeAction);
+  const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
+  if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToVerifyWork) {
+    issues.push(
+      "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
+    );
+  }
+  if ((gateState === "PARTIAL" || gateState === "BLOCKED" || readinessState === "not ready for UAT") && routesToVerifyWork) {
+    issues.push(
+      "Verification artifact must not route PARTIAL or BLOCKED validation to /blu-verify-work under ## Next Safe Action."
     );
   }
   return {
@@ -22457,7 +22538,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -22800,6 +22881,16 @@ var init_artifacts = __esm({
       "Explicit blocker, follow-up, or `none`.",
       "Explicit next repair, follow-up, or `none`."
     ];
+    VALID_VERIFICATION_COVERAGE_STATES = /* @__PURE__ */ new Set(["PASS", "MANUAL", "DEFERRED", "BLOCKED"]);
+    VALID_VERIFICATION_MANUAL_COVERAGE_STATES = /* @__PURE__ */ new Set(["MANUAL", "DEFERRED", "NONE"]);
+    VALID_VERIFICATION_GAP_CLASSES = /* @__PURE__ */ new Set([
+      "missing-evidence",
+      "partial-coverage",
+      "manual-only",
+      "deferred-test",
+      "contradiction",
+      "none"
+    ]);
     REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings;
     UAT_PLACEHOLDER_BODIES = [
       "Concise user-facing result grounded in the saved summaries and verification artifact.",
@@ -24901,7 +24992,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
   });
   const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
     projectRoot,
-    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+    completedSummaryRecords(summaryIndex.summaries)
   );
   const validationWarnings = [];
   let hasValidVerification = false;
@@ -26052,6 +26143,9 @@ async function collectValidatedSummaryPaths(projectRoot, summaries) {
     warnings.push(...validation.warnings.map((warning) => `${summary.path}: ${warning}`));
   }
   return { summaryPaths, warnings };
+}
+function completedSummaryRecords(summaries) {
+  return summaries.filter((summary) => summary.status === "COMPLETED");
 }
 function collectReferencedValidatedSummaryPaths(content, summaries, completedPlans) {
   const references = /* @__PURE__ */ new Map();
@@ -27273,10 +27367,13 @@ async function blueprintPhaseValidationRead(args) {
     cwd: projectRoot,
     phase: resolved.phaseNumber
   });
+  const completedSummaryPlanIds = new Set(
+    completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId)
+  );
   const summaryPaths = collectReferencedValidatedSummaryPaths(
     content,
     summaryIndex.summaries,
-    new Set(summaryIndex.completedPlans)
+    completedSummaryPlanIds
   );
   const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths);
   const uatState = args.artifact === "uat" ? readUatArtifactState(content) : null;
@@ -27315,7 +27412,7 @@ async function blueprintPhaseValidationWrite(args) {
   }
   const { summaryPaths, warnings: summaryWarnings } = await collectValidatedSummaryPaths(
     projectRoot,
-    summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+    completedSummaryRecords(summaryIndex.summaries)
   );
   const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
   const warnings = [...summaryWarnings];
@@ -27328,16 +27425,17 @@ async function blueprintPhaseValidationWrite(args) {
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
   const normalizedContent = normalizeTextContent2(args.content);
   const exists = await pathExists2(absolutePath);
+  const completedSummaryPaths = summaryPaths;
   const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
     normalizedContent,
     summaryIndex.summaries,
-    new Set(summaryIndex.completedPlans)
+    new Set(completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId))
   );
   const validation = normalizedContent.trim().length === 0 ? {
     valid: false,
     issues: [`${args.artifact} content must not be empty.`],
     warnings: []
-  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, referencedSummaryPaths) : validateUatArtifactContent(normalizedContent, referencedSummaryPaths);
+  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths) : validateUatArtifactContent(normalizedContent, referencedSummaryPaths);
   if (args.artifact === "uat") {
     const verificationPath = validationArtifactPathFor(resolved, "verification");
     const verificationAbsolutePath = resolveBlueprintPath(projectRoot, verificationPath);
@@ -27350,7 +27448,7 @@ async function blueprintPhaseValidationWrite(args) {
     const verificationSummaryPaths = collectReferencedValidatedSummaryPaths(
       verificationContent,
       summaryIndex.summaries,
-      new Set(summaryIndex.completedPlans)
+      new Set(completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId))
     );
     const verificationValidation = validateVerificationArtifactContent(
       verificationContent,
@@ -27426,7 +27524,6 @@ async function blueprintPhaseValidationWrite(args) {
     }
   }
   if (!validation.valid) {
-    warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,

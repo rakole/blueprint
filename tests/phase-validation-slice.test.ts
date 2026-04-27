@@ -611,7 +611,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
 **Gate State:** PASS
 **Sign-off:** validation lead
 
@@ -628,6 +628,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -679,7 +680,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
 **Gate State:** PASS
 **Sign-off:** validation lead
 
@@ -696,6 +697,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -741,7 +743,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
 **Gate State:** PARTIAL
 **Sign-off:** pending
 
@@ -758,6 +760,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -782,7 +785,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| deferred | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Reconfirm during /blu-verify-work 4 |
+| deferred-test | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Repair through /blu-validate-phase 4 |
 
 ## Gaps Found
 
@@ -790,23 +793,26 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 ## Suggested Repairs
 
-- Reconfirm the follow-up note during \`/blu-verify-work 4\`.
+- Repair the verification evidence through \`/blu-validate-phase 4\`.
 
 ## Next Safe Action
 
-- Continue with \`/blu-verify-work 4\`.
+- Continue with \`/blu-validate-phase 4\`.
 `,
     overwrite: true
   });
   const beforeUatStatus = await blueprintProjectStatus({ cwd: repoPath });
   const beforeUatState = await blueprintStateLoad({ cwd: repoPath });
-  await blueprintPhaseValidationWrite({
+  assert.equal(verificationCreated.status, "created", JSON.stringify(verificationCreated, null, 2));
+  assert.equal(verificationReused.status, "reused", JSON.stringify(verificationReused, null, 2));
+  assert.equal(verificationUpdated.status, "updated", JSON.stringify(verificationUpdated, null, 2));
+  const verificationRestored = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
 **Gate State:** PASS
 **Sign-off:** validation lead
 
@@ -823,6 +829,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -863,6 +870,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 `,
     overwrite: true
   });
+  assert.ok(["updated", "reused"].includes(verificationRestored.status));
   const invalidUat = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "4",
@@ -962,10 +970,12 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.equal(verificationRead.found, true);
   assert.match(verificationRead.content ?? "", /ready for UAT/);
   assert.deepEqual(verificationCreated.summaryPaths, [
-    ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"
+    ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md",
+    ".blueprint/phases/04-phase-validation/04-02-SUMMARY.md"
   ]);
   assert.deepEqual(verificationRead.summaryPaths, [
-    ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"
+    ".blueprint/phases/04-phase-validation/04-01-SUMMARY.md",
+    ".blueprint/phases/04-phase-validation/04-02-SUMMARY.md"
   ]);
   assert.equal(verificationRead.validation?.valid, true);
   assert.equal(verificationRead.verificationReadyForUat, true);
@@ -989,7 +999,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
     artifact: "verification",
     content: `# Phase 04: Validation - Verification
 
-**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
 **Gate State:** PASS
 **Sign-off:** validation lead
 
@@ -1006,6 +1016,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -1152,7 +1163,7 @@ test("verify-work refuses to persist UAT when the verification artifact is valid
 
   const readyVerification = `# Phase 04: Validation - Verification
 
-**Coverage:** Reviewed \`04-01-SUMMARY.md\` for the completed validation plan.
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
 **Gate State:** PASS
 **Sign-off:** validation lead
 
@@ -1169,6 +1180,7 @@ test("verify-work refuses to persist UAT when the verification artifact is valid
 ## Evidence Reviewed
 
 - .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
 
 ## Test Infrastructure / Evidence Metadata
 
@@ -1212,7 +1224,8 @@ test("verify-work refuses to persist UAT when the verification artifact is valid
     .replace("**Gate State:** PASS", "**Gate State:** PARTIAL")
     .replace("- Gate: PASS", "- Gate: PARTIAL")
     .replace("- Readiness: ready for UAT", "- Readiness: not ready for UAT")
-    .replace("- The validated feature set is ready for UAT.", "- The validated feature set needs a final repair pass before UAT.");
+    .replace("- The validated feature set is ready for UAT.", "- The validated feature set needs a final repair pass before UAT.")
+    .replace("- Continue with `/blu-verify-work 4`.", "- Continue with `/blu-validate-phase 4`.");
 
   await blueprintPhaseValidationWrite({
     cwd: repoPath,
