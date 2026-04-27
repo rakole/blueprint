@@ -6,6 +6,10 @@ orchestration: MCP owns deterministic state, the command stays thin and
 user-facing, the skill owns workflow policy, and the verifier agent performs
 bounded read-only analysis when available.
 
+This file is the canonical detailed contract for `validate-phase`. The skill
+bundle, command manifest, and command doc should point here for detailed stage
+mapping and retry behavior instead of restating the full flow.
+
 ## Stage Mapping
 
 | Stage | Purpose | Required Control Signal |

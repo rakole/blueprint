@@ -179,7 +179,9 @@ durable audit-fix report.
   - a concise artifact draft for the parent command to persist
 - Keep the draft bounded to the parent-selected validation or UAT scope and the
   supplied evidence bundle.
-- In validation mode, the draft must be ready for `XX-VERIFICATION.md`.
+- In validation mode, the draft must be ready for the parent to normalize into
+  `XX-VERIFICATION.md` using the live contract it read through
+  `blueprint_artifact_contract_read`.
 - In UAT mode, the draft must be ready for `XX-UAT.md`, must preserve
   resumable follow-up notes when gaps remain, and must make any follow-up-fix
   capture explicit enough for a separate confirmation before persistence.
@@ -190,79 +192,30 @@ durable audit-fix report.
   parent to merge into `XX-VERIFICATION.md` and `report.add-tests`; they must
   include classification/test-plan evidence, targeted command output,
   generated/passing/failing/blocked counts, and explicit remaining gaps.
+- When the parent supplies live contract headings, locked markers, or
+  authoring notes, use those exact headings and markers instead of copying a
+  prompt-local scaffold.
 - If there are no gaps, say so plainly and explain why the evidence is
   sufficient.
 
-## Verification Draft Template
+## Validation Draft Handoff
 
-When the parent command asks for validation output, produce the draft in this
-exact shape so it can be persisted without schema drift:
+When the parent command asks for validation output:
 
-```md
-# Phase XX: <Phase Name> - Verification
-
-**Coverage:** Reviewed `<summary filename>` and any other saved phase summaries for validation evidence.
-**Gate State:** PASS|PARTIAL|BLOCKED
-**Sign-off:** <verified owner or pending state>
-
-## Validation Summary
-
-- Concise readiness result grounded in the saved summaries.
-
-## Requirement / Task Coverage
-
-| Requirement | Task or Check | Evidence | Coverage State | Notes |
-|-------------|---------------|----------|----------------|-------|
-| REQ-... | Task/check id | `.blueprint/phases/.../XX-YY-SUMMARY.md` | PASS|MANUAL|DEFERRED|BLOCKED | Concrete coverage note. |
-
-## Evidence Reviewed
-
-- `.blueprint/phases/<phase-dir>/<summary-file>.md`
-
-## Test Infrastructure / Evidence Metadata
-
-- Harness: <detected harness, saved command, or none found>
-- Commands: <commands cited by summaries or none found>
-- Evidence type: <automated test, manual evidence, summary-only, mixed>
-- Test infrastructure status: <ready, missing, deferred, unknown>
-
-## Manual-Only or Deferred Coverage
-
-| Item | Why manual or deferred | Follow-Up | Status |
-|------|------------------------|-----------|--------|
-| <item or none> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
-
-## Gate State
-
-- Gate: PASS|PARTIAL|BLOCKED
-- Sign-off: <name or pending>
-- Readiness: <ready for UAT or not ready>
-
-## Gap Classification
-
-| Gap class | Scope | Evidence | Repair |
-|-----------|-------|----------|--------|
-| <gap class or none> | <scope> | <saved evidence> | <repair or none> |
-
-## Gaps Found
-
-- Explicit blocker, follow-up, or `none`.
-
-## Suggested Repairs
-
-- Explicit next repair, follow-up, or `none`.
-
-## Next Safe Action
-
-- `/blu-verify-work <phase>`
-```
-
-Do not rename headings, replace the `**Coverage:**`, `**Gate State:**`, or
-`**Sign-off:**` labels, or move summary citations out of
-`## Evidence Reviewed`. Keep the top gate marker aligned with the `## Gate
-State` section: `PASS` means `ready for UAT`, while `PARTIAL` or `BLOCKED`
-means `not ready for UAT`. Any extra detail must stay inside the required
-sections unless the parent-supplied contract explicitly allows more headings.
+- treat the live `phase.verification` contract returned by
+  `blueprint_artifact_contract_read` as the only heading, locked-marker, and
+  authoring authority
+- provide populated section content for the contract-defined verification areas:
+  validation summary, requirement or task coverage, evidence reviewed, test
+  infrastructure or evidence metadata, manual-only or deferred coverage, gate
+  state, gap classification, gaps found, suggested repairs, and next safe
+  action
+- never emit scaffold literals or placeholder-grade text such as `<Phase Name>`,
+  `<summary filename>`, `PASS|PARTIAL|BLOCKED`, or canned filler sentences that
+  would fail Blueprint artifact validation if copied too literally
+- if the parent did not supply live contract headings, return structured
+  findings plus draft-ready section content instead of inventing a full
+  markdown artifact from memory
 
 ## UAT Contract Handoff
 

@@ -543,7 +543,7 @@ test("phase validation docs and catalog metadata promote validate-phase and veri
 
   assert.match(
     catalogMarkdown,
-    /\| `validate-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-VERIFICATION\.md; \.blueprint\/STATE\.md` \| `Low: writes summary-aware validation artifacts and gap reports\.` \|/
+    /\| `validate-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-VERIFICATION\.md; \.blueprint\/STATE\.md` \| `Low: writes summary-aware verification evidence and updates follow-up state\.` \|/
   );
   assert.match(
     catalogMarkdown,
