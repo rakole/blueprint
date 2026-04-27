@@ -29,7 +29,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   const codeReview = files["docs/commands/code-review.md"];
   assert.match(
     codeReview,
-    /resolved scope must stay tied to the scope source \(`explicit-files` or saved phase evidence\)/i
+    /shared review posture from the runtime contract/i
   );
   assert.match(
     codeReview,
@@ -285,7 +285,7 @@ test("review and docs agents stay read-only with parent-owned confirmation and p
         /## Parent-Owned Responsibilities/,
         /`update_topic`, `write_todos`, and `ask_user`/,
         /The parent command owns `blueprint_review_record` and every other\s+MCP-backed persistence step/i,
-        /For `\/blu-review`, the parent command owns external reviewer CLI selection,\s+reviewer availability\/authentication truth/i,
+        /The parent command owns any non-code-review reuse contract/i,
         /Remain read-only; the parent command owns MCP persistence and any repo\s+mutation/i,
         /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i
       ]

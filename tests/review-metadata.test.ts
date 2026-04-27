@@ -70,7 +70,7 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
   assert.match(skillFile, /Execution profile for `review`: `long-running-mutation`/);
   assert.match(
     skillFile,
-    /In-flight status fields for `review`: resolved scope, active stage, pending gate, execution mode, next safe action/
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /### `review`/);
   assert.match(skillFile, /blueprint_phase_plan_index/);
@@ -107,9 +107,9 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or generic helpers/i);
   assert.match(runtimeContract, /Invalid peer-review write/i);
 
-  assert.match(agentFile, /peer-review packet or synthesis mode/i);
-  assert.match(agentFile, /reviewer coverage gaps/i);
+  assert.match(agentFile, /parent command owns any non-code-review reuse contract/i);
   assert.match(agentFile, /Do not invoke external reviewer CLIs/i);
+  assert.doesNotMatch(agentFile, /peer-review packet or synthesis mode|reviewer coverage gaps/i);
 });
 
 test("review docs and runtime reference describe the long-running peer-review spine", async () => {

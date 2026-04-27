@@ -92,7 +92,7 @@ test("blueprint-review skill captures audit-fix report-backed remediation rules"
   assert.match(skillFile, /Execution profile for `audit-fix`: `long-running-mutation`/);
   assert.match(
     skillFile,
-    /In-flight status fields for `audit-fix`: resolved scope, active stage, pending gate, execution mode, next safe action/
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_mutate_index/);
@@ -175,11 +175,10 @@ test("audit-fix agents include classification and post-fix verification quality 
     readFile(path.join(repoRoot, "agents/blueprint-verifier.md"), "utf8")
   ]);
 
-  assert.match(reviewerAgent, /\/blu-audit-fix/);
-  assert.match(reviewerAgent, /auto-fixable\/manual-only\/skip/);
-  assert.match(reviewerAgent, /mutation-safe candidate table/i);
-  assert.match(reviewerAgent, /classification \(`auto-fixable`, `manual-only`, or `skip`\)/i);
-  assert.match(reviewerAgent, /Do not act as an audit-fix executor/i);
+  assert.match(reviewerAgent, /\/blu-code-review/);
+  assert.match(reviewerAgent, /non-code-review reuse contract/i);
+  assert.match(reviewerAgent, /Do not act as a fixer or executor agent/i);
+  assert.doesNotMatch(reviewerAgent, /\/blu-audit-fix|auto-fixable\/manual-only\/skip|mutation-safe candidate table/i);
 
   assert.match(verifierAgent, /\/blu-audit-fix/);
   assert.match(verifierAgent, /Audit-fix verification mode/i);

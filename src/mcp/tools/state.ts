@@ -185,6 +185,8 @@ type CurrentPhaseArtifactStatus = {
   contextPath: string | null;
   researchPath: string | null;
   uiSpecPath: string | null;
+  reviewPath: string | null;
+  reviewNextSafeAction: string | null;
   verificationPath: string | null;
   uatPath: string | null;
   planIds: string[];
@@ -857,6 +859,8 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      reviewPath: null,
+      reviewNextSafeAction: null,
       verificationPath: null,
       uatPath: null,
       planIds: [],
@@ -907,6 +911,8 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      reviewPath: null,
+      reviewNextSafeAction: null,
       verificationPath: null,
       uatPath: null,
       planIds: [],
@@ -943,6 +949,8 @@ async function inspectCurrentPhaseArtifacts(
       contextPath: null,
       researchPath: null,
       uiSpecPath: null,
+      reviewPath: null,
+      reviewNextSafeAction: null,
       verificationPath: null,
       uatPath: null,
       planIds: [],
@@ -969,11 +977,13 @@ async function inspectCurrentPhaseArtifacts(
   const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
+  const reviewPath = `${phaseRoot}/${phasePrefix}-REVIEW.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix}-UAT.md`;
   const hasContext = phaseArtifacts.includes(contextPath);
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
+  const hasReview = phaseArtifacts.includes(reviewPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
   const {
@@ -1010,6 +1020,7 @@ async function inspectCurrentPhaseArtifacts(
       artifact.endsWith(`${phasePrefix}-UAT.md`)
   );
   let researchValid: boolean | null = null;
+  let reviewNextSafeAction: string | null = null;
 
   if (hasResearch) {
     try {
@@ -1025,6 +1036,15 @@ async function inspectCurrentPhaseArtifacts(
       warnings.push(`${researchPath}: ${message}`);
       researchValid = false;
     }
+  }
+
+  if (hasReview) {
+    const reviewRouting = await readReviewArtifactNextSafeAction({
+      projectRoot,
+      artifactPath: reviewPath
+    });
+    reviewNextSafeAction = reviewRouting.nextAction;
+    warnings.push(...reviewRouting.warnings);
   }
 
   if (!hasContext && hasLaterArtifacts) {
@@ -1072,6 +1092,8 @@ async function inspectCurrentPhaseArtifacts(
     contextPath,
     researchPath,
     uiSpecPath,
+    reviewPath,
+    reviewNextSafeAction,
     verificationPath,
     uatPath,
     planIds,
@@ -1272,6 +1294,43 @@ function extractBlueprintCommand(line: string): string | null {
   const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
 
   return match?.[0]?.trim() ?? null;
+}
+
+async function readReviewArtifactNextSafeAction(args: {
+  projectRoot: string;
+  artifactPath: string;
+}): Promise<{
+  nextAction: string | null;
+  warnings: string[];
+}> {
+  try {
+    const raw = await fs.readFile(
+      resolveBlueprintPath(args.projectRoot, args.artifactPath),
+      "utf8"
+    );
+    const nextSafeAction =
+      extractMarkdownSectionLines(raw, "Next Safe Action")
+        .map(extractBlueprintCommand)
+        .find((command): command is string => command !== null) ?? null;
+
+    if (nextSafeAction) {
+      return { nextAction: nextSafeAction, warnings: [] };
+    }
+
+    return {
+      nextAction: null,
+      warnings: [
+        `${args.artifactPath}: Next Safe Action does not contain a Blueprint command; state routing will fall back to derived phase status.`
+      ]
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      nextAction: null,
+      warnings: [`${args.artifactPath}: ${message}`]
+    };
+  }
 }
 
 function parseMilestoneAuditGapSection(section: string): MilestoneAuditGapRow[] {
@@ -1525,6 +1584,15 @@ async function deriveNextAction(args: {
     implementedCommands.has(verifyWorkCommand)
   ) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
+  }
+
+  if (args.phaseArtifacts.reviewNextSafeAction) {
+    const reviewNextCommand =
+      args.phaseArtifacts.reviewNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+
+    if (reviewNextCommand && implementedCommands.has(reviewNextCommand)) {
+      return args.phaseArtifacts.reviewNextSafeAction;
+    }
   }
 
   if (

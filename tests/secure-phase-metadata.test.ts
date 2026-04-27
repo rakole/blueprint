@@ -86,7 +86,7 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /Execution profile for `secure-phase`: `long-running-mutation`/);
   assert.match(
     skillFile,
-    /In-flight status fields for `secure-phase`: resolved scope, active stage, pending gate, execution mode, next safe action/
+    /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /ask_user/);
