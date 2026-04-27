@@ -1,0 +1,551 @@
+<mxfile host="app.diagrams.net" modified="2026-04-27T00:00:00.000Z" agent="codex" version="24.7.8">
+  <diagram id="new-project-workflow-end-to-end" name="new-project workflow end-to-end">
+    <mxGraphModel dx="2840" dy="5600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2840" pageHeight="5600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Canvas -->
+        <mxCell id="canvas" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="2840" height="5600" as="geometry" />
+        </mxCell>
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;div style=&quot;font-size:32px;font-weight:700;&quot;&gt;/blu-new-project end-to-end workflow&lt;/div&gt;&lt;div style=&quot;font-size:15px;margin-top:8px;&quot;&gt;Presentation map of what happens from the user trigger through routing, discovery, approval, MCP-owned persistence, validation, and the final next safe action. Internal names are paired with plain-English explanations inside each step.&lt;/div&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#0f172a;gradientColor=#1e293b;strokeColor=#0f172a;fontColor=#ffffff;align=center;verticalAlign=middle;shadow=1;spacing=18;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="28" width="2760" height="118" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="&lt;b&gt;Diagram type: swimlane activity map&lt;/b&gt;&lt;br&gt;Read left to right inside a stage, then follow the blue arrows down. Purple cards are MCP calls. Green cards are files or returned state. Orange cards are user or safety gates. Dashed cards are optional capability-gated paths." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;fontColor=#0f172a;spacing=14;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="168" width="760" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-fqn" value="&lt;b&gt;Name pattern used below&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;b&gt;Runtime FQN&lt;/b&gt;: mcp_blueprint_blueprint_project_init&lt;br&gt;&lt;b&gt;Registered MCP tool&lt;/b&gt;: blueprint_project_init&lt;br&gt;&lt;b&gt;TypeScript handler&lt;/b&gt;: blueprintProjectInit(args)&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt;: create the initial .blueprint project package from an approved seed.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="168" width="640" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-contract" value="&lt;b&gt;Core invariant&lt;/b&gt;&lt;br&gt;Commands own user experience, skills own orchestration policy, MCP tools own durable state writes, and .blueprint/ is the runtime source of truth. Shell commands and hand-edited .blueprint files are not substitute persistence paths." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#10b981;fontColor=#064e3b;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="168" width="610" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-outcome" value="&lt;b&gt;Workflow completion means&lt;/b&gt;&lt;br&gt;Map-first gates passed, a sufficient seed was approved or explicitly auto-synthesized, core artifacts were written through MCP, validation passed or was repaired, and the final route came from project status." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;fontColor=#1e3a8a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2170" y="168" width="630" height="116" as="geometry" />
+        </mxCell>
+
+        <!-- Column headers -->
+        <mxCell id="col-user" value="User and Gemini host" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#1e3a8a;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="80" y="330" width="340" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-skill" value="Command manifest and skill" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#64748b;fontColor=#0f172a;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="460" y="330" width="420" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-agent" value="Session helpers and optional agents" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="920" y="330" width="390" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-mcp" value="Blueprint MCP tool calls" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#3b0764;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="330" width="460" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-runtime" value="Runtime internals and decisions" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="330" width="470" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="col-artifacts" value="Artifacts, output, and next action" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#14532d;fontStyle=1;fontSize=14;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="330" width="400" height="54" as="geometry" />
+        </mxCell>
+
+        <!-- Stage backgrounds and labels -->
+        <mxCell id="bg-entry" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="414" width="2760" height="326" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-resolve" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="778" width="2760" height="650" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-read" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1466" width="2760" height="502" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-decide" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2006" width="2760" height="760" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-execute" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2804" width="2760" height="474" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-persist" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="3316" width="2760" height="664" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-validate" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="4018" width="2760" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-route" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="4556" width="2760" height="462" as="geometry" />
+        </mxCell>
+        <mxCell id="bg-guardrails" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fed7aa;" vertex="1" parent="1">
+          <mxGeometry x="40" y="5056" width="2760" height="468" as="geometry" />
+        </mxCell>
+
+        <mxCell id="stage-entry" value="Entry and runtime contract loading" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#1d4ed8;strokeColor=#1d4ed8;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="434" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-resolve" value="1. Resolve" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0f766e;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="798" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-read" value="2. Read" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#7c3aed;strokeColor=#7c3aed;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1486" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-decide" value="3. Decide" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2026" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-execute" value="4. Execute" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#0284c7;strokeColor=#0284c7;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2824" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-persist" value="5. Persist" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#16a34a;strokeColor=#16a34a;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="3336" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-validate" value="6. Validate" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#9333ea;strokeColor=#9333ea;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="4038" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-route" value="7. Route and report" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#047857;strokeColor=#047857;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="4576" width="210" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-guardrails" value="Always-on guardrails and glossary" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ea580c;strokeColor=#ea580c;fontColor=#ffffff;fontStyle=1;fontSize=13;align=center;verticalAlign=middle;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="60" y="5076" width="250" height="38" as="geometry" />
+        </mxCell>
+
+        <!-- Entry cards -->
+        <mxCell id="entry-user-trigger" value="&lt;b&gt;User trigger&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;User enters &lt;code&gt;/blu-new-project&lt;/code&gt; or root-router form &lt;code&gt;/blu new-project&lt;/code&gt;. Optional &lt;code&gt;--auto&lt;/code&gt; asks for automatic synthesis when enough context exists.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="506" width="340" height="118" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-manifest" value="&lt;b&gt;commands/blu-new-project.toml&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: the host entrypoint stays thin. It tells the model to use the bootstrap skill, keep writes inside MCP tools, and show approval content before asking the user to proceed.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="486" width="420" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-skill" value="&lt;b&gt;skills/blueprint-bootstrap/SKILL.md&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: the orchestration contract. It requires the seven-stage posture, the MCP tool set, visible approval, map-first brownfield behavior, and honest fallback when optional helpers are absent.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;strokeWidth=2;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="486" width="390" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-refs" value="&lt;b&gt;Local runtime references loaded&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;questioning.md&lt;/code&gt;: how to discover intent.&lt;br&gt;&lt;code&gt;bootstrap-runtime-contract.md&lt;/code&gt;: stage-by-stage behavior.&lt;br&gt;&lt;code&gt;runtime-guardrails.md&lt;/code&gt;: MCP FQNs, approval surface, shell boundaries.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="486" width="460" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-catalog" value="&lt;b&gt;Catalog safety check&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Runtime exposure is allowed only because the catalog status is &lt;code&gt;implemented&lt;/code&gt;: manifest exists, primary skill exists, and all required MCP tools are registered.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="486" width="470" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="entry-no-write" value="&lt;b&gt;No durable writes yet&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;At this point the workflow has only loaded instructions and classified the command. The first persistent bootstrap write must be &lt;code&gt;blueprint_project_init&lt;/code&gt; later in Persist.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="486" width="400" height="158" as="geometry" />
+        </mxCell>
+
+        <!-- Resolve cards -->
+        <mxCell id="resolve-host" value="&lt;b&gt;Resolve command context&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: confirm the user is in the target repo, detect &lt;code&gt;--auto&lt;/code&gt;, and keep in-flight status visible: resolved scope, active stage, pending gate, execution mode, next safe action.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="880" width="340" height="154" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-guardrails" value="&lt;b&gt;Apply runtime guardrails&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Internal rule: use runtime FQNs such as &lt;code&gt;mcp_blueprint_blueprint_project_status&lt;/code&gt;. Plain English: talk to the connected Blueprint MCP server, not to ad-hoc shell scripts or hidden files.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="880" width="420" height="154" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-mcp-status" value="&lt;b&gt;Runtime FQN&lt;/b&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_project_status&lt;/code&gt;&lt;br&gt;&lt;b&gt;Registered tool&lt;/b&gt;&lt;br&gt;&lt;code&gt;blueprint_project_status&lt;/code&gt;&lt;br&gt;&lt;b&gt;Handler&lt;/b&gt;&lt;br&gt;&lt;code&gt;blueprintProjectStatus(args)&lt;/code&gt;&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt;&lt;br&gt;Ask Blueprint what state this repo is in and what the next safe action should be before any write." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="858" width="460" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-status-internals" value="&lt;b&gt;Inside project status&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;ensureRepoRoot&lt;/code&gt;: find the repo root safely.&lt;br&gt;&lt;code&gt;inspectBlueprintArtifacts&lt;/code&gt;: check .blueprint core, phases, reports, codebase bundle.&lt;br&gt;&lt;code&gt;inspectBootstrapArtifacts&lt;/code&gt;: detect placeholders, traceability warnings, and brownfield readiness.&lt;br&gt;&lt;code&gt;buildBootstrapStatus&lt;/code&gt;: package repo-shape and routing facts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="858" width="470" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-status-output" value="&lt;b&gt;Status result&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Returns &lt;code&gt;status&lt;/code&gt;, &lt;code&gt;initialized&lt;/code&gt;, current phase and milestone, health warnings, bootstrap repo shape, codebase mapping state, and authoritative &lt;code&gt;nextAction&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="858" width="400" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-decision" value="&lt;b&gt;Repo-state gate&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: decide whether bootstrap can proceed now, must ask for confirmation, or must route to a safer command first.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1126" width="260" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-continue" value="&lt;b&gt;Continue&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;uninitialized&lt;/code&gt; greenfield or scaffold-only: continue.&lt;br&gt;&lt;code&gt;mapped-only&lt;/code&gt; brownfield: continue and preserve existing .blueprint/codebase/*.md.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#10b981;fontColor=#064e3b;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1220" width="340" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-stop-map" value="&lt;b&gt;Stop: map first&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;uninitialized&lt;/code&gt; brownfield with no valid codebase map, or &lt;code&gt;mapping-incomplete&lt;/code&gt;: do not write project bootstrap. Route to &lt;code&gt;/blu-map-codebase&lt;/code&gt;.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1220" width="420" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-stop-health" value="&lt;b&gt;Stop: repair partial bootstrap&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;partial&lt;/code&gt; means core artifacts are broken or incomplete. Route to &lt;code&gt;/blu-health&lt;/code&gt; instead of guessing which files to patch.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1220" width="460" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-overwrite" value="&lt;b&gt;Overwrite gate&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;initialized&lt;/code&gt; with existing core artifacts: require explicit overwrite confirmation before calling project init with &lt;code&gt;overwrite: true&lt;/code&gt;. No confirmation means stop safely.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="1220" width="470" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="resolve-next-safe" value="&lt;b&gt;Next safe action is already known&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If Resolve stops, the command ends with the status-derived action instead of half-initializing .blueprint/. If Resolve continues, the workflow enters Read.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="1220" width="400" height="144" as="geometry" />
+        </mxCell>
+
+        <!-- Read cards -->
+        <mxCell id="read-host" value="&lt;b&gt;Session-local coordination&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: keep the user oriented during a long bootstrap. Use &lt;code&gt;update_topic&lt;/code&gt;, &lt;code&gt;write_todos&lt;/code&gt;, or tracker helpers when the host exposes them; otherwise use concise stage-labeled progress notes.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1568" width="340" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="read-contracts" value="&lt;b&gt;Read canonical bootstrap contracts&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Internal IDs: &lt;code&gt;bootstrap.project&lt;/code&gt;, &lt;code&gt;bootstrap.requirements&lt;/code&gt;, &lt;code&gt;bootstrap.roadmap&lt;/code&gt;. Plain English: get the required headings, locked markers, placeholder signals, and authoring templates before drafting content.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1568" width="420" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="read-helpers" value="&lt;b&gt;Helper docs only when needed&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;get_internal_docs&lt;/code&gt; can clarify host helper behavior. Plain English: verify helper behavior before relying on it, but do not turn helpers into durable Blueprint state.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1568" width="390" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="read-config-get" value="&lt;b&gt;Runtime FQN&lt;/b&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_config_get&lt;/code&gt;&lt;br&gt;&lt;b&gt;Tool&lt;/b&gt; &lt;code&gt;blueprint_config_get&lt;/code&gt;&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt;&lt;br&gt;Read effective config, saved defaults, provenance, and warnings before any mutation." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1516" width="460" height="182" as="geometry" />
+        </mxCell>
+        <mxCell id="read-contract-call" value="&lt;b&gt;Runtime FQN&lt;/b&gt;&lt;br&gt;&lt;code&gt;mcp_blueprint_blueprint_artifact_contract_read&lt;/code&gt;&lt;br&gt;&lt;b&gt;Tool&lt;/b&gt; &lt;code&gt;blueprint_artifact_contract_read&lt;/code&gt;&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt;&lt;br&gt;Ask the artifact system what each bootstrap file must look like before authoring it." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1728" width="460" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="read-runtime-output" value="&lt;b&gt;Read-stage evidence&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Config provenance explains which layer supplied defaults: hardcoded Blueprint defaults, host-global defaults, project config, or explicit command choices. Contract output supplies &lt;code&gt;contract.authoringTemplate&lt;/code&gt; for each authored bootstrap file.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="1568" width="470" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="read-artifact-output" value="&lt;b&gt;No bootstrap files are written here&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Read produces inputs for discovery and drafting: defaults, warnings, contract templates, repo evidence, and helper availability. Persistence waits for approval and Project Init.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="1568" width="400" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Decide cards -->
+        <mxCell id="decide-mode" value="&lt;b&gt;Mode fork&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;bootstrapMode: &quot;interactive&quot;&lt;/code&gt; by default.&lt;br&gt;&lt;code&gt;bootstrapMode: &quot;auto&quot;&lt;/code&gt; only when user passed &lt;code&gt;--auto&lt;/code&gt;.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="2098" width="250" height="146" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-interactive" value="&lt;b&gt;Interactive discovery loop&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: ask thread-following questions until project intent is concrete enough. Capture vision, audience, constraints, current milestone, non-goals, explicit assumptions, committed scope, deferred scope, and out-of-scope cuts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="2290" width="340" height="172" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-auto" value="&lt;b&gt;Auto-mode sufficiency gate&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: skip extended questioning only if there is a substantive supplied or repo-derived brief. The workflow may use README or package description evidence, but it must stop and ask if the brief is thin.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="2490" width="340" height="172" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-defaults" value="&lt;b&gt;Saved defaults and workflow preferences&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Internal names: &lt;code&gt;mode&lt;/code&gt;, &lt;code&gt;granularity&lt;/code&gt;, &lt;code&gt;parallelization&lt;/code&gt;, &lt;code&gt;planning.commit_docs&lt;/code&gt;, workflow toggles. Plain English: decide how this repo wants Blueprint to behave, and explain whether choices came from saved defaults, questions, or hardcoded fallbacks.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="2114" width="420" height="178" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-approval" value="&lt;b&gt;Visible approval packet&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: before the first persistent write, show a reviewable Markdown preview in the main conversation: project brief, target users, requirement groups, roadmap phase table, assumptions, deferred or out-of-scope items, defaults provenance, and brownfield confidence notes.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="2340" width="420" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-revision" value="&lt;b&gt;Revision loop&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If the user wants changes, revise requirements, roadmap shape, defaults, or assumptions before persistence. Approval must refer to the visible packet, not hidden tool output or a temporary file.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="2580" width="420" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-researcher" value="&lt;b&gt;Optional agent&lt;/b&gt;&lt;br&gt;&lt;code&gt;blueprint-project-researcher&lt;/code&gt;&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt;&lt;br&gt;When available and useful, perform bounded read-only synthesis of repo shape, product context, stack, features, architecture, or pitfalls. Its conclusions remain private until rewritten into the visible approval packet." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2106" width="390" height="226" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-roadmapper" value="&lt;b&gt;Optional agent&lt;/b&gt;&lt;br&gt;&lt;code&gt;blueprint-roadmapper&lt;/code&gt;&lt;br&gt;&lt;b&gt;Plain English&lt;/b&gt;&lt;br&gt;When available and useful, cluster requirements, sequence phases, check coverage, and derive 2-5 observable success criteria per phase. Browser, web-search, shell-only, or generic helpers are not substitutes." style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2370" width="390" height="226" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-no-agent" value="&lt;b&gt;No-subagent fallback&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: continue sequentially in the parent session: classify repo shape, handle stack/features/architecture/pitfalls one at a time when relevant, scope one requirement group at a time, draft roadmap areas, then run final coverage.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2632" width="390" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-no-mcp-write" value="&lt;b&gt;No core MCP write yet&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;MCP calls in this stage are read-oriented unless the user explicitly approved saved-default changes later through config tools. Core project bootstrap artifacts still wait for approved seed persistence.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="2200" width="460" height="154" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-seed-ready" value="&lt;b&gt;Seed readiness decision&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Internal name: &lt;code&gt;bootstrapSeed&lt;/code&gt;. Plain English: the approved structured brief that Project Init will turn into PROJECT, REQUIREMENTS, ROADMAP, initial STATE, config, and phase directory scaffolding.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="2450" width="260" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-output" value="&lt;b&gt;Decision-stage output&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Approved or auto-sufficient bootstrap source containing project vision, users, constraints, non-goals, requirement candidates, roadmap phase candidates, assumptions, defaults provenance, and explicit open questions or deferred cuts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="2240" width="400" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-stop" value="&lt;b&gt;Stop conditions in Decide&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Interactive mode: keep asking if intent is too thin. Auto mode: stop and ask for a brief if README/package/user input cannot support a credible seed. The command must not invent a product.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="2240" width="470" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="decide-approved" value="&lt;b&gt;Ready for Execute&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Proceed only when the source is rich enough to produce substantive artifacts, not placeholder shells. Material changes after approval return to the revision loop.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#10b981;fontColor=#064e3b;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="2500" width="910" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Execute cards -->
+        <mxCell id="execute-author" value="&lt;b&gt;Author the structured seed&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: convert conversation and approved preview into structured data. Preserve committed, deferred, and out-of-scope distinctions instead of flattening everything into vague roadmap text.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="2896" width="340" height="156" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-seed-fields" value="&lt;b&gt;&lt;code&gt;bootstrapSeed&lt;/code&gt; fields&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;vision&lt;/code&gt;: what and why.&lt;br&gt;&lt;code&gt;audience&lt;/code&gt;: primary and secondary users.&lt;br&gt;&lt;code&gt;constraints&lt;/code&gt; and &lt;code&gt;nonGoals&lt;/code&gt;: boundaries.&lt;br&gt;&lt;code&gt;currentMilestone&lt;/code&gt;: active milestone name.&lt;br&gt;&lt;code&gt;requirements&lt;/code&gt;: durable requirement rows with IDs and scope.&lt;br&gt;&lt;code&gt;roadmapPhases&lt;/code&gt;: phases, mapped requirements, success criteria.&lt;br&gt;&lt;code&gt;brownfieldMode&lt;/code&gt;, &lt;code&gt;assumptions&lt;/code&gt;: confidence and caveats.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#64748b;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="2862" width="420" height="254" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-preflight" value="&lt;b&gt;Preflight before Project Init&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: reject weak content before touching disk. Vision must be substantive. At least one committed requirement must exist. Requirement IDs must be durable. Each committed requirement must map to exactly one phase. Each phase must have explicit requirement IDs and 2-5 observable success criteria. Generic criteria are rejected.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2862" width="390" height="254" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-no-persist" value="&lt;b&gt;Still no durable write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;The Execute stage prepares content and checks it. It does not hand-edit .blueprint files. The prepared seed is the input to the MCP-owned Persist stage.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="2896" width="460" height="156" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-invalid" value="&lt;b&gt;If preflight fails&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Return to Decide: ask more questions, repair the seed source, revise roadmap or requirement coverage, then request approval again if the scope materially changed.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="2896" width="470" height="156" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-output" value="&lt;b&gt;Persist-ready package&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;A validated structured seed plus explicit mode, overwrite posture, project name if supplied, defaults path if supplied, and whether existing mapped codebase docs must be preserved.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="2896" width="400" height="156" as="geometry" />
+        </mxCell>
+
+        <!-- Persist cards -->
+        <mxCell id="persist-call" value="&lt;b&gt;First persistent bootstrap write&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Runtime FQN: &lt;code&gt;mcp_blueprint_blueprint_project_init&lt;/code&gt;&lt;br&gt;Tool: &lt;code&gt;blueprint_project_init&lt;/code&gt;&lt;br&gt;Handler: &lt;code&gt;blueprintProjectInit(args)&lt;/code&gt;&lt;br&gt;Plain English: create the initial .blueprint project package from the approved seed and return authoritative paths, diagnostics, warnings, and next action.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="3410" width="460" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-inputs" value="&lt;b&gt;Project Init inputs&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;cwd&lt;/code&gt;: repo root if supplied.&lt;br&gt;&lt;code&gt;bootstrapMode&lt;/code&gt;: interactive or auto.&lt;br&gt;&lt;code&gt;bootstrapSeed&lt;/code&gt;: approved structured source.&lt;br&gt;&lt;code&gt;overwrite&lt;/code&gt;: true only after explicit confirmation.&lt;br&gt;&lt;code&gt;projectName&lt;/code&gt; and &lt;code&gt;defaultsPath&lt;/code&gt;: optional caller-supplied refinements.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="3410" width="340" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-internals-a" value="&lt;b&gt;Inside &lt;code&gt;blueprintProjectInit&lt;/code&gt; - safety&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;ensureRepoRoot&lt;/code&gt;: safe repo root.&lt;br&gt;&lt;code&gt;inspectBlueprintArtifacts&lt;/code&gt;: current .blueprint shape.&lt;br&gt;&lt;code&gt;inspectBootstrapArtifacts&lt;/code&gt;: brownfield and traceability diagnostics.&lt;br&gt;&lt;code&gt;assertBootstrapCanWrite&lt;/code&gt;: block partial state, mapping-incomplete state, initialized-without-overwrite, unmapped brownfield, or insufficient interactive seed.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="3370" width="470" height="202" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-internals-b" value="&lt;b&gt;Inside &lt;code&gt;blueprintProjectInit&lt;/code&gt; - seed shaping&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;inferProjectName&lt;/code&gt;: supplied name, package name, or folder name.&lt;br&gt;&lt;code&gt;readRepoSummary&lt;/code&gt;: README or package description for auto context.&lt;br&gt;&lt;code&gt;bootstrapSeedHasAutoContext&lt;/code&gt;: prove auto has enough context.&lt;br&gt;&lt;code&gt;mergeBootstrapSeed&lt;/code&gt; and &lt;code&gt;buildDefaultBootstrapSeed&lt;/code&gt;: normalize explicit seed with safe defaults.&lt;br&gt;&lt;code&gt;assertBootstrapSeedHasNoExplicitGaps&lt;/code&gt; and &lt;code&gt;assertBootstrapSeedPreflight&lt;/code&gt;: enforce traceability before write.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="3600" width="470" height="244" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-internals-c" value="&lt;b&gt;Inside &lt;code&gt;blueprintProjectInit&lt;/code&gt; - writes&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;normalizeBlueprintPhaseRef&lt;/code&gt;: choose the initial phase safely.&lt;br&gt;&lt;code&gt;blueprintArtifactScaffold&lt;/code&gt;: render seeded PROJECT, REQUIREMENTS, ROADMAP, and phases directory from the approved seed.&lt;br&gt;&lt;code&gt;seedProjectConfig&lt;/code&gt;: write normalized v2 config with provenance.&lt;br&gt;&lt;code&gt;blueprintStateUpdate&lt;/code&gt;: write initial STATE with milestone, phase, active command, blockers, and next action.&lt;br&gt;&lt;code&gt;inspectBootstrapArtifacts&lt;/code&gt; again: collect final diagnostics and traceability warnings.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="3870" width="470" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-artifacts" value="&lt;b&gt;Files created or reused&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;.blueprint/PROJECT.md: project vision, audience, constraints, milestone, scope posture, assumptions.&lt;br&gt;.blueprint/REQUIREMENTS.md: durable IDs, scope groups, deferred and out-of-scope cuts, traceability notes.&lt;br&gt;.blueprint/ROADMAP.md: milestone, phases, requirement coverage, success criteria.&lt;br&gt;.blueprint/phases/: phase root for later lifecycle artifacts.&lt;br&gt;.blueprint/config.json: normalized repo config.&lt;br&gt;.blueprint/STATE.md: initialized workflow position and next action.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="3370" width="400" height="282" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-preserve-codebase" value="&lt;b&gt;Mapped-only preservation&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If Resolve found a valid .blueprint/codebase/*.md bundle but no core bootstrap artifacts, Project Init adds core bootstrap files without treating the codebase docs as overwrite conflicts.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#10b981;fontColor=#064e3b;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="3684" width="400" height="118" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-return" value="&lt;b&gt;Project Init return object&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;projectRoot&lt;/code&gt;, &lt;code&gt;createdPaths&lt;/code&gt;, &lt;code&gt;seededState&lt;/code&gt;, &lt;code&gt;configPath&lt;/code&gt;, &lt;code&gt;configProvenance&lt;/code&gt;, &lt;code&gt;brownfield&lt;/code&gt;, &lt;code&gt;bootstrapDiagnostics&lt;/code&gt;, &lt;code&gt;nextAction&lt;/code&gt;, &lt;code&gt;warnings&lt;/code&gt;. Plain English: what changed, where it lives, what confidence limits remain, and what should happen next.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="3828" width="400" height="128" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-config-set" value="&lt;b&gt;Optional post-init config patch&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Runtime FQN: &lt;code&gt;mcp_blueprint_blueprint_config_set&lt;/code&gt;&lt;br&gt;Tool: &lt;code&gt;blueprint_config_set&lt;/code&gt;&lt;br&gt;Plain English: persist workflow preferences in project config. Use &lt;code&gt;scope: &quot;defaults&quot;&lt;/code&gt; only if the user explicitly approved saved-default changes.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="3664" width="420" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="persist-state-update" value="&lt;b&gt;Optional state refinement&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Runtime FQN: &lt;code&gt;mcp_blueprint_blueprint_state_update&lt;/code&gt;&lt;br&gt;Tool: &lt;code&gt;blueprint_state_update&lt;/code&gt;&lt;br&gt;Plain English: adjust active command, blockers, or next-step guidance deterministically after initialization if the workflow needs to refine status.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="3664" width="390" height="142" as="geometry" />
+        </mxCell>
+
+        <!-- Validate cards -->
+        <mxCell id="validate-call" value="&lt;b&gt;Post-write validation&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Runtime FQN: &lt;code&gt;mcp_blueprint_blueprint_artifact_validate&lt;/code&gt;&lt;br&gt;Tool: &lt;code&gt;blueprint_artifact_validate&lt;/code&gt;&lt;br&gt;Handler: &lt;code&gt;blueprintArtifactValidate(args)&lt;/code&gt;&lt;br&gt;Plain English: verify that the .blueprint artifact tree satisfies the runtime contract before declaring bootstrap complete.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="4112" width="460" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-internals" value="&lt;b&gt;Validation checks&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: confirm .blueprint exists, core artifacts are present, config is normalized, phase directory layout is coherent, mapped codebase bundle is valid if present, placeholders are surfaced, and requirement-to-roadmap traceability warnings are not hidden.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="4112" width="470" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-output" value="&lt;b&gt;Validation output&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Returns &lt;code&gt;valid&lt;/code&gt;, &lt;code&gt;issues&lt;/code&gt;, &lt;code&gt;suggestedRepairs&lt;/code&gt;, and &lt;code&gt;warnings&lt;/code&gt;. Plain English: either the bootstrap is contract-valid, or the command knows what must be repaired before completion.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="4112" width="400" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-decision" value="&lt;b&gt;Valid?&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;No hidden acceptance of thin scaffolds.&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=10;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="930" y="4132" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-repair" value="&lt;b&gt;Repair loop on failure&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: revise the bootstrap seed or approval-packet source, then retry through MCP. If the repair changes material scope, ask the user to approve the revised packet. Do not patch .blueprint files by hand around the MCP owner.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="4112" width="420" height="204" as="geometry" />
+        </mxCell>
+        <mxCell id="validate-config-confirm" value="&lt;b&gt;Config confirmation&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If workflow preferences were chosen, confirm persisted config reflects them. Defaults provenance remains visible in the final response, including malformed-default fallback warnings.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="4112" width="340" height="204" as="geometry" />
+        </mxCell>
+
+        <!-- Route cards -->
+        <mxCell id="route-status-call" value="&lt;b&gt;Final status read&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Runtime FQN: &lt;code&gt;mcp_blueprint_blueprint_project_status&lt;/code&gt;&lt;br&gt;Tool: &lt;code&gt;blueprint_project_status&lt;/code&gt;&lt;br&gt;Plain English: after writes and validation, ask Blueprint again for the authoritative current phase, milestone, health, and next safe action.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="4650" width="460" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="route-final-response" value="&lt;b&gt;Final user-facing summary&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Must summarize created .blueprint paths including config.json, discovered project direction, requirement scope, roadmap stance, defaults provenance, approval or auto-synthesis posture, explicit assumptions, warnings, and whether output is greenfield-ready or brownfield-provisional.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="4650" width="340" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="route-safe-action" value="&lt;b&gt;Next safe action examples&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Ready bootstrap: &lt;code&gt;/blu-progress&lt;/code&gt; to review the next safe Blueprint action.&lt;br&gt;Brownfield provisional: &lt;code&gt;/blu-map-codebase&lt;/code&gt; before treating roadmap as durable.&lt;br&gt;Mapped-only after codebase mapping: &lt;code&gt;/blu-new-project&lt;/code&gt; to add core bootstrap while preserving mapping docs.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontColor=#052e16;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="4650" width="400" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="route-state-complete" value="&lt;b&gt;Session-local coordination closes&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Plain English: mark any visible todos or tracker tasks consistently with what happened, update the topic to the finished route, and leave no invisible workflow state pretending to be Blueprint state.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#d97706;fontColor=#78350f;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="920" y="4650" width="390" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="route-status-internals" value="&lt;b&gt;Final status semantics&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;If initialized, status loads STATE and effective config. If warnings exist, they are surfaced. If not initialized because of a safe stop, the final answer follows the earlier status-derived action instead.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#0c4a6e;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="4650" width="470" height="176" as="geometry" />
+        </mxCell>
+        <mxCell id="route-done" value="&lt;b&gt;Workflow ends&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;Done means the user has a durable reviewable bootstrap record, not just a generated folder. Later lifecycle commands inherit PROJECT, REQUIREMENTS, ROADMAP, STATE, config, phase roots, and any validated codebase map.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#047857;strokeColor=#047857;fontColor=#ffffff;spacing=14;fontSize=14;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="4870" width="1860" height="92" as="geometry" />
+        </mxCell>
+
+        <!-- Guardrail cards -->
+        <mxCell id="guardrail-do-not" value="&lt;b&gt;What must not happen&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;- Do not run &lt;code&gt;/blu-new-project&lt;/code&gt; in the shell.&lt;br&gt;- Do not call shorthand MCP IDs directly; translate to runtime FQNs.&lt;br&gt;- Do not use shell scripts, browser searches, or generic agents as substitutes for Blueprint MCP tools or bundled Blueprint agents.&lt;br&gt;- Do not reintroduce .planning/ as Blueprint runtime state.&lt;br&gt;- Do not create CLAUDE.md or AGENTS.md.&lt;br&gt;- Do not call artifact scaffold before project init for core bootstrap.&lt;br&gt;- Do not hand-edit .blueprint files around validation failures.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="5150" width="620" height="292" as="geometry" />
+        </mxCell>
+        <mxCell id="guardrail-glossary" value="&lt;b&gt;Glossary of internal names&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;bootstrapSeed&lt;/code&gt;: approved structured source for authored artifacts.&lt;br&gt;&lt;code&gt;contract.authoringTemplate&lt;/code&gt;: canonical heading and structure authority.&lt;br&gt;&lt;code&gt;createdPaths&lt;/code&gt;: files or directories Project Init created.&lt;br&gt;&lt;code&gt;configProvenance&lt;/code&gt;: which config layers were applied.&lt;br&gt;&lt;code&gt;brownfield.provisionalRoadmap&lt;/code&gt;: roadmap should not be treated as durable until codebase mapping is complete.&lt;br&gt;&lt;code&gt;nextAction&lt;/code&gt;: command-safe follow-up returned by Blueprint status, not guessed by the model.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="5150" width="620" height="292" as="geometry" />
+        </mxCell>
+        <mxCell id="guardrail-statuses" value="&lt;b&gt;Project readiness statuses&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;uninitialized&lt;/code&gt;: no .blueprint tree. Greenfield can bootstrap; unmapped brownfield maps first.&lt;br&gt;&lt;code&gt;mapping-incomplete&lt;/code&gt;: interrupted or invalid codebase-only bundle; route to map-codebase.&lt;br&gt;&lt;code&gt;mapped-only&lt;/code&gt;: valid codebase bundle but no core bootstrap; run new-project and preserve codebase docs.&lt;br&gt;&lt;code&gt;partial&lt;/code&gt;: broken core bootstrap; route to health.&lt;br&gt;&lt;code&gt;initialized&lt;/code&gt;: normal workflow routing can continue.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;fontColor=#0f172a;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="5150" width="620" height="292" as="geometry" />
+        </mxCell>
+        <mxCell id="guardrail-mcp-list" value="&lt;b&gt;Required MCP tools for this command&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;code&gt;blueprint_project_init&lt;/code&gt;: create bootstrap package.&lt;br&gt;&lt;code&gt;blueprint_project_status&lt;/code&gt;: classify readiness and route.&lt;br&gt;&lt;code&gt;blueprint_config_get&lt;/code&gt;: read config and defaults.&lt;br&gt;&lt;code&gt;blueprint_config_set&lt;/code&gt;: persist approved config choices.&lt;br&gt;&lt;code&gt;blueprint_state_update&lt;/code&gt;: patch STATE deterministically.&lt;br&gt;&lt;code&gt;blueprint_artifact_contract_read&lt;/code&gt;: read canonical artifact shape.&lt;br&gt;&lt;code&gt;blueprint_artifact_validate&lt;/code&gt;: validate final artifact tree.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#faf5ff;strokeColor=#8b5cf6;fontColor=#2e1065;spacing=12;fontSize=13;fontFamily=Inter;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2060" y="5150" width="700" height="292" as="geometry" />
+        </mxCell>
+
+        <!-- Main sequence edges -->
+        <mxCell id="edge-entry-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="entry-user-trigger" target="entry-manifest">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-entry-2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="entry-manifest" target="entry-skill">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-entry-3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="entry-skill" target="entry-refs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-entry-4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="entry-refs" target="entry-catalog">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-entry-down" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="entry-catalog" target="resolve-host">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2085" y="716" />
+              <mxPoint x="250" y="716" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-resolve-a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="resolve-host" target="resolve-guardrails">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=3;" edge="1" parent="1" source="resolve-guardrails" target="resolve-mcp-status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="resolve-mcp-status" target="resolve-status-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#16a34a;strokeWidth=2;" edge="1" parent="1" source="resolve-status-internals" target="resolve-status-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-decision" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;" edge="1" parent="1" source="resolve-status-output" target="resolve-decision">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2560" y="1170" />
+              <mxPoint x="1050" y="1170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-resolve-continue" value="continue" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#10b981;strokeWidth=2;fontColor=#064e3b;fontSize=11;" edge="1" parent="1" source="resolve-decision" target="resolve-continue">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-map" value="stop and route" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;fontSize=11;" edge="1" parent="1" source="resolve-decision" target="resolve-stop-map">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-health" value="stop and route" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;fontSize=11;" edge="1" parent="1" source="resolve-decision" target="resolve-stop-health">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-overwrite" value="confirm if needed" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;fontColor=#7c2d12;fontSize=11;" edge="1" parent="1" source="resolve-decision" target="resolve-overwrite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-resolve-read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="resolve-continue" target="read-host">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-read-a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="read-host" target="read-contracts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-read-b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=2;dashed=1;" edge="1" parent="1" source="read-host" target="read-helpers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-read-config" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=3;" edge="1" parent="1" source="read-contracts" target="read-config-get">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-read-contract" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=3;" edge="1" parent="1" source="read-contracts" target="read-contract-call">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-read-output" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#16a34a;strokeWidth=2;" edge="1" parent="1" source="read-contract-call" target="read-runtime-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-read-down" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="read-artifact-output" target="decide-mode">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2560" y="1990" />
+              <mxPoint x="245" y="1990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-decide-interactive" value="interactive" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="decide-mode" target="decide-interactive">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-auto" value="--auto" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="decide-mode" target="decide-auto">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-defaults" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="decide-interactive" target="decide-defaults">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-approval" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;" edge="1" parent="1" source="decide-defaults" target="decide-approval">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-agents" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=2;dashed=1;" edge="1" parent="1" source="decide-defaults" target="decide-researcher">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-roadmapper" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=2;dashed=1;" edge="1" parent="1" source="decide-researcher" target="decide-roadmapper">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-agent-to-output" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=2;dashed=1;" edge="1" parent="1" source="decide-roadmapper" target="decide-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-seed" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;" edge="1" parent="1" source="decide-approval" target="decide-seed-ready">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-decide-execute" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="decide-approved" target="execute-author">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2300" y="2785" />
+              <mxPoint x="250" y="2785" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-execute-a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="execute-author" target="execute-seed-fields">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-execute-b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="execute-seed-fields" target="execute-preflight">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-execute-c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#10b981;strokeWidth=2;" edge="1" parent="1" source="execute-preflight" target="execute-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-execute-fail" value="if invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;dashed=1;fontSize=11;" edge="1" parent="1" source="execute-preflight" target="execute-invalid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-execute-persist" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="execute-output" target="persist-inputs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2560" y="3300" />
+              <mxPoint x="250" y="3300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-persist-a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=3;" edge="1" parent="1" source="persist-inputs" target="persist-call">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-persist-b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="persist-call" target="persist-internals-a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-persist-c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="persist-internals-a" target="persist-internals-b">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-persist-d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="persist-internals-b" target="persist-internals-c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-persist-e" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#16a34a;strokeWidth=2;" edge="1" parent="1" source="persist-internals-c" target="persist-artifacts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-persist-f" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#16a34a;strokeWidth=2;" edge="1" parent="1" source="persist-artifacts" target="persist-return">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-persist-validate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="persist-return" target="validate-config-confirm">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2560" y="4000" />
+              <mxPoint x="250" y="4000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-validate-a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=3;" edge="1" parent="1" source="validate-config-confirm" target="validate-call">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-validate-b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="validate-call" target="validate-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-validate-c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#16a34a;strokeWidth=2;" edge="1" parent="1" source="validate-internals" target="validate-output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-validate-decision" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;" edge="1" parent="1" source="validate-output" target="validate-decision">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2560" y="4400" />
+              <mxPoint x="1050" y="4400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-validate-repair" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#fb923c;strokeWidth=2;dashed=1;fontSize=11;" edge="1" parent="1" source="validate-decision" target="validate-repair">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-validate-route" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#10b981;strokeWidth=3;fontSize=11;" edge="1" parent="1" source="validate-decision" target="route-final-response">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1050" y="4540" />
+              <mxPoint x="250" y="4540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-route-a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563eb;strokeWidth=3;" edge="1" parent="1" source="route-final-response" target="route-state-complete">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-route-b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=3;" edge="1" parent="1" source="route-state-complete" target="route-status-call">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-route-c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;" edge="1" parent="1" source="route-status-call" target="route-status-internals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-route-d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#16a34a;strokeWidth=2;" edge="1" parent="1" source="route-status-internals" target="route-safe-action">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-route-done" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#047857;strokeWidth=3;" edge="1" parent="1" source="route-safe-action" target="route-done">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2560" y="4990" />
+              <mxPoint x="1390" y="4990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

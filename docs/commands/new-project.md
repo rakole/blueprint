@@ -22,6 +22,10 @@
 
 `new-project` is Blueprint's command for initialize a new project with deep context gathering and `PROJECT.md`. In Blueprint it stays host-native and delegates persistence to documented MCP tools, but the orchestration depth must remain richer than a simple scaffold-only bootstrap.
 
+## Workflow Diagram
+
+- Detailed Draw.io workflow: [`docs/diagrams/new-project-workflow-end-to-end.drawio`](../diagrams/new-project-workflow-end-to-end.drawio)
+
 ## Command Path And Examples
 
 - CLI command path: `/blu-new-project`
