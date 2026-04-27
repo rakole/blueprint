@@ -162,7 +162,7 @@ Before persistence, normalize the final `XX-UAT.md` body to the returned `phase.
 
 ## Shell Risk Profile
 
-- Low: writes UAT and follow-up evidence.
+- Medium: writes UAT evidence, can sync `.blueprint/ROADMAP.md` completion state, and updates follow-up state.
 
 ## User Prompts And Confirmation Gates
 

@@ -547,7 +547,7 @@ test("phase validation docs and catalog metadata promote validate-phase and veri
   );
   assert.match(
     catalogMarkdown,
-    /\| `verify-work` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-UAT\.md; \.blueprint\/ROADMAP\.md when completion evidence closes; \.blueprint\/STATE\.md; optional explicit follow-up fix capture` \| `Low: writes resumable UAT artifacts, closes roadmap completion, and records follow-up state\.` \|/
+    /\| `verify-work` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-UAT\.md; \.blueprint\/ROADMAP\.md when completion evidence closes; \.blueprint\/STATE\.md; optional explicit follow-up fix capture` \| `Medium: writes resumable UAT artifacts, can close or reopen roadmap completion, and records follow-up state\.` \|/
   );
   assert.match(
     skillsMarkdown,
