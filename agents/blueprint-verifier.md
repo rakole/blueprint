@@ -38,6 +38,9 @@ durable audit-fix report.
   Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns prerequisite checks, overwrite or resume decisions,
   follow-up fix capture gates, and final routing.
+- The parent command owns collected user responses, observed behavior, live
+  result counts, structured UAT evidence derived from those responses, and the
+  final acceptance-ready UAT artifact.
 - The parent command owns validation-state writes, report persistence, and
   every other MCP-backed persistence step.
 - For `/blu-audit-fix`, the parent command owns repo edits, test execution,
@@ -61,13 +64,14 @@ durable audit-fix report.
   - start from saved summaries plus the current verification artifact
   - derive a queue of user-observable UAT tests with expected behavior,
     evidence, result state, and notes
-  - evaluate user-facing readiness, blocked prerequisites, issue reports,
-    unresolved gaps, and explicit follow-up fix capture for `XX-UAT.md`
+  - prepare the parent for user-facing UAT by highlighting blocked
+    prerequisites, saved-evidence-only risk areas, and explicit follow-up fix
+    candidates for `XX-UAT.md`
   - preserve plain-language response classification rules for pass, skipped,
     blocked, and issue outcomes so the parent command can run one test at a
     time without asking the user for severity
-  - keep the draft resumable, summary-aware, and aligned to the canonical UAT
-    template before the parent persists it
+  - keep the preparation output resumable, summary-aware, and aligned to the
+    live canonical UAT contract before the parent persists the finished artifact
 - Add-tests coverage review mode:
   - start from saved summaries plus verification or UAT evidence, the approved
     classification table, the approved test plan, changed test files, targeted
@@ -161,9 +165,8 @@ durable audit-fix report.
   - manual-only or deferred coverage with follow-up status
   - UAT test queue rows with expected behavior, saved evidence, result, and
     notes when running in UAT mode
-  - UAT result counts for total, passed, issues, pending, skipped, and blocked
-  - structured UAT gaps with verbatim user report, inferred severity, and repair
-    path when running in UAT mode
+  - initial pending UAT queue state and saved-evidence-only gap notes when
+    running in UAT mode before the parent collects user responses
   - gap classification and suggested repair path
   - readiness result with rationale
   - add-tests coverage rows with saved behavior, test file, assertion or
@@ -180,6 +183,9 @@ durable audit-fix report.
 - In UAT mode, the draft must be ready for `XX-UAT.md`, must preserve
   resumable follow-up notes when gaps remain, and must make any follow-up-fix
   capture explicit enough for a separate confirmation before persistence.
+- In UAT mode, do not invent observed user behavior, completed pass/fail counts,
+  or a final acceptance-ready artifact before the parent has collected user
+  responses.
 - In add-tests coverage review mode, the draft notes must be ready for the
   parent to merge into `XX-VERIFICATION.md` and `report.add-tests`; they must
   include classification/test-plan evidence, targeted command output,
@@ -258,91 +264,27 @@ State` section: `PASS` means `ready for UAT`, while `PARTIAL` or `BLOCKED`
 means `not ready for UAT`. Any extra detail must stay inside the required
 sections unless the parent-supplied contract explicitly allows more headings.
 
-## UAT Draft Template
+## UAT Contract Handoff
 
-When the parent command asks for UAT output, produce the draft in this exact
-shape so it can be persisted without schema drift:
+When the parent command asks for UAT preparation output, align to the live
+`phase.uat` contract returned by `blueprint_artifact_contract_read` instead of
+copying a prompt-local template. Treat that returned contract as the only
+heading and locked-marker authority for `XX-UAT.md`.
 
-```md
-# Phase XX: <Phase Name> - UAT
+For UAT mode specifically:
 
-**Status:** PASS|FAIL|PARTIAL
-**Resume State:** RESUMED|NEW|CONTINUED
-**Checkpoint:** <saved checkpoint path or none>
-
-## UAT Summary
-
-- Concise user-facing result grounded in the saved summaries and verification
-  artifact.
-- Mention the saved summary paths or filenames that shaped the result.
-
-## Session State
-
-- Resume source: <saved summary path, checkpoint, or none>
-- Current session step: <what is being resumed now>
-- Continuity notes: <what must remain stable between sessions>
-
-## Current Test
-
-- Number: <active test number or testing complete>
-- Name: <active user-observable test name or none>
-- Expected: <what the user should observe>
-- Awaiting: <user response, next checkpoint, or none>
-
-## Test Matrix
-
-| # | Test | Expected Behavior | Evidence | Result | Notes |
-|---|------|-------------------|----------|--------|-------|
-| 1 | <test name> | <observable expected behavior> | `.blueprint/phases/.../XX-YY-SUMMARY.md` | pending|pass|issue|skipped|blocked | <note> |
-
-## Result Summary
-
-- Total: <N>
-- Passed: <N>
-- Issues: <N>
-- Pending: <N>
-- Skipped: <N>
-- Blocked: <N>
-
-## Questions Asked
-
-- Question asked during the UAT pass, or `none`.
-
-## Observed Behavior
-
-- Observed behavior tied to saved summary evidence.
-
-## Unresolved Gaps
-
-- Explicit blocker, follow-up, or `none`.
-
-## Structured Gaps
-
-| Test | Truth | Status | Severity | Reason | Follow-Up |
-|------|-------|--------|----------|--------|-----------|
-| <test number or none> | <expected behavior> | failed|partial|blocked|none | blocker|major|minor|cosmetic|none | <verbatim report or blocked reason> | <repair or confirmation path> |
-
-## Follow-Up Fixes
-
-- Explicit follow-up fix, acceptance note, or `none`.
-- Keep follow-up fixes narrow enough that the parent can ask for confirmation
-  before persisting them.
-
-## Next Safe Action
-
-- `/blu-progress`
-```
-
-Do not rename headings, replace the `**Status:**`, `**Resume State:**`, or
-`**Checkpoint:**` labels, or move summary references out of `## UAT Summary`,
-`## Session State`, and `## Observed Behavior`. The parent-supplied
-`phase.uat` contract currently allows additional top-level headings; keep the
-test matrix, result counts, and structured gaps in those allowed headings when
-the returned contract includes them.
+- prepare queue rows and pending-state scaffold content without inventing
+  observed behavior
+- leave result counts and questions-asked sections for the parent to fill from
+  collected user responses
+- keep follow-up fixes narrow enough that the parent can ask for confirmation
+  before persisting them
+- keep the next safe action aligned with the parent-supplied runtime state
+  instead of defaulting to a hard-coded command
 
 ## Outputs
 
-- verification or UAT findings grounded in saved artifacts
+- verification findings or UAT preparation output grounded in saved artifacts
 - add-tests coverage review findings grounded in saved artifacts, changed tests,
   and targeted command output
 - classified gaps and explicit follow-up notes

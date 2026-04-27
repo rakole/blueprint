@@ -409,11 +409,11 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   );
   assert.match(milestoneSummaryContract.authoringTemplate, /\/blu-new-milestone/);
   assert.match(uatContract.authoringTemplate, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
-  assert.match(uatContract.authoringTemplate, /\*\*Checkpoint:\*\* <saved checkpoint path or none>/);
+  assert.match(uatContract.authoringTemplate, /\*\*Checkpoint:\*\* <current checkpoint label or none>/);
   assert.match(uatContract.authoringTemplate, /## Session State/);
   assert.match(
     uatContract.authoringTemplate,
-    /Resume source: <saved summary path, checkpoint, or none>/
+    /Resume source: <saved summary path, in-artifact checkpoint, or none>/
   );
   assert.match(
     uatContract.authoringTemplate,
@@ -588,7 +588,7 @@ test("canonical lifecycle contracts allow additional top-level headings without 
   const uatValidation = validateUatArtifactContent(uat, [
     ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
   ]);
-  const invalidCheckpointUat = uat.replace("**Checkpoint:** none", "**Checkpoint:** pending");
+  const invalidCheckpointUat = uat.replace("**Checkpoint:** none", "**Checkpoint:**");
   const invalidCheckpointValidation = validateUatArtifactContent(invalidCheckpointUat, [
     ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
   ]);
@@ -599,7 +599,7 @@ test("canonical lifecycle contracts allow additional top-level headings without 
   assert.equal(invalidCheckpointValidation.valid, false, invalidCheckpointValidation.issues.join("\n"));
   assert.match(
     invalidCheckpointValidation.issues.join("\n"),
-    /saved checkpoint path ending in `-DISCUSS-CHECKPOINT\.json` or `none`|`none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT\.json`/
+    /non-empty in-artifact checkpoint label|Checkpoint:\*\* with `none`/
   );
 
   const contradictoryVerification = verification

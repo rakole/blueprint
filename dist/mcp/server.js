@@ -15078,7 +15078,7 @@ function renderUatTemplate(context) {
 
 **Status:** PASS|FAIL|PARTIAL
 **Resume State:** RESUMED|NEW|CONTINUED
-**Checkpoint:** <saved checkpoint path or none>
+**Checkpoint:** <current checkpoint label or none>
 
 ## UAT Summary
 
@@ -15086,7 +15086,7 @@ function renderUatTemplate(context) {
 
 ## Session State
 
-- Resume source: <saved summary path, checkpoint, or none>
+- Resume source: <saved summary path, in-artifact checkpoint, or none>
 - Current session step: <what is being resumed now>
 - Continuity notes: <what must remain stable between sessions>
 
@@ -15095,7 +15095,7 @@ function renderUatTemplate(context) {
 - Number: <active test number or testing complete>
 - Name: <active user-observable test name or none>
 - Expected: <what the user should observe>
-- Awaiting: <user response, next checkpoint, or none>
+- Awaiting: <explicit user response, checkpoint review choice, or none>
 
 ## Test Matrix
 
@@ -15118,7 +15118,7 @@ function renderUatTemplate(context) {
 
 ## Observed Behavior
 
-- Observed behavior tied to saved summary evidence such as \`${summaryFile(context)}\`.
+- User-reported observed behavior tied to saved summary evidence such as \`${summaryFile(context)}\`.
 
 ## Unresolved Gaps
 
@@ -15136,7 +15136,7 @@ function renderUatTemplate(context) {
 
 ## Next Safe Action
 
-- /blu-progress`;
+- <implemented next action such as /blu-verify-work ${phasePrefix(context)} while checkpointed, or /blu-progress when completed>`;
 }
 function renderCodeReviewTemplate(context) {
   return `# ${phaseLabel(context)} - Code Review
@@ -20424,11 +20424,9 @@ function validateUatArtifactContent(content, summaryPaths = []) {
   if (!/^\*\*Resume State:\*\*\s*(RESUMED|NEW|CONTINUED)\s*$/m.test(content)) {
     issues.push("UAT artifact must declare **Resume State:** RESUMED, NEW, or CONTINUED.");
   }
-  if (!/^\*\*Checkpoint:\*\*\s*(?:none|(?:\.blueprint\/phases\/[^\s/]+\/)?[^\s]+-DISCUSS-CHECKPOINT\.json)\s*$/m.test(
-    content
-  )) {
+  if (!/^\*\*Checkpoint:\*\*[^\S\r\n]*(?:none|[^\r\n]*\S[^\r\n]*)[^\S\r\n]*$/m.test(content)) {
     issues.push(
-      "UAT artifact must declare **Checkpoint:** with `none` or a saved checkpoint path ending in `-DISCUSS-CHECKPOINT.json`."
+      "UAT artifact must declare **Checkpoint:** with `none` or a non-empty in-artifact checkpoint label."
     );
   }
   issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
@@ -22787,7 +22785,7 @@ var init_artifacts = __esm({
     UAT_PLACEHOLDER_BODIES = [
       "Concise user-facing result grounded in the saved summaries and verification artifact.",
       "Question asked during the UAT pass, or `none`.",
-      "Observed behavior tied to saved summary evidence such as",
+      "User-reported observed behavior tied to saved summary evidence such as",
       "Explicit blocker, follow-up, or `none`.",
       "Explicit follow-up fix, acceptance note, or `none`.",
       "<active test number or testing complete>",
@@ -26085,8 +26083,6 @@ function checkpointExpectedOwnerFromMode(value) {
       return "/blu-discuss-phase";
     case "research":
       return "/blu-research-phase";
-    case "uat":
-      return "/blu-verify-work";
     default:
       return null;
   }
@@ -28587,14 +28583,12 @@ var init_phase = __esm({
     PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
     PHASE_CHECKPOINT_OWNER_COMMANDS = [
       "/blu-discuss-phase",
-      "/blu-research-phase",
-      "/blu-verify-work"
+      "/blu-research-phase"
     ];
-    PHASE_CHECKPOINT_RESUME_MODES = ["discuss", "research", "uat"];
+    PHASE_CHECKPOINT_RESUME_MODES = ["discuss", "research"];
     PHASE_CHECKPOINT_OWNER_MODES = {
       "/blu-discuss-phase": "discuss",
-      "/blu-research-phase": "research",
-      "/blu-verify-work": "uat"
+      "/blu-research-phase": "research"
     };
     roadmapReadInputSchema = {
       cwd: string2().optional()
