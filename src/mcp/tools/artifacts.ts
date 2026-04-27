@@ -4120,6 +4120,30 @@ export function isVerificationArtifactReadyForUat(content: string): boolean {
   );
 }
 
+type UatArtifactStatus = "PASS" | "FAIL" | "PARTIAL";
+type UatArtifactResumeState = "RESUMED" | "NEW" | "CONTINUED";
+
+export function readUatArtifactState(content: string): {
+  status: UatArtifactStatus | null;
+  resumeState: UatArtifactResumeState | null;
+  checkpoint: string | null;
+  complete: boolean;
+} {
+  const statusMatch = content.match(/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m);
+  const resumeStateMatch = content.match(
+    /^\*\*Resume State:\*\*\s*(RESUMED|NEW|CONTINUED)\s*$/m
+  );
+  const checkpointMatch = content.match(/^\*\*Checkpoint:\*\*[^\S\r\n]*(.+?)[^\S\r\n]*$/m);
+  const checkpoint = checkpointMatch?.[1]?.trim() ?? null;
+
+  return {
+    status: (statusMatch?.[1] ?? null) as UatArtifactStatus | null,
+    resumeState: (resumeStateMatch?.[1] ?? null) as UatArtifactResumeState | null,
+    checkpoint,
+    complete: statusMatch?.[1] === "PASS" && checkpoint?.toLowerCase() === "none"
+  };
+}
+
 const REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings;
 const UAT_PLACEHOLDER_BODIES = [
   "Concise user-facing result grounded in the saved summaries and verification artifact.",
@@ -4152,22 +4176,21 @@ export function validateUatArtifactContent(
 } {
   const issues: string[] = [];
   const warnings: string[] = [];
+  const uatState = readUatArtifactState(content);
 
   if (!/^# .+ - UAT(?:\r?\n|$)/.test(content)) {
     issues.push("UAT artifact must start with a '# ... - UAT' heading.");
   }
 
-  if (!/^\*\*Status:\*\*\s*(PASS|FAIL|PARTIAL)\s*$/m.test(content)) {
+  if (!uatState.status) {
     issues.push("UAT artifact must declare **Status:** PASS, FAIL, or PARTIAL.");
   }
 
-  if (!/^\*\*Resume State:\*\*\s*(RESUMED|NEW|CONTINUED)\s*$/m.test(content)) {
+  if (!uatState.resumeState) {
     issues.push("UAT artifact must declare **Resume State:** RESUMED, NEW, or CONTINUED.");
   }
 
-  if (
-    !/^\*\*Checkpoint:\*\*[^\S\r\n]*(?:none|[^\r\n]*\S[^\r\n]*)[^\S\r\n]*$/m.test(content)
-  ) {
+  if (!uatState.checkpoint || uatState.checkpoint.length === 0) {
     issues.push(
       "UAT artifact must declare **Checkpoint:** with `none` or a non-empty in-artifact checkpoint label."
     );

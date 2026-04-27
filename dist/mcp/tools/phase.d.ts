@@ -374,6 +374,16 @@ type PhaseValidationReadResult = {
     artifact: PhaseValidationArtifactKind;
     path: string | null;
     content: string | null;
+    validation: {
+        valid: boolean;
+        issues: string[];
+        warnings: string[];
+    } | null;
+    verificationReadyForUat: boolean;
+    uatStatus: "PASS" | "FAIL" | "PARTIAL" | null;
+    resumeState: "RESUMED" | "NEW" | "CONTINUED" | null;
+    checkpoint: string | null;
+    complete: boolean;
     summaryPaths: string[];
     reason: string | null;
 };

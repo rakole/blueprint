@@ -20,6 +20,7 @@ import {
   validateResearchArtifactContent,
   extractSummaryPlanReference,
   extractSummaryStatus,
+  readUatArtifactState,
   validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
   validateVerificationArtifactContent,
@@ -482,6 +483,16 @@ type PhaseValidationReadResult = {
   artifact: PhaseValidationArtifactKind;
   path: string | null;
   content: string | null;
+  validation: {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+  } | null;
+  verificationReadyForUat: boolean;
+  uatStatus: "PASS" | "FAIL" | "PARTIAL" | null;
+  resumeState: "RESUMED" | "NEW" | "CONTINUED" | null;
+  checkpoint: string | null;
+  complete: boolean;
   summaryPaths: string[];
   reason: string | null;
 };
@@ -1973,7 +1984,7 @@ async function syncRoadmapPhaseCompletion(
   const validationWarnings: string[] = [];
   let hasValidVerification = false;
   let verificationReadyForUat = false;
-  let hasValidUat = false;
+  let hasCompleteUat = false;
 
   for (const artifact of ["verification", "uat"] as const) {
     const artifactPath = validationArtifactPathFor(resolved, artifact);
@@ -1998,7 +2009,15 @@ async function syncRoadmapPhaseCompletion(
           );
         }
       } else {
-        hasValidUat = true;
+        const uatState = readUatArtifactState(content);
+
+        if (uatState.complete) {
+          hasCompleteUat = true;
+        } else {
+          validationWarnings.push(
+            `${artifactPath}: UAT artifact is valid but remains incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so the phase cannot complete yet.`
+          );
+        }
       }
       continue;
     }
@@ -2015,7 +2034,7 @@ async function syncRoadmapPhaseCompletion(
     summaryPaths.length > 0 &&
     hasValidVerification &&
     verificationReadyForUat &&
-    hasValidUat;
+    hasCompleteUat;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -5164,6 +5183,12 @@ export async function blueprintPhaseValidationRead(
       artifact: args.artifact,
       path: null,
       content: null,
+      validation: null,
+      verificationReadyForUat: false,
+      uatStatus: null,
+      resumeState: null,
+      checkpoint: null,
+      complete: false,
       summaryPaths: [],
       reason: located.reason
     };
@@ -5183,6 +5208,12 @@ export async function blueprintPhaseValidationRead(
       artifact: args.artifact,
       path: artifactPath,
       content: null,
+      validation: null,
+      verificationReadyForUat: false,
+      uatStatus: null,
+      resumeState: null,
+      checkpoint: null,
+      complete: false,
       summaryPaths: [],
       reason: `${artifactPath} does not exist yet.`
     };
@@ -5198,6 +5229,19 @@ export async function blueprintPhaseValidationRead(
     summaryIndex.summaries,
     new Set(summaryIndex.completedPlans)
   );
+  const validation =
+    args.artifact === "verification"
+      ? validateVerificationArtifactContent(content, summaryPaths)
+      : validateUatArtifactContent(content, summaryPaths);
+  const uatState = args.artifact === "uat" ? readUatArtifactState(content) : null;
+  const verificationReadyForUat =
+    args.artifact === "verification" && validation.valid
+      ? isVerificationArtifactReadyForUat(content)
+      : false;
+  const complete =
+    args.artifact === "verification"
+      ? validation.valid && verificationReadyForUat
+      : validation.valid && Boolean(uatState?.complete);
 
   return {
     phaseFound: true,
@@ -5209,6 +5253,12 @@ export async function blueprintPhaseValidationRead(
     artifact: args.artifact,
     path: artifactPath,
     content,
+    validation,
+    verificationReadyForUat,
+    uatStatus: uatState?.status ?? null,
+    resumeState: uatState?.resumeState ?? null,
+    checkpoint: uatState?.checkpoint ?? null,
+    complete,
     summaryPaths,
     reason: null
   };
@@ -5298,6 +5348,17 @@ export async function blueprintPhaseValidationWrite(
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
+    const existingReferencedSummaryPaths = collectReferencedValidatedSummaryPaths(
+      existingContent,
+      summaryIndex.summaries,
+      new Set(summaryIndex.completedPlans)
+    );
+    const existingValidation =
+      args.artifact === "verification"
+        ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths)
+        : validateUatArtifactContent(existingContent, existingReferencedSummaryPaths);
+    const existingUatState = args.artifact === "uat" ? readUatArtifactState(existingContent) : null;
+    const nextUatState = args.artifact === "uat" ? readUatArtifactState(normalizedContent) : null;
 
     if (existingContent === normalizedContent) {
       if (!validation.valid) {
@@ -5338,9 +5399,23 @@ export async function blueprintPhaseValidationWrite(
       };
     }
 
-    if (!(args.overwrite ?? false)) {
+    const resumableUatContinuation =
+      args.artifact === "uat" &&
+      existingValidation.valid &&
+      existingUatState !== null &&
+      !existingUatState.complete &&
+      nextUatState !== null &&
+      nextUatState.resumeState !== "NEW";
+
+    if (!(args.overwrite ?? false) && !resumableUatContinuation) {
       throw new Error(
         `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
+      );
+    }
+
+    if (resumableUatContinuation) {
+      warnings.push(
+        `Continuing the existing incomplete UAT artifact at ${artifactPath} without the replace path because the saved pass remains resumable.`
       );
     }
   }

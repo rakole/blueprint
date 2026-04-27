@@ -600,7 +600,7 @@ Contract notes:
 - Keep all required section names unchanged so `blueprint_phase_validation_write` passes current validation.
 - Treat `**Checkpoint:**` as the current in-artifact checkpoint label rather than a separate checkpoint file path.
 - Reference at least one saved summary path or filename inside `## UAT Summary`, `## Session State`, or `## Observed Behavior`.
-- Fill the richer authoring sections when creating or updating UAT; existing artifacts without those sections remain validation-compatible, but new output should include current test state, the test matrix, result counts, and structured gaps.
+- Fill the richer authoring sections when creating or updating UAT; completion-grade saved UAT should include current test state, the test matrix, result counts, and structured gaps.
 - Preserve user-reported issues and blocked prerequisites as UAT evidence by default. Keep follow-up-fix captures explicit enough that the parent command can ask for confirmation before persistence.
 
 ### `XX-REVIEW-FIX.md`

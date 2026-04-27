@@ -214,7 +214,10 @@ test("verify-work runtime contract locks GSD-grade UAT richness without changing
   assert.match(artifactContracts, /## Test Matrix/);
   assert.match(artifactContracts, /## Result Summary/);
   assert.match(artifactContracts, /## Structured Gaps/);
-  assert.match(artifactContracts, /older UAT artifacts remain validation-compatible/i);
+  assert.match(
+    artifactContracts,
+    /Saved UAT must include the richer current-test, test-matrix, result-summary, and structured-gap sections before it can count as completion evidence/i
+  );
 
   assert.match(schemaDoc, /Richer authoring template sections/i);
   assert.match(schemaDoc, /structured gaps that can feed later explicit follow-up capture/i);

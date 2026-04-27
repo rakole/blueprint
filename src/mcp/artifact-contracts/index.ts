@@ -2301,9 +2301,13 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     requiredHeadings: [
       "UAT Summary",
       "Session State",
+      "Current Test",
+      "Test Matrix",
+      "Result Summary",
       "Questions Asked",
       "Observed Behavior",
       "Unresolved Gaps",
+      "Structured Gaps",
       "Follow-Up Fixes",
       "Next Safe Action"
     ],
@@ -2334,7 +2338,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "UAT artifacts stay resumable across sessions and must reference saved summaries inside UAT Summary, Session State, or Observed Behavior.",
       "Write validation keeps the resume checkpoint and current session state explicit so the artifact can be safely continued after a pause.",
-      "Authoring guidance expects a concrete user-observable test matrix, result counts, blocked-prerequisite separation, and structured gaps even though older UAT artifacts remain validation-compatible."
+      "Saved UAT must include the richer current-test, test-matrix, result-summary, and structured-gap sections before it can count as completion evidence."
     ],
     renderScaffoldTemplate: renderUatTemplate,
     renderAuthoringTemplate: renderUatTemplate

@@ -385,6 +385,28 @@ function validUatContent(summaryFile = "03-01-SUMMARY.md"): string {
 - Current session step: Close the initial UAT pass.
 - Continuity notes: Keep the saved lifecycle evidence stable if the session resumes.
 
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the saved lifecycle evidence stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Lifecycle pilot UAT smoke | Keep the saved lifecycle evidence stable. | .blueprint/phases/03-lifecycle-pilot/${summaryFile} | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
 ## Questions Asked
 
 - Did the saved lifecycle evidence match the observed behavior?
@@ -396,6 +418,12 @@ function validUatContent(summaryFile = "03-01-SUMMARY.md"): string {
 ## Unresolved Gaps
 
 - none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
 
 ## Follow-Up Fixes
 
@@ -556,6 +584,9 @@ test("lifecycle pilot integration tools stay registered and route the phase thro
   assert.deepEqual(verificationRead.summaryPaths, [
     ".blueprint/phases/03-lifecycle-pilot/03-01-SUMMARY.md"
   ]);
+  assert.equal(verificationRead.validation?.valid, true);
+  assert.equal(verificationRead.verificationReadyForUat, true);
+  assert.equal(verificationRead.complete, true);
   assert.match(afterVerificationStatus.nextAction, /\/blu-verify-work 3/);
 
   assert.equal(uatWrite.status, "created");
@@ -566,6 +597,11 @@ test("lifecycle pilot integration tools stay registered and route the phase thro
   assert.deepEqual(uatRead.summaryPaths, [
     ".blueprint/phases/03-lifecycle-pilot/03-01-SUMMARY.md"
   ]);
+  assert.equal(uatRead.validation?.valid, true);
+  assert.equal(uatRead.uatStatus, "PASS");
+  assert.equal(uatRead.resumeState, "NEW");
+  assert.equal(uatRead.checkpoint, "none");
+  assert.equal(uatRead.complete, true);
   assert.match(finalStatus.nextAction, /\/blu-audit-milestone v1/);
   assert.match(roadmapBody, /- \[x\] \*\*Phase 3: Lifecycle Pilot\*\* - Prove lifecycle pilot coherence/);
   assert.match(roadmapBody, /### Phase 3: Lifecycle Pilot[\s\S]*\*\*Status\*\*: completed/);
