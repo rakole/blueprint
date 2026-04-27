@@ -2410,10 +2410,9 @@ test("help progress and health command files reference registered MCP tool names
       file: "commands/blu-code-review.toml",
       tools: [
         "blueprint_phase_locate",
-        "blueprint_config_get",
-        "blueprint_artifact_list",
         "blueprint_artifact_contract_read",
         "blueprint_review_scope",
+        "blueprint_review_load_findings",
         "blueprint_review_record"
       ]
     },

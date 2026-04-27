@@ -28,13 +28,12 @@ test("code-review manifest references the review tools, canonical contract, and 
   );
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
-  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(
     commandFile,
     new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
   );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_scope")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_load_findings")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, /review\.code-review/);
   assert.match(commandFile, /XX-REVIEW\.md/);
@@ -103,9 +102,9 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
 
   assert.match(runtimeContract, /## Required MCP Calls/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
-  assert.match(runtimeContract, /mcp_blueprint_blueprint_config_get/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_review_scope/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_load_findings/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_review_record/);
   assert.match(runtimeContract, /## Depth Semantics/);
   assert.match(runtimeContract, /`quick`/);
