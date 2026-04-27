@@ -48,12 +48,8 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 ## Required Inputs
 
-- `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`
-- `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`
-- `skills/blueprint-phase-validation/references/add-tests-runtime-contract.md`
-- `docs/commands/validate-phase.md`
-- `docs/commands/verify-work.md`
-- `docs/commands/add-tests.md`
+### Shared validation inputs
+
 - `docs/COMMAND-CATALOG.md`
 - `docs/SKILLS-AND-AGENTS.md`
 - `docs/ARTIFACT-SCHEMA.md`
@@ -61,6 +57,23 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - `docs/RUNTIME-REFERENCE.md`
 - `docs/PHASE-LIFECYCLE.md`
 - saved `XX-YY-SUMMARY.md` artifacts for the target phase
+
+### Command-specific inputs
+
+#### `validate-phase`
+
+- `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`
+- `docs/commands/validate-phase.md`
+
+#### `verify-work`
+
+- `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`
+- `docs/commands/verify-work.md`
+
+#### `add-tests`
+
+- `skills/blueprint-phase-validation/references/add-tests-runtime-contract.md`
+- `docs/commands/add-tests.md`
 
 ## Required MCP Tools
 

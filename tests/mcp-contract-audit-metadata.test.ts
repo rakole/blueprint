@@ -425,8 +425,9 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(verifyCommand, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
   assert.match(verifyCommand, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
   assert.match(verifyCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(verifyCommand, /review`, `skip`, or `stop`/i);
-  assert.match(verifyCommand, /\*\*Resume State:\*\*` and `\*\*Checkpoint:\*\*/i);
+  assert.match(verifyCommand, /`review`, `skip`, or `stop`/i);
+  assert.match(verifyCommand, /phase_validation_read` as the typed truth/i);
+  assert.match(verifyCommand, /\.blueprint\/ROADMAP\.md/);
   assert.match(verifyDoc, /## UAT Persistence Contract/);
   assert.match(verifyDoc, /## Shared Runtime Contract/);
   assert.match(verifyDoc, /## In-Flight Progress Contract/);
