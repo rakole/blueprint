@@ -755,7 +755,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Requirement | Task or Check | Evidence | Coverage State | Notes |
 |-------------|---------------|----------|----------------|-------|
-| EXEC-01 | Reconfirm validation evidence and follow-up note | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | DEFERRED | Follow-up note still needs confirmation. |
+| EXEC-01 | Reconfirm validation evidence and follow-up note | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | MANUAL | Follow-up note still needs confirmation. |
 
 ## Evidence Reviewed
 
@@ -773,7 +773,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| Follow-up note confirmation | Requires manual confirmation during UAT | Reconfirm during /blu-verify-work 4 | DEFERRED |
+| Follow-up note confirmation | Requires manual confirmation during UAT | Reconfirm during /blu-verify-work 4 | MANUAL |
 
 ## Gate State
 
@@ -785,7 +785,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| deferred-test | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Repair through /blu-validate-phase 4 |
+| manual-only | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Repair through /blu-validate-phase 4 |
 
 ## Gaps Found
 

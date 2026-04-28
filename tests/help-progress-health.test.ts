@@ -1537,6 +1537,117 @@ test("project status recommends validate-phase once execution summaries exist wi
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
 });
 
+test("project status routes deferred validation test gaps to add-tests instead of looping on validate-phase", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(phaseRoot, "03-01-SUMMARY.md"),
+    `# Phase 03: Phase Discovery - Summary 01
+
+**Plan:** \`03-01-PLAN.md\`
+**Status:** COMPLETED
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed execution in the phase summary.
+
+## Verification
+
+- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+
+## Follow-Ups
+
+- Add backend smoke coverage before validation can pass.
+
+## Evidence
+
+- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-VERIFICATION.md"),
+    `# Phase 03: Phase Discovery - Verification
+
+**Coverage:** Reviewed \`03-01-SUMMARY.md\` for completed execution evidence.
+**Gate State:** PARTIAL
+**Sign-off:** pending
+
+## Validation Summary
+
+- Validation found manual backend checks and one deferred test gap.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Backend smoke behavior | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | DEFERRED | Automated coverage still needs to be generated. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| Backend runtime smoke | Requires the backend process to be running | Start the backend and rerun validation | MANUAL |
+| Backend environment variables | Requires local operator setup | Confirm local env before validation | MANUAL |
+| Backend smoke test | Missing automated regression coverage | Generate focused coverage through /blu-add-tests 3 | DEFERRED |
+
+## Gate State
+
+- Gate: PARTIAL
+- Sign-off: pending
+- Readiness: not ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| manual-only | Backend runtime smoke | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | Start the backend before final validation. |
+| manual-only | Backend environment variables | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | Confirm local environment before final validation. |
+| deferred-test | Backend smoke test | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | Add focused test coverage through /blu-add-tests 3. |
+
+## Gaps Found
+
+- Backend validation has two manual-only gaps and one deferred test gap.
+
+## Suggested Repairs
+
+- Add the deferred backend smoke coverage before rerunning validation.
+
+## Next Safe Action
+
+- Continue with \`/blu-validate-phase 3\` after running the backend.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-add-tests 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-add-tests 3/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
+});
+
 test("project status keeps execute-phase as the next action when completed summaries link to plans with missing dependencies", async (t) => {
   const repoPath = await createExecutionReadyRepo();
   const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");

@@ -23591,6 +23591,8 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
   const warnings = [];
   let hasVerification = false;
   let verificationReadyForUat = false;
+  let verificationNextSafeAction = null;
+  let verificationHasDeferredTestGaps = false;
   let hasUat = false;
   if (summaryPaths.length === 0) {
     warnings.push(
@@ -23599,6 +23601,8 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     return {
       hasVerification: false,
       verificationReadyForUat: false,
+      verificationNextSafeAction: null,
+      verificationHasDeferredTestGaps: false,
       hasUat: false,
       warnings
     };
@@ -23618,6 +23622,9 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
       if (artifact === "verification") {
         hasVerification = true;
         verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+        const routingSignals = readVerificationRoutingSignals(content);
+        verificationNextSafeAction = routingSignals.nextSafeAction;
+        verificationHasDeferredTestGaps = routingSignals.hasDeferredTestGaps;
         if (!verificationReadyForUat) {
           warnings.push(
             `${artifactPath}: verification artifact is valid but does not declare ready for UAT, so it should not route to conversational UAT yet.`
@@ -23641,7 +23648,14 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     warnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
     warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
-  return { hasVerification, verificationReadyForUat, hasUat, warnings };
+  return {
+    hasVerification,
+    verificationReadyForUat,
+    verificationNextSafeAction,
+    verificationHasDeferredTestGaps,
+    hasUat,
+    warnings
+  };
 }
 async function listImmediateDirectories2(rootPath) {
   try {
@@ -23685,6 +23699,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
+      verificationHasDeferredTestGaps: false,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -23733,6 +23749,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
+      verificationHasDeferredTestGaps: false,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -23767,6 +23785,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
+      verificationHasDeferredTestGaps: false,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -23809,6 +23829,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const {
     hasVerification,
     verificationReadyForUat,
+    verificationNextSafeAction,
+    verificationHasDeferredTestGaps,
     hasUat,
     warnings: validationWarnings
   } = await inspectValidatedPhaseValidationArtifacts(
@@ -23890,6 +23912,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     reviewPath,
     reviewNextSafeAction,
     verificationPath,
+    verificationNextSafeAction,
+    verificationHasDeferredTestGaps,
     uatPath,
     planIds,
     summaryIds,
@@ -23938,6 +23962,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
   const missingVerificationPhases = [];
   const missingUatPhases = [];
   const verificationNotReadyPhases = [];
+  const verificationTestGapPhases = [];
   const pendingSummaryCoveragePhases = [];
   const warnings = [];
   for (const phase of phases) {
@@ -23961,6 +23986,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     const {
       hasVerification,
       verificationReadyForUat,
+      verificationHasDeferredTestGaps,
       hasUat,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
@@ -23975,6 +24001,9 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     }
     if (hasVerification && !verificationReadyForUat) {
       verificationNotReadyPhases.push(phase.phaseNumber);
+      if (verificationHasDeferredTestGaps) {
+        verificationTestGapPhases.push(phase.phaseNumber);
+      }
       warnings.push(
         `Phase ${phase.phaseNumber} has verification evidence that is valid but not ready for UAT, so milestone closeout remains blocked until validation is repaired.`
       );
@@ -23987,9 +24016,10 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     missingVerificationPhases,
     missingUatPhases,
     verificationNotReadyPhases,
+    verificationTestGapPhases,
     pendingSummaryCoveragePhases,
-    blockingPhase: missingVerificationPhases[0] ?? verificationNotReadyPhases[0] ?? missingUatPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
-    allCompletedPhasesReady: missingVerificationPhases.length === 0 && verificationNotReadyPhases.length === 0 && missingUatPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
+    blockingPhase: missingVerificationPhases[0] ?? verificationTestGapPhases[0] ?? verificationNotReadyPhases[0] ?? missingUatPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
+    allCompletedPhasesReady: missingVerificationPhases.length === 0 && verificationNotReadyPhases.length === 0 && verificationTestGapPhases.length === 0 && missingUatPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
     warnings
   };
 }
@@ -24026,6 +24056,21 @@ function isNoneLikeReportSignal(line) {
 function extractBlueprintCommand(line) {
   const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
   return match?.[0]?.trim() ?? null;
+}
+function normalizeBlueprintCommandAction(action) {
+  return action.replace(/`/g, "").trim().replace(/[.,;:]+$/, "");
+}
+function readVerificationRoutingSignals(content) {
+  const nextSafeAction = extractMarkdownSectionLines(content, "Next Safe Action").map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+  const gapRows = extractMarkdownTableRows(
+    extractMarkdownSectionLines(content, "Gap Classification").join("\n")
+  );
+  return {
+    nextSafeAction: nextSafeAction ? normalizeBlueprintCommandAction(nextSafeAction) : null,
+    hasDeferredTestGaps: gapRows.some(
+      ([gapClass]) => normalizeReportSignalLine(gapClass ?? "") === "deferred-test"
+    )
+  };
 }
 async function readReviewArtifactNextSafeAction(args) {
   try {
@@ -24152,6 +24197,7 @@ async function deriveNextAction(args) {
   const executePhaseCommand = blueprintDirectCommand("execute-phase");
   const validatePhaseCommand = blueprintDirectCommand("validate-phase");
   const verifyWorkCommand = blueprintDirectCommand("verify-work");
+  const addTestsCommand = blueprintDirectCommand("add-tests");
   const auditMilestoneCommand = blueprintDirectCommand("audit-milestone");
   const planMilestoneGapsCommand = blueprintDirectCommand("plan-milestone-gaps");
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
@@ -24186,8 +24232,17 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasPendingExecution && !args.phaseArtifacts.hasVerification && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.currentPhase} to validate the completed phase execution`;
   }
-  if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.verificationReadyForUat && implementedCommands.has(validatePhaseCommand)) {
-    return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
+  if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.verificationReadyForUat) {
+    const verificationNextCommand = args.phaseArtifacts.verificationNextSafeAction?.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+    if (verificationNextCommand === addTestsCommand && implementedCommands.has(addTestsCommand)) {
+      return `Run ${args.phaseArtifacts.verificationNextSafeAction} to address deferred validation test gaps`;
+    }
+    if (args.phaseArtifacts.verificationHasDeferredTestGaps && implementedCommands.has(addTestsCommand)) {
+      return `Run ${addTestsCommand} ${args.currentPhase} to add tests for deferred validation gaps before rerunning validation`;
+    }
+    if (implementedCommands.has(validatePhaseCommand)) {
+      return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
+    }
   }
   if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && !args.phaseArtifacts.hasUat && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
@@ -24200,6 +24255,9 @@ async function deriveNextAction(args) {
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationTestGapPhases.length > 0 && implementedCommands.has(addTestsCommand)) {
+    return `Run ${addTestsCommand} ${args.milestoneEvidence.verificationTestGapPhases[0]} to add tests for deferred milestone validation gaps before closeout`;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.milestoneEvidence.verificationNotReadyPhases[0]} to repair milestone validation evidence before closeout`;
@@ -24468,6 +24526,7 @@ async function blueprintStateLoad(args = {}) {
         missingVerificationPhases: [],
         missingUatPhases: [],
         verificationNotReadyPhases: [],
+        verificationTestGapPhases: [],
         pendingSummaryCoveragePhases: [],
         blockingPhase: null,
         allCompletedPhasesReady: false,

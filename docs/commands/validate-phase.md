@@ -11,7 +11,7 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `validate-phase` uses the shared long-running-mutation posture: resolve the target phase, read every completed saved execution summary plus any existing verification artifact, decide whether validation can reuse or revise the current artifact, execute bounded verifier analysis, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
-- Keep the saved-summary-first contract explicit throughout the run: execution summaries are the validation baseline, overwrite confirmation is the pending gate when an existing `XX-VERIFICATION.md` would change, and the next safe action stays on `/blu-validate-phase <phase>` until the saved verification artifact is ready for `/blu-verify-work`.
+- Keep the saved-summary-first contract explicit throughout the run: execution summaries are the validation baseline, overwrite confirmation is the pending gate when an existing `XX-VERIFICATION.md` would change, and the next safe action stays on `/blu-validate-phase <phase>` until the saved verification artifact is ready for `/blu-verify-work` unless saved `deferred-test` evidence makes `/blu-add-tests <phase>` the safer gap-closure step.
 - Detailed runtime reference: `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`. Keep the manifest and skill thin, and treat that reference as the canonical source for the State A/B/C model, coverage-map rules, verifier fallback, retry behavior, and final routing details.
 
 ## Purpose
@@ -90,7 +90,7 @@
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
 - `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
 - If `blueprint_phase_validation_write` returns `status: "invalid"`, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs. Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome.
-- Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS` and readiness is ready for UAT. When the saved artifact makes test-generation gaps the main remaining follow-up, route to `/blu-add-tests <phase>` instead of looping back through validation.
+- Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS` and readiness is ready for UAT. When the saved artifact contains explicit test-generation gaps such as `deferred-test`, route to `/blu-add-tests <phase>` instead of looping back through validation, even if manual-only checks still require a later validation pass.
 - Prefer `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` after persistence so `STATE.md` derives the next safe action from the updated artifact inventory without losing the active validation command.
 
 
