@@ -217,6 +217,7 @@ type MilestoneEvidenceStatus = {
   missingUatPhases: string[];
   verificationNotReadyPhases: string[];
   verificationTestGapPhases: string[];
+  verificationRepairActions: Record<string, string>;
   pendingSummaryCoveragePhases: string[];
   blockingPhase: string | null;
   allCompletedPhasesReady: boolean;
@@ -776,13 +777,15 @@ async function inspectValidatedPhaseValidationArtifacts(
         ? validateVerificationArtifactContent(content, summaryPaths)
         : validateUatArtifactContent(content, summaryPaths);
 
+    if (artifact === "verification") {
+      verificationNextSafeAction = extractNextSafeActionCommand(content);
+      verificationHasDeferredTestGaps = hasDeferredTestGap(content);
+    }
+
     if (validation.valid) {
       if (artifact === "verification") {
         hasVerification = true;
         verificationReadyForUat = isVerificationArtifactReadyForUat(content);
-        const routingSignals = readVerificationRoutingSignals(content);
-        verificationNextSafeAction = routingSignals.nextSafeAction;
-        verificationHasDeferredTestGaps = routingSignals.hasDeferredTestGaps;
 
         if (!verificationReadyForUat) {
           warnings.push(
@@ -1191,6 +1194,7 @@ async function inspectMilestoneEvidence(
   const missingUatPhases: string[] = [];
   const verificationNotReadyPhases: string[] = [];
   const verificationTestGapPhases: string[] = [];
+  const verificationRepairActions: Record<string, string> = {};
   const pendingSummaryCoveragePhases: string[] = [];
   const warnings: string[] = [];
 
@@ -1219,6 +1223,7 @@ async function inspectMilestoneEvidence(
       hasVerification,
       verificationReadyForUat,
       verificationHasDeferredTestGaps,
+      verificationNextSafeAction,
       hasUat,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
@@ -1230,18 +1235,26 @@ async function inspectMilestoneEvidence(
 
     warnings.push(...summaryWarnings, ...validationWarnings);
 
+    if (verificationHasDeferredTestGaps) {
+      verificationTestGapPhases.push(phase.phaseNumber);
+    }
+
     if (!hasVerification) {
       missingVerificationPhases.push(phase.phaseNumber);
     }
 
     if (hasVerification && !verificationReadyForUat) {
       verificationNotReadyPhases.push(phase.phaseNumber);
-      if (verificationHasDeferredTestGaps) {
-        verificationTestGapPhases.push(phase.phaseNumber);
-      }
       warnings.push(
         `Phase ${phase.phaseNumber} has verification evidence that is valid but not ready for UAT, so milestone closeout remains blocked until validation is repaired.`
       );
+    }
+
+    if (
+      (verificationHasDeferredTestGaps || (hasVerification && !verificationReadyForUat)) &&
+      verificationNextSafeAction
+    ) {
+      verificationRepairActions[phase.phaseNumber] = verificationNextSafeAction;
     }
 
     if (!hasUat) {
@@ -1254,6 +1267,7 @@ async function inspectMilestoneEvidence(
     missingUatPhases,
     verificationNotReadyPhases,
     verificationTestGapPhases,
+    verificationRepairActions,
     pendingSummaryCoveragePhases,
     blockingPhase:
       missingVerificationPhases[0] ??
@@ -1328,36 +1342,29 @@ function isNoneLikeReportSignal(line: string): boolean {
 }
 
 function extractBlueprintCommand(line: string): string | null {
-  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
 
-  return match?.[0]?.trim() ?? null;
+  return match?.[0]
+    ?.trim()
+    .replace(/[`'").,;:!?]+$/g, "") ?? null;
 }
 
-function normalizeBlueprintCommandAction(action: string): string {
-  return action
-    .replace(/`/g, "")
-    .trim()
-    .replace(/[.,;:]+$/, "");
-}
-
-function readVerificationRoutingSignals(content: string): {
-  nextSafeAction: string | null;
-  hasDeferredTestGaps: boolean;
-} {
-  const nextSafeAction =
+function extractNextSafeActionCommand(content: string): string | null {
+  return (
     extractMarkdownSectionLines(content, "Next Safe Action")
       .map(extractBlueprintCommand)
-      .find((command): command is string => command !== null) ?? null;
+      .find((command): command is string => command !== null) ?? null
+  );
+}
+
+function hasDeferredTestGap(content: string): boolean {
   const gapRows = extractMarkdownTableRows(
     extractMarkdownSectionLines(content, "Gap Classification").join("\n")
   );
 
-  return {
-    nextSafeAction: nextSafeAction ? normalizeBlueprintCommandAction(nextSafeAction) : null,
-    hasDeferredTestGaps: gapRows.some(
-      ([gapClass]) => normalizeReportSignalLine(gapClass ?? "") === "deferred-test"
-    )
-  };
+  return gapRows.some(
+    ([gapClass]) => normalizeReportSignalLine(gapClass ?? "") === "deferred-test"
+  );
 }
 
 async function readReviewArtifactNextSafeAction(args: {
@@ -1372,10 +1379,7 @@ async function readReviewArtifactNextSafeAction(args: {
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
-    const nextSafeAction =
-      extractMarkdownSectionLines(raw, "Next Safe Action")
-        .map(extractBlueprintCommand)
-        .find((command): command is string => command !== null) ?? null;
+    const nextSafeAction = extractNextSafeActionCommand(raw);
 
     if (nextSafeAction) {
       return { nextAction: nextSafeAction, warnings: [] };
@@ -1628,6 +1632,15 @@ async function deriveNextAction(args: {
   if (
     args.phaseArtifacts.hasPlans &&
     !args.phaseArtifacts.hasPendingExecution &&
+    args.phaseArtifacts.verificationHasDeferredTestGaps &&
+    implementedCommands.has(addTestsCommand)
+  ) {
+    return `Run ${addTestsCommand} ${args.currentPhase} to add tests for deferred validation gaps before rerunning validation`;
+  }
+
+  if (
+    args.phaseArtifacts.hasPlans &&
+    !args.phaseArtifacts.hasPendingExecution &&
     !args.phaseArtifacts.hasVerification &&
     implementedCommands.has(validatePhaseCommand)
   ) {
@@ -1642,10 +1655,19 @@ async function deriveNextAction(args: {
       args.phaseArtifacts.verificationNextSafeAction?.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
 
     if (
-      verificationNextCommand === addTestsCommand &&
+      args.phaseArtifacts.verificationHasDeferredTestGaps &&
+      (!verificationNextCommand || verificationNextCommand === validatePhaseCommand) &&
       implementedCommands.has(addTestsCommand)
     ) {
-      return `Run ${args.phaseArtifacts.verificationNextSafeAction} to address deferred validation test gaps`;
+      return `Run ${addTestsCommand} ${args.currentPhase} to add tests for deferred validation gaps before rerunning validation`;
+    }
+
+    if (
+      verificationNextCommand &&
+      args.phaseArtifacts.verificationNextSafeAction &&
+      implementedCommands.has(verificationNextCommand)
+    ) {
+      return args.phaseArtifacts.verificationNextSafeAction;
     }
 
     if (
@@ -1683,16 +1705,16 @@ async function deriveNextAction(args: {
     args.milestoneEvidence.missingVerificationPhases.length > 0 &&
     implementedCommands.has(validatePhaseCommand)
   ) {
-    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;
-  }
+    const phaseNumber = args.milestoneEvidence.missingVerificationPhases[0];
 
-  if (
-    args.allPhasesComplete &&
-    args.milestoneEvidence.missingVerificationPhases.length === 0 &&
-    args.milestoneEvidence.verificationTestGapPhases.length > 0 &&
-    implementedCommands.has(addTestsCommand)
-  ) {
-    return `Run ${addTestsCommand} ${args.milestoneEvidence.verificationTestGapPhases[0]} to add tests for deferred milestone validation gaps before closeout`;
+    if (
+      args.milestoneEvidence.verificationTestGapPhases.includes(phaseNumber) &&
+      implementedCommands.has(addTestsCommand)
+    ) {
+      return `Run ${addTestsCommand} ${phaseNumber} to add tests for deferred milestone validation gaps before closeout`;
+    }
+
+    return `Run ${validatePhaseCommand} ${phaseNumber} to restore missing milestone validation evidence before closeout`;
   }
 
   if (
@@ -1701,7 +1723,30 @@ async function deriveNextAction(args: {
     args.milestoneEvidence.verificationNotReadyPhases.length > 0 &&
     implementedCommands.has(validatePhaseCommand)
   ) {
-    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.verificationNotReadyPhases[0]} to repair milestone validation evidence before closeout`;
+    const phaseNumber = args.milestoneEvidence.verificationNotReadyPhases[0];
+    const verificationRepairAction = args.milestoneEvidence.verificationRepairActions[phaseNumber] ?? null;
+    const verificationRepairCommand =
+      verificationRepairAction?.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+    const hasDeferredTestGap =
+      args.milestoneEvidence.verificationTestGapPhases.includes(phaseNumber);
+
+    if (
+      hasDeferredTestGap &&
+      (!verificationRepairCommand || verificationRepairCommand === validatePhaseCommand) &&
+      implementedCommands.has(addTestsCommand)
+    ) {
+      return `Run ${addTestsCommand} ${phaseNumber} to add tests for deferred milestone validation gaps before closeout`;
+    }
+
+    if (verificationRepairCommand && implementedCommands.has(verificationRepairCommand)) {
+      return verificationRepairAction;
+    }
+
+    if (hasDeferredTestGap && implementedCommands.has(addTestsCommand)) {
+      return `Run ${addTestsCommand} ${phaseNumber} to add tests for deferred milestone validation gaps before closeout`;
+    }
+
+    return `Run ${validatePhaseCommand} ${phaseNumber} to repair milestone validation evidence before closeout`;
   }
 
   if (
@@ -2112,6 +2157,7 @@ export async function blueprintStateLoad(
               missingUatPhases: [],
               verificationNotReadyPhases: [],
               verificationTestGapPhases: [],
+              verificationRepairActions: {},
               pendingSummaryCoveragePhases: [],
               blockingPhase: null,
               allCompletedPhasesReady: false,

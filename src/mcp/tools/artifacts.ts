@@ -3128,6 +3128,7 @@ const VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS: Array<{
   { pattern: /<repair>/i, signal: "<repair>" },
   { pattern: /<name or pending>/i, signal: "<name or pending>" },
   { pattern: /<ready for UAT or not ready>/i, signal: "<ready for UAT or not ready>" },
+  { pattern: /<implemented next action:[^>]+>/i, signal: "<implemented next action>" },
   { pattern: /\bPASS\|PARTIAL\|BLOCKED\b/i, signal: "PASS|PARTIAL|BLOCKED" },
   { pattern: /\bPASS\|MANUAL\|DEFERRED\|BLOCKED\b/i, signal: "PASS|MANUAL|DEFERRED|BLOCKED" },
   { pattern: /\bMANUAL\|DEFERRED\|NONE\b/i, signal: "MANUAL|DEFERRED|NONE" },
@@ -4123,6 +4124,10 @@ const VALID_VERIFICATION_GAP_CLASSES = new Set([
   "contradiction",
   "none"
 ]);
+const VERIFICATION_REPAIR_COMMANDS = new Set([
+  "/blu-add-tests",
+  "/blu-audit-fix"
+]);
 
 function parseVerificationGateState(
   content: string
@@ -4141,6 +4146,42 @@ function parseVerificationGateState(
     gateState: gateState as VerificationGateState | null,
     readinessState: readinessState as VerificationReadinessState | null
   };
+}
+
+function normalizeValidationSignal(value: string): string {
+  return value
+    .trim()
+    .replace(/^[\s>*-]+/, "")
+    .replace(/^\d+\.\s+/, "")
+    .replace(/[`*_]/g, "")
+    .replace(/[.!?;:]+$/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isNoValidationGapSignal(value: string): boolean {
+  const normalized = normalizeValidationSignal(value);
+
+  return (
+    normalized.length === 0 ||
+    normalized === "none" ||
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "not applicable" ||
+    normalized.startsWith("no gaps") ||
+    normalized.startsWith("no blockers") ||
+    normalized.startsWith("no repairs") ||
+    normalized.startsWith("no suggested repairs") ||
+    normalized.startsWith("nothing to repair")
+  );
+}
+
+function hasActionableValidationListSignal(section: string): boolean {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("|"))
+    .some((line) => !isNoValidationGapSignal(line));
 }
 
 export function validateVerificationArtifactContent(
@@ -4227,6 +4268,7 @@ export function validateVerificationArtifactContent(
   }
 
   const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
+  let hasUnresolvedCoverageState = false;
   if (!hasCoverageTableRows(requirementCoverage)) {
     issues.push(
       "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
@@ -4245,6 +4287,9 @@ export function validateVerificationArtifactContent(
       issues.push(
         `Verification artifact section Requirement / Task Coverage uses an unsupported coverage state: ${cells[3] ?? ""}.`
       );
+    }
+    if (coverageState === "DEFERRED" || coverageState === "BLOCKED") {
+      hasUnresolvedCoverageState = true;
     }
   }
 
@@ -4265,6 +4310,7 @@ export function validateVerificationArtifactContent(
   }
 
   const manualCoverage = extractMarkdownSection(content, "Manual-Only or Deferred Coverage");
+  let hasUnresolvedManualCoverage = false;
   for (const cells of extractMarkdownTableDataRows(manualCoverage)) {
     if (cells.length < 4) {
       issues.push(
@@ -4279,10 +4325,14 @@ export function validateVerificationArtifactContent(
         `Verification artifact section Manual-Only or Deferred Coverage uses an unsupported status: ${cells[3] ?? ""}.`
       );
     }
+    if (status === "DEFERRED") {
+      hasUnresolvedManualCoverage = true;
+    }
   }
 
   const gapClassification = extractMarkdownSection(content, "Gap Classification");
   const gapRows = extractMarkdownTableDataRows(gapClassification);
+  let hasActionableGapClass = false;
   if (gapRows.length === 0) {
     issues.push(
       "Verification artifact section Gap Classification must include at least one populated gap row."
@@ -4302,11 +4352,32 @@ export function validateVerificationArtifactContent(
         `Verification artifact section Gap Classification uses an unsupported gap class: ${cells[0] ?? ""}.`
       );
     }
+    if (VALID_VERIFICATION_GAP_CLASSES.has(gapClass) && gapClass !== "none") {
+      hasActionableGapClass = true;
+    }
   }
 
+  const gapsFound = extractMarkdownSection(content, "Gaps Found");
+  const suggestedRepairs = extractMarkdownSection(content, "Suggested Repairs");
+  const hasActionableGapsFound = hasActionableValidationListSignal(gapsFound);
+  const hasActionableRepairs = hasActionableValidationListSignal(suggestedRepairs);
+  const hasUnresolvedValidationGap =
+    hasUnresolvedCoverageState ||
+    hasUnresolvedManualCoverage ||
+    hasActionableGapClass ||
+    hasActionableGapsFound ||
+    hasActionableRepairs;
   const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
   const nextActionCommands = extractBlueprintCommands(nextSafeAction);
   const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
+  const routesToRepairCommand = nextActionCommands.some((command) =>
+    VERIFICATION_REPAIR_COMMANDS.has(command.toLowerCase())
+  );
+  if (gateState === "PASS" && hasUnresolvedValidationGap) {
+    issues.push(
+      "Verification artifact must not declare PASS while unresolved coverage, gap, or repair signals remain. Use PARTIAL or BLOCKED and route to /blu-audit-fix or /blu-add-tests as appropriate."
+    );
+  }
   if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToVerifyWork) {
     issues.push(
       "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
@@ -4318,6 +4389,14 @@ export function validateVerificationArtifactContent(
   ) {
     issues.push(
       "Verification artifact must not route PARTIAL or BLOCKED validation to /blu-verify-work under ## Next Safe Action."
+    );
+  }
+  if (
+    (gateState === "PARTIAL" || gateState === "BLOCKED" || readinessState === "not ready for UAT") &&
+    !routesToRepairCommand
+  ) {
+    issues.push(
+      "Verification artifact must route PARTIAL or BLOCKED validation to /blu-audit-fix or /blu-add-tests under ## Next Safe Action."
     );
   }
 

@@ -73,8 +73,9 @@ informational and do not imply automated gap closure happened.
 
 `/blu-validate-phase` remains advisory and artifact-focused. It must not mutate
 implementation files or create tests. Route test-generation gaps to
-`/blu-add-tests <phase>` only when that command is implemented and the saved
-artifact makes the need explicit.
+`/blu-add-tests <phase>` and implementation or behavior gaps to `/blu-audit-fix
+<phase>` only when those commands are implemented and the saved artifact makes
+the need explicit.
 
 ## Artifact Authoring Rules
 
@@ -95,7 +96,11 @@ artifact makes the need explicit.
 9. Keep top `**Gate State:**` aligned with the `## Gate State` section:
    `PASS` means `ready for UAT`; `PARTIAL` or `BLOCKED` means
    `not ready for UAT`.
-10. Self-check the final markdown against the returned contract before calling
+10. Do not declare `PASS` while unresolved coverage, gap, or repair signals
+    remain. Use `PARTIAL` or `BLOCKED` and route to `/blu-audit-fix <phase>`
+    for implementation/behavior gaps or `/blu-add-tests <phase>` for
+    test-generation gaps.
+11. Self-check the final markdown against the returned contract before calling
     `blueprint_phase_validation_write`.
 
 ## Capability-Gated Subagent Path
@@ -115,8 +120,8 @@ Pass the verifier:
   verification draft
 
 The verifier must remain read-only. It may recommend `/blu-add-tests <phase>`
-for explicit test gaps, but it must not create or modify test files during
-`/blu-validate-phase`.
+for explicit test gaps or `/blu-audit-fix <phase>` for implementation/behavior
+gaps, but it must not create or modify files during `/blu-validate-phase`.
 
 Do not substitute browser, web-search-only, shell-only, or generic agents for
 `blueprint-verifier`. If the suitable verifier is unavailable, use the
@@ -155,6 +160,10 @@ This fallback must preserve the same output quality bar as the subagent path.
 - If summaries are contradictory or missing required evidence, write a
   `BLOCKED` verification only when completed summaries exist and the artifact
   can cite the blocker. Otherwise stop without writing.
+- If the draft claims `PASS` while the coverage table, gap classification,
+  `## Gaps Found`, or `## Suggested Repairs` still contains unresolved work,
+  repair the gate to `PARTIAL` or `BLOCKED` and route to `/blu-audit-fix
+  <phase>` or `/blu-add-tests <phase>` before retrying the MCP write.
 - Never claim persistence from a tool call unless `written` is `true` or the
   returned `status` explicitly says `reused`.
 

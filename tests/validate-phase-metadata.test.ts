@@ -55,6 +55,7 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /artifactId: "phase\.verification"/);
   assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(commandFile, /explicit test-generation gaps[\s\S]*\/blu-add-tests <phase>/i);
+  assert.match(commandFile, /implementation\/behavior gaps[\s\S]*\/blu-audit-fix <phase>/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /saved-summary-first/i);
@@ -108,7 +109,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(skillFile, /saved-summary-first, phase-scoped, and MCP-owned/i);
   assert.match(skillFile, /Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome/i);
   assert.match(skillFile, /patch\.activeCommand: "\/blu-validate-phase"/);
-  assert.match(skillFile, /Route explicit test-generation gaps to `\/blu-add-tests <phase>` only when the saved artifact makes that follow-up necessary/i);
+  assert.match(skillFile, /Route explicit test-generation gaps to `\/blu-add-tests <phase>` and implementation\/behavior gaps to `\/blu-audit-fix <phase>`/i);
   assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
   assert.match(docFile, /## Shared Runtime Contract/);
   assert.match(docFile, /## In-Flight Progress Contract/);
@@ -123,6 +124,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(docFile, /no-subagent fallback/i);
   assert.match(docFile, /retry once/i);
   assert.match(docFile, /test-generation gaps.*\/blu-add-tests <phase>/i);
+  assert.match(docFile, /implementation or behavior gaps.*\/blu-audit-fix <phase>/i);
   assert.match(docFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(
     runtimeReference,

@@ -535,6 +535,76 @@ Exercise validation artifact routing.
   return repoPath;
 }
 
+function buildVerificationArtifact(options: {
+  gate: "PASS" | "PARTIAL" | "BLOCKED";
+  readiness: "ready for UAT" | "not ready for UAT";
+  coverageState: "PASS" | "MANUAL" | "DEFERRED" | "BLOCKED";
+  gapClass: "missing-evidence" | "partial-coverage" | "manual-only" | "deferred-test" | "contradiction" | "none";
+  gapsFound: string;
+  suggestedRepairs: string;
+  nextSafeAction: string;
+  signOff?: string;
+}): string {
+  return `# Phase 04: Validation - Verification
+
+**Coverage:** Reviewed \`04-01-SUMMARY.md\` and \`04-02-SUMMARY.md\` for completed validation evidence.
+**Gate State:** ${options.gate}
+**Sign-off:** ${options.signOff ?? "validation lead"}
+
+## Validation Summary
+
+- Validation result is grounded in saved execution summaries.
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| EXEC-01 | Confirm validation evidence exists | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | ${options.coverageState} | Execution summaries back this validation row. |
+
+## Evidence Reviewed
+
+- .blueprint/phases/04-phase-validation/04-01-SUMMARY.md
+- .blueprint/phases/04-phase-validation/04-02-SUMMARY.md
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: ${options.gate}
+- Sign-off: ${options.signOff ?? "validation lead"}
+- Readiness: ${options.readiness}
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| ${options.gapClass} | validation routing | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | ${options.suggestedRepairs} |
+
+## Gaps Found
+
+- ${options.gapsFound}
+
+## Suggested Repairs
+
+- ${options.suggestedRepairs}
+
+## Next Safe Action
+
+- ${options.nextSafeAction}
+`;
+}
+
 test("phase validation docs and catalog metadata promote validate-phase and verify-work to implemented", async () => {
   const [catalogMarkdown, skillsMarkdown] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
@@ -785,7 +855,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| manual-only | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Repair through /blu-validate-phase 4 |
+| deferred-test | Follow-up note confirmation | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Repair through /blu-add-tests 4 |
 
 ## Gaps Found
 
@@ -793,11 +863,11 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 ## Suggested Repairs
 
-- Repair the verification evidence through \`/blu-validate-phase 4\`.
+- Repair the verification evidence through \`/blu-add-tests 4\`.
 
 ## Next Safe Action
 
-- Continue with \`/blu-validate-phase 4\`.
+- Continue with \`/blu-add-tests 4\`.
 `,
     overwrite: true
   });
@@ -984,8 +1054,8 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.match(verificationRead.content ?? "", /Gate State/);
   assert.equal(verificationReused.status, "reused");
   assert.equal(verificationUpdated.status, "updated");
-  assert.match(beforeUatStatus.nextAction, /\/blu-validate-phase 4/);
-  assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-validate-phase 4/);
+  assert.match(beforeUatStatus.nextAction, /\/blu-add-tests 4/);
+  assert.match(beforeUatState.derivedStatus.nextAction, /\/blu-add-tests 4/);
   assert.equal(invalidUat.status, "invalid");
   assert.match(invalidUat.issues.join("\n"), /\*\*Status:\*\*/);
   assert.match(invalidUat.issues.join("\n"), /Resume State/);
@@ -1083,6 +1153,65 @@ test("validation phase artifacts can be written, read, and discovered alongside 
   assert.match(roadmapBody, /### Phase 4: Validation[\s\S]*\*\*Status\*\*: completed/);
   assert.match(afterUatStatus.nextAction, /\/blu-audit-milestone v2/);
   assert.match(afterUatState.derivedStatus.nextAction, /\/blu-audit-milestone v2/);
+});
+
+test("validation write rejects PASS verification when unresolved gaps remain", async (t) => {
+  const repoPath = await createValidationRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidPass = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "verification",
+    content: buildVerificationArtifact({
+      gate: "PASS",
+      readiness: "ready for UAT",
+      coverageState: "DEFERRED",
+      gapClass: "deferred-test",
+      gapsFound: "A deferred test gap still needs closure before UAT.",
+      suggestedRepairs: "Run /blu-add-tests 4 to add the missing regression coverage.",
+      nextSafeAction: "Continue with `/blu-verify-work 4`."
+    }),
+    overwrite: true
+  });
+
+  assert.equal(invalidPass.status, "invalid");
+  assert.equal(invalidPass.written, false);
+  assert.match(invalidPass.issues.join("\n"), /must not declare PASS/i);
+  assert.match(invalidPass.issues.join("\n"), /\/blu-audit-fix or \/blu-add-tests/);
+});
+
+test("project status follows non-ready verification repair routes to audit-fix", async (t) => {
+  const repoPath = await createValidationRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const verificationCreated = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "4",
+    artifact: "verification",
+    content: buildVerificationArtifact({
+      gate: "PARTIAL",
+      readiness: "not ready for UAT",
+      coverageState: "BLOCKED",
+      gapClass: "partial-coverage",
+      gapsFound: "The saved execution summary exposes a repairable behavior gap.",
+      suggestedRepairs: "Run /blu-audit-fix 4 to repair the implementation gap.",
+      nextSafeAction: "Run `/blu-audit-fix 4`."
+    }),
+    overwrite: true
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(verificationCreated.status, "created");
+  assert.match(status.nextAction, /\/blu-audit-fix 4/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-audit-fix 4/);
+  assert.doesNotMatch(status.nextAction, /\/blu-verify-work 4/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-verify-work 4/);
 });
 
 test("verify-work refuses to persist UAT when the verification artifact is invalid", async (t) => {
@@ -1225,7 +1354,7 @@ test("verify-work refuses to persist UAT when the verification artifact is valid
     .replace("- Gate: PASS", "- Gate: PARTIAL")
     .replace("- Readiness: ready for UAT", "- Readiness: not ready for UAT")
     .replace("- The validated feature set is ready for UAT.", "- The validated feature set needs a final repair pass before UAT.")
-    .replace("- Continue with `/blu-verify-work 4`.", "- Continue with `/blu-validate-phase 4`.");
+    .replace("- Continue with `/blu-verify-work 4`.", "- Continue with `/blu-audit-fix 4`.");
 
   await blueprintPhaseValidationWrite({
     cwd: repoPath,

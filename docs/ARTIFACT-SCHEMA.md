@@ -479,7 +479,8 @@ Validation expectations:
 - should describe gaps and pass signals explicitly rather than only restating artifact content
 - should keep the locked markers `**Coverage:**`, `**Gate State:**`, and `**Sign-off:**` exactly as written
 - should keep the full heading set above so the persisted artifact matches the runtime validator and authoring template
-- should only route the next safe action to `/blu-verify-work` when the saved gate state is `PASS` and the artifact says readiness is ready for UAT; otherwise keep the next safe action on `/blu-progress` or the equivalent implemented fallback
+- should only route the next safe action to `/blu-verify-work` when the saved gate state is `PASS`, readiness is ready for UAT, and no unresolved gap or repair signals remain
+- should keep non-ready validation truthful as `PARTIAL` or `BLOCKED` and route repairable test gaps to `/blu-add-tests <phase>` or implementation/behavior gaps to `/blu-audit-fix <phase>`
 - should be resumable by the next `validate-phase` run if the artifact already exists
 
 ### `XX-UAT.md`
