@@ -626,6 +626,142 @@ test("validation authoring context and render produce write-ready VERIFICATION c
   assert.equal(written.status, "created", JSON.stringify(written, null, 2));
 });
 
+test("validation write accepts a structured VERIFICATION model and rejects invalid model usage", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const { artifact: _artifact, phase: _phase, ...model } = verificationRenderInput(
+    [summaryPath],
+    {
+      evidenceReviewedSummaryPaths: [summaryPath]
+    }
+  );
+  const written = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model
+  });
+  const savedContent = await readFile(path.join(repoPath, written.path), "utf8");
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.match(savedContent, /## Requirement \/ Task Coverage/);
+  assert.match(savedContent, /## Evidence Reviewed/);
+  assert.match(savedContent, /## Gap Classification/);
+  assert.equal(
+    savedContent.includes("03-01-SUMMARY.md"),
+    true,
+    "rendered model should preserve saved summary evidence"
+  );
+
+  const bothContentAndModel = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: savedContent,
+    model
+  });
+  const leakedExample = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      validationSummary: [
+        "Completed summary 03-01 shows implementation, verification command, and saved evidence for the phase objective."
+      ]
+    },
+    overwrite: true
+  });
+  const modelWithIdentity = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      phase: "4"
+    },
+    overwrite: true
+  });
+  const {
+    evidenceReviewedSummaryPaths: _evidenceReviewedSummaryPaths,
+    ...missingLedgerModel
+  } = model;
+  const modelMissingRequiredLedger = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: missingLedgerModel,
+    overwrite: true
+  });
+  const modelWithBlankCoverageRow = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      requirementCoverage: [{}]
+    },
+    overwrite: true
+  });
+  const uatModelWithBlankNestedObjects = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      status: "PASS",
+      resumeState: "NEW",
+      checkpoint: "none",
+      uatSummary: [`User acceptance passed for ${summaryPath}.`],
+      sessionState: [`Resume source: ${summaryPath}`],
+      currentTest: {},
+      testMatrix: [{}],
+      resultSummary: {},
+      questionsAsked: [],
+      observedBehavior: [`Observed behavior matched ${summaryPath}.`],
+      unresolvedGaps: ["none"],
+      structuredGaps: [
+        {
+          test: "none",
+          truth: "none",
+          status: "none",
+          severity: "none",
+          reason: "none",
+          followUp: "none"
+        }
+      ],
+      followUpFixes: ["none"],
+      nextSafeAction: "/blu-progress"
+    },
+    overwrite: true
+  });
+
+  assert.equal(bothContentAndModel.status, "invalid");
+  assert.match(bothContentAndModel.issues.join("\n"), /exactly one of content or model/);
+  assert.equal(leakedExample.status, "invalid");
+  assert.match(leakedExample.issues.join("\n"), /copied example leakage signal/);
+  assert.equal(modelWithIdentity.status, "invalid");
+  assert.match(modelWithIdentity.issues.join("\n"), /MCP-owned identity keys: phase/);
+  assert.equal(modelMissingRequiredLedger.status, "invalid");
+  assert.match(
+    modelMissingRequiredLedger.issues.join("\n"),
+    /missing required fields: evidenceReviewedSummaryPaths/
+  );
+  assert.equal(modelWithBlankCoverageRow.status, "invalid");
+  assert.match(
+    modelWithBlankCoverageRow.issues.join("\n"),
+    /requirementCoverage\.0\.requirement/
+  );
+  assert.equal(uatModelWithBlankNestedObjects.status, "invalid");
+  assert.match(
+    uatModelWithBlankNestedObjects.issues.join("\n"),
+    /currentTest\.number/
+  );
+});
+
 test("validation render rejects VERIFICATION summary, placeholder, enum, gap, and route mistakes before write", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {

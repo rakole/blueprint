@@ -17,7 +17,7 @@
 ## Purpose
 
 
-`validate-phase` is Blueprint's command for auditing completed phase execution and persisting durable, summary-backed verification evidence in `XX-VERIFICATION.md`. It is implemented as a host-native validation contract: it reads saved execution summaries first (not chat memory), renders canonical verification markdown from structured evidence, persists the artifact through validation MCP tools, and keeps `verify-work` as the next safe implemented step when validation succeeds. Nyquist-style test-gap closure is handled separately via `/blu-add-tests`.
+`validate-phase` is Blueprint's command for auditing completed phase execution and persisting durable, summary-backed verification evidence in `XX-VERIFICATION.md`. It is implemented as a host-native validation contract: it reads saved execution summaries first (not chat memory), renders canonical verification markdown from structured evidence or persists that structured model directly through the writer, and keeps `verify-work` as the next safe implemented step when validation succeeds. Nyquist-style test-gap closure is handled separately via `/blu-add-tests`.
 
 
 ## Command Path And Examples
@@ -56,7 +56,7 @@
 - execution summaries through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation artifacts through `blueprint_phase_validation_read`
 - render-ready validation authoring inputs through `blueprint_phase_validation_authoring_context`
-- canonical authoring templates and required-tool derivation through `blueprint_artifact_contract_read`
+- canonical authoring templates, optional structured `modelContract`, and required-tool derivation through `blueprint_artifact_contract_read`
 
 
 ## Blueprint And Global State Writes
@@ -76,7 +76,7 @@
 - `blueprint_phase_validation_authoring_context` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, contract, summaryPaths, summaryEvidence, existing, verification, prerequisiteBlockers, readyForDraft, allowedValues, routingRules, warnings, reason}`
 - `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
-- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
+- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, modelContract?, notes}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
@@ -85,11 +85,12 @@
 ## Validation Persistence Contract
 
 - Persist verification evidence through `blueprint_phase_validation_write`; do not write raw validation files directly.
+- `blueprint_phase_validation_write` accepts exactly one of canonical Markdown `content` or a structured `model`. The structured model path rejects prompt-owned identity keys, copied minimal-example phrases, missing required ledgers, unsupported fields, and invalid field types before MCP renders canonical Markdown and runs the same summary-aware validators.
 - Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
 - Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
 - Read `blueprint_phase_validation_authoring_context` before final authoring so the mandatory completed-summary citations, allowed values, routing rules, existing baseline, and prerequisite blockers are explicit.
-- Build a structured verification evidence payload, call `blueprint_phase_validation_render`, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing the returned `content` unchanged.
+- Build a structured verification evidence payload, call `blueprint_phase_validation_render` for the pre-write self-check, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing either the returned `content` unchanged or the same structured `model`.
 - Keep the locked markers and required section names unchanged, cite every completed saved summary under `## Evidence Reviewed`, and treat `blueprint_phase_validation_render.validation` as the pre-write self-check result.
 - Build the concrete requirement/task coverage map, verifier behavior, no-subagent fallback, and retry path from the detailed runtime reference instead of duplicating that step-by-step contract in this doc.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.

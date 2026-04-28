@@ -113,7 +113,8 @@ Before writing tests:
    report write status, remaining gaps, and next safe action.
 7. Build the verification update as a structured payload and call
    `blueprint_phase_validation_render`; call `blueprint_phase_validation_write`
-   only when `readyToWrite: true`, passing the returned `content` unchanged.
+   only when `readyToWrite: true`, passing exactly one of the returned `content`
+   or the same structured `model`.
 8. Self-check the durable report against its returned contract before writing.
 
 ## Capability-Gated Subagent Path

@@ -98,10 +98,10 @@
 
 ## Validation And Report Contract
 
-- Update verification coverage through `blueprint_phase_validation_render` followed by `blueprint_phase_validation_write` with `artifact: "verification"` and the rendered `content`; do not edit `XX-VERIFICATION.md` directly.
+- Update verification coverage through `blueprint_phase_validation_render` followed by `blueprint_phase_validation_write` with `artifact: "verification"` and exactly one of rendered `content` or the same structured `model`; do not edit `XX-VERIFICATION.md` directly.
 - Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths`, `written`, and `status` as authoritative instead of rebuilding filenames or summary links manually.
 - Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final verification authoring.
-- Build a structured verification evidence payload, call `blueprint_phase_validation_render`, keep the locked markers and required section names unchanged, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing the returned `content` unchanged.
+- Build a structured verification evidence payload, call `blueprint_phase_validation_render`, keep the locked markers and required section names unchanged, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing exactly one of the returned `content` unchanged or the same structured `model`.
 - Keep the reported verification status aligned with the returned `written` and `status` fields instead of claiming a save from command progress alone.
 - Read the canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` before final report authoring.
 - Normalize the durable report to the returned `authoringTemplate` and include the approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification write status, report write status, remaining gaps, and next safe action.
@@ -177,7 +177,7 @@
 - Keeps repo mutation scoped to the selected tests and any minimal supporting helpers.
 - Keeps test-generation stages, pending gates, targeted test results, verification status, report status, and the next safe action explicit while add-tests is in flight.
 - Persists updated verification notes through `blueprint_phase_validation_write` rather than direct file edits.
-- Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so updated verification notes are rendered canonically before the writer runs.
+- Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so updated verification notes are rendered canonically or passed as the same ready structured model before the writer runs.
 - Persists the durable report through `blueprint_artifact_report_write` after normalizing it to the `report.add-tests` authoring template.
 - Reports verification and report persistence outcomes from MCP return values instead of assuming they succeeded.
 - Distinguishes passing tests, implementation bugs, test-authoring errors, and blocked checks in the final report.

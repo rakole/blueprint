@@ -476,6 +476,7 @@ Minimum expected structure:
 
 Validation expectations:
 - must be grounded in the saved execution summaries for the phase
+- may be authored as a structured `blueprint.phase.verification.model` payload; MCP owns phase identity, path derivation, canonical Markdown rendering, example-leakage rejection, and the final Markdown validation pass
 - should describe gaps and pass signals explicitly rather than only restating artifact content
 - should keep the locked markers `**Coverage:**`, `**Gate State:**`, and `**Sign-off:**` exactly as written
 - should keep the full heading set above so the persisted artifact matches the runtime validator and authoring template
@@ -507,6 +508,7 @@ Richer authoring template sections:
 
 UAT expectations:
 - must be grounded in the saved execution summaries for the phase
+- may be authored as a structured `blueprint.phase.uat.model` payload; MCP owns phase identity, path derivation, canonical Markdown rendering, example-leakage rejection, and the final Markdown validation pass
 - should preserve resumable conversational state rather than acting like a one-shot transcript
 - should keep resumability inside `XX-UAT.md` itself rather than inventing a separate checkpoint file for `/blu-verify-work`
 - should preserve a concrete user-observable test queue with expected behavior, saved evidence, result state, and notes

@@ -108,7 +108,7 @@
 - UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact that is valid and ready for UAT.
 - Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final authoring.
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
-- Build a structured UAT evidence payload, call `blueprint_phase_validation_render`, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing the returned `content` unchanged.
+- Build a structured UAT evidence payload, call `blueprint_phase_validation_render`, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing exactly one of the returned `content` unchanged or the same structured `model`.
 - Treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume inside `XX-UAT.md` without inventing a second checkpoint file.
 - New or updated UAT artifacts must preserve the current test, test matrix, result counts, blocked prerequisites, structured gaps, and follow-up fix candidates from the canonical authoring template before the artifact can count as completion evidence.
@@ -121,7 +121,7 @@
 
 ## Canonical UAT Contract
 
-Before persistence, render the final `XX-UAT.md` body through `blueprint_phase_validation_render` from a structured UAT payload grounded in the returned `phase.uat` contract.
+Before persistence, render the final `XX-UAT.md` body through `blueprint_phase_validation_render` from a structured UAT payload grounded in the returned `phase.uat` contract. Persist either the returned `content` or the same structured `model`, never both.
 
 - Do not rename the contract's required headings or replace the locked `**Status:**`, `**Resume State:**`, or `**Checkpoint:**` markers.
 - Keep summary references inside the contract-defined summary-aware sections so `blueprint_phase_validation_render` and `blueprint_phase_validation_write` validation pass cleanly.
@@ -198,7 +198,7 @@ Before persistence, render the final `XX-UAT.md` body through `blueprint_phase_v
 - Creates or updates only the declared artifacts for this command.
 - Uses execution summaries as the source of truth for conversational UAT coverage.
 - Persists UAT evidence through `blueprint_phase_validation_write` rather than direct file writes.
-- Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so the writer receives canonical rendered content rather than prompt-built Markdown.
+- Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so the writer receives canonical rendered content or the same ready structured model rather than prompt-built Markdown.
 - Marks the matching `ROADMAP.md` phase complete only after summary, verification, and UAT evidence all exist.
 - Keeps `XX-UAT.md` resumable and explicit about unresolved gaps or follow-up captures.
 - Produces a concrete user-observable test matrix with expected behavior, saved evidence, result counts, blocked-prerequisite separation, and structured gaps.
