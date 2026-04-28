@@ -280,10 +280,10 @@ export declare const workspaceToolDefinitions: ({
                 reapply: "reapply";
             }>>;
             outcome: z.ZodOptional<z.ZodEnum<{
+                blocked: "blocked";
                 recorded: "recorded";
                 applied: "applied";
                 conflict: "conflict";
-                blocked: "blocked";
             }>>;
             conflicts: z.ZodOptional<z.ZodArray<z.ZodString>>;
             warnings: z.ZodOptional<z.ZodArray<z.ZodString>>;

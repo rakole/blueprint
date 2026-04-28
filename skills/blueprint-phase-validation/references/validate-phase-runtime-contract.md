@@ -18,7 +18,7 @@ mapping and retry behavior instead of restating the full flow.
 | Read | Gather saved execution evidence and current validation baseline. | Summary index, every completed summary body, existing verification content, effective config, artifact health, and current state. |
 | Decide | Classify input state and select reuse, revise, or stop behavior. | State A/B/C, overwrite gate, verifier and Nyquist config, missing evidence, and next safe action. |
 | Execute | Run bounded validation analysis over saved evidence. | Requirement/task coverage map, test infrastructure metadata, gap classifications, and verifier result. |
-| Persist | Normalize and write only the canonical verification artifact. | `phase.verification` authoring template, self-check result, and `blueprint_phase_validation_write` response. |
+| Persist | Render and write only the canonical verification artifact. | `phase.verification` authoring context, structured render result, and `blueprint_phase_validation_write` response. |
 | Validate | Re-validate persisted Blueprint artifacts and repair if needed. | `blueprint_artifact_validate.valid`, write status, issues, warnings, and suggested repairs. |
 | Route | Update state and report the next implemented action. | `blueprint_state_update` plus saved gate state and readiness. |
 
@@ -37,6 +37,8 @@ the authority for control flow.
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
 | `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, and authoring-template authority. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, and routing rules. |
+| `blueprint_phase_validation_render` with `artifact: "verification"` | Canonical markdown rendering and pre-write validation from the structured verification payload. |
 | `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`. |
 | `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` | Final state sync, active-command capture, and next-action derivation. |
 
@@ -81,27 +83,28 @@ the need explicit.
 
 1. Read `phase.verification` with `blueprint_artifact_contract_read` before
    drafting final content.
-2. Treat `contract.authoringTemplate`, `requiredHeadings`, `lockedMarkers`, and
+2. Read `blueprint_phase_validation_authoring_context` before rendering so every mandatory summary citation, prerequisite blocker, allowed value, and routing rule is in the authoring packet.
+3. Treat `contract.authoringTemplate`, `requiredHeadings`, `lockedMarkers`, and
    `freehandPolicy` as schema authority.
-3. Preserve all locked markers exactly, including `**Coverage:**`,
+4. Preserve all locked markers exactly, including `**Coverage:**`,
    `**Gate State:**`, and `**Sign-off:**`.
-4. Fill every required section with concrete evidence. Do not leave scaffold
+5. Fill every required section with concrete evidence. Do not leave scaffold
    placeholders or generic "none" rows where gaps exist.
-5. Keep every completed saved summary path or filename under `## Evidence Reviewed`.
-6. Put requirement/task coverage under `## Requirement / Task Coverage`.
-7. Put harness, command, evidence source, and confidence notes under
+6. Keep every completed saved summary path or filename under `## Evidence Reviewed`.
+7. Put requirement/task coverage under `## Requirement / Task Coverage`.
+8. Put harness, command, evidence source, and confidence notes under
    `## Test Infrastructure / Evidence Metadata`.
-8. Put manual-only and deferred coverage under
+9. Put manual-only and deferred coverage under
    `## Manual-Only or Deferred Coverage`.
-9. Keep top `**Gate State:**` aligned with the `## Gate State` section:
+10. Keep top `**Gate State:**` aligned with the `## Gate State` section:
    `PASS` means `ready for UAT`; `PARTIAL` or `BLOCKED` means
    `not ready for UAT`.
-10. Do not declare `PASS` while unresolved coverage, gap, or repair signals
+11. Do not declare `PASS` while unresolved coverage, gap, or repair signals
     remain. Use `PARTIAL` or `BLOCKED` and route to `/blu-audit-fix <phase>`
     for implementation/behavior gaps or `/blu-add-tests <phase>` for
     test-generation gaps.
-11. Self-check the final markdown against the returned contract before calling
-    `blueprint_phase_validation_write`.
+12. Call `blueprint_phase_validation_render` with the structured evidence payload and treat `readyToWrite: true` as the pre-write self-check.
+13. Call `blueprint_phase_validation_write` only with the returned `content`; do not hand-build the final markdown body.
 
 ## Capability-Gated Subagent Path
 
@@ -144,11 +147,14 @@ This fallback must preserve the same output quality bar as the subagent path.
 
 ## Retry And Repair Behavior
 
+- If `blueprint_phase_validation_render` returns `readyToWrite: false`, report the
+  issues, repair the structured payload against the canonical contract, and
+  render again before calling the writer.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
-  `written: false` because validation failed, report the issues, repair the
-  draft against the canonical contract, and retry once before stopping. Do not
-  run post-write artifact validation or state sync until the write succeeds
-  with `written: true` or `status: "reused"`.
+  `written: false` after a ready render, treat that as a race, overwrite, or
+  prerequisite failure, repair once through MCP when safe, and stop with the
+  issues otherwise. Do not run post-write artifact validation or state sync until
+  the write succeeds with `written: true` or `status: "reused"`.
 - If `blueprint_artifact_validate` reports invalid artifacts after a successful
   write or reuse outcome,
   use `suggestedRepairs` to revise the draft and retry once when the repair is

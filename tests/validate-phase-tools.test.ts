@@ -14,12 +14,16 @@ import {
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseContext,
+  blueprintPhaseValidationAuthoringContext,
+  blueprintPhaseValidationRender,
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead,
   blueprintPhaseValidationRead,
   blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
 import { blueprintStateLoad, blueprintStateUpdate } from "../src/mcp/tools/state.js";
+
+type PhaseValidationRenderInput = Parameters<typeof blueprintPhaseValidationRender>[0];
 
 async function createValidationReadyRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-validate-phase-"));
@@ -469,13 +473,346 @@ ${evidenceReviewed}
 `;
 }
 
+function verificationRenderInput(
+  summaryPaths: string[],
+  overrides: Partial<Extract<PhaseValidationRenderInput, { artifact: "verification" }>> = {}
+): Extract<PhaseValidationRenderInput, { artifact: "verification" }> {
+  return {
+    artifact: "verification",
+    phase: "3",
+    coverageSummary: `Reviewed ${summaryPaths.map((summaryPath) => `\`${summaryPath.split("/").pop() ?? summaryPath}\``).join(", ")} for completed execution evidence.`,
+    gateState: "PASS",
+    signOff: "validation lead",
+    validationSummary: ["Execution evidence matches the expected phase outcome."],
+    requirementCoverage: summaryPaths.map((summaryPath, index) => ({
+      requirement: `VAL-0${index + 1}`,
+      taskOrCheck: `Review completed execution evidence ${index + 1}`,
+      evidence: summaryPath,
+      coverageState: "PASS",
+      notes: "Saved summary evidence remains authoritative."
+    })),
+    evidenceMetadata: [
+      "Harness: node:test",
+      "Commands: npm test",
+      "Evidence type: saved execution summary",
+      "Test infrastructure status: available"
+    ],
+    manualOrDeferredCoverage: [
+      {
+        item: "none",
+        whyManualOrDeferred: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapClassification: [
+      {
+        gapClass: "none",
+        scope: "none",
+        evidence: summaryPaths[0] ?? ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+        repair: "none"
+      }
+    ],
+    gapsFound: ["none"],
+    suggestedRepairs: ["none"],
+    nextSafeAction: "Continue with conversational UAT through `/blu-verify-work 3`.",
+    ...overrides
+  };
+}
+
+function uatRenderInput(
+  summaryPath: string,
+  overrides: Partial<Extract<PhaseValidationRenderInput, { artifact: "uat" }>> = {}
+): Extract<PhaseValidationRenderInput, { artifact: "uat" }> {
+  return {
+    artifact: "uat",
+    phase: "3",
+    status: "PASS",
+    resumeState: "NEW",
+    checkpoint: "none",
+    uatSummary: [`User acceptance run passed for ${summaryPath}.`],
+    sessionState: [`Resume source: ${summaryPath}`, "Current session step: testing complete", "Continuity notes: none"],
+    currentTest: {
+      number: "testing complete",
+      name: "none",
+      expected: "Saved execution behavior remains user-acceptable.",
+      awaiting: "none"
+    },
+    testMatrix: [
+      {
+        number: "1",
+        test: "Saved execution behavior",
+        expectedBehavior: "Behavior described by the saved summary is acceptable.",
+        evidence: summaryPath,
+        result: "pass",
+        notes: "User acceptance evidence confirmed."
+      }
+    ],
+    resultSummary: {
+      total: 1,
+      passed: 1,
+      issues: 0,
+      pending: 0,
+      skipped: 0,
+      blocked: 0
+    },
+    questionsAsked: ["Did the delivered behavior match the saved execution summary?"],
+    observedBehavior: [`Observed behavior matched ${summaryPath}.`],
+    unresolvedGaps: ["none"],
+    structuredGaps: [
+      {
+        test: "none",
+        truth: "none",
+        status: "none",
+        severity: "none",
+        reason: "none",
+        followUp: "none"
+      }
+    ],
+    followUpFixes: ["none"],
+    nextSafeAction: "/blu-progress",
+    ...overrides
+  };
+}
+
 test("validate-phase tools are registered in the Blueprint server", () => {
   for (const toolName of [
     "blueprint_phase_validation_read",
+    "blueprint_phase_validation_authoring_context",
+    "blueprint_phase_validation_render",
     "blueprint_phase_validation_write"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
   }
+});
+
+test("validation authoring context and render produce write-ready VERIFICATION content", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const context = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification"
+  });
+  const rendered = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput([summaryPath])
+  });
+  const written = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: rendered.content
+  });
+
+  assert.equal(context.readyForDraft, true);
+  assert.deepEqual(context.summaryPaths, [summaryPath]);
+  assert.equal(context.contract.id, "phase.verification");
+  assert.deepEqual(context.allowedValues.verification.coverageStates, [
+    "PASS",
+    "MANUAL",
+    "DEFERRED",
+    "BLOCKED"
+  ]);
+  assert.equal(rendered.readyToWrite, true, JSON.stringify(rendered, null, 2));
+  assert.equal(rendered.validation.valid, true);
+  assert.deepEqual(rendered.summaryPaths, [summaryPath]);
+  assert.deepEqual(rendered.referencedSummaryPaths, [summaryPath]);
+  assert.doesNotMatch(rendered.content, /PASS\|PARTIAL\|BLOCKED|<Phase Name>|03\.1-YY-SUMMARY/);
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+});
+
+test("validation render rejects VERIFICATION summary, placeholder, enum, gap, and route mistakes before write", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await markValidationPlanCompleted(repoPath, "02");
+  const summaryPaths = [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+    ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"
+  ];
+  const missingSummary = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput(summaryPaths, {
+      evidenceReviewedSummaryPaths: [summaryPaths[0]]
+    })
+  });
+  const placeholders = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput(summaryPaths, {
+      coverageSummary: "Reviewed `03.1-YY-SUMMARY.md` and any other saved phase summaries for validation evidence.",
+      signOff: "verified|pending|blocked"
+    })
+  });
+  const badEnums = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput(summaryPaths, {
+      requirementCoverage: [
+        {
+          requirement: "VAL-01",
+          taskOrCheck: "Review completed execution evidence",
+          evidence: summaryPaths[0],
+          coverageState: "SKIPPED",
+          notes: "Bad enum."
+        }
+      ],
+      manualOrDeferredCoverage: [
+        {
+          item: "manual check",
+          whyManualOrDeferred: "manual",
+          followUp: "later",
+          status: "LATER"
+        }
+      ],
+      gapClassification: [
+        {
+          gapClass: "unknown-gap",
+          scope: "validation",
+          evidence: summaryPaths[0],
+          repair: "none"
+        }
+      ]
+    })
+  });
+  const passWithGap = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput(summaryPaths, {
+      requirementCoverage: [
+        {
+          requirement: "VAL-01",
+          taskOrCheck: "Review completed execution evidence",
+          evidence: summaryPaths[0],
+          coverageState: "DEFERRED",
+          notes: "Deferred test remains open."
+        }
+      ],
+      gapClassification: [
+        {
+          gapClass: "deferred-test",
+          scope: "tests",
+          evidence: summaryPaths[0],
+          repair: "Run /blu-add-tests 3."
+        }
+      ],
+      gapsFound: ["Deferred test gap remains."],
+      suggestedRepairs: ["Run /blu-add-tests 3."]
+    })
+  });
+  const partialVerifyRoute = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput(summaryPaths, {
+      gateState: "PARTIAL",
+      requirementCoverage: [
+        {
+          requirement: "VAL-01",
+          taskOrCheck: "Review completed execution evidence",
+          evidence: summaryPaths[0],
+          coverageState: "DEFERRED",
+          notes: "Deferred test remains open."
+        }
+      ],
+      manualOrDeferredCoverage: [
+        {
+          item: "regression test",
+          whyManualOrDeferred: "test not generated",
+          followUp: "/blu-add-tests 3",
+          status: "DEFERRED"
+        }
+      ],
+      gapClassification: [
+        {
+          gapClass: "deferred-test",
+          scope: "tests",
+          evidence: summaryPaths[0],
+          repair: "Run /blu-add-tests 3."
+        }
+      ],
+      gapsFound: ["Deferred test gap remains."],
+      suggestedRepairs: ["Run /blu-add-tests 3."],
+      nextSafeAction: "Continue with conversational UAT through `/blu-verify-work 3`."
+    })
+  });
+
+  assert.equal(missingSummary.readyToWrite, false);
+  assert.match(missingSummary.issues.join("\n"), /cite every saved execution summary/i);
+  assert.match(missingSummary.issues.join("\n"), /03-02-SUMMARY\.md/);
+  assert.equal(placeholders.readyToWrite, false);
+  assert.match(placeholders.issues.join("\n"), /03\.1-YY-SUMMARY\.md/);
+  assert.match(placeholders.issues.join("\n"), /verified\|pending\|blocked/);
+  assert.equal(badEnums.readyToWrite, false);
+  assert.match(badEnums.issues.join("\n"), /unsupported coverage state: SKIPPED/);
+  assert.match(badEnums.issues.join("\n"), /unsupported status: LATER/);
+  assert.match(badEnums.issues.join("\n"), /unsupported gap class: unknown-gap/);
+  assert.equal(passWithGap.readyToWrite, false);
+  assert.match(passWithGap.issues.join("\n"), /must not declare PASS/i);
+  assert.equal(partialVerifyRoute.readyToWrite, false);
+  assert.match(partialVerifyRoute.issues.join("\n"), /must not route PARTIAL or BLOCKED validation/i);
+});
+
+test("validation render handles UAT prerequisites, summary citations, checkpoints, and one-shot writes", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const missingVerification = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath)
+  });
+
+  assert.equal(missingVerification.readyToWrite, false);
+  assert.match(missingVerification.issues.join("\n"), /VERIFICATION artifact before UAT/);
+
+  const verification = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...verificationRenderInput([summaryPath])
+  });
+  await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: verification.content
+  });
+
+  const missingCitation = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      uatSummary: ["User acceptance run passed."],
+      sessionState: ["Resume source: none"],
+      observedBehavior: ["Observed behavior matched expectations."]
+    })
+  });
+  const incompleteCheckpoint = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      checkpoint: "test-1"
+    })
+  });
+  const validUat = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath)
+  });
+  const written = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: validUat.content
+  });
+
+  assert.equal(missingCitation.readyToWrite, false);
+  assert.match(missingCitation.issues.join("\n"), /must cite at least one saved execution summary/i);
+  assert.equal(incompleteCheckpoint.readyToWrite, false);
+  assert.match(incompleteCheckpoint.issues.join("\n"), /checkpoint none when status is PASS/i);
+  assert.equal(validUat.readyToWrite, true, JSON.stringify(validUat, null, 2));
+  assert.deepEqual(validUat.referencedSummaryPaths, [summaryPath]);
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
 });
 
 test("validation tools persist VERIFICATION artifacts and advance routing toward verify-work", async (t) => {

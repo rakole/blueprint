@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { type ArtifactContractReadResult } from "../artifact-contracts/index.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
@@ -65,6 +66,164 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
     artifact: PhaseValidationArtifactKind;
     content: string;
     overwrite?: boolean;
+};
+type PhaseValidationAuthoringContextArgs = PhaseLookupArgs & {
+    artifact: PhaseValidationArtifactKind;
+};
+type PhaseValidationSummaryEvidence = {
+    planId: string;
+    path: string;
+    linkedPlanPath: string | null;
+    status: "COMPLETED";
+    title: string | null;
+    summary: string | null;
+    outcome: string[];
+    changesMade: string[];
+    verification: string[];
+    followUps: string[];
+    evidence: string[];
+};
+type PhaseValidationAllowedValues = {
+    verification: {
+        gateStates: string[];
+        coverageStates: string[];
+        manualCoverageStatuses: string[];
+        gapClasses: string[];
+        readinessByGate: Record<string, string>;
+        readyForUatCommand: string;
+        repairCommands: string[];
+    };
+    uat: {
+        statuses: string[];
+        resumeStates: string[];
+        completeCheckpoint: string;
+        testResults: string[];
+        structuredGapStatuses: string[];
+        structuredGapSeverities: string[];
+    };
+};
+type PhaseValidationAuthoringContextResult = {
+    phaseFound: boolean;
+    phaseNumber: string | null;
+    phasePrefix: string | null;
+    phaseName: string | null;
+    phaseDir: string | null;
+    artifact: PhaseValidationArtifactKind;
+    path: string | null;
+    contract: ArtifactContractReadResult;
+    summaryPaths: string[];
+    summaryEvidence: PhaseValidationSummaryEvidence[];
+    existing: PhaseValidationReadResult | null;
+    verification: PhaseValidationReadResult | null;
+    prerequisiteBlockers: string[];
+    readyForDraft: boolean;
+    allowedValues: PhaseValidationAllowedValues;
+    routingRules: string[];
+    warnings: string[];
+    reason: string | null;
+};
+type VerificationRenderCoverageRow = {
+    requirement?: string;
+    taskOrCheck?: string;
+    evidence?: string;
+    coverageState?: string;
+    notes?: string;
+};
+type VerificationManualCoverageRow = {
+    item?: string;
+    whyManualOrDeferred?: string;
+    followUp?: string;
+    status?: string;
+};
+type VerificationGapClassificationRow = {
+    gapClass?: string;
+    scope?: string;
+    evidence?: string;
+    repair?: string;
+};
+type VerificationRenderArgs = PhaseLookupArgs & {
+    artifact: "verification";
+    coverageSummary?: string;
+    gateState?: string;
+    signOff?: string;
+    validationSummary?: string | string[];
+    requirementCoverage?: VerificationRenderCoverageRow[];
+    evidenceReviewedSummaryPaths?: string[];
+    evidenceMetadata?: string[];
+    manualOrDeferredCoverage?: VerificationManualCoverageRow[];
+    gapClassification?: VerificationGapClassificationRow[];
+    gapsFound?: string[];
+    suggestedRepairs?: string[];
+    nextSafeAction?: string;
+};
+type UatRenderCurrentTest = {
+    number?: string;
+    name?: string;
+    expected?: string;
+    awaiting?: string;
+};
+type UatRenderTestMatrixRow = {
+    number?: string;
+    test?: string;
+    expectedBehavior?: string;
+    evidence?: string;
+    result?: string;
+    notes?: string;
+};
+type UatRenderResultSummary = {
+    total?: number;
+    passed?: number;
+    issues?: number;
+    pending?: number;
+    skipped?: number;
+    blocked?: number;
+};
+type UatRenderStructuredGapRow = {
+    test?: string;
+    truth?: string;
+    status?: string;
+    severity?: string;
+    reason?: string;
+    followUp?: string;
+};
+type UatRenderArgs = PhaseLookupArgs & {
+    artifact: "uat";
+    status?: string;
+    resumeState?: string;
+    checkpoint?: string;
+    uatSummary?: string[];
+    sessionState?: string[];
+    currentTest?: UatRenderCurrentTest;
+    testMatrix?: UatRenderTestMatrixRow[];
+    resultSummary?: UatRenderResultSummary;
+    questionsAsked?: string[];
+    observedBehavior?: string[];
+    unresolvedGaps?: string[];
+    structuredGaps?: UatRenderStructuredGapRow[];
+    followUpFixes?: string[];
+    nextSafeAction?: string;
+};
+type PhaseValidationRenderArgs = VerificationRenderArgs | UatRenderArgs;
+type PhaseValidationRenderResult = {
+    phaseFound: boolean;
+    phaseNumber: string | null;
+    phasePrefix: string | null;
+    phaseName: string | null;
+    phaseDir: string | null;
+    artifact: PhaseValidationArtifactKind;
+    path: string | null;
+    content: string;
+    validation: {
+        valid: boolean;
+        issues: string[];
+        warnings: string[];
+    };
+    summaryPaths: string[];
+    referencedSummaryPaths: string[];
+    prerequisiteBlockers: string[];
+    readyToWrite: boolean;
+    issues: string[];
+    warnings: string[];
 };
 type PhaseCheckpointRecord = Record<string, unknown>;
 type PhaseCheckpointDecisionRecord = {
@@ -679,6 +838,8 @@ type RoadmapReadResult = {
         phaseDir: string | null;
     }>;
 };
+export declare function blueprintPhaseValidationAuthoringContext(args: PhaseValidationAuthoringContextArgs): Promise<PhaseValidationAuthoringContextResult>;
+export declare function blueprintPhaseValidationRender(args: PhaseValidationRenderArgs): Promise<PhaseValidationRenderResult>;
 export declare function blueprintRoadmapRead(args?: RoadmapReadArgs): Promise<RoadmapReadResult>;
 export declare function blueprintRoadmapAddPhase(args: RoadmapAddPhaseArgs): Promise<RoadmapAddPhaseResult>;
 export declare function blueprintRoadmapInsertPhase(args: RoadmapInsertPhaseArgs): Promise<RoadmapInsertPhaseResult>;
@@ -854,6 +1015,97 @@ export declare const phaseToolDefinitions: ({
         }>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseValidationReadResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        artifact: z.ZodEnum<{
+            verification: "verification";
+            uat: "uat";
+        }>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseValidationAuthoringContextResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        artifact: z.ZodEnum<{
+            verification: "verification";
+            uat: "uat";
+        }>;
+        coverageSummary: z.ZodOptional<z.ZodString>;
+        gateState: z.ZodOptional<z.ZodString>;
+        signOff: z.ZodOptional<z.ZodString>;
+        validationSummary: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodString>]>>;
+        requirementCoverage: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            requirement: z.ZodOptional<z.ZodString>;
+            taskOrCheck: z.ZodOptional<z.ZodString>;
+            evidence: z.ZodOptional<z.ZodString>;
+            coverageState: z.ZodOptional<z.ZodString>;
+            notes: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+        evidenceReviewedSummaryPaths: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        evidenceMetadata: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        manualOrDeferredCoverage: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            item: z.ZodOptional<z.ZodString>;
+            whyManualOrDeferred: z.ZodOptional<z.ZodString>;
+            followUp: z.ZodOptional<z.ZodString>;
+            status: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+        gapClassification: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            gapClass: z.ZodOptional<z.ZodString>;
+            scope: z.ZodOptional<z.ZodString>;
+            evidence: z.ZodOptional<z.ZodString>;
+            repair: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+        gapsFound: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        suggestedRepairs: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        nextSafeAction: z.ZodOptional<z.ZodString>;
+        status: z.ZodOptional<z.ZodString>;
+        resumeState: z.ZodOptional<z.ZodString>;
+        checkpoint: z.ZodOptional<z.ZodString>;
+        uatSummary: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        sessionState: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        currentTest: z.ZodOptional<z.ZodObject<{
+            number: z.ZodOptional<z.ZodString>;
+            name: z.ZodOptional<z.ZodString>;
+            expected: z.ZodOptional<z.ZodString>;
+            awaiting: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        testMatrix: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            number: z.ZodOptional<z.ZodString>;
+            test: z.ZodOptional<z.ZodString>;
+            expectedBehavior: z.ZodOptional<z.ZodString>;
+            evidence: z.ZodOptional<z.ZodString>;
+            result: z.ZodOptional<z.ZodString>;
+            notes: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+        resultSummary: z.ZodOptional<z.ZodObject<{
+            total: z.ZodOptional<z.ZodNumber>;
+            passed: z.ZodOptional<z.ZodNumber>;
+            issues: z.ZodOptional<z.ZodNumber>;
+            pending: z.ZodOptional<z.ZodNumber>;
+            skipped: z.ZodOptional<z.ZodNumber>;
+            blocked: z.ZodOptional<z.ZodNumber>;
+        }, z.core.$strip>>;
+        questionsAsked: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        observedBehavior: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        unresolvedGaps: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        structuredGaps: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            test: z.ZodOptional<z.ZodString>;
+            truth: z.ZodOptional<z.ZodString>;
+            status: z.ZodOptional<z.ZodString>;
+            severity: z.ZodOptional<z.ZodString>;
+            reason: z.ZodOptional<z.ZodString>;
+            followUp: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+        followUpFixes: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseValidationRenderResult>;
 } | {
     name: string;
     description: string;

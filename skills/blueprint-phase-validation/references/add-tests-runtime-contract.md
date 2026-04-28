@@ -15,7 +15,7 @@ are available.
 | Read | Gather completed execution evidence, validation or UAT evidence, existing artifacts, and current state. | Summary index, every completed summary body, verification read, UAT read, artifact inventory, artifact health, and state load results. |
 | Decide | Classify candidate files and choose the narrowest safe test scope. | Testability classification, discovered test conventions, user-approved scope, missing evidence, and next safe action. |
 | Execute | Generate or update tests and run the narrowest meaningful check. | Parent-approved test plan, changed test files, targeted test command, pass/fail/blocker status, and bug-versus-test-error classification. |
-| Persist | Save updated verification notes and the durable add-tests report through MCP. | `phase.verification` authoring template, `report.add-tests` authoring template, self-check results, and write responses. |
+| Persist | Render updated verification notes and save the durable add-tests report through MCP. | `phase.verification` authoring context, structured render result, `report.add-tests` authoring template, self-check results, and write responses. |
 | Validate | Re-validate saved Blueprint artifacts and repair if needed. | `blueprint_artifact_validate.valid`, write statuses, issues, warnings, and suggested repairs. |
 | Route | Update state and report the next implemented action. | `blueprint_state_update`, saved verification/report status, remaining gaps, and implemented follow-up availability. |
 
@@ -31,6 +31,8 @@ the authority for control flow.
 | `blueprint_phase_summary_read` | Source implementation evidence for every completed summary; never generate tests from chat memory alone. |
 | `blueprint_phase_validation_read` with `artifact: "verification"` | Existing validation baseline, saved gaps, and verification note update baseline. |
 | `blueprint_phase_validation_read` with `artifact: "uat"` | User-observable evidence, UAT gaps, and additional scenario source. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, allowed values, and routing rules for the verification update. |
+| `blueprint_phase_validation_render` with `artifact: "verification"` | Canonical verification markdown rendering and pre-write validation from the structured verification payload. |
 | `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, and authoring-template authority for the verification update. |
 | `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` | Canonical heading and authoring-template authority for the durable add-tests report. |
 | `blueprint_artifact_list` | Existing phase and report inventory, including whether review evidence already exists. |
@@ -96,7 +98,8 @@ Before writing tests:
 
 ## Artifact Authoring Rules
 
-1. Read `phase.verification` before drafting updated verification notes.
+1. Read `phase.verification` and `blueprint_phase_validation_authoring_context`
+   before drafting updated verification notes.
 2. Read `report.add-tests` before drafting the durable report.
 3. Treat each returned `contract.authoringTemplate`, `requiredHeadings`,
    `lockedMarkers`, and `freehandPolicy` as heading and schema authority.
@@ -108,7 +111,10 @@ Before writing tests:
    test plan, tests added or updated, commands run, generated/passing/failing/
    blocked counts, bugs or blockers discovered, verification write status,
    report write status, remaining gaps, and next safe action.
-7. Self-check both drafts against their returned contracts before writing.
+7. Build the verification update as a structured payload and call
+   `blueprint_phase_validation_render`; call `blueprint_phase_validation_write`
+   only when `readyToWrite: true`, passing the returned `content` unchanged.
+8. Self-check the durable report against its returned contract before writing.
 
 ## Capability-Gated Subagent Path
 
@@ -162,9 +168,13 @@ This fallback must preserve the same output quality bar as the subagent path.
 
 ## Retry And Repair Behavior
 
+- If `blueprint_phase_validation_render` returns `readyToWrite: false`, report the
+  issues, repair the structured verification payload against the canonical
+  contract, and render again before calling the writer.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
-  `written: false` because validation failed, report the issues, repair the
-  verification draft against the canonical contract, and retry once.
+  `written: false` after a ready render, treat that as a race, overwrite, or
+  prerequisite failure, repair once through MCP when safe, and stop with the
+  issues otherwise.
 - If `blueprint_artifact_report_write` returns `status: "invalid"` or
   `written: false` because validation failed, repair the report draft against
   the `report.add-tests` authoring template and retry once.

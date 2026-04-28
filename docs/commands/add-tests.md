@@ -63,6 +63,7 @@
 
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing verification and UAT artifacts through `blueprint_phase_validation_read`
+- verification authoring context through `blueprint_phase_validation_authoring_context`
 - canonical verification contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`
 - canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"`
 - current Blueprint artifact inventory through `blueprint_artifact_list`
@@ -85,6 +86,8 @@
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
 - `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
+- `blueprint_phase_validation_authoring_context` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, contract, summaryPaths, summaryEvidence, existing, verification, prerequisiteBlockers, readyForDraft, allowedValues, routingRules, warnings, reason}`
+- `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
 - `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
@@ -95,16 +98,16 @@
 
 ## Validation And Report Contract
 
-- Update verification coverage through `blueprint_phase_validation_write` with `artifact: "verification"` and the full final markdown body; do not edit `XX-VERIFICATION.md` directly.
+- Update verification coverage through `blueprint_phase_validation_render` followed by `blueprint_phase_validation_write` with `artifact: "verification"` and the rendered `content`; do not edit `XX-VERIFICATION.md` directly.
 - Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths`, `written`, and `status` as authoritative instead of rebuilding filenames or summary links manually.
-- Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
-- Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, and self-check the normalized verification draft against the returned contract before writing.
+- Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final verification authoring.
+- Build a structured verification evidence payload, call `blueprint_phase_validation_render`, keep the locked markers and required section names unchanged, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing the returned `content` unchanged.
 - Keep the reported verification status aligned with the returned `written` and `status` fields instead of claiming a save from command progress alone.
 - Read the canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` before final report authoring.
 - Normalize the durable report to the returned `authoringTemplate` and include the approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification write status, report write status, remaining gaps, and next safe action.
 - Persist the durable add-tests report through `blueprint_artifact_report_write` with the bare report name `add-tests-<phase>`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path`, `written`, and `status` as authoritative, and keep the reported report status explicit even when targeted test execution or verification persistence fails.
-- If validation or report persistence is rejected, repair the authored markdown against the returned canonical contract and retry once before stopping with explicit issues and suggested repairs.
+- If validation render or report persistence is rejected, repair the structured verification payload or authored report against the returned canonical contract and retry once before stopping with explicit issues and suggested repairs.
 
 
 ## Skills And Subagents
@@ -174,6 +177,7 @@
 - Keeps repo mutation scoped to the selected tests and any minimal supporting helpers.
 - Keeps test-generation stages, pending gates, targeted test results, verification status, report status, and the next safe action explicit while add-tests is in flight.
 - Persists updated verification notes through `blueprint_phase_validation_write` rather than direct file edits.
+- Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so updated verification notes are rendered canonically before the writer runs.
 - Persists the durable report through `blueprint_artifact_report_write` after normalizing it to the `report.add-tests` authoring template.
 - Reports verification and report persistence outcomes from MCP return values instead of assuming they succeeded.
 - Distinguishes passing tests, implementation bugs, test-authoring errors, and blocked checks in the final report.
