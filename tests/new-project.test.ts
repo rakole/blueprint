@@ -8,6 +8,7 @@ import os from "node:os";
 import {
   blueprintToolNames,
   createToolResponseContent,
+  executeToolHandlerWithFailureLogging,
   summarizeToolResult
 } from "../src/mcp/server.js";
 import {
@@ -698,6 +699,88 @@ test("new-project rejects seeds with duplicate committed mappings before writes"
   );
 
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
+test("new-project can retry after a preflight failure leaves only the MCP failure log", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    executeToolHandlerWithFailureLogging(
+      {
+        name: "blueprint_project_init",
+        description: "fixture",
+        handler: async (args: Record<string, unknown>) =>
+          blueprintProjectInit(args as Parameters<typeof blueprintProjectInit>[0])
+      },
+      {
+        cwd: repoPath,
+        bootstrapSeed: {
+          vision:
+            "Create a reliable project bootstrap workflow with durable requirement traceability.",
+          currentMilestone: "v1",
+          requirements: [
+            {
+              id: "PF-31",
+              scope: "committed",
+              group: "Traceability",
+              requirement:
+                "Let maintainers retry project bootstrap after seed preflight failures without deleting operational logs.",
+              status: "Pending",
+              notes: "Retryability guard."
+            }
+          ],
+          roadmapPhases: [
+            {
+              phase: "1",
+              title: "First Mapping Pass",
+              objective: "Map committed requirements into the first roadmap phase.",
+              requirementIds: ["PF-31"],
+              successCriteria: [
+                "The first phase names the committed requirement selected for bootstrap.",
+                "The preview shows the requirement mapping before the write starts."
+              ]
+            },
+            {
+              phase: "2",
+              title: "Second Mapping Pass",
+              objective: "Accidentally map the same committed requirement again.",
+              requirementIds: ["PF-31"],
+              successCriteria: [
+                "The second phase repeats the committed requirement for regression coverage.",
+                "The preflight rejects duplicate committed coverage before artifacts exist."
+              ]
+            }
+          ]
+        }
+      }
+    ),
+    /Committed requirement PF-31 must be mapped to exactly one roadmap phase/i
+  );
+
+  const failureLogPath = path.join(repoPath, ".blueprint/mcp-write-failures.ndjson");
+  const retryableStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const retryableValidation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(await pathExists(failureLogPath), true);
+  assert.equal(retryableStatus.status, "uninitialized");
+  assert.match(retryableStatus.nextAction, /\/blu-new-project/);
+  assert.match(retryableValidation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(retryableValidation.suggestedRepairs.join("\n"), /\/blu-health/);
+
+  const retryResult = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: buildAutoBootstrapSeed()
+  });
+  const finalStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const finalValidation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(await pathExists(failureLogPath), true);
+  assert.match(retryResult.nextAction, /\/blu-progress/);
+  assert.equal(finalStatus.status, "initialized");
+  assert.equal(finalValidation.valid, true);
 });
 
 test("new-project rejects duplicate phase refs and generic success criteria before writes", async (t) => {

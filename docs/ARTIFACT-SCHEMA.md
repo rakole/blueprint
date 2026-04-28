@@ -26,7 +26,7 @@ Blueprint-managed repositories store project state here:
 
 `blueprint_project_status` and related read tools use these project readiness states:
 
-- `uninitialized`: no `.blueprint/` tree exists. Brownfield repos in this state route to `/blu-map-codebase`; greenfield and scaffold-only repos route to `/blu-new-project`.
+- `uninitialized`: no Blueprint workflow artifacts exist. A missing `.blueprint/` tree, an empty greenfield/scaffold-only `.blueprint/` root, or a root containing only operational diagnostics such as `mcp-write-failures.ndjson` all stay retryable. Brownfield repos in this state route to `/blu-map-codebase`; greenfield and scaffold-only repos route to `/blu-new-project`.
 - `mapping-incomplete`: `.blueprint/` contains only an interrupted, missing, or invalid `.blueprint/codebase/` mapping bundle. This is an intentional codebase-only state and routes to `/blu-map-codebase`, not `/blu-health`.
 - `mapped-only`: `.blueprint/` contains a valid seven-document `.blueprint/codebase/` bundle but no core project bootstrap artifacts. This is an intentional codebase-only state and routes to `/blu-new-project`; validation treats it as healthy.
 - `partial`: core project bootstrap artifacts are broken or incomplete. This routes to `/blu-health`.
@@ -243,6 +243,7 @@ Contract notes:
 - written best-effort by the MCP server for mutating tools such as config, roadmap, phase, report, review, and capture writes
 - entries include timestamp, tool name, sanitized request fields, and either a rejected result payload or thrown error metadata
 - this is an operational debug log rather than a workflow artifact that commands should edit directly
+- when this is the only file under `.blueprint/`, project readiness should stay retryable instead of becoming a partial bootstrap that requires manual deletion
 
 ## Phase Tree
 
