@@ -1176,6 +1176,8 @@ test("add-tests is implemented once manifest, validation skill, and test-generat
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_phase_validation_authoring_context",
+    "blueprint_phase_validation_render",
     "blueprint_artifact_contract_read",
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",

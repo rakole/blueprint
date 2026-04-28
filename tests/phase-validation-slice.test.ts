@@ -641,6 +641,8 @@ test("validate-phase and verify-work manifests reference registered validation t
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_phase_validation_authoring_context",
+    "blueprint_phase_validation_render",
     "blueprint_phase_validation_write",
     "blueprint_config_get",
     "blueprint_artifact_validate",
@@ -1416,12 +1418,14 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(validateDoc, /blueprint_phase_summary_index/);
   assert.match(validateDoc, /blueprint_phase_summary_read/);
   assert.match(validateDoc, /blueprint_phase_validation_read/);
+  assert.match(validateDoc, /blueprint_phase_validation_authoring_context/);
+  assert.match(validateDoc, /blueprint_phase_validation_render/);
   assert.match(validateDoc, /blueprint_phase_validation_write/);
   assert.match(validateDoc, /blueprint_config_get/);
   assert.match(validateDoc, /blueprint_artifact_validate/);
   assert.match(validateDoc, /blueprint_state_update/);
   assert.match(validateDoc, /blueprint_artifact_contract_read/);
-  assert.match(validateDoc, /self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`/i);
+  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
   assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
   assert.match(validateDoc, /Direct `validate-phase` happy-path fixture\./);
   assert.match(verifyDoc, /Primary skill: `blueprint-phase-validation`/);
@@ -1430,6 +1434,8 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(verifyDoc, /blueprint_phase_summary_index/);
   assert.match(verifyDoc, /blueprint_phase_summary_read/);
   assert.match(verifyDoc, /blueprint_phase_validation_read/);
+  assert.match(verifyDoc, /blueprint_phase_validation_authoring_context/);
+  assert.match(verifyDoc, /blueprint_phase_validation_render/);
   assert.match(verifyDoc, /blueprint_phase_validation_write/);
   assert.match(verifyDoc, /blueprint_config_get/);
   assert.match(verifyDoc, /blueprint_state_update/);
@@ -1458,9 +1464,9 @@ test("validation contract docs keep the published verification schema aligned wi
   assert.match(artifactSchema, /should only route the next safe action to `\/blu-verify-work` when the saved gate state is `PASS`/i);
 
   assert.match(addTestsDoc, /blueprint_artifact_contract_read/);
-  assert.match(addTestsDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
-  assert.match(addTestsDoc, /self-check the normalized verification draft against the returned contract before writing/i);
+  assert.match(addTestsDoc, /blueprint_phase_validation_render/);
+  assert.match(addTestsDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
   assert.match(validateDoc, /blueprint_artifact_contract_read/);
-  assert.match(validateDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
-  assert.match(validateDoc, /self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`/i);
+  assert.match(validateDoc, /blueprint_phase_validation_render/);
+  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
 });

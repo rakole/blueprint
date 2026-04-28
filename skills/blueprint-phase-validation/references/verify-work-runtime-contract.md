@@ -14,7 +14,7 @@ bounded read-only UAT analysis when a suitable agent is available.
 | Read | Gather saved execution evidence, ready verification evidence, existing UAT state, effective config, artifact health, and current state. | Summary index, every completed valid summary body, `verification` read, `uat` read, config, artifact validation, and state load results. |
 | Decide | Select view, resume, update, create, or stop behavior. | Missing prerequisites, existing UAT decision, overwrite gate, verifier and Nyquist config, active checkpoint, and next safe action. |
 | Execute | Run bounded conversational UAT over user-observable outcomes. | Test queue, current test, response classification, result counts, structured gaps, blocked prerequisites, and verifier result. |
-| Persist | Normalize and write only the canonical UAT artifact. | `phase.uat` authoring template, locked markers, self-check result, and `blueprint_phase_validation_write` response. |
+| Persist | Render and write only the canonical UAT artifact. | `phase.uat` authoring context, locked markers, structured render result, and `blueprint_phase_validation_write` response. |
 | Validate | Re-validate persisted Blueprint artifacts and repair if needed. | `blueprint_artifact_validate.valid`, write status, issues, warnings, and suggested repairs. |
 | Route | Update state and report the next implemented action. | `blueprint_state_update` plus saved UAT status, checkpoint state, blockers, and readiness. |
 
@@ -34,6 +34,8 @@ the authority for control flow.
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
 | `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` | Canonical heading, marker, and authoring-template authority. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "uat"` | Mandatory summary evidence, ready-verification prerequisite status, existing UAT baseline, allowed values, and routing rules. |
+| `blueprint_phase_validation_render` with `artifact: "uat"` | Canonical UAT markdown rendering and pre-write validation from the structured UAT payload. |
 | `blueprint_phase_validation_write` with `artifact: "uat"` | The only allowed persistence path for `XX-UAT.md`. |
 | `blueprint_state_update` with `base: "synced"` | Final state sync and next-action derivation. |
 
@@ -116,31 +118,36 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
 
 1. Read `phase.uat` with `blueprint_artifact_contract_read` before drafting
    final content.
-2. Treat `contract.authoringTemplate`, `requiredHeadings`, `lockedMarkers`, and
+2. Read `blueprint_phase_validation_authoring_context` before rendering so ready
+   verification, mandatory summary evidence, existing UAT state, allowed values,
+   and routing rules are explicit.
+3. Treat `contract.authoringTemplate`, `requiredHeadings`, `lockedMarkers`, and
    `freehandPolicy` as schema authority.
-3. Preserve all locked markers exactly, including `**Status:**`,
+4. Preserve all locked markers exactly, including `**Status:**`,
    `**Resume State:**`, and `**Checkpoint:**`.
-4. Treat `**Checkpoint:**` as the current in-artifact checkpoint label or
+5. Treat `**Checkpoint:**` as the current in-artifact checkpoint label or
    `none`, not as a separate checkpoint file path.
-5. Fill every required section with concrete evidence. Do not leave scaffold
+6. Fill every required section with concrete evidence. Do not leave scaffold
    placeholders or omit the richer current-test, test-matrix, result-summary,
    or structured-gap sections.
-6. Keep saved summary paths or filenames in `## UAT Summary`,
+7. Keep saved summary paths or filenames in `## UAT Summary`,
    `## Session State`, or `## Observed Behavior`.
-7. Keep the current test or completion state in the saved artifact so the run
+8. Keep the current test or completion state in the saved artifact so the run
    survives context reset.
-8. Include a test matrix with name, expected behavior, evidence, result, and
+9. Include a test matrix with name, expected behavior, evidence, result, and
    notes for every generated test.
-9. Include result counts for total, passed, issues, pending, skipped, and
+10. Include result counts for total, passed, issues, pending, skipped, and
    blocked.
-10. Include structured gaps with truth, status, reason, severity, test number,
+11. Include structured gaps with truth, status, reason, severity, test number,
    artifacts, missing work, and follow-up status when issues are found.
-11. Persist user-reported issues, blocked prerequisites, and structured gaps as
+12. Persist user-reported issues, blocked prerequisites, and structured gaps as
     UAT evidence without an extra confirmation gate. Keep follow-up-fix entries
     explicit enough for the parent command to ask for confirmation before
     persisting or acting on them.
-12. Self-check the final markdown against the returned contract before calling
-    `blueprint_phase_validation_write`.
+13. Call `blueprint_phase_validation_render` with the structured UAT payload and
+    treat `readyToWrite: true` as the pre-write self-check.
+14. Call `blueprint_phase_validation_write` only with the returned `content`; do
+    not hand-build the final markdown body.
 
 ## Capability-Gated Subagent Path
 
@@ -193,9 +200,13 @@ This fallback must preserve the same output quality bar as the subagent path.
 
 ## Retry And Repair Behavior
 
+- If `blueprint_phase_validation_render` returns `readyToWrite: false`, report the
+  issues, repair the structured UAT payload against the canonical contract, and
+  render again before calling the writer.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
-  `written: false` because validation failed, report the issues, repair the
-  draft against the canonical contract, and retry once before stopping.
+  `written: false` after a ready render, treat that as a race, overwrite, or
+  prerequisite failure, repair once through MCP when safe, and stop with the
+  issues otherwise.
 - Re-read the saved UAT through `blueprint_phase_validation_read` after a
   write and use its typed `validation`, `uatStatus`, `resumeState`,
   `checkpoint`, and `complete` fields as the artifact-scoped truth.

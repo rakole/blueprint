@@ -42,6 +42,8 @@ test("add-tests manifest references visibility, validation/report tools, bounded
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_phase_validation_authoring_context",
+    "blueprint_phase_validation_render",
     "blueprint_artifact_contract_read",
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",
@@ -58,7 +60,8 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   assert.match(commandFile, /add-tests-<phase>/);
   assert.match(commandFile, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
   assert.match(commandFile, /`path`, `written`, and `status` as authoritative/i);
-  assert.match(commandFile, /repair the draft against the returned canonical contract and retry once/i);
+  assert.match(commandFile, /mcp_blueprint_blueprint_phase_validation_render/);
+  assert.match(commandFile, /readyToWrite: true/i);
   assert.match(commandFile, /\/blu-execute-phase <phase>/);
   assert.match(commandFile, /\/blu-validate-phase <phase>/);
   assert.match(commandFile, /\/blu-code-review <phase>/);
@@ -85,6 +88,8 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /Integration \/ API/);
   assert.match(skillFile, /E2E \/ UI/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
+  assert.match(skillFile, /blueprint_phase_validation_authoring_context/);
+  assert.match(skillFile, /blueprint_phase_validation_render/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-executor/);
   assert.match(skillFile, /blueprint-verifier/);
@@ -120,6 +125,8 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_phase_validation_authoring_context",
+    "blueprint_phase_validation_render",
     "blueprint_phase_validation_write",
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
@@ -132,6 +139,7 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
   }
 
   assert.match(runtimeContract, /artifactId: "phase\.verification"/);
+  assert.match(runtimeContract, /blueprint_phase_validation_render/);
   assert.match(runtimeContract, /artifactId: "report\.add-tests"/);
   assert.match(runtimeContract, /Classification And Scope Decision/);
   assert.match(runtimeContract, /Unit \/ TDD/);

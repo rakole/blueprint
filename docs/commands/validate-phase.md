@@ -17,7 +17,7 @@
 ## Purpose
 
 
-`validate-phase` is Blueprint's command for auditing completed phase execution and persisting durable, summary-backed verification evidence in `XX-VERIFICATION.md`. It is implemented as a host-native validation contract: it reads saved execution summaries first (not chat memory), normalizes the verification draft against the canonical `phase.verification` authoring template, persists the artifact through validation MCP tools, and keeps `verify-work` as the next safe implemented step when validation succeeds. Nyquist-style test-gap closure is handled separately via `/blu-add-tests`.
+`validate-phase` is Blueprint's command for auditing completed phase execution and persisting durable, summary-backed verification evidence in `XX-VERIFICATION.md`. It is implemented as a host-native validation contract: it reads saved execution summaries first (not chat memory), renders canonical verification markdown from structured evidence, persists the artifact through validation MCP tools, and keeps `verify-work` as the next safe implemented step when validation succeeds. Nyquist-style test-gap closure is handled separately via `/blu-add-tests`.
 
 
 ## Command Path And Examples
@@ -55,6 +55,7 @@
 - effective Blueprint config through `blueprint_config_get`
 - execution summaries through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation artifacts through `blueprint_phase_validation_read`
+- render-ready validation authoring inputs through `blueprint_phase_validation_authoring_context`
 - canonical authoring templates and required-tool derivation through `blueprint_artifact_contract_read`
 
 
@@ -72,6 +73,8 @@
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, reason}`
 - `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
+- `blueprint_phase_validation_authoring_context` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, contract, summaryPaths, summaryEvidence, existing, verification, prerequisiteBlockers, readyForDraft, allowedValues, routingRules, warnings, reason}`
+- `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
@@ -85,11 +88,13 @@
 - Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
 - Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
-- Normalize the final verification draft to the returned `authoringTemplate`, keep the locked markers and required section names unchanged, cite every completed saved summary under `## Evidence Reviewed`, and self-check the normalized draft against the returned contract before calling `blueprint_phase_validation_write`.
+- Read `blueprint_phase_validation_authoring_context` before final authoring so the mandatory completed-summary citations, allowed values, routing rules, existing baseline, and prerequisite blockers are explicit.
+- Build a structured verification evidence payload, call `blueprint_phase_validation_render`, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing the returned `content` unchanged.
+- Keep the locked markers and required section names unchanged, cite every completed saved summary under `## Evidence Reviewed`, and treat `blueprint_phase_validation_render.validation` as the pre-write self-check result.
 - Build the concrete requirement/task coverage map, verifier behavior, no-subagent fallback, and retry path from the detailed runtime reference instead of duplicating that step-by-step contract in this doc.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
 - `uat` writes are a separate flow and additionally require an existing `XX-VERIFICATION.md` artifact before persistence succeeds.
-- If `blueprint_phase_validation_write` returns `status: "invalid"`, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs. Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome.
+- If `blueprint_phase_validation_render` returns `readyToWrite: false`, repair the structured evidence payload before calling the writer. If `blueprint_phase_validation_write` still returns `status: "invalid"` after a ready render, treat that as a race, overwrite, or prerequisite failure, repair once through MCP, and stop with explicit issues if the retry is not safe. Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome.
 - Only route the next safe action to `/blu-verify-work` when the saved artifact says `Gate State: PASS`, readiness is ready for UAT, and no unresolved gap or repair signals remain. When the saved artifact contains explicit test-generation gaps such as `deferred-test`, route to `/blu-add-tests <phase>`; when implementation or behavior gaps remain, route to `/blu-audit-fix <phase>` instead of coercing the gate to PASS or looping back through validation.
 - Prefer `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` after persistence so `STATE.md` derives the next safe action from the updated artifact inventory without losing the active validation command.
 
@@ -168,6 +173,7 @@
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Persists verification evidence through `blueprint_phase_validation_write` rather than direct file writes.
+- Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so the writer receives canonical rendered content rather than prompt-built Markdown.
 - Leaves unrelated repo files untouched.
 
 

@@ -41,6 +41,8 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_authoring_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
@@ -93,6 +95,8 @@ test("validate-phase skill scopes required inputs to the active command and keep
   );
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
+  assert.match(skillFile, /blueprint_phase_validation_authoring_context/);
+  assert.match(skillFile, /blueprint_phase_validation_render/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
@@ -118,11 +122,12 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(docFile, /pending gate, execution mode, and next safe action/i);
   assert.match(docFile, /required-tool derivation through `blueprint_artifact_contract_read`/i);
   assert.match(docFile, /State A\/B\/C/);
+  assert.match(docFile, /blueprint_phase_validation_render/);
   assert.match(docFile, /cite every completed saved summary under `## Evidence Reviewed`/i);
   assert.match(docFile, /Build the concrete requirement\/task coverage map[\s\S]*detailed runtime reference instead of duplicating that step-by-step contract/i);
   assert.match(docFile, /Run post-write `blueprint_artifact_validate` and `blueprint_state_update` only after a successful write or reuse outcome/i);
   assert.match(docFile, /no-subagent fallback/i);
-  assert.match(docFile, /retry once/i);
+  assert.match(docFile, /repair once through MCP/i);
   assert.match(docFile, /test-generation gaps.*\/blu-add-tests <phase>/i);
   assert.match(docFile, /implementation or behavior gaps.*\/blu-audit-fix <phase>/i);
   assert.match(docFile, /patch\.activeCommand: "\/blu-validate-phase"/);
@@ -141,11 +146,13 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(validateReference, /Do not substitute browser, web-search-only, shell-only, or generic agents/);
   assert.match(validateReference, /## Retry And Repair Behavior/);
   assert.match(validateReference, /retry once/i);
+  assert.match(validateReference, /blueprint_phase_validation_render/);
+  assert.match(validateReference, /readyToWrite: true/);
   assert.match(validateReference, /Keep every completed saved summary path or filename under `## Evidence Reviewed`/i);
   assert.match(validateReference, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(
     validateReference,
-    /Do not\s+run post-write artifact validation or state sync until the write succeeds/i
+    /post-write artifact validation or state sync until\s+the write succeeds/i
   );
   assert.match(validateReference, /## Output Quality Criteria/);
   assert.match(validateReference, /requirement\/task coverage/i);
@@ -172,5 +179,5 @@ test("validate-phase verifier and MCP docs preserve contract-driven evidence exp
     /validate-phase[\s\S]*validate-phase-runtime-contract\.md[\s\S]*State A\/B\/C[\s\S]*requirement\/task coverage map[\s\S]*sequential no-subagent fallback/i
   );
   assert.match(mcpTools, /browser\/web-search\/shell-only or generic agents as substitutes/i);
-  assert.match(mcpTools, /repair invalid writes or validation failures once through MCP/i);
+  assert.match(mcpTools, /render the canonical verification body/i);
 });

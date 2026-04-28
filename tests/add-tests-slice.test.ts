@@ -23,7 +23,9 @@ test("add-tests docs and runtime summaries mark the test-generation slice as shi
     /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/
   );
   assert.match(commandDoc, /blueprint_artifact_contract_read/);
-  assert.match(commandDoc, /normalize the final verification draft to the returned `authoringTemplate`/i);
+  assert.match(commandDoc, /blueprint_phase_validation_authoring_context/);
+  assert.match(commandDoc, /blueprint_phase_validation_render/);
+  assert.match(commandDoc, /readyToWrite: true/i);
   assert.match(commandDoc, /artifactId: "report\.add-tests"/);
   assert.match(commandDoc, /Normalize the durable report to the returned `authoringTemplate`/i);
   assert.match(commandDoc, /classification table and approved test plan/i);
@@ -53,6 +55,8 @@ test("add-tests is exposed as an implemented validation follow-up command", asyn
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
+    "blueprint_phase_validation_authoring_context",
+    "blueprint_phase_validation_render",
     "blueprint_artifact_contract_read",
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",

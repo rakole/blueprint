@@ -4,6 +4,10 @@ import path from "node:path";
 import * as z from "zod/v4";
 
 import {
+  readArtifactContract,
+  type ArtifactContractReadResult
+} from "../artifact-contracts/index.js";
+import {
   CODEBASE_ARTIFACTS,
   BLUEPRINT_BACKLOG_INDEX_PATH,
   BLUEPRINT_DIR,
@@ -123,6 +127,179 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
   artifact: PhaseValidationArtifactKind;
   content: string;
   overwrite?: boolean;
+};
+
+type PhaseValidationAuthoringContextArgs = PhaseLookupArgs & {
+  artifact: PhaseValidationArtifactKind;
+};
+
+type PhaseValidationSummaryEvidence = {
+  planId: string;
+  path: string;
+  linkedPlanPath: string | null;
+  status: "COMPLETED";
+  title: string | null;
+  summary: string | null;
+  outcome: string[];
+  changesMade: string[];
+  verification: string[];
+  followUps: string[];
+  evidence: string[];
+};
+
+type PhaseValidationAllowedValues = {
+  verification: {
+    gateStates: string[];
+    coverageStates: string[];
+    manualCoverageStatuses: string[];
+    gapClasses: string[];
+    readinessByGate: Record<string, string>;
+    readyForUatCommand: string;
+    repairCommands: string[];
+  };
+  uat: {
+    statuses: string[];
+    resumeStates: string[];
+    completeCheckpoint: string;
+    testResults: string[];
+    structuredGapStatuses: string[];
+    structuredGapSeverities: string[];
+  };
+};
+
+type PhaseValidationAuthoringContextResult = {
+  phaseFound: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  artifact: PhaseValidationArtifactKind;
+  path: string | null;
+  contract: ArtifactContractReadResult;
+  summaryPaths: string[];
+  summaryEvidence: PhaseValidationSummaryEvidence[];
+  existing: PhaseValidationReadResult | null;
+  verification: PhaseValidationReadResult | null;
+  prerequisiteBlockers: string[];
+  readyForDraft: boolean;
+  allowedValues: PhaseValidationAllowedValues;
+  routingRules: string[];
+  warnings: string[];
+  reason: string | null;
+};
+
+type VerificationRenderCoverageRow = {
+  requirement?: string;
+  taskOrCheck?: string;
+  evidence?: string;
+  coverageState?: string;
+  notes?: string;
+};
+
+type VerificationManualCoverageRow = {
+  item?: string;
+  whyManualOrDeferred?: string;
+  followUp?: string;
+  status?: string;
+};
+
+type VerificationGapClassificationRow = {
+  gapClass?: string;
+  scope?: string;
+  evidence?: string;
+  repair?: string;
+};
+
+type VerificationRenderArgs = PhaseLookupArgs & {
+  artifact: "verification";
+  coverageSummary?: string;
+  gateState?: string;
+  signOff?: string;
+  validationSummary?: string | string[];
+  requirementCoverage?: VerificationRenderCoverageRow[];
+  evidenceReviewedSummaryPaths?: string[];
+  evidenceMetadata?: string[];
+  manualOrDeferredCoverage?: VerificationManualCoverageRow[];
+  gapClassification?: VerificationGapClassificationRow[];
+  gapsFound?: string[];
+  suggestedRepairs?: string[];
+  nextSafeAction?: string;
+};
+
+type UatRenderCurrentTest = {
+  number?: string;
+  name?: string;
+  expected?: string;
+  awaiting?: string;
+};
+
+type UatRenderTestMatrixRow = {
+  number?: string;
+  test?: string;
+  expectedBehavior?: string;
+  evidence?: string;
+  result?: string;
+  notes?: string;
+};
+
+type UatRenderResultSummary = {
+  total?: number;
+  passed?: number;
+  issues?: number;
+  pending?: number;
+  skipped?: number;
+  blocked?: number;
+};
+
+type UatRenderStructuredGapRow = {
+  test?: string;
+  truth?: string;
+  status?: string;
+  severity?: string;
+  reason?: string;
+  followUp?: string;
+};
+
+type UatRenderArgs = PhaseLookupArgs & {
+  artifact: "uat";
+  status?: string;
+  resumeState?: string;
+  checkpoint?: string;
+  uatSummary?: string[];
+  sessionState?: string[];
+  currentTest?: UatRenderCurrentTest;
+  testMatrix?: UatRenderTestMatrixRow[];
+  resultSummary?: UatRenderResultSummary;
+  questionsAsked?: string[];
+  observedBehavior?: string[];
+  unresolvedGaps?: string[];
+  structuredGaps?: UatRenderStructuredGapRow[];
+  followUpFixes?: string[];
+  nextSafeAction?: string;
+};
+
+type PhaseValidationRenderArgs = VerificationRenderArgs | UatRenderArgs;
+
+type PhaseValidationRenderResult = {
+  phaseFound: boolean;
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  phaseDir: string | null;
+  artifact: PhaseValidationArtifactKind;
+  path: string | null;
+  content: string;
+  validation: {
+    valid: boolean;
+    issues: string[];
+    warnings: string[];
+  };
+  summaryPaths: string[];
+  referencedSummaryPaths: string[];
+  prerequisiteBlockers: string[];
+  readyToWrite: boolean;
+  issues: string[];
+  warnings: string[];
 };
 
 type PhaseCheckpointRecord = Record<string, unknown>;
@@ -908,6 +1085,7 @@ const phaseValidationArtifactInputSchema = {
   phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["verification", "uat"])
 };
+const phaseValidationAuthoringContextInputSchema = phaseValidationArtifactInputSchema;
 const phasePlanInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional()
@@ -934,6 +1112,102 @@ const phaseValidationWriteInputSchema = {
   artifact: z.enum(["verification", "uat"]),
   content: z.string(),
   overwrite: z.boolean().optional()
+};
+const phaseValidationRenderInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  artifact: z.enum(["verification", "uat"]),
+  coverageSummary: z.string().optional(),
+  gateState: z.string().optional(),
+  signOff: z.string().optional(),
+  validationSummary: z.union([z.string(), z.array(z.string())]).optional(),
+  requirementCoverage: z
+    .array(
+      z.object({
+        requirement: z.string().optional(),
+        taskOrCheck: z.string().optional(),
+        evidence: z.string().optional(),
+        coverageState: z.string().optional(),
+        notes: z.string().optional()
+      })
+    )
+    .optional(),
+  evidenceReviewedSummaryPaths: z.array(z.string()).optional(),
+  evidenceMetadata: z.array(z.string()).optional(),
+  manualOrDeferredCoverage: z
+    .array(
+      z.object({
+        item: z.string().optional(),
+        whyManualOrDeferred: z.string().optional(),
+        followUp: z.string().optional(),
+        status: z.string().optional()
+      })
+    )
+    .optional(),
+  gapClassification: z
+    .array(
+      z.object({
+        gapClass: z.string().optional(),
+        scope: z.string().optional(),
+        evidence: z.string().optional(),
+        repair: z.string().optional()
+      })
+    )
+    .optional(),
+  gapsFound: z.array(z.string()).optional(),
+  suggestedRepairs: z.array(z.string()).optional(),
+  nextSafeAction: z.string().optional(),
+  status: z.string().optional(),
+  resumeState: z.string().optional(),
+  checkpoint: z.string().optional(),
+  uatSummary: z.array(z.string()).optional(),
+  sessionState: z.array(z.string()).optional(),
+  currentTest: z
+    .object({
+      number: z.string().optional(),
+      name: z.string().optional(),
+      expected: z.string().optional(),
+      awaiting: z.string().optional()
+    })
+    .optional(),
+  testMatrix: z
+    .array(
+      z.object({
+        number: z.string().optional(),
+        test: z.string().optional(),
+        expectedBehavior: z.string().optional(),
+        evidence: z.string().optional(),
+        result: z.string().optional(),
+        notes: z.string().optional()
+      })
+    )
+    .optional(),
+  resultSummary: z
+    .object({
+      total: z.number().int().nonnegative().optional(),
+      passed: z.number().int().nonnegative().optional(),
+      issues: z.number().int().nonnegative().optional(),
+      pending: z.number().int().nonnegative().optional(),
+      skipped: z.number().int().nonnegative().optional(),
+      blocked: z.number().int().nonnegative().optional()
+    })
+    .optional(),
+  questionsAsked: z.array(z.string()).optional(),
+  observedBehavior: z.array(z.string()).optional(),
+  unresolvedGaps: z.array(z.string()).optional(),
+  structuredGaps: z
+    .array(
+      z.object({
+        test: z.string().optional(),
+        truth: z.string().optional(),
+        status: z.string().optional(),
+        severity: z.string().optional(),
+        reason: z.string().optional(),
+        followUp: z.string().optional()
+      })
+    )
+    .optional(),
+  followUpFixes: z.array(z.string()).optional()
 };
 const phasePlanReadInputSchema = {
   cwd: z.string().optional(),
@@ -3796,6 +4070,648 @@ function collectReferencedValidatedSummaryPaths(
   return [...references.entries()]
     .sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))
     .map(([summaryPath]) => summaryPath);
+}
+
+const PHASE_VALIDATION_ALLOWED_VALUES: PhaseValidationAllowedValues = {
+  verification: {
+    gateStates: ["PASS", "PARTIAL", "BLOCKED"],
+    coverageStates: ["PASS", "MANUAL", "DEFERRED", "BLOCKED"],
+    manualCoverageStatuses: ["MANUAL", "DEFERRED", "NONE"],
+    gapClasses: [
+      "missing-evidence",
+      "partial-coverage",
+      "manual-only",
+      "deferred-test",
+      "contradiction",
+      "none"
+    ],
+    readinessByGate: {
+      PASS: "ready for UAT",
+      PARTIAL: "not ready for UAT",
+      BLOCKED: "not ready for UAT"
+    },
+    readyForUatCommand: "/blu-verify-work",
+    repairCommands: ["/blu-add-tests", "/blu-audit-fix"]
+  },
+  uat: {
+    statuses: ["PASS", "FAIL", "PARTIAL"],
+    resumeStates: ["RESUMED", "NEW", "CONTINUED"],
+    completeCheckpoint: "none",
+    testResults: ["pending", "pass", "issue", "skipped", "blocked"],
+    structuredGapStatuses: ["failed", "partial", "blocked", "none"],
+    structuredGapSeverities: ["blocker", "major", "minor", "cosmetic", "none"]
+  }
+};
+
+function clonePhaseValidationAllowedValues(): PhaseValidationAllowedValues {
+  return {
+    verification: {
+      gateStates: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.gateStates],
+      coverageStates: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.coverageStates],
+      manualCoverageStatuses: [
+        ...PHASE_VALIDATION_ALLOWED_VALUES.verification.manualCoverageStatuses
+      ],
+      gapClasses: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.gapClasses],
+      readinessByGate: {
+        ...PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate
+      },
+      readyForUatCommand: PHASE_VALIDATION_ALLOWED_VALUES.verification.readyForUatCommand,
+      repairCommands: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.repairCommands]
+    },
+    uat: {
+      statuses: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.statuses],
+      resumeStates: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.resumeStates],
+      completeCheckpoint: PHASE_VALIDATION_ALLOWED_VALUES.uat.completeCheckpoint,
+      testResults: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.testResults],
+      structuredGapStatuses: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.structuredGapStatuses],
+      structuredGapSeverities: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.structuredGapSeverities]
+    }
+  };
+}
+
+function validationArtifactContractId(
+  artifact: PhaseValidationArtifactKind
+): "phase.verification" | "phase.uat" {
+  return artifact === "verification" ? "phase.verification" : "phase.uat";
+}
+
+function validationArtifactContractContext(
+  resolved?: ResolvedPhaseLocation
+): {
+  phaseLabel?: string;
+  phasePrefix?: string;
+  phaseName?: string;
+  phaseDir?: string;
+  summaryFile?: string;
+  summaryPath?: string;
+} {
+  if (!resolved) {
+    return {};
+  }
+
+  return {
+    phaseLabel: `Phase ${resolved.phasePrefix}: ${resolved.phaseName}`,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    summaryFile: `${resolved.phasePrefix}-01-SUMMARY.md`,
+    summaryPath: `${resolved.phaseDir}/${resolved.phasePrefix}-01-SUMMARY.md`
+  };
+}
+
+function validationArtifactContract(
+  artifact: PhaseValidationArtifactKind,
+  resolved?: ResolvedPhaseLocation
+): ArtifactContractReadResult {
+  return readArtifactContract(
+    validationArtifactContractId(artifact),
+    validationArtifactContractContext(resolved)
+  );
+}
+
+function phaseValidationRoutingRules(phaseNumber: string | null): string[] {
+  const phaseRef = phaseNumber ?? "<phase>";
+
+  return [
+    `PASS verification must use Readiness: ready for UAT and route to /blu-verify-work ${phaseRef}.`,
+    "PARTIAL or BLOCKED verification must use Readiness: not ready for UAT.",
+    `Test-generation gaps route to /blu-add-tests ${phaseRef}; implementation or behavior gaps route to /blu-audit-fix ${phaseRef}.`,
+    "UAT PASS is complete only when **Checkpoint:** is none; checkpointed UAT should route back to /blu-verify-work."
+  ];
+}
+
+function mergeSummarySections(content: string, headings: string[]): string[] {
+  return headings.flatMap((heading) => sectionToList(extractMarkdownSection(content, heading)));
+}
+
+async function collectValidationAuthoringSummaryEvidence(
+  projectRoot: string,
+  summaries: PhaseSummaryRecord[]
+): Promise<{
+  summaryPaths: string[];
+  evidence: PhaseValidationSummaryEvidence[];
+  warnings: string[];
+}> {
+  const summaryPaths: string[] = [];
+  const evidence: PhaseValidationSummaryEvidence[] = [];
+  const warnings: string[] = [];
+
+  for (const summary of completedSummaryRecords(summaries)) {
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, summary.path), "utf8");
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: summary.linkedPlanPath
+    });
+
+    if (!validation.valid) {
+      warnings.push(
+        `${summary.path}: summary artifact is invalid and does not count as completed execution evidence.`
+      );
+      warnings.push(...validation.issues.map((issue) => `${summary.path}: ${issue}`));
+      warnings.push(...validation.warnings.map((warning) => `${summary.path}: ${warning}`));
+      continue;
+    }
+
+    summaryPaths.push(summary.path);
+    evidence.push({
+      planId: summary.planId,
+      path: summary.path,
+      linkedPlanPath: summary.linkedPlanPath,
+      status: "COMPLETED",
+      title: extractMarkdownHeading(content) ?? summary.title,
+      summary: summary.summary,
+      outcome: mergeSummarySections(content, ["Outcome", "Result"]),
+      changesMade: mergeSummarySections(content, ["Changes Made"]),
+      verification: mergeSummarySections(content, ["Verification"]),
+      followUps: mergeSummarySections(content, ["Follow-Ups", "Follow Ups"]),
+      evidence: mergeSummarySections(content, ["Evidence"])
+    });
+  }
+
+  return { summaryPaths, evidence, warnings };
+}
+
+function markdownCell(value: unknown): string {
+  const normalized = String(value ?? "")
+    .replace(/\r?\n/g, " ")
+    .replace(/\|/g, "\\|")
+    .trim();
+
+  return normalized;
+}
+
+function renderBulletList(items: string[] | undefined, fallback = "none"): string {
+  const lines = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
+
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+
+  return lines.map((item) => `- ${item}`).join("\n");
+}
+
+function normalizeRenderList(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value === undefined ? [] : [value];
+}
+
+function renderVerificationContent(
+  args: VerificationRenderArgs,
+  resolved: ResolvedPhaseLocation,
+  summaryPaths: string[]
+): string {
+  const evidenceReviewedSummaryPaths = args.evidenceReviewedSummaryPaths ?? summaryPaths;
+  const requirementRows = (args.requirementCoverage ?? [])
+    .map(
+      (row) =>
+        `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(row.coverageState)} | ${markdownCell(row.notes)} |`
+    )
+    .join("\n");
+  const manualRows =
+    (args.manualOrDeferredCoverage ?? []).length > 0
+      ? (args.manualOrDeferredCoverage ?? [])
+          .map(
+            (row) =>
+              `| ${markdownCell(row.item)} | ${markdownCell(row.whyManualOrDeferred)} | ${markdownCell(row.followUp)} | ${markdownCell(row.status)} |`
+          )
+          .join("\n")
+      : "| none | none | none | NONE |";
+  const gapRows =
+    (args.gapClassification ?? []).length > 0
+      ? (args.gapClassification ?? [])
+          .map(
+            (row) =>
+              `| ${markdownCell(row.gapClass)} | ${markdownCell(row.scope)} | ${markdownCell(row.evidence)} | ${markdownCell(row.repair)} |`
+          )
+          .join("\n")
+      : "| none | none | none | none |";
+
+  return normalizeTextContent(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Verification
+
+**Coverage:** ${args.coverageSummary ?? ""}
+**Gate State:** ${args.gateState ?? ""}
+**Sign-off:** ${args.signOff ?? ""}
+
+## Validation Summary
+
+${renderBulletList(normalizeRenderList(args.validationSummary))}
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+${requirementRows}
+
+## Evidence Reviewed
+
+${renderBulletList(evidenceReviewedSummaryPaths)}
+
+## Test Infrastructure / Evidence Metadata
+
+${renderBulletList(args.evidenceMetadata)}
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+${manualRows}
+
+## Gate State
+
+- Gate: ${args.gateState ?? ""}
+- Sign-off: ${args.signOff ?? ""}
+- Readiness: ${
+    PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate[args.gateState ?? ""] ?? ""
+  }
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+${gapRows}
+
+## Gaps Found
+
+${renderBulletList(args.gapsFound)}
+
+## Suggested Repairs
+
+${renderBulletList(args.suggestedRepairs)}
+
+## Next Safe Action
+
+- ${args.nextSafeAction ?? ""}
+`);
+}
+
+function renderUatContent(
+  args: UatRenderArgs,
+  resolved: ResolvedPhaseLocation
+): string {
+  const currentTest = args.currentTest ?? {};
+  const resultSummary = args.resultSummary ?? {};
+  const testRows =
+    (args.testMatrix ?? []).length > 0
+      ? (args.testMatrix ?? [])
+          .map(
+            (row, index) =>
+              `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
+          )
+          .join("\n")
+      : "";
+  const structuredGapRows =
+    (args.structuredGaps ?? []).length > 0
+      ? (args.structuredGaps ?? [])
+          .map(
+            (row) =>
+              `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
+          )
+          .join("\n")
+      : "| none | none | none | none | none | none |";
+
+  return normalizeTextContent(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - UAT
+
+**Status:** ${args.status ?? ""}
+**Resume State:** ${args.resumeState ?? ""}
+**Checkpoint:** ${args.checkpoint ?? ""}
+
+## UAT Summary
+
+${renderBulletList(args.uatSummary)}
+
+## Session State
+
+${renderBulletList(args.sessionState)}
+
+## Current Test
+
+- Number: ${currentTest.number ?? ""}
+- Name: ${currentTest.name ?? ""}
+- Expected: ${currentTest.expected ?? ""}
+- Awaiting: ${currentTest.awaiting ?? ""}
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+${testRows}
+
+## Result Summary
+
+- Total: ${resultSummary.total ?? ""}
+- Passed: ${resultSummary.passed ?? ""}
+- Issues: ${resultSummary.issues ?? ""}
+- Pending: ${resultSummary.pending ?? ""}
+- Skipped: ${resultSummary.skipped ?? ""}
+- Blocked: ${resultSummary.blocked ?? ""}
+
+## Questions Asked
+
+${renderBulletList(args.questionsAsked)}
+
+## Observed Behavior
+
+${renderBulletList(args.observedBehavior)}
+
+## Unresolved Gaps
+
+${renderBulletList(args.unresolvedGaps)}
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+${structuredGapRows}
+
+## Follow-Up Fixes
+
+${renderBulletList(args.followUpFixes)}
+
+## Next Safe Action
+
+- ${args.nextSafeAction ?? ""}
+`);
+}
+
+function verificationPayloadIssues(args: VerificationRenderArgs): string[] {
+  const issues: string[] = [];
+
+  if (!args.coverageSummary?.trim()) {
+    issues.push("Verification render payload must include coverageSummary.");
+  }
+  if (!args.gateState?.trim()) {
+    issues.push("Verification render payload must include gateState.");
+  }
+  if (!args.signOff?.trim()) {
+    issues.push("Verification render payload must include signOff.");
+  }
+  if (normalizeRenderList(args.validationSummary).filter((item) => item.trim().length > 0).length === 0) {
+    issues.push("Verification render payload must include validationSummary.");
+  }
+  if ((args.requirementCoverage ?? []).length === 0) {
+    issues.push("Verification render payload must include at least one requirementCoverage row.");
+  }
+  if ((args.evidenceMetadata ?? []).filter((item) => item.trim().length > 0).length === 0) {
+    issues.push("Verification render payload must include evidenceMetadata.");
+  }
+  if (!args.nextSafeAction?.trim()) {
+    issues.push("Verification render payload must include nextSafeAction.");
+  }
+
+  return issues;
+}
+
+function uatPayloadIssues(args: UatRenderArgs): string[] {
+  const issues: string[] = [];
+
+  if (!args.status?.trim()) {
+    issues.push("UAT render payload must include status.");
+  }
+  if (!args.resumeState?.trim()) {
+    issues.push("UAT render payload must include resumeState.");
+  }
+  if (!args.checkpoint?.trim()) {
+    issues.push("UAT render payload must include checkpoint.");
+  }
+  if (args.status === "PASS" && args.checkpoint?.trim().toLowerCase() !== "none") {
+    issues.push("UAT render payload must use checkpoint none when status is PASS.");
+  }
+  if (
+    (args.status === "FAIL" || args.status === "PARTIAL") &&
+    args.checkpoint?.trim().toLowerCase() === "none"
+  ) {
+    issues.push("UAT render payload must keep a non-empty checkpoint label until status is PASS.");
+  }
+  if ((args.uatSummary ?? []).filter((item) => item.trim().length > 0).length === 0) {
+    issues.push("UAT render payload must include uatSummary.");
+  }
+  if ((args.testMatrix ?? []).length === 0) {
+    issues.push("UAT render payload must include at least one testMatrix row.");
+  }
+  if (!args.resultSummary) {
+    issues.push("UAT render payload must include resultSummary.");
+  }
+  if (!args.nextSafeAction?.trim()) {
+    issues.push("UAT render payload must include nextSafeAction.");
+  }
+
+  return issues;
+}
+
+async function validationPrerequisiteBlockers(
+  projectRoot: string,
+  resolved: ResolvedPhaseLocation,
+  artifact: PhaseValidationArtifactKind,
+  summaryPaths: string[]
+): Promise<{
+  blockers: string[];
+  verification: PhaseValidationReadResult | null;
+}> {
+  const blockers: string[] = [];
+  let verification: PhaseValidationReadResult | null = null;
+
+  if (summaryPaths.length === 0) {
+    blockers.push(
+      `Phase ${resolved.phaseNumber} does not have any valid completed execution summaries.`
+    );
+  }
+
+  if (artifact === "uat") {
+    verification = await blueprintPhaseValidationRead({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber,
+      artifact: "verification"
+    });
+
+    if (!verification.found) {
+      blockers.push(
+        `Phase ${resolved.phaseNumber} must have a saved VERIFICATION artifact before UAT.`
+      );
+    } else if (!verification.validation?.valid) {
+      blockers.push(
+        `Phase ${resolved.phaseNumber} must have a valid VERIFICATION artifact before UAT.`
+      );
+    } else if (!verification.verificationReadyForUat) {
+      blockers.push(
+        `Phase ${resolved.phaseNumber} verification is valid but not ready for UAT.`
+      );
+    }
+  }
+
+  return { blockers, verification };
+}
+
+export async function blueprintPhaseValidationAuthoringContext(
+  args: PhaseValidationAuthoringContextArgs
+): Promise<PhaseValidationAuthoringContextResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+  const contract = validationArtifactContract(args.artifact, resolved ?? undefined);
+  const allowedValues = clonePhaseValidationAllowedValues();
+
+  if (!resolved) {
+    const reason = located.reason ?? "Phase could not be resolved for validation authoring.";
+
+    return {
+      phaseFound: false,
+      phaseNumber: null,
+      phasePrefix: null,
+      phaseName: null,
+      phaseDir: null,
+      artifact: args.artifact,
+      path: null,
+      contract,
+      summaryPaths: [],
+      summaryEvidence: [],
+      existing: null,
+      verification: null,
+      prerequisiteBlockers: [reason],
+      readyForDraft: false,
+      allowedValues,
+      routingRules: phaseValidationRoutingRules(null),
+      warnings: [],
+      reason
+    };
+  }
+
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const summaryEvidence = await collectValidationAuthoringSummaryEvidence(
+    projectRoot,
+    summaryIndex.summaries
+  );
+  const existing = await blueprintPhaseValidationRead({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber,
+    artifact: args.artifact
+  });
+  const prerequisites = await validationPrerequisiteBlockers(
+    projectRoot,
+    resolved,
+    args.artifact,
+    summaryEvidence.summaryPaths
+  );
+  const verification = args.artifact === "verification" ? existing : prerequisites.verification;
+
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: validationArtifactPathFor(resolved, args.artifact),
+    contract,
+    summaryPaths: summaryEvidence.summaryPaths,
+    summaryEvidence: summaryEvidence.evidence,
+    existing,
+    verification,
+    prerequisiteBlockers: prerequisites.blockers,
+    readyForDraft: prerequisites.blockers.length === 0,
+    allowedValues,
+    routingRules: phaseValidationRoutingRules(resolved.phaseNumber),
+    warnings: summaryEvidence.warnings,
+    reason: null
+  };
+}
+
+export async function blueprintPhaseValidationRender(
+  args: PhaseValidationRenderArgs
+): Promise<PhaseValidationRenderResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  const resolved = toResolvedPhaseLocation(located);
+
+  if (!resolved) {
+    const reason = located.reason ?? "Phase could not be resolved for validation rendering.";
+    const validation = {
+      valid: false,
+      issues: [reason],
+      warnings: [] as string[]
+    };
+
+    return {
+      phaseFound: false,
+      phaseNumber: null,
+      phasePrefix: null,
+      phaseName: null,
+      phaseDir: null,
+      artifact: args.artifact,
+      path: null,
+      content: "",
+      validation,
+      summaryPaths: [],
+      referencedSummaryPaths: [],
+      prerequisiteBlockers: [reason],
+      readyToWrite: false,
+      issues: [reason],
+      warnings: []
+    };
+  }
+
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const summaryEvidence = await collectValidationAuthoringSummaryEvidence(
+    projectRoot,
+    summaryIndex.summaries
+  );
+  const prerequisites = await validationPrerequisiteBlockers(
+    projectRoot,
+    resolved,
+    args.artifact,
+    summaryEvidence.summaryPaths
+  );
+  const content =
+    args.artifact === "verification"
+      ? renderVerificationContent(args, resolved, summaryEvidence.summaryPaths)
+      : renderUatContent(args, resolved);
+  const completedSummaryPlanIds = new Set(
+    completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId)
+  );
+  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
+    content,
+    summaryIndex.summaries,
+    completedSummaryPlanIds
+  );
+  const validation =
+    args.artifact === "verification"
+      ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths)
+      : validateUatArtifactContent(content, referencedSummaryPaths);
+  const payloadIssues =
+    args.artifact === "verification"
+      ? verificationPayloadIssues(args)
+      : uatPayloadIssues(args);
+  const issues = [
+    ...prerequisites.blockers,
+    ...payloadIssues,
+    ...validation.issues
+  ];
+  const warnings = [...summaryEvidence.warnings, ...validation.warnings];
+
+  return {
+    phaseFound: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: validationArtifactPathFor(resolved, args.artifact),
+    content,
+    validation,
+    summaryPaths: summaryEvidence.summaryPaths,
+    referencedSummaryPaths,
+    prerequisiteBlockers: prerequisites.blockers,
+    readyToWrite: issues.length === 0,
+    issues,
+    warnings
+  };
 }
 
 function ensureCheckpointObject(
@@ -7083,6 +7999,22 @@ export const phaseToolDefinitions = [
     inputSchema: phaseValidationArtifactInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseValidationRead(args as PhaseValidationReadArgs)
+  },
+  {
+    name: "blueprint_phase_validation_authoring_context",
+    description:
+      "Read phase validation authoring inputs, canonical contract metadata, summary evidence, existing baselines, and prerequisite blockers without mutating state.",
+    inputSchema: phaseValidationAuthoringContextInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseValidationAuthoringContext(args as PhaseValidationAuthoringContextArgs)
+  },
+  {
+    name: "blueprint_phase_validation_render",
+    description:
+      "Render canonical VERIFICATION or UAT markdown from structured validation evidence and validate it without writing files.",
+    inputSchema: phaseValidationRenderInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseValidationRender(args as PhaseValidationRenderArgs)
   },
   {
     name: "blueprint_phase_validation_write",

@@ -34,6 +34,8 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_authoring_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
@@ -76,6 +78,8 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(skillFile, /verify-work-runtime-contract\.md/);
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
+  assert.match(skillFile, /blueprint_phase_validation_authoring_context/);
+  assert.match(skillFile, /blueprint_phase_validation_render/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
@@ -90,7 +94,8 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.doesNotMatch(verifyInputs, /add-tests-runtime-contract|validate-phase-runtime-contract/);
   assert.match(runtimeContract, /Build a concrete UAT queue before asking the user anything/i);
   assert.match(runtimeContract, /Present one test at a time/i);
-  assert.match(runtimeContract, /repair the[\s\S]*canonical contract, and retry once/i);
+  assert.match(runtimeContract, /blueprint_phase_validation_render/);
+  assert.match(runtimeContract, /readyToWrite: true/i);
   assert.match(
     runtimeReference,
     /`verify-work`[\s\S]*Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
@@ -112,7 +117,7 @@ test("verify-work docs and supporting contracts keep roadmap-sync risk and resum
     /updates `?\.blueprint\/ROADMAP\.md`? when valid execution, verification, and UAT evidence make completion durable/i
   );
   assert.match(commandDoc, /## Shell Risk Profile[\s\S]*Medium: writes UAT evidence, can sync `\.blueprint\/ROADMAP\.md` completion state, and updates follow-up state\./i);
-  assert.match(commandDoc, /normalizes the final body to the canonical UAT template before persistence/i);
+  assert.match(commandDoc, /render the final `XX-UAT\.md` body through `blueprint_phase_validation_render`/i);
   assert.match(commandDoc, /validates the written artifact before updating state/i);
   assert.match(commandDoc, /next safe action stays on `\/blu-verify-work <phase>`/i);
   assert.match(schemaDoc, /`\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED`/);
