@@ -125,7 +125,8 @@ type PhaseValidationReadArgs = PhaseLookupArgs & {
 
 type PhaseValidationWriteArgs = PhaseLookupArgs & {
   artifact: PhaseValidationArtifactKind;
-  content: string;
+  content?: string;
+  model?: Record<string, unknown>;
   overwrite?: boolean;
 };
 
@@ -1110,7 +1111,8 @@ const phaseValidationWriteInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["verification", "uat"]),
-  content: z.string(),
+  content: z.string().optional(),
+  model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional()
 };
 const phaseValidationRenderInputSchema = {
@@ -1209,6 +1211,125 @@ const phaseValidationRenderInputSchema = {
     .optional(),
   followUpFixes: z.array(z.string()).optional()
 };
+const phaseValidationRenderSchema = z.object(phaseValidationRenderInputSchema).strict();
+const phaseValidationModelStringSchema = z.string().min(1);
+const phaseVerificationStructuredModelSchema = z
+  .object({
+    coverageSummary: phaseValidationModelStringSchema,
+    gateState: z.enum(["PASS", "PARTIAL", "BLOCKED"]),
+    signOff: phaseValidationModelStringSchema,
+    validationSummary: z.array(phaseValidationModelStringSchema).min(1),
+    requirementCoverage: z
+      .array(
+        z
+          .object({
+            requirement: phaseValidationModelStringSchema,
+            taskOrCheck: phaseValidationModelStringSchema,
+            evidence: phaseValidationModelStringSchema,
+            coverageState: z.enum(["PASS", "MANUAL", "DEFERRED", "BLOCKED"]),
+            notes: phaseValidationModelStringSchema
+          })
+          .strict()
+      )
+      .min(1),
+    evidenceReviewedSummaryPaths: z.array(phaseValidationModelStringSchema).min(1),
+    evidenceMetadata: z.array(phaseValidationModelStringSchema).min(1),
+    manualOrDeferredCoverage: z
+      .array(
+        z
+          .object({
+            item: phaseValidationModelStringSchema,
+            whyManualOrDeferred: phaseValidationModelStringSchema,
+            followUp: phaseValidationModelStringSchema,
+            status: z.enum(["MANUAL", "DEFERRED", "NONE"])
+          })
+          .strict()
+      )
+      .min(1),
+    gapClassification: z
+      .array(
+        z
+          .object({
+            gapClass: z.enum([
+              "missing-evidence",
+              "partial-coverage",
+              "manual-only",
+              "deferred-test",
+              "contradiction",
+              "none"
+            ]),
+            scope: phaseValidationModelStringSchema,
+            evidence: phaseValidationModelStringSchema,
+            repair: phaseValidationModelStringSchema
+          })
+          .strict()
+      )
+      .min(1),
+    gapsFound: z.array(phaseValidationModelStringSchema).min(1),
+    suggestedRepairs: z.array(phaseValidationModelStringSchema).min(1),
+    nextSafeAction: phaseValidationModelStringSchema
+  })
+  .strict();
+const phaseUatStructuredModelSchema = z
+  .object({
+    status: z.enum(["PASS", "FAIL", "PARTIAL"]),
+    resumeState: z.enum(["RESUMED", "NEW", "CONTINUED"]),
+    checkpoint: phaseValidationModelStringSchema,
+    uatSummary: z.array(phaseValidationModelStringSchema).min(1),
+    sessionState: z.array(phaseValidationModelStringSchema).min(1),
+    currentTest: z
+      .object({
+        number: phaseValidationModelStringSchema,
+        name: phaseValidationModelStringSchema,
+        expected: phaseValidationModelStringSchema,
+        awaiting: phaseValidationModelStringSchema
+      })
+      .strict(),
+    testMatrix: z
+      .array(
+        z
+          .object({
+            number: phaseValidationModelStringSchema,
+            test: phaseValidationModelStringSchema,
+            expectedBehavior: phaseValidationModelStringSchema,
+            evidence: phaseValidationModelStringSchema,
+            result: z.enum(["pending", "pass", "issue", "skipped", "blocked"]),
+            notes: phaseValidationModelStringSchema
+          })
+          .strict()
+      )
+      .min(1),
+    resultSummary: z
+      .object({
+        total: z.number().int().nonnegative(),
+        passed: z.number().int().nonnegative(),
+        issues: z.number().int().nonnegative(),
+        pending: z.number().int().nonnegative(),
+        skipped: z.number().int().nonnegative(),
+        blocked: z.number().int().nonnegative()
+      })
+      .strict(),
+    questionsAsked: z.array(phaseValidationModelStringSchema),
+    observedBehavior: z.array(phaseValidationModelStringSchema).min(1),
+    unresolvedGaps: z.array(phaseValidationModelStringSchema).min(1),
+    structuredGaps: z
+      .array(
+        z
+          .object({
+            test: phaseValidationModelStringSchema,
+            truth: phaseValidationModelStringSchema,
+            status: z.enum(["failed", "partial", "blocked", "none"]),
+            severity: z.enum(["blocker", "major", "minor", "cosmetic", "none"]),
+            reason: phaseValidationModelStringSchema,
+            followUp: phaseValidationModelStringSchema
+          })
+          .strict()
+      )
+      .min(1),
+    followUpFixes: z.array(phaseValidationModelStringSchema).min(1),
+    nextSafeAction: phaseValidationModelStringSchema
+  })
+  .strict();
 const phasePlanReadInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
@@ -4169,6 +4290,150 @@ function validationArtifactContract(
   );
 }
 
+const PHASE_VALIDATION_MODEL_IDENTITY_KEYS = new Set([
+  "cwd",
+  "phase",
+  "phaseNumber",
+  "phasePrefix",
+  "phaseName",
+  "phaseDir",
+  "artifact",
+  "path",
+  "content"
+]);
+
+function collectModelStringValues(value: unknown): string[] {
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectModelStringValues(item));
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).flatMap((item) => collectModelStringValues(item));
+  }
+
+  return [];
+}
+
+function formatZodIssuePath(pathSegments: PropertyKey[]): string {
+  return pathSegments.length > 0 ? pathSegments.map(String).join(".") : "model";
+}
+
+function phaseValidationModelToRenderArgs(
+  args: PhaseValidationWriteArgs,
+  resolved: ResolvedPhaseLocation,
+  projectRoot: string
+): {
+  renderArgs: PhaseValidationRenderArgs | null;
+  issues: string[];
+} {
+  const model = args.model;
+  const issues: string[] = [];
+
+  if (typeof model !== "object" || model === null || Array.isArray(model)) {
+    return {
+      renderArgs: null,
+      issues: ["Phase validation model must be a JSON object."]
+    };
+  }
+
+  const identityKeys = Object.keys(model).filter((key) =>
+    PHASE_VALIDATION_MODEL_IDENTITY_KEYS.has(key)
+  );
+  if (identityKeys.length > 0) {
+    issues.push(
+      `Phase validation model must not include MCP-owned identity keys: ${identityKeys.join(", ")}.`
+    );
+  }
+
+  const modelContract = validationArtifactContract(args.artifact, resolved).modelContract;
+  if (!modelContract) {
+    issues.push(
+      `${validationArtifactContractId(args.artifact)} does not support structured model writes.`
+    );
+  } else {
+    const requiredKeys = Array.isArray(modelContract.jsonSchema.required)
+      ? modelContract.jsonSchema.required.filter((key): key is string => typeof key === "string")
+      : [];
+    const properties =
+      typeof modelContract.jsonSchema.properties === "object" &&
+      modelContract.jsonSchema.properties !== null
+        ? modelContract.jsonSchema.properties
+        : {};
+    const allowedKeys = new Set(Object.keys(properties));
+    const missingKeys = requiredKeys.filter((key) => !(key in model));
+    const unknownKeys = Object.keys(model).filter((key) => !allowedKeys.has(key));
+
+    if (missingKeys.length > 0) {
+      issues.push(
+        `Phase validation model for ${modelContract.schemaId} is missing required fields: ${missingKeys.join(", ")}.`
+      );
+    }
+
+    if (unknownKeys.length > 0) {
+      issues.push(
+        `Phase validation model for ${modelContract.schemaId} includes unsupported fields: ${unknownKeys.join(", ")}.`
+      );
+    }
+
+    const modelStrings = collectModelStringValues(model);
+    const leakedSignals = modelContract.exampleLeakageSignals.filter((signal) =>
+      modelStrings.some((value) => value.includes(signal))
+    );
+
+    for (const signal of leakedSignals) {
+      issues.push(
+        `Phase validation model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`
+      );
+    }
+  }
+
+  if (issues.length > 0) {
+    return { renderArgs: null, issues };
+  }
+
+  const artifactModelSchema =
+    args.artifact === "verification"
+      ? phaseVerificationStructuredModelSchema
+      : phaseUatStructuredModelSchema;
+  const parsedModel = artifactModelSchema.safeParse(model);
+
+  if (!parsedModel.success) {
+    return {
+      renderArgs: null,
+      issues: parsedModel.error.issues.map(
+        (issue) =>
+          `Phase validation model field ${formatZodIssuePath(issue.path)} is invalid: ${issue.message}.`
+      )
+    };
+  }
+
+  const parsed = phaseValidationRenderSchema.safeParse({
+    ...parsedModel.data,
+    cwd: projectRoot,
+    phase: resolved.phaseNumber,
+    artifact: args.artifact
+  });
+
+  if (!parsed.success) {
+    return {
+      renderArgs: null,
+      issues: parsed.error.issues.map(
+        (issue) =>
+          `Phase validation model field ${formatZodIssuePath(issue.path)} is invalid: ${issue.message}.`
+      )
+    };
+  }
+
+  return {
+    renderArgs: parsed.data as PhaseValidationRenderArgs,
+    issues: []
+  };
+}
+
 function phaseValidationRoutingRules(phaseNumber: string | null): string[] {
   const phaseRef = phaseNumber ?? "<phase>";
 
@@ -6297,6 +6562,31 @@ export async function blueprintPhaseValidationWrite(
   args: PhaseValidationWriteArgs
 ): Promise<PhaseValidationWriteResult> {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const artifactPath = validationArtifactPathFor(resolved, args.artifact);
+  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
+  const hasContent = args.content !== undefined;
+  const hasModel = args.model !== undefined;
+
+  if (hasContent === hasModel) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      artifact: args.artifact,
+      path: artifactPath,
+      summaryPaths: [],
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues: [
+        "Phase validation writes must supply exactly one of content or model."
+      ],
+      warnings: []
+    };
+  }
+
   const summaryIndex = await blueprintPhaseSummaryIndex({
     cwd: projectRoot,
     phase: resolved.phaseNumber
@@ -6321,9 +6611,55 @@ export async function blueprintPhaseValidationWrite(
     );
   }
 
-  const artifactPath = validationArtifactPathFor(resolved, args.artifact);
-  const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
-  const normalizedContent = normalizeTextContent(args.content);
+  let renderedModel: PhaseValidationRenderResult | null = null;
+  let normalizedContent: string;
+
+  if (hasModel) {
+    const modelRender = phaseValidationModelToRenderArgs(args, resolved, projectRoot);
+
+    if (!modelRender.renderArgs) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        artifact: args.artifact,
+        path: artifactPath,
+        summaryPaths,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        issues: modelRender.issues,
+        warnings
+      };
+    }
+
+    renderedModel = await blueprintPhaseValidationRender(modelRender.renderArgs);
+
+    if (!renderedModel.readyToWrite) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        artifact: args.artifact,
+        path: artifactPath,
+        summaryPaths: renderedModel.referencedSummaryPaths,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        issues: renderedModel.issues,
+        warnings: [...warnings, ...renderedModel.warnings]
+      };
+    }
+
+    normalizedContent = normalizeTextContent(renderedModel.content);
+  } else {
+    normalizedContent = normalizeTextContent(args.content ?? "");
+  }
+
   const exists = await pathExists(absolutePath);
   const completedSummaryPaths = summaryPaths;
   const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
@@ -8019,7 +8355,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_validation_write",
     description:
-      "Persist a phase-scoped VERIFICATION or UAT artifact with overwrite protection and execution-aware prerequisite checks.",
+      "Persist a phase-scoped VERIFICATION or UAT artifact from canonical markdown content or a structured model with overwrite protection and execution-aware prerequisite checks.",
     inputSchema: phaseValidationWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseValidationWrite(args as PhaseValidationWriteArgs)

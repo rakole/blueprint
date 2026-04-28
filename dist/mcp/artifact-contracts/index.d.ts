@@ -1,5 +1,15 @@
 export type ArtifactContractScope = "bootstrap" | "codebase" | "phase" | "review" | "report";
 export type ArtifactContractFreehandPolicy = "additional-top-level-headings" | "locked-structure";
+export type ArtifactModelContract = {
+    schemaId: string;
+    schemaVersion: string;
+    jsonSchema: Record<string, unknown>;
+    qualityRules: string[];
+    contextBindings: string[];
+    renderedHeadings: string[];
+    minimalValidExample: Record<string, unknown>;
+    exampleLeakageSignals: string[];
+};
 export type ArtifactContractId = "bootstrap.project" | "bootstrap.requirements" | "bootstrap.roadmap" | "codebase.stack" | "codebase.architecture" | "codebase.structure" | "codebase.conventions" | "codebase.testing" | "codebase.integrations" | "codebase.concerns" | "phase.context" | "phase.discussion-log" | "phase.research" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix" | "report.impact";
 export type ArtifactTemplateContext = {
     phaseLabel?: string;
@@ -27,6 +37,7 @@ export type ArtifactContractDefinition = {
     lockedMarkers: string[];
     placeholderSignals: string[];
     notes: string[];
+    modelContract?: ArtifactModelContract;
     renderScaffoldTemplate: (context?: ArtifactTemplateContext) => string;
     renderAuthoringTemplate: (context?: ArtifactTemplateContext) => string;
 };

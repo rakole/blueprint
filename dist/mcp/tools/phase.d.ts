@@ -64,7 +64,8 @@ type PhaseValidationReadArgs = PhaseLookupArgs & {
 };
 type PhaseValidationWriteArgs = PhaseLookupArgs & {
     artifact: PhaseValidationArtifactKind;
-    content: string;
+    content?: string;
+    model?: Record<string, unknown>;
     overwrite?: boolean;
 };
 type PhaseValidationAuthoringContextArgs = PhaseLookupArgs & {
@@ -884,8 +885,8 @@ export declare const phaseToolDefinitions: ({
             repairRequirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
             gapGroups: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 category: z.ZodEnum<{
-                    optional: "optional";
                     requirement: "requirement";
+                    optional: "optional";
                     integration: "integration";
                     flow: "flow";
                 }>;
@@ -1116,7 +1117,8 @@ export declare const phaseToolDefinitions: ({
             verification: "verification";
             uat: "uat";
         }>;
-        content: z.ZodString;
+        content: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseValidationWriteResult>;

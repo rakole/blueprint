@@ -151,8 +151,9 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
     persisting or acting on them.
 13. Call `blueprint_phase_validation_render` with the structured UAT payload and
     treat `readyToWrite: true` as the pre-write self-check.
-14. Call `blueprint_phase_validation_write` only with the returned `content`; do
-    not hand-build the final markdown body.
+14. Call `blueprint_phase_validation_write` only with exactly one of the
+    returned `content` or the same structured `model`; do not hand-build the
+    final markdown body.
 
 ## Capability-Gated Subagent Path
 

@@ -8,6 +8,10 @@ The core decision is: Markdown remains the durable `.blueprint/` source of truth
 
 This plan starts with a document-only checkpoint. Runtime behavior changes should happen in later implementation passes.
 
+## Implementation Status
+
+- 2026-04-28: `/blu-validate-phase` slice implemented for `phase.verification` and the shared validation writer. `phase.verification` and `phase.uat` now expose structured `modelContract` metadata from `blueprint_artifact_contract_read`, and `blueprint_phase_validation_write` accepts exactly one of rendered Markdown `content` or a structured `model` that MCP validates, renders, and revalidates before persistence.
+
 ## Locked Decisions
 
 - Keep `.blueprint/*.md` artifacts as durable human-readable state.
