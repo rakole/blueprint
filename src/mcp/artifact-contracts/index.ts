@@ -1053,6 +1053,169 @@ function renderCodeReviewTemplate(context?: ArtifactTemplateContext): string {
 - /blu-progress`;
 }
 
+const CODE_REVIEW_LINE_LOCATION_PATTERN =
+  "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$";
+
+const CODE_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.review.code-review.model",
+  schemaVersion: "1.0.0",
+  jsonSchema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "verdict",
+      "depth",
+      "scopeSource",
+      "reviewSummary",
+      "scopeReviewed",
+      "evidenceReviewed",
+      "evidenceDeferrals",
+      "positiveSignals",
+      "findings",
+      "followUps",
+      "nextSafeAction"
+    ],
+    properties: {
+      verdict: { type: "string", enum: ["PASS", "FOLLOW_UP", "BLOCKED"] },
+      depth: { type: "string", enum: ["quick", "standard", "deep"] },
+      scopeSource: {
+        type: "string",
+        enum: ["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]
+      },
+      reviewSummary: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      scopeReviewed: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      evidenceReviewed: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      evidenceDeferrals: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["artifact", "rationale"],
+          properties: {
+            artifact: { type: "string", minLength: 1 },
+            rationale: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      positiveSignals: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      findings: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "severity",
+            "disposition",
+            "location",
+            "evidence",
+            "impact",
+            "recommendation"
+          ],
+          properties: {
+            severity: {
+              type: "string",
+              enum: ["critical", "high", "medium", "low", "unknown"]
+            },
+            disposition: {
+              type: "string",
+              enum: ["follow-up", "observation", "blocked", "accepted-risk"]
+            },
+            location: {
+              type: "string",
+              minLength: 1,
+              pattern: CODE_REVIEW_LINE_LOCATION_PATTERN
+            },
+            evidence: { type: "string", minLength: 1 },
+            impact: { type: "string", minLength: 1 },
+            recommendation: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      followUps: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      nextSafeAction: { type: "string", minLength: 1 }
+    }
+  },
+  qualityRules: [
+    "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, reportPath, or content; the write tool owns identity and path derivation.",
+    "Keep scopeReviewed aligned with blueprint_review_scope.files; every resolved scoped file must be visible in the rendered Scope Reviewed section.",
+    "Every known saved evidence artifact from the phase must appear in evidenceReviewed or evidenceDeferrals with a concrete rationale.",
+    "Every finding must include severity, disposition, repo-relative file:line location, evidence, impact, and concrete fix or verification guidance.",
+    "Use only implemented Blueprint commands in nextSafeAction, and do not copy minimal example wording or placeholder review prose."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus the write tool arguments.",
+    "scopeReviewed is checked against the scopeFiles supplied from blueprint_review_scope when present.",
+    "Known evidence artifacts are read from the selected phase artifact inventory and rendered visibly into Evidence Reviewed or as explicit deferrals.",
+    "existing review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+  ],
+  renderedHeadings: [
+    "Review Summary",
+    "Scope Reviewed",
+    "Evidence Reviewed",
+    "Positive Signals",
+    "Severity Summary",
+    "Findings",
+    "Follow-Ups",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    verdict: "FOLLOW_UP",
+    depth: "standard",
+    scopeSource: "phase-evidence",
+    reviewSummary: [
+      "Phase 5 standard review covered two scoped repo files with one high follow-up."
+    ],
+    scopeReviewed: ["src/feature.ts", "tests/feature.test.ts"],
+    evidenceReviewed: [
+      ".blueprint/phases/05-review-scope/05-01-PLAN.md",
+      ".blueprint/phases/05-review-scope/05-01-SUMMARY.md"
+    ],
+    evidenceDeferrals: [],
+    positiveSignals: [
+      "Plan and summary evidence agree on the bounded source and test scope."
+    ],
+    findings: [
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "src/feature.ts:42",
+        evidence: "The changed branch accepts negative input without a guard.",
+        impact: "Callers can receive a misleading success result for invalid input.",
+        recommendation: "Add an explicit negative-input guard and focused regression test."
+      }
+    ],
+    followUps: ["Add the negative-input guard and rerun focused verification."],
+    nextSafeAction: "/blu-code-review-fix 5"
+  },
+  exampleLeakageSignals: [
+    "Phase 5 standard review covered two scoped repo files with one high follow-up.",
+    "Plan and summary evidence agree on the bounded source and test scope.",
+    "The changed branch accepts negative input without a guard.",
+    "Add the negative-input guard and rerun focused verification."
+  ]
+};
+
 function renderReviewFixTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Review Fix
 
@@ -2788,11 +2951,13 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
+      "Structured model writes are supported for code review and render through MCP-owned canonical Markdown before persistence.",
       "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
       "Scope Reviewed must list every repo-relative file in the resolved review scope before the artifact can persist.",
       "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance.",
       "Severity Summary counts must match the persisted Findings section."
     ],
+    modelContract: CODE_REVIEW_MODEL_CONTRACT,
     renderScaffoldTemplate: renderCodeReviewTemplate,
     renderAuthoringTemplate: renderCodeReviewTemplate
   },

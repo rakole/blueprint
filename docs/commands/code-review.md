@@ -65,7 +65,7 @@
 
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, notes}`
+- `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, modelContract, notes}`
 - `blueprint_review_scope` -> `{status, phase, files, reviewMode, confirmationRecommended, artifacts, reason, warnings}`
 - `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
@@ -78,7 +78,7 @@
 - If explicit files were supplied, review only those exact repo-relative paths even if the phase has broader execution evidence or saved summaries.
 - If `blueprint_review_scope.confirmationRecommended.recommended` is true, pause for a structured confirmation before any replacement write and ground that prompt in the returned reasons and thresholds.
 - If a prior `XX-REVIEW.md` exists, load its structured findings through `blueprint_review_load_findings` before replacement, and use read-only file access for full-body comparison only when needed.
-- Persist the final review through `blueprint_review_record` with `artifact: "code-review"` plus the resolved `scopeFiles`, and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`.
+- Persist the final review through `blueprint_review_record` with `artifact: "code-review"` plus the resolved `scopeFiles`, and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`. Prefer the structured `model` payload from the returned `modelContract` when JSON authoring is available; otherwise pass canonical Markdown `content`.
 
 ## Depth And Output Quality Contract
 
@@ -86,7 +86,8 @@
 - `standard` reviews read every resolved file and apply behavior, security, error-handling, language-aware, and test-coverage checks in context.
 - `deep` reviews add import/export, call-chain, boundary-type, error-propagation, and shared-state consistency checks across the resolved file set. If the scope is too broad for a credible deep pass, ask for scope confirmation or recommend narrowing instead of saving a thin review.
 - Every material finding must include severity, disposition, repo-relative file path and line or line range, evidence, impact, and a concrete fix or verification suggestion.
-- The saved artifact must list every reviewed file in `Scope Reviewed`, every saved artifact that influenced the result in `Evidence Reviewed`, matching critical/high/medium/low/unknown counts in `Severity Summary`, and only implemented commands in `Next Safe Action`.
+- The saved artifact must list every reviewed file in `Scope Reviewed`, every saved phase evidence artifact either cited or explicitly deferred in `Evidence Reviewed`, matching critical/high/medium/low/unknown counts in `Severity Summary`, and only implemented commands in `Next Safe Action`.
+- Structured `model` writes must not include MCP-owned identity keys such as `phase`, `artifact`, path, or `content`; those come from the write-tool arguments and phase lookup.
 
 ## Subagent And Fallback Contract
 
@@ -146,7 +147,7 @@
 
 - Preserve generated reports when review persistence needs overwrite confirmation or artifact repair.
 - Fall back to explicit file selection or saved-evidence recovery guidance instead of guessing.
-- If `blueprint_review_record` returns `status: "invalid"`, repair the authored markdown against the canonical `authoringTemplate` and returned warnings, retry once through MCP, and stop with the invalid reasons if the retry still fails.
+- If `blueprint_review_record` returns `status: "invalid"`, repair the authored structured model or markdown against the canonical `modelContract` or `authoringTemplate` plus returned warnings, retry once through MCP, and stop with the invalid reasons if the retry still fails.
 
 
 ## Acceptance Criteria

@@ -135,8 +135,10 @@ test("code-review authoring contract requires line-backed fix guidance", () => {
   assert.match(contract.authoringTemplate, /Repo-relative file path reviewed/i);
   assert.match(contract.authoringTemplate, /path\/to\/file\.ts:42/);
   assert.match(contract.authoringTemplate, /concrete fix or verification guidance/i);
+  assert.equal(contract.modelContract?.schemaId, "blueprint.review.code-review.model");
+  assert.ok(contract.modelContract?.contextBindings.some((binding) => /scopeFiles/i.test(binding)));
   assert.match(
     contract.notes.join("\n"),
-    /Scope Reviewed must list every repo-relative file|repo-relative file:line evidence, impact, and concrete fix or verification guidance|Severity Summary counts must match/i
+    /Structured model writes are supported|Scope Reviewed must list every repo-relative file|repo-relative file:line evidence, impact, and concrete fix or verification guidance|Severity Summary counts must match/i
   );
 });
