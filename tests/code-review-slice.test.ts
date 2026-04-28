@@ -446,7 +446,7 @@ Exercise code-review follow-up routing.
 
 ## UAT Summary
 
-- UAT closed without blocking issues against \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`.
+- UAT closed without blocking issues against the ready verification evidence in \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`.
 
 ## Session State
 
@@ -482,7 +482,7 @@ Exercise code-review follow-up routing.
 
 ## Observed Behavior
 
-- The observed behavior matched \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`.
+- The observed behavior matched the ready verification evidence in \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 

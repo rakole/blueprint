@@ -2909,6 +2909,8 @@ function isMarkdownTableHeaderRow(line: string): boolean {
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
     ["requirement", "task or check", "evidence", "coverage state"],
+    ["#", "test", "expected behavior", "evidence", "result", "notes"],
+    ["test", "truth", "status", "severity", "reason", "follow-up"],
     ["gap id", "surface", "evidence", "repair"],
     ["item", "why manual or deferred", "follow-up", "status"],
     ["gap class", "scope", "evidence", "repair"]
@@ -4169,6 +4171,7 @@ function isNoValidationGapSignal(value: string): boolean {
     normalized === "na" ||
     normalized === "not applicable" ||
     normalized.startsWith("no gaps") ||
+    normalized.startsWith("no unresolved gaps") ||
     normalized.startsWith("no blockers") ||
     normalized.startsWith("no repairs") ||
     normalized.startsWith("no suggested repairs") ||
@@ -4182,6 +4185,25 @@ function hasActionableValidationListSignal(section: string): boolean {
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("|"))
     .some((line) => !isNoValidationGapSignal(line));
+}
+
+function validateModelExampleLeakage(
+  content: string,
+  contractId: ArtifactContractId,
+  artifactLabel: string
+): string[] {
+  const modelContract = readArtifactContract(contractId).modelContract;
+
+  if (!modelContract) {
+    return [];
+  }
+
+  return modelContract.exampleLeakageSignals
+    .filter((signal) => signal.length > 0 && content.includes(signal))
+    .map(
+      (signal) =>
+        `${artifactLabel} still contains copied model example text from ${modelContract.schemaId}: ${signal}.`
+    );
 }
 
 export function validateVerificationArtifactContent(
@@ -4419,6 +4441,9 @@ export function isVerificationArtifactReadyForUat(content: string): boolean {
 
 type UatArtifactStatus = "PASS" | "FAIL" | "PARTIAL";
 type UatArtifactResumeState = "RESUMED" | "NEW" | "CONTINUED";
+type UatValidationOptions = {
+  requireReadyVerificationEvidence?: boolean;
+};
 
 export function readUatArtifactState(content: string): {
   status: UatArtifactStatus | null;
@@ -4462,10 +4487,52 @@ const UAT_PLACEHOLDER_BODIES = [
   "<verbatim report or blocked reason>",
   "<repair or confirmation path>"
 ] as const;
+const VALID_UAT_TEST_RESULTS = new Set(["pending", "pass", "issue", "skipped", "blocked"]);
+const VALID_UAT_STRUCTURED_GAP_STATUSES = new Set(["failed", "partial", "blocked", "none"]);
+const VALID_UAT_STRUCTURED_GAP_SEVERITIES = new Set([
+  "blocker",
+  "major",
+  "minor",
+  "cosmetic",
+  "none"
+]);
+const UAT_NEXT_ACTION_COMMANDS = new Set([
+  "/blu-progress",
+  "/blu-verify-work",
+  "/blu-audit-fix",
+  "/blu-add-tests"
+]);
+
+function normalizeMarkdownTableEnum(value: string | undefined): string {
+  return (value ?? "").replace(/^`|`$/g, "").trim().toLowerCase();
+}
+
+function extractUatResultSummaryCounts(section: string): {
+  counts: Partial<Record<"total" | "passed" | "issues" | "pending" | "skipped" | "blocked", number>>;
+  issues: string[];
+} {
+  const counts: Partial<Record<"total" | "passed" | "issues" | "pending" | "skipped" | "blocked", number>> = {};
+  const issues: string[] = [];
+  const labels = ["total", "passed", "issues", "pending", "skipped", "blocked"] as const;
+
+  for (const label of labels) {
+    const match = section.match(new RegExp(`^[-*+]\\s+${label}:\\s*(\\d+)\\s*$`, "im"));
+
+    if (!match) {
+      issues.push(`UAT artifact Result Summary must include a ${label} count.`);
+      continue;
+    }
+
+    counts[label] = Number.parseInt(match[1], 10);
+  }
+
+  return { counts, issues };
+}
 
 export function validateUatArtifactContent(
   content: string,
-  summaryPaths: string[] = []
+  summaryPaths: string[] = [],
+  options: UatValidationOptions = {}
 ): {
   valid: boolean;
   issues: string[];
@@ -4492,6 +4559,15 @@ export function validateUatArtifactContent(
       "UAT artifact must declare **Checkpoint:** with `none` or a non-empty in-artifact checkpoint label."
     );
   }
+  if (uatState.status === "PASS" && uatState.checkpoint?.toLowerCase() !== "none") {
+    issues.push("UAT artifact must use **Checkpoint:** none when **Status:** is PASS.");
+  }
+  if (
+    (uatState.status === "FAIL" || uatState.status === "PARTIAL") &&
+    uatState.checkpoint?.toLowerCase() === "none"
+  ) {
+    issues.push("UAT artifact must keep a resumable checkpoint label when **Status:** is FAIL or PARTIAL.");
+  }
 
   issues.push(...validateValidationScaffoldPlaceholders(content, "UAT artifact"));
   issues.push(...validateRequiredMarkdownSections(content, "UAT artifact", REQUIRED_UAT_SECTIONS));
@@ -4505,11 +4581,176 @@ export function validateUatArtifactContent(
   const uatSummary = extractMarkdownSection(content, "UAT Summary");
   const sessionState = extractMarkdownSection(content, "Session State");
   const observedBehavior = extractMarkdownSection(content, "Observed Behavior");
+  const unresolvedGaps = extractMarkdownSection(content, "Unresolved Gaps");
+  const testMatrix = extractMarkdownSection(content, "Test Matrix");
+  const resultSummary = extractMarkdownSection(content, "Result Summary");
+  const structuredGaps = extractMarkdownSection(content, "Structured Gaps");
+  const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
+  issues.push(...validateModelExampleLeakage(content, "phase.uat", "UAT artifact"));
   if (
     !containsReferencedSummaryPath(`${uatSummary}\n${sessionState}\n${observedBehavior}`, summaryPaths)
   ) {
     issues.push(
       "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
+    );
+  }
+  if (
+    options.requireReadyVerificationEvidence === true &&
+    !/\b(?:ready[- ]verification(?:[- ](?:artifact|evidence))?|verification[- ]artifact|validation[- ]baseline|ready[- ]for[- ]UAT)\b/i.test(
+      `${uatSummary}\n${sessionState}\n${observedBehavior}\n${testMatrix}`
+    )
+  ) {
+    issues.push(
+      "UAT artifact must ground acceptance evidence in the ready verification artifact or validation baseline."
+    );
+  }
+
+  const testRows = extractMarkdownTableDataRows(testMatrix);
+  const actualCounts = {
+    total: testRows.length,
+    passed: 0,
+    issues: 0,
+    pending: 0,
+    skipped: 0,
+    blocked: 0
+  };
+
+  if (testRows.length === 0) {
+    issues.push("UAT artifact section Test Matrix must include at least one populated test row.");
+  }
+
+  for (const cells of testRows) {
+    if (cells.length < 6) {
+      issues.push(
+        "UAT artifact section Test Matrix must keep #, Test, Expected Behavior, Evidence, Result, and Notes columns populated."
+      );
+      continue;
+    }
+    if (cells.slice(0, 6).some((cell) => cell.trim().length === 0)) {
+      issues.push(
+        "UAT artifact section Test Matrix must keep #, Test, Expected Behavior, Evidence, Result, and Notes cells non-empty."
+      );
+      continue;
+    }
+
+    const result = normalizeMarkdownTableEnum(cells[4]);
+    if (!VALID_UAT_TEST_RESULTS.has(result)) {
+      issues.push(
+        `UAT artifact section Test Matrix uses an unsupported result: ${cells[4] ?? ""}.`
+      );
+      continue;
+    }
+
+    if (result === "pass") {
+      actualCounts.passed += 1;
+    } else if (result === "issue") {
+      actualCounts.issues += 1;
+    } else if (result === "pending") {
+      actualCounts.pending += 1;
+    } else if (result === "skipped") {
+      actualCounts.skipped += 1;
+    } else if (result === "blocked") {
+      actualCounts.blocked += 1;
+    }
+  }
+
+  const parsedCounts = extractUatResultSummaryCounts(resultSummary);
+  issues.push(...parsedCounts.issues);
+  for (const [label, actual] of Object.entries(actualCounts)) {
+    const expected = parsedCounts.counts[label as keyof typeof actualCounts];
+    if (typeof expected === "number" && expected !== actual) {
+      issues.push(
+        `UAT artifact Result Summary ${label} count ${expected} does not match Test Matrix count ${actual}.`
+      );
+    }
+  }
+
+  const gapRows = extractMarkdownTableDataRows(structuredGaps);
+  let hasActiveStructuredGap = false;
+  const hasActionableUnresolvedGap = hasActionableValidationListSignal(unresolvedGaps);
+  if (gapRows.length === 0) {
+    issues.push("UAT artifact section Structured Gaps must include at least one populated gap row.");
+  }
+  for (const cells of gapRows) {
+    if (cells.length < 6) {
+      issues.push(
+        "UAT artifact section Structured Gaps must keep Test, Truth, Status, Severity, Reason, and Follow-Up columns populated."
+      );
+      continue;
+    }
+    if (cells.slice(0, 6).some((cell) => cell.trim().length === 0)) {
+      issues.push(
+        "UAT artifact section Structured Gaps must keep Test, Truth, Status, Severity, Reason, and Follow-Up cells non-empty."
+      );
+      continue;
+    }
+
+    const status = normalizeMarkdownTableEnum(cells[2]);
+    const severity = normalizeMarkdownTableEnum(cells[3]);
+    if (!VALID_UAT_STRUCTURED_GAP_STATUSES.has(status)) {
+      issues.push(
+        `UAT artifact section Structured Gaps uses an unsupported status: ${cells[2] ?? ""}.`
+      );
+    }
+    if (!VALID_UAT_STRUCTURED_GAP_SEVERITIES.has(severity)) {
+      issues.push(
+        `UAT artifact section Structured Gaps uses an unsupported severity: ${cells[3] ?? ""}.`
+      );
+    }
+    if (status === "none" && severity !== "none") {
+      issues.push("UAT artifact Structured Gaps rows with status none must also use severity none.");
+    }
+    if (VALID_UAT_STRUCTURED_GAP_STATUSES.has(status) && status !== "none" && severity === "none") {
+      issues.push("UAT artifact Structured Gaps rows with an active gap must include a non-none severity.");
+    }
+    if (VALID_UAT_STRUCTURED_GAP_STATUSES.has(status) && status !== "none") {
+      hasActiveStructuredGap = true;
+    }
+  }
+
+  if (
+    uatState.status === "PASS" &&
+    (actualCounts.issues > 0 ||
+      actualCounts.pending > 0 ||
+      actualCounts.skipped > 0 ||
+      actualCounts.blocked > 0 ||
+      hasActionableUnresolvedGap ||
+      hasActiveStructuredGap)
+  ) {
+    issues.push(
+      "UAT artifact must not declare PASS while issue, pending, skipped, blocked, unresolved gap, or active structured gap evidence remains."
+    );
+  }
+
+  const nextActionCommands = extractBlueprintCommands(nextSafeAction).map((command) =>
+    command.toLowerCase()
+  );
+  const unsupportedNextActionCommands = nextActionCommands.filter(
+    (command) => !UAT_NEXT_ACTION_COMMANDS.has(command)
+  );
+  const routesToProgress = nextActionCommands.includes("/blu-progress");
+  const routesToContinuationOrRepair = nextActionCommands.some((command) =>
+    command === "/blu-verify-work" || command === "/blu-audit-fix" || command === "/blu-add-tests"
+  );
+
+  if (nextActionCommands.length === 0) {
+    issues.push(
+      "UAT artifact must include an implemented Blueprint command under ## Next Safe Action."
+    );
+  }
+  if (unsupportedNextActionCommands.length > 0) {
+    issues.push(
+      `UAT artifact routes to unsupported or non-implemented Blueprint commands under ## Next Safe Action: ${unsupportedNextActionCommands.join(", ")}.`
+    );
+  }
+  if (uatState.complete && !routesToProgress) {
+    issues.push(
+      "UAT artifact must route completed PASS evidence to /blu-progress under ## Next Safe Action."
+    );
+  }
+  if (!uatState.complete && uatState.status && !routesToContinuationOrRepair) {
+    issues.push(
+      "UAT artifact must route incomplete, failed, or partial UAT evidence to /blu-verify-work, /blu-audit-fix, or /blu-add-tests under ## Next Safe Action."
     );
   }
 
@@ -6645,7 +6886,9 @@ export async function blueprintArtifactValidate(
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const raw = await fs.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
-    const validation = validateUatArtifactContent(raw, summaryPaths);
+    const validation = validateUatArtifactContent(raw, summaryPaths, {
+      requireReadyVerificationEvidence: true
+    });
 
     for (const issue of validation.issues) {
       issues.push(`${artifact}: ${issue}`);

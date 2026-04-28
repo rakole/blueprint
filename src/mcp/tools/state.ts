@@ -775,7 +775,9 @@ async function inspectValidatedPhaseValidationArtifacts(
     const validation =
       artifact === "verification"
         ? validateVerificationArtifactContent(content, summaryPaths)
-        : validateUatArtifactContent(content, summaryPaths);
+        : validateUatArtifactContent(content, summaryPaths, {
+            requireReadyVerificationEvidence: true
+          });
 
     if (artifact === "verification") {
       verificationNextSafeAction = extractNextSafeActionCommand(content);

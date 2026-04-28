@@ -362,7 +362,22 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "**Checkpoint:**"
   ]);
   assert.equal(uatContract.modelContract?.schemaId, "blueprint.phase.uat.model");
+  assert.equal(uatContract.modelContract?.schemaVersion, "1.0.0");
+  assert.deepEqual(
+    (uatContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "resumeState", "checkpoint", "uatSummary"]
+  );
   assert.ok(uatContract.modelContract?.renderedHeadings.includes("Structured Gaps"));
+  assert.ok(
+    uatContract.modelContract?.qualityRules.some((rule) =>
+      /Ground UAT summary, session state, test matrix, and observed behavior/i.test(rule)
+    )
+  );
+  assert.ok(
+    uatContract.modelContract?.contextBindings.some((binding) =>
+      /ready verification content/i.test(binding)
+    )
+  );
   assert.deepEqual(milestoneAuditContract.requiredHeadings, [
     "Audit Verdict",
     "Milestone Evidence Dimensions",

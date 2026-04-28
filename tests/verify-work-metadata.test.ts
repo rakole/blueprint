@@ -54,6 +54,7 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   assert.match(commandFile, /per-test UAT feedback prompt/i);
   assert.match(commandFile, /Use `ask_user` for the initial view\/resume\/update choice, per-test UAT feedback/i);
   assert.match(commandFile, /next safe action on `\/blu-verify-work <phase>`/i);
+  assert.match(commandFile, /modelContract` as the structured payload schema authority/);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/);
   assert.doesNotMatch(commandFile, /Build a concrete UAT test queue/i);
   assert.doesNotMatch(commandFile, /Present one expected behavior at a time/i);
@@ -100,6 +101,8 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(runtimeContract, /Build a concrete UAT queue before asking the user anything/i);
   assert.match(runtimeContract, /Present one test at a time/i);
   assert.match(runtimeContract, /use `ask_user` for the first-pass result on each test/i);
+  assert.match(runtimeContract, /structured `modelContract` authority/);
+  assert.match(runtimeContract, /phase\.uat\.modelContract/);
   assert.match(runtimeContract, /blueprint_phase_validation_render/);
   assert.match(runtimeContract, /readyToWrite: true/i);
   assert.match(
@@ -109,6 +112,8 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(runtimeReference, /verify-work-runtime-contract\.md/i);
   assert.match(runtimeReference, /concrete user-observable UAT test queue/i);
   assert.match(runtimeReference, /pass\/skipped\/blocked\/issue/i);
+  assert.match(runtimeReference, /read the `phase\.uat` model contract/i);
+  assert.match(runtimeReference, /same ready structured model directly to the writer/i);
 });
 
 test("verify-work docs and supporting contracts keep roadmap-sync risk and resumable UAT behavior explicit", async () => {
@@ -124,6 +129,8 @@ test("verify-work docs and supporting contracts keep roadmap-sync risk and resum
   );
   assert.match(commandDoc, /## Shell Risk Profile[\s\S]*Medium: writes UAT evidence, can sync `\.blueprint\/ROADMAP\.md` completion state, and updates follow-up state\./i);
   assert.match(commandDoc, /render the final `XX-UAT\.md` body through `blueprint_phase_validation_render`/i);
+  assert.match(commandDoc, /modelContract` JSON Schema, quality rules, context bindings, rendered headings, and example leakage signals/i);
+  assert.match(commandDoc, /phase\.uat\.modelContract/i);
   assert.match(commandDoc, /validates the written artifact before updating state/i);
   assert.match(commandDoc, /next safe action stays on `\/blu-verify-work <phase>`/i);
   assert.match(commandDoc, /Use Gemini CLI `ask_user` for each user-observable UAT prompt/i);

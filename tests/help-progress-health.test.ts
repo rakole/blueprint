@@ -835,7 +835,7 @@ Exercise milestone closeout summary coverage.
 
 ## UAT Summary
 
-- UAT evidence is complete for \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+- UAT evidence is complete for \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -871,7 +871,7 @@ Exercise milestone closeout summary coverage.
 
 ## Observed Behavior
 
-- The accepted behavior matched \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
+- The validated behavior matched \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -1159,7 +1159,7 @@ Close the milestone.
 
 ## UAT Summary
 
-- UAT evidence is complete for \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+- UAT evidence is complete for \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -1195,7 +1195,7 @@ Close the milestone.
 
 ## Observed Behavior
 
-- The accepted behavior matched \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
+- The validated behavior matched \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
