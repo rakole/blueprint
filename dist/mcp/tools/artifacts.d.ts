@@ -363,6 +363,7 @@ export declare function validatePlanArtifactContent(content: string, expectedPha
 export declare function inspectBlueprintArtifacts(projectRoot: string): Promise<{
     readiness: BlueprintReadiness;
     blueprintRootExists: boolean;
+    workflowArtifactFiles: string[];
     core: {
         present: string[];
         missing: string[];

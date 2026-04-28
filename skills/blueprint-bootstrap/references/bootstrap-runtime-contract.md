@@ -237,6 +237,10 @@ session instead of degrading to shallow synthesis.
    - If any committed requirement lacks a durable ID, appears in zero or
      multiple roadmap phases, or any phase lacks requirement IDs or success
      criteria, revise before calling the MCP tool.
+   - Do this preflight in the main session before calling the MCP tool:
+     use durable IDs like `IV-01`, map each committed requirement exactly once,
+     and replace empty recap or polish phases with a real owned requirement or
+     remove them from the first persisted roadmap.
 3. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
 4. Require explicit overwrite confirmation before calling
    `mcp_blueprint_blueprint_project_init` with `overwrite: true`.
@@ -259,6 +263,9 @@ session instead of degrading to shallow synthesis.
    issues, repair the authored `bootstrapSeed` or approval-packet source and
    retry the MCP write only after the user approves any material scope change.
    Do not patch `.blueprint/` files by hand.
+   A failed mutating MCP call may leave `.blueprint/mcp-write-failures.ndjson`;
+   treat that as an operational diagnostic, not a core bootstrap artifact to
+   delete through shell commands.
 4. Surface warnings, defaults provenance, and brownfield-provisional confidence
    honestly.
 5. If the user selected repo-level workflow preferences, confirm the persisted

@@ -60,6 +60,9 @@ export const CODEBASE_ARTIFACTS = [
   `${BLUEPRINT_CODEBASE_PATH}/INTEGRATIONS.md`,
   `${BLUEPRINT_CODEBASE_PATH}/CONCERNS.md`
 ] as const;
+const OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS = new Set([
+  `${BLUEPRINT_DIR}/mcp-write-failures.ndjson`
+]);
 const CODEBASE_ARTIFACT_CONTRACT_IDS = [
   "codebase.stack",
   "codebase.architecture",
@@ -5115,6 +5118,7 @@ async function listImmediateDirectories(rootPath: string): Promise<string[]> {
 export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
   readiness: BlueprintReadiness;
   blueprintRootExists: boolean;
+  workflowArtifactFiles: string[];
   core: { present: string[]; missing: string[] };
   phases: string[];
   reports: string[];
@@ -5124,6 +5128,12 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
   const blueprintRootExists = await pathExists(blueprintRoot);
   const codebaseRootExists = await pathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_CODEBASE_PATH));
   const rootShape = await assessRootBootstrapShape(projectRoot);
+  const blueprintFiles = blueprintRootExists
+    ? await listRelativeFiles(blueprintRoot, projectRoot)
+    : [];
+  const workflowArtifactFiles = blueprintFiles.filter(
+    (artifact) => !OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS.has(artifact)
+  );
   const corePresent: string[] = [];
   const coreMissing: string[] = [];
 
@@ -5179,7 +5189,14 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
 
   let readiness: BlueprintReadiness = "uninitialized";
 
-  if (!blueprintRootExists) {
+  if (
+    !blueprintRootExists ||
+    (
+      workflowArtifactFiles.length === 0 &&
+      !codebaseRootExists &&
+      rootShape.repoShape !== "brownfield"
+    )
+  ) {
     readiness = "uninitialized";
   } else if (coreMissing.length === 0) {
     readiness = "initialized";
@@ -5200,6 +5217,7 @@ export async function inspectBlueprintArtifacts(projectRoot: string): Promise<{
   return {
     readiness,
     blueprintRootExists,
+    workflowArtifactFiles,
     core: {
       present: corePresent,
       missing: coreMissing
@@ -6249,18 +6267,32 @@ export async function blueprintArtifactValidate(
         ? "Run /blu-map-codebase to create the seven-document codebase bundle before project bootstrap."
         : "Run /blu-new-project to initialize Blueprint artifacts."
     );
+  } else if (
+    inspection.readiness === "uninitialized" &&
+    inspection.workflowArtifactFiles.length === 0
+  ) {
+    issues.push(`Missing ${BLUEPRINT_DIR}/ workflow artifacts.`);
+    suggestedRepairs.add(
+      bootstrapAssessment.repoShape === "brownfield"
+        ? "Run /blu-map-codebase to create the seven-document codebase bundle before project bootstrap."
+        : "Run /blu-new-project to initialize Blueprint artifacts."
+    );
   }
 
   const codebaseOnly =
     inspection.readiness === "mapped-only" || inspection.readiness === "mapping-incomplete";
 
-  if (!codebaseOnly) {
+  if (!codebaseOnly && inspection.readiness !== "uninitialized") {
     for (const artifact of inspection.core.missing) {
       issues.push(`Missing core artifact: ${artifact}`);
     }
   }
 
-  if (inspection.core.missing.length > 0 && !codebaseOnly) {
+  if (
+    inspection.core.missing.length > 0 &&
+    !codebaseOnly &&
+    inspection.readiness !== "uninitialized"
+  ) {
     suggestedRepairs.add("Run /blu-health to inspect partial Blueprint state.");
     suggestedRepairs.add("Use /blu-health --repair only after reviewing the proposed writes.");
   }

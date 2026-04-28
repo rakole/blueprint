@@ -21089,6 +21089,10 @@ async function inspectBlueprintArtifacts(projectRoot) {
   const blueprintRootExists = await pathExists(blueprintRoot);
   const codebaseRootExists = await pathExists(resolveBlueprintPath(projectRoot, BLUEPRINT_CODEBASE_PATH));
   const rootShape = await assessRootBootstrapShape(projectRoot);
+  const blueprintFiles = blueprintRootExists ? await listRelativeFiles(blueprintRoot, projectRoot) : [];
+  const workflowArtifactFiles = blueprintFiles.filter(
+    (artifact) => !OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS.has(artifact)
+  );
   const corePresent = [];
   const coreMissing = [];
   for (const artifact of CORE_PROJECT_ARTIFACTS) {
@@ -21135,7 +21139,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
     }
   }
   let readiness = "uninitialized";
-  if (!blueprintRootExists) {
+  if (!blueprintRootExists || workflowArtifactFiles.length === 0 && !codebaseRootExists && rootShape.repoShape !== "brownfield") {
     readiness = "uninitialized";
   } else if (coreMissing.length === 0) {
     readiness = "initialized";
@@ -21147,6 +21151,7 @@ async function inspectBlueprintArtifacts(projectRoot) {
   return {
     readiness,
     blueprintRootExists,
+    workflowArtifactFiles,
     core: {
       present: corePresent,
       missing: coreMissing
@@ -21939,14 +21944,19 @@ async function blueprintArtifactValidate(args = {}) {
     suggestedRepairs.add(
       bootstrapAssessment.repoShape === "brownfield" ? "Run /blu-map-codebase to create the seven-document codebase bundle before project bootstrap." : "Run /blu-new-project to initialize Blueprint artifacts."
     );
+  } else if (inspection.readiness === "uninitialized" && inspection.workflowArtifactFiles.length === 0) {
+    issues.push(`Missing ${BLUEPRINT_DIR}/ workflow artifacts.`);
+    suggestedRepairs.add(
+      bootstrapAssessment.repoShape === "brownfield" ? "Run /blu-map-codebase to create the seven-document codebase bundle before project bootstrap." : "Run /blu-new-project to initialize Blueprint artifacts."
+    );
   }
   const codebaseOnly = inspection.readiness === "mapped-only" || inspection.readiness === "mapping-incomplete";
-  if (!codebaseOnly) {
+  if (!codebaseOnly && inspection.readiness !== "uninitialized") {
     for (const artifact of inspection.core.missing) {
       issues.push(`Missing core artifact: ${artifact}`);
     }
   }
-  if (inspection.core.missing.length > 0 && !codebaseOnly) {
+  if (inspection.core.missing.length > 0 && !codebaseOnly && inspection.readiness !== "uninitialized") {
     suggestedRepairs.add("Run /blu-health to inspect partial Blueprint state.");
     suggestedRepairs.add("Use /blu-health --repair only after reviewing the proposed writes.");
   }
@@ -22687,7 +22697,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -22730,6 +22740,9 @@ var init_artifacts = __esm({
       `${BLUEPRINT_CODEBASE_PATH}/INTEGRATIONS.md`,
       `${BLUEPRINT_CODEBASE_PATH}/CONCERNS.md`
     ];
+    OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS = /* @__PURE__ */ new Set([
+      `${BLUEPRINT_DIR}/mcp-write-failures.ndjson`
+    ]);
     CODEBASE_ARTIFACT_CONTRACT_IDS = [
       "codebase.stack",
       "codebase.architecture",
