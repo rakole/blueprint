@@ -170,6 +170,7 @@ Before persistence, render the final `XX-UAT.md` body through `blueprint_phase_v
 ## User Prompts And Confirmation Gates
 
 - Use Gemini CLI `ask_user` to capture a focused structured decision when an existing UAT artifact is present: `view` (`view current UAT`), `resume` (`resume saved UAT`), or `update` (`replace UAT`).
+- Use Gemini CLI `ask_user` for each user-observable UAT prompt when collecting test results, keeping one focused question per test before any follow-up detail capture.
 - In interactive mode, prefer `ask_user` for checkpoint decisions after each major UAT block: `review`, `skip`, or `stop`.
 - Confirm any overwrite before replacing an existing UAT artifact; use a separate `ask_user` confirmation path for that overwrite.
 - Confirm any explicit follow-up fix capture before persisting it in the UAT artifact.

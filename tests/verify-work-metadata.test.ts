@@ -50,6 +50,9 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   assert.match(commandFile, /completion evidence closes or reopens the phase/);
   assert.match(commandFile, /\.blueprint\/STATE\.md/);
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /initial `view` \/ `resume` \/ `update` UAT choice/i);
+  assert.match(commandFile, /per-test UAT feedback prompt/i);
+  assert.match(commandFile, /Use `ask_user` for the initial view\/resume\/update choice, per-test UAT feedback/i);
   assert.match(commandFile, /next safe action on `\/blu-verify-work <phase>`/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/);
   assert.doesNotMatch(commandFile, /Build a concrete UAT test queue/i);
@@ -85,6 +88,8 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(skillFile, /workflow\.nyquist_validation/);
   assert.match(skillFile, /blueprint_artifact_validate/);
   assert.match(skillFile, /ask_user/);
+  assert.match(skillFile, /per-test UAT prompts/i);
+  assert.match(skillFile, /using `ask_user` for the per-test result when the host supports interactive questioning/i);
   assert.match(skillFile, /next safe action on `\/blu-verify-work <phase>`/i);
   assert.match(skillFile, /follow-up-fix capture/i);
   assert.match(requiredInputs, /### Shared validation inputs/);
@@ -94,6 +99,7 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.doesNotMatch(verifyInputs, /add-tests-runtime-contract|validate-phase-runtime-contract/);
   assert.match(runtimeContract, /Build a concrete UAT queue before asking the user anything/i);
   assert.match(runtimeContract, /Present one test at a time/i);
+  assert.match(runtimeContract, /use `ask_user` for the first-pass result on each test/i);
   assert.match(runtimeContract, /blueprint_phase_validation_render/);
   assert.match(runtimeContract, /readyToWrite: true/i);
   assert.match(
@@ -120,6 +126,7 @@ test("verify-work docs and supporting contracts keep roadmap-sync risk and resum
   assert.match(commandDoc, /render the final `XX-UAT\.md` body through `blueprint_phase_validation_render`/i);
   assert.match(commandDoc, /validates the written artifact before updating state/i);
   assert.match(commandDoc, /next safe action stays on `\/blu-verify-work <phase>`/i);
+  assert.match(commandDoc, /Use Gemini CLI `ask_user` for each user-observable UAT prompt/i);
   assert.match(schemaDoc, /`\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED`/);
   assert.match(schemaDoc, /`\*\*Checkpoint:\*\* <current checkpoint label or none>`/);
   assert.match(schemaDoc, /`## Session State`/);
