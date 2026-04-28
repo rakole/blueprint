@@ -188,6 +188,7 @@ type CurrentPhaseArtifactStatus = {
   reviewPath: string | null;
   reviewNextSafeAction: string | null;
   verificationPath: string | null;
+  verificationNextSafeAction: string | null;
   uatPath: string | null;
   planIds: string[];
   summaryIds: string[];
@@ -214,6 +215,7 @@ type MilestoneEvidenceStatus = {
   missingVerificationPhases: string[];
   missingUatPhases: string[];
   verificationNotReadyPhases: string[];
+  verificationRepairActions: Record<string, string>;
   pendingSummaryCoveragePhases: string[];
   blockingPhase: string | null;
   allCompletedPhasesReady: boolean;
@@ -729,12 +731,14 @@ async function inspectValidatedPhaseValidationArtifacts(
 ): Promise<{
   hasVerification: boolean;
   verificationReadyForUat: boolean;
+  verificationNextSafeAction: string | null;
   hasUat: boolean;
   warnings: string[];
 }> {
   const warnings: string[] = [];
   let hasVerification = false;
   let verificationReadyForUat = false;
+  let verificationNextSafeAction: string | null = null;
   let hasUat = false;
 
   if (summaryPaths.length === 0) {
@@ -745,6 +749,7 @@ async function inspectValidatedPhaseValidationArtifacts(
     return {
       hasVerification: false,
       verificationReadyForUat: false,
+      verificationNextSafeAction: null,
       hasUat: false,
       warnings
     };
@@ -771,6 +776,7 @@ async function inspectValidatedPhaseValidationArtifacts(
       if (artifact === "verification") {
         hasVerification = true;
         verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+        verificationNextSafeAction = extractNextSafeActionCommand(content);
 
         if (!verificationReadyForUat) {
           warnings.push(
@@ -798,7 +804,7 @@ async function inspectValidatedPhaseValidationArtifacts(
     warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
 
-  return { hasVerification, verificationReadyForUat, hasUat, warnings };
+  return { hasVerification, verificationReadyForUat, verificationNextSafeAction, hasUat, warnings };
 }
 
 async function listImmediateDirectories(rootPath: string): Promise<string[]> {
@@ -862,6 +868,7 @@ async function inspectCurrentPhaseArtifacts(
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -914,6 +921,7 @@ async function inspectCurrentPhaseArtifacts(
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -952,6 +960,7 @@ async function inspectCurrentPhaseArtifacts(
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -995,6 +1004,7 @@ async function inspectCurrentPhaseArtifacts(
   const {
     hasVerification,
     verificationReadyForUat,
+    verificationNextSafeAction,
     hasUat,
     warnings: validationWarnings
   } = await inspectValidatedPhaseValidationArtifacts(
@@ -1095,6 +1105,7 @@ async function inspectCurrentPhaseArtifacts(
     reviewPath,
     reviewNextSafeAction,
     verificationPath,
+    verificationNextSafeAction,
     uatPath,
     planIds,
     summaryIds,
@@ -1161,6 +1172,7 @@ async function inspectMilestoneEvidence(
   const missingVerificationPhases: string[] = [];
   const missingUatPhases: string[] = [];
   const verificationNotReadyPhases: string[] = [];
+  const verificationRepairActions: Record<string, string> = {};
   const pendingSummaryCoveragePhases: string[] = [];
   const warnings: string[] = [];
 
@@ -1188,6 +1200,7 @@ async function inspectMilestoneEvidence(
     const {
       hasVerification,
       verificationReadyForUat,
+      verificationNextSafeAction,
       hasUat,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
@@ -1205,6 +1218,9 @@ async function inspectMilestoneEvidence(
 
     if (hasVerification && !verificationReadyForUat) {
       verificationNotReadyPhases.push(phase.phaseNumber);
+      if (verificationNextSafeAction) {
+        verificationRepairActions[phase.phaseNumber] = verificationNextSafeAction;
+      }
       warnings.push(
         `Phase ${phase.phaseNumber} has verification evidence that is valid but not ready for UAT, so milestone closeout remains blocked until validation is repaired.`
       );
@@ -1219,6 +1235,7 @@ async function inspectMilestoneEvidence(
     missingVerificationPhases,
     missingUatPhases,
     verificationNotReadyPhases,
+    verificationRepairActions,
     pendingSummaryCoveragePhases,
     blockingPhase:
       missingVerificationPhases[0] ??
@@ -1291,9 +1308,19 @@ function isNoneLikeReportSignal(line: string): boolean {
 }
 
 function extractBlueprintCommand(line: string): string | null {
-  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
 
-  return match?.[0]?.trim() ?? null;
+  return match?.[0]
+    ?.trim()
+    .replace(/[`'").,;:!?]+$/g, "") ?? null;
+}
+
+function extractNextSafeActionCommand(content: string): string | null {
+  return (
+    extractMarkdownSectionLines(content, "Next Safe Action")
+      .map(extractBlueprintCommand)
+      .find((command): command is string => command !== null) ?? null
+  );
 }
 
 async function readReviewArtifactNextSafeAction(args: {
@@ -1308,10 +1335,7 @@ async function readReviewArtifactNextSafeAction(args: {
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
-    const nextSafeAction =
-      extractMarkdownSectionLines(raw, "Next Safe Action")
-        .map(extractBlueprintCommand)
-        .find((command): command is string => command !== null) ?? null;
+    const nextSafeAction = extractNextSafeActionCommand(raw);
 
     if (nextSafeAction) {
       return { nextAction: nextSafeAction, warnings: [] };
@@ -1572,6 +1596,19 @@ async function deriveNextAction(args: {
   if (
     args.phaseArtifacts.hasVerification &&
     !args.phaseArtifacts.verificationReadyForUat &&
+    args.phaseArtifacts.verificationNextSafeAction
+  ) {
+    const verificationNextCommand =
+      args.phaseArtifacts.verificationNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+
+    if (verificationNextCommand && implementedCommands.has(verificationNextCommand)) {
+      return args.phaseArtifacts.verificationNextSafeAction;
+    }
+  }
+
+  if (
+    args.phaseArtifacts.hasVerification &&
+    !args.phaseArtifacts.verificationReadyForUat &&
     implementedCommands.has(validatePhaseCommand)
   ) {
     return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
@@ -1609,7 +1646,16 @@ async function deriveNextAction(args: {
     args.milestoneEvidence.verificationNotReadyPhases.length > 0 &&
     implementedCommands.has(validatePhaseCommand)
   ) {
-    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.verificationNotReadyPhases[0]} to repair milestone validation evidence before closeout`;
+    const phaseNumber = args.milestoneEvidence.verificationNotReadyPhases[0];
+    const verificationRepairAction = args.milestoneEvidence.verificationRepairActions[phaseNumber] ?? null;
+    const verificationRepairCommand =
+      verificationRepairAction?.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+
+    if (verificationRepairCommand && implementedCommands.has(verificationRepairCommand)) {
+      return verificationRepairAction;
+    }
+
+    return `Run ${validatePhaseCommand} ${phaseNumber} to repair milestone validation evidence before closeout`;
   }
 
   if (
@@ -2019,6 +2065,7 @@ export async function blueprintStateLoad(
               missingVerificationPhases: [],
               missingUatPhases: [],
               verificationNotReadyPhases: [],
+              verificationRepairActions: {},
               pendingSummaryCoveragePhases: [],
               blockingPhase: null,
               allCompletedPhasesReady: false,
