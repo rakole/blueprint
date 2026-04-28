@@ -57,7 +57,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /Omit `planId` to auto-assign the next available slot/i);
   assert.match(commandFile, /numeric plan id when targeting a specific plan/i);
-  assert.match(commandFile, /numeric inputs such as `1` are accepted/i);
+  assert.match(commandFile, /numeric value `planId: 1`/i);
+  assert.match(commandFile, /double-encoded string/i);
   assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /`reuse`, `revise`, or `replace`|reuse\/revise\/replace/i);
   assert.match(commandFile, /Use saved research for unstable technical decisions/i);
@@ -119,7 +120,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /\/blu-progress/);
   assert.match(skillFile, /Omit `planId` to auto-assign the next slot/i);
   assert.match(skillFile, /numeric plan id when targeting a specific plan/i);
-  assert.match(skillFile, /numeric inputs such as `1` are accepted/i);
+  assert.match(skillFile, /numeric value `planId: 1`/i);
+  assert.match(skillFile, /double-encoded string/i);
   assert.match(skillFile, /contract\.authoringTemplate/);
   assert.match(skillFile, /reuse\/revise\/replace|reuse.*revise.*replace/i);
   assert.match(skillFile, /no-subagent fallback/i);
@@ -221,7 +223,8 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /base: "synced"/);
   assert.match(docFile, /Omit `planId` to let Blueprint auto-assign the next available plan slot/i);
   assert.match(docFile, /If targeting a specific plan, pass only the numeric plan id/i);
-  assert.match(docFile, /numeric inputs such as `1` are also accepted/i);
+  assert.match(docFile, /numeric value `planId: 1`/i);
+  assert.match(docFile, /double-encoded string/i);
   assert.match(docFile, /do not derive `planId` manually from a scaffold path/i);
   assert.match(docFile, /actual current `XX-CONTEXT\.md` content/i);
   assert.match(docFile, /relevant discovery artifacts/i);

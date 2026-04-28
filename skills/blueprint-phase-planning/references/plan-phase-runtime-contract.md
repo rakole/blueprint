@@ -94,7 +94,9 @@ Blueprint-native.
   "warn"` is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `content` as the full plan
   body. Omit `planId` to auto-assign, or pass only a numeric plan id when
-  targeting an existing plan.
+  targeting an existing plan. If passing `planId`, use the JSON string value
+  `planId: "01"` or numeric value `planId: 1`, never the double-encoded string
+  `planId: "\"01\""`.
 - Do not write raw `.blueprint/` files and do not pass phase directories,
   slugs, filenames, combined tokens like `02-01`, or frontmatter key names as
   plan ids.
@@ -123,11 +125,17 @@ Blueprint-native.
 
 - Every plan must follow the live `phase.plan` authoring template and preserve
   required frontmatter keys and headings.
+- Preserve the exact frontmatter keys `phase`, `plan_id`, `title`, `wave`,
+  `status`, `objective`, `depends_on`, `requirements`, `files_modified`,
+  `read_first`, `acceptance_criteria`, and `autonomous`.
+- Preserve the exact required sections `## Goal`, `## Scope`, `## Tasks`,
+  `## Verification`, and `## Must Haves`.
 - Every task must include `#### Read First`, `#### Action`, and
   `#### Acceptance Criteria`.
 - `#### Read First` must include concrete repo-relative paths: the file being
   modified, source-of-truth docs, existing pattern files, schemas, interfaces,
-  tests, and config that constrain the task.
+  tests, and config that constrain the task. Do not put endpoint routes,
+  command globs, or code snippets in path-list positions.
 - `#### Action` must include concrete target state: function names, routes,
   schema fields, config keys, expected values, imports, command arguments, and
   decisions being implemented. Avoid vague "align with", "make consistent",

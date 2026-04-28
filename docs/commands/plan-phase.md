@@ -93,7 +93,7 @@ Interactive planning UX rules:
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
-- If targeting a specific plan, pass only the numeric plan id. Prefer zero-padded string values such as `"01"` so the request matches Blueprint artifact naming, but numeric inputs such as `1` are also accepted.
+- If targeting a specific plan, pass only the numeric plan id. Use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`.
 - Do not derive `planId` manually from a scaffold path and do not pass phase slugs, filenames, or combined tokens such as `02-01` as `planId`.
 - When omitting `planId` to add a new plan and no saved plan body will be overwritten, do not force a reuse/revise/replace gate just because other plans already exist for the phase.
 

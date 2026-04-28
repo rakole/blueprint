@@ -2422,19 +2422,39 @@ function isSubjectivePlanLine(line: string): boolean {
   );
 }
 
-function isRepoRelativePlanPath(value: string): boolean {
-  const normalized = value.trim().replace(/\\/g, "/");
+function normalizePlanPathForValidation(value: string): string {
+  let normalized = value.trim().replace(/\\/g, "/");
 
   if (normalized.length === 0) {
+    return "";
+  }
+
+  normalized = normalized.replace(/^\.\//, "");
+  normalized = normalized.replace(/\/+\.$/, "");
+  normalized = normalized.replace(/\/+$/, "");
+
+  return normalized;
+}
+
+function isRepoRelativePlanPath(value: string): boolean {
+  const rawValue = value.trim().replace(/\\/g, "/");
+
+  if (rawValue.length === 0) {
     return false;
   }
 
   if (
-    path.isAbsolute(normalized) ||
-    /^[A-Za-z]:\//.test(normalized) ||
-    normalized.startsWith("//") ||
-    normalized.startsWith("~")
+    path.isAbsolute(rawValue) ||
+    /^[A-Za-z]:\//.test(rawValue) ||
+    rawValue.startsWith("//") ||
+    rawValue.startsWith("~")
   ) {
+    return false;
+  }
+
+  const normalized = normalizePlanPathForValidation(rawValue);
+
+  if (normalized.length === 0) {
     return false;
   }
 
@@ -2457,6 +2477,71 @@ function isGlobPlanPath(value: string): boolean {
 
 function isBlueprintCommandReference(value: string): boolean {
   return /^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(value.trim());
+}
+
+const PLAN_TASK_ABSOLUTE_PATH_ROOTS = new Set([
+  "Applications",
+  "Library",
+  "System",
+  "Users",
+  "Volumes",
+  "bin",
+  "dev",
+  "etc",
+  "home",
+  "mnt",
+  "opt",
+  "private",
+  "proc",
+  "root",
+  "sbin",
+  "srv",
+  "tmp",
+  "usr",
+  "var",
+  "workspace",
+  "workspaces"
+]);
+
+function isRouteLikePlanTaskReference(value: string): boolean {
+  const normalized = value.trim().replace(/\\/g, "/");
+
+  if (!normalized.startsWith("/") || normalized.startsWith("//")) {
+    return false;
+  }
+
+  const segments = normalized.split("/").filter((segment) => segment.length > 0);
+  const firstSegment = segments[0] ?? "";
+  const lastSegment = segments.at(-1)?.replace(/[?#].*$/, "") ?? "";
+
+  if (PLAN_TASK_ABSOLUTE_PATH_ROOTS.has(firstSegment)) {
+    return false;
+  }
+
+  return !/\.[A-Za-z0-9][A-Za-z0-9_-]{0,12}$/.test(lastSegment);
+}
+
+function isCommandLikePlanTaskLine(line: string): boolean {
+  const normalizedLine = line
+    .trim()
+    .replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "")
+    .replace(/^`([^`]+)`$/, "$1")
+    .trim();
+
+  return /^(?:run|execute|call|use|verify with|check with|test with)?\s*(?:npm|pnpm|yarn|node|git|bash|sh|rg|grep|find|ls|cat|sed|awk|tsx|tsc|mvn|gradle|curl)\b/i.test(
+    normalizedLine
+  );
+}
+
+function isCodeLikePlanTaskToken(rawToken: string, normalizedToken: string): boolean {
+  const trimmed = rawToken.trim();
+  const inlineCode = trimmed.startsWith("`") && trimmed.endsWith("`");
+
+  if (inlineCode && /\s/.test(normalizedToken)) {
+    return true;
+  }
+
+  return /[()=]/.test(trimmed);
 }
 
 function validatePlanPathList(entries: string[], label: string): string[] {
@@ -2489,8 +2574,19 @@ function validatePlanPathList(entries: string[], label: string): string[] {
 
 function extractTaskPathReferenceCandidates(section: string): string[] {
   const candidates = new Set<string>();
+  let inFencedCodeBlock = false;
 
   for (const line of section.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*```/.test(line)) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      continue;
+    }
+
+    if (inFencedCodeBlock) {
+      continue;
+    }
+
+    const commandLikeLine = isCommandLikePlanTaskLine(line);
     const tokens = line.match(/`[^`]+`|[^\s]+/g) ?? [];
 
     for (const token of tokens) {
@@ -2506,6 +2602,14 @@ function extractTaskPathReferenceCandidates(section: string): string[] {
       const normalizedPath = normalizedToken.replace(/\\/g, "/");
 
       if (isBlueprintCommandReference(normalizedPath)) {
+        continue;
+      }
+
+      if (
+        isCodeLikePlanTaskToken(token, normalizedToken) ||
+        isRouteLikePlanTaskReference(normalizedPath) ||
+        (commandLikeLine && isGlobPlanPath(normalizedPath))
+      ) {
         continue;
       }
 
@@ -2569,7 +2673,8 @@ function hasConcretePlanSubsectionContent(section: string): boolean {
       /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) ||
       /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) ||
       /\/blu-[\w-]+(?:\b|$)/i.test(line) ||
-      /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line)
+      /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line) ||
+      (!isGlobPlanPath(line) && isRepoRelativePlanPath(line))
     ) {
       return true;
     }
@@ -2602,7 +2707,7 @@ function validateObjectivePlanBulletList(section: string, artifactLabel: string)
   }
 
   const objectiveSignals = [
-    /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
+    /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bshows?\b|\bdisplays?\b|\brenders?\b|\blists?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
     /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/,
     /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/,
     /\/blu-[\w-]+(?:\b|$)/i,

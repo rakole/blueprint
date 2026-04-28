@@ -1064,7 +1064,14 @@ const phaseCheckpointDeleteInputSchema = {
 };
 
 function normalizeBlueprintInput(value: NumericInput): string {
-  return typeof value === "number" ? String(value) : value;
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  const trimmed = value.trim();
+  const quoteMatch = trimmed.match(/^(['"])([\s\S]+)\1$/);
+
+  return quoteMatch ? quoteMatch[2].trim() : value;
 }
 
 function normalizePhaseNumber(value: NumericInput): string {
