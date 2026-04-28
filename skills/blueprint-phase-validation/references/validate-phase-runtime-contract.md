@@ -55,6 +55,10 @@ the authority for control flow.
   prerequisite. If plan artifacts are also missing, explain that the phase has
   not reached executable validation state.
 
+When validation needs human confirmation around manual-only coverage, UAT
+readiness, or another structured gate, use Gemini-native `ask_user` instead of
+plain assistant prose.
+
 ## Evidence And Gap Analysis
 
 Build a compact but explicit validation map before writing:

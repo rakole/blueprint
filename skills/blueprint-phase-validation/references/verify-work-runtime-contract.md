@@ -81,7 +81,12 @@ Build a concrete UAT queue before asking the user anything.
 
 Present one test at a time. Show expected behavior and ask whether reality
 matches. Keep the prompt plain and specific; do not interrogate the user for
-severity or internal implementation guesses.
+severity or internal implementation guesses. When the host supports interactive
+questions, use `ask_user` for the first-pass result on each test with one
+focused prompt and explicit result choices such as `pass`, `issue`, `blocked`,
+or `skipped`. Only fall back to plain assistant prose when `ask_user` is
+unavailable, and ask a short follow-up question when an `issue` or `blocked`
+result needs detail that should be preserved in the UAT artifact.
 
 Response classification:
 

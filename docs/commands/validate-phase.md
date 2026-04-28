@@ -143,6 +143,7 @@
 
 
 - Confirm any overwrite before replacing an existing `XX-VERIFICATION.md` artifact; prefer Gemini CLI `ask_user` for that gate.
+- If validation needs manual feedback on coverage, sign-off posture, or readiness to hand off into conversational UAT, use Gemini CLI `ask_user` instead of plain prose.
 
 
 ## Edge Cases

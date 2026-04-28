@@ -60,6 +60,11 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /implementation\/behavior gaps[\s\S]*\/blu-audit-fix <phase>/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /manual validation feedback, UAT-readiness confirmation/i);
+  assert.match(
+    commandFile,
+    /manual-feedback or UAT-handoff gate that needs a user decision/i
+  );
   assert.match(commandFile, /saved-summary-first/i);
   assert.match(commandFile, /Route only to implemented commands/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/);
@@ -131,6 +136,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(docFile, /test-generation gaps.*\/blu-add-tests <phase>/i);
   assert.match(docFile, /implementation or behavior gaps.*\/blu-audit-fix <phase>/i);
   assert.match(docFile, /patch\.activeCommand: "\/blu-validate-phase"/);
+  assert.match(docFile, /manual feedback on coverage, sign-off posture, or readiness to hand off into conversational UAT/i);
   assert.match(
     runtimeReference,
     /`validate-phase`[\s\S]*validate-phase-runtime-contract\.md[\s\S]*classify State A\/B\/C[\s\S]*sequential no-subagent fallback/i
@@ -141,6 +147,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(validateReference, /State A:/);
   assert.match(validateReference, /State B:/);
   assert.match(validateReference, /State C:/);
+  assert.match(validateReference, /manual-only coverage,[\s\S]*UAT\s+readiness, or another structured gate/i);
   assert.match(validateReference, /## Capability-Gated Subagent Path/);
   assert.match(validateReference, /## No-Subagent Fallback/);
   assert.match(validateReference, /Do not substitute browser, web-search-only, shell-only, or generic agents/);

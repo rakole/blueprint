@@ -21,7 +21,7 @@ Command requirements:
 - Saved execution summaries are required before persistence. Use the runtime contract's State A/B/C input model to decide reuse, reconstruction, or stop-without-write behavior.
 - Default to reusing an existing valid `XX-VERIFICATION.md` artifact. Require explicit overwrite confirmation before replacement.
 - For non-trivial validation runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for summary review, verifier analysis, persistence, post-write validation, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
-- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or another structured validation decision. Default to one focused question per `ask_user` call.
+- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation, manual validation feedback, UAT-readiness confirmation, or another structured validation decision. Default to one focused question per `ask_user` call.
 - Keep validation phase-scoped and summary-aware. Follow the runtime contract for detailed verifier behavior, the no-subagent fallback, canonical `phase.verification` normalization, repair behavior, and output quality. Do not substitute browser, web-search-only, shell-only, or generic agents for this analysis.
 - Read the canonical verification contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.verification"` and read `mcp_blueprint_blueprint_phase_validation_authoring_context` with `artifact: "verification"` before final authoring.
 - Build a structured verification evidence payload, call `mcp_blueprint_blueprint_phase_validation_render`, and call `mcp_blueprint_blueprint_phase_validation_write` only when the render result has `readyToWrite: true`; pass the returned `content` unchanged and treat any later writer rejection as a race, overwrite, or prerequisite failure.
@@ -32,7 +32,7 @@ Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_authoring_context`, `mcp_blueprint_blueprint_phase_validation_render`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for Blueprint contract discovery and persistent state work.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
-- Use `ask_user` for overwrite confirmation of existing verification evidence.
+- Use `ask_user` for overwrite confirmation of existing verification evidence and for any focused manual-feedback or UAT-handoff gate that needs a user decision.
 - Keep the audit grounded in saved execution evidence. Do not invent missing implementation details from chat memory.
 - Use only the validation artifact enums that the tool owns, and do not hand-build validation filenames.
 - Keep the detailed behavior aligned with `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`.
