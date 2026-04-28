@@ -231,6 +231,48 @@ async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
   }
 }
 
+function validContextContent(): string {
+  return `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Keep discovery scoped to phase 3 and the saved artifacts in .blueprint/phases/03-phase-discovery/.
+- Capture durable context before planning begins.
+- Preserve implemented-only routing for the next lifecycle step.
+
+## Discovery Grounding
+- Project brief - discovery should stay phase-scoped and resumable.
+- Requirements grounding - keep LIFE-01, LIFE-02, and LIFE-03 visible to downstream planning.
+- Workflow posture - route through enabled research and UI gates before planning.
+- Prior-context sweep - review existing artifacts before asking fresh questions.
+
+## Implementation Decisions
+- Use the refreshed state next action as the end-of-discussion handoff.
+- Do not infer a direct plan-phase route when enabled gates still require research or UI artifacts.
+- Keep MCP tools responsible for durable state updates and routing.
+
+## Specific Ideas
+- Make planning readiness explicit so command prompts do not guess from missing artifact lists.
+
+## Existing Code Insights
+- The state loader already derives next action from effective workflow config.
+- The research-status tool can expose the same gate to plan-phase.
+
+## Dependencies
+- .blueprint/STATE.md controls the final handoff after discuss-phase.
+- .blueprint/config.json controls whether research and UI artifacts are required before planning.
+
+## Open Questions
+- None that block this fixture.
+
+## Deferred Ideas
+- Broader lifecycle routing cleanup can happen outside this regression.
+
+## Canonical References
+- .blueprint/ROADMAP.md defines phase 3.
+- .blueprint/config.json defines workflow gates.
+`;
+}
+
 async function createLegacyDecimalPhaseRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-phase-tools-legacy-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -486,6 +528,52 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.match(after.suggestedRepairs.join("\n"), /discuss-phase/i);
   assert.match(after.suggestedRepairs.join("\n"), /ui-phase/i);
   assert.match(uiSpec, /Outcome Mode/);
+});
+
+test("phase research status exposes config-aware plan-phase readiness", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    validContextContent(),
+    "utf8"
+  );
+
+  const defaultStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(defaultStatus.hasUsableContext, true);
+  assert.equal(defaultStatus.hasResearch, false);
+  assert.equal(defaultStatus.hasUiSpec, false);
+  assert.equal(defaultStatus.planningReadiness.workflowResearchRequired, true);
+  assert.equal(defaultStatus.planningReadiness.workflowUiPhaseRequired, true);
+  assert.equal(defaultStatus.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    defaultStatus.planningReadiness.nextSafeAction,
+    "Run /blu-research-phase 3 to capture phase research"
+  );
+  assert.match(defaultStatus.planningReadiness.blockers.join("\n"), /workflow\.research=true/);
+
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    workflow: { research: boolean; ui_phase: boolean };
+  };
+  config.workflow.research = false;
+  config.workflow.ui_phase = false;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+  const disabledGateStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(disabledGateStatus.planningReadiness.workflowResearchRequired, false);
+  assert.equal(disabledGateStatus.planningReadiness.workflowUiPhaseRequired, false);
+  assert.equal(disabledGateStatus.planningReadiness.readyForPlanPhase, true);
+  assert.equal(
+    disabledGateStatus.planningReadiness.nextSafeAction,
+    "Run /blu-plan-phase 3 to create execution-ready phase plans"
+  );
+  assert.deepEqual(disabledGateStatus.planningReadiness.blockers, []);
 });
 
 test("phase research status returns warnings instead of throwing for unreadable saved research paths", async (t) => {

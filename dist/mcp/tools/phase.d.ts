@@ -331,7 +331,16 @@ type PhaseResearchStatusResult = {
     uiSpecValid: boolean | null;
     uiSpecIssues: string[];
     suggestedRepairs: string[];
+    planningReadiness: PhasePlanningReadiness;
     warnings: string[];
+};
+type PhasePlanningReadiness = {
+    workflowResearchRequired: boolean;
+    workflowUiPhaseRequired: boolean;
+    workflowUiSafetyGateEnabled: boolean;
+    readyForPlanPhase: boolean;
+    nextSafeAction: string;
+    blockers: string[];
 };
 type PhaseArtifactReadResult = {
     phaseFound: boolean;

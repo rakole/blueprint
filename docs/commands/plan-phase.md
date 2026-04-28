@@ -67,7 +67,7 @@ Interactive planning UX rules:
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_context` -> `{phase: {roadmap}, codebase, requirements, missingArtifacts}`
-- `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, hasUsableContext, hasUsableResearch, hasUsableUiSpec, contextValid, contextIssues, researchValid, researchIssues, uiSpecValid, uiSpecIssues}`
+- `blueprint_phase_research_status` -> `{hasContext, hasResearch, hasUiSpec, hasUsableContext, hasUsableResearch, hasUsableUiSpec, contextValid, contextIssues, researchValid, researchIssues, uiSpecValid, uiSpecIssues, planningReadiness}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
 - `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, validation, reason}`
 - `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
@@ -86,6 +86,7 @@ Interactive planning UX rules:
 - Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` before drafting or revising `XX-YY-PLAN.md`, and normalize the final draft to `contract.authoringTemplate`. Use the live contract object as the source of truth rather than a copied local template.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone. Read saved validation evidence through `blueprint_phase_validation_read` and saved review findings through `blueprint_review_load_findings` when those artifacts exist before replanning around them.
 - Use saved research for unstable technical choices. If needed research is missing or stale under the active gates, route to `/blu-research-phase` instead of browsing live web docs during planning.
+- Treat `blueprint_phase_research_status.planningReadiness` as the config-aware pre-draft handoff gate. If it reports `readyForPlanPhase=false`, route to its `nextSafeAction` before drafting. If it reports `readyForPlanPhase=true`, do not block only because raw missing-artifact or suggested-repair fields mention research or UI artifacts that normalized config disabled.
 - Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly. `/blu-plan-phase` writes must use `validationMode: "strict"`; do not use warn-mode writes from this command.
 - After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion. If `blueprint_phase_plan_write` or final scoped plan validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
 - When `workflow.plan_check=true`, run the bounded review loop from the runtime contract before finalization: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.

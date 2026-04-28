@@ -184,7 +184,7 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 13. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry before treating `/blu-discuss-phase` as complete. If repair cannot finish safely, leave the checkpoint intact and report the validation blocker.
 14. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
 15. Require explicit overwrite confirmation before replacing existing context artifacts.
-16. End with a next safe action inside the implemented Blueprint surface and leave `STATE.md` legible about that next step.
+16. End with the next safe action loaded from `blueprint_state_load.derivedStatus.nextAction` after the synced state update, and leave `STATE.md` legible about that next step. Do not infer a direct `/blu-plan-phase` handoff from successful context capture when enabled research or UI gates still route through `/blu-research-phase` or `/blu-ui-phase`.
 
 ### `research-phase`
 
