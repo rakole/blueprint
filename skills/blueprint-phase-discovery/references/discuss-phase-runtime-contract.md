@@ -211,6 +211,10 @@ Before treating the discussion as complete:
 6. Call `blueprint_state_load` after the synced update and report the refreshed
    next safe action from the loaded state, falling back to `/blu-progress` when
    routing is missing, blocked, or undecidable.
+   Do not infer `/blu-plan-phase` only because context capture succeeded; when
+   normalized config still requires research or UI, the loaded
+   `derivedStatus.nextAction` must continue to point to `/blu-research-phase`
+   or `/blu-ui-phase` and the final response must preserve that handoff.
 7. Delete the checkpoint only after the context write, optional discussion-log
    write, synced state update, and follow-up state load have all succeeded.
    Pass `expectedOwnerCommand: "/blu-discuss-phase"` and

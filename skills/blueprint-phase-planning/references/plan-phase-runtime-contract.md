@@ -23,7 +23,7 @@ Blueprint-native.
 - Read `mcp_blueprint_blueprint_phase_context` for roadmap, requirement, and
   mapped codebase signals.
 - Read `mcp_blueprint_blueprint_phase_research_status` for context, research,
-  and UI readiness.
+  UI readiness, and the config-aware `planningReadiness` handoff gate.
 - Read `mcp_blueprint_blueprint_phase_artifact_read` for actual current
   context, research, UI, and other relevant discovery artifact content that
   exists. Status metadata alone is not enough.
@@ -43,6 +43,10 @@ Blueprint-native.
 ### Decide
 
 - Honor normalized effective config:
+  - Use `phase_research_status.planningReadiness` as the authoritative
+    pre-draft gate. If `readyForPlanPhase=false`, stop before drafting and
+    route to `nextSafeAction`; report the first listed blocker instead of
+    recomputing a different handoff from raw missing-artifact metadata.
   - `workflow.research=true`: require usable research before final plan
     authoring, or route to `/blu-research-phase`.
   - `workflow.research=false`: state that research was skipped by config.
@@ -205,6 +209,10 @@ When planner/checker agents are unavailable, continue sequentially:
 - Missing phase: stop and route with the locate recovery guidance.
 - Missing required context or research under enabled config: route to the
   producing command instead of fabricating evidence.
+- If `planningReadiness.readyForPlanPhase=true`, do not block only because
+  `suggestedRepairs` or `missingArtifacts` mention disabled research or UI
+  artifacts. Those lists are artifact inventory and repair hints; the readiness
+  gate owns whether `/blu-plan-phase` may continue.
 - Missing UI contract under enabled UI gates: require skip rationale or route to
   `/blu-ui-phase`.
 - Existing plans: additive new plan writes may proceed without the

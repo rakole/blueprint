@@ -140,6 +140,8 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /referenced runtime contract as the source of truth/i);
   assert.match(commandFile, /substantive user-authored artifacts/i);
   assert.match(commandFile, /host-supported structured choices/i);
+  assert.match(commandFile, /Do not infer a direct `\/blu-plan-phase` handoff/i);
+  assert.match(commandFile, /derivedStatus\.nextAction/);
   assert.doesNotMatch(commandFile, /type:\s*"choice"|2-4 labeled options|Type your own answer/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly/i);
   assert.doesNotMatch(commandFile, /\n1\. Resolve the target phase/i);
@@ -159,6 +161,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, new RegExp(runtimeContractPath));
   assert.match(skillFile, new RegExp(sharedProfilePath));
   assert.match(skillFile, /contract\.authoringTemplate.*schema authority/i);
+  assert.match(skillFile, /derivedStatus\.nextAction/);
   assert.match(skillFile, /Command-Scoped Required MCP Tools/i);
   const discussToolSection = skillFile.match(
     /### `\/blu-discuss-phase`\n([\s\S]*?)(?=\n### `\/blu-research-phase`)/
@@ -173,6 +176,8 @@ test("discuss-phase command references only registered phase-discovery tool name
 
   assert.match(discussReference, /blueprint_state_update` with `base: "synced"/i);
   assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
+  assert.match(discussReference, /Do not infer `\/blu-plan-phase`/i);
+  assert.match(discussReference, /`derivedStatus\.nextAction`/);
   assert.match(
     discussReference,
     /Delete the checkpoint only after[\s\S]*context write[\s\S]*optional discussion-log[\s\S]*synced state update[\s\S]*state load/i
@@ -209,6 +214,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(docFile, new RegExp(sharedProfilePath));
   assert.match(docFile, new RegExp(runtimeContractPath));
   assert.match(docFile, /Writes only declared `\.blueprint\/` phase artifacts, checkpoints, and `STATE\.md`/);
+  assert.match(docFile, /without inferring a direct `\/blu-plan-phase` handoff/i);
   assert.doesNotMatch(docFile, /may also mutate code or git state/i);
 
   const discussRuntimeRow = runtimeReference

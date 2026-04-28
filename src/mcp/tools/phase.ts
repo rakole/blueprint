@@ -435,7 +435,17 @@ type PhaseResearchStatusResult = {
   uiSpecValid: boolean | null;
   uiSpecIssues: string[];
   suggestedRepairs: string[];
+  planningReadiness: PhasePlanningReadiness;
   warnings: string[];
+};
+
+type PhasePlanningReadiness = {
+  workflowResearchRequired: boolean;
+  workflowUiPhaseRequired: boolean;
+  workflowUiSafetyGateEnabled: boolean;
+  readyForPlanPhase: boolean;
+  nextSafeAction: string;
+  blockers: string[];
 };
 
 type PhaseArtifactReadResult = {
@@ -2683,6 +2693,86 @@ async function evaluatePhaseArtifactUsability(
       unreadable: true
     };
   }
+}
+
+function buildPhasePlanningReadiness(args: {
+  context: PhaseContextResult;
+  contextStatus: PhaseArtifactUsability;
+  researchPath: string | null;
+  researchValid: boolean | null;
+  uiSpecStatus: PhaseArtifactUsability;
+}): PhasePlanningReadiness {
+  const phaseNumber = args.context.phase?.phaseNumber ?? null;
+  const workflow = args.context.workflowPosture.workflow;
+  const phaseSuffix = phaseNumber ? ` ${phaseNumber}` : "";
+  const progressAction = "Run /blu-progress to review the next safe Blueprint action";
+
+  if (!phaseNumber) {
+    return {
+      workflowResearchRequired: workflow.research,
+      workflowUiPhaseRequired: workflow.uiPhase,
+      workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+      readyForPlanPhase: false,
+      nextSafeAction: progressAction,
+      blockers: ["Phase planning readiness could not be resolved because the phase was not found."]
+    };
+  }
+
+  if (!args.contextStatus.usable) {
+    return {
+      workflowResearchRequired: workflow.research,
+      workflowUiPhaseRequired: workflow.uiPhase,
+      workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+      readyForPlanPhase: false,
+      nextSafeAction: `Run /blu-discuss-phase${phaseSuffix} to rebuild the current phase context`,
+      blockers: [
+        args.contextStatus.present
+          ? "Saved phase context exists but is not usable for planning."
+          : "Phase planning requires a usable XX-CONTEXT.md artifact."
+      ]
+    };
+  }
+
+  if (workflow.research && args.researchValid !== true) {
+    return {
+      workflowResearchRequired: workflow.research,
+      workflowUiPhaseRequired: workflow.uiPhase,
+      workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+      readyForPlanPhase: false,
+      nextSafeAction: args.researchPath
+        ? `Run /blu-research-phase${phaseSuffix} to repair invalid phase research`
+        : `Run /blu-research-phase${phaseSuffix} to capture phase research`,
+      blockers: [
+        args.researchPath
+          ? "workflow.research=true but the saved XX-RESEARCH.md artifact is not usable."
+          : "workflow.research=true but no XX-RESEARCH.md artifact is saved."
+      ]
+    };
+  }
+
+  if (workflow.uiPhase && !args.uiSpecStatus.usable) {
+    return {
+      workflowResearchRequired: workflow.research,
+      workflowUiPhaseRequired: workflow.uiPhase,
+      workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+      readyForPlanPhase: false,
+      nextSafeAction: `Run /blu-ui-phase${phaseSuffix} to draft the phase UI contract`,
+      blockers: [
+        args.uiSpecStatus.present
+          ? "workflow.ui_phase=true but the saved XX-UI-SPEC.md artifact is not usable."
+          : "workflow.ui_phase=true but no XX-UI-SPEC.md artifact is saved."
+      ]
+    };
+  }
+
+  return {
+    workflowResearchRequired: workflow.research,
+    workflowUiPhaseRequired: workflow.uiPhase,
+    workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+    readyForPlanPhase: true,
+    nextSafeAction: `Run /blu-plan-phase${phaseSuffix} to create execution-ready phase plans`,
+    blockers: []
+  };
 }
 
 function buildLocateRecovery(reason: string | null): string[] {
@@ -4954,6 +5044,14 @@ export async function blueprintPhaseResearchStatus(
     );
   }
 
+  const planningReadiness = buildPhasePlanningReadiness({
+    context,
+    contextStatus,
+    researchPath,
+    researchValid,
+    uiSpecStatus
+  });
+
   return {
     hasContext: contextStatus.present,
     hasResearch: Boolean(artifacts?.research),
@@ -4971,6 +5069,7 @@ export async function blueprintPhaseResearchStatus(
     uiSpecValid: uiSpecStatus.valid,
     uiSpecIssues: uiSpecStatus.issues,
     suggestedRepairs,
+    planningReadiness,
     warnings
   };
 }

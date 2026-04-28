@@ -50,7 +50,7 @@
 4. `Execute`: run one-question `ask_user` branching, optionally use capability-gated sidecar research for one gray area, capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
 5. `Persist`: scaffold only missing discovery artifacts, persist substantive context or discussion content, refresh checkpoints per area, and update `STATE.md` through MCP only.
 6. `Validate`: normalize drafts to the canonical `authoringTemplate`, run the blocking anti-pattern check, repair any `blueprint_phase_artifact_write` validation issues, and keep plan-inventory warnings explicit before conclusion.
-7. `Route`: summarize reused versus replaced artifacts, checkpoint disposition, deferred follow-ups, and the next safe implemented action.
+7. `Route`: summarize reused versus replaced artifacts, checkpoint disposition, deferred follow-ups, and the next safe implemented action loaded from refreshed state, without inferring a direct `/blu-plan-phase` handoff while research or UI gates still route elsewhere.
 
 
 ## Blueprint And Global State Reads

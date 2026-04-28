@@ -45,6 +45,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /workflow\.plan_check/);
+  assert.match(commandFile, /phase_research_status\.planningReadiness/);
+  assert.match(commandFile, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
   assert.match(commandFile, /current `context` artifact|actual saved discovery content/i);
   assert.match(commandFile, /saved validation or review evidence/i);
   assert.match(commandFile, /explicit confirmation path/i);
@@ -107,6 +109,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /workflow\.ui_phase/);
   assert.match(skillFile, /workflow\.ui_safety_gate/);
   assert.match(skillFile, /workflow\.plan_check/);
+  assert.match(skillFile, /planningReadiness/);
+  assert.match(skillFile, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
   assert.match(skillFile, /blueprint-planner/);
   assert.match(skillFile, /blueprint-checker/);
   assert.match(skillFile, /explicit confirmation/i);
@@ -149,6 +153,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_update/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
   assert.match(runtimeContract, /Use saved research for freshness-sensitive or unstable technical decisions/i);
+  assert.match(runtimeContract, /planningReadiness/);
+  assert.match(runtimeContract, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
   assert.match(
     runtimeContract,
     /route\s+to `\/blu-research-phase` instead of live browsing or ad hoc web-doc lookup/i
@@ -179,6 +185,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
     /use `skills\/blueprint-phase-planning\/references\/plan-phase-runtime-contract\.md` as the rich behavior contract/
   );
   assert.match(runtimeReference, /gate reuse\/revise\/replace only for writes that revise or replace saved plan ids/i);
+  assert.match(runtimeReference, /planningReadiness/i);
   assert.match(runtimeReference, /allow additive new plan ids without an unnecessary overwrite gate/i);
   assert.match(runtimeReference, /consume saved research instead of live browsing/i);
   assert.match(runtimeReference, /checker review as config-gated rather than mandatory/i);
@@ -209,6 +216,8 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /saved research for unstable technical choices/i);
   assert.match(docFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
   assert.match(docFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
+  assert.match(docFile, /planningReadiness/);
+  assert.match(docFile, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
   assert.match(docFile, /base: "synced"/);
   assert.match(docFile, /Omit `planId` to let Blueprint auto-assign the next available plan slot/i);
   assert.match(docFile, /If targeting a specific plan, pass only the numeric plan id/i);
