@@ -2180,7 +2180,7 @@ const PHASE_UAT_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Do not include model-owned identity keys such as cwd, phase, artifact, path, or content; the write tool owns identity and path derivation.",
     "Ground UAT summary, session state, test matrix, and observed behavior in saved summary paths plus the ready verification artifact.",
-    "Keep PASS paired with checkpoint none; FAIL and PARTIAL must keep a resumable checkpoint label.",
+    "Keep PASS paired with checkpoint none, all test rows passing, unresolvedGaps set to none, and no active structured gaps; FAIL and PARTIAL must keep a resumable checkpoint label.",
     "Separate blocked prerequisites, user-reported issues, structured gaps, and follow-up fixes instead of flattening them into a generic note.",
     "Use only implemented next-safe actions and do not copy minimal example phrasing."
   ],

@@ -377,7 +377,7 @@ function validUatContent(summaryFile = "03-01-SUMMARY.md"): string {
 
 ## UAT Summary
 
-- The lifecycle pilot passed against \`.blueprint/phases/03-lifecycle-pilot/${summaryFile}\`.
+- The lifecycle pilot passed against \`.blueprint/phases/03-lifecycle-pilot/${summaryFile}\` with ready verification evidence.
 
 ## Session State
 
@@ -413,7 +413,7 @@ function validUatContent(summaryFile = "03-01-SUMMARY.md"): string {
 
 ## Observed Behavior
 
-- The observed behavior matched \`.blueprint/phases/03-lifecycle-pilot/${summaryFile}\`.
+- The validated behavior matched \`.blueprint/phases/03-lifecycle-pilot/${summaryFile}\`.
 
 ## Unresolved Gaps
 

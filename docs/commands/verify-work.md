@@ -95,7 +95,7 @@
 - `blueprint_phase_validation_authoring_context` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, contract, summaryPaths, summaryEvidence, existing, verification, prerequisiteBlockers, readyForDraft, allowedValues, routingRules, warnings, reason}`
 - `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
-- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
+- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes, modelContract}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
@@ -106,7 +106,7 @@
 - Persist conversational UAT through `blueprint_phase_validation_write`; do not write raw `XX-UAT.md` files directly, and require the verification artifact to be both valid and ready for UAT before persisting UAT.
 - Pass `phase` as the resolved numeric phase reference and `artifact: "uat"`.
 - UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact that is valid and ready for UAT.
-- Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final authoring.
+- Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final authoring; treat the returned `modelContract` JSON Schema, quality rules, context bindings, rendered headings, and example leakage signals as the structured payload authority.
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
 - Build a structured UAT evidence payload, call `blueprint_phase_validation_render`, and call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`, passing exactly one of the returned `content` unchanged or the same structured `model`.
 - Treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
@@ -121,7 +121,7 @@
 
 ## Canonical UAT Contract
 
-Before persistence, render the final `XX-UAT.md` body through `blueprint_phase_validation_render` from a structured UAT payload grounded in the returned `phase.uat` contract. Persist either the returned `content` or the same structured `model`, never both.
+Before persistence, render the final `XX-UAT.md` body through `blueprint_phase_validation_render` from a structured UAT payload grounded in the returned `phase.uat.modelContract`. Persist either the returned `content` or the same structured `model`, never both.
 
 - Do not rename the contract's required headings or replace the locked `**Status:**`, `**Resume State:**`, or `**Checkpoint:**` markers.
 - Keep summary references inside the contract-defined summary-aware sections so `blueprint_phase_validation_render` and `blueprint_phase_validation_write` validation pass cleanly.

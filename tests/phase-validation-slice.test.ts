@@ -228,7 +228,7 @@ Exercise verification and UAT handoff.
 
 ## UAT Summary
 
-- Phase 3 already has completed UAT evidence from \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+- Phase 3 already has completed UAT evidence from \`.blueprint/phases/03-execution/03-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -264,7 +264,7 @@ Exercise verification and UAT handoff.
 
 ## Observed Behavior
 
-- The accepted behavior matched \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+- The validated behavior matched \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -967,7 +967,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 ## UAT Summary
 
-- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 

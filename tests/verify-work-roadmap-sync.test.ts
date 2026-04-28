@@ -219,7 +219,7 @@ const validUat = `# Phase 04: Validation - UAT
 
 ## UAT Summary
 
-- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -255,7 +255,7 @@ const validUat = `# Phase 04: Validation - UAT
 
 ## Observed Behavior
 
-- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` with ready verification evidence.
 
 ## Unresolved Gaps
 
@@ -331,7 +331,7 @@ const partialUat = validUat
   .replace("| 1 | Validation UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | pass | none |", "| 1 | Validation UAT smoke | Confirm the saved validation behavior still matches the summary evidence. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | issue | Follow-up review still open. |")
   .replace("- Passed: 1", "- Passed: 0")
   .replace("- Issues: 0", "- Issues: 1")
-  .replace("- The observed behavior matched `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md`.", "- The observed behavior exposed a remaining follow-up against `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md`.")
+  .replace("- The observed behavior matched `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md` with ready verification evidence.", "- The observed behavior exposed a remaining follow-up against `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md` with ready verification evidence.")
   .replace("- none\n\n## Structured Gaps", "- Validation UAT still needs one follow-up review.\n\n## Structured Gaps")
   .replace("| none | none | none | none | none | none |", "| 1 | Confirm the saved validation behavior still matches the summary evidence. | partial | major | Follow-up review still open. | Resume `/blu-verify-work 4` after repair. |")
   .replace("- none\n\n## Follow-Up Fixes", "- Resume `/blu-verify-work 4` after the follow-up review is complete.\n\n## Follow-Up Fixes")
@@ -448,7 +448,7 @@ test("resuming a valid incomplete UAT persists without overwrite confirmation", 
       .replace("| 1 | Validation UAT smoke | Confirm the saved validation behavior still matches the summary evidence. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | issue | Follow-up review still open. |", "| 1 | Validation UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | pass | Follow-up review closed. |")
       .replace("- Passed: 0", "- Passed: 1")
       .replace("- Issues: 1", "- Issues: 0")
-      .replace("- The observed behavior exposed a remaining follow-up against `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md`.", "- The observed behavior matched `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md`.")
+      .replace("- The observed behavior exposed a remaining follow-up against `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md` with ready verification evidence.", "- The observed behavior matched `.blueprint/phases/04-phase-validation/04-01-SUMMARY.md` with ready verification evidence.")
       .replace("- Validation UAT still needs one follow-up review.", "- none")
       .replace("| 1 | Confirm the saved validation behavior still matches the summary evidence. | partial | major | Follow-up review still open. | Resume `/blu-verify-work 4` after repair. |", "| none | none | none | none | none | none |")
       .replace("- Resume `/blu-verify-work 4` after the follow-up review is complete.", "- none")

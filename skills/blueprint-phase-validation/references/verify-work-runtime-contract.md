@@ -14,7 +14,7 @@ bounded read-only UAT analysis when a suitable agent is available.
 | Read | Gather saved execution evidence, ready verification evidence, existing UAT state, effective config, artifact health, and current state. | Summary index, every completed valid summary body, `verification` read, `uat` read, config, artifact validation, and state load results. |
 | Decide | Select view, resume, update, create, or stop behavior. | Missing prerequisites, existing UAT decision, overwrite gate, verifier and Nyquist config, active checkpoint, and next safe action. |
 | Execute | Run bounded conversational UAT over user-observable outcomes. | Test queue, current test, response classification, result counts, structured gaps, blocked prerequisites, and verifier result. |
-| Persist | Render and write only the canonical UAT artifact. | `phase.uat` authoring context, locked markers, structured render result, and `blueprint_phase_validation_write` response. |
+| Persist | Render and write only the canonical UAT artifact. | `phase.uat` authoring context, `modelContract`, locked markers, structured render result, and `blueprint_phase_validation_write` response. |
 | Validate | Re-validate persisted Blueprint artifacts and repair if needed. | `blueprint_artifact_validate.valid`, write status, issues, warnings, and suggested repairs. |
 | Route | Update state and report the next implemented action. | `blueprint_state_update` plus saved UAT status, checkpoint state, blockers, and readiness. |
 
@@ -33,7 +33,7 @@ the authority for control flow.
 | `blueprint_config_get` with `scope: "effective"` | Whether verifier and Nyquist-style gap expectations are active or informational. |
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
-| `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` | Canonical heading, marker, and authoring-template authority. |
+| `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. |
 | `blueprint_phase_validation_authoring_context` with `artifact: "uat"` | Mandatory summary evidence, ready-verification prerequisite status, existing UAT baseline, allowed values, and routing rules. |
 | `blueprint_phase_validation_render` with `artifact: "uat"` | Canonical UAT markdown rendering and pre-write validation from the structured UAT payload. |
 | `blueprint_phase_validation_write` with `artifact: "uat"` | The only allowed persistence path for `XX-UAT.md`. |
@@ -126,8 +126,8 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
 2. Read `blueprint_phase_validation_authoring_context` before rendering so ready
    verification, mandatory summary evidence, existing UAT state, allowed values,
    and routing rules are explicit.
-3. Treat `contract.authoringTemplate`, `requiredHeadings`, `lockedMarkers`, and
-   `freehandPolicy` as schema authority.
+3. Treat `contract.authoringTemplate`, `modelContract`, `requiredHeadings`,
+   `lockedMarkers`, and `freehandPolicy` as schema authority.
 4. Preserve all locked markers exactly, including `**Status:**`,
    `**Resume State:**`, and `**Checkpoint:**`.
 5. Treat `**Checkpoint:**` as the current in-artifact checkpoint label or
@@ -143,14 +143,16 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
    notes for every generated test.
 10. Include result counts for total, passed, issues, pending, skipped, and
    blocked.
-11. Include structured gaps with truth, status, reason, severity, test number,
-   artifacts, missing work, and follow-up status when issues are found.
+11. Include structured gaps using the `phase.uat.modelContract` fields:
+   `test`, `truth`, `status`, `severity`, `reason`, and `followUp` when issues
+   are found.
 12. Persist user-reported issues, blocked prerequisites, and structured gaps as
     UAT evidence without an extra confirmation gate. Keep follow-up-fix entries
     explicit enough for the parent command to ask for confirmation before
     persisting or acting on them.
-13. Call `blueprint_phase_validation_render` with the structured UAT payload and
-    treat `readyToWrite: true` as the pre-write self-check.
+13. Call `blueprint_phase_validation_render` with the structured UAT payload
+    shaped by `phase.uat.modelContract` and treat `readyToWrite: true` as the
+    pre-write self-check.
 14. Call `blueprint_phase_validation_write` only with exactly one of the
     returned `content` or the same structured `model`; do not hand-build the
     final markdown body.
@@ -167,7 +169,7 @@ Pass the verifier:
 - current verification artifact and readiness state
 - existing UAT artifact when present
 - effective config values for verifier and Nyquist gates
-- canonical `phase.uat` authoring rules
+- canonical `phase.uat` authoring rules and structured `modelContract`
 - requested output shape: `READY`, `GAPS`, or `BLOCKED`, plus a prepared test
   queue, response-classification-ready UAT prompts, saved-evidence-only gap
   hypotheses, pending-state scaffold content, and optional follow-up-fix

@@ -502,7 +502,7 @@ Preserve earlier milestone execution evidence.
 
 ## UAT Summary
 
-- Earlier milestone UAT closed without blocking issues against \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+- Earlier milestone UAT closed without blocking issues against \`.blueprint/phases/03-execution/03-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -538,7 +538,7 @@ Preserve earlier milestone execution evidence.
 
 ## Observed Behavior
 
-- The accepted behavior matched \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
+- The validated behavior matched \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 
@@ -820,7 +820,7 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 
 ## UAT Summary
 
-- UAT closed with no blocking issues against \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
+- UAT closed with no blocking issues against \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -856,7 +856,7 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 
 ## Observed Behavior
 
-- The accepted behavior matched \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
+- The validated behavior matched \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
 
 ## Unresolved Gaps
 

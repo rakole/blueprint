@@ -2409,7 +2409,9 @@ async function syncRoadmapPhaseCompletion(
     const validation =
       artifact === "verification"
         ? validateVerificationArtifactContent(content, summaryPaths)
-        : validateUatArtifactContent(content, summaryPaths);
+        : validateUatArtifactContent(content, summaryPaths, {
+            requireReadyVerificationEvidence: true
+          });
 
     if (validation.valid) {
       if (artifact === "verification") {
@@ -4948,7 +4950,9 @@ export async function blueprintPhaseValidationRender(
   const validation =
     args.artifact === "verification"
       ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths)
-      : validateUatArtifactContent(content, referencedSummaryPaths);
+      : validateUatArtifactContent(content, referencedSummaryPaths, {
+          requireReadyVerificationEvidence: true
+        });
   const payloadIssues =
     args.artifact === "verification"
       ? verificationPayloadIssues(args)
@@ -6526,7 +6530,9 @@ export async function blueprintPhaseValidationRead(
   const validation =
     args.artifact === "verification"
       ? validateVerificationArtifactContent(content, summaryPaths)
-      : validateUatArtifactContent(content, summaryPaths);
+      : validateUatArtifactContent(content, summaryPaths, {
+          requireReadyVerificationEvidence: true
+        });
   const uatState = args.artifact === "uat" ? readUatArtifactState(content) : null;
   const verificationReadyForUat =
     args.artifact === "verification" && validation.valid
@@ -6676,7 +6682,9 @@ export async function blueprintPhaseValidationWrite(
         }
       : args.artifact === "verification"
         ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths)
-        : validateUatArtifactContent(normalizedContent, referencedSummaryPaths);
+        : validateUatArtifactContent(normalizedContent, referencedSummaryPaths, {
+            requireReadyVerificationEvidence: true
+          });
 
   if (args.artifact === "uat") {
     const verificationPath = validationArtifactPathFor(resolved, "verification");
@@ -6722,7 +6730,9 @@ export async function blueprintPhaseValidationWrite(
     const existingValidation =
       args.artifact === "verification"
         ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths)
-        : validateUatArtifactContent(existingContent, existingReferencedSummaryPaths);
+        : validateUatArtifactContent(existingContent, existingReferencedSummaryPaths, {
+            requireReadyVerificationEvidence: true
+          });
     const existingUatState = args.artifact === "uat" ? readUatArtifactState(existingContent) : null;
     const nextUatState = args.artifact === "uat" ? readUatArtifactState(normalizedContent) : null;
 

@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
@@ -530,7 +531,7 @@ function uatRenderInput(
     status: "PASS",
     resumeState: "NEW",
     checkpoint: "none",
-    uatSummary: [`User acceptance run passed for ${summaryPath}.`],
+    uatSummary: [`User acceptance run passed for ${summaryPath} with ready verification evidence.`],
     sessionState: [`Resume source: ${summaryPath}`, "Current session step: testing complete", "Continuity notes: none"],
     currentTest: {
       number: "testing complete",
@@ -542,7 +543,7 @@ function uatRenderInput(
       {
         number: "1",
         test: "Saved execution behavior",
-        expectedBehavior: "Behavior described by the saved summary is acceptable.",
+        expectedBehavior: "Behavior described by the saved summary and ready verification evidence is acceptable.",
         evidence: summaryPath,
         result: "pass",
         notes: "User acceptance evidence confirmed."
@@ -557,7 +558,7 @@ function uatRenderInput(
       blocked: 0
     },
     questionsAsked: ["Did the delivered behavior match the saved execution summary?"],
-    observedBehavior: [`Observed behavior matched ${summaryPath}.`],
+    observedBehavior: [`Observed behavior matched ${summaryPath} and the ready verification evidence.`],
     unresolvedGaps: ["none"],
     structuredGaps: [
       {
@@ -762,6 +763,54 @@ test("validation write accepts a structured VERIFICATION model and rejects inval
   );
 });
 
+test("validation write accepts a structured UAT model after ready verification evidence", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const {
+    artifact: _verificationArtifact,
+    phase: _verificationPhase,
+    ...verificationModel
+  } = verificationRenderInput([summaryPath], {
+    evidenceReviewedSummaryPaths: [summaryPath]
+  });
+  const verification = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: verificationModel
+  });
+  const { artifact: _artifact, phase: _phase, ...model } = uatRenderInput(summaryPath, {
+    uatSummary: [
+      `User acceptance passed for ${summaryPath} after reviewing ready verification evidence.`
+    ],
+    observedBehavior: [
+      `Observed behavior matched ${summaryPath} and the ready verification artifact.`
+    ]
+  });
+  const uat = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model
+  });
+
+  assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
+  assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
+  assert.equal(uat.written, true);
+  assert.deepEqual(uat.summaryPaths, [summaryPath]);
+  const savedUat = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UAT.md"),
+    "utf8"
+  );
+  assert.match(savedUat, /## Test Matrix/);
+  assert.match(savedUat, /## Structured Gaps/);
+  assert.match(savedUat, /ready verification artifact/);
+});
+
 test("validation render rejects VERIFICATION summary, placeholder, enum, gap, and route mistakes before write", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {
@@ -931,6 +980,179 @@ test("validation render handles UAT prerequisites, summary citations, checkpoint
       checkpoint: "test-1"
     })
   });
+  const plannedCommandRoute = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      nextSafeAction: "Continue through `/blu-do`."
+    })
+  });
+  const missingCommandRoute = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      nextSafeAction: "All acceptance evidence is saved."
+    })
+  });
+  const invalidTestResult = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      testMatrix: [
+        {
+          number: "1",
+          test: "Saved execution behavior",
+          expectedBehavior: "Behavior described by saved evidence is acceptable.",
+          evidence: summaryPath,
+          result: "later",
+          notes: "Unsupported result state."
+        }
+      ]
+    })
+  });
+  const invalidGapEnums = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      structuredGaps: [
+        {
+          test: "1",
+          truth: "User reported a mismatch.",
+          status: "unknown",
+          severity: "urgent",
+          reason: "Unsupported gap state.",
+          followUp: "Resume `/blu-verify-work 3`."
+        }
+      ]
+    })
+  });
+  const inconsistentCounts = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      resultSummary: {
+        total: 1,
+        passed: 0,
+        issues: 0,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      }
+    })
+  });
+  const passWithActiveGap = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      testMatrix: [
+        {
+          number: "1",
+          test: "Saved execution behavior",
+          expectedBehavior:
+            "Behavior described by saved summary and ready verification evidence is acceptable.",
+          evidence: summaryPath,
+          result: "issue",
+          notes: "User reported a mismatch."
+        }
+      ],
+      resultSummary: {
+        total: 1,
+        passed: 0,
+        issues: 1,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      },
+      unresolvedGaps: ["User reported a mismatch."],
+      structuredGaps: [
+        {
+          test: "1",
+          truth: "User reported a mismatch.",
+          status: "failed",
+          severity: "major",
+          reason: "User-reported issue remains active.",
+          followUp: "Repair before returning to `/blu-progress`."
+        }
+      ]
+    })
+  });
+  const passWithUnresolvedGapOnly = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      unresolvedGaps: ["User still reports that the accepted flow misses the requested behavior."],
+      structuredGaps: [
+        {
+          test: "none",
+          truth: "none",
+          status: "none",
+          severity: "none",
+          reason: "none",
+          followUp: "none"
+        }
+      ]
+    })
+  });
+  const blankTestMatrixCell = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      testMatrix: [
+        {
+          number: "1",
+          test: "",
+          expectedBehavior:
+            "Behavior described by saved summary and ready verification evidence is acceptable.",
+          evidence: summaryPath,
+          result: "pass",
+          notes: "User acceptance evidence confirmed."
+        }
+      ]
+    })
+  });
+  const blankStructuredGapCell = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      structuredGaps: [
+        {
+          test: "none",
+          truth: "",
+          status: "none",
+          severity: "none",
+          reason: "none",
+          followUp: "none"
+        }
+      ]
+    })
+  });
+  const missingVerificationGrounding = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(summaryPath, {
+      uatSummary: [`User acceptance run passed for ${summaryPath}.`],
+      sessionState: [
+        `Resume source: ${summaryPath}`,
+        "Current session step: testing complete",
+        "Continuity notes: none"
+      ],
+      testMatrix: [
+        {
+          number: "1",
+          test: "Saved execution behavior",
+          expectedBehavior: "Behavior described by saved evidence is acceptable.",
+          evidence: summaryPath,
+          result: "pass",
+          notes: "User acceptance evidence confirmed."
+        }
+      ],
+      observedBehavior: [`Observed behavior matched ${summaryPath}.`]
+    })
+  });
+  const uatModelExample = readArtifactContract("phase.uat").modelContract?.minimalValidExample;
+  assert.ok(uatModelExample);
+  const leakedExampleRender = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    ...uatModelExample
+  } as PhaseValidationRenderInput);
+  const leakedExampleContentWrite = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: leakedExampleRender.content
+  });
   const validUat = await blueprintPhaseValidationRender({
     cwd: repoPath,
     ...uatRenderInput(summaryPath)
@@ -946,6 +1168,31 @@ test("validation render handles UAT prerequisites, summary citations, checkpoint
   assert.match(missingCitation.issues.join("\n"), /must cite at least one saved execution summary/i);
   assert.equal(incompleteCheckpoint.readyToWrite, false);
   assert.match(incompleteCheckpoint.issues.join("\n"), /checkpoint none when status is PASS/i);
+  assert.equal(plannedCommandRoute.readyToWrite, false);
+  assert.match(plannedCommandRoute.issues.join("\n"), /non-implemented Blueprint commands/i);
+  assert.equal(missingCommandRoute.readyToWrite, false);
+  assert.match(missingCommandRoute.issues.join("\n"), /implemented Blueprint command/);
+  assert.equal(invalidTestResult.readyToWrite, false);
+  assert.match(invalidTestResult.issues.join("\n"), /unsupported result: later/);
+  assert.equal(invalidGapEnums.readyToWrite, false);
+  assert.match(invalidGapEnums.issues.join("\n"), /unsupported status: unknown/);
+  assert.match(invalidGapEnums.issues.join("\n"), /unsupported severity: urgent/);
+  assert.equal(inconsistentCounts.readyToWrite, false);
+  assert.match(inconsistentCounts.issues.join("\n"), /passed count 0 does not match Test Matrix count 1/);
+  assert.equal(passWithActiveGap.readyToWrite, false);
+  assert.match(passWithActiveGap.issues.join("\n"), /must not declare PASS/i);
+  assert.equal(passWithUnresolvedGapOnly.readyToWrite, false);
+  assert.match(passWithUnresolvedGapOnly.issues.join("\n"), /unresolved gap/i);
+  assert.equal(blankTestMatrixCell.readyToWrite, false);
+  assert.match(blankTestMatrixCell.issues.join("\n"), /Test Matrix.*cells non-empty/);
+  assert.equal(blankStructuredGapCell.readyToWrite, false);
+  assert.match(blankStructuredGapCell.issues.join("\n"), /Structured Gaps.*cells non-empty/);
+  assert.equal(missingVerificationGrounding.readyToWrite, false);
+  assert.match(missingVerificationGrounding.issues.join("\n"), /ready verification artifact or validation baseline/);
+  assert.equal(leakedExampleRender.readyToWrite, false);
+  assert.match(leakedExampleRender.issues.join("\n"), /copied model example text/);
+  assert.equal(leakedExampleContentWrite.status, "invalid");
+  assert.match(leakedExampleContentWrite.issues.join("\n"), /copied model example text/);
   assert.equal(validUat.readyToWrite, true, JSON.stringify(validUat, null, 2));
   assert.deepEqual(validUat.referencedSummaryPaths, [summaryPath]);
   assert.equal(written.status, "created", JSON.stringify(written, null, 2));
@@ -1637,7 +1884,7 @@ test("validation tools do not re-check roadmap completion when a plan summary is
 
 ## UAT Summary
 
-- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
@@ -2032,7 +2279,7 @@ Capture the second completed validation summary.
 
 ## UAT Summary
 
-- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
+- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
