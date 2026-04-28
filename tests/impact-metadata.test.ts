@@ -142,7 +142,11 @@ test("impact docs, catalog, MCP docs, and artifact contract agree on implemented
     /\| `impact` \| `docs\/commands\/impact\.md` \| `blueprint-impact` \| `blueprint_impact_config_get`<br>`blueprint_impact_scope_resolve`<br>`blueprint_impact_context_load`<br>`blueprint_impact_analyze`<br>`blueprint_impact_report_write`<br>`blueprint_impact_output_render` \| none \|/
   );
   assert.match(runtimeReference, /impact-runtime-contract\.md/);
-  assert.match(runtimeReference, /\| `locked`; `docs-aligned`; `needs-behavior-audit` \|/);
+  assert.match(runtimeReference, /`behavior-audited`: final hardening/);
+  assert.match(
+    runtimeReference,
+    /\| `impact` \|[\s\S]*\| `locked`; `docs-aligned`; `behavior-audited` \|/
+  );
   assert.match(artifactSchema, /durable blast-radius report bundle for implemented `\/blu-impact`/);
   assert.match(artifactContracts, /\/blu-impact is implemented as an advisory command/);
   assert.match(readme, /\/blu-impact`: compute an evidence-backed blast-radius report/);
@@ -165,6 +169,11 @@ test("impact runtime-contract resource is exposed from implemented catalog truth
   assert.equal(contract.catalog.skillPath, "skills/blueprint-impact/SKILL.md");
   assert.equal(contract.spec.path, "docs/commands/impact.md");
   assert.equal(contract.spec.primarySkill, "blueprint-impact");
+  assert.deepEqual(contract.runtimeReference.evidenceState, [
+    "locked",
+    "docs-aligned",
+    "behavior-audited"
+  ]);
   assert.deepEqual(contract.spec.requiredTools, [...IMPACT_TOOL_NAMES]);
   assert.deepEqual(contract.runtimeReference.exactMcpDestination, [...IMPACT_TOOL_NAMES]);
   assert.deepEqual(contract.runtimeReference.optionalAgents, []);

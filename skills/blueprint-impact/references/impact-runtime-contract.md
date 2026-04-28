@@ -51,6 +51,8 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
   resolved scope, loaded context, description, and invocation metadata.
 - Treat returned findings, obligations, unknowns, evidence, impact status,
   risk, confidence, scoring metadata, and normalized report as authoritative.
+- Verify the normalized report includes first-class scope provenance evidence
+  before treating the output as release-ready.
 - Do not synthesize deterministic findings outside MCP output. Narrative
   summaries may group or abbreviate the returned facts, but they must not
   invent certainty.
@@ -143,6 +145,8 @@ output paths belong to MCP tools.
 - The user can see scope provenance, status, risk, confidence, top impacted
   areas, required reviewers, required tests, blocking findings, warnings,
   unknowns, and suggested next actions.
+- Markdown summaries must distinguish impact/status drivers from confidence
+  factors instead of labeling one as the other.
 - Missing metadata is explicit and actionable.
 - Artifact paths are included when writing succeeds.
 - `--no-write` output clearly says no bundle was written.

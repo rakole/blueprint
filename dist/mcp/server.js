@@ -15763,7 +15763,7 @@ function renderImpactTemplate(context) {
 ## Summary
 
 - Status, risk, confidence, and one concise evidence-backed outcome.
-- Confidence drivers and confidence reducers.
+- Impact drivers, impact reducers, and confidence factors.
 
 ## Change Scope
 
@@ -35543,7 +35543,7 @@ async function resolvePhase6Context(projectRoot, providedContext, surfaces, evid
     const runtime2 = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 9,
+      implementationPhase: 11,
       readOnly: true,
       includeRuntime: true,
       includeCatalog: true,
@@ -37326,7 +37326,7 @@ async function blueprintImpactContextLoad(args = {}) {
     runtime = {
       registeredTools: allRegisteredRuntimeToolNames(),
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 9,
+      implementationPhase: 11,
       readOnly: true,
       includeRuntime,
       includeCatalog,
@@ -37376,18 +37376,19 @@ async function blueprintImpactAnalyze(args = {}) {
     );
   }
   const reportScope = buildReportScope(args, files, warnings);
+  const scopeEvidenceRef = addEvidence(evidence, {
+    kind: "scope",
+    source: "impact-analyze-scope",
+    summary: files.length === 0 ? "No file-backed scope was provided to impact analysis." : "Impact analysis consumed normalized scope provenance and file-backed changed paths.",
+    paths: files,
+    data: {
+      scopeKind: reportScope.kind,
+      scopeSource: reportScope.source,
+      scopeFingerprint: reportScope.fingerprint,
+      fileCount: files.length
+    }
+  });
   if (files.length === 0) {
-    const evidenceRef = addEvidence(evidence, {
-      kind: "scope",
-      source: "impact-analyze-scope",
-      summary: "No file-backed scope was provided to impact analysis.",
-      paths: [],
-      data: {
-        scopeKind: reportScope.kind,
-        scopeSource: reportScope.source,
-        scopeFingerprint: reportScope.fingerprint
-      }
-    });
     analysisUnknowns.push({
       id: "unknown.scope.file-backed",
       category: "scope",
@@ -37396,7 +37397,7 @@ async function blueprintImpactAnalyze(args = {}) {
       impactedFiles: [],
       reason: "Impact analysis did not receive changed files from git, explicit files, a diff file, or another file-backed seed.",
       resolution: "Resolve scope with --staged, --working-tree, --range, --base/--head, --files, --diff-file, or a seed containing changed files.",
-      evidenceRefs: [evidenceRef]
+      evidenceRefs: [scopeEvidenceRef]
     });
   }
   addEvidence(evidence, {
@@ -38031,8 +38032,8 @@ function validateRenderedImpactMarkdown(markdown, errors, warnings) {
       errors.push(`IMPACT.md contains generic N/A without an explicit reason: ${line.trim()}`);
     }
   }
-  if (!markdown.includes("Confidence drivers") || !markdown.includes("Confidence reducers")) {
-    warnings.push("IMPACT.md should include confidence drivers and reducers.");
+  if (!markdown.includes("Impact drivers") || !markdown.includes("Confidence factors")) {
+    warnings.push("IMPACT.md should include impact drivers and confidence factors.");
   }
 }
 function parseMarkdownSections(markdown) {
@@ -38089,7 +38090,7 @@ function buildImpactReportBundle(report, options) {
   if (paths.evidenceJsonl) {
     files.set(
       "evidence.jsonl",
-      report.evidence.map((evidence) => stableJson(evidence)).join("\n") + "\n"
+      report.evidence.map((evidence) => stableStringify(evidence)).join("\n") + "\n"
     );
   }
   if (paths.reviewChecklist) {
@@ -38163,8 +38164,9 @@ ${report.summary}
 - Status: ${report.status}
 - Risk: ${report.risk.level}
 - Confidence: ${report.confidence.level} (${report.confidence.score})
-- Confidence drivers: ${sentenceList(report.scoring.drivers, "No positive confidence drivers were recorded because the analyzer found no strengthening signals.")}
-- Confidence reducers: ${sentenceList(report.scoring.reducers, "No confidence reducers were recorded because no weakening signals were detected.")}
+- Impact drivers: ${sentenceList(report.scoring.drivers, "No impact drivers were recorded because the analyzer found no status or risk signals.")}
+- Impact reducers: ${sentenceList(report.scoring.reducers, "No impact reducers were recorded because no weakening signals were detected.")}
+- Confidence factors: ${sentenceList(report.confidence.reasons, "No confidence factors were recorded because confidence evidence was unavailable.")}
 
 ## Change Scope
 
@@ -38184,7 +38186,7 @@ ${renderStringList(report.requiredTests, "No required tests are listed because t
 
 ## Blocking Findings
 
-${renderFindings(report.blockingFindings, "No blocking findings were detected because the report status did not include BLOCK findings.")}
+${renderFindings(report.blockingFindings, "No blocking finding records were emitted. BLOCK status can still come from scoring policy, high-assurance low-confidence thresholds, or structured unknowns; see Summary and Unknowns.")}
 
 ## Warnings
 

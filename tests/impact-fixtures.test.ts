@@ -265,7 +265,7 @@ function contractContext(): Record<string, unknown> {
     runtime: {
       registeredTools: ["blueprint_example_tool", ...IMPACT_TOOL_NAMES],
       registeredImpactTools: [...IMPACT_TOOL_NAMES],
-      implementationPhase: 10,
+      implementationPhase: 11,
       readOnly: true
     },
     artifactContracts: listArtifactContracts()

@@ -1639,7 +1639,7 @@ function renderImpactTemplate(context?: ArtifactTemplateContext): string {
 ## Summary
 
 - Status, risk, confidence, and one concise evidence-backed outcome.
-- Confidence drivers and confidence reducers.
+- Impact drivers, impact reducers, and confidence factors.
 
 ## Change Scope
 

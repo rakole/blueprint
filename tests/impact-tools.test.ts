@@ -588,7 +588,7 @@ test("impact context load honors toggles without marking omitted optional sectio
   assert.match(context.warnings.join("\n"), /includeArtifacts=false/);
 });
 
-test("impact context load reports Phase 9 runtime metadata", async () => {
+test("impact context load reports Phase 11 runtime metadata", async () => {
   const context = await blueprintImpactContextLoad({
     cwd: repoRoot,
     includeCatalog: false,
@@ -596,7 +596,7 @@ test("impact context load reports Phase 9 runtime metadata", async () => {
   });
 
   assert.equal(context.status, "loaded");
-  assert.equal(context.runtime?.implementationPhase, 9);
+  assert.equal(context.runtime?.implementationPhase, 11);
   assert.equal(context.runtime?.readOnly, true);
 });
 
@@ -2099,6 +2099,83 @@ test("impact analyze creates security, deployment, release, and test obligations
   assert.ok(categories.has("tests"));
 });
 
+test("impact self-analysis produces release-readiness coverage for the implemented workflow", async () => {
+  const implementationFiles = [
+    "commands/blu-impact.toml",
+    "docs/COMMAND-CATALOG.md",
+    "docs/commands/impact.md",
+    "docs/MCP-TOOLS.md",
+    "docs/RUNTIME-REFERENCE.md",
+    "docs/ARTIFACT-SCHEMA.md",
+    "skills/blueprint-impact/SKILL.md",
+    "skills/blueprint-impact/references/impact-runtime-contract.md",
+    "src/mcp/server.ts",
+    "src/mcp/tools/impact.ts",
+    "src/mcp/artifact-contracts/index.ts",
+    "package.json",
+    "dist/mcp/server.js",
+    "tests/impact-tools.test.ts",
+    "tests/impact-fixtures.test.ts",
+    "tests/impact-metadata.test.ts"
+  ];
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: implementationFiles,
+    config: {
+      ownership: {
+        sources: [],
+        fallbackReviewers: ["@blueprint/runtime"]
+      },
+      dependencyGraph: {
+        sources: []
+      },
+      risk: {
+        blockBelowConfidenceForSensitiveAreas: 0
+      }
+    }
+  });
+  const markdown = await blueprintImpactOutputRender({
+    cwd: repoRoot,
+    mode: "markdown",
+    report: analysis.report
+  });
+  const repoPath = await createTempRepo();
+
+  try {
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: analysis.report
+    });
+
+    assert.equal(analysis.status, "WARN");
+    assert.equal(analysis.risk.level, "high");
+    assert.equal(analysis.confidence.level, "low");
+    assert.equal(analysis.report.requiredReviewers.includes("@blueprint/runtime"), true);
+    assert.ok(analysis.report.requiredTests.length > 0);
+    assert.ok(analysis.evidence.some((evidence) => evidence.kind === "scope"));
+    assert.ok(analysis.unknowns.some((unknown) => unknown.category === "dependency"));
+    assert.equal(findingByCheck(analysis, "build.dist-coverage"), undefined);
+    assertHasObligation(analysis, "Command contract review required");
+    assertHasObligation(analysis, "MCP tool documentation must be reviewed");
+    assertHasObligation(analysis, "Artifact schema documentation must be reviewed");
+    assertHasObligation(analysis, "Skill and agent contract review required");
+    assertHasObligation(analysis, "Generated output provenance must be verified");
+    assertHasObligation(analysis, "Release notes review required");
+    assert.match(markdown.content, /Impact drivers:/);
+    assert.match(markdown.content, /Confidence factors:/);
+    assert.match(markdown.content, /## Contract And Compatibility Impact/);
+    assert.match(markdown.content, /## Unknowns And Missing Metadata/);
+    assert.doesNotMatch(markdown.content, /<owner>|<test command>|\bTBD\b|\bTODO\b/);
+    assert.equal(write.status, "written");
+    assert.match(write.paths.impactMarkdown, /\.blueprint\/impact\/impact-[^/]+\/IMPACT\.md/);
+    assert.match(write.paths.evidenceJsonl ?? "", /evidence\.jsonl/);
+    assert.match(write.paths.reviewChecklist ?? "", /review-checklist\.md/);
+    assert.match(write.paths.questions ?? "", /QUESTIONS\.md/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
 test("impact report writer persists required and optional impact bundle files", async () => {
   const repoPath = await createTempRepo();
 
@@ -2126,12 +2203,18 @@ test("impact report writer persists required and optional impact bundle files", 
     const markdown = await readFile(path.join(repoPath, write.paths.impactMarkdown), "utf8");
     const payload = JSON.parse(await readFile(path.join(repoPath, write.paths.impactJson), "utf8"));
     const summary = JSON.parse(await readFile(path.join(repoPath, write.paths.summaryJson), "utf8"));
+    const evidenceRows = (await readFile(path.join(repoPath, write.paths.evidenceJsonl ?? ""), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
     const checklist = await readFile(path.join(repoPath, write.paths.reviewChecklist ?? ""), "utf8");
 
     assert.match(markdown, /^# Impact Report: impact-/);
     assert.match(markdown, /## Unknowns And Missing Metadata/);
     assert.equal(payload.schemaVersion, "blueprint.impact.report.v1");
     assert.equal(summary.impactId, analysis.impactId);
+    assert.equal(evidenceRows.length, analysis.evidence.length);
+    assert.equal(evidenceRows.some((row) => row.kind === "scope"), true);
     assert.match(checklist, /@reviewer/);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
@@ -2175,8 +2258,9 @@ Impact status PASS with low risk and high confidence (0.8) across 1 changed file
 - Status: PASS
 - Risk: low
 - Confidence: high (0.8)
-- Confidence drivers: No blocking or warning impact signals remain above policy thresholds.; No findings, obligations, or unknowns remained after deterministic analysis.
-- Confidence reducers: No confidence reducers were recorded because no weakening signals were detected.
+- Impact drivers: No blocking or warning impact signals remain above policy thresholds.; No findings, obligations, or unknowns remained after deterministic analysis.
+- Impact reducers: No impact reducers were recorded because no weakening signals were detected.
+- Confidence factors: Changed files were normalized and classified deterministically.; Explicit file scope was provided and path-containment checks passed.; Ownership coverage is complete for the analyzed files.
 
 ## Change Scope
 
@@ -2202,7 +2286,7 @@ No required tests are listed because the analyzed signals did not produce test o
 
 ## Blocking Findings
 
-No blocking findings were detected because the report status did not include BLOCK findings.
+No blocking finding records were emitted. BLOCK status can still come from scoring policy, high-assurance low-confidence thresholds, or structured unknowns; see Summary and Unknowns.
 
 ## Warnings
 
@@ -2237,6 +2321,10 @@ No unknowns remain because scope, ownership, dependency, contract, and obligatio
 - ev.ownership.62c2fbdee13c: Fallback reviewers were applied because no specific ownership rule matched this changed file.
   - Kind: ownership
   - Source: ownership-coverage
+  - Paths: \`tests/impact-tools.test.ts\`
+- ev.scope.6c38fb805c7e: Impact analysis consumed normalized scope provenance and file-backed changed paths.
+  - Kind: scope
+  - Source: impact-analyze-scope
   - Paths: \`tests/impact-tools.test.ts\`
 - ev.surface.e250dc884736: Changed files were classified into deterministic multi-label impact surfaces.
   - Kind: surface

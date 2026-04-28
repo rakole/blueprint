@@ -22,7 +22,7 @@ Dependency-aware grouping for safe parallel implementation. Commands within a ba
 
 Blocked commands (not schedulable until substrate/status changes):
 
-None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline and is now implemented with its manifest, primary skill, registered impact MCP tools, tests, docs, and built assets aligned.
+None in the retained baseline beyond `/blu-do`. `/blu-do` docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands. `/blu-impact` is intentionally added outside the retained baseline and is now implemented with its manifest, primary skill, registered impact MCP tools, tests, docs, built assets, and Phase 11 self-impact hardening aligned.
 
 ## Completed Commands (Bubbled Down)
 

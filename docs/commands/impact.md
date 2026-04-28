@@ -93,7 +93,7 @@
 
 ## Analysis Contract
 
-- Impact analysis normalizes file scope from top-level `changedFiles`, top-level `files`, nested `scope.files`, nested `scope.changedFiles`, and nested full scope-resolver payloads; mismatches produce a deterministic union warning.
+- Impact analysis normalizes file scope from top-level `changedFiles`, top-level `files`, nested `scope.files`, nested `scope.changedFiles`, and nested full scope-resolver payloads; mismatches produce a deterministic union warning, and every normalized report includes first-class scope provenance evidence.
 - Impact analysis detects Blueprint runtime surfaces such as command manifests, command docs, command catalog, MCP server and tool modules, artifact contracts, command resources, skills, agents, extension manifests, hooks, tests, docs, and `dist/**`.
 - Impact analysis detects generic package runtime, build config, repo config, environment config, secret-sensitive, docs, generated, source, repo-root, and unknown surfaces with deterministic priority ordering.
 - Impact analysis resolves effective impact config from built-ins plus invocation `config`, then honors `ownership.sources`, `ownership.fallbackReviewers`, `dependencyGraph.sources`, `dependencyGraph.customGraphFiles`, and risk thresholds. Configured source paths must stay repo-contained; path escapes fail hard.
@@ -195,6 +195,7 @@
 
 - Live catalog marks `impact` as `implemented` only when its manifest, primary skill, required MCP tools, docs, tests, and built assets align.
 - Produces evidence-backed impact status, risk, confidence, findings, obligations, unknowns, and next actions.
+- Phase 11 release-readiness coverage verifies the command against its own command, MCP, docs, skill, artifact-contract, package, test, and `dist` implementation surfaces.
 - Writes only the declared `.blueprint/impact/<impact-id>/` report bundle when writing is enabled.
 - Does not mutate source files, roadmap state, phase state, command catalog state, PR state, deployment state, or the installed extension directory.
 - Keeps missing metadata visible as unknowns rather than false certainty.
