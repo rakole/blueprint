@@ -2222,6 +2222,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
       "Additional top-level headings are allowed, but required plan sections must remain unchanged.",
       "Plan authoring should stay execution-ready: exact repo-relative `Read First` paths, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, and goal-backward must-haves with observable truths, required artifacts, and key links.",
+      "Use concrete repo-relative paths in `files_modified`, `read_first`, and task `Read First`; keep endpoint routes, command globs, and code snippets in `Action` or `Acceptance Criteria` rather than path-list positions.",
       "Do not silently reduce locked context decisions with `v1`, placeholder, static-for-now, future-wiring, or stub language; split or block when full fidelity does not fit."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderPlanTemplate(context)),

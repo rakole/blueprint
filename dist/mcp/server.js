@@ -16463,6 +16463,7 @@ var init_artifact_contracts = __esm({
           "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
           "Additional top-level headings are allowed, but required plan sections must remain unchanged.",
           "Plan authoring should stay execution-ready: exact repo-relative `Read First` paths, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, and goal-backward must-haves with observable truths, required artifacts, and key links.",
+          "Use concrete repo-relative paths in `files_modified`, `read_first`, and task `Read First`; keep endpoint routes, command globs, and code snippets in `Action` or `Acceptance Criteria` rather than path-list positions.",
           "Do not silently reduce locked context decisions with `v1`, placeholder, static-for-now, future-wiring, or stub language; split or block when full fidelity does not fit."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderPlanTemplate(context)),
@@ -19303,12 +19304,26 @@ function isSubjectivePlanLine(line) {
     line
   );
 }
-function isRepoRelativePlanPath(value) {
-  const normalized = value.trim().replace(/\\/g, "/");
+function normalizePlanPathForValidation(value) {
+  let normalized = value.trim().replace(/\\/g, "/");
   if (normalized.length === 0) {
+    return "";
+  }
+  normalized = normalized.replace(/^\.\//, "");
+  normalized = normalized.replace(/\/+\.$/, "");
+  normalized = normalized.replace(/\/+$/, "");
+  return normalized;
+}
+function isRepoRelativePlanPath(value) {
+  const rawValue = value.trim().replace(/\\/g, "/");
+  if (rawValue.length === 0) {
     return false;
   }
-  if (path3.isAbsolute(normalized) || /^[A-Za-z]:\//.test(normalized) || normalized.startsWith("//") || normalized.startsWith("~")) {
+  if (path3.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+    return false;
+  }
+  const normalized = normalizePlanPathForValidation(rawValue);
+  if (normalized.length === 0) {
     return false;
   }
   const segments = normalized.split("/");
@@ -19325,6 +19340,33 @@ function isGlobPlanPath(value) {
 }
 function isBlueprintCommandReference(value) {
   return /^\/blu-[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(value.trim());
+}
+function isRouteLikePlanTaskReference(value) {
+  const normalized = value.trim().replace(/\\/g, "/");
+  if (!normalized.startsWith("/") || normalized.startsWith("//")) {
+    return false;
+  }
+  const segments = normalized.split("/").filter((segment) => segment.length > 0);
+  const firstSegment = segments[0] ?? "";
+  const lastSegment = segments.at(-1)?.replace(/[?#].*$/, "") ?? "";
+  if (PLAN_TASK_ABSOLUTE_PATH_ROOTS.has(firstSegment)) {
+    return false;
+  }
+  return !/\.[A-Za-z0-9][A-Za-z0-9_-]{0,12}$/.test(lastSegment);
+}
+function isCommandLikePlanTaskLine(line) {
+  const normalizedLine = line.trim().replace(/^(?:[-*+]\s+|\d+\.\s+)+/, "").replace(/^`([^`]+)`$/, "$1").trim();
+  return /^(?:run|execute|call|use|verify with|check with|test with)?\s*(?:npm|pnpm|yarn|node|git|bash|sh|rg|grep|find|ls|cat|sed|awk|tsx|tsc|mvn|gradle|curl)\b/i.test(
+    normalizedLine
+  );
+}
+function isCodeLikePlanTaskToken(rawToken, normalizedToken) {
+  const trimmed = rawToken.trim();
+  const inlineCode = trimmed.startsWith("`") && trimmed.endsWith("`");
+  if (inlineCode && /\s/.test(normalizedToken)) {
+    return true;
+  }
+  return /[()=]/.test(trimmed);
 }
 function validatePlanPathList(entries, label) {
   const issues = [];
@@ -19350,7 +19392,16 @@ function validatePlanPathList(entries, label) {
 }
 function extractTaskPathReferenceCandidates(section) {
   const candidates = /* @__PURE__ */ new Set();
+  let inFencedCodeBlock = false;
   for (const line of section.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*```/.test(line)) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      continue;
+    }
+    if (inFencedCodeBlock) {
+      continue;
+    }
+    const commandLikeLine = isCommandLikePlanTaskLine(line);
     const tokens = line.match(/`[^`]+`|[^\s]+/g) ?? [];
     for (const token of tokens) {
       const normalizedToken = token.trim().replace(/^[`"'([<{]+/, "").replace(/[)`"'\])>.,;:!?]+$/, "");
@@ -19359,6 +19410,9 @@ function extractTaskPathReferenceCandidates(section) {
       }
       const normalizedPath = normalizedToken.replace(/\\/g, "/");
       if (isBlueprintCommandReference(normalizedPath)) {
+        continue;
+      }
+      if (isCodeLikePlanTaskToken(token, normalizedToken) || isRouteLikePlanTaskReference(normalizedPath) || commandLikeLine && isGlobPlanPath(normalizedPath)) {
         continue;
       }
       if (normalizedPath.includes("/") || normalizedPath.startsWith(".") || normalizedPath.startsWith("~") || /^[A-Za-z]:/.test(normalizedPath) || normalizedToken.includes("\\")) {
@@ -19395,7 +19449,7 @@ function hasConcretePlanSubsectionContent(section) {
     if (isBlankOrPlaceholderPlanLine(line)) {
       return false;
     }
-    if (/`[^`]+`/.test(line) || /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) || /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) || /\/blu-[\w-]+(?:\b|$)/i.test(line) || /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line)) {
+    if (/`[^`]+`/.test(line) || /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/.test(line) || /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/.test(line) || /\/blu-[\w-]+(?:\b|$)/i.test(line) || /^(?:npm|pnpm|yarn|node|git|bash|sh)\s+\S+/i.test(line) || !isGlobPlanPath(line) && isRepoRelativePlanPath(line)) {
       return true;
     }
     if (isSubjectivePlanLine(line)) {
@@ -19414,7 +19468,7 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
     return issues;
   }
   const objectiveSignals = [
-    /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
+    /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bshows?\b|\bdisplays?\b|\brenders?\b|\blists?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
     /(?:^|[\s"'])\.?\.blueprint\/[^\s`'"()]+/,
     /(?:^|[\s"'])?(?:src|tests|docs|skills|agents|commands)\/[^\s`'"()]+/,
     /\/blu-[\w-]+(?:\b|$)/i,
@@ -22697,7 +22751,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -22988,6 +23042,29 @@ var init_artifacts = __esm({
       ".blueprint/codebase/INTEGRATIONS.md": "Integrations",
       ".blueprint/codebase/CONCERNS.md": "Concerns"
     };
+    PLAN_TASK_ABSOLUTE_PATH_ROOTS = /* @__PURE__ */ new Set([
+      "Applications",
+      "Library",
+      "System",
+      "Users",
+      "Volumes",
+      "bin",
+      "dev",
+      "etc",
+      "home",
+      "mnt",
+      "opt",
+      "private",
+      "proc",
+      "root",
+      "sbin",
+      "srv",
+      "tmp",
+      "usr",
+      "var",
+      "workspace",
+      "workspaces"
+    ]);
     VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS = [
       { pattern: /\bPhase XX\b/i, signal: "Phase XX" },
       { pattern: /<Phase Name>/i, signal: "<Phase Name>" },
@@ -24612,7 +24689,12 @@ __export(phase_exports, {
 import { promises as fs4 } from "node:fs";
 import path5 from "node:path";
 function normalizeBlueprintInput(value) {
-  return typeof value === "number" ? String(value) : value;
+  if (typeof value === "number") {
+    return String(value);
+  }
+  const trimmed = value.trim();
+  const quoteMatch = trimmed.match(/^(['"])([\s\S]+)\1$/);
+  return quoteMatch ? quoteMatch[2].trim() : value;
 }
 function normalizePhaseNumber3(value) {
   return normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));

@@ -689,6 +689,67 @@ Harden plan validation.
 `;
 }
 
+function planWithRouteAndCodeExamples(): string {
+  return `---
+phase: 3
+plan_id: "08"
+title: "Route And Code Examples"
+wave: 2
+status: planned
+objective: "Harden plan validation without blocking route examples."
+depends_on: []
+requirements:
+  - LIFE-01
+files_modified:
+  - backend/src/.
+read_first:
+  - backend/.
+  - ./pages/
+acceptance_criteria:
+  - H2 console at /h2-console shows tables INVOICE, VALIDATION_RULE, VALIDATION_RESULT.
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan 08
+
+## Goal
+
+Harden plan validation without blocking route examples.
+
+## Scope
+
+- Keep repo path lists concrete while allowing endpoint and code examples in task prose.
+
+## Tasks
+
+### Task 1: Preserve endpoint examples in action text
+
+#### Read First
+
+- backend/.
+- ./pages/
+
+#### Action
+
+- Register route examples such as /api/invoices, /api/rules, and /api/results in the prose without treating them as repo paths.
+- Keep \`registry.addMapping("/api/**").allowedOrigins("*").allowedMethods(...)\` examples available for CORS guidance.
+- Run \`rg "Invoice" ./src/**/*.{ts,tsx}\` before finalizing the validator changes.
+- MockMvc.perform(get("/api/invoices")).andExpect(status().isOk()) captures the expected integration behavior.
+
+#### Acceptance Criteria
+
+- H2 console at /h2-console shows tables INVOICE, VALIDATION_RULE, VALIDATION_RESULT.
+
+## Verification
+
+- tests/phase-plan-validation-hardening.test.ts exits 0
+
+## Must Haves
+
+- Keep endpoint strings and command globs distinct from repo path lists.
+`;
+}
+
 test("strict plan writes reject absolute and traversing repo paths", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -864,6 +925,52 @@ test("strict plan writes reject glob path entries", async (t) => {
   assert.equal(result.written, false);
   assert.match(result.validation?.issues.join("\n") ?? "", /concrete repo-relative path/i);
   assert.match(result.validation?.issues.join("\n") ?? "", /glob pattern/i);
+});
+
+test("strict plan writes allow route examples, code snippets, command globs, and directory shorthand", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "08",
+    content: planWithRouteAndCodeExamples(),
+    overwrite: true
+  });
+
+  assert.equal(result.status, "created");
+  assert.equal(result.written, true);
+  assert.equal(result.validation?.valid, true);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-08-PLAN.md")),
+    true
+  );
+});
+
+test("phase plan writes normalize accidentally quoted numeric plan ids", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "\"09\"",
+    content: validPlanContent("09", 2),
+    overwrite: true
+  });
+
+  assert.equal(result.status, "created");
+  assert.equal(result.written, true);
+  assert.equal(result.planId, "09");
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-09-PLAN.md")),
+    true
+  );
 });
 
 test("strict plan writes still accept a concrete execution-ready plan", async (t) => {
