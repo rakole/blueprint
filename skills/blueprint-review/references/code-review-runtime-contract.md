@@ -12,6 +12,9 @@ evidence, not merely valid markdown.
   authority for `review.code-review`.
 - The returned `contract.authoringTemplate` is the canonical shape for
   `XX-REVIEW.md` before drafting, repair, or persistence.
+- The returned `contract.modelContract` is the preferred structured authoring
+  shape when the host can provide JSON. The write tool renders that model to
+  canonical Markdown before persistence.
 - This reference is the output-quality authority: it defines scope handling,
   review depth, finding anatomy, fallback behavior, and write repair.
 - Do not add new public command names, `.planning/` runtime dependencies, shell
@@ -74,6 +77,8 @@ Call these tools in this order unless the command must stop early:
 5. `mcp_blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
+   - Accepts exactly one of canonical Markdown `content` or a structured
+     `model` for `review.code-review`; prefer the model path when available.
    - Never write `XX-REVIEW.md` directly.
 
 ## Artifact Authoring Rules
@@ -98,6 +103,13 @@ The final artifact must include:
 - `Follow-Ups` with actionable follow-up fixes, test gaps, validation steps, or
   `none`.
 - `Next Safe Action` using only implemented Blueprint commands.
+
+The structured model must include verdict, depth, scope source, review summary,
+scope reviewed, evidence reviewed, evidence deferrals, positive signals,
+findings, follow-ups, and next safe action. Do not include MCP-owned identity
+keys such as `phase`, `artifact`, path, or `content`; the tool call owns them.
+Every known saved phase evidence artifact must be cited or explicitly deferred
+with rationale.
 
 Do not persist placeholder examples, generic "reviewed code" prose, or findings
 without file evidence. If no issue is found, explain which files and saved
@@ -170,8 +182,8 @@ Do not replace the missing subagent with browser/web/search-only analysis.
 - If `XX-REVIEW.md` already exists and the new body differs, require explicit
   overwrite confirmation before passing `overwrite: true`.
 - If `blueprint_review_record` returns `status: "invalid"`, repair the authored
-  markdown against `contract.authoringTemplate` and the returned warnings, then
-  retry once through `blueprint_review_record`.
+  structured model against `contract.modelContract` or the authored markdown
+  against `contract.authoringTemplate` and the returned warnings, then retry once through `blueprint_review_record`.
 - If the retry is still invalid, stop with the invalid reasons and do not
   hand-edit `.blueprint/`.
 - If the record call throws because overwrite was not confirmed, surface the

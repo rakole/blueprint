@@ -4614,7 +4614,7 @@ function isPlaceholderReviewArtifactItem(item: string): boolean {
 
 function extractScopeReviewedPaths(section: string): string[] {
   const paths = new Set<string>();
-  const pathPattern = /(?:^|[\s(])`?((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)`?(?=$|[\s),.;:!?])/g;
+  const pathPattern = /(?:^|[\s(])`?(((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)|(?:[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+))`?(?=$|[\s),.;:!?])/g;
 
   for (const item of collectMarkdownListItems(section)) {
     for (const match of item.matchAll(pathPattern)) {
@@ -4630,7 +4630,7 @@ function extractScopeReviewedPaths(section: string): string[] {
     }
 
     const unwrapped = candidate.replace(/^`|`$/g, "");
-    if (/^(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?$/.test(unwrapped)) {
+    if (/^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+)$/.test(unwrapped)) {
       paths.add(unwrapped);
     }
   }
@@ -4661,7 +4661,7 @@ function inferReviewArtifactSeverity(item: string): ReviewArtifactSeverity {
 }
 
 function containsLineBackedRepoFileEvidence(item: string): boolean {
-  return /(?:^|[\s(])`?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?:\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
+  return /(?:^|[\s(])`?(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
     item
   );
 }

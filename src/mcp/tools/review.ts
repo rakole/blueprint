@@ -4,6 +4,8 @@ import path from "node:path";
 import * as z from "zod/v4";
 
 import { prepareTextForPersistence } from "../../shared/security.js";
+import { readArtifactContract } from "../artifact-contracts/index.js";
+import { blueprintDirectCommand } from "../command-paths.js";
 import {
   ensureRepoRoot,
   resolveBlueprintPath,
@@ -39,7 +41,8 @@ type ReviewRecordArgs = {
   cwd?: string;
   phase?: NumericInput;
   artifact: ReviewArtifactKind;
-  content: string;
+  content?: string;
+  model?: Record<string, unknown>;
   overwrite?: boolean;
   scopeFiles?: string[];
 };
@@ -170,7 +173,8 @@ const reviewRecordInputSchema = {
     "security",
     "ui-review"
   ]),
-  content: z.string(),
+  content: z.string().optional(),
+  model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional(),
   scopeFiles: z.array(z.string()).optional()
 };
@@ -190,8 +194,182 @@ const reviewLoadFindingsInputSchema = {
     .optional()
 };
 
+const CODE_REVIEW_MODEL_IDENTITY_KEYS = new Set([
+  "cwd",
+  "phase",
+  "phaseNumber",
+  "phasePrefix",
+  "phaseName",
+  "phaseDir",
+  "artifact",
+  "path",
+  "reportPath",
+  "content"
+]);
+
+const codeReviewModelStringSchema = z.string().min(1);
+const codeReviewModelLineLocationSchema = codeReviewModelStringSchema.regex(
+  /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?$/,
+  "must be a repo-relative file:line or file:line-line reference"
+);
+const codeReviewStructuredModelSchema = z
+  .object({
+    verdict: z.enum(["PASS", "FOLLOW_UP", "BLOCKED"]),
+    depth: z.enum(["quick", "standard", "deep"]),
+    scopeSource: z.enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]),
+    reviewSummary: z.array(codeReviewModelStringSchema).min(1),
+    scopeReviewed: z.array(codeReviewModelStringSchema).min(1),
+    evidenceReviewed: z.array(codeReviewModelStringSchema).min(1),
+    evidenceDeferrals: z
+      .array(
+        z
+          .object({
+            artifact: codeReviewModelStringSchema,
+            rationale: codeReviewModelStringSchema
+          })
+          .strict()
+      )
+      .default([]),
+    positiveSignals: z.array(codeReviewModelStringSchema).min(1),
+    findings: z.array(
+      z
+        .object({
+          severity: z.enum(["critical", "high", "medium", "low", "unknown"]),
+          disposition: z.enum(["follow-up", "observation", "blocked", "accepted-risk"]),
+          location: codeReviewModelLineLocationSchema,
+          evidence: codeReviewModelStringSchema,
+          impact: codeReviewModelStringSchema,
+          recommendation: codeReviewModelStringSchema
+        })
+        .strict()
+    ),
+    followUps: z.array(codeReviewModelStringSchema).min(1),
+    nextSafeAction: codeReviewModelStringSchema
+  })
+  .strict();
+
+type CodeReviewStructuredModel = z.infer<typeof codeReviewStructuredModelSchema>;
+
+type CommandCatalogResult = {
+  commands: Record<string, { implemented: boolean }>;
+};
+
+let implementedCommandNamesPromise: Promise<Set<string> | null> | null = null;
+
 function normalizeTextContent(content: string): string {
   return content.endsWith("\n") ? content : `${content}\n`;
+}
+
+function collectModelStringValues(value: unknown): string[] {
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectModelStringValues(item));
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).flatMap((item) => collectModelStringValues(item));
+  }
+
+  return [];
+}
+
+function formatZodIssuePath(pathSegments: PropertyKey[]): string {
+  return pathSegments.length > 0 ? pathSegments.map(String).join(".") : "model";
+}
+
+function renderBulletList(items: string[], fallback = "none"): string {
+  const lines = items.map((item) => item.trim()).filter((item) => item.length > 0);
+
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+
+  return lines.map((item) => `- ${item}`).join("\n");
+}
+
+function isGenericNoneValue(value: string): boolean {
+  return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
+}
+
+function hasPlaceholderLanguage(value: string): boolean {
+  return /\b(?:todo|tbd|placeholder|replace me|fill in|insert here|coming soon)\b/i.test(value);
+}
+
+async function getImplementedCommandNames(): Promise<Set<string> | null> {
+  if (!implementedCommandNamesPromise) {
+    implementedCommandNamesPromise = (async () => {
+      try {
+        const projectModule = (await import("./project.js")) as {
+          blueprintCommandCatalog: () => Promise<CommandCatalogResult>;
+        };
+        const catalog = await projectModule.blueprintCommandCatalog();
+        const implementedCommands = new Set(
+          Object.entries(catalog.commands)
+            .filter(([, entry]) => entry.implemented)
+            .map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
+        );
+
+        if (
+          !implementedCommands.has("/blu-progress") ||
+          !implementedCommands.has("/blu-code-review")
+        ) {
+          return null;
+        }
+
+        return implementedCommands;
+      } catch {
+        return null;
+      }
+    })();
+  }
+
+  return implementedCommandNamesPromise;
+}
+
+function extractBlueprintDirectCommands(value: string): string[] {
+  return [
+    ...new Set(
+      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) =>
+        match[0].toLowerCase()
+      )
+    )
+  ];
+}
+
+async function validateImplementedNextSafeAction(
+  value: string,
+  sourceLabel = "Code-review model nextSafeAction"
+): Promise<string[]> {
+  const commands = extractBlueprintDirectCommands(value);
+
+  if (commands.length === 0) {
+    return [
+      `${sourceLabel} must contain a direct Blueprint command such as /blu-progress.`
+    ];
+  }
+
+  const implementedCommands = await getImplementedCommandNames();
+
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return [
+      `${sourceLabel} could not be checked because the implemented command catalog was unavailable.`
+    ];
+  }
+
+  const nonImplementedCommands = commands.filter(
+    (command) => !implementedCommands.has(command)
+  );
+
+  if (nonImplementedCommands.length > 0) {
+    return [
+      `${sourceLabel} points to non-implemented command(s): ${nonImplementedCommands.join(", ")}.`
+    ];
+  }
+
+  return [];
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -632,6 +810,343 @@ function collectReviewCounts(
       followUps: parsedFindings.followUps.length
     },
     followUps: parsedFindings.followUps
+  };
+}
+
+type LocatedReviewPhase = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName?: string | null;
+  phaseDir: string;
+  artifacts: string[];
+};
+
+function reviewRecordInvalidResult(args: {
+  located: LocatedReviewPhase;
+  artifact: ReviewArtifactKind;
+  reportPath: string;
+  counts?: ReviewRecordResult["counts"];
+  followUps?: string[];
+  warnings: string[];
+}): ReviewRecordResult {
+  return {
+    phaseNumber: args.located.phaseNumber,
+    phasePrefix: args.located.phasePrefix,
+    phaseName: args.located.phaseName ?? `Phase ${args.located.phasePrefix}`,
+    phaseDir: args.located.phaseDir,
+    artifact: args.artifact,
+    reportPath: args.reportPath,
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    counts:
+      args.counts ?? {
+        sections: 0,
+        findings: 0,
+        followUps: 0
+      },
+    followUps: args.followUps ?? [],
+    warnings: args.warnings
+  };
+}
+
+function collectKnownCodeReviewEvidenceArtifacts(
+  located: LocatedReviewPhase,
+  reportPath: string
+): string[] {
+  return located.artifacts
+    .filter((artifactPath) => artifactPath !== reportPath)
+    .filter((artifactPath) =>
+      /-(?:PLAN|SUMMARY|VERIFICATION|UAT|SECURITY)\.md$/i.test(artifactPath)
+    )
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function validateCodeReviewEvidenceCoverage(
+  content: string,
+  knownEvidenceArtifacts: string[]
+): string[] {
+  if (knownEvidenceArtifacts.length === 0) {
+    return [];
+  }
+
+  const evidenceSections = extractMarkdownSectionContent(content, /^Evidence Reviewed$/i).join("\n");
+  const missingEvidence = knownEvidenceArtifacts.filter(
+    (artifactPath) => !evidenceSections.includes(artifactPath)
+  );
+
+  return missingEvidence.length === 0
+    ? []
+    : [
+        `Review artifact section Evidence Reviewed must cite or explicitly defer every saved phase evidence artifact. Missing: ${missingEvidence.join(", ")}.`
+      ];
+}
+
+async function validateCodeReviewNextSafeAction(content: string): Promise<string[]> {
+  return validateImplementedNextSafeAction(
+    extractMarkdownSectionContent(content, /^Next Safe Action$/i).join("\n"),
+    "Review artifact section Next Safe Action"
+  );
+}
+
+function codeReviewModelSeverityCounts(
+  findings: CodeReviewStructuredModel["findings"]
+): Record<ReviewFindingSeverity, number> {
+  const counts = emptySeverityCounts();
+
+  for (const finding of findings) {
+    counts[finding.severity] += 1;
+  }
+
+  return counts;
+}
+
+function renderCodeReviewFinding(finding: CodeReviewStructuredModel["findings"][number]): string {
+  return `- [${finding.severity}][${finding.disposition}] \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
+}
+
+function renderCodeReviewModelContent(
+  model: CodeReviewStructuredModel,
+  located: LocatedReviewPhase
+): string {
+  const severityCounts = codeReviewModelSeverityCounts(model.findings);
+  const evidenceReviewed = [
+    ...model.evidenceReviewed,
+    ...model.evidenceDeferrals.map(
+      (deferral) => `${deferral.artifact} (deferred: ${deferral.rationale})`
+    )
+  ];
+  const findings =
+    model.findings.length > 0
+      ? model.findings.map(renderCodeReviewFinding)
+      : ["none"];
+
+  return normalizeTextContent(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Code Review
+
+**Verdict:** ${model.verdict}
+
+## Review Summary
+
+- Depth: ${model.depth}
+- Scope source: ${model.scopeSource}
+- File count: ${model.scopeReviewed.length}
+${renderBulletList(model.reviewSummary)}
+
+## Scope Reviewed
+
+${renderBulletList(model.scopeReviewed)}
+
+## Evidence Reviewed
+
+${renderBulletList(evidenceReviewed)}
+
+## Positive Signals
+
+${renderBulletList(model.positiveSignals)}
+
+## Severity Summary
+
+- critical: ${severityCounts.critical}
+- high: ${severityCounts.high}
+- medium: ${severityCounts.medium}
+- low: ${severityCounts.low}
+- unknown: ${severityCounts.unknown}
+
+## Findings
+
+${findings.join("\n")}
+
+## Follow-Ups
+
+${renderBulletList(model.followUps)}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`);
+}
+
+async function codeReviewModelToContent(args: {
+  model: Record<string, unknown> | undefined;
+  located: LocatedReviewPhase;
+  reportPath: string;
+  scopeFiles: string[];
+}): Promise<{
+  content: string | null;
+  issues: string[];
+}> {
+  const model = args.model;
+  const issues: string[] = [];
+
+  if (typeof model !== "object" || model === null || Array.isArray(model)) {
+    return {
+      content: null,
+      issues: ["Code-review model must be a JSON object."]
+    };
+  }
+
+  const identityKeys = Object.keys(model).filter((key) =>
+    CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
+  );
+  if (identityKeys.length > 0) {
+    issues.push(
+      `Code-review model must not include MCP-owned identity keys: ${identityKeys.join(", ")}.`
+    );
+  }
+
+  const modelContract = readArtifactContract("review.code-review").modelContract;
+  if (!modelContract) {
+    issues.push("review.code-review does not support structured model writes.");
+  } else {
+    const requiredKeys = Array.isArray(modelContract.jsonSchema.required)
+      ? modelContract.jsonSchema.required.filter((key): key is string => typeof key === "string")
+      : [];
+    const properties =
+      typeof modelContract.jsonSchema.properties === "object" &&
+      modelContract.jsonSchema.properties !== null
+        ? modelContract.jsonSchema.properties
+        : {};
+    const allowedKeys = new Set(Object.keys(properties));
+    const missingKeys = requiredKeys.filter((key) => !(key in model));
+    const unknownKeys = Object.keys(model).filter((key) => !allowedKeys.has(key));
+
+    if (missingKeys.length > 0) {
+      issues.push(
+        `Code-review model for ${modelContract.schemaId} is missing required fields: ${missingKeys.join(", ")}.`
+      );
+    }
+
+    if (unknownKeys.length > 0) {
+      issues.push(
+        `Code-review model for ${modelContract.schemaId} includes unsupported fields: ${unknownKeys.join(", ")}.`
+      );
+    }
+
+    const modelStrings = collectModelStringValues(model);
+    const leakedSignals = modelContract.exampleLeakageSignals.filter((signal) =>
+      modelStrings.some((value) => value.includes(signal))
+    );
+
+    for (const signal of leakedSignals) {
+      issues.push(
+        `Code-review model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`
+      );
+    }
+
+    const placeholderSignals = modelStrings.filter(hasPlaceholderLanguage);
+    if (placeholderSignals.length > 0) {
+      issues.push(
+        `Code-review model still contains placeholder language: ${placeholderSignals.slice(0, 3).join("; ")}.`
+      );
+    }
+  }
+
+  if (issues.length > 0) {
+    return { content: null, issues };
+  }
+
+  const parsed = codeReviewStructuredModelSchema.safeParse(model);
+
+  if (!parsed.success) {
+    return {
+      content: null,
+      issues: parsed.error.issues.map(
+        (issue) =>
+          `Code-review model field ${formatZodIssuePath(issue.path)} is invalid: ${issue.message}.`
+      )
+    };
+  }
+
+  const parsedModel = parsed.data;
+  const scopeSet = new Set(args.scopeFiles);
+  const knownEvidenceArtifacts = collectKnownCodeReviewEvidenceArtifacts(
+    args.located,
+    args.reportPath
+  );
+  const citedEvidence = new Set([
+    ...parsedModel.evidenceReviewed,
+    ...parsedModel.evidenceDeferrals.map((deferral) => deferral.artifact)
+  ]);
+  const missingEvidence = knownEvidenceArtifacts.filter(
+    (artifactPath) => !citedEvidence.has(artifactPath)
+  );
+
+  if (missingEvidence.length > 0) {
+    issues.push(
+      `Code-review model must cite or explicitly defer every saved phase evidence artifact. Missing: ${missingEvidence.join(", ")}.`
+    );
+  }
+
+  if (args.scopeFiles.length > 0) {
+    const reviewed = new Set(parsedModel.scopeReviewed);
+    const missingScopeFiles = args.scopeFiles.filter((scopeFile) => !reviewed.has(scopeFile));
+
+    if (missingScopeFiles.length > 0) {
+      issues.push(
+        `Code-review model scopeReviewed must list every resolved scoped file. Missing: ${missingScopeFiles.join(", ")}.`
+      );
+    }
+  }
+
+  const scopedFindingLocations = parsedModel.findings
+    .map((finding) => ({
+      location: finding.location,
+      file: finding.location.replace(/:\d+(?:-\d+)?$/, "")
+    }))
+    .filter(({ file }) => scopeSet.size > 0 && !scopeSet.has(file));
+
+  if (scopedFindingLocations.length > 0) {
+    issues.push(
+      `Code-review model findings must cite files inside the resolved review scope. Outside scope: ${scopedFindingLocations.map((entry) => entry.location).join(", ")}.`
+    );
+  }
+
+  if (
+    parsedModel.findings.length > 0 &&
+    parsedModel.followUps.every((followUp) => isGenericNoneValue(followUp))
+  ) {
+    issues.push("Code-review model with findings must include concrete followUps instead of generic none.");
+  }
+
+  for (const field of ["reviewSummary", "scopeReviewed", "evidenceReviewed"] as const) {
+    const genericValues = parsedModel[field].filter(isGenericNoneValue);
+    if (genericValues.length > 0) {
+      issues.push(`Code-review model ${field} cannot use generic none values.`);
+    }
+  }
+
+  if (parsedModel.positiveSignals.some(isGenericNoneValue)) {
+    issues.push("Code-review model positiveSignals cannot use generic none values.");
+  }
+
+  parsedModel.findings.forEach((finding, index) => {
+    for (const field of ["evidence", "impact", "recommendation"] as const) {
+      if (isGenericNoneValue(finding[field])) {
+        issues.push(
+          `Code-review model findings.${index}.${field} must be concrete instead of generic none.`
+        );
+      }
+    }
+  });
+
+  for (const deferral of parsedModel.evidenceDeferrals) {
+    if (isGenericNoneValue(deferral.rationale)) {
+      issues.push(
+        `Code-review model evidenceDeferrals rationale for ${deferral.artifact} must be concrete.`
+      );
+    }
+  }
+
+  issues.push(...await validateImplementedNextSafeAction(parsedModel.nextSafeAction));
+
+  if (issues.length > 0) {
+    return { content: null, issues };
+  }
+
+  return {
+    content: renderCodeReviewModelContent(parsedModel, args.located),
+    issues: []
   };
 }
 
@@ -1366,75 +1881,141 @@ export async function blueprintReviewRecord(
   }
 
   const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;
-  const prepared = prepareTextForPersistence(normalizeTextContent(args.content), {
+  const hasContent = args.content !== undefined;
+  const hasModel = args.model !== undefined;
+  const warnings: string[] = [];
+  const locatedReviewPhase: LocatedReviewPhase = {
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName,
+    phaseDir: located.phaseDir,
+    artifacts: located.artifacts
+  };
+
+  if (hasContent === hasModel) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        "Review artifact writes must supply exactly one of content or model."
+      ]
+    });
+  }
+
+  const normalizedScopeFiles =
+    args.artifact === "code-review"
+      ? await normalizeReviewFiles(projectRoot, args.scopeFiles ?? [], warnings, "review scope")
+      : { files: [], rejected: false };
+
+  if (hasModel && args.artifact !== "code-review") {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        `${args.artifact} does not support structured model writes. Supply canonical Markdown content instead.`
+      ]
+    });
+  }
+
+  if (args.artifact === "code-review" && normalizedScopeFiles.rejected) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        ...warnings,
+        "Code-review persistence received invalid scoped repo files. Re-run with the repo-relative `files` returned by blueprint_review_scope."
+      ]
+    });
+  }
+
+  let content = args.content ?? "";
+
+  if (hasModel) {
+    const modelRender = await codeReviewModelToContent({
+      model: args.model,
+      located: locatedReviewPhase,
+      reportPath,
+      scopeFiles: normalizedScopeFiles.files
+    });
+
+    if (!modelRender.content) {
+      return reviewRecordInvalidResult({
+        located: locatedReviewPhase,
+        artifact: args.artifact,
+        reportPath,
+        warnings: [...warnings, ...modelRender.issues]
+      });
+    }
+
+    content = modelRender.content;
+  }
+
+  const prepared = prepareTextForPersistence(normalizeTextContent(content), {
     label: reportPath
   });
   const normalizedContent = normalizeTextContent(prepared.content);
   const { counts, followUps } = collectReviewCounts(normalizedContent, args.artifact);
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists = await pathExists(absolutePath);
-  const warnings: string[] = [...prepared.warnings];
+  warnings.push(...prepared.warnings);
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
-  const normalizedScopeFiles =
+  const evidenceCoverageIssues =
     args.artifact === "code-review"
-      ? await normalizeReviewFiles(projectRoot, args.scopeFiles ?? [], warnings, "review scope")
-      : { files: [], rejected: false };
+      ? validateCodeReviewEvidenceCoverage(
+          normalizedContent,
+          collectKnownCodeReviewEvidenceArtifacts(locatedReviewPhase, reportPath)
+        )
+      : [];
+  const nextSafeActionIssues =
+    args.artifact === "code-review"
+      ? await validateCodeReviewNextSafeAction(normalizedContent)
+      : [];
 
   if (normalizedContent.trim().length === 0) {
-    return {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-      phaseDir: located.phaseDir,
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
       counts,
       followUps,
       warnings: [...warnings, `${reportPath} content must not be empty.`]
-    };
+    });
   }
 
   if (!validation.valid) {
-    return {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-      phaseDir: located.phaseDir,
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
       counts,
       followUps,
       warnings: [...warnings, ...validation.issues]
-    };
+    });
   }
 
-  if (args.artifact === "code-review" && normalizedScopeFiles.rejected) {
-    return {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-      phaseDir: located.phaseDir,
+  if (evidenceCoverageIssues.length > 0) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
       counts,
       followUps,
-      warnings: [
-        ...warnings,
-        "Code-review persistence received invalid scoped repo files. Re-run with the repo-relative `files` returned by blueprint_review_scope."
-      ]
-    };
+      warnings: [...warnings, ...evidenceCoverageIssues]
+    });
+  }
+
+  if (nextSafeActionIssues.length > 0) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      counts,
+      followUps,
+      warnings: [...warnings, ...nextSafeActionIssues]
+    });
   }
 
   if (args.artifact === "code-review" && normalizedScopeFiles.files.length > 0) {
@@ -1444,21 +2025,14 @@ export async function blueprintReviewRecord(
     );
 
     if (!scopedValidation.valid) {
-      return {
-        phaseNumber: located.phaseNumber,
-        phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-        phaseDir: located.phaseDir,
+      return reviewRecordInvalidResult({
+        located: locatedReviewPhase,
         artifact: args.artifact,
         reportPath,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
         counts,
         followUps,
         warnings: [...warnings, ...scopedValidation.issues]
-      };
+      });
     }
   }
 
@@ -1552,7 +2126,9 @@ export async function blueprintReviewLoadFindings(
       followUps: [],
       reason:
         located.reason ?? "Phase could not be resolved for review findings loading.",
-      warnings: located.warnings
+      warnings: [
+        ...located.warnings
+      ]
     };
   }
 

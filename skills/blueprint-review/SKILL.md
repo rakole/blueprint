@@ -117,7 +117,7 @@ non-routable until their extra MCP substrate lands.
    invalid-write repair for `/blu-code-review`.
 2. Resolve the target phase first and read the current Blueprint artifact
    inventory before reviewing code.
-3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW.md`, then use the returned template as the baseline for the persisted artifact.
+3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW.md`, then use the returned `modelContract` and template as the baseline for the persisted artifact.
 4. Use `blueprint_review_scope` to derive the deterministic repo file list from
    executed plan metadata or explicit file arguments; do not guess from git
    diff alone.
@@ -144,9 +144,12 @@ non-routable until their extra MCP substrate lands.
     crossed deterministic thresholds, and keep rolling finding counts or
     severity buckets visible while the review is in flight.
 13. Persist the finished review through `blueprint_review_record` with the
-   `code-review` artifact and the resolved `scopeFiles`.
-14. If `blueprint_review_record` returns invalid, repair the markdown against
-   `contract.authoringTemplate` and the returned warnings, then retry once
+   `code-review` artifact, the resolved `scopeFiles`, and exactly one of a
+   structured `model` matching `contract.modelContract` or canonical Markdown
+   `content`. Prefer the structured model path when JSON authoring is available.
+14. If `blueprint_review_record` returns invalid, repair the structured model
+   against `contract.modelContract` or the markdown against `contract.authoringTemplate`
+   and the returned warnings, then retry once
    through MCP. Do not hand-edit `.blueprint/`.
 15. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-secure-phase <phase>` when the phase still lacks a security artifact,

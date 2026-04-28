@@ -15937,10 +15937,170 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var CODE_REVIEW_LINE_LOCATION_PATTERN, CODE_REVIEW_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
+    CODE_REVIEW_LINE_LOCATION_PATTERN = "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$";
+    CODE_REVIEW_MODEL_CONTRACT = {
+      schemaId: "blueprint.review.code-review.model",
+      schemaVersion: "1.0.0",
+      jsonSchema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "verdict",
+          "depth",
+          "scopeSource",
+          "reviewSummary",
+          "scopeReviewed",
+          "evidenceReviewed",
+          "evidenceDeferrals",
+          "positiveSignals",
+          "findings",
+          "followUps",
+          "nextSafeAction"
+        ],
+        properties: {
+          verdict: { type: "string", enum: ["PASS", "FOLLOW_UP", "BLOCKED"] },
+          depth: { type: "string", enum: ["quick", "standard", "deep"] },
+          scopeSource: {
+            type: "string",
+            enum: ["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]
+          },
+          reviewSummary: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", minLength: 1 }
+          },
+          scopeReviewed: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", minLength: 1 }
+          },
+          evidenceReviewed: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", minLength: 1 }
+          },
+          evidenceDeferrals: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["artifact", "rationale"],
+              properties: {
+                artifact: { type: "string", minLength: 1 },
+                rationale: { type: "string", minLength: 1 }
+              }
+            }
+          },
+          positiveSignals: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", minLength: 1 }
+          },
+          findings: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "severity",
+                "disposition",
+                "location",
+                "evidence",
+                "impact",
+                "recommendation"
+              ],
+              properties: {
+                severity: {
+                  type: "string",
+                  enum: ["critical", "high", "medium", "low", "unknown"]
+                },
+                disposition: {
+                  type: "string",
+                  enum: ["follow-up", "observation", "blocked", "accepted-risk"]
+                },
+                location: {
+                  type: "string",
+                  minLength: 1,
+                  pattern: CODE_REVIEW_LINE_LOCATION_PATTERN
+                },
+                evidence: { type: "string", minLength: 1 },
+                impact: { type: "string", minLength: 1 },
+                recommendation: { type: "string", minLength: 1 }
+              }
+            }
+          },
+          followUps: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", minLength: 1 }
+          },
+          nextSafeAction: { type: "string", minLength: 1 }
+        }
+      },
+      qualityRules: [
+        "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, reportPath, or content; the write tool owns identity and path derivation.",
+        "Keep scopeReviewed aligned with blueprint_review_scope.files; every resolved scoped file must be visible in the rendered Scope Reviewed section.",
+        "Every known saved evidence artifact from the phase must appear in evidenceReviewed or evidenceDeferrals with a concrete rationale.",
+        "Every finding must include severity, disposition, repo-relative file:line location, evidence, impact, and concrete fix or verification guidance.",
+        "Use only implemented Blueprint commands in nextSafeAction, and do not copy minimal example wording or placeholder review prose."
+      ],
+      contextBindings: [
+        "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus the write tool arguments.",
+        "scopeReviewed is checked against the scopeFiles supplied from blueprint_review_scope when present.",
+        "Known evidence artifacts are read from the selected phase artifact inventory and rendered visibly into Evidence Reviewed or as explicit deferrals.",
+        "existing review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+      ],
+      renderedHeadings: [
+        "Review Summary",
+        "Scope Reviewed",
+        "Evidence Reviewed",
+        "Positive Signals",
+        "Severity Summary",
+        "Findings",
+        "Follow-Ups",
+        "Next Safe Action"
+      ],
+      minimalValidExample: {
+        verdict: "FOLLOW_UP",
+        depth: "standard",
+        scopeSource: "phase-evidence",
+        reviewSummary: [
+          "Phase 5 standard review covered two scoped repo files with one high follow-up."
+        ],
+        scopeReviewed: ["src/feature.ts", "tests/feature.test.ts"],
+        evidenceReviewed: [
+          ".blueprint/phases/05-review-scope/05-01-PLAN.md",
+          ".blueprint/phases/05-review-scope/05-01-SUMMARY.md"
+        ],
+        evidenceDeferrals: [],
+        positiveSignals: [
+          "Plan and summary evidence agree on the bounded source and test scope."
+        ],
+        findings: [
+          {
+            severity: "high",
+            disposition: "follow-up",
+            location: "src/feature.ts:42",
+            evidence: "The changed branch accepts negative input without a guard.",
+            impact: "Callers can receive a misleading success result for invalid input.",
+            recommendation: "Add an explicit negative-input guard and focused regression test."
+          }
+        ],
+        followUps: ["Add the negative-input guard and rerun focused verification."],
+        nextSafeAction: "/blu-code-review-fix 5"
+      },
+      exampleLeakageSignals: [
+        "Phase 5 standard review covered two scoped repo files with one high follow-up.",
+        "Plan and summary evidence agree on the bounded source and test scope.",
+        "The changed branch accepts negative input without a guard.",
+        "Add the negative-input guard and rerun focused verification."
+      ]
+    };
     PHASE_VERIFICATION_MODEL_CONTRACT = {
       schemaId: "blueprint.phase.verification.model",
       schemaVersion: "1.0.0",
@@ -17023,11 +17183,13 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
+          "Structured model writes are supported for code review and render through MCP-owned canonical Markdown before persistence.",
           "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
           "Scope Reviewed must list every repo-relative file in the resolved review scope before the artifact can persist.",
           "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance.",
           "Severity Summary counts must match the persisted Findings section."
         ],
+        modelContract: CODE_REVIEW_MODEL_CONTRACT,
         renderScaffoldTemplate: renderCodeReviewTemplate,
         renderAuthoringTemplate: renderCodeReviewTemplate
       },
@@ -21103,7 +21265,7 @@ function isPlaceholderReviewArtifactItem(item) {
 }
 function extractScopeReviewedPaths(section) {
   const paths = /* @__PURE__ */ new Set();
-  const pathPattern = /(?:^|[\s(])`?((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)`?(?=$|[\s),.;:!?])/g;
+  const pathPattern = /(?:^|[\s(])`?(((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)|(?:[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+))`?(?=$|[\s),.;:!?])/g;
   for (const item of collectMarkdownListItems(section)) {
     for (const match of item.matchAll(pathPattern)) {
       paths.add(match[1]);
@@ -21115,7 +21277,7 @@ function extractScopeReviewedPaths(section) {
       continue;
     }
     const unwrapped = candidate.replace(/^`|`$/g, "");
-    if (/^(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?$/.test(unwrapped)) {
+    if (/^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+)$/.test(unwrapped)) {
       paths.add(unwrapped);
     }
   }
@@ -21138,7 +21300,7 @@ function inferReviewArtifactSeverity(item) {
   return "unknown";
 }
 function containsLineBackedRepoFileEvidence(item) {
-  return /(?:^|[\s(])`?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?:\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
+  return /(?:^|[\s(])`?(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
     item
   );
 }
@@ -30876,6 +31038,86 @@ function normalizeTextContent3(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
 }
+function collectModelStringValues2(value) {
+  if (typeof value === "string") {
+    return [value];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectModelStringValues2(item));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).flatMap((item) => collectModelStringValues2(item));
+  }
+  return [];
+}
+function formatZodIssuePath2(pathSegments) {
+  return pathSegments.length > 0 ? pathSegments.map(String).join(".") : "model";
+}
+function renderBulletList2(items, fallback = "none") {
+  const lines = items.map((item) => item.trim()).filter((item) => item.length > 0);
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+  return lines.map((item) => `- ${item}`).join("\n");
+}
+function isGenericNoneValue(value) {
+  return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
+}
+function hasPlaceholderLanguage(value) {
+  return /\b(?:todo|tbd|placeholder|replace me|fill in|insert here|coming soon)\b/i.test(value);
+}
+async function getImplementedCommandNames2() {
+  if (!implementedCommandNamesPromise2) {
+    implementedCommandNamesPromise2 = (async () => {
+      try {
+        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+        const catalog = await projectModule.blueprintCommandCatalog();
+        const implementedCommands = new Set(
+          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
+        );
+        if (!implementedCommands.has("/blu-progress") || !implementedCommands.has("/blu-code-review")) {
+          return null;
+        }
+        return implementedCommands;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return implementedCommandNamesPromise2;
+}
+function extractBlueprintDirectCommands(value) {
+  return [
+    ...new Set(
+      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map(
+        (match) => match[0].toLowerCase()
+      )
+    )
+  ];
+}
+async function validateImplementedNextSafeAction(value, sourceLabel = "Code-review model nextSafeAction") {
+  const commands = extractBlueprintDirectCommands(value);
+  if (commands.length === 0) {
+    return [
+      `${sourceLabel} must contain a direct Blueprint command such as /blu-progress.`
+    ];
+  }
+  const implementedCommands = await getImplementedCommandNames2();
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return [
+      `${sourceLabel} could not be checked because the implemented command catalog was unavailable.`
+    ];
+  }
+  const nonImplementedCommands = commands.filter(
+    (command) => !implementedCommands.has(command)
+  );
+  if (nonImplementedCommands.length > 0) {
+    return [
+      `${sourceLabel} points to non-implemented command(s): ${nonImplementedCommands.join(", ")}.`
+    ];
+  }
+  return [];
+}
 async function pathExists3(targetPath) {
   try {
     await fs5.access(targetPath);
@@ -31140,6 +31382,250 @@ function collectReviewCounts(content, artifact) {
       followUps: parsedFindings.followUps.length
     },
     followUps: parsedFindings.followUps
+  };
+}
+function reviewRecordInvalidResult(args) {
+  return {
+    phaseNumber: args.located.phaseNumber,
+    phasePrefix: args.located.phasePrefix,
+    phaseName: args.located.phaseName ?? `Phase ${args.located.phasePrefix}`,
+    phaseDir: args.located.phaseDir,
+    artifact: args.artifact,
+    reportPath: args.reportPath,
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    counts: args.counts ?? {
+      sections: 0,
+      findings: 0,
+      followUps: 0
+    },
+    followUps: args.followUps ?? [],
+    warnings: args.warnings
+  };
+}
+function collectKnownCodeReviewEvidenceArtifacts(located, reportPath) {
+  return located.artifacts.filter((artifactPath) => artifactPath !== reportPath).filter(
+    (artifactPath) => /-(?:PLAN|SUMMARY|VERIFICATION|UAT|SECURITY)\.md$/i.test(artifactPath)
+  ).sort((left, right) => left.localeCompare(right));
+}
+function validateCodeReviewEvidenceCoverage(content, knownEvidenceArtifacts) {
+  if (knownEvidenceArtifacts.length === 0) {
+    return [];
+  }
+  const evidenceSections = extractMarkdownSectionContent(content, /^Evidence Reviewed$/i).join("\n");
+  const missingEvidence = knownEvidenceArtifacts.filter(
+    (artifactPath) => !evidenceSections.includes(artifactPath)
+  );
+  return missingEvidence.length === 0 ? [] : [
+    `Review artifact section Evidence Reviewed must cite or explicitly defer every saved phase evidence artifact. Missing: ${missingEvidence.join(", ")}.`
+  ];
+}
+async function validateCodeReviewNextSafeAction(content) {
+  return validateImplementedNextSafeAction(
+    extractMarkdownSectionContent(content, /^Next Safe Action$/i).join("\n"),
+    "Review artifact section Next Safe Action"
+  );
+}
+function codeReviewModelSeverityCounts(findings) {
+  const counts = emptySeverityCounts();
+  for (const finding of findings) {
+    counts[finding.severity] += 1;
+  }
+  return counts;
+}
+function renderCodeReviewFinding(finding) {
+  return `- [${finding.severity}][${finding.disposition}] \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
+}
+function renderCodeReviewModelContent(model, located) {
+  const severityCounts = codeReviewModelSeverityCounts(model.findings);
+  const evidenceReviewed = [
+    ...model.evidenceReviewed,
+    ...model.evidenceDeferrals.map(
+      (deferral) => `${deferral.artifact} (deferred: ${deferral.rationale})`
+    )
+  ];
+  const findings = model.findings.length > 0 ? model.findings.map(renderCodeReviewFinding) : ["none"];
+  return normalizeTextContent3(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Code Review
+
+**Verdict:** ${model.verdict}
+
+## Review Summary
+
+- Depth: ${model.depth}
+- Scope source: ${model.scopeSource}
+- File count: ${model.scopeReviewed.length}
+${renderBulletList2(model.reviewSummary)}
+
+## Scope Reviewed
+
+${renderBulletList2(model.scopeReviewed)}
+
+## Evidence Reviewed
+
+${renderBulletList2(evidenceReviewed)}
+
+## Positive Signals
+
+${renderBulletList2(model.positiveSignals)}
+
+## Severity Summary
+
+- critical: ${severityCounts.critical}
+- high: ${severityCounts.high}
+- medium: ${severityCounts.medium}
+- low: ${severityCounts.low}
+- unknown: ${severityCounts.unknown}
+
+## Findings
+
+${findings.join("\n")}
+
+## Follow-Ups
+
+${renderBulletList2(model.followUps)}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`);
+}
+async function codeReviewModelToContent(args) {
+  const model = args.model;
+  const issues = [];
+  if (typeof model !== "object" || model === null || Array.isArray(model)) {
+    return {
+      content: null,
+      issues: ["Code-review model must be a JSON object."]
+    };
+  }
+  const identityKeys = Object.keys(model).filter(
+    (key) => CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
+  );
+  if (identityKeys.length > 0) {
+    issues.push(
+      `Code-review model must not include MCP-owned identity keys: ${identityKeys.join(", ")}.`
+    );
+  }
+  const modelContract = readArtifactContract("review.code-review").modelContract;
+  if (!modelContract) {
+    issues.push("review.code-review does not support structured model writes.");
+  } else {
+    const requiredKeys = Array.isArray(modelContract.jsonSchema.required) ? modelContract.jsonSchema.required.filter((key) => typeof key === "string") : [];
+    const properties = typeof modelContract.jsonSchema.properties === "object" && modelContract.jsonSchema.properties !== null ? modelContract.jsonSchema.properties : {};
+    const allowedKeys = new Set(Object.keys(properties));
+    const missingKeys = requiredKeys.filter((key) => !(key in model));
+    const unknownKeys = Object.keys(model).filter((key) => !allowedKeys.has(key));
+    if (missingKeys.length > 0) {
+      issues.push(
+        `Code-review model for ${modelContract.schemaId} is missing required fields: ${missingKeys.join(", ")}.`
+      );
+    }
+    if (unknownKeys.length > 0) {
+      issues.push(
+        `Code-review model for ${modelContract.schemaId} includes unsupported fields: ${unknownKeys.join(", ")}.`
+      );
+    }
+    const modelStrings = collectModelStringValues2(model);
+    const leakedSignals = modelContract.exampleLeakageSignals.filter(
+      (signal) => modelStrings.some((value) => value.includes(signal))
+    );
+    for (const signal of leakedSignals) {
+      issues.push(
+        `Code-review model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`
+      );
+    }
+    const placeholderSignals = modelStrings.filter(hasPlaceholderLanguage);
+    if (placeholderSignals.length > 0) {
+      issues.push(
+        `Code-review model still contains placeholder language: ${placeholderSignals.slice(0, 3).join("; ")}.`
+      );
+    }
+  }
+  if (issues.length > 0) {
+    return { content: null, issues };
+  }
+  const parsed = codeReviewStructuredModelSchema.safeParse(model);
+  if (!parsed.success) {
+    return {
+      content: null,
+      issues: parsed.error.issues.map(
+        (issue2) => `Code-review model field ${formatZodIssuePath2(issue2.path)} is invalid: ${issue2.message}.`
+      )
+    };
+  }
+  const parsedModel = parsed.data;
+  const scopeSet = new Set(args.scopeFiles);
+  const knownEvidenceArtifacts = collectKnownCodeReviewEvidenceArtifacts(
+    args.located,
+    args.reportPath
+  );
+  const citedEvidence = /* @__PURE__ */ new Set([
+    ...parsedModel.evidenceReviewed,
+    ...parsedModel.evidenceDeferrals.map((deferral) => deferral.artifact)
+  ]);
+  const missingEvidence = knownEvidenceArtifacts.filter(
+    (artifactPath) => !citedEvidence.has(artifactPath)
+  );
+  if (missingEvidence.length > 0) {
+    issues.push(
+      `Code-review model must cite or explicitly defer every saved phase evidence artifact. Missing: ${missingEvidence.join(", ")}.`
+    );
+  }
+  if (args.scopeFiles.length > 0) {
+    const reviewed = new Set(parsedModel.scopeReviewed);
+    const missingScopeFiles = args.scopeFiles.filter((scopeFile) => !reviewed.has(scopeFile));
+    if (missingScopeFiles.length > 0) {
+      issues.push(
+        `Code-review model scopeReviewed must list every resolved scoped file. Missing: ${missingScopeFiles.join(", ")}.`
+      );
+    }
+  }
+  const scopedFindingLocations = parsedModel.findings.map((finding) => ({
+    location: finding.location,
+    file: finding.location.replace(/:\d+(?:-\d+)?$/, "")
+  })).filter(({ file: file2 }) => scopeSet.size > 0 && !scopeSet.has(file2));
+  if (scopedFindingLocations.length > 0) {
+    issues.push(
+      `Code-review model findings must cite files inside the resolved review scope. Outside scope: ${scopedFindingLocations.map((entry) => entry.location).join(", ")}.`
+    );
+  }
+  if (parsedModel.findings.length > 0 && parsedModel.followUps.every((followUp) => isGenericNoneValue(followUp))) {
+    issues.push("Code-review model with findings must include concrete followUps instead of generic none.");
+  }
+  for (const field of ["reviewSummary", "scopeReviewed", "evidenceReviewed"]) {
+    const genericValues = parsedModel[field].filter(isGenericNoneValue);
+    if (genericValues.length > 0) {
+      issues.push(`Code-review model ${field} cannot use generic none values.`);
+    }
+  }
+  if (parsedModel.positiveSignals.some(isGenericNoneValue)) {
+    issues.push("Code-review model positiveSignals cannot use generic none values.");
+  }
+  parsedModel.findings.forEach((finding, index) => {
+    for (const field of ["evidence", "impact", "recommendation"]) {
+      if (isGenericNoneValue(finding[field])) {
+        issues.push(
+          `Code-review model findings.${index}.${field} must be concrete instead of generic none.`
+        );
+      }
+    }
+  });
+  for (const deferral of parsedModel.evidenceDeferrals) {
+    if (isGenericNoneValue(deferral.rationale)) {
+      issues.push(
+        `Code-review model evidenceDeferrals rationale for ${deferral.artifact} must be concrete.`
+      );
+    }
+  }
+  issues.push(...await validateImplementedNextSafeAction(parsedModel.nextSafeAction));
+  if (issues.length > 0) {
+    return { content: null, issues };
+  }
+  return {
+    content: renderCodeReviewModelContent(parsedModel, args.located),
+    issues: []
   };
 }
 function parsePlanIdForSuffix(pathValue, phasePrefix2, suffix) {
@@ -31671,69 +32157,119 @@ async function blueprintReviewRecord(args) {
     );
   }
   const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES[args.artifact]}`;
-  const prepared = prepareTextForPersistence(normalizeTextContent3(args.content), {
+  const hasContent = args.content !== void 0;
+  const hasModel = args.model !== void 0;
+  const warnings = [];
+  const locatedReviewPhase = {
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName,
+    phaseDir: located.phaseDir,
+    artifacts: located.artifacts
+  };
+  if (hasContent === hasModel) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        "Review artifact writes must supply exactly one of content or model."
+      ]
+    });
+  }
+  const normalizedScopeFiles = args.artifact === "code-review" ? await normalizeReviewFiles(projectRoot, args.scopeFiles ?? [], warnings, "review scope") : { files: [], rejected: false };
+  if (hasModel && args.artifact !== "code-review") {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        `${args.artifact} does not support structured model writes. Supply canonical Markdown content instead.`
+      ]
+    });
+  }
+  if (args.artifact === "code-review" && normalizedScopeFiles.rejected) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        ...warnings,
+        "Code-review persistence received invalid scoped repo files. Re-run with the repo-relative `files` returned by blueprint_review_scope."
+      ]
+    });
+  }
+  let content = args.content ?? "";
+  if (hasModel) {
+    const modelRender = await codeReviewModelToContent({
+      model: args.model,
+      located: locatedReviewPhase,
+      reportPath,
+      scopeFiles: normalizedScopeFiles.files
+    });
+    if (!modelRender.content) {
+      return reviewRecordInvalidResult({
+        located: locatedReviewPhase,
+        artifact: args.artifact,
+        reportPath,
+        warnings: [...warnings, ...modelRender.issues]
+      });
+    }
+    content = modelRender.content;
+  }
+  const prepared = prepareTextForPersistence(normalizeTextContent3(content), {
     label: reportPath
   });
   const normalizedContent = normalizeTextContent3(prepared.content);
   const { counts, followUps } = collectReviewCounts(normalizedContent, args.artifact);
   const absolutePath = resolveBlueprintPath(projectRoot, reportPath);
   const exists = await pathExists3(absolutePath);
-  const warnings = [...prepared.warnings];
+  warnings.push(...prepared.warnings);
   const validation = validateReviewArtifactContent(normalizedContent, args.artifact);
-  const normalizedScopeFiles = args.artifact === "code-review" ? await normalizeReviewFiles(projectRoot, args.scopeFiles ?? [], warnings, "review scope") : { files: [], rejected: false };
+  const evidenceCoverageIssues = args.artifact === "code-review" ? validateCodeReviewEvidenceCoverage(
+    normalizedContent,
+    collectKnownCodeReviewEvidenceArtifacts(locatedReviewPhase, reportPath)
+  ) : [];
+  const nextSafeActionIssues = args.artifact === "code-review" ? await validateCodeReviewNextSafeAction(normalizedContent) : [];
   if (normalizedContent.trim().length === 0) {
-    return {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-      phaseDir: located.phaseDir,
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
       counts,
       followUps,
       warnings: [...warnings, `${reportPath} content must not be empty.`]
-    };
+    });
   }
   if (!validation.valid) {
-    return {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-      phaseDir: located.phaseDir,
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
       counts,
       followUps,
       warnings: [...warnings, ...validation.issues]
-    };
+    });
   }
-  if (args.artifact === "code-review" && normalizedScopeFiles.rejected) {
-    return {
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-      phaseDir: located.phaseDir,
+  if (evidenceCoverageIssues.length > 0) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
       counts,
       followUps,
-      warnings: [
-        ...warnings,
-        "Code-review persistence received invalid scoped repo files. Re-run with the repo-relative `files` returned by blueprint_review_scope."
-      ]
-    };
+      warnings: [...warnings, ...evidenceCoverageIssues]
+    });
+  }
+  if (nextSafeActionIssues.length > 0) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      counts,
+      followUps,
+      warnings: [...warnings, ...nextSafeActionIssues]
+    });
   }
   if (args.artifact === "code-review" && normalizedScopeFiles.files.length > 0) {
     const scopedValidation = validateReviewArtifactScopeCoverage(
@@ -31741,21 +32277,14 @@ async function blueprintReviewRecord(args) {
       normalizedScopeFiles.files
     );
     if (!scopedValidation.valid) {
-      return {
-        phaseNumber: located.phaseNumber,
-        phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix}`,
-        phaseDir: located.phaseDir,
+      return reviewRecordInvalidResult({
+        located: locatedReviewPhase,
         artifact: args.artifact,
         reportPath,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
         counts,
         followUps,
         warnings: [...warnings, ...scopedValidation.issues]
-      };
+      });
     }
   }
   if (exists) {
@@ -31831,7 +32360,9 @@ async function blueprintReviewLoadFindings(args) {
       severityCounts: emptySeverityCounts(),
       followUps: [],
       reason: located.reason ?? "Phase could not be resolved for review findings loading.",
-      warnings: located.warnings
+      warnings: [
+        ...located.warnings
+      ]
     };
   }
   const artifactPath = located.artifacts.find(
@@ -31878,12 +32409,14 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, codeReviewModelStringSchema, codeReviewModelLineLocationSchema, codeReviewStructuredModelSchema, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
     init_v4();
     init_security();
+    init_artifact_contracts();
+    init_command_paths();
     init_artifacts();
     init_config();
     init_phase();
@@ -31905,7 +32438,8 @@ var init_review = __esm({
         "security",
         "ui-review"
       ]),
-      content: string2(),
+      content: string2().optional(),
+      model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
       scopeFiles: array(string2()).optional()
     };
@@ -31920,6 +32454,51 @@ var init_review = __esm({
       phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["code-review", "peer-review", "review-fix", "security", "ui-review"]).optional()
     };
+    CODE_REVIEW_MODEL_IDENTITY_KEYS = /* @__PURE__ */ new Set([
+      "cwd",
+      "phase",
+      "phaseNumber",
+      "phasePrefix",
+      "phaseName",
+      "phaseDir",
+      "artifact",
+      "path",
+      "reportPath",
+      "content"
+    ]);
+    codeReviewModelStringSchema = string2().min(1);
+    codeReviewModelLineLocationSchema = codeReviewModelStringSchema.regex(
+      /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?$/,
+      "must be a repo-relative file:line or file:line-line reference"
+    );
+    codeReviewStructuredModelSchema = object2({
+      verdict: _enum(["PASS", "FOLLOW_UP", "BLOCKED"]),
+      depth: _enum(["quick", "standard", "deep"]),
+      scopeSource: _enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]),
+      reviewSummary: array(codeReviewModelStringSchema).min(1),
+      scopeReviewed: array(codeReviewModelStringSchema).min(1),
+      evidenceReviewed: array(codeReviewModelStringSchema).min(1),
+      evidenceDeferrals: array(
+        object2({
+          artifact: codeReviewModelStringSchema,
+          rationale: codeReviewModelStringSchema
+        }).strict()
+      ).default([]),
+      positiveSignals: array(codeReviewModelStringSchema).min(1),
+      findings: array(
+        object2({
+          severity: _enum(["critical", "high", "medium", "low", "unknown"]),
+          disposition: _enum(["follow-up", "observation", "blocked", "accepted-risk"]),
+          location: codeReviewModelLineLocationSchema,
+          evidence: codeReviewModelStringSchema,
+          impact: codeReviewModelStringSchema,
+          recommendation: codeReviewModelStringSchema
+        }).strict()
+      ),
+      followUps: array(codeReviewModelStringSchema).min(1),
+      nextSafeAction: codeReviewModelStringSchema
+    }).strict();
+    implementedCommandNamesPromise2 = null;
     REVIEW_SCOPE_CONFIRMATION_THRESHOLDS = {
       broadFileCount: 5,
       multiPlanCount: 2,

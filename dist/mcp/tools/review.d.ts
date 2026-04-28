@@ -12,7 +12,8 @@ type ReviewRecordArgs = {
     cwd?: string;
     phase?: NumericInput;
     artifact: ReviewArtifactKind;
-    content: string;
+    content?: string;
+    model?: Record<string, unknown>;
     overwrite?: boolean;
     scopeFiles?: string[];
 };
@@ -117,8 +118,8 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
-            standard: "standard";
             quick: "quick";
+            standard: "standard";
             deep: "deep";
         }>>;
     };
@@ -151,7 +152,8 @@ export declare const reviewToolDefinitions: ({
             security: "security";
             "ui-review": "ui-review";
         }>;
-        content: z.ZodString;
+        content: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         scopeFiles: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
