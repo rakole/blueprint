@@ -926,7 +926,7 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
 
 ## Next Safe Action
 
-- /blu-verify-work ${phasePrefix(context)}`;
+- <implemented next action: /blu-verify-work ${phasePrefix(context)} only for PASS and ready for UAT, /blu-add-tests ${phasePrefix(context)} for test-generation gaps, or /blu-audit-fix ${phasePrefix(context)} for implementation gaps>`;
 }
 
 function renderUatTemplate(context?: ArtifactTemplateContext): string {
@@ -2281,6 +2281,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "verified|pending|blocked",
       "PASS|MANUAL|DEFERRED|BLOCKED",
       "MANUAL|DEFERRED|NONE",
+      "<implemented next action",
       "Concise readiness result grounded in the saved summaries."
     ],
     notes: [

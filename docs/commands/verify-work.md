@@ -109,7 +109,7 @@
 - Pass the full final UAT body and treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume inside `XX-UAT.md` without inventing a second checkpoint file.
 - New or updated UAT artifacts must preserve the current test, test matrix, result counts, blocked prerequisites, structured gaps, and follow-up fix candidates from the canonical authoring template before the artifact can count as completion evidence.
-- If the verification artifact is valid but not ready for UAT, route back to `/blu-validate-phase <phase>` for repair before attempting UAT persistence.
+- If the verification artifact is valid but not ready for UAT, follow its saved implemented repair route, such as `/blu-audit-fix <phase>` or `/blu-add-tests <phase>`, before attempting UAT persistence.
 - Keep user-reported issues and remaining gaps inside the saved UAT content by default. Confirm follow-up-fix capture before persistence or later explicit state updates, and do not invent separate tool-owned artifacts.
 - Keep the next safe action on `/blu-verify-work <phase>` while the saved UAT artifact still reflects an in-progress or intentionally stopped checkpoint; route onward only when the saved evidence and current prerequisites support that follow-up.
 - Re-read the saved UAT through `blueprint_phase_validation_read` after persistence and use its typed `validation`, `uatStatus`, `resumeState`, `checkpoint`, and `complete` fields as the artifact-scoped truth.

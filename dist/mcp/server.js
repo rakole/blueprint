@@ -15071,7 +15071,7 @@ function renderVerificationTemplate(context) {
 
 ## Next Safe Action
 
-- /blu-verify-work ${phasePrefix(context)}`;
+- <implemented next action: /blu-verify-work ${phasePrefix(context)} only for PASS and ready for UAT, /blu-add-tests ${phasePrefix(context)} for test-generation gaps, or /blu-audit-fix ${phasePrefix(context)} for implementation gaps>`;
 }
 function renderUatTemplate(context) {
   return `# ${phaseLabel(context)} - UAT
@@ -16522,6 +16522,7 @@ var init_artifact_contracts = __esm({
           "verified|pending|blocked",
           "PASS|MANUAL|DEFERRED|BLOCKED",
           "MANUAL|DEFERRED|NONE",
+          "<implemented next action",
           "Concise readiness result grounded in the saved summaries."
         ],
         notes: [
@@ -20405,6 +20406,16 @@ function parseVerificationGateState(content) {
     readinessState
   };
 }
+function normalizeValidationSignal(value) {
+  return value.trim().replace(/^[\s>*-]+/, "").replace(/^\d+\.\s+/, "").replace(/[`*_]/g, "").replace(/[.!?;:]+$/g, "").trim().toLowerCase();
+}
+function isNoValidationGapSignal(value) {
+  const normalized = normalizeValidationSignal(value);
+  return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "na" || normalized === "not applicable" || normalized.startsWith("no gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no repairs") || normalized.startsWith("no suggested repairs") || normalized.startsWith("nothing to repair");
+}
+function hasActionableValidationListSignal(section) {
+  return section.split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("|")).some((line) => !isNoValidationGapSignal(line));
+}
 function validateVerificationArtifactContent(content, summaryPaths = []) {
   const issues = [];
   const warnings = [];
@@ -20467,6 +20478,7 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
     }
   }
   const requirementCoverage = extractMarkdownSection(content, "Requirement / Task Coverage");
+  let hasUnresolvedCoverageState = false;
   if (!hasCoverageTableRows(requirementCoverage)) {
     issues.push(
       "Verification artifact section Requirement / Task Coverage must include at least one populated coverage row."
@@ -20485,6 +20497,9 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
         `Verification artifact section Requirement / Task Coverage uses an unsupported coverage state: ${cells[3] ?? ""}.`
       );
     }
+    if (coverageState === "DEFERRED" || coverageState === "BLOCKED") {
+      hasUnresolvedCoverageState = true;
+    }
   }
   const evidenceReviewed = extractMarkdownSection(content, "Evidence Reviewed");
   const citedSummaries = new Set(collectReferencedSummaryPaths(evidenceReviewed, summaryPaths));
@@ -20500,6 +20515,7 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
     );
   }
   const manualCoverage = extractMarkdownSection(content, "Manual-Only or Deferred Coverage");
+  let hasUnresolvedManualCoverage = false;
   for (const cells of extractMarkdownTableDataRows(manualCoverage)) {
     if (cells.length < 4) {
       issues.push(
@@ -20513,9 +20529,13 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
         `Verification artifact section Manual-Only or Deferred Coverage uses an unsupported status: ${cells[3] ?? ""}.`
       );
     }
+    if (status === "DEFERRED") {
+      hasUnresolvedManualCoverage = true;
+    }
   }
   const gapClassification = extractMarkdownSection(content, "Gap Classification");
   const gapRows = extractMarkdownTableDataRows(gapClassification);
+  let hasActionableGapClass = false;
   if (gapRows.length === 0) {
     issues.push(
       "Verification artifact section Gap Classification must include at least one populated gap row."
@@ -20534,10 +20554,26 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
         `Verification artifact section Gap Classification uses an unsupported gap class: ${cells[0] ?? ""}.`
       );
     }
+    if (VALID_VERIFICATION_GAP_CLASSES.has(gapClass) && gapClass !== "none") {
+      hasActionableGapClass = true;
+    }
   }
+  const gapsFound = extractMarkdownSection(content, "Gaps Found");
+  const suggestedRepairs = extractMarkdownSection(content, "Suggested Repairs");
+  const hasActionableGapsFound = hasActionableValidationListSignal(gapsFound);
+  const hasActionableRepairs = hasActionableValidationListSignal(suggestedRepairs);
+  const hasUnresolvedValidationGap = hasUnresolvedCoverageState || hasUnresolvedManualCoverage || hasActionableGapClass || hasActionableGapsFound || hasActionableRepairs;
   const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
   const nextActionCommands = extractBlueprintCommands(nextSafeAction);
   const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
+  const routesToRepairCommand = nextActionCommands.some(
+    (command) => VERIFICATION_REPAIR_COMMANDS.has(command.toLowerCase())
+  );
+  if (gateState === "PASS" && hasUnresolvedValidationGap) {
+    issues.push(
+      "Verification artifact must not declare PASS while unresolved coverage, gap, or repair signals remain. Use PARTIAL or BLOCKED and route to /blu-audit-fix or /blu-add-tests as appropriate."
+    );
+  }
   if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToVerifyWork) {
     issues.push(
       "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
@@ -20546,6 +20582,11 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
   if ((gateState === "PARTIAL" || gateState === "BLOCKED" || readinessState === "not ready for UAT") && routesToVerifyWork) {
     issues.push(
       "Verification artifact must not route PARTIAL or BLOCKED validation to /blu-verify-work under ## Next Safe Action."
+    );
+  }
+  if ((gateState === "PARTIAL" || gateState === "BLOCKED" || readinessState === "not ready for UAT") && !routesToRepairCommand) {
+    issues.push(
+      "Verification artifact must route PARTIAL or BLOCKED validation to /blu-audit-fix or /blu-add-tests under ## Next Safe Action."
     );
   }
   return {
@@ -22751,7 +22792,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -23089,6 +23130,7 @@ var init_artifacts = __esm({
       { pattern: /<repair>/i, signal: "<repair>" },
       { pattern: /<name or pending>/i, signal: "<name or pending>" },
       { pattern: /<ready for UAT or not ready>/i, signal: "<ready for UAT or not ready>" },
+      { pattern: /<implemented next action:[^>]+>/i, signal: "<implemented next action>" },
       { pattern: /\bPASS\|PARTIAL\|BLOCKED\b/i, signal: "PASS|PARTIAL|BLOCKED" },
       { pattern: /\bPASS\|MANUAL\|DEFERRED\|BLOCKED\b/i, signal: "PASS|MANUAL|DEFERRED|BLOCKED" },
       { pattern: /\bMANUAL\|DEFERRED\|NONE\b/i, signal: "MANUAL|DEFERRED|NONE" },
@@ -23129,6 +23171,10 @@ var init_artifacts = __esm({
       "deferred-test",
       "contradiction",
       "none"
+    ]);
+    VERIFICATION_REPAIR_COMMANDS = /* @__PURE__ */ new Set([
+      "/blu-add-tests",
+      "/blu-audit-fix"
     ]);
     REQUIRED_UAT_SECTIONS = readArtifactContract("phase.uat").requiredHeadings;
     UAT_PLACEHOLDER_BODIES = [
@@ -23591,6 +23637,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
   const warnings = [];
   let hasVerification = false;
   let verificationReadyForUat = false;
+  let verificationNextSafeAction = null;
   let hasUat = false;
   if (summaryPaths.length === 0) {
     warnings.push(
@@ -23599,6 +23646,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     return {
       hasVerification: false,
       verificationReadyForUat: false,
+      verificationNextSafeAction: null,
       hasUat: false,
       warnings
     };
@@ -23618,6 +23666,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
       if (artifact === "verification") {
         hasVerification = true;
         verificationReadyForUat = isVerificationArtifactReadyForUat(content);
+        verificationNextSafeAction = extractNextSafeActionCommand(content);
         if (!verificationReadyForUat) {
           warnings.push(
             `${artifactPath}: verification artifact is valid but does not declare ready for UAT, so it should not route to conversational UAT yet.`
@@ -23641,7 +23690,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     warnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
     warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
-  return { hasVerification, verificationReadyForUat, hasUat, warnings };
+  return { hasVerification, verificationReadyForUat, verificationNextSafeAction, hasUat, warnings };
 }
 async function listImmediateDirectories2(rootPath) {
   try {
@@ -23685,6 +23734,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -23733,6 +23783,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -23767,6 +23818,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       reviewPath: null,
       reviewNextSafeAction: null,
       verificationPath: null,
+      verificationNextSafeAction: null,
       uatPath: null,
       planIds: [],
       summaryIds: [],
@@ -23809,6 +23861,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const {
     hasVerification,
     verificationReadyForUat,
+    verificationNextSafeAction,
     hasUat,
     warnings: validationWarnings
   } = await inspectValidatedPhaseValidationArtifacts(
@@ -23890,6 +23943,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     reviewPath,
     reviewNextSafeAction,
     verificationPath,
+    verificationNextSafeAction,
     uatPath,
     planIds,
     summaryIds,
@@ -23938,6 +23992,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
   const missingVerificationPhases = [];
   const missingUatPhases = [];
   const verificationNotReadyPhases = [];
+  const verificationRepairActions = {};
   const pendingSummaryCoveragePhases = [];
   const warnings = [];
   for (const phase of phases) {
@@ -23961,6 +24016,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     const {
       hasVerification,
       verificationReadyForUat,
+      verificationNextSafeAction,
       hasUat,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
@@ -23975,6 +24031,9 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     }
     if (hasVerification && !verificationReadyForUat) {
       verificationNotReadyPhases.push(phase.phaseNumber);
+      if (verificationNextSafeAction) {
+        verificationRepairActions[phase.phaseNumber] = verificationNextSafeAction;
+      }
       warnings.push(
         `Phase ${phase.phaseNumber} has verification evidence that is valid but not ready for UAT, so milestone closeout remains blocked until validation is repaired.`
       );
@@ -23987,6 +24046,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     missingVerificationPhases,
     missingUatPhases,
     verificationNotReadyPhases,
+    verificationRepairActions,
     pendingSummaryCoveragePhases,
     blockingPhase: missingVerificationPhases[0] ?? verificationNotReadyPhases[0] ?? missingUatPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
     allCompletedPhasesReady: missingVerificationPhases.length === 0 && verificationNotReadyPhases.length === 0 && missingUatPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
@@ -24024,8 +24084,11 @@ function isNoneLikeReportSignal(line) {
   return normalized === "none" || normalized === "n/a" || normalized === "na" || normalized.startsWith("no gaps") || normalized.startsWith("no actionable gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no archival blockers");
 }
 function extractBlueprintCommand(line) {
-  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s]+)*/i);
-  return match?.[0]?.trim() ?? null;
+  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
+  return match?.[0]?.trim().replace(/[`'").,;:!?]+$/g, "") ?? null;
+}
+function extractNextSafeActionCommand(content) {
+  return extractMarkdownSectionLines(content, "Next Safe Action").map(extractBlueprintCommand).find((command) => command !== null) ?? null;
 }
 async function readReviewArtifactNextSafeAction(args) {
   try {
@@ -24033,7 +24096,7 @@ async function readReviewArtifactNextSafeAction(args) {
       resolveBlueprintPath(args.projectRoot, args.artifactPath),
       "utf8"
     );
-    const nextSafeAction = extractMarkdownSectionLines(raw, "Next Safe Action").map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+    const nextSafeAction = extractNextSafeActionCommand(raw);
     if (nextSafeAction) {
       return { nextAction: nextSafeAction, warnings: [] };
     }
@@ -24186,6 +24249,12 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasPendingExecution && !args.phaseArtifacts.hasVerification && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.currentPhase} to validate the completed phase execution`;
   }
+  if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.verificationReadyForUat && args.phaseArtifacts.verificationNextSafeAction) {
+    const verificationNextCommand = args.phaseArtifacts.verificationNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+    if (verificationNextCommand && implementedCommands.has(verificationNextCommand)) {
+      return args.phaseArtifacts.verificationNextSafeAction;
+    }
+  }
   if (args.phaseArtifacts.hasVerification && !args.phaseArtifacts.verificationReadyForUat && implementedCommands.has(validatePhaseCommand)) {
     return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
   }
@@ -24202,7 +24271,13 @@ async function deriveNextAction(args) {
     return `Run ${validatePhaseCommand} ${args.milestoneEvidence.missingVerificationPhases[0]} to restore missing milestone validation evidence before closeout`;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
-    return `Run ${validatePhaseCommand} ${args.milestoneEvidence.verificationNotReadyPhases[0]} to repair milestone validation evidence before closeout`;
+    const phaseNumber = args.milestoneEvidence.verificationNotReadyPhases[0];
+    const verificationRepairAction = args.milestoneEvidence.verificationRepairActions[phaseNumber] ?? null;
+    const verificationRepairCommand = verificationRepairAction?.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+    if (verificationRepairCommand && implementedCommands.has(verificationRepairCommand)) {
+      return verificationRepairAction;
+    }
+    return `Run ${validatePhaseCommand} ${phaseNumber} to repair milestone validation evidence before closeout`;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
@@ -24468,6 +24543,7 @@ async function blueprintStateLoad(args = {}) {
         missingVerificationPhases: [],
         missingUatPhases: [],
         verificationNotReadyPhases: [],
+        verificationRepairActions: {},
         pendingSummaryCoveragePhases: [],
         blockingPhase: null,
         allCompletedPhasesReady: false,

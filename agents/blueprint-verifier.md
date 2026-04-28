@@ -58,6 +58,9 @@ durable audit-fix report.
   - build a requirement/task coverage map with evidence source, coverage state,
     and gap class before declaring readiness
   - distinguish automated, manual-only, deferred, partial, and blocked coverage
+  - never declare `READY` or draft a `PASS` gate while unresolved gap or repair
+    signals remain; route test gaps to `/blu-add-tests <phase>` and
+    implementation or behavior gaps to `/blu-audit-fix <phase>`
   - produce verification-ready findings and a draft the parent command can
     persist as `XX-VERIFICATION.md`
 - UAT mode:
