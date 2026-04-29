@@ -11,7 +11,7 @@ This plan starts with a document-only checkpoint. Runtime behavior changes shoul
 ## Implementation Status
 
 - 2026-04-28: `/blu-validate-phase` slice implemented for `phase.verification` and the shared validation writer. `phase.verification` and `phase.uat` now expose structured `modelContract` metadata from `blueprint_artifact_contract_read`, and `blueprint_phase_validation_write` accepts exactly one of rendered Markdown `content` or a structured `model` that MCP validates, renders, and revalidates before persistence.
-- 2026-04-28: `/blu-code-review` slice implemented for `review.code-review`. The contract now exposes structured `modelContract` metadata, and `blueprint_review_record` accepts exactly one of Markdown `content` or a structured code-review `model` that MCP validates, renders to canonical `XX-REVIEW.md`, and revalidates against scope, evidence, severity, line-backed finding, and next-action requirements before persistence.
+- 2026-04-28: `/blu-code-review` slice implemented for `review.code-review`. The contract now exposes structured `modelContract` metadata, and the current validator-first flow makes `blueprint_review_validate_model` validate the structured code-review `model` before `blueprint_review_record` renders canonical `XX-REVIEW.md`; Markdown `content` is no longer accepted for this artifact.
 
 ## Locked Decisions
 

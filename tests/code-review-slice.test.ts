@@ -11,7 +11,8 @@ import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintReviewLoadFindings,
   blueprintReviewRecord,
-  blueprintReviewScope
+  blueprintReviewScope,
+  blueprintReviewValidateModel
 } from "../src/mcp/tools/review.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
@@ -231,18 +232,9 @@ function createStructuredCodeReviewModel(
 ): Record<string, unknown> {
   return {
     verdict: "FOLLOW_UP",
-    depth: "standard",
-    scopeSource: "phase-evidence",
     reviewSummary: [
       "Phase 5 standard review covered the source and test files with one high follow-up."
     ],
-    scopeReviewed: ["src/feature.ts", "tests/feature.test.ts"],
-    evidenceReviewed: [
-      ".blueprint/phases/05-review-scope/05-01-PLAN.md",
-      ".blueprint/phases/05-review-scope/05-01-SUMMARY.md",
-      ".blueprint/phases/05-review-scope/05-VERIFICATION.md"
-    ],
-    evidenceDeferrals: [],
     positiveSignals: [
       "Saved plan and summary evidence agree on the bounded source and test scope."
     ],
@@ -256,6 +248,20 @@ function createStructuredCodeReviewModel(
         recommendation: "Add a negative-input guard and matching regression test."
       }
     ],
+    evidenceCoverage: {
+      ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+        status: "used",
+        rationale: "Plan metadata defined the reviewed source and test files."
+      },
+      ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
+        status: "used",
+        rationale: "Summary evidence confirmed the completed implementation slice."
+      },
+      ".blueprint/phases/05-review-scope/05-VERIFICATION.md": {
+        status: "used",
+        rationale: "Verification evidence confirmed the saved phase was review-ready."
+      }
+    },
     followUps: ["Add a negative-input regression test before shipping."],
     nextSafeAction: "/blu-code-review-fix 5",
     ...overrides
@@ -509,51 +515,47 @@ Exercise code-review follow-up routing.
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: `# Phase 05: Code Review Scope - Review
-
-**Verdict:** FOLLOW_UP
-
-## Review Summary
-
-- Phase 5 standard review over one source file and one test file with two follow-up findings.
-
-## Scope Reviewed
-
-- src/feature.ts
-- tests/feature.test.ts
-
-## Evidence Reviewed
-
-- .blueprint/phases/05-review-scope/05-01-PLAN.md
-- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
-- .blueprint/phases/05-review-scope/05-VERIFICATION.md
-- .blueprint/phases/05-review-scope/05-UAT.md
-
-## Positive Signals
-
-- Summary and plan evidence agree on the bounded review scope.
-
-## Severity Summary
-
-- critical: 0
-- high: 1
-- medium: 1
-- low: 0
-- unknown: 0
-
-## Findings
-
-- [high][follow-up] \`src/feature.ts:1\` - Negative-input behavior is undocumented and untested.
-- [medium][observation] \`tests/feature.test.ts:1\` - The saved evidence does not prove edge-case coverage.
-
-## Follow-Ups
-
-- Add a negative-input regression test before shipping.
-
-## Next Safe Action
-
-- /blu-code-review-fix 5
-`,
+    model: createStructuredCodeReviewModel({
+      reviewSummary: [
+        "Phase 5 standard review over one source file and one test file with two follow-up findings."
+      ],
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence: "Negative-input behavior is undocumented and untested.",
+          impact: "Invalid input can be processed as successful behavior.",
+          recommendation: "Add a negative-input regression test before shipping."
+        },
+        {
+          severity: "medium",
+          disposition: "observation",
+          location: "tests/feature.test.ts:1",
+          evidence: "The saved evidence does not prove edge-case coverage.",
+          impact: "Regression confidence remains lower for boundary behavior.",
+          recommendation: "Extend focused tests for edge-case coverage."
+        }
+      ],
+      evidenceCoverage: {
+        ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+          status: "used",
+          rationale: "Plan metadata defined the reviewed source and test files."
+        },
+        ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
+          status: "used",
+          rationale: "Summary evidence confirmed the completed implementation slice."
+        },
+        ".blueprint/phases/05-review-scope/05-VERIFICATION.md": {
+          status: "used",
+          rationale: "Verification evidence confirmed the saved phase was review-ready."
+        },
+        ".blueprint/phases/05-review-scope/05-UAT.md": {
+          status: "used",
+          rationale: "UAT evidence confirmed the phase behavior was accepted."
+        }
+      }
+    }),
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
 
@@ -623,6 +625,70 @@ test("blueprint_review_scope merges summary and plan evidence when no explicit s
     scoped.artifacts.verification,
     ".blueprint/phases/05-review-scope/05-VERIFICATION.md"
   );
+});
+
+test("blueprint_review_scope returns model authoring context with narrowed task schema", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    summaryChangedFiles: ["src/summary.ts"],
+    planFilesModified: ["src/plan.ts", "tests/plan.test.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5",
+    includeAuthoringContext: true
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.ok(scoped.authoringContext);
+  assert.deepEqual(scoped.authoringContext.files, [
+    "src/plan.ts",
+    "src/summary.ts",
+    "tests/plan.test.ts"
+  ]);
+  assert.deepEqual(scoped.authoringContext.knownEvidenceArtifacts, [
+    ".blueprint/phases/05-review-scope/05-01-PLAN.md",
+    ".blueprint/phases/05-review-scope/05-01-SUMMARY.md",
+    ".blueprint/phases/05-review-scope/05-VERIFICATION.md"
+  ]);
+  assert.equal(
+    scoped.authoringContext.schemaPath,
+    "src/mcp/artifact-contracts/schemas/review.code-review.model.schema.json"
+  );
+  assert.match(
+    JSON.stringify(scoped.authoringContext.baseSchema),
+    /Model-authored payload|examples|evidenceCoverage/
+  );
+  assert.deepEqual(
+    (scoped.authoringContext.taskSchema.properties as Record<string, unknown>).evidenceCoverage,
+    {
+      type: "object",
+      description:
+        "Exhaustive coverage decisions for the exact known evidence artifacts in this phase.",
+      additionalProperties: false,
+      required: [
+        ".blueprint/phases/05-review-scope/05-01-PLAN.md",
+        ".blueprint/phases/05-review-scope/05-01-SUMMARY.md",
+        ".blueprint/phases/05-review-scope/05-VERIFICATION.md"
+      ],
+      properties: {
+        ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+          $ref: "#/$defs/evidenceCoverageEntry"
+        },
+        ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
+          $ref: "#/$defs/evidenceCoverageEntry"
+        },
+        ".blueprint/phases/05-review-scope/05-VERIFICATION.md": {
+          $ref: "#/$defs/evidenceCoverageEntry"
+        }
+      }
+    }
+  );
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-code-review-fix 5"));
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-progress"));
 });
 
 test("blueprint_review_scope reports phase-summaries when summary evidence alone defines the scope", async (t) => {
@@ -872,66 +938,68 @@ Expand the changed repo files.
   assert.match(scoped.confirmationRecommended.reasons.join("\n"), /deep-review confirmation threshold/i);
 });
 
-test("blueprint_review_record persists code-review artifacts, strips disposition markers, and tracks overwrite status", async (t) => {
+test("blueprint_review_record persists model-only code-review artifacts and tracks overwrite status", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const initialContent = `# Phase 05: Code Review Scope - Code Review
-
-**Verdict:** FOLLOW_UP
-
-## Review Summary
-
-- Phase 5 standard review over one source file and one test file with two follow-up findings.
-
-## Scope Reviewed
-
-- src/feature.ts
-- tests/feature.test.ts
-
-## Evidence Reviewed
-
-- .blueprint/phases/05-review-scope/05-01-PLAN.md
-- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
-- .blueprint/phases/05-review-scope/05-VERIFICATION.md
-
-## Positive Signals
-
-- Summary and plan evidence agree on the bounded review scope.
-
-## Severity Summary
-
-- critical: 0
-- high: 1
-- medium: 1
-- low: 0
-- unknown: 0
-
-## Findings
-
-- [high][follow-up] \`src/feature.ts:1\` - Negative-input behavior is undocumented and untested.
-- [medium][observation] \`tests/feature.test.ts:1\` - The saved evidence does not prove edge-case coverage.
-
-## Follow-Ups
-
-- Add a negative-input regression test before shipping.
-
-## Next Safe Action
-
-- /blu-code-review-fix 5
-`;
-  const updatedContent = initialContent.replace(
-    "Add a negative-input regression test before shipping.",
-    "Add a negative-input regression test and rerun focused verification before shipping."
-  );
+  const initialModel = createStructuredCodeReviewModel({
+    reviewSummary: [
+      "Phase 5 standard review over one source file and one test file with two follow-up findings."
+    ],
+    findings: [
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "src/feature.ts:1",
+        evidence: "Negative-input behavior is undocumented and untested.",
+        impact: "Invalid input can be processed as successful behavior.",
+        recommendation: "Add a negative-input regression test before shipping."
+      },
+      {
+        severity: "medium",
+        disposition: "observation",
+        location: "tests/feature.test.ts:1",
+        evidence: "The saved evidence does not prove edge-case coverage.",
+        impact: "Regression confidence remains lower for boundary behavior.",
+        recommendation: "Extend focused tests for edge-case coverage."
+      }
+    ]
+  });
+  const updatedModel = createStructuredCodeReviewModel({
+    reviewSummary: [
+      "Phase 5 standard review over one source file and one test file with two follow-up findings."
+    ],
+    findings: [
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "src/feature.ts:1",
+        evidence: "Negative-input behavior is undocumented and untested.",
+        impact: "Invalid input can be processed as successful behavior.",
+        recommendation:
+          "Add a negative-input regression test and rerun focused verification before shipping."
+      },
+      {
+        severity: "medium",
+        disposition: "observation",
+        location: "tests/feature.test.ts:1",
+        evidence: "The saved evidence does not prove edge-case coverage.",
+        impact: "Regression confidence remains lower for boundary behavior.",
+        recommendation: "Extend focused tests for edge-case coverage."
+      }
+    ],
+    followUps: [
+      "Add a negative-input regression test and rerun focused verification before shipping."
+    ]
+  });
 
   const created = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: initialContent,
+    model: initialModel,
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
 
@@ -953,8 +1021,14 @@ test("blueprint_review_record persists code-review artifacts, strips disposition
   assert.deepEqual(
     loaded.findings.map((finding) => [finding.severity, finding.summary]),
     [
-      ["high", "`src/feature.ts:1` - Negative-input behavior is undocumented and untested."],
-      ["medium", "`tests/feature.test.ts:1` - The saved evidence does not prove edge-case coverage."]
+      [
+        "high",
+        "`src/feature.ts:1` - Evidence: Negative-input behavior is undocumented and untested. Impact: Invalid input can be processed as successful behavior. Fix/verification: Add a negative-input regression test before shipping."
+      ],
+      [
+        "medium",
+        "`tests/feature.test.ts:1` - Evidence: The saved evidence does not prove edge-case coverage. Impact: Regression confidence remains lower for boundary behavior. Fix/verification: Extend focused tests for edge-case coverage."
+      ]
     ]
   );
   assert.deepEqual(loaded.followUps, ["Add a negative-input regression test before shipping."]);
@@ -963,7 +1037,8 @@ test("blueprint_review_record persists code-review artifacts, strips disposition
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: initialContent
+    model: initialModel,
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
 
   assert.equal(reused.status, "reused");
@@ -975,7 +1050,8 @@ test("blueprint_review_record persists code-review artifacts, strips disposition
         cwd: repoPath,
         phase: "5",
         artifact: "code-review",
-        content: updatedContent
+        model: updatedModel,
+        scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
       }),
     /already exists\. Re-run only after explicit overwrite confirmation/i
   );
@@ -984,7 +1060,8 @@ test("blueprint_review_record persists code-review artifacts, strips disposition
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: updatedContent,
+    model: updatedModel,
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
     overwrite: true
   });
 
@@ -998,12 +1075,26 @@ test("blueprint_review_record persists structured code-review models as canonica
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+  const model = createStructuredCodeReviewModel();
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model
+  });
+
+  assert.equal(validation.status, "valid");
+  assert.equal(validation.valid, true);
+  assert.equal(validation.diagnosticCounts.total, 0);
+  assert.ok(validation.normalizedModel);
+  assert.match(validation.renderPreview ?? "", /## Scope Reviewed/);
 
   const created = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    model: createStructuredCodeReviewModel(),
+    model,
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
 
@@ -1018,7 +1109,7 @@ test("blueprint_review_record persists structured code-review models as canonica
   const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
   assert.match(saved, /\*\*Verdict:\*\* FOLLOW_UP/);
   assert.match(saved, /- Depth: standard/);
-  assert.match(saved, /- Scope source: phase-evidence/);
+  assert.match(saved, /- Scope source: explicit-files/);
   assert.match(saved, /- high: 1/);
   assert.match(saved, /\.blueprint\/phases\/05-review-scope\/05-VERIFICATION\.md/);
   assert.match(
@@ -1059,7 +1150,6 @@ test("blueprint_review_record accepts structured code-review findings for root-l
       reviewSummary: [
         "Phase 5 standard review covered one root-level package metadata file with one high follow-up."
       ],
-      scopeReviewed: ["package.json"],
       positiveSignals: [
         "Saved phase evidence narrowed the review to the root-level package metadata file."
       ],
@@ -1095,10 +1185,16 @@ test("blueprint_review_record rejects invalid structured code-review models befo
     phase: "5",
     artifact: "code-review",
     model: createStructuredCodeReviewModel({
-      evidenceReviewed: [
-        ".blueprint/phases/05-review-scope/05-01-PLAN.md",
-        ".blueprint/phases/05-review-scope/05-01-SUMMARY.md"
-      ]
+      evidenceCoverage: {
+        ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+          status: "used",
+          rationale: "Plan metadata defined the reviewed source and test files."
+        },
+        ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
+          status: "used",
+          rationale: "Summary evidence confirmed the completed implementation slice."
+        }
+      }
     }),
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
@@ -1144,10 +1240,10 @@ test("blueprint_review_record rejects invalid structured code-review models befo
   });
 
   assert.equal(bothInputs.status, "invalid");
-  assert.match(bothInputs.warnings.join("\n"), /exactly one of content or model/i);
+  assert.match(bothInputs.warnings.join("\n"), /model-only; content is invalid/i);
 });
 
-test("blueprint_review_record rejects code-review scaffold prose even after the verdict marker changes", async (t) => {
+test("blueprint_review_record rejects markdown content for code-review artifacts", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1157,57 +1253,62 @@ test("blueprint_review_record rejects code-review scaffold prose even after the 
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: `# Phase 05: Code Review Scope - Code Review
-
-**Verdict:** PASS
-
-## Review Summary
-
-- Phase, effective depth, scope source, file count, verdict rationale, and severity counts.
-
-## Scope Reviewed
-
-- Repo-relative file path reviewed, one per bullet or table row.
-
-## Evidence Reviewed
-
-- Saved summaries, plans, validation, UAT, security, existing review, or repo-file evidence that influenced the result.
-
-## Positive Signals
-
-- Concrete pass evidence, safeguards, tests, or coverage strengths; use \`none\` only when no positive signal was checked.
-
-## Severity Summary
-
-- critical: 0
-- high: 0
-- medium: 0
-- low: 0
-- unknown: 0
-
-## Findings
-
-- [high][follow-up] \`path/to/file.ts:42\` - Evidence, impact, and concrete fix or verification guidance.
-
-## Follow-Ups
-
-- Actionable fix, test gap, validation step, or \`none\`.
-
-## Next Safe Action
-
-- /blu-progress
-`
+    content: "# Phase 05: Code Review Scope - Code Review\n"
   });
 
   assert.equal(invalid.status, "invalid");
   assert.equal(invalid.written, false);
+  assert.match(invalid.warnings.join("\n"), /model-only; content is invalid/i);
+});
+
+test("blueprint_review_validate_model aggregates schema and residual diagnostics", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel({
+      unsupportedField: "must be rejected",
+      positiveSignals: ["todo"],
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts",
+          evidence: "n/a",
+          impact: "none",
+          recommendation: "not applicable"
+        }
+      ]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.diagnosticCounts.bySource.schema > 0);
+  assert.ok(invalid.diagnosticCounts.bySource.residual > 0);
   assert.match(
-    invalid.warnings.join("\n"),
-    /Repo-relative file path reviewed|path\/to\/file\.ts:42|Phase, effective depth, scope source, file count/i
+    invalid.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have additional properties|must match pattern|placeholder language|must be concrete/i
+  );
+  assert.ok(
+    invalid.diagnostics.every(
+      (diagnostic) =>
+        diagnostic.source &&
+        diagnostic.path &&
+        diagnostic.code &&
+        diagnostic.message &&
+        diagnostic.context &&
+        diagnostic.suggestion
+    )
   );
 });
 
-test("blueprint_review_record rejects code-review findings without line evidence or matching severity counts", async (t) => {
+test("blueprint_review_record rejects code-review models with out-of-scope finding locations", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1217,184 +1318,47 @@ test("blueprint_review_record rejects code-review findings without line evidence
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
-    content: `# Phase 05: Code Review Scope - Code Review
-
-**Verdict:** FOLLOW_UP
-
-## Review Summary
-
-- Phase 5 standard review over one source file with one follow-up finding.
-
-## Scope Reviewed
-
-- src/feature.ts
-
-## Evidence Reviewed
-
-- .blueprint/phases/05-review-scope/05-01-PLAN.md
-- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
-- .blueprint/phases/05-review-scope/05-VERIFICATION.md
-
-## Positive Signals
-
-- Existing saved evidence narrowed the review to one source file.
-
-## Severity Summary
-
-- critical: 0
-- high: 0
-- medium: 0
-- low: 0
-- unknown: 0
-
-## Findings
-
-- [high][follow-up] Negative-input behavior is undocumented and untested.
-
-## Follow-Ups
-
-- Add a negative-input regression test before shipping.
-
-## Next Safe Action
-
-- /blu-code-review-fix 5
-`
+    scopeFiles: ["src/feature.ts"],
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "tests/feature.test.ts:1",
+          evidence: "The test file is outside the explicit review scope.",
+          impact: "The review could claim coverage beyond the confirmed scope.",
+          recommendation: "Keep finding citations inside the resolved scope files."
+        }
+      ]
+    })
   });
 
   assert.equal(invalid.status, "invalid");
   assert.match(
     invalid.warnings.join("\n"),
-    /must include repo-relative file:line evidence/i
-  );
-  assert.match(
-    invalid.warnings.join("\n"),
-    /Severity Summary reports high: 0, but Findings contains 1 high item/i
+    /must match pattern|outside the resolved review scope/i
   );
 });
 
-test("blueprint_review_record rejects code-review artifacts that omit resolved scoped files", async (t) => {
+test("blueprint_review_validate_model rejects next actions outside the narrowed allowed list", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const invalid = await blueprintReviewRecord({
+  const invalid = await blueprintReviewValidateModel({
     cwd: repoPath,
     phase: "5",
-    artifact: "code-review",
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
-    content: `# Phase 05: Code Review Scope - Code Review
-
-**Verdict:** FOLLOW_UP
-
-## Review Summary
-
-- Phase 5 standard review over one source file with one follow-up finding.
-
-## Scope Reviewed
-
-- src/feature.ts
-
-## Evidence Reviewed
-
-- .blueprint/phases/05-review-scope/05-01-PLAN.md
-- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
-- .blueprint/phases/05-review-scope/05-VERIFICATION.md
-
-## Positive Signals
-
-- Saved evidence narrowed the review to the expected source file group.
-
-## Severity Summary
-
-- critical: 0
-- high: 1
-- medium: 0
-- low: 0
-- unknown: 0
-
-## Findings
-
-- [high][follow-up] \`src/feature.ts:1\` - Negative-input behavior is undocumented and untested.
-
-## Follow-Ups
-
-- Add a negative-input regression test before shipping.
-
-## Next Safe Action
-
-- /blu-code-review-fix 5
-`
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel({
+      nextSafeAction: "/blu-do 5"
+    })
   });
 
   assert.equal(invalid.status, "invalid");
   assert.match(
-    invalid.warnings.join("\n"),
-    /must list every resolved scoped file\. Missing: tests\/feature\.test\.ts/i
-  );
-});
-
-test("blueprint_review_record rejects code-review artifacts with non-implemented next actions", async (t) => {
-  const repoPath = await createCodeReviewRepo();
-  t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
-  });
-
-  const invalid = await blueprintReviewRecord({
-    cwd: repoPath,
-    phase: "5",
-    artifact: "code-review",
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
-    content: `# Phase 05: Code Review Scope - Code Review
-
-**Verdict:** PASS
-
-## Review Summary
-
-- Phase 5 standard review over the resolved source and test scope found no follow-up findings.
-
-## Scope Reviewed
-
-- src/feature.ts
-- tests/feature.test.ts
-
-## Evidence Reviewed
-
-- .blueprint/phases/05-review-scope/05-01-PLAN.md
-- .blueprint/phases/05-review-scope/05-01-SUMMARY.md
-- .blueprint/phases/05-review-scope/05-VERIFICATION.md
-
-## Positive Signals
-
-- Saved evidence and scoped file reads did not expose a follow-up finding.
-
-## Severity Summary
-
-- critical: 0
-- high: 0
-- medium: 0
-- low: 0
-- unknown: 0
-
-## Findings
-
-- none
-
-## Follow-Ups
-
-- none
-
-## Next Safe Action
-
-- /blu-progress
-- /blu-do 5
-`
-  });
-
-  assert.equal(invalid.status, "invalid");
-  assert.match(
-    invalid.warnings.join("\n"),
-    /Next Safe Action points to non-implemented command\(s\): \/blu-do/i
+    invalid.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of/i
   );
 });
 
@@ -1466,6 +1430,7 @@ test("code-review is exposed as an implemented review command with the scope too
   const entry = catalog.commands["code-review"];
 
   assert.ok(blueprintToolNames.includes("blueprint_review_scope"));
+  assert.ok(blueprintToolNames.includes("blueprint_review_validate_model"));
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
@@ -1475,6 +1440,7 @@ test("code-review is exposed as an implemented review command with the scope too
     "blueprint_artifact_contract_read",
     "blueprint_review_scope",
     "blueprint_review_load_findings",
+    "blueprint_review_validate_model",
     "blueprint_review_record",
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);

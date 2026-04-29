@@ -545,7 +545,8 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(reviewCommand, /returned `reportPath` as authoritative/i);
   assert.match(reviewDoc, /## Peer-Review Persistence Contract/);
   assert.match(reviewSkill, /`blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts/i);
-  assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW\.md`/i);
+  assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting the model that will render to `XX-REVIEW\.md`/i);
+  assert.match(reviewSkill, /Validate through `blueprint_review_validate_model`/i);
   assert.match(reviewSkill, /Execution profile for `code-review`: `long-running-mutation`/i);
   assert.match(
     reviewSkill,

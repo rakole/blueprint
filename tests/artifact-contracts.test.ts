@@ -545,33 +545,32 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(reviewContract.authoringTemplate, /## Severity Summary/);
   assert.equal(reviewContract.modelContract?.schemaId, "blueprint.review.code-review.model");
   assert.equal(reviewContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    reviewContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/review.code-review.model.schema.json"
+  );
   assert.ok(reviewContract.modelContract?.renderedHeadings.includes("Scope Reviewed"));
   assert.ok(
     reviewContract.modelContract?.qualityRules.some((rule) =>
-      /scopeReviewed aligned with blueprint_review_scope\.files/i.test(rule)
+      /narrowed taskSchema returned by blueprint_review_scope/i.test(rule)
     )
   );
   assert.deepEqual(
     (reviewContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
-    ["verdict", "depth", "scopeSource", "reviewSummary"]
+    ["verdict", "reviewSummary", "positiveSignals", "findings"]
   );
   const reviewModelSchema = reviewContract.modelContract?.jsonSchema as {
-    properties?: {
-      findings?: {
-        items?: {
-          properties?: {
-            location?: {
-              pattern?: string;
-            };
-          };
-        };
+    $defs?: {
+      lineLocation?: {
+        pattern?: string;
       };
     };
   };
   assert.equal(
-    reviewModelSchema.properties?.findings?.items?.properties?.location?.pattern,
+    reviewModelSchema.$defs?.lineLocation?.pattern,
     "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$"
   );
+  assert.match(JSON.stringify(reviewContract.modelContract?.jsonSchema), /examples|evidenceCoverage/);
   assert.match(securityContract.authoringTemplate, /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/);
   assert.match(securityContract.authoringTemplate, /## Threat Register/);
   assert.match(

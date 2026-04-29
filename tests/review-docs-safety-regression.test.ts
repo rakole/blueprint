@@ -284,7 +284,7 @@ test("review and docs agents stay read-only with parent-owned confirmation and p
       [
         /## Parent-Owned Responsibilities/,
         /`update_topic`, `write_todos`, and `ask_user`/,
-        /The parent command owns `blueprint_review_record` and every other\s+MCP-backed persistence step/i,
+        /The parent command owns `blueprint_review_validate_model`,\s+`blueprint_review_record`, and every other MCP-backed validation or\s+persistence step/i,
         /The parent command owns any non-code-review reuse contract/i,
         /Remain read-only; the parent command owns MCP persistence and any repo\s+mutation/i,
         /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i

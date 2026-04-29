@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -63,3 +63,9 @@ await build({
   sourcemap: true,
   target: "node20"
 });
+
+await cp(
+  path.join(repoRoot, "src", "mcp", "artifact-contracts", "schemas"),
+  path.join(distDir, "mcp", "artifact-contracts", "schemas"),
+  { recursive: true }
+);

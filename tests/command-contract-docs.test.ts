@@ -899,11 +899,12 @@ test("code-review docs and reviewer agent are marked implemented in docs", async
   assert.match(codeReviewDoc, /## In-Flight Progress Contract/);
   assert.match(codeReviewDoc, /`blueprint_review_scope`/);
   assert.match(codeReviewDoc, /`blueprint_review_load_findings`/);
+  assert.match(codeReviewDoc, /`blueprint_review_validate_model`/);
   assert.match(codeReviewDoc, /`blueprint-reviewer`/);
   assert.match(codeReviewDoc, /phase XX-REVIEW\.md/);
   assert.match(
     runtimeReference,
-    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_load_findings`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_load_findings`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
   );
   assert.match(runtimeReference, /Long-running-mutation profile for deterministic phase-scoped review/i);
   assert.match(runtimeReference, /use Gemini-native `update_topic` and `write_todos` for non-trivial review runs/i);

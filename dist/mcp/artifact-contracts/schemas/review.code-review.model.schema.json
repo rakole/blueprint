@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.review.code-review.model",
+  "title": "Blueprint Code Review Model",
+  "description": "Model-authored payload for review.code-review. Runtime-owned phase metadata, scope files, depth, source, evidence inventory, severity counts, paths, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "reviewSummary",
+    "positiveSignals",
+    "findings",
+    "evidenceCoverage",
+    "followUps",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "verdict": {
+      "$ref": "#/$defs/verdict"
+    },
+    "reviewSummary": {
+      "type": "array",
+      "description": "Concrete review outcome notes written by the model. Do not include MCP-owned depth, source, file count, or path metadata.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "examples": [
+        [
+          "The reviewed source path preserves the happy path but leaves negative input behavior uncovered."
+        ]
+      ]
+    },
+    "positiveSignals": {
+      "type": "array",
+      "description": "Concrete pass evidence, safeguards, tests, or coverage strengths observed during review.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "examples": [
+        [
+          "The saved plan and summary agree on the bounded source and test scope."
+        ]
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "description": "Line-backed review findings. Empty is allowed only when the verdict and follow-up fields are consistent with a pass.",
+      "items": {
+        "$ref": "#/$defs/finding"
+      },
+      "examples": [
+        [
+          {
+            "severity": "high",
+            "disposition": "follow-up",
+            "location": "src/example.ts:42",
+            "evidence": "The changed branch accepts negative input without a guard.",
+            "impact": "Callers can receive a misleading success result for invalid input.",
+            "recommendation": "Add an explicit negative-input guard and a focused regression test."
+          }
+        ]
+      ]
+    },
+    "evidenceCoverage": {
+      "type": "object",
+      "description": "Coverage decisions keyed by exact known evidence artifact paths returned by blueprint_review_scope.authoringContext. The task schema narrows this to exhaustive exact keys.",
+      "additionalProperties": {
+        "$ref": "#/$defs/evidenceCoverageEntry"
+      },
+      "examples": [
+        {
+          ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+            "status": "used",
+            "rationale": "Plan metadata defined the source files and acceptance criteria reviewed."
+          },
+          ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
+            "status": "used",
+            "rationale": "Summary evidence confirmed the completed implementation slice."
+          }
+        }
+      ]
+    },
+    "followUps": {
+      "type": "array",
+      "description": "Actionable fix, test, validation, or explicit no-follow-up statement consistent with verdict and findings.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "examples": [
+        [
+          "Add a negative-input regression test before shipping."
+        ]
+      ]
+    },
+    "nextSafeAction": {
+      "type": "string",
+      "description": "One exact command string from the allowedNextActions list in the authoring context. The task schema narrows this to the current phase.",
+      "minLength": 1,
+      "examples": [
+        "/blu-code-review-fix 5"
+      ]
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verdict": {
+      "type": "string",
+      "description": "Overall review posture inferred by the model from inspected code and evidence.",
+      "enum": [
+        "PASS",
+        "FOLLOW_UP",
+        "BLOCKED"
+      ],
+      "examples": [
+        "FOLLOW_UP"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ],
+      "examples": [
+        "high"
+      ]
+    },
+    "disposition": {
+      "type": "string",
+      "enum": [
+        "follow-up",
+        "observation",
+        "blocked",
+        "accepted-risk"
+      ],
+      "examples": [
+        "follow-up"
+      ]
+    },
+    "lineLocation": {
+      "type": "string",
+      "description": "Repo-relative file:line or file:line-line citation. The task schema narrows the file portion to the resolved review scope.",
+      "pattern": "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$",
+      "examples": [
+        "src/example.ts:42"
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "disposition",
+        "location",
+        "evidence",
+        "impact",
+        "recommendation"
+      ],
+      "properties": {
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "disposition": {
+          "$ref": "#/$defs/disposition"
+        },
+        "location": {
+          "$ref": "#/$defs/lineLocation"
+        },
+        "evidence": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "impact": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "recommendation": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "evidenceCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "used",
+        "deferred",
+        "irrelevant"
+      ],
+      "examples": [
+        "used"
+      ]
+    },
+    "evidenceCoverageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "rationale"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/evidenceCoverageStatus"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}
