@@ -36,6 +36,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_load_findings")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_authoring_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_validate_model")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_validate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_config_get")));
@@ -59,12 +61,14 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /numeric plan id when targeting a specific plan/i);
   assert.match(commandFile, /numeric value `planId: 1`/i);
   assert.match(commandFile, /double-encoded string/i);
-  assert.match(commandFile, /contract\.authoringTemplate/);
+  assert.match(commandFile, /taskSchema/);
+  assert.match(commandFile, /contract\.modelContract\.schemaPath/);
   assert.match(commandFile, /`reuse`, `revise`, or `replace`|reuse\/revise\/replace/i);
   assert.match(commandFile, /Use saved research for unstable technical decisions/i);
   assert.match(commandFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
-  assert.match(commandFile, /repair the content against the live contract and retry through MCP/i);
+  assert.match(commandFile, /repair all diagnostics against the live task schema and contract/i);
   assert.match(commandFile, /validationMode: "strict"/);
+  assert.match(commandFile, /authoringMode: "model-only"/);
   assert.match(commandFile, /validationMode: "warn"/);
   assert.doesNotMatch(commandFile, /artifact_report_write/);
   assert.doesNotMatch(commandFile, /blueprint_artifact_scaffold/);
@@ -122,13 +126,14 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /numeric plan id when targeting a specific plan/i);
   assert.match(skillFile, /numeric value `planId: 1`/i);
   assert.match(skillFile, /double-encoded string/i);
-  assert.match(skillFile, /contract\.authoringTemplate/);
+  assert.match(skillFile, /taskSchema/);
   assert.match(skillFile, /reuse\/revise\/replace|reuse.*revise.*replace/i);
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /saved research for unstable technical decisions instead of browsing live web docs/i);
   assert.match(skillFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
   assert.match(skillFile, /raw `\.blueprint\/` edits/i);
   assert.match(skillFile, /validationMode: "strict"/);
+  assert.match(skillFile, /authoringMode: "model-only"/);
   assert.doesNotMatch(skillFile, /docs\/COMMAND-CATALOG\.md|docs\/SKILLS-AND-AGENTS\.md|docs\/ARTIFACT-SCHEMA\.md/);
   assert.doesNotMatch(skillFile, /blueprint_artifact_scaffold/);
   assert.doesNotMatch(skillFile, /blueprint_artifact_validate/);
@@ -150,10 +155,14 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_validation_read/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_review_load_findings/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_write/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_authoring_context/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_validate_model/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_validate/);
   assert.match(runtimeContract, /validationMode:\s+"strict"/);
+  assert.match(runtimeContract, /authoringMode:\s+"model-only"/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_update/);
-  assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /contract\.modelContract\.schemaPath/);
+  assert.match(runtimeContract, /taskSchema/);
   assert.match(runtimeContract, /Use saved research for freshness-sensitive or unstable technical decisions/i);
   assert.match(runtimeContract, /planningReadiness/);
   assert.match(runtimeContract, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
@@ -173,14 +182,14 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /Subagent Path/);
   assert.match(runtimeContract, /No-Subagent Fallback/);
   assert.match(runtimeContract, /Do not use browser, web-search-only, or generic browsing agents/i);
-  assert.match(runtimeContract, /Invalid write: repair the content/i);
+  assert.match(runtimeContract, /Markdown fallback/i);
   assert.match(runtimeContract, /Max revision loop: three checker passes/i);
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
 
   assert.match(
     runtimeReference,
-    /\| `plan-phase` \| `docs\/commands\/plan-phase\.md` \| `blueprint-phase-planning` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_context`<br>`blueprint_phase_research_status`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_validation_read`<br>`blueprint_review_load_findings`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_plan_validate`<br>`blueprint_phase_plan_write`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+    /\| `plan-phase` \| `docs\/commands\/plan-phase\.md` \| `blueprint-phase-planning` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_context`<br>`blueprint_phase_research_status`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_validation_read`<br>`blueprint_review_load_findings`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_plan_authoring_context`<br>`blueprint_phase_plan_validate_model`<br>`blueprint_phase_plan_validate`<br>`blueprint_phase_plan_write`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
   );
   assert.match(
     runtimeReference,
@@ -214,7 +223,8 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /## Plan Persistence Contract/);
   assert.match(docFile, /artifact_contract_read/);
   assert.match(docFile, /artifactId: "phase\.plan"/);
-  assert.match(docFile, /contract\.authoringTemplate/);
+  assert.match(docFile, /blueprint_phase_plan_authoring_context/);
+  assert.match(docFile, /taskSchema/);
   assert.match(docFile, /saved research for unstable technical choices/i);
   assert.match(docFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
   assert.match(docFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
@@ -231,8 +241,9 @@ test("plan-phase command doc explains the plan write contract for planId", async
   assert.match(docFile, /blueprint_phase_validation_read/);
   assert.match(docFile, /blueprint_review_load_findings/);
   assert.match(docFile, /When omitting `planId` to add a new plan and no saved plan body will be overwritten/i);
-  assert.match(docFile, /repair against the live contract and retry through MCP/i);
+  assert.match(docFile, /repair all diagnostics against the live task schema and contract/i);
   assert.match(docFile, /validationMode: "strict"/);
+  assert.match(docFile, /authoringMode: "model-only"/);
   assert.match(docFile, /warn-mode writes/i);
   assert.doesNotMatch(docFile, /optional plan-check report in \.blueprint\/reports/i);
   assert.doesNotMatch(docFile, /web docs for unstable technical choices/i);
@@ -253,7 +264,7 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   ]);
 
   assert.match(plannerFile, /live phase\.plan contract/i);
-  assert.match(plannerFile, /authoringTemplate/i);
+  assert.match(plannerFile, /taskSchema/i);
   assert.match(plannerFile, /requirements-coverage map/i);
   assert.match(plannerFile, /too broad for one coherent plan|prioritize it|split it into smaller slices/i);
   assert.match(plannerFile, /bounded number of passes|stop and return the best coherent draft/i);
@@ -261,7 +272,7 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(plannerFile, /visible stage narration/i);
   assert.match(plannerFile, /user\s+checkpoints/i);
   assert.match(plannerFile, /reuse\/revise\/replace or overwrite decision/i);
-  assert.match(plannerFile, /ready for\s+`blueprint_phase_plan_write` by the parent command/i);
+  assert.match(plannerFile, /ready for\s+`blueprint_phase_plan_validate_model` and `blueprint_phase_plan_write` by the\s+parent command/i);
   assert.match(plannerFile, /Do not own orchestration/i);
   assert.match(plannerFile, /user confirmations/i);
   assert.match(plannerFile, /MCP validation/i);
@@ -278,7 +289,7 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(plannerFile, /observable truths, required\s+artifacts,\s+and\s+key links/i);
 
   assert.match(checkerFile, /live phase\.plan contract/i);
-  assert.match(checkerFile, /authoringTemplate/i);
+  assert.match(checkerFile, /task schema/i);
   assert.match(checkerFile, /## Review Modes/);
   assert.match(checkerFile, /Do not apply\s+the UI-specific six-dimension gate to ordinary plan reviews/i);
   assert.match(checkerFile, /coverage readiness/i);
@@ -310,14 +321,14 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
 
   assert.match(
     mcpToolsDoc,
-    /`plan-phase` uses the canonical `phase\.plan` contract read, phase context and readiness status, discovery artifact reads, validation reads when evidence exists, saved review findings when present, plan index, plan read\/write\/validate tools, config, and state update tools\./i
+    /`plan-phase` uses the canonical `phase\.plan` contract read, phase context and readiness status, discovery artifact reads, validation reads when evidence exists, saved review findings when present, plan index\/read tools, `blueprint_phase_plan_authoring_context`, `blueprint_phase_plan_validate_model`, plan write\/validate tools, config, and state update tools\./i
   );
   assert.match(mcpToolsDoc, /plan-phase-runtime-contract\.md/);
-  assert.match(mcpToolsDoc, /requirements-coverage check before finalization/i);
+  assert.match(mcpToolsDoc, /schema-backed requirements\/evidence\/dependency coverage check before finalization/i);
   assert.match(mcpToolsDoc, /saved research rather than live browsing/i);
   assert.match(mcpToolsDoc, /gates reuse\/revise\/replace only for writes that would overwrite saved plans/i);
   assert.match(mcpToolsDoc, /treats checker review as config-gated/i);
-  assert.match(mcpToolsDoc, /repairs invalid writes or scoped plan-validation failures through MCP/i);
+  assert.match(mcpToolsDoc, /repairs model-validation\/write\/scoped-validation diagnostics through MCP/i);
   assert.match(mcpToolsDoc, /synced state recomputation/i);
 
   assert.match(contractFile, /Plan authoring should stay execution-ready/i);

@@ -285,9 +285,16 @@ type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
 type PhasePlanWriteArgs = PhaseLookupArgs & {
     planId?: NumericInput;
     content?: string;
-    model?: Record<string, unknown>;
+    model?: unknown;
+    authoringMode?: "content-compatible" | "model-only";
     overwrite?: boolean;
     validationMode?: "strict" | "warn";
+};
+type PhasePlanAuthoringContextArgs = PhaseLookupArgs & {
+    planId?: NumericInput;
+};
+type PhasePlanValidateModelArgs = PhasePlanAuthoringContextArgs & {
+    model: unknown;
 };
 type PhaseSummaryReadArgs = PhaseLookupArgs & {
     planId: NumericInput;
@@ -296,6 +303,12 @@ type PhaseSummaryWriteArgs = PhaseLookupArgs & {
     planId: NumericInput;
     content: string;
     overwrite?: boolean;
+};
+type ResolvedPhaseLocation = {
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
 };
 type RoadmapAddPhaseResult = {
     phaseNumber: string;
@@ -690,6 +703,48 @@ type PhasePlanWriteResult = {
     };
     warnings: string[];
 };
+type PhasePlanAuthoringContextResult = {
+    status: "ready" | "invalid";
+    phase: ResolvedPhaseLocation | null;
+    planId: string | null;
+    path: string | null;
+    schemaPath: string | null;
+    baseSchema: Record<string, unknown> | null;
+    taskSchema: Record<string, unknown> | null;
+    knownRequirements: string[];
+    knownEvidenceArtifacts: string[];
+    allowedDependencyPlanIds: string[];
+    modelOnly: boolean;
+    reason: string | null;
+    warnings: string[];
+};
+type PhasePlanModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type PhasePlanModelDiagnostic = {
+    source: PhasePlanModelDiagnosticSource;
+    path: string;
+    code: string;
+    message: string;
+    context: Record<string, unknown>;
+    suggestion: string;
+};
+type PhasePlanValidateModelResult = {
+    status: "valid" | "invalid";
+    valid: boolean;
+    phase: ResolvedPhaseLocation | null;
+    planId: string | null;
+    path: string | null;
+    schemaPath: string | null;
+    taskSchema: Record<string, unknown> | null;
+    diagnostics: PhasePlanModelDiagnostic[];
+    diagnosticCounts: {
+        total: number;
+        bySource: Record<PhasePlanModelDiagnosticSource, number>;
+        byCode: Record<string, number>;
+    };
+    normalizedModel: PhasePlanStructuredModel | null;
+    renderPreview: string | null;
+    warnings: string[];
+};
 type PhaseSummaryRecord = {
     planId: string;
     path: string;
@@ -840,6 +895,59 @@ type RoadmapReadResult = {
         phaseDir: string | null;
     }>;
 };
+type PhasePlanStructuredModel = {
+    title: string;
+    wave: number;
+    status: "planned";
+    objective: string;
+    gapClosure?: boolean;
+    dependsOn: string[];
+    requirements: string[];
+    filesModified: string[];
+    readFirst: string[];
+    autonomous: boolean;
+    goal: string;
+    scope: string[];
+    tasks: Array<{
+        id: string;
+        title: string;
+        readFirst: string[];
+        action: string[];
+        acceptanceCriteria: string[];
+        requirements: string[];
+        filesModified: string[];
+    }>;
+    verification: Array<{
+        item: string;
+        method: "test" | "grep" | "command" | "file-read" | "artifact-validation";
+        evidence: string;
+    }>;
+    mustHaves: string[];
+    requirementCoverage: Array<{
+        requirement: string;
+        status: "covered" | "deferred" | "irrelevant";
+        coveredByTasks: string[];
+        evidence: string;
+        rationale: string;
+    }>;
+    evidenceCoverage: Array<{
+        artifact: string;
+        status: "used" | "deferred" | "irrelevant" | "unavailable";
+        rationale: string;
+    }>;
+    fileSurfaceCoverage: Array<{
+        surface: string;
+        coveredByTasks: string[];
+        verification: string;
+        rationale: string;
+    }>;
+    unknownsAndDeferrals: Array<{
+        item: string;
+        disposition: "unknown" | "deferred" | "blocked" | "none";
+        rationale: string;
+        followUp: string;
+    }>;
+};
 export declare function blueprintPhaseValidationAuthoringContext(args: PhaseValidationAuthoringContextArgs): Promise<PhaseValidationAuthoringContextResult>;
 export declare function blueprintPhaseValidationRender(args: PhaseValidationRenderArgs): Promise<PhaseValidationRenderResult>;
 export declare function blueprintRoadmapRead(args?: RoadmapReadArgs): Promise<RoadmapReadResult>;
@@ -857,6 +965,8 @@ export declare function blueprintPhaseValidationWrite(args: PhaseValidationWrite
 export declare function blueprintPhasePlanIndex(args?: PlanIndexArgs): Promise<PhasePlanIndexResult>;
 export declare function blueprintPhasePlanRead(args: PhasePlanReadArgs): Promise<PhasePlanReadResult>;
 export declare function blueprintPhasePlanValidate(args?: PhasePlanValidateArgs): Promise<PhasePlanValidationResult>;
+export declare function blueprintPhasePlanAuthoringContext(args?: PhasePlanAuthoringContextArgs): Promise<PhasePlanAuthoringContextResult>;
+export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanValidateModelResult>;
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
 export declare function blueprintPhaseSummaryRead(args: PhaseSummaryReadArgs): Promise<PhaseSummaryReadResult>;
@@ -1147,8 +1257,31 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhasePlanAuthoringContextResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        model: z.ZodUnknown;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhasePlanValidateModelResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         content: z.ZodOptional<z.ZodString>;
-        model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        model: z.ZodOptional<z.ZodUnknown>;
+        authoringMode: z.ZodOptional<z.ZodEnum<{
+            "content-compatible": "content-compatible";
+            "model-only": "model-only";
+        }>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         validationMode: z.ZodOptional<z.ZodEnum<{
             strict: "strict";

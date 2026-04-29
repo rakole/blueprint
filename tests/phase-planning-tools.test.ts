@@ -8,9 +8,11 @@ import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
+  blueprintPhasePlanAuthoringContext,
   blueprintPhasePlanIndex,
   blueprintPhasePlanRead,
   blueprintPhasePlanValidate,
+  blueprintPhasePlanValidateModel,
   blueprintPhasePlanWrite
 } from "../src/mcp/tools/phase.js";
 
@@ -504,6 +506,8 @@ test("phase planning MCP tools are registered in the Blueprint server", () => {
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
     "blueprint_phase_plan_validate",
+    "blueprint_phase_plan_authoring_context",
+    "blueprint_phase_plan_validate_model",
     "blueprint_phase_plan_write"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
@@ -614,6 +618,13 @@ test("phase plan writes accept the content or model input surface with exact-one
     content: validPlanContent("01", 1),
     model: { title: "Plan 01" }
   });
+  const markdownFallback = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    authoringMode: "model-only"
+  });
   const modelOnly = await blueprintPhasePlanWrite({
     cwd: repoPath,
     phase: "3",
@@ -626,8 +637,10 @@ test("phase plan writes accept the content or model input surface with exact-one
   assert.match(missingInput.validation.issues.join("\n"), /exactly one of content or model/i);
   assert.equal(bothInputs.status, "invalid");
   assert.match(bothInputs.validation.issues.join("\n"), /exactly one of content or model/i);
+  assert.equal(markdownFallback.status, "invalid");
+  assert.match(markdownFallback.validation.issues.join("\n"), /model-only writes must supply.*model/i);
   assert.equal(modelOnly.status, "invalid");
-  assert.match(modelOnly.validation.issues.join("\n"), /missing required fields/i);
+  assert.match(modelOnly.validation.issues.join("\n"), /schema\.required|required property/i);
   assert.equal(modelOnly.written, false);
   assert.deepEqual(index.plans, []);
 });
@@ -638,6 +651,11 @@ test("phase plan writes persist structured models as canonical plan markdown", a
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel()
+  });
   const created = await blueprintPhasePlanWrite({
     cwd: repoPath,
     phase: "3",
@@ -651,6 +669,9 @@ test("phase plan writes persist structured models as canonical plan markdown", a
     planId: "01"
   });
 
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.match(validated.schemaPath ?? "", /phase\.plan\.model\.schema\.json/);
+  assert.match(validated.renderPreview ?? "", /# Phase 03: Phase Discovery - Plan 01/);
   assert.equal(created.status, "created", JSON.stringify(created, null, 2));
   assert.equal(created.planId, "01");
   assert.equal(created.path, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md");
@@ -666,6 +687,121 @@ test("phase plan writes persist structured models as canonical plan markdown", a
   assert.doesNotMatch(savedContent, /Add structured model contract metadata/);
   assert.equal(read.validation?.valid, true);
   assert.deepEqual(read.metadata?.requirements, ["LIFE-01"]);
+});
+
+test("phase plan authoring context exposes a complete runtime-narrowed task schema", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const taskSchemaText = JSON.stringify(context.taskSchema);
+
+  assert.equal(context.status, "ready", JSON.stringify(context, null, 2));
+  assert.equal(context.modelOnly, true);
+  assert.equal(
+    context.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"
+  );
+  assert.equal(context.planId, "01");
+  assert.equal(context.path, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md");
+  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.deepEqual(context.allowedDependencyPlanIds, []);
+  assert.ok(context.knownEvidenceArtifacts.includes(
+    ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+  ));
+  assert.match(taskSchemaText, /LIFE-01/);
+  assert.match(taskSchemaText, /03-CONTEXT\.md/);
+  assert.match(taskSchemaText, /x-blueprint-runtimeContext/);
+});
+
+test("phase plan model schema rejects unsupported, missing, and out-of-scope values", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const unsupported = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel({ unexpectedRuntimeField: true })
+  });
+  const missingRequiredModel = cloneStructuredPlanModel();
+  delete missingRequiredModel.goal;
+  const missingRequired = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: missingRequiredModel
+  });
+  const outOfScopeRequirementModel = cloneStructuredPlanModel();
+  outOfScopeRequirementModel.requirements = ["LIFE-99"];
+  const outOfScopeRequirement = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: outOfScopeRequirementModel
+  });
+  const outOfScopeEvidenceModel = cloneStructuredPlanModel();
+  const evidenceCoverage = outOfScopeEvidenceModel.evidenceCoverage as Array<Record<string, unknown>>;
+  evidenceCoverage[0].artifact = ".blueprint/phases/03-phase-discovery/03-BOGUS.md";
+  const outOfScopeEvidence = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: outOfScopeEvidenceModel
+  });
+
+  assert.equal(unsupported.status, "invalid");
+  assert.match(
+    unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /additional properties/i
+  );
+  assert.match(
+    unsupported.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n"),
+    /Remove unsupported field unexpectedRuntimeField/
+  );
+  assert.equal(missingRequired.status, "invalid");
+  assert.match(
+    missingRequired.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /schema\.required/
+  );
+  assert.equal(outOfScopeRequirement.status, "invalid");
+  assert.match(
+    outOfScopeRequirement.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of/i
+  );
+  assert.equal(outOfScopeEvidence.status, "invalid");
+  assert.match(
+    outOfScopeEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of/i
+  );
+});
+
+test("phase plan model writes preserve MCP-owned phase and plan provenance", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: createStructuredPlanModel({
+      title: "Implement the selected plan slot"
+    }),
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.planId, "02");
+  assert.equal(created.path, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md");
+  assert.match(savedContent, /^phase: 3$/m);
+  assert.match(savedContent, /^plan_id: "02"$/m);
+  assert.match(savedContent, /^# Phase 03: Phase Discovery - Plan 02$/m);
 });
 
 test("phase plan structured model writes reject invalid identity, coverage, examples, evidence, surfaces, and commands", async (t) => {
@@ -756,11 +892,12 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
   const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
 
   assert.equal(identityModel.status, "invalid");
-  assert.match(identityModel.validation.issues.join("\n"), /MCP-owned identity keys: phase, planId/);
+  assert.match(identityModel.validation.issues.join("\n"), /Remove unsupported field phase/);
+  assert.match(identityModel.validation.issues.join("\n"), /Remove unsupported field planId/);
   assert.equal(missingRequirement.status, "invalid");
   assert.match(
     missingRequirement.validation.issues.join("\n"),
-    /Known roadmap requirement LIFE-02 is missing from requirementCoverage/
+    /requirementCoverage must include exactly one row for known roadmap requirement LIFE-02/
   );
   assert.equal(leakedExample.status, "invalid");
   assert.match(leakedExample.validation.issues.join("\n"), /copied example leakage signal/);
@@ -772,7 +909,7 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
   assert.equal(missingEvidence.status, "invalid");
   assert.match(
     missingEvidence.validation.issues.join("\n"),
-    /Known evidence artifact .*03-UI-SPEC\.md is missing from evidenceCoverage/
+    /evidenceCoverage must include exactly one row for known saved evidence artifact .*03-UI-SPEC\.md/
   );
   assert.equal(badSurface.status, "invalid");
   assert.match(

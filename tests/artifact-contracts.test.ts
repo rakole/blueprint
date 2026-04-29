@@ -119,6 +119,10 @@ test("artifact contract read exposes structured model contracts for phase plan a
 
   assert.equal(planContract.contract.modelContract?.schemaId, "blueprint.phase.plan.model");
   assert.equal(planContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    planContract.contract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"
+  );
   assert.deepEqual(
     (planContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
     ["title", "wave", "status", "objective"]

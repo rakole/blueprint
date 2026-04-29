@@ -56,6 +56,10 @@ Contract notes:
 - `blueprint://reports/latest` is a read-only projection over durable report inventory in `.blueprint/reports/`; it is an index view, not a report authoring path.
 - Resource views are for discovery and grounding only. Writes remain on the existing MCP tool surface for config, roadmap, phase, report, review, and capture persistence.
 
+## Structured Model Schema Assets
+
+Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model.
+
 ## Core Top-Level Artifacts
 
 ### `PROJECT.md`

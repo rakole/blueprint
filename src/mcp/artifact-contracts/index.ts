@@ -889,204 +889,18 @@ Replace with a concrete, execution-ready goal.
 - Replace with the goal-backward must-haves this plan cannot drop.`;
 }
 
+const PHASE_PLAN_MODEL_SCHEMA_FILE = "phase.plan.model.schema.json";
+const PHASE_PLAN_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json";
+
 const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.plan.model",
   schemaVersion: "1.0.0",
-  jsonSchema: {
-    $schema: "https://json-schema.org/draft/2020-12/schema",
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "title",
-      "wave",
-      "status",
-      "objective",
-      "dependsOn",
-      "requirements",
-      "filesModified",
-      "readFirst",
-      "autonomous",
-      "goal",
-      "scope",
-      "tasks",
-      "verification",
-      "mustHaves",
-      "requirementCoverage",
-      "evidenceCoverage",
-      "fileSurfaceCoverage",
-      "unknownsAndDeferrals"
-    ],
-    properties: {
-      title: { type: "string", minLength: 1 },
-      wave: { type: "integer", minimum: 1 },
-      status: { type: "string", enum: ["planned"] },
-      objective: { type: "string", minLength: 1 },
-      gapClosure: { type: "boolean" },
-      dependsOn: {
-        type: "array",
-        items: { type: "string", pattern: "^[0-9]+$" }
-      },
-      requirements: {
-        type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
-      },
-      filesModified: {
-        type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
-      },
-      readFirst: {
-        type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
-      },
-      autonomous: { type: "boolean" },
-      goal: { type: "string", minLength: 1 },
-      scope: {
-        type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
-      },
-      tasks: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: [
-            "id",
-            "title",
-            "readFirst",
-            "action",
-            "acceptanceCriteria",
-            "requirements",
-            "filesModified"
-          ],
-          properties: {
-            id: { type: "string", minLength: 1, pattern: "^[A-Za-z0-9._-]+$" },
-            title: { type: "string", minLength: 1 },
-            readFirst: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", minLength: 1 }
-            },
-            action: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", minLength: 1 }
-            },
-            acceptanceCriteria: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", minLength: 1 }
-            },
-            requirements: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", minLength: 1 }
-            },
-            filesModified: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", minLength: 1 }
-            }
-          }
-        }
-      },
-      verification: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["item", "method", "evidence"],
-          properties: {
-            item: { type: "string", minLength: 1 },
-            method: {
-              type: "string",
-              enum: ["test", "grep", "command", "file-read", "artifact-validation"]
-            },
-            evidence: { type: "string", minLength: 1 }
-          }
-        }
-      },
-      mustHaves: {
-        type: "array",
-        minItems: 1,
-        items: { type: "string", minLength: 1 }
-      },
-      requirementCoverage: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["requirement", "status", "coveredByTasks", "evidence", "rationale"],
-          properties: {
-            requirement: { type: "string", minLength: 1 },
-            status: { type: "string", enum: ["covered", "deferred", "irrelevant"] },
-            coveredByTasks: {
-              type: "array",
-              items: { type: "string", minLength: 1 }
-            },
-            evidence: { type: "string", minLength: 1 },
-            rationale: { type: "string", minLength: 1 }
-          }
-        }
-      },
-      evidenceCoverage: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["artifact", "status", "rationale"],
-          properties: {
-            artifact: { type: "string", minLength: 1 },
-            status: { type: "string", enum: ["used", "deferred", "irrelevant", "unavailable"] },
-            rationale: { type: "string", minLength: 1 }
-          }
-        }
-      },
-      fileSurfaceCoverage: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["surface", "coveredByTasks", "verification", "rationale"],
-          properties: {
-            surface: { type: "string", minLength: 1 },
-            coveredByTasks: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", minLength: 1 }
-            },
-            verification: { type: "string", minLength: 1 },
-            rationale: { type: "string", minLength: 1 }
-          }
-        }
-      },
-      unknownsAndDeferrals: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["item", "disposition", "rationale", "followUp"],
-          properties: {
-            item: { type: "string", minLength: 1 },
-            disposition: { type: "string", enum: ["unknown", "deferred", "blocked", "none"] },
-            rationale: { type: "string", minLength: 1 },
-            followUp: { type: "string", minLength: 1 }
-          }
-        }
-      }
-    }
-  },
+  schemaPath: PHASE_PLAN_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(PHASE_PLAN_MODEL_SCHEMA_FILE),
   qualityRules: [
     "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, planId, artifact, path, or content; the write tool owns identity and path derivation.",
+    "Author against the narrowed taskSchema returned by blueprint_phase_plan_authoring_context or blueprint_phase_plan_validate_model so roadmap requirements, saved evidence artifacts, and dependency ids stay deterministic.",
     "Every known in-scope requirement must appear exactly once in requirementCoverage as covered, deferred, or irrelevant with a concrete rationale.",
     "Every known context, research, UI, review, or prior evidence artifact used for planning must appear in evidenceCoverage, or be explicitly deferred or marked irrelevant with rationale.",
     "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
@@ -1170,10 +984,10 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
     ],
     unknownsAndDeferrals: [
       {
-        item: "none",
+        item: "No open unknowns for this metadata-only contract exposure.",
         disposition: "none",
         rationale: "No known unknowns remain for metadata-only contract exposure.",
-        followUp: "none"
+        followUp: "No follow-up required after the focused contract test passes."
       }
     ]
   },
