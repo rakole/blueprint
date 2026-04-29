@@ -311,6 +311,113 @@ Ship the plan-phase runtime.
 `;
 }
 
+function createStructuredPlanModel(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    title: "Plan 01",
+    wave: 1,
+    status: "planned",
+    objective: "Ship structured phase plan model writes.",
+    dependsOn: [],
+    requirements: ["LIFE-01"],
+    filesModified: ["src/mcp/tools/phase.ts"],
+    readFirst: [
+      "src/mcp/tools/phase.ts",
+      "docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md"
+    ],
+    autonomous: true,
+    goal: "Persist structured phase plan models through the existing MCP plan writer.",
+    scope: [
+      "Add structured model validation and canonical Markdown rendering for phase.plan writes."
+    ],
+    tasks: [
+      {
+        id: "task-1",
+        title: "Implement structured plan rendering",
+        readFirst: ["src/mcp/tools/phase.ts"],
+        action: [
+          "Validate the structured model, render canonical plan Markdown, and reuse existing plan persistence."
+        ],
+        acceptanceCriteria: [
+          "tests/phase-planning-tools.test.ts structured phase plan model coverage exits 0"
+        ],
+        requirements: ["LIFE-01"],
+        filesModified: ["src/mcp/tools/phase.ts"]
+      }
+    ],
+    verification: [
+      {
+        item: "Run focused phase planning tests",
+        method: "test",
+        evidence: "npm test -- tests/phase-planning-tools.test.ts"
+      }
+    ],
+    mustHaves: [
+      "Structured phase plan models render to canonical PLAN Markdown before persistence."
+    ],
+    requirementCoverage: [
+      {
+        requirement: "LIFE-01",
+        status: "covered",
+        coveredByTasks: ["task-1"],
+        evidence: "src/mcp/tools/phase.ts",
+        rationale: "The task implements the model write path in the phase tool."
+      },
+      {
+        requirement: "LIFE-02",
+        status: "deferred",
+        coveredByTasks: [],
+        evidence: ".blueprint/phases/03-phase-discovery/03-RESEARCH.md",
+        rationale: "This focused unit pilots phase.plan only and leaves broader rollout unchanged."
+      }
+    ],
+    evidenceCoverage: [
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
+        status: "used",
+        rationale: "Context records the MCP-owned planning persistence decision."
+      },
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-RESEARCH.md",
+        status: "used",
+        rationale: "Research supplies the plan-phase runtime contract."
+      },
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md",
+        status: "irrelevant",
+        rationale: "The phase plan writer is a non-UI MCP persistence change."
+      }
+    ],
+    fileSurfaceCoverage: [
+      {
+        surface: "src/mcp/tools/phase.ts",
+        coveredByTasks: ["task-1"],
+        verification: "npm test -- tests/phase-planning-tools.test.ts",
+        rationale: "The focused test exercises the changed phase plan write path."
+      }
+    ],
+    unknownsAndDeferrals: [
+      {
+        item: "No unresolved structured model pilot unknowns remain.",
+        disposition: "none",
+        rationale: "The pilot is bounded to phase.plan writes and preserves raw Markdown behavior.",
+        followUp: "Run /blu-progress 3 after execution to route the next implemented step."
+      }
+    ],
+    ...overrides
+  };
+}
+
+function cloneStructuredPlanModel(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(createStructuredPlanModel(overrides))) as Record<
+    string,
+    unknown
+  >;
+}
+
 function hollowPlanContent(planId: string, wave: number): string {
   return hollowPlanContentWithOptions(planId, wave);
 }
@@ -520,8 +627,163 @@ test("phase plan writes accept the content or model input surface with exact-one
   assert.equal(bothInputs.status, "invalid");
   assert.match(bothInputs.validation.issues.join("\n"), /exactly one of content or model/i);
   assert.equal(modelOnly.status, "invalid");
-  assert.match(modelOnly.validation.issues.join("\n"), /not yet supported/i);
+  assert.match(modelOnly.validation.issues.join("\n"), /missing required fields/i);
   assert.equal(modelOnly.written, false);
+  assert.deepEqual(index.plans, []);
+});
+
+test("phase plan writes persist structured models as canonical plan markdown", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel(),
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+  const read = await blueprintPhasePlanRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.planId, "01");
+  assert.equal(created.path, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md");
+  assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
+  assert.match(savedContent, /plan_id: "01"/);
+  assert.match(savedContent, /# Phase 03: Phase Discovery - Plan 01/);
+  assert.match(savedContent, /## Requirement Coverage/);
+  assert.match(savedContent, /## Evidence Coverage/);
+  assert.match(savedContent, /## File \/ Surface Coverage/);
+  assert.match(savedContent, /## Unknowns And Deferrals/);
+  assert.match(savedContent, /\| LIFE-01 \| covered \| task-1 \|/);
+  assert.match(savedContent, /\| LIFE-02 \| deferred \| none \|/);
+  assert.doesNotMatch(savedContent, /Add structured model contract metadata/);
+  assert.equal(read.validation?.valid, true);
+  assert.deepEqual(read.metadata?.requirements, ["LIFE-01"]);
+});
+
+test("phase plan structured model writes reject invalid identity, coverage, examples, evidence, surfaces, and commands", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const identityModel = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: createStructuredPlanModel({
+      phase: "4",
+      planId: "99"
+    })
+  });
+  const missingRequirementCoverage = cloneStructuredPlanModel();
+  missingRequirementCoverage.requirementCoverage = (
+    missingRequirementCoverage.requirementCoverage as Array<Record<string, unknown>>
+  ).filter((row) => row.requirement !== "LIFE-02");
+  const missingRequirement = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: missingRequirementCoverage
+  });
+  const leakedExample = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: createStructuredPlanModel({
+      title: "Add structured model contract metadata"
+    })
+  });
+  const unverifiableModel = cloneStructuredPlanModel();
+  const unverifiableTasks = unverifiableModel.tasks as Array<Record<string, unknown>>;
+  unverifiableTasks[0].acceptanceCriteria = ["Make the implementation reliable and polished."];
+  const unverifiable = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: unverifiableModel
+  });
+  const missingEvidenceModel = cloneStructuredPlanModel();
+  missingEvidenceModel.evidenceCoverage = (
+    missingEvidenceModel.evidenceCoverage as Array<Record<string, unknown>>
+  ).filter(
+    (row) =>
+      row.artifact !== ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"
+  );
+  const missingEvidence = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: missingEvidenceModel
+  });
+  const badSurfaceModel = cloneStructuredPlanModel();
+  badSurfaceModel.fileSurfaceCoverage = [
+    {
+      surface: "tests/phase-planning-tools.test.ts",
+      coveredByTasks: ["task-1"],
+      verification: "npm test -- tests/phase-planning-tools.test.ts",
+      rationale: "This intentionally mismatches the declared modified file."
+    }
+  ];
+  const badSurface = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: badSurfaceModel
+  });
+  const plannedCommandModel = cloneStructuredPlanModel();
+  plannedCommandModel.unknownsAndDeferrals = [
+    {
+      item: "Follow-up intentionally references a planned command.",
+      disposition: "deferred",
+      rationale: "This should be rejected by implemented-command validation.",
+      followUp: "Run /blu-do 3 after this plan."
+    }
+  ];
+  const plannedCommand = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: plannedCommandModel
+  });
+  const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(identityModel.status, "invalid");
+  assert.match(identityModel.validation.issues.join("\n"), /MCP-owned identity keys: phase, planId/);
+  assert.equal(missingRequirement.status, "invalid");
+  assert.match(
+    missingRequirement.validation.issues.join("\n"),
+    /Known roadmap requirement LIFE-02 is missing from requirementCoverage/
+  );
+  assert.equal(leakedExample.status, "invalid");
+  assert.match(leakedExample.validation.issues.join("\n"), /copied example leakage signal/);
+  assert.equal(unverifiable.status, "invalid");
+  assert.match(
+    unverifiable.validation.issues.join("\n"),
+    /acceptance criterion is not objectively verifiable/
+  );
+  assert.equal(missingEvidence.status, "invalid");
+  assert.match(
+    missingEvidence.validation.issues.join("\n"),
+    /Known evidence artifact .*03-UI-SPEC\.md is missing from evidenceCoverage/
+  );
+  assert.equal(badSurface.status, "invalid");
+  assert.match(
+    badSurface.validation.issues.join("\n"),
+    /Modified file src\/mcp\/tools\/phase\.ts is missing from fileSurfaceCoverage/
+  );
+  assert.equal(plannedCommand.status, "invalid");
+  assert.match(
+    plannedCommand.validation.issues.join("\n"),
+    /non-implemented Blueprint command\(s\): \/blu-do/
+  );
   assert.deepEqual(index.plans, []);
 });
 
