@@ -654,7 +654,7 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
   assert.match(roadmapBody, /### Phase 3: Lifecycle Pilot[\s\S]*\*\*Status\*\*: completed/);
 });
 
-test("artifact report writes accept the content or model input surface with exact-one validation", async (t) => {
+test("artifact report writes report blocking input issues and contract-gate model writes", async (t) => {
   const repoPath = await createLifecyclePilotRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -676,13 +676,35 @@ test("artifact report writes accept the content or model input surface with exac
     reportName: "quick-run-latest",
     model: { taskSummary: ["Completed a focused quick run."] }
   });
+  const nonStructuredContractModel = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "debug-latest",
+    model: { problemStatement: ["Investigated a focused issue."] }
+  });
+  const genericReportModel = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "custom-health-check",
+    model: { summary: ["Checked custom health."] }
+  });
 
   assert.equal(missingInput.status, "invalid");
-  assert.match(missingInput.warnings.join("\n"), /exactly one of content or model/i);
+  assert.match(missingInput.issues.join("\n"), /exactly one of content or model/i);
+  assert.deepEqual(missingInput.warnings, []);
   assert.equal(bothInputs.status, "invalid");
-  assert.match(bothInputs.warnings.join("\n"), /exactly one of content or model/i);
+  assert.match(bothInputs.issues.join("\n"), /exactly one of content or model/i);
+  assert.deepEqual(bothInputs.warnings, []);
   assert.equal(modelOnly.status, "invalid");
-  assert.match(modelOnly.warnings.join("\n"), /not yet supported/i);
+  assert.match(modelOnly.issues.join("\n"), /report\.quick-run/i);
+  assert.match(modelOnly.issues.join("\n"), /blueprint\.report\.quick-run\.model/i);
+  assert.match(modelOnly.issues.join("\n"), /not yet supported/i);
+  assert.deepEqual(modelOnly.warnings, []);
+  assert.equal(nonStructuredContractModel.status, "invalid");
+  assert.match(nonStructuredContractModel.issues.join("\n"), /report\.debug/i);
+  assert.match(nonStructuredContractModel.issues.join("\n"), /does not expose a modelContract/i);
+  assert.deepEqual(nonStructuredContractModel.warnings, []);
+  assert.equal(genericReportModel.status, "invalid");
+  assert.match(genericReportModel.issues.join("\n"), /known report contract/i);
+  assert.deepEqual(genericReportModel.warnings, []);
   assert.equal(modelOnly.written, false);
   await assert.rejects(readFile(reportPath, "utf8"), /ENOENT/);
 });

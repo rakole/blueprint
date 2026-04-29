@@ -23799,6 +23799,34 @@ async function blueprintArtifactContractRead(args = {}) {
     contracts: listArtifactContracts()
   };
 }
+function artifactReportWriteInvalidResult(pathValue, issues, warnings = []) {
+  return {
+    path: pathValue,
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    issues,
+    warnings
+  };
+}
+function reportModelWriteIssues(reportName2) {
+  const contractId = resolveReportContractId(reportName2);
+  if (!contractId) {
+    return [
+      `Report structured model writes require reportName to resolve to a known report contract; "${reportName2}" is not contract-backed. Supply canonical Markdown content instead.`
+    ];
+  }
+  const contract = readArtifactContract(contractId);
+  if (!contract.modelContract) {
+    return [
+      `Report structured model writes are not supported for ${contractId} because it does not expose a modelContract. Supply canonical Markdown content instead.`
+    ];
+  }
+  return [
+    `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
+  ];
+}
 async function blueprintArtifactReportWrite(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
@@ -23817,26 +23845,12 @@ async function blueprintArtifactReportWrite(args) {
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   if (hasContent === hasModel) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: ["Artifact report writes must supply exactly one of content or model."]
-    };
+    return artifactReportWriteInvalidResult(pathValue, [
+      "Artifact report writes must supply exactly one of content or model."
+    ]);
   }
   if (hasModel) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: [
-        `Artifact report structured model writes are not yet supported for "${args.reportName}". Supply canonical Markdown content instead.`
-      ]
-    };
+    return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
   }
   const content = args.content ?? "";
   const normalizedContent = content.endsWith("\n") ? content : `${content}
@@ -23845,24 +23859,10 @@ async function blueprintArtifactReportWrite(args) {
   const exists = await pathExists(absolutePath);
   const validation = validateReportArtifactContent(normalizedContent, args.reportName);
   if (normalizedContent.trim().length === 0) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: ["Report content must not be empty."]
-    };
+    return artifactReportWriteInvalidResult(pathValue, ["Report content must not be empty."]);
   }
   if (!validation.valid) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: [...validation.issues]
-    };
+    return artifactReportWriteInvalidResult(pathValue, validation.issues, validation.warnings);
   }
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
@@ -23874,6 +23874,7 @@ async function blueprintArtifactReportWrite(args) {
         created: false,
         overwritten: false,
         status: "reused",
+        issues: validation.issues,
         warnings
       };
     }
@@ -23891,7 +23892,6 @@ async function blueprintArtifactReportWrite(args) {
   if (exists) {
     warnings.push(`Replaced existing report: ${pathValue}`);
   }
-  warnings.push(...validation.issues);
   warnings.push(...validation.warnings);
   return {
     path: pathValue,
@@ -23899,6 +23899,7 @@ async function blueprintArtifactReportWrite(args) {
     created: !exists,
     overwritten: exists,
     status: exists ? "updated" : "created",
+    issues: validation.issues,
     warnings
   };
 }

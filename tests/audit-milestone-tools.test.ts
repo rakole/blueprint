@@ -943,10 +943,11 @@ test("artifact report write rejects malformed audit-fix reports before persisten
   assert.equal(invalid.written, false);
   assert.equal(invalid.created, false);
   assert.equal(invalid.overwritten, false);
-  assert.match(invalid.warnings.join("\n"), /Fix Scope/);
-  assert.match(invalid.warnings.join("\n"), /Changes Applied/);
-  assert.match(invalid.warnings.join("\n"), /Remaining Gaps/);
-  assert.match(invalid.warnings.join("\n"), /Next Safe Action/);
+  assert.match(invalid.issues.join("\n"), /Fix Scope/);
+  assert.match(invalid.issues.join("\n"), /Changes Applied/);
+  assert.match(invalid.issues.join("\n"), /Remaining Gaps/);
+  assert.match(invalid.issues.join("\n"), /Next Safe Action/);
+  assert.deepEqual(invalid.warnings, []);
   await assert.rejects(() => readFile(path.join(repoPath, invalid.path), "utf8"), /ENOENT/);
 });
 

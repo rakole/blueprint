@@ -319,6 +319,7 @@ type ArtifactReportWriteResult = {
   created: boolean;
   overwritten: boolean;
   status: "created" | "updated" | "reused" | "invalid";
+  issues: string[];
   warnings: string[];
 };
 
@@ -7488,6 +7489,44 @@ export async function blueprintArtifactContractRead(
   };
 }
 
+function artifactReportWriteInvalidResult(
+  pathValue: string,
+  issues: string[],
+  warnings: string[] = []
+): ArtifactReportWriteResult {
+  return {
+    path: pathValue,
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    issues,
+    warnings
+  };
+}
+
+function reportModelWriteIssues(reportName: string): string[] {
+  const contractId = resolveReportContractId(reportName);
+
+  if (!contractId) {
+    return [
+      `Report structured model writes require reportName to resolve to a known report contract; "${reportName}" is not contract-backed. Supply canonical Markdown content instead.`
+    ];
+  }
+
+  const contract = readArtifactContract(contractId);
+
+  if (!contract.modelContract) {
+    return [
+      `Report structured model writes are not supported for ${contractId} because it does not expose a modelContract. Supply canonical Markdown content instead.`
+    ];
+  }
+
+  return [
+    `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
+  ];
+}
+
 export async function blueprintArtifactReportWrite(
   args: ArtifactReportWriteArgs
 ): Promise<ArtifactReportWriteResult> {
@@ -7512,27 +7551,13 @@ export async function blueprintArtifactReportWrite(
   const hasModel = args.model !== undefined;
 
   if (hasContent === hasModel) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: ["Artifact report writes must supply exactly one of content or model."]
-    };
+    return artifactReportWriteInvalidResult(pathValue, [
+      "Artifact report writes must supply exactly one of content or model."
+    ]);
   }
 
   if (hasModel) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: [
-        `Artifact report structured model writes are not yet supported for "${args.reportName}". Supply canonical Markdown content instead.`
-      ]
-    };
+    return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
   }
 
   const content = args.content ?? "";
@@ -7542,25 +7567,11 @@ export async function blueprintArtifactReportWrite(
   const validation = validateReportArtifactContent(normalizedContent, args.reportName);
 
   if (normalizedContent.trim().length === 0) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: ["Report content must not be empty."]
-    };
+    return artifactReportWriteInvalidResult(pathValue, ["Report content must not be empty."]);
   }
 
   if (!validation.valid) {
-    return {
-      path: pathValue,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      warnings: [...validation.issues]
-    };
+    return artifactReportWriteInvalidResult(pathValue, validation.issues, validation.warnings);
   }
 
   if (exists) {
@@ -7575,6 +7586,7 @@ export async function blueprintArtifactReportWrite(
         created: false,
         overwritten: false,
         status: "reused",
+        issues: validation.issues,
         warnings
       };
     }
@@ -7596,7 +7608,6 @@ export async function blueprintArtifactReportWrite(
     warnings.push(`Replaced existing report: ${pathValue}`);
   }
 
-  warnings.push(...validation.issues);
   warnings.push(...validation.warnings);
   return {
     path: pathValue,
@@ -7604,6 +7615,7 @@ export async function blueprintArtifactReportWrite(
     created: !exists,
     overwritten: exists,
     status: exists ? "updated" : "created",
+    issues: validation.issues,
     warnings
   };
 }
