@@ -5,8 +5,8 @@ description: >
   UI-spec revision loops. Use this agent when a draft plan or phase UI spec
   needs a goal-backward check against requirements, locked decisions, the live
   contract, and discovery artifacts before it is accepted. Example scenarios:
-  reviewing new structured `phase.plan` models or rendered `XX-YY-PLAN.md`
-  previews, checking `XX-UI-SPEC.md` before save,
+  reviewing new `XX-YY-PLAN.md` drafts from structured `phase.plan` models or
+  rendered previews, checking `XX-UI-SPEC.md` before save,
   identifying blocker gaps before `/blu-plan-phase` finalization, and
   proposing targeted revisions instead of a full replan or respec.
 kind: local

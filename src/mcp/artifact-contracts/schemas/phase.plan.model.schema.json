@@ -162,13 +162,15 @@
   "$defs": {
     "nonEmptyString": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$",
+      "description": "Non-empty single-line string. CR/LF is rejected because model strings are rendered into YAML frontmatter, Markdown lists, or Markdown tables."
     },
     "repoRelativePath": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?!/)(?!~)(?![A-Za-z]:[\\\\/])(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[*?\\[\\]{}]).+$",
-      "description": "Concrete repo-relative path. No absolute paths, home-relative paths, traversal, backslashes, or glob metacharacters."
+      "pattern": "^(?!.*[\\r\\n])(?!/)(?!~)(?![A-Za-z]:[\\\\/])(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[*?\\[\\]{}]).+$",
+      "description": "Concrete single-line repo-relative path. No CR/LF, absolute paths, home-relative paths, traversal, backslashes, or glob metacharacters."
     },
     "taskId": {
       "type": "string",
