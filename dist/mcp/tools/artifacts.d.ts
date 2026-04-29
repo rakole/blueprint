@@ -221,6 +221,7 @@ type ArtifactReportWriteResult = {
     created: boolean;
     overwritten: boolean;
     status: "created" | "updated" | "reused" | "invalid";
+    issues: string[];
     warnings: string[];
 };
 type ArtifactCodebaseWriteArgs = {
