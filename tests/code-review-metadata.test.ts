@@ -33,6 +33,8 @@ test("code-review manifest references the review tools, canonical contract, and 
   assert.match(commandFile, /XX-REVIEW\.md/);
   assert.match(commandFile, /confirmationRecommended/);
   assert.match(commandFile, /scopeFiles/);
+  assert.match(commandFile, /scopeSource/);
+  assert.match(commandFile, /reviewMode\.source/);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-secure-phase/);
   assert.match(commandFile, /\/blu-code-review-fix/);
@@ -68,6 +70,7 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /retry once\s+through MCP/i);
   assert.match(skillFile, /XX-REVIEW\.md/);
   assert.match(skillFile, /scopeFiles/);
+  assert.match(skillFile, /scopeSource/);
   assert.match(skillFile, /\/blu-secure-phase <phase>/);
   assert.match(skillFile, /\/blu-code-review-fix <phase>/);
   assert.match(skillFile, /\/blu-progress/);
@@ -114,6 +117,8 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(runtimeContract, /## Retry And Repair/);
   assert.match(runtimeContract, /retry validation once before persistence/i);
   assert.match(runtimeContract, /confirmationRecommended/);
+  assert.match(runtimeContract, /scopeSource/);
+  assert.match(runtimeContract, /reviewMode\.source/);
   assert.match(runtimeContract, /scoped file:line or\s+line-range location, evidence, impact, and recommendation/i);
 
   assert.match(reviewerAgent, /## Depth-Aware Review Expectations/);

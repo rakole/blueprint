@@ -6,6 +6,8 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { Ajv2020 } from "ajv/dist/2020.js";
+
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -1095,7 +1097,8 @@ test("blueprint_review_record persists structured code-review models as canonica
     phase: "5",
     artifact: "code-review",
     model,
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(created.status, "created");
@@ -1131,6 +1134,38 @@ test("blueprint_review_record persists structured code-review models as canonica
     low: 0,
     unknown: 0
   });
+});
+
+test("blueprint_review_record preserves implicit phase-evidence scope source when replaying validated files", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    summaryChangedFiles: ["src/feature.ts", "tests/feature.test.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const model = createStructuredCodeReviewModel();
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model
+  });
+
+  assert.equal(validation.status, "valid");
+  assert.equal(validation.reviewMode.source, "phase-evidence");
+
+  const created = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model,
+    scopeFiles: validation.files
+  });
+
+  assert.equal(created.status, "created");
+  const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
+  assert.match(saved, /- Scope source: phase-evidence/);
+  assert.doesNotMatch(saved, /- Scope source: explicit-files/);
 });
 
 test("blueprint_review_record accepts structured code-review findings for root-level files", async (t) => {
@@ -1172,6 +1207,54 @@ test("blueprint_review_record accepts structured code-review findings for root-l
   const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
   assert.match(saved, /- package\.json/);
   assert.match(saved, /`package\.json:1`/);
+});
+
+test("blueprint_review_scope task schema accepts scoped root extensionless file citations", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    planFilesModified: ["Dockerfile"],
+    summaryChangedFiles: ["Dockerfile"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5",
+    includeAuthoringContext: true
+  });
+  assert.equal(scoped.status, "ready");
+  assert.deepEqual(scoped.files, ["Dockerfile"]);
+  assert.ok(scoped.authoringContext);
+
+  const validate = new Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  }).compile(scoped.authoringContext.taskSchema);
+  const valid = validate(
+    createStructuredCodeReviewModel({
+      reviewSummary: [
+        "Phase 5 standard review covered one root-level Dockerfile with one high follow-up."
+      ],
+      positiveSignals: [
+        "Saved phase evidence narrowed the review to the root-level Dockerfile."
+      ],
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "Dockerfile:1",
+          evidence: "The Dockerfile fixture records a reviewable root-level extensionless change.",
+          impact: "Review evidence for extensionless root files must remain valid.",
+          recommendation: "Keep root-level extensionless file:line citations valid in structured reviews."
+        }
+      ],
+      followUps: ["Keep extensionless root file citations covered by code-review regression tests."]
+    })
+  );
+
+  assert.equal(valid, true, JSON.stringify(validate.errors, null, 2));
 });
 
 test("blueprint_review_record rejects invalid structured code-review models before persistence", async (t) => {
@@ -1267,33 +1350,49 @@ test("blueprint_review_validate_model aggregates schema and residual diagnostics
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  const model = createStructuredCodeReviewModel({
+    unsupportedField: "must be rejected",
+    positiveSignals: ["todo"],
+    findings: [
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "src/feature.ts:3-2",
+        evidence: "n/a",
+        impact: "none",
+        recommendation: "not applicable"
+      }
+    ]
+  });
+  delete model.evidenceCoverage;
+
   const invalid = await blueprintReviewValidateModel({
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
-    model: createStructuredCodeReviewModel({
-      unsupportedField: "must be rejected",
-      positiveSignals: ["todo"],
-      findings: [
-        {
-          severity: "high",
-          disposition: "follow-up",
-          location: "src/feature.ts",
-          evidence: "n/a",
-          impact: "none",
-          recommendation: "not applicable"
-        }
-      ]
-    })
+    model
   });
 
   assert.equal(invalid.status, "invalid");
   assert.equal(invalid.valid, false);
   assert.ok(invalid.diagnosticCounts.bySource.schema > 0);
   assert.ok(invalid.diagnosticCounts.bySource.residual > 0);
+  assert.ok(
+    invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.additionalProperties")
+  );
+  assert.ok(
+    invalid.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "schema.required" &&
+        diagnostic.path === "model.evidenceCoverage"
+    )
+  );
+  assert.ok(
+    invalid.diagnostics.some((diagnostic) => diagnostic.code === "residual.invalid_line_range")
+  );
   assert.match(
     invalid.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have additional properties|must match pattern|placeholder language|must be concrete/i
+    /must NOT have additional properties|invalid line range|placeholder language|must be concrete/i
   );
   assert.ok(
     invalid.diagnostics.every(
@@ -1337,6 +1436,71 @@ test("blueprint_review_record rejects code-review models with out-of-scope findi
   assert.match(
     invalid.warnings.join("\n"),
     /must match pattern|outside the resolved review scope/i
+  );
+});
+
+test("blueprint_review_validate_model rejects one-past-EOF citations on trailing-newline files", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts:4",
+          evidence: "The feature fixture has three real lines and a terminal newline.",
+          impact: "A phantom fourth line would allow citations that do not exist.",
+          recommendation: "Reject one-past-EOF locations when the file only ends with a normal trailing newline."
+        }
+      ]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(
+    invalid.diagnostics.some((diagnostic) => diagnostic.code === "residual.line_range_missing")
+  );
+});
+
+test("blueprint_review_validate_model rejects blocked reviews that route to progress", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      verdict: "BLOCKED",
+      findings: [
+        {
+          severity: "high",
+          disposition: "blocked",
+          location: "src/feature.ts:1",
+          evidence: "The review cannot verify the changed behavior from the available scope.",
+          impact: "Shipping would rely on unverified behavior.",
+          recommendation: "Repair or validate the blocked review evidence before proceeding."
+        }
+      ],
+      followUps: ["Repair the blocked review evidence before proceeding."],
+      nextSafeAction: "/blu-progress"
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(
+    invalid.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "residual.next_action_contradiction" &&
+        /blocked findings or a BLOCKED verdict/i.test(diagnostic.message)
+    )
   );
 });
 

@@ -102,7 +102,7 @@ non-routable until their extra MCP substrate lands.
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, treat returned `files` as authoritative, use `confirmationRecommended` instead of prompt-only heuristics for scope-confirmation gates, and request `includeAuthoringContext` for code-review model authoring.
 - `blueprint_review_validate_model`: validate `review.code-review` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid.
-- `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content for non-code-review artifacts. For `code-review`, pass only the validated structured `model` plus resolved `scopeFiles`; Markdown `content` is invalid. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content for non-code-review artifacts. For `code-review`, pass only the validated structured `model` plus resolved `scopeFiles` and the resolved `scopeSource`; Markdown `content` is invalid. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
@@ -152,7 +152,9 @@ non-routable until their extra MCP substrate lands.
 14. Validate through `blueprint_review_validate_model`; repair every returned
    diagnostic against `authoringContext.taskSchema`, then retry validation once.
 15. Persist the validated model through `blueprint_review_record` with the
-   `code-review` artifact and resolved `scopeFiles`. Do not pass Markdown
+   `code-review` artifact, resolved `scopeFiles`, and the returned
+   `reviewMode.source` as `scopeSource`. Use `scopeSource: "explicit-files"`
+   only when the user supplied explicit file arguments. Do not pass Markdown
    `content` for code-review, and do not hand-edit `.blueprint/`.
 16. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-secure-phase <phase>` when the phase still lacks a security artifact,

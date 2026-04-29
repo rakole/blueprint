@@ -29,7 +29,7 @@ Follow this flow exactly:
 11. Use the `blueprint-reviewer` subagent for bounded analysis when the scope covers multiple plans, more than a few files, or the requested depth is `deep`. If that subagent is unavailable or unnecessary, use the local runtime contract's no-subagent fallback: read saved evidence first, review one file group at a time, compress carry-forward context after each group, and run a final severity-count consistency pass.
 12. Author only the JSON model shape accepted by `review.code-review`: `verdict`, `reviewSummary`, `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and `nextSafeAction`. Do not author runtime-owned fields such as `depth`, `scopeSource`, `scopeReviewed`, `evidenceReviewed`, `severityCounts`, paths, or Markdown.
 13. Validate the authored JSON through `mcp_blueprint_blueprint_review_validate_model` with the resolved numeric `phase`, optional explicit `files`, optional `depth`, and `model`. If diagnostics are returned, repair all schema and residual issues together against `authoringContext.taskSchema`, then retry validation once before stopping with the diagnostics.
-14. Persist the finished review through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, the resolved `files` list as `scopeFiles`, optional `depth`, and the validated structured `model`. Markdown `content` is invalid for `code-review`; MCP renders and validates canonical Markdown before writing. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
+14. Persist the finished review through `mcp_blueprint_blueprint_review_record` with the resolved numeric `phase`, `artifact: "code-review"`, the resolved `files` list as `scopeFiles`, the returned `reviewMode.source` as `scopeSource`, optional `depth`, and the validated structured `model`. Pass `scopeSource: "explicit-files"` only when the user supplied explicit `--files`; otherwise preserve the implicit source returned by the review-scope result. Markdown `content` is invalid for `code-review`; MCP renders and validates canonical Markdown before writing. Treat the returned `reportPath` as authoritative. Do not write `XX-REVIEW.md` directly.
 15. End with a concise summary covering the resolved phase, scope source, depth, whether the artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:
@@ -39,7 +39,7 @@ Next-action rules:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_review_scope`, `mcp_blueprint_blueprint_review_load_findings`, `mcp_blueprint_blueprint_review_validate_model`, and `mcp_blueprint_blueprint_review_record` for persistent Blueprint state work.
-- When using structured persistence, do not include MCP-owned identity keys in the model; `phase`, `artifact`, `scopeFiles`, path, and filename come from the tool call.
+- When using structured persistence, do not include MCP-owned identity keys in the model; `phase`, `artifact`, `scopeFiles`, `scopeSource`, path, and filename come from the tool call.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Keep the review grounded in saved artifacts and the concrete repo files returned by the review-scope tool.

@@ -18,6 +18,7 @@ type ReviewRecordArgs = {
     model?: unknown;
     overwrite?: boolean;
     scopeFiles?: string[];
+    scopeSource?: ReviewModeSource;
     depth?: ReviewDepth;
 };
 type ReviewRecordResult = {
@@ -245,6 +246,12 @@ export declare const reviewToolDefinitions: ({
         model: z.ZodOptional<z.ZodUnknown>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         scopeFiles: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        scopeSource: z.ZodOptional<z.ZodEnum<{
+            "explicit-files": "explicit-files";
+            "phase-plans": "phase-plans";
+            "phase-summaries": "phase-summaries";
+            "phase-evidence": "phase-evidence";
+        }>>;
         depth: z.ZodOptional<z.ZodEnum<{
             standard: "standard";
             quick: "quick";
