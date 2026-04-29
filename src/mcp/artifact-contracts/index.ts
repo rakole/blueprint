@@ -859,6 +859,302 @@ Replace with a concrete, execution-ready goal.
 - Replace with the goal-backward must-haves this plan cannot drop.`;
 }
 
+const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.phase.plan.model",
+  schemaVersion: "1.0.0",
+  jsonSchema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "title",
+      "wave",
+      "status",
+      "objective",
+      "dependsOn",
+      "requirements",
+      "filesModified",
+      "readFirst",
+      "autonomous",
+      "goal",
+      "scope",
+      "tasks",
+      "verification",
+      "mustHaves",
+      "requirementCoverage",
+      "evidenceCoverage",
+      "fileSurfaceCoverage",
+      "unknownsAndDeferrals"
+    ],
+    properties: {
+      title: { type: "string", minLength: 1 },
+      wave: { type: "integer", minimum: 1 },
+      status: { type: "string", enum: ["planned"] },
+      objective: { type: "string", minLength: 1 },
+      gapClosure: { type: "boolean" },
+      dependsOn: {
+        type: "array",
+        items: { type: "string", pattern: "^[0-9]+$" }
+      },
+      requirements: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      filesModified: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      readFirst: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      autonomous: { type: "boolean" },
+      goal: { type: "string", minLength: 1 },
+      scope: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      tasks: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "id",
+            "title",
+            "readFirst",
+            "action",
+            "acceptanceCriteria",
+            "requirements",
+            "filesModified"
+          ],
+          properties: {
+            id: { type: "string", minLength: 1, pattern: "^[A-Za-z0-9._-]+$" },
+            title: { type: "string", minLength: 1 },
+            readFirst: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 }
+            },
+            action: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 }
+            },
+            acceptanceCriteria: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 }
+            },
+            requirements: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 }
+            },
+            filesModified: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 }
+            }
+          }
+        }
+      },
+      verification: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["item", "method", "evidence"],
+          properties: {
+            item: { type: "string", minLength: 1 },
+            method: {
+              type: "string",
+              enum: ["test", "grep", "command", "file-read", "artifact-validation"]
+            },
+            evidence: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      mustHaves: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      requirementCoverage: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["requirement", "status", "coveredByTasks", "evidence", "rationale"],
+          properties: {
+            requirement: { type: "string", minLength: 1 },
+            status: { type: "string", enum: ["covered", "deferred", "irrelevant"] },
+            coveredByTasks: {
+              type: "array",
+              items: { type: "string", minLength: 1 }
+            },
+            evidence: { type: "string", minLength: 1 },
+            rationale: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      evidenceCoverage: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["artifact", "status", "rationale"],
+          properties: {
+            artifact: { type: "string", minLength: 1 },
+            status: { type: "string", enum: ["used", "deferred", "irrelevant", "unavailable"] },
+            rationale: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      fileSurfaceCoverage: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["surface", "coveredByTasks", "verification", "rationale"],
+          properties: {
+            surface: { type: "string", minLength: 1 },
+            coveredByTasks: {
+              type: "array",
+              minItems: 1,
+              items: { type: "string", minLength: 1 }
+            },
+            verification: { type: "string", minLength: 1 },
+            rationale: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      unknownsAndDeferrals: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["item", "disposition", "rationale", "followUp"],
+          properties: {
+            item: { type: "string", minLength: 1 },
+            disposition: { type: "string", enum: ["unknown", "deferred", "blocked", "none"] },
+            rationale: { type: "string", minLength: 1 },
+            followUp: { type: "string", minLength: 1 }
+          }
+        }
+      }
+    }
+  },
+  qualityRules: [
+    "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, planId, artifact, path, or content; the write tool owns identity and path derivation.",
+    "Every known in-scope requirement must appear exactly once in requirementCoverage as covered, deferred, or irrelevant with a concrete rationale.",
+    "Every known context, research, UI, review, or prior evidence artifact used for planning must appear in evidenceCoverage, or be explicitly deferred or marked irrelevant with rationale.",
+    "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
+    "Acceptance criteria and verification entries must be grep, test, command, file-read, or artifact-validation verifiable; do not use vague manual-only acceptance.",
+    "Do not copy minimal example wording, placeholder prose, static-for-now language, or generic none rows where real unknowns or deferrals exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_plan_write arguments.",
+    "planId is supplied by blueprint_phase_plan_write or auto-assigned by the existing phase plan writer; the model must not derive paths or filenames.",
+    "known requirements come from the selected roadmap phase and any resolved phase context or research artifacts.",
+    "known evidence artifacts come from saved phase context, research, UI spec, review, existing plan index, summaries, and validation artifacts when present.",
+    "dependency options and used plan ids come from blueprint_phase_plan_index; dependsOn must reference existing plan ids or remain empty for the first plan."
+  ],
+  renderedHeadings: [
+    "Goal",
+    "Scope",
+    "Tasks",
+    "Verification",
+    "Must Haves",
+    "Requirement Coverage",
+    "Evidence Coverage",
+    "File / Surface Coverage",
+    "Unknowns And Deferrals"
+  ],
+  minimalValidExample: {
+    title: "Add structured model contract metadata",
+    wave: 1,
+    status: "planned",
+    objective: "Expose structured artifact model metadata through the contract registry.",
+    dependsOn: [],
+    requirements: ["PLAN-01"],
+    filesModified: ["src/mcp/artifact-contracts/index.ts"],
+    readFirst: ["docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md"],
+    autonomous: true,
+    goal: "Add a registry-owned model contract without changing write-tool behavior.",
+    scope: ["Define metadata for structured phase plan authoring."],
+    tasks: [
+      {
+        id: "task-1",
+        title: "Add contract metadata",
+        readFirst: ["src/mcp/artifact-contracts/index.ts"],
+        action: ["Attach a structured model contract to the phase plan artifact entry."],
+        acceptanceCriteria: [
+          "tests/artifact-contracts.test.ts proves phase.plan exposes modelContract."
+        ],
+        requirements: ["PLAN-01"],
+        filesModified: ["src/mcp/artifact-contracts/index.ts"]
+      }
+    ],
+    verification: [
+      {
+        item: "Run focused contract tests",
+        method: "test",
+        evidence: "npm test -- tests/artifact-contracts.test.ts"
+      }
+    ],
+    mustHaves: ["The contract read path returns schema metadata for phase.plan."],
+    requirementCoverage: [
+      {
+        requirement: "PLAN-01",
+        status: "covered",
+        coveredByTasks: ["task-1"],
+        evidence: "src/mcp/artifact-contracts/index.ts",
+        rationale: "The registry entry exposes the structured model metadata."
+      }
+    ],
+    evidenceCoverage: [
+      {
+        artifact: "docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md",
+        status: "used",
+        rationale: "The plan document defines the required model contract fields."
+      }
+    ],
+    fileSurfaceCoverage: [
+      {
+        surface: "src/mcp/artifact-contracts/index.ts",
+        coveredByTasks: ["task-1"],
+        verification: "npm test -- tests/artifact-contracts.test.ts",
+        rationale: "The focused test reads the contract registry payload."
+      }
+    ],
+    unknownsAndDeferrals: [
+      {
+        item: "none",
+        disposition: "none",
+        rationale: "No known unknowns remain for metadata-only contract exposure.",
+        followUp: "none"
+      }
+    ]
+  },
+  exampleLeakageSignals: [
+    "Add structured model contract metadata",
+    "Expose structured artifact model metadata through the contract registry.",
+    "Add a registry-owned model contract without changing write-tool behavior.",
+    "The contract read path returns schema metadata for phase.plan."
+  ]
+};
+
 function renderSummaryTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Summary ${planId(context)}
 
@@ -1604,6 +1900,138 @@ function renderQuickRunTemplate(): string {
 
 - /blu-progress`;
 }
+
+const QUICK_RUN_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.report.quick-run.model",
+  schemaVersion: "1.0.0",
+  jsonSchema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "taskSummary",
+      "changedSurfaces",
+      "evidenceUsed",
+      "changesMade",
+      "verification",
+      "followUps",
+      "nextSafeAction"
+    ],
+    properties: {
+      taskSummary: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      changedSurfaces: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["surface", "change", "rationale"],
+          properties: {
+            surface: { type: "string", minLength: 1 },
+            change: { type: "string", minLength: 1 },
+            rationale: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      evidenceUsed: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["source", "summary"],
+          properties: {
+            source: { type: "string", minLength: 1 },
+            summary: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      changesMade: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      verification: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["check", "result", "evidence"],
+          properties: {
+            check: { type: "string", minLength: 1 },
+            result: { type: "string", enum: ["pass", "partial", "blocked", "not-run"] },
+            evidence: { type: "string", minLength: 1 }
+          }
+        }
+      },
+      followUps: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", minLength: 1 }
+      },
+      nextSafeAction: { type: "string", minLength: 1 }
+    }
+  },
+  qualityRules: [
+    "Do not include MCP-owned identity keys such as cwd, reportName, reportPath, artifact, path, or content; the report write tool owns identity and path derivation.",
+    "Keep the task bounded enough for a quick run and do not impersonate saved phase plans or execution summaries.",
+    "Every changed repo, config, or Blueprint surface must be visible in changedSurfaces with a concrete change and rationale.",
+    "Every claim in taskSummary, changesMade, and verification should be grounded in evidenceUsed or a concrete verification entry.",
+    "Use only implemented Blueprint commands in nextSafeAction, and do not copy minimal example wording or placeholder report prose."
+  ],
+  contextBindings: [
+    "reportName, canonical filename, and output path come from blueprint_artifact_report_write arguments.",
+    "Project readiness and existing report content come from the report write tool before overwrite or reuse decisions.",
+    "Changed surfaces are supplied by the user request, the actual diff, or command-local evidence gathered during the quick run.",
+    "Allowed next-safe actions come from the implemented command catalog exposed by the Blueprint runtime."
+  ],
+  renderedHeadings: [
+    "Task Summary",
+    "Changed Surfaces",
+    "Evidence Used",
+    "Changes Made",
+    "Verification",
+    "Follow-Ups",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    taskSummary: ["Updated one documentation sentence as a bounded quick run."],
+    changedSurfaces: [
+      {
+        surface: "README.md",
+        change: "Clarified the install wording.",
+        rationale: "The user requested a documentation-only quick fix."
+      }
+    ],
+    evidenceUsed: [
+      {
+        source: "README.md",
+        summary: "Reviewed the existing install section before editing."
+      }
+    ],
+    changesMade: ["Clarified the install sentence in README.md."],
+    verification: [
+      {
+        check: "Read README.md",
+        result: "pass",
+        evidence: "Confirmed the updated sentence is present."
+      }
+    ],
+    followUps: ["none"],
+    nextSafeAction: "/blu-progress"
+  },
+  exampleLeakageSignals: [
+    "Updated one documentation sentence as a bounded quick run.",
+    "Clarified the install wording.",
+    "The user requested a documentation-only quick fix.",
+    "Confirmed the updated sentence is present."
+  ]
+};
 
 function renderDocsUpdateTemplate(): string {
   return `# Docs Update Report
@@ -2802,6 +3230,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Use concrete repo-relative paths in `files_modified`, `read_first`, and task `Read First`; keep endpoint routes, command globs, and code snippets in `Action` or `Acceptance Criteria` rather than path-list positions.",
       "Do not silently reduce locked context decisions with `v1`, placeholder, static-for-now, future-wiring, or stub language; split or block when full fidelity does not fit."
     ],
+    modelContract: PHASE_PLAN_MODEL_CONTRACT,
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderPlanTemplate(context)),
     renderAuthoringTemplate: renderPlanTemplate
   },
@@ -3254,6 +3683,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     lockedMarkers: [],
     placeholderSignals: [],
     notes: ["Quick reports capture bounded execution without impersonating saved plans."],
+    modelContract: QUICK_RUN_MODEL_CONTRACT,
     renderScaffoldTemplate: renderQuickRunTemplate,
     renderAuthoringTemplate: renderQuickRunTemplate
   },
