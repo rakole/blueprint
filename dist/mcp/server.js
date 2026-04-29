@@ -23814,7 +23814,32 @@ async function blueprintArtifactReportWrite(args) {
   }
   const pathValue = buildBlueprintReportPath(args.reportName);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
-  const normalizedContent = args.content.endsWith("\n") ? args.content : `${args.content}
+  const hasContent = args.content !== void 0;
+  const hasModel = args.model !== void 0;
+  if (hasContent === hasModel) {
+    return {
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      warnings: ["Artifact report writes must supply exactly one of content or model."]
+    };
+  }
+  if (hasModel) {
+    return {
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      warnings: [
+        `Artifact report structured model writes are not yet supported for "${args.reportName}". Supply canonical Markdown content instead.`
+      ]
+    };
+  }
+  const content = args.content ?? "";
+  const normalizedContent = content.endsWith("\n") ? content : `${content}
 `;
   const warnings = [];
   const exists = await pathExists(absolutePath);
@@ -24247,7 +24272,8 @@ var init_artifacts = __esm({
     artifactReportWriteInputSchema = {
       cwd: string2().optional(),
       reportName: string2(),
-      content: string2(),
+      content: string2().optional(),
+      model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional()
     };
     artifactCodebaseWriteInputSchema = {
@@ -30094,7 +30120,8 @@ async function blueprintPhasePlanValidate(args = {}) {
 }
 async function blueprintPhasePlanWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const normalizedContent = normalizeTextContent2(args.content);
+  const hasContent = args.content !== void 0;
+  const hasModel = args.model !== void 0;
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
     const existingIndex = await blueprintPhasePlanIndex({
@@ -30107,6 +30134,49 @@ async function blueprintPhasePlanWrite(args) {
     const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
     const pathValue = planPathFor(resolved, planId2);
     const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+    if (hasContent === hasModel) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: ["Phase plan writes must supply exactly one of content or model."],
+          warnings: []
+        },
+        warnings: []
+      };
+    }
+    if (hasModel) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: [
+            "Phase plan structured model writes are not yet supported. Supply canonical Markdown content instead."
+          ],
+          warnings: []
+        },
+        warnings: []
+      };
+    }
+    const normalizedContent = normalizeTextContent2(args.content ?? "");
     const contentForValidation = args.planId === void 0 ? reconcileAutoAssignedPlanContent(normalizedContent, planId2) : normalizedContent;
     const preparedContent = prepareTextForPersistence(contentForValidation, {
       label: pathValue
@@ -31380,7 +31450,8 @@ var init_phase = __esm({
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
       planId: numericBlueprintInputSchema.optional(),
-      content: string2(),
+      content: string2().optional(),
+      model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
       validationMode: _enum(["strict", "warn"]).optional()
     };

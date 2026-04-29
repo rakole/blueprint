@@ -284,7 +284,8 @@ type ArtifactContractReadArgs = {
 type ArtifactReportWriteArgs = {
   cwd?: string;
   reportName: string;
-  content: string;
+  content?: string;
+  model?: Record<string, unknown>;
   overwrite?: boolean;
 };
 
@@ -1714,7 +1715,8 @@ const artifactContractReadInputSchema = {
 const artifactReportWriteInputSchema = {
   cwd: z.string().optional(),
   reportName: z.string(),
-  content: z.string(),
+  content: z.string().optional(),
+  model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional()
 };
 const artifactCodebaseWriteInputSchema = {
@@ -7506,7 +7508,35 @@ export async function blueprintArtifactReportWrite(
 
   const pathValue = buildBlueprintReportPath(args.reportName);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
-  const normalizedContent = args.content.endsWith("\n") ? args.content : `${args.content}\n`;
+  const hasContent = args.content !== undefined;
+  const hasModel = args.model !== undefined;
+
+  if (hasContent === hasModel) {
+    return {
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      warnings: ["Artifact report writes must supply exactly one of content or model."]
+    };
+  }
+
+  if (hasModel) {
+    return {
+      path: pathValue,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      warnings: [
+        `Artifact report structured model writes are not yet supported for "${args.reportName}". Supply canonical Markdown content instead.`
+      ]
+    };
+  }
+
+  const content = args.content ?? "";
+  const normalizedContent = content.endsWith("\n") ? content : `${content}\n`;
   const warnings: string[] = [];
   const exists = await pathExists(absolutePath);
   const validation = validateReportArtifactContent(normalizedContent, args.reportName);

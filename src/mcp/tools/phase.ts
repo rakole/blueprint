@@ -377,7 +377,8 @@ type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
 
 type PhasePlanWriteArgs = PhaseLookupArgs & {
   planId?: NumericInput;
-  content: string;
+  content?: string;
+  model?: Record<string, unknown>;
   overwrite?: boolean;
   validationMode?: "strict" | "warn";
 };
@@ -1343,7 +1344,8 @@ const phasePlanWriteInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   planId: numericBlueprintInputSchema.optional(),
-  content: z.string(),
+  content: z.string().optional(),
+  model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
 };
@@ -7059,7 +7061,8 @@ export async function blueprintPhasePlanWrite(
   args: PhasePlanWriteArgs
 ): Promise<PhasePlanWriteResult> {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const normalizedContent = normalizeTextContent(args.content);
+  const hasContent = args.content !== undefined;
+  const hasModel = args.model !== undefined;
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
     const existingIndex = await blueprintPhasePlanIndex({
@@ -7077,6 +7080,52 @@ export async function blueprintPhasePlanWrite(
       : normalizePlanId(String(nextPlanNumber));
     const pathValue = planPathFor(resolved, planId);
     const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
+
+    if (hasContent === hasModel) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: ["Phase plan writes must supply exactly one of content or model."],
+          warnings: []
+        },
+        warnings: []
+      };
+    }
+
+    if (hasModel) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: [
+            "Phase plan structured model writes are not yet supported. Supply canonical Markdown content instead."
+          ],
+          warnings: []
+        },
+        warnings: []
+      };
+    }
+
+    const normalizedContent = normalizeTextContent(args.content ?? "");
     const contentForValidation =
       args.planId === undefined
         ? reconcileAutoAssignedPlanContent(normalizedContent, planId)
