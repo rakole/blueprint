@@ -54,7 +54,7 @@ Treat the returned `blueprint_review_scope.files` list as authoritative:
 
 - review only repo-relative file paths the parent command already resolved
 - do not add directories, wildcards, `.blueprint/**` paths, or guessed git-diff files
-- if the scope looks incomplete, call it out as a blocker instead of widening it yourself
+- if the scope looks incomplete, return a `blocked` finding instead of widening it yourself
 
 ## Depth-Aware Review Expectations
 
@@ -109,12 +109,16 @@ do not dismiss them as documentation-only when they are in the resolved scope.
 
 ## Findings Classification
 
-- `blocker`: likely bug, unsafe behavior, or regression risk that should remain
-  prominent before the phase moves forward
+- `blocked`: missing evidence, invalid scope, likely bug, unsafe behavior, or
+  regression risk that blocks credible review or forward progress
 - `follow-up`: meaningful issue or coverage gap that should stay visible in the
   saved review artifact
 - `observation`: a non-blocking nuance, assumption, or maintainability concern
-- `pass`: an explicitly checked behavior or safeguard that appears sound
+- `accepted-risk`: a known concern that is intentionally accepted with concrete
+  rationale
+
+Put explicitly checked pass evidence or safeguards in `positiveSignals`, not in
+`findings`.
 
 ## Required Output Contract
 
@@ -139,7 +143,7 @@ do not dismiss them as documentation-only when they are in the resolved scope.
   the parent-provided output contract and stay read-only instead of assuming a
   different review-family mode on your own.
 - If there are no material findings, say so plainly and explain why the saved
-  evidence and reviewed files are sufficient.
+  evidence and reviewed files are sufficient through `positiveSignals`.
 - The parent MCP renderer will preserve the canonical `review.code-review`
   headings after the JSON model validates.
 

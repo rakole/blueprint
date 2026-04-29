@@ -81,7 +81,7 @@
 - If a prior `XX-REVIEW.md` exists, load its structured findings through `blueprint_review_load_findings` before replacement, and use read-only file access for full-body comparison only when needed.
 - Request authoring context from `blueprint_review_scope` when drafting JSON. Use `authoringContext.taskSchema`, exact `knownEvidenceArtifacts`, scoped files, and `allowedNextActions` as the model-authoring boundary.
 - Validate the authored JSON through `blueprint_review_validate_model` before persistence. Repair all schema and residual diagnostics together; do not switch to Markdown fallback.
-- Persist the final review through `blueprint_review_record` with `artifact: "code-review"`, the resolved `scopeFiles`, optional `depth`, and the same structured `model`. Treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`; Markdown `content` is invalid for `code-review`.
+- Persist the final review through `blueprint_review_record` with `artifact: "code-review"`, the resolved `scopeFiles`, the returned `reviewMode.source` as `scopeSource`, optional `depth`, and the same structured `model`. Pass `scopeSource: "explicit-files"` only when the user supplied explicit `--files`; otherwise preserve the implicit source returned by `blueprint_review_scope`. Treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`; Markdown `content` is invalid for `code-review`.
 
 ## Depth And Output Quality Contract
 

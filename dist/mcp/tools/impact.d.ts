@@ -493,9 +493,9 @@ export declare const impactToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         mode: z.ZodOptional<z.ZodEnum<{
             summary: "summary";
+            markdown: "markdown";
             human: "human";
             json: "json";
-            markdown: "markdown";
             "pr-comment": "pr-comment";
         }>>;
         impactId: z.ZodOptional<z.ZodString>;

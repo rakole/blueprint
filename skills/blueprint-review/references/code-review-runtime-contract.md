@@ -49,8 +49,8 @@ Map `/blu-code-review` to those stages:
    authored JSON model and repair all returned diagnostics together.
 6. `Persist`: call `mcp_blueprint_blueprint_review_record` with the validated
    model and `artifact: "code-review"`. MCP renders canonical Markdown.
-7. `Route`: summarize findings or pass evidence and end with the next safe
-   implemented command.
+7. `Route`: summarize findings or `positiveSignals` pass evidence and end with
+   the next safe implemented command.
 
 ## Required MCP Calls
 
@@ -87,6 +87,10 @@ Call these tools in this order unless the command must stop early:
      follow-ups, warnings, and validation failures.
    - For `review.code-review`, accepts a structured `model` only. Markdown
      `content` is invalid for this artifact.
+   - Pass the resolved `scopeFiles` and the returned `reviewMode.source` as
+     `scopeSource` so MCP preserves validated scope provenance. Use
+     `scopeSource: "explicit-files"` only when the user supplied an explicit
+     `--files` scope.
    - Never write `XX-REVIEW.md` directly.
 
 ## Artifact Authoring Rules
@@ -148,8 +152,10 @@ Pass the subagent only:
 - the effective depth
 - the canonical authoring requirements from this contract
 
-The subagent returns findings and an artifact draft. The parent command owns all
-confirmation, user-facing progress, MCP writes, validation, and routing.
+The subagent returns JSON model fields, including findings and
+`positiveSignals`; it does not return a Markdown artifact draft. The parent
+command owns all confirmation, user-facing progress, MCP writes, validation, and
+routing.
 
 Browser, web-search-only, shell-only, or generic page-inspection helpers are not
 acceptable substitutes for `blueprint-reviewer`.
@@ -165,7 +171,8 @@ the parent session.
 3. Review one file group at a time at the selected depth.
 4. After each group, compress carry-forward context to a short note with:
    checked files, confirmed findings, open uncertainties, and remaining risk.
-5. Build the final artifact from the accumulated findings and pass evidence.
+5. Build the final JSON model from the accumulated findings and
+   `positiveSignals` pass evidence.
 6. Run one final consistency pass: every finding has file evidence and every
    severity count matches the `Findings` section.
 

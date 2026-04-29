@@ -32644,6 +32644,14 @@ function buildScopedLocationPattern(scopeFiles) {
   const filePattern = scopeFiles.length === 0 ? "(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+)" : `(?:${scopeFiles.map(escapePatternLiteral).join("|")})`;
   return `^${filePattern}:\\d+(?:-\\d+)?$`;
 }
+function buildTaskLocationSchema(scopeFiles) {
+  return {
+    type: "string",
+    description: "Repo-relative file:line or file:line-line citation narrowed to the resolved review scope.",
+    pattern: buildScopedLocationPattern(scopeFiles),
+    examples: scopeFiles.slice(0, 1).map((scopeFile) => `${scopeFile}:1`)
+  };
+}
 function asJsonObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
@@ -32676,7 +32684,10 @@ function buildCodeReviewTaskSchema(args) {
     };
   }
   if (location) {
-    location.pattern = buildScopedLocationPattern(args.scopeFiles);
+    for (const key of Object.keys(location)) {
+      delete location[key];
+    }
+    Object.assign(location, buildTaskLocationSchema(args.scopeFiles));
   }
   return schema;
 }
@@ -33114,41 +33125,78 @@ function schemaDiagnosticFromAjvError(error2) {
     suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
   });
 }
+function normalizeStringArray(value) {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    return null;
+  }
+  return value.map((item) => item.trim());
+}
+function normalizeCodeReviewFinding(finding) {
+  const findingObject = asJsonObject(finding);
+  if (!findingObject || typeof findingObject.severity !== "string" || typeof findingObject.disposition !== "string" || typeof findingObject.location !== "string" || typeof findingObject.evidence !== "string" || typeof findingObject.impact !== "string" || typeof findingObject.recommendation !== "string") {
+    return null;
+  }
+  return {
+    severity: findingObject.severity,
+    disposition: findingObject.disposition,
+    location: findingObject.location.trim(),
+    evidence: findingObject.evidence.trim(),
+    impact: findingObject.impact.trim(),
+    recommendation: findingObject.recommendation.trim()
+  };
+}
+function normalizeEvidenceCoverage(evidenceCoverage) {
+  const normalized = {};
+  for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
+    const coverageObject = asJsonObject(coverage);
+    if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
+      return null;
+    }
+    normalized[artifactPath] = {
+      status: coverageObject.status,
+      rationale: coverageObject.rationale.trim()
+    };
+  }
+  return normalized;
+}
 function normalizeCodeReviewModel(model) {
   const findings = Array.isArray(model.findings) ? model.findings : null;
   const evidenceCoverage = asJsonObject(model.evidenceCoverage);
-  if (typeof model.verdict !== "string" || !Array.isArray(model.reviewSummary) || !Array.isArray(model.positiveSignals) || findings === null || evidenceCoverage === null || !Array.isArray(model.followUps) || typeof model.nextSafeAction !== "string") {
+  const reviewSummary = normalizeStringArray(model.reviewSummary);
+  const positiveSignals = normalizeStringArray(model.positiveSignals);
+  const followUps = normalizeStringArray(model.followUps);
+  if (typeof model.verdict !== "string" || reviewSummary === null || positiveSignals === null || findings === null || evidenceCoverage === null || followUps === null || typeof model.nextSafeAction !== "string") {
+    return null;
+  }
+  const normalizedFindings = findings.map(normalizeCodeReviewFinding);
+  const normalizedEvidenceCoverage = normalizeEvidenceCoverage(evidenceCoverage);
+  if (normalizedFindings.some((finding) => finding === null) || normalizedEvidenceCoverage === null) {
     return null;
   }
   return {
     verdict: model.verdict,
-    reviewSummary: model.reviewSummary.map(String).map((value) => value.trim()),
-    positiveSignals: model.positiveSignals.map(String).map((value) => value.trim()),
-    findings: findings.map((finding) => {
-      const findingObject = asJsonObject(finding) ?? {};
-      return {
-        severity: findingObject.severity,
-        disposition: findingObject.disposition,
-        location: String(findingObject.location ?? "").trim(),
-        evidence: String(findingObject.evidence ?? "").trim(),
-        impact: String(findingObject.impact ?? "").trim(),
-        recommendation: String(findingObject.recommendation ?? "").trim()
-      };
-    }),
-    evidenceCoverage: Object.fromEntries(
-      Object.entries(evidenceCoverage).map(([artifactPath, coverage]) => {
-        const coverageObject = asJsonObject(coverage) ?? {};
-        return [
-          artifactPath,
-          {
-            status: coverageObject.status,
-            rationale: String(coverageObject.rationale ?? "").trim()
-          }
-        ];
-      })
-    ),
-    followUps: model.followUps.map(String).map((value) => value.trim()),
+    reviewSummary,
+    positiveSignals,
+    findings: normalizedFindings,
+    evidenceCoverage: normalizedEvidenceCoverage,
+    followUps,
     nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+function normalizeCodeReviewModelForResiduals(model) {
+  const findings = Array.isArray(model.findings) ? model.findings.flatMap((finding) => {
+    const normalized = normalizeCodeReviewFinding(finding);
+    return normalized ? [normalized] : [];
+  }) : [];
+  const evidenceCoverage = asJsonObject(model.evidenceCoverage);
+  return {
+    verdict: typeof model.verdict === "string" ? model.verdict : "",
+    reviewSummary: normalizeStringArray(model.reviewSummary) ?? [],
+    positiveSignals: normalizeStringArray(model.positiveSignals) ?? [],
+    findings,
+    evidenceCoverage: evidenceCoverage ? normalizeEvidenceCoverage(evidenceCoverage) ?? {} : {},
+    followUps: normalizeStringArray(model.followUps) ?? [],
+    nextSafeAction: typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
 }
 function parseCodeReviewLocation(location) {
@@ -33156,13 +33204,9 @@ function parseCodeReviewLocation(location) {
   if (!match) {
     return null;
   }
-  const lineMatch = location.match(/:(\d+)(?:-(\d+))?$/);
-  if (!lineMatch) {
-    return null;
-  }
-  const file2 = location.slice(0, location.length - lineMatch[0].length);
-  const startLine = Number(lineMatch[1]);
-  const endLine = lineMatch[2] ? Number(lineMatch[2]) : startLine;
+  const file2 = match[1];
+  const startLine = Number(match[2]);
+  const endLine = match[3] ? Number(match[3]) : startLine;
   return {
     file: file2,
     startLine,
@@ -33171,7 +33215,11 @@ function parseCodeReviewLocation(location) {
 }
 async function countFileLines(filePath) {
   const content = await fs5.readFile(filePath, "utf8");
-  return content.length === 0 ? 0 : content.split(/\r\n|\r|\n/).length;
+  const contentWithoutTerminalNewline = content.replace(/(?:\r\n|\r|\n)$/, "");
+  if (contentWithoutTerminalNewline.length === 0) {
+    return content.length === 0 ? 0 : 1;
+  }
+  return contentWithoutTerminalNewline.split(/\r\n|\r|\n/).length;
 }
 function addGenericValueDiagnostics(args) {
   for (const [field, values] of [
@@ -33489,6 +33537,22 @@ function addVerdictContradictionDiagnostics(args) {
         code: "residual.next_action_contradiction",
         message: "Code-review model routes to /blu-progress while follow-up findings remain.",
         context: { nextSafeAction: nextAction, followUpFindingCount: followUpFindings.length },
+        suggestion: "Route to /blu-code-review-fix <phase> or another allowed repair/validation action."
+      })
+    );
+  }
+  if ((args.model.verdict === "BLOCKED" || blockedFindings.length > 0) && nextAction === "/blu-progress") {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_contradiction",
+        message: "Code-review model routes to /blu-progress while blocked findings or a BLOCKED verdict remain.",
+        context: {
+          verdict: args.model.verdict,
+          nextSafeAction: nextAction,
+          blockedFindingCount: blockedFindings.length
+        },
         suggestion: "Route to /blu-code-review-fix <phase> or another allowed repair/validation action."
       })
     );
@@ -34154,18 +34218,18 @@ async function blueprintReviewValidateModel(args) {
   }
   let normalizedModel = null;
   if (modelObject) {
+    normalizedModel = normalizeCodeReviewModel(modelObject);
+    const residualModel = normalizeCodeReviewModelForResiduals(modelObject);
     const validate = createAjvValidator().compile(scoped.authoringContext.taskSchema);
     const schemaValid = validate(modelObject);
     if (!schemaValid) {
       diagnostics.push(...(validate.errors ?? []).map(schemaDiagnosticFromAjvError));
-    } else {
-      normalizedModel = normalizeCodeReviewModel(modelObject);
     }
     diagnostics.push(
       ...await collectCodeReviewResidualDiagnostics({
         projectRoot,
         model: modelObject,
-        normalizedModel,
+        normalizedModel: residualModel,
         authoringContext: scoped.authoringContext
       })
     );
@@ -34238,6 +34302,31 @@ async function blueprintReviewValidateModel(args) {
     warnings: scoped.warnings
   };
 }
+function sameStringSet(left, right) {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  if (leftSet.size !== rightSet.size) {
+    return false;
+  }
+  return [...leftSet].every((value) => rightSet.has(value));
+}
+async function resolveCodeReviewRecordValidationFiles(args) {
+  if (!args.recordArgs.scopeFiles || args.recordArgs.scopeFiles.length === 0) {
+    return void 0;
+  }
+  if (args.recordArgs.scopeSource) {
+    return args.recordArgs.scopeSource === "explicit-files" ? args.recordArgs.scopeFiles : void 0;
+  }
+  const implicitScope = await blueprintReviewScope({
+    cwd: args.projectRoot,
+    phase: args.recordArgs.phase,
+    depth: args.recordArgs.depth
+  });
+  if (implicitScope.status === "ready" && sameStringSet(args.recordArgs.scopeFiles, implicitScope.files)) {
+    return void 0;
+  }
+  return args.recordArgs.scopeFiles;
+}
 async function blueprintReviewRecord(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate({
@@ -34303,10 +34392,14 @@ async function blueprintReviewRecord(args) {
   let content = args.content ?? "";
   let codeReviewScopeFiles = [];
   if (args.artifact === "code-review") {
+    const validationFiles = await resolveCodeReviewRecordValidationFiles({
+      projectRoot,
+      recordArgs: args
+    });
     const validation2 = await blueprintReviewValidateModel({
       cwd: projectRoot,
       phase: args.phase,
-      files: args.scopeFiles,
+      files: validationFiles,
       depth: args.depth,
       model: args.model
     });
@@ -34550,6 +34643,7 @@ var init_review = __esm({
       model: unknown().optional(),
       overwrite: boolean2().optional(),
       scopeFiles: array(string2()).optional(),
+      scopeSource: _enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]).optional(),
       depth: _enum(["quick", "standard", "deep"]).optional()
     };
     reviewScopeInputSchema = {
@@ -34583,7 +34677,7 @@ var init_review = __esm({
       "reportPath",
       "content"
     ]);
-    CODE_REVIEW_LOCATION_PATTERN = /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
+    CODE_REVIEW_LOCATION_PATTERN = /^((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
     CODE_REVIEW_NEXT_ACTION_BUILDERS = [
       (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
       (phaseNumber) => `/blu-secure-phase ${phaseNumber}`,
