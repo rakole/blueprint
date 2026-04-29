@@ -642,7 +642,6 @@ test("validate-phase and verify-work manifests reference registered validation t
     "blueprint_phase_summary_read",
     "blueprint_phase_validation_read",
     "blueprint_phase_validation_authoring_context",
-    "blueprint_phase_validation_render",
     "blueprint_phase_validation_write",
     "blueprint_config_get",
     "blueprint_artifact_validate",
@@ -653,6 +652,10 @@ test("validate-phase and verify-work manifests reference registered validation t
     assert.match(validateManifest, new RegExp(blueprintRuntimeToolFqn(toolName)));
     assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
+  assert.ok(blueprintToolNames.includes("blueprint_phase_validation_render"));
+  assert.ok(blueprintToolNames.includes("blueprint_phase_validation_validate_model"));
+  assert.match(validateManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_validate_model")));
+  assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
 
   assert.match(validateManifest, /Use the `blueprint-phase-validation` skill/);
   assert.match(verifyManifest, /Use the `blueprint-phase-validation` skill/);
@@ -1419,13 +1422,13 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(validateDoc, /blueprint_phase_summary_read/);
   assert.match(validateDoc, /blueprint_phase_validation_read/);
   assert.match(validateDoc, /blueprint_phase_validation_authoring_context/);
-  assert.match(validateDoc, /blueprint_phase_validation_render/);
+  assert.match(validateDoc, /blueprint_phase_validation_validate_model/);
   assert.match(validateDoc, /blueprint_phase_validation_write/);
   assert.match(validateDoc, /blueprint_config_get/);
   assert.match(validateDoc, /blueprint_artifact_validate/);
   assert.match(validateDoc, /blueprint_state_update/);
   assert.match(validateDoc, /blueprint_artifact_contract_read/);
-  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
+  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`/i);
   assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
   assert.match(validateDoc, /Direct `validate-phase` happy-path fixture\./);
   assert.match(verifyDoc, /Primary skill: `blueprint-phase-validation`/);
@@ -1467,6 +1470,6 @@ test("validation contract docs keep the published verification schema aligned wi
   assert.match(addTestsDoc, /blueprint_phase_validation_render/);
   assert.match(addTestsDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
   assert.match(validateDoc, /blueprint_artifact_contract_read/);
-  assert.match(validateDoc, /blueprint_phase_validation_render/);
-  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
+  assert.match(validateDoc, /blueprint_phase_validation_validate_model/);
+  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`/i);
 });

@@ -18,7 +18,7 @@ mapping and retry behavior instead of restating the full flow.
 | Read | Gather saved execution evidence and current validation baseline. | Summary index, every completed summary body, existing verification content, effective config, artifact health, and current state. |
 | Decide | Classify input state and select reuse, revise, or stop behavior. | State A/B/C, overwrite gate, verifier and Nyquist config, missing evidence, and next safe action. |
 | Execute | Run bounded validation analysis over saved evidence. | Requirement/task coverage map, test infrastructure metadata, gap classifications, and verifier result. |
-| Persist | Render and write only the canonical verification artifact. | `phase.verification` authoring context, structured render result or model, and `blueprint_phase_validation_write` response. |
+| Persist | Validate and write only the canonical verification artifact. | `phase.verification` authoring context, narrowed `taskSchema`, model validation result, and `blueprint_phase_validation_write` response. |
 | Validate | Re-validate persisted Blueprint artifacts and repair if needed. | `blueprint_artifact_validate.valid`, write status, issues, warnings, and suggested repairs. |
 | Route | Update state and report the next implemented action. | `blueprint_state_update` plus saved gate state and readiness. |
 
@@ -37,9 +37,9 @@ the authority for control flow.
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
 | `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. |
-| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, and routing rules. |
-| `blueprint_phase_validation_render` with `artifact: "verification"` | Canonical markdown rendering and pre-write validation from the structured verification payload. |
-| `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`; accepts exactly one of rendered `content` or the ready structured `model`. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, and narrowed task schema. |
+| `blueprint_phase_validation_validate_model` with `artifact: "verification"` | AJV task-schema validation, residual quality checks, and canonical markdown render preview from the structured verification payload. |
+| `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`; `/blu-validate-phase` passes the validated model with `authoringMode: "model-only"`. |
 | `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` | Final state sync, active-command capture, and next-action derivation. |
 
 ## Input State Model
@@ -107,8 +107,8 @@ the need explicit.
     remain. Use `PARTIAL` or `BLOCKED` and route to `/blu-audit-fix <phase>`
     for implementation/behavior gaps or `/blu-add-tests <phase>` for
     test-generation gaps.
-12. Call `blueprint_phase_validation_render` with the structured evidence payload and treat `readyToWrite: true` as the pre-write self-check.
-13. Call `blueprint_phase_validation_write` only with exactly one of the returned `content` or the same ready structured `model`; do not hand-build the final markdown body. Model writes must not include identity fields such as `phase`, `artifact`, `path`, or `content`.
+12. Call `blueprint_phase_validation_validate_model` with the structured evidence payload and treat `status: "valid"` plus `renderPreview` as the pre-write self-check.
+13. Call `blueprint_phase_validation_write` only with the same ready structured `model` and `authoringMode: "model-only"`; do not hand-build or pass the final markdown body from `/blu-validate-phase`. Model writes must not include identity fields such as `phase`, `artifact`, `path`, or `content`.
 
 ## Capability-Gated Subagent Path
 
@@ -151,11 +151,11 @@ This fallback must preserve the same output quality bar as the subagent path.
 
 ## Retry And Repair Behavior
 
-- If `blueprint_phase_validation_render` returns `readyToWrite: false`, report the
-  issues, repair the structured payload against the canonical contract, and
-  render again before calling the writer.
+- If `blueprint_phase_validation_validate_model` returns `status: "invalid"`, report the
+  diagnostics, repair the structured payload against the canonical task schema, and
+  validate again before calling the writer.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
-  `written: false` after a ready render, treat that as a race, overwrite, or
+  `written: false` after valid model validation, treat that as a race, overwrite, or
   prerequisite failure, repair once through MCP when safe, and stop with the
   issues otherwise. Do not run post-write artifact validation or state sync until
   the write succeeds with `written: true` or `status: "reused"`.

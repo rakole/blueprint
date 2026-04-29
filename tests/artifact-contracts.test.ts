@@ -391,6 +391,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(verificationContract.authoringTemplate, /\*\*Sign-off:\*\*/);
   assert.equal(verificationContract.modelContract?.schemaId, "blueprint.phase.verification.model");
   assert.equal(verificationContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    verificationContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json"
+  );
   assert.ok(
     verificationContract.modelContract?.renderedHeadings.includes(
       "Requirement / Task Coverage"
