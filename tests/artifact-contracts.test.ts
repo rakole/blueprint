@@ -104,6 +104,63 @@ Read the contract, then normalize before writing.
 `;
 }
 
+test("artifact contract read exposes structured model contracts for phase plan and quick run", async () => {
+  const planContract = await blueprintArtifactContractRead({ artifactId: "phase.plan" });
+  const quickRunContract = await blueprintArtifactContractRead({
+    artifactId: "report.quick-run"
+  });
+  const listedContracts = await blueprintArtifactContractRead({});
+  const listedPlanContract = listedContracts.contracts.find(
+    (contract) => contract.id === "phase.plan"
+  );
+  const listedQuickRunContract = listedContracts.contracts.find(
+    (contract) => contract.id === "report.quick-run"
+  );
+
+  assert.equal(planContract.contract.modelContract?.schemaId, "blueprint.phase.plan.model");
+  assert.equal(planContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.deepEqual(
+    (planContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["title", "wave", "status", "objective"]
+  );
+  assert.ok(
+    planContract.contract.modelContract?.renderedHeadings.includes("Requirement Coverage")
+  );
+  assert.ok(
+    planContract.contract.modelContract?.renderedHeadings.includes("Unknowns And Deferrals")
+  );
+  assert.ok(
+    planContract.contract.modelContract?.contextBindings.some((binding) =>
+      /auto-assigned by the existing phase plan writer/i.test(binding)
+    )
+  );
+
+  assert.equal(
+    quickRunContract.contract.modelContract?.schemaId,
+    "blueprint.report.quick-run.model"
+  );
+  assert.equal(quickRunContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.deepEqual(
+    (quickRunContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 3),
+    ["taskSummary", "changedSurfaces", "evidenceUsed"]
+  );
+  assert.ok(
+    quickRunContract.contract.modelContract?.renderedHeadings.includes("Changed Surfaces")
+  );
+  assert.ok(quickRunContract.contract.modelContract?.renderedHeadings.includes("Evidence Used"));
+  assert.ok(
+    quickRunContract.contract.modelContract?.qualityRules.some((rule) =>
+      /bounded enough for a quick run/i.test(rule)
+    )
+  );
+
+  assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");
+  assert.equal(
+    listedQuickRunContract?.modelContract?.schemaId,
+    "blueprint.report.quick-run.model"
+  );
+});
+
 test("artifact contract registry exposes canonical contract ids and templates", async () => {
   assert.ok(blueprintToolNames.includes("blueprint_artifact_contract_read"));
   assert.ok(artifactContractIds.includes("bootstrap.project"));

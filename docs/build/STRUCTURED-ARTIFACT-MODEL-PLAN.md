@@ -44,6 +44,10 @@ Define a reusable contract shape with:
 
 `blueprint_artifact_contract_read` should include this payload when an artifact supports structured model authoring.
 
+Completion note:
+
+- 2026-04-29: Completed metadata-only registry support for this unit. `phase.plan` and `report.quick-run` now expose `modelContract` payloads from `blueprint_artifact_contract_read`, including schema id/version, JSON Schema, quality rules, context bindings, rendered headings, minimal valid examples, and example leakage signals. Write-tool model inputs, rendering, and strict context validation remain assigned to later units in this plan.
+
 ### 2. Extend Existing Write Tool Inputs
 
 For the pilot, update:
