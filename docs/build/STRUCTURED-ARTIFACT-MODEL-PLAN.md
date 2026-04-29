@@ -12,6 +12,7 @@ This plan starts with a document-only checkpoint. Runtime behavior changes shoul
 
 - 2026-04-28: `/blu-validate-phase` slice implemented for `phase.verification` and the shared validation writer. `phase.verification` and `phase.uat` now expose structured `modelContract` metadata from `blueprint_artifact_contract_read`, and `blueprint_phase_validation_write` accepts exactly one of rendered Markdown `content` or a structured `model` that MCP validates, renders, and revalidates before persistence.
 - 2026-04-28: `/blu-code-review` slice implemented for `review.code-review`. The contract now exposes structured `modelContract` metadata, and the current validator-first flow makes `blueprint_review_validate_model` validate the structured code-review `model` before `blueprint_review_record` renders canonical `XX-REVIEW.md`; Markdown `content` is no longer accepted for this artifact.
+- 2026-04-29: `phase.plan` moved from embedded TypeScript/Zod shape checks to schema-first model authoring. The base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` returns a runtime-narrowed task schema, `blueprint_phase_plan_validate_model` validates and renders a preview, and `blueprint_phase_plan_write` reuses that same schema-first model path before Markdown persistence.
 
 ## Locked Decisions
 
@@ -97,7 +98,7 @@ MCP must reject the model when:
 
 Completion note:
 
-- 2026-04-29: Completed the `phase.plan` structured model pilot. `blueprint_phase_plan_write` now accepts structured `model` input for `phase.plan`, keeps phase identity and auto-assigned `planId` ownership in MCP args, validates identity-key exclusion, required and unknown fields, copied examples, typed schema shape, requirement/evidence/file coverage, objective verification, and implemented-command references, renders canonical PLAN Markdown with visible coverage ledgers, and then reuses the existing plan artifact validation and persistence path. `report.quick-run` model rendering remains intentionally out of scope for this unit.
+- 2026-04-29: Completed the `phase.plan` structured model pilot, then migrated it to schema-first authoring. `blueprint_phase_plan_write` now accepts structured `model` input for `phase.plan`, keeps phase identity and auto-assigned `planId` ownership in MCP args, validates unsupported fields, required fields, enums, object shape, path patterns, roadmap requirement ids, saved evidence artifact rows, and dependency ids through JSON Schema/AJV, keeps copied examples, low-effort text, cross-field task/file/requirement coverage, objective verification, rendered Markdown validation, and implemented-command references in residual TypeScript, renders canonical PLAN Markdown with visible coverage ledgers, and then reuses the existing plan artifact validation and persistence path. `report.quick-run` model rendering remains intentionally out of scope for this unit.
 
 ### 4. Pilot `report.quick-run` Structured Model
 

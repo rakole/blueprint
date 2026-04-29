@@ -11435,7 +11435,7 @@ var require_core = __commonJS({
       constructor(opts = {}) {
         this.schemas = {};
         this.refs = {};
-        this.formats = {};
+        this.formats = /* @__PURE__ */ Object.create(null);
         this._compilations = /* @__PURE__ */ new Set();
         this._loading = {};
         this._cache = /* @__PURE__ */ new Map();
@@ -15961,208 +15961,20 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_PLAN_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
+    PHASE_PLAN_MODEL_SCHEMA_FILE = "phase.plan.model.schema.json";
+    PHASE_PLAN_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json";
     PHASE_PLAN_MODEL_CONTRACT = {
       schemaId: "blueprint.phase.plan.model",
       schemaVersion: "1.0.0",
-      jsonSchema: {
-        $schema: "https://json-schema.org/draft/2020-12/schema",
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "title",
-          "wave",
-          "status",
-          "objective",
-          "dependsOn",
-          "requirements",
-          "filesModified",
-          "readFirst",
-          "autonomous",
-          "goal",
-          "scope",
-          "tasks",
-          "verification",
-          "mustHaves",
-          "requirementCoverage",
-          "evidenceCoverage",
-          "fileSurfaceCoverage",
-          "unknownsAndDeferrals"
-        ],
-        properties: {
-          title: { type: "string", minLength: 1 },
-          wave: { type: "integer", minimum: 1 },
-          status: { type: "string", enum: ["planned"] },
-          objective: { type: "string", minLength: 1 },
-          gapClosure: { type: "boolean" },
-          dependsOn: {
-            type: "array",
-            items: { type: "string", pattern: "^[0-9]+$" }
-          },
-          requirements: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          filesModified: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          readFirst: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          autonomous: { type: "boolean" },
-          goal: { type: "string", minLength: 1 },
-          scope: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          tasks: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: [
-                "id",
-                "title",
-                "readFirst",
-                "action",
-                "acceptanceCriteria",
-                "requirements",
-                "filesModified"
-              ],
-              properties: {
-                id: { type: "string", minLength: 1, pattern: "^[A-Za-z0-9._-]+$" },
-                title: { type: "string", minLength: 1 },
-                readFirst: {
-                  type: "array",
-                  minItems: 1,
-                  items: { type: "string", minLength: 1 }
-                },
-                action: {
-                  type: "array",
-                  minItems: 1,
-                  items: { type: "string", minLength: 1 }
-                },
-                acceptanceCriteria: {
-                  type: "array",
-                  minItems: 1,
-                  items: { type: "string", minLength: 1 }
-                },
-                requirements: {
-                  type: "array",
-                  minItems: 1,
-                  items: { type: "string", minLength: 1 }
-                },
-                filesModified: {
-                  type: "array",
-                  minItems: 1,
-                  items: { type: "string", minLength: 1 }
-                }
-              }
-            }
-          },
-          verification: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["item", "method", "evidence"],
-              properties: {
-                item: { type: "string", minLength: 1 },
-                method: {
-                  type: "string",
-                  enum: ["test", "grep", "command", "file-read", "artifact-validation"]
-                },
-                evidence: { type: "string", minLength: 1 }
-              }
-            }
-          },
-          mustHaves: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          requirementCoverage: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["requirement", "status", "coveredByTasks", "evidence", "rationale"],
-              properties: {
-                requirement: { type: "string", minLength: 1 },
-                status: { type: "string", enum: ["covered", "deferred", "irrelevant"] },
-                coveredByTasks: {
-                  type: "array",
-                  items: { type: "string", minLength: 1 }
-                },
-                evidence: { type: "string", minLength: 1 },
-                rationale: { type: "string", minLength: 1 }
-              }
-            }
-          },
-          evidenceCoverage: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["artifact", "status", "rationale"],
-              properties: {
-                artifact: { type: "string", minLength: 1 },
-                status: { type: "string", enum: ["used", "deferred", "irrelevant", "unavailable"] },
-                rationale: { type: "string", minLength: 1 }
-              }
-            }
-          },
-          fileSurfaceCoverage: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["surface", "coveredByTasks", "verification", "rationale"],
-              properties: {
-                surface: { type: "string", minLength: 1 },
-                coveredByTasks: {
-                  type: "array",
-                  minItems: 1,
-                  items: { type: "string", minLength: 1 }
-                },
-                verification: { type: "string", minLength: 1 },
-                rationale: { type: "string", minLength: 1 }
-              }
-            }
-          },
-          unknownsAndDeferrals: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["item", "disposition", "rationale", "followUp"],
-              properties: {
-                item: { type: "string", minLength: 1 },
-                disposition: { type: "string", enum: ["unknown", "deferred", "blocked", "none"] },
-                rationale: { type: "string", minLength: 1 },
-                followUp: { type: "string", minLength: 1 }
-              }
-            }
-          }
-        }
-      },
+      schemaPath: PHASE_PLAN_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(PHASE_PLAN_MODEL_SCHEMA_FILE),
       qualityRules: [
         "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, planId, artifact, path, or content; the write tool owns identity and path derivation.",
+        "Author against the narrowed taskSchema returned by blueprint_phase_plan_authoring_context or blueprint_phase_plan_validate_model so roadmap requirements, saved evidence artifacts, and dependency ids stay deterministic.",
         "Every known in-scope requirement must appear exactly once in requirementCoverage as covered, deferred, or irrelevant with a concrete rationale.",
         "Every known context, research, UI, review, or prior evidence artifact used for planning must appear in evidenceCoverage, or be explicitly deferred or marked irrelevant with rationale.",
         "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
@@ -16246,10 +16058,10 @@ var init_artifact_contracts = __esm({
         ],
         unknownsAndDeferrals: [
           {
-            item: "none",
+            item: "No open unknowns for this metadata-only contract exposure.",
             disposition: "none",
             rationale: "No known unknowns remain for metadata-only contract exposure.",
-            followUp: "none"
+            followUp: "No follow-up required after the focused contract test passes."
           }
         ]
       },
@@ -24461,6 +24273,830 @@ var init_runtime_vocabulary = __esm({
   }
 });
 
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+var require_dynamicAnchor = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.dynamicAnchor = void 0;
+    var codegen_1 = require_codegen();
+    var names_1 = require_names();
+    var compile_1 = require_compile();
+    var ref_1 = require_ref();
+    var def = {
+      keyword: "$dynamicAnchor",
+      schemaType: "string",
+      code: (cxt) => dynamicAnchor(cxt, cxt.schema)
+    };
+    function dynamicAnchor(cxt, anchor) {
+      const { gen, it } = cxt;
+      it.schemaEnv.root.dynamicAnchors[anchor] = true;
+      const v = (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`;
+      const validate = it.errSchemaPath === "#" ? it.validateName : _getValidate(cxt);
+      gen.if((0, codegen_1._)`!${v}`, () => gen.assign(v, validate));
+    }
+    exports.dynamicAnchor = dynamicAnchor;
+    function _getValidate(cxt) {
+      const { schemaEnv, schema, self } = cxt.it;
+      const { root, baseId, localRefs, meta: meta3 } = schemaEnv.root;
+      const { schemaId } = self.opts;
+      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta: meta3 });
+      compile_1.compileSchema.call(self, sch);
+      return (0, ref_1.getValidate)(cxt, sch);
+    }
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+var require_dynamicRef = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.dynamicRef = void 0;
+    var codegen_1 = require_codegen();
+    var names_1 = require_names();
+    var ref_1 = require_ref();
+    var def = {
+      keyword: "$dynamicRef",
+      schemaType: "string",
+      code: (cxt) => dynamicRef(cxt, cxt.schema)
+    };
+    function dynamicRef(cxt, ref) {
+      const { gen, keyword, it } = cxt;
+      if (ref[0] !== "#")
+        throw new Error(`"${keyword}" only supports hash fragment reference`);
+      const anchor = ref.slice(1);
+      if (it.allErrors) {
+        _dynamicRef();
+      } else {
+        const valid = gen.let("valid", false);
+        _dynamicRef(valid);
+        cxt.ok(valid);
+      }
+      function _dynamicRef(valid) {
+        if (it.schemaEnv.root.dynamicAnchors[anchor]) {
+          const v = gen.let("_v", (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`);
+          gen.if(v, _callRef(v, valid), _callRef(it.validateName, valid));
+        } else {
+          _callRef(it.validateName, valid)();
+        }
+      }
+      function _callRef(validate, valid) {
+        return valid ? () => gen.block(() => {
+          (0, ref_1.callRef)(cxt, validate);
+          gen.let(valid, true);
+        }) : () => (0, ref_1.callRef)(cxt, validate);
+      }
+    }
+    exports.dynamicRef = dynamicRef;
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+var require_recursiveAnchor = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicAnchor_1 = require_dynamicAnchor();
+    var util_1 = require_util();
+    var def = {
+      keyword: "$recursiveAnchor",
+      schemaType: "boolean",
+      code(cxt) {
+        if (cxt.schema)
+          (0, dynamicAnchor_1.dynamicAnchor)(cxt, "");
+        else
+          (0, util_1.checkStrictMode)(cxt.it, "$recursiveAnchor: false is ignored");
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+var require_recursiveRef = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicRef_1 = require_dynamicRef();
+    var def = {
+      keyword: "$recursiveRef",
+      schemaType: "string",
+      code: (cxt) => (0, dynamicRef_1.dynamicRef)(cxt, cxt.schema)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/index.js
+var require_dynamic = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicAnchor_1 = require_dynamicAnchor();
+    var dynamicRef_1 = require_dynamicRef();
+    var recursiveAnchor_1 = require_recursiveAnchor();
+    var recursiveRef_1 = require_recursiveRef();
+    var dynamic = [dynamicAnchor_1.default, dynamicRef_1.default, recursiveAnchor_1.default, recursiveRef_1.default];
+    exports.default = dynamic;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+var require_dependentRequired = __commonJS({
+  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependencies_1 = require_dependencies();
+    var def = {
+      keyword: "dependentRequired",
+      type: "object",
+      schemaType: "object",
+      error: dependencies_1.error,
+      code: (cxt) => (0, dependencies_1.validatePropertyDeps)(cxt)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+var require_dependentSchemas = __commonJS({
+  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependencies_1 = require_dependencies();
+    var def = {
+      keyword: "dependentSchemas",
+      type: "object",
+      schemaType: "object",
+      code: (cxt) => (0, dependencies_1.validateSchemaDeps)(cxt)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/validation/limitContains.js
+var require_limitContains = __commonJS({
+  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var util_1 = require_util();
+    var def = {
+      keyword: ["maxContains", "minContains"],
+      type: "array",
+      schemaType: "number",
+      code({ keyword, parentSchema, it }) {
+        if (parentSchema.contains === void 0) {
+          (0, util_1.checkStrictMode)(it, `"${keyword}" without "contains" is ignored`);
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/next.js
+var require_next = __commonJS({
+  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependentRequired_1 = require_dependentRequired();
+    var dependentSchemas_1 = require_dependentSchemas();
+    var limitContains_1 = require_limitContains();
+    var next = [dependentRequired_1.default, dependentSchemas_1.default, limitContains_1.default];
+    exports.default = next;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+var require_unevaluatedProperties = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var codegen_1 = require_codegen();
+    var util_1 = require_util();
+    var names_1 = require_names();
+    var error2 = {
+      message: "must NOT have unevaluated properties",
+      params: ({ params }) => (0, codegen_1._)`{unevaluatedProperty: ${params.unevaluatedProperty}}`
+    };
+    var def = {
+      keyword: "unevaluatedProperties",
+      type: "object",
+      schemaType: ["boolean", "object"],
+      trackErrors: true,
+      error: error2,
+      code(cxt) {
+        const { gen, schema, data, errsCount, it } = cxt;
+        if (!errsCount)
+          throw new Error("ajv implementation error");
+        const { allErrors, props } = it;
+        if (props instanceof codegen_1.Name) {
+          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key) => gen.if(unevaluatedDynamic(props, key), () => unevaluatedPropCode(key))));
+        } else if (props !== true) {
+          gen.forIn("key", data, (key) => props === void 0 ? unevaluatedPropCode(key) : gen.if(unevaluatedStatic(props, key), () => unevaluatedPropCode(key)));
+        }
+        it.props = true;
+        cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
+        function unevaluatedPropCode(key) {
+          if (schema === false) {
+            cxt.setParams({ unevaluatedProperty: key });
+            cxt.error();
+            if (!allErrors)
+              gen.break();
+            return;
+          }
+          if (!(0, util_1.alwaysValidSchema)(it, schema)) {
+            const valid = gen.name("valid");
+            cxt.subschema({
+              keyword: "unevaluatedProperties",
+              dataProp: key,
+              dataPropType: util_1.Type.Str
+            }, valid);
+            if (!allErrors)
+              gen.if((0, codegen_1.not)(valid), () => gen.break());
+          }
+        }
+        function unevaluatedDynamic(evaluatedProps, key) {
+          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key}]`;
+        }
+        function unevaluatedStatic(evaluatedProps, key) {
+          const ps = [];
+          for (const p in evaluatedProps) {
+            if (evaluatedProps[p] === true)
+              ps.push((0, codegen_1._)`${key} !== ${p}`);
+          }
+          return (0, codegen_1.and)(...ps);
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+var require_unevaluatedItems = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var codegen_1 = require_codegen();
+    var util_1 = require_util();
+    var error2 = {
+      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
+      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+    };
+    var def = {
+      keyword: "unevaluatedItems",
+      type: "array",
+      schemaType: ["boolean", "object"],
+      error: error2,
+      code(cxt) {
+        const { gen, schema, data, it } = cxt;
+        const items = it.items || 0;
+        if (items === true)
+          return;
+        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+        if (schema === false) {
+          cxt.setParams({ len: items });
+          cxt.fail((0, codegen_1._)`${len} > ${items}`);
+        } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
+          const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items}`);
+          gen.if((0, codegen_1.not)(valid), () => validateItems(valid, items));
+          cxt.ok(valid);
+        }
+        it.items = true;
+        function validateItems(valid, from) {
+          gen.forRange("i", from, len, (i) => {
+            cxt.subschema({ keyword: "unevaluatedItems", dataProp: i, dataPropType: util_1.Type.Num }, valid);
+            if (!it.allErrors)
+              gen.if((0, codegen_1.not)(valid), () => gen.break());
+          });
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/index.js
+var require_unevaluated = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var unevaluatedProperties_1 = require_unevaluatedProperties();
+    var unevaluatedItems_1 = require_unevaluatedItems();
+    var unevaluated = [unevaluatedProperties_1.default, unevaluatedItems_1.default];
+    exports.default = unevaluated;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/draft2020.js
+var require_draft2020 = __commonJS({
+  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var core_1 = require_core2();
+    var validation_1 = require_validation();
+    var applicator_1 = require_applicator();
+    var dynamic_1 = require_dynamic();
+    var next_1 = require_next();
+    var unevaluated_1 = require_unevaluated();
+    var format_1 = require_format2();
+    var metadata_1 = require_metadata();
+    var draft2020Vocabularies = [
+      dynamic_1.default,
+      core_1.default,
+      validation_1.default,
+      (0, applicator_1.default)(true),
+      format_1.default,
+      metadata_1.metadataVocabulary,
+      metadata_1.contentVocabulary,
+      next_1.default,
+      unevaluated_1.default
+    ];
+    exports.default = draft2020Vocabularies;
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+var require_schema = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/schema",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true,
+        "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+        "https://json-schema.org/draft/2020-12/vocab/content": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Core and Validation specifications meta-schema",
+      allOf: [
+        { $ref: "meta/core" },
+        { $ref: "meta/applicator" },
+        { $ref: "meta/unevaluated" },
+        { $ref: "meta/validation" },
+        { $ref: "meta/meta-data" },
+        { $ref: "meta/format-annotation" },
+        { $ref: "meta/content" }
+      ],
+      type: ["object", "boolean"],
+      $comment: "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.",
+      properties: {
+        definitions: {
+          $comment: '"definitions" has been replaced by "$defs".',
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          deprecated: true,
+          default: {}
+        },
+        dependencies: {
+          $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.',
+          type: "object",
+          additionalProperties: {
+            anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }]
+          },
+          deprecated: true,
+          default: {}
+        },
+        $recursiveAnchor: {
+          $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".',
+          $ref: "meta/core#/$defs/anchorString",
+          deprecated: true
+        },
+        $recursiveRef: {
+          $comment: '"$recursiveRef" has been replaced by "$dynamicRef".',
+          $ref: "meta/core#/$defs/uriReferenceString",
+          deprecated: true
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+var require_applicator2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/applicator",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Applicator vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        prefixItems: { $ref: "#/$defs/schemaArray" },
+        items: { $dynamicRef: "#meta" },
+        contains: { $dynamicRef: "#meta" },
+        additionalProperties: { $dynamicRef: "#meta" },
+        properties: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          default: {}
+        },
+        patternProperties: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          propertyNames: { format: "regex" },
+          default: {}
+        },
+        dependentSchemas: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          default: {}
+        },
+        propertyNames: { $dynamicRef: "#meta" },
+        if: { $dynamicRef: "#meta" },
+        then: { $dynamicRef: "#meta" },
+        else: { $dynamicRef: "#meta" },
+        allOf: { $ref: "#/$defs/schemaArray" },
+        anyOf: { $ref: "#/$defs/schemaArray" },
+        oneOf: { $ref: "#/$defs/schemaArray" },
+        not: { $dynamicRef: "#meta" }
+      },
+      $defs: {
+        schemaArray: {
+          type: "array",
+          minItems: 1,
+          items: { $dynamicRef: "#meta" }
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+var require_unevaluated2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Unevaluated applicator vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        unevaluatedItems: { $dynamicRef: "#meta" },
+        unevaluatedProperties: { $dynamicRef: "#meta" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+var require_content = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/content",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/content": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Content vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        contentEncoding: { type: "string" },
+        contentMediaType: { type: "string" },
+        contentSchema: { $dynamicRef: "#meta" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+var require_core3 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/core",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/core": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Core vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        $id: {
+          $ref: "#/$defs/uriReferenceString",
+          $comment: "Non-empty fragments not allowed.",
+          pattern: "^[^#]*#?$"
+        },
+        $schema: { $ref: "#/$defs/uriString" },
+        $ref: { $ref: "#/$defs/uriReferenceString" },
+        $anchor: { $ref: "#/$defs/anchorString" },
+        $dynamicRef: { $ref: "#/$defs/uriReferenceString" },
+        $dynamicAnchor: { $ref: "#/$defs/anchorString" },
+        $vocabulary: {
+          type: "object",
+          propertyNames: { $ref: "#/$defs/uriString" },
+          additionalProperties: {
+            type: "boolean"
+          }
+        },
+        $comment: {
+          type: "string"
+        },
+        $defs: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" }
+        }
+      },
+      $defs: {
+        anchorString: {
+          type: "string",
+          pattern: "^[A-Za-z_][-A-Za-z0-9._]*$"
+        },
+        uriString: {
+          type: "string",
+          format: "uri"
+        },
+        uriReferenceString: {
+          type: "string",
+          format: "uri-reference"
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+var require_format_annotation = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Format vocabulary meta-schema for annotation results",
+      type: ["object", "boolean"],
+      properties: {
+        format: { type: "string" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+var require_meta_data = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/meta-data": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Meta-data vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        title: {
+          type: "string"
+        },
+        description: {
+          type: "string"
+        },
+        default: true,
+        deprecated: {
+          type: "boolean",
+          default: false
+        },
+        readOnly: {
+          type: "boolean",
+          default: false
+        },
+        writeOnly: {
+          type: "boolean",
+          default: false
+        },
+        examples: {
+          type: "array",
+          items: true
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+var require_validation2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/validation",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Validation vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        type: {
+          anyOf: [
+            { $ref: "#/$defs/simpleTypes" },
+            {
+              type: "array",
+              items: { $ref: "#/$defs/simpleTypes" },
+              minItems: 1,
+              uniqueItems: true
+            }
+          ]
+        },
+        const: true,
+        enum: {
+          type: "array",
+          items: true
+        },
+        multipleOf: {
+          type: "number",
+          exclusiveMinimum: 0
+        },
+        maximum: {
+          type: "number"
+        },
+        exclusiveMaximum: {
+          type: "number"
+        },
+        minimum: {
+          type: "number"
+        },
+        exclusiveMinimum: {
+          type: "number"
+        },
+        maxLength: { $ref: "#/$defs/nonNegativeInteger" },
+        minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        pattern: {
+          type: "string",
+          format: "regex"
+        },
+        maxItems: { $ref: "#/$defs/nonNegativeInteger" },
+        minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        uniqueItems: {
+          type: "boolean",
+          default: false
+        },
+        maxContains: { $ref: "#/$defs/nonNegativeInteger" },
+        minContains: {
+          $ref: "#/$defs/nonNegativeInteger",
+          default: 1
+        },
+        maxProperties: { $ref: "#/$defs/nonNegativeInteger" },
+        minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        required: { $ref: "#/$defs/stringArray" },
+        dependentRequired: {
+          type: "object",
+          additionalProperties: {
+            $ref: "#/$defs/stringArray"
+          }
+        }
+      },
+      $defs: {
+        nonNegativeInteger: {
+          type: "integer",
+          minimum: 0
+        },
+        nonNegativeIntegerDefault0: {
+          $ref: "#/$defs/nonNegativeInteger",
+          default: 0
+        },
+        simpleTypes: {
+          enum: ["array", "boolean", "integer", "null", "number", "object", "string"]
+        },
+        stringArray: {
+          type: "array",
+          items: { type: "string" },
+          uniqueItems: true,
+          default: []
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+var require_json_schema_2020_12 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var metaSchema = require_schema();
+    var applicator = require_applicator2();
+    var unevaluated = require_unevaluated2();
+    var content = require_content();
+    var core = require_core3();
+    var format = require_format_annotation();
+    var metadata = require_meta_data();
+    var validation = require_validation2();
+    var META_SUPPORT_DATA = ["/properties"];
+    function addMetaSchema2020($data) {
+      ;
+      [
+        metaSchema,
+        applicator,
+        unevaluated,
+        content,
+        core,
+        with$data(this, format),
+        metadata,
+        with$data(this, validation)
+      ].forEach((sch) => this.addMetaSchema(sch, void 0, false));
+      return this;
+      function with$data(ajv, sch) {
+        return $data ? ajv.$dataMetaSchema(sch, META_SUPPORT_DATA) : sch;
+      }
+    }
+    exports.default = addMetaSchema2020;
+  }
+});
+
+// node_modules/ajv/dist/2020.js
+var require__ = __commonJS({
+  "node_modules/ajv/dist/2020.js"(exports, module) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
+    var core_1 = require_core();
+    var draft2020_1 = require_draft2020();
+    var discriminator_1 = require_discriminator();
+    var json_schema_2020_12_1 = require_json_schema_2020_12();
+    var META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
+    var Ajv20203 = class extends core_1.default {
+      constructor(opts = {}) {
+        super({
+          ...opts,
+          dynamicRef: true,
+          next: true,
+          unevaluated: true
+        });
+      }
+      _addVocabularies() {
+        super._addVocabularies();
+        draft2020_1.default.forEach((v) => this.addVocabulary(v));
+        if (this.opts.discriminator)
+          this.addKeyword(discriminator_1.default);
+      }
+      _addDefaultMetaSchema() {
+        super._addDefaultMetaSchema();
+        const { $data, meta: meta3 } = this.opts;
+        if (!meta3)
+          return;
+        json_schema_2020_12_1.default.call(this, $data);
+        this.refs["http://json-schema.org/schema"] = META_SCHEMA_ID;
+      }
+      defaultMeta() {
+        return this.opts.defaultMeta = super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : void 0);
+      }
+    };
+    exports.Ajv2020 = Ajv20203;
+    module.exports = exports = Ajv20203;
+    module.exports.Ajv2020 = Ajv20203;
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = Ajv20203;
+    var validate_1 = require_validate();
+    Object.defineProperty(exports, "KeywordCxt", { enumerable: true, get: function() {
+      return validate_1.KeywordCxt;
+    } });
+    var codegen_1 = require_codegen();
+    Object.defineProperty(exports, "_", { enumerable: true, get: function() {
+      return codegen_1._;
+    } });
+    Object.defineProperty(exports, "str", { enumerable: true, get: function() {
+      return codegen_1.str;
+    } });
+    Object.defineProperty(exports, "stringify", { enumerable: true, get: function() {
+      return codegen_1.stringify;
+    } });
+    Object.defineProperty(exports, "nil", { enumerable: true, get: function() {
+      return codegen_1.nil;
+    } });
+    Object.defineProperty(exports, "Name", { enumerable: true, get: function() {
+      return codegen_1.Name;
+    } });
+    Object.defineProperty(exports, "CodeGen", { enumerable: true, get: function() {
+      return codegen_1.CodeGen;
+    } });
+    var validation_error_1 = require_validation_error();
+    Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function() {
+      return validation_error_1.default;
+    } });
+    var ref_error_1 = require_ref_error();
+    Object.defineProperty(exports, "MissingRefError", { enumerable: true, get: function() {
+      return ref_error_1.default;
+    } });
+  }
+});
+
 // src/mcp/command-paths.ts
 function blueprintRootCommand() {
   return BLUEPRINT_ROOT_COMMAND;
@@ -25958,9 +26594,11 @@ __export(phase_exports, {
   blueprintPhaseContext: () => blueprintPhaseContext,
   blueprintPhaseExecutionTargets: () => blueprintPhaseExecutionTargets,
   blueprintPhaseLocate: () => blueprintPhaseLocate,
+  blueprintPhasePlanAuthoringContext: () => blueprintPhasePlanAuthoringContext,
   blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
   blueprintPhasePlanRead: () => blueprintPhasePlanRead,
   blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
+  blueprintPhasePlanValidateModel: () => blueprintPhasePlanValidateModel,
   blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
   blueprintPhaseResearchStatus: () => blueprintPhaseResearchStatus,
   blueprintPhaseSummaryIndex: () => blueprintPhaseSummaryIndex,
@@ -27874,8 +28512,110 @@ function collectModelStringValues(value) {
   }
   return [];
 }
+function cloneJsonObject2(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function asJsonObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function getJsonObjectProperty(value, key) {
+  return asJsonObject(value[key]);
+}
+function createAjvValidator() {
+  return new import__.Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  });
+}
+function phasePlanDiagnostic(args) {
+  return args;
+}
+function emptyPhasePlanDiagnosticCounts() {
+  return {
+    total: 0,
+    bySource: {
+      scope: 0,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    },
+    byCode: {}
+  };
+}
+function countPhasePlanDiagnostics(diagnostics) {
+  const counts = emptyPhasePlanDiagnosticCounts();
+  for (const diagnostic of diagnostics) {
+    counts.total += 1;
+    counts.bySource[diagnostic.source] += 1;
+    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+  }
+  return counts;
+}
+function formatPhasePlanDiagnostic(diagnostic) {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
 function formatZodIssuePath(pathSegments) {
   return pathSegments.length > 0 ? pathSegments.map(String).join(".") : "model";
+}
+function ajvPathToPhasePlanModelPath(instancePath) {
+  if (instancePath.length === 0) {
+    return "model";
+  }
+  return `model${instancePath.split("/").filter((segment) => segment.length > 0).map((segment) => {
+    const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+    return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+  }).join("")}`;
+}
+function schemaDiagnosticFromAjvError(error2) {
+  const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
+  const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
+  const basePath = ajvPathToPhasePlanModelPath(error2.instancePath);
+  const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  return phasePlanDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error2.keyword}`,
+    message: error2.message ?? "Model does not match the phase.plan task schema.",
+    context: {
+      keyword: error2.keyword,
+      params: error2.params,
+      schemaPath: error2.schemaPath
+    },
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
+  });
+}
+function schemaDiagnosticFromPhasePlanAjvError(error2, taskSchema) {
+  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
+  const knownRequirements = Array.isArray(runtimeContext?.knownRequirements) ? runtimeContext.knownRequirements.filter((value) => typeof value === "string") : [];
+  const knownEvidenceArtifacts = Array.isArray(runtimeContext?.knownEvidenceArtifacts) ? runtimeContext.knownEvidenceArtifacts.filter(
+    (value) => typeof value === "string"
+  ) : [];
+  const exactContainsMatch = error2.schemaPath.match(
+    /\/properties\/(requirementCoverage|evidenceCoverage)\/allOf\/(\d+)/
+  );
+  if (error2.keyword === "contains" && exactContainsMatch) {
+    const collection = exactContainsMatch[1] ?? "";
+    const index = Number.parseInt(exactContainsMatch[2] ?? "", 10);
+    const requiredValue = collection === "requirementCoverage" ? knownRequirements[index] : knownEvidenceArtifacts[index];
+    if (requiredValue) {
+      const noun = collection === "requirementCoverage" ? "known roadmap requirement" : "known saved evidence artifact";
+      return phasePlanDiagnostic({
+        source: "schema",
+        path: `model.${collection}`,
+        code: "schema.exactCoverage",
+        message: `Phase plan model ${collection} must include exactly one row for ${noun} ${requiredValue}.`,
+        context: {
+          requiredValue,
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath
+        },
+        suggestion: `Add one ${collection} row for ${requiredValue}, or remove duplicate rows for that value.`
+      });
+    }
+  }
+  return schemaDiagnosticFromAjvError(error2);
 }
 async function getPhasePlanImplementedCommandNames() {
   if (!phasePlanImplementedCommandNamesPromise) {
@@ -27924,48 +28664,133 @@ function hasPhasePlanModelPlaceholderLanguage(value) {
     value
   );
 }
-function validatePhasePlanModelPlainText(model) {
-  return collectModelStringValues(model).filter((value) => hasPhasePlanModelPlaceholderLanguage(value)).map((value) => `Phase plan model contains placeholder language: ${value}.`);
-}
-function phasePlanModelContractIssues(model) {
-  const issues = [];
-  const identityKeys = Object.keys(model).filter((key) => PHASE_PLAN_MODEL_IDENTITY_KEYS.has(key));
-  if (identityKeys.length > 0) {
-    issues.push(
-      `Phase plan model must not include MCP-owned identity keys: ${identityKeys.join(", ")}.`
-    );
-  }
+function phasePlanModelResidualDiagnostics(model) {
+  const diagnostics = [];
   const modelContract = readArtifactContract("phase.plan").modelContract;
   if (!modelContract) {
-    issues.push("phase.plan does not support structured model writes.");
-    return issues;
-  }
-  const requiredKeys = Array.isArray(modelContract.jsonSchema.required) ? modelContract.jsonSchema.required.filter((key) => typeof key === "string") : [];
-  const properties = typeof modelContract.jsonSchema.properties === "object" && modelContract.jsonSchema.properties !== null ? modelContract.jsonSchema.properties : {};
-  const allowedKeys = new Set(Object.keys(properties));
-  const missingKeys = requiredKeys.filter((key) => !(key in model));
-  const unknownKeys = Object.keys(model).filter((key) => !allowedKeys.has(key));
-  if (missingKeys.length > 0) {
-    issues.push(
-      `Phase plan model for ${modelContract.schemaId} is missing required fields: ${missingKeys.join(", ")}.`
-    );
-  }
-  if (unknownKeys.length > 0) {
-    issues.push(
-      `Phase plan model for ${modelContract.schemaId} includes unsupported fields: ${unknownKeys.join(", ")}.`
-    );
+    return [
+      phasePlanDiagnostic({
+        source: "scope",
+        path: "model",
+        code: "contract.missing",
+        message: "phase.plan does not support structured model writes.",
+        context: {},
+        suggestion: "Read the live phase.plan artifact contract before authoring."
+      })
+    ];
   }
   const modelStrings = collectModelStringValues(model);
   const leakedSignals = modelContract.exampleLeakageSignals.filter(
     (signal) => modelStrings.some((value) => value.includes(signal))
   );
   for (const signal of leakedSignals) {
-    issues.push(
-      `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.example_leakage",
+        message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        context: { signal },
+        suggestion: "Replace copied example wording with evidence from the selected phase."
+      })
     );
   }
-  issues.push(...validatePhasePlanModelPlainText(model));
-  return issues;
+  for (const value of collectModelStringValues(model).filter(
+    (item) => hasPhasePlanModelPlaceholderLanguage(item)
+  )) {
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.placeholder",
+        message: `Phase plan model contains placeholder language: ${value}.`,
+        context: { value },
+        suggestion: "Replace placeholder language with concrete phase-specific evidence."
+      })
+    );
+  }
+  return diagnostics;
+}
+function setArrayItemEnum(schema, values) {
+  if (!schema || values.length === 0) {
+    return;
+  }
+  const items = getJsonObjectProperty(schema, "items");
+  if (items) {
+    items.enum = values;
+  }
+}
+function exactObjectPropertyContains(propertyName, value) {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+function buildPhasePlanTaskSchema(args) {
+  const schema = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const task = defs ? getJsonObjectProperty(defs, "task") : null;
+  const taskProperties = task ? getJsonObjectProperty(task, "properties") : null;
+  const requirementCoverageRow = defs ? getJsonObjectProperty(defs, "requirementCoverageRow") : null;
+  const requirementCoverageRowProperties = requirementCoverageRow ? getJsonObjectProperty(requirementCoverageRow, "properties") : null;
+  const evidenceCoverageRow = defs ? getJsonObjectProperty(defs, "evidenceCoverageRow") : null;
+  const evidenceCoverageRowProperties = evidenceCoverageRow ? getJsonObjectProperty(evidenceCoverageRow, "properties") : null;
+  if (!properties) {
+    return schema;
+  }
+  const dependsOn = getJsonObjectProperty(properties, "dependsOn");
+  if (dependsOn) {
+    if (args.allowedDependencyPlanIds.length > 0) {
+      setArrayItemEnum(dependsOn, args.allowedDependencyPlanIds);
+    } else {
+      dependsOn.maxItems = 0;
+    }
+  }
+  if (args.knownRequirements.length > 0) {
+    setArrayItemEnum(getJsonObjectProperty(properties, "requirements"), args.knownRequirements);
+    if (taskProperties) {
+      setArrayItemEnum(
+        getJsonObjectProperty(taskProperties, "requirements"),
+        args.knownRequirements
+      );
+    }
+    const requirement = requirementCoverageRowProperties ? getJsonObjectProperty(requirementCoverageRowProperties, "requirement") : null;
+    if (requirement) {
+      requirement.enum = args.knownRequirements;
+    }
+    const requirementCoverage = getJsonObjectProperty(properties, "requirementCoverage");
+    if (requirementCoverage) {
+      requirementCoverage.allOf = args.knownRequirements.map(
+        (requirementId) => exactObjectPropertyContains("requirement", requirementId)
+      );
+    }
+  }
+  if (args.knownEvidenceArtifacts.length > 0) {
+    const artifact = evidenceCoverageRowProperties ? getJsonObjectProperty(evidenceCoverageRowProperties, "artifact") : null;
+    if (artifact) {
+      artifact.enum = args.knownEvidenceArtifacts;
+    }
+    const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
+    if (evidenceCoverage) {
+      evidenceCoverage.allOf = args.knownEvidenceArtifacts.map(
+        (artifactPath) => exactObjectPropertyContains("artifact", artifactPath)
+      );
+    }
+  }
+  schema["x-blueprint-runtimeContext"] = {
+    knownRequirements: args.knownRequirements,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    allowedDependencyPlanIds: args.allowedDependencyPlanIds
+  };
+  return schema;
 }
 function uniquePreservingOrder(values) {
   const seen = /* @__PURE__ */ new Set();
@@ -27990,11 +28815,6 @@ function listDuplicateValues(values) {
   }
   return [...counts.entries()].filter(([, count]) => count > 1).map(([value]) => value).sort((left, right) => left.localeCompare(right));
 }
-function evidenceArtifactMatches(knownArtifact, declaredArtifact) {
-  const normalizedKnown = normalizePhasePlanModelSurface(knownArtifact);
-  const normalizedDeclared = normalizePhasePlanModelSurface(declaredArtifact);
-  return normalizedKnown === normalizedDeclared || path6.posix.basename(normalizedKnown) === normalizedDeclared;
-}
 function isPhasePlanEvidenceArtifact(artifactPath, targetPath) {
   const normalized = normalizePhasePlanModelSurface(artifactPath);
   if (normalized === normalizePhasePlanModelSurface(targetPath)) {
@@ -28016,10 +28836,52 @@ async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, tar
   });
   return located.artifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
 }
-async function validatePhasePlanStructuredModelCoverage(model, projectRoot, resolved, targetPath) {
+async function resolvePhasePlanAuthoringContextData(args) {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const existingIndex = await blueprintPhasePlanIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))) + 1;
+  const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
+  const pathValue = planPathFor(resolved, planId2);
+  const modelContract = readArtifactContract("phase.plan").modelContract;
+  if (!modelContract) {
+    throw new Error("phase.plan does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("phase.plan modelContract does not expose a schemaPath.");
+  }
+  const knownRequirements = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const knownEvidenceArtifacts = await collectKnownPhasePlanEvidenceArtifacts(
+    projectRoot,
+    resolved,
+    pathValue
+  );
+  const allowedDependencyPlanIds = existingIndex.plans.map((plan) => plan.planId).filter((existingPlanId) => existingPlanId !== planId2);
+  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const taskSchema = buildPhasePlanTaskSchema({
+    baseSchema,
+    knownRequirements,
+    knownEvidenceArtifacts,
+    allowedDependencyPlanIds
+  });
+  return {
+    projectRoot,
+    resolved,
+    planId: planId2,
+    pathValue,
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema,
+    knownRequirements,
+    knownEvidenceArtifacts,
+    allowedDependencyPlanIds
+  };
+}
+function validatePhasePlanStructuredModelCoverage(model) {
   const issues = [];
   const warnings = [];
-  const knownRequirementIds = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
   const taskIds = model.tasks.map((task) => task.id);
   const taskIdSet = new Set(taskIds);
   const declaredRequirements = new Set(model.requirements);
@@ -28033,11 +28895,6 @@ async function validatePhasePlanStructuredModelCoverage(model, projectRoot, reso
     (row) => normalizePhasePlanModelSurface(row.surface)
   );
   const duplicateFileSurfaceRows = listDuplicateValues(fileSurfaceRows);
-  const knownEvidenceArtifacts = await collectKnownPhasePlanEvidenceArtifacts(
-    projectRoot,
-    resolved,
-    targetPath
-  );
   for (const duplicate of duplicateTaskIds) {
     issues.push(`Phase plan model task id "${duplicate}" must be unique.`);
   }
@@ -28049,20 +28906,6 @@ async function validatePhasePlanStructuredModelCoverage(model, projectRoot, reso
   }
   for (const duplicate of duplicateFileSurfaceRows) {
     issues.push(`Phase plan model fileSurfaceCoverage duplicates surface "${duplicate}".`);
-  }
-  for (const requirementId of knownRequirementIds) {
-    const matchingRows = model.requirementCoverage.filter(
-      (row) => row.requirement === requirementId
-    );
-    if (matchingRows.length === 0) {
-      issues.push(
-        `Known roadmap requirement ${requirementId} is missing from requirementCoverage.`
-      );
-    } else if (matchingRows.length > 1) {
-      issues.push(
-        `Known roadmap requirement ${requirementId} appears more than once in requirementCoverage.`
-      );
-    }
   }
   for (const row of model.requirementCoverage) {
     for (const taskId of row.coveredByTasks) {
@@ -28178,24 +29021,6 @@ async function validatePhasePlanStructuredModelCoverage(model, projectRoot, reso
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
       issues.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
-      );
-    }
-  }
-  for (const artifact of knownEvidenceArtifacts) {
-    const coverage = model.evidenceCoverage.find(
-      (row) => evidenceArtifactMatches(artifact, row.artifact)
-    );
-    if (!coverage) {
-      issues.push(`Known evidence artifact ${artifact} is missing from evidenceCoverage.`);
-    }
-  }
-  for (const row of model.evidenceCoverage) {
-    const known = knownEvidenceArtifacts.some(
-      (artifact) => evidenceArtifactMatches(artifact, row.artifact)
-    );
-    if (!known && row.status === "used") {
-      warnings.push(
-        `Evidence coverage references ${row.artifact}, which is not a known saved phase evidence artifact.`
       );
     }
   }
@@ -28335,44 +29160,109 @@ ${fileRows}
 ${unknownRows}
 `);
 }
-async function phasePlanModelToContent(model, projectRoot, resolved, planId2, targetPath) {
-  if (typeof model !== "object" || model === null || Array.isArray(model)) {
-    return {
-      content: null,
-      issues: ["Phase plan model must be a JSON object."],
-      warnings: []
-    };
+async function validatePhasePlanModelWithContext(args) {
+  const diagnostics = [];
+  const modelObject = asJsonObject(args.model);
+  if (!modelObject) {
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "schema",
+        path: "model",
+        code: "schema.type",
+        message: "Phase plan model must be a JSON object.",
+        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        suggestion: "Return a JSON object that matches taskSchema."
+      })
+    );
   }
-  const contractIssues = phasePlanModelContractIssues(model);
-  const commandIssues = await validatePhasePlanModelCommands(model);
-  if (contractIssues.length > 0 || commandIssues.length > 0) {
-    return {
-      content: null,
-      issues: [...contractIssues, ...commandIssues],
-      warnings: []
-    };
+  let normalizedModel = null;
+  if (modelObject) {
+    const validate = createAjvValidator().compile(args.context.taskSchema);
+    const schemaValid = validate(modelObject);
+    if (!schemaValid) {
+      diagnostics.push(
+        ...(validate.errors ?? []).map(
+          (error2) => schemaDiagnosticFromPhasePlanAjvError(error2, args.context.taskSchema)
+        )
+      );
+    }
+    diagnostics.push(...phasePlanModelResidualDiagnostics(modelObject));
+    for (const issue2 of await validatePhasePlanModelCommands(modelObject)) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          source: "residual",
+          path: "model",
+          code: "content.non_implemented_command",
+          message: issue2,
+          context: {},
+          suggestion: "Use only implemented Blueprint command references, or route to /blu-progress."
+        })
+      );
+    }
+    if (schemaValid) {
+      normalizedModel = modelObject;
+      const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
+      for (const issue2 of coverage.issues) {
+        diagnostics.push(
+          phasePlanDiagnostic({
+            source: "residual",
+            path: "model",
+            code: "coverage.invalid",
+            message: issue2,
+            context: {},
+            suggestion: "Repair the cross-field requirement, task, file, verification, or deferral coverage."
+          })
+        );
+      }
+    }
   }
-  const parsedModel = phasePlanStructuredModelSchema.safeParse(model);
-  if (!parsedModel.success) {
-    return {
-      content: null,
-      issues: parsedModel.error.issues.map(
-        (issue2) => `Phase plan model field ${formatZodIssuePath(issue2.path)} is invalid: ${issue2.message}.`
-      ),
-      warnings: []
-    };
+  let renderPreview = null;
+  if (diagnostics.length === 0 && normalizedModel) {
+    const rendered = renderPhasePlanModelContent(
+      normalizedModel,
+      args.context.resolved,
+      args.context.planId
+    );
+    const validation = validatePlanArtifactContent(rendered, args.context.resolved.phaseNumber, {
+      strict: true
+    });
+    for (const issue2 of validation.issues) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue2,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+        })
+      );
+    }
+    if (validation.issues.length === 0) {
+      renderPreview = rendered;
+    }
   }
-  const content = renderPhasePlanModelContent(parsedModel.data, resolved, planId2);
-  const coverage = await validatePhasePlanStructuredModelCoverage(
-    parsedModel.data,
-    projectRoot,
-    resolved,
-    targetPath
-  );
   return {
-    content,
-    issues: coverage.issues,
-    warnings: coverage.warnings
+    status: diagnostics.length === 0 ? "valid" : "invalid",
+    valid: diagnostics.length === 0,
+    phase: args.context.resolved,
+    planId: args.context.planId,
+    path: args.context.pathValue,
+    schemaPath: args.context.schemaPath,
+    taskSchema: args.context.taskSchema,
+    diagnostics,
+    diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    renderPreview,
+    warnings: []
+  };
+}
+async function phasePlanModelToContent(model, context) {
+  const validation = await validatePhasePlanModelWithContext({ model, context });
+  return {
+    content: validation.renderPreview,
+    issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
+    warnings: validation.warnings
   };
 }
 function phaseValidationModelToRenderArgs(args, resolved, projectRoot) {
@@ -30551,10 +31441,82 @@ async function blueprintPhasePlanValidate(args = {}) {
   }
   return validatePhasePlanSet(projectRoot, resolved);
 }
+async function blueprintPhasePlanAuthoringContext(args = {}) {
+  try {
+    const context = await resolvePhasePlanAuthoringContextData(args);
+    return {
+      status: "ready",
+      phase: context.resolved,
+      planId: context.planId,
+      path: context.pathValue,
+      schemaPath: context.schemaPath,
+      baseSchema: context.baseSchema,
+      taskSchema: context.taskSchema,
+      knownRequirements: context.knownRequirements,
+      knownEvidenceArtifacts: context.knownEvidenceArtifacts,
+      allowedDependencyPlanIds: context.allowedDependencyPlanIds,
+      modelOnly: true,
+      reason: null,
+      warnings: []
+    };
+  } catch (error2) {
+    return {
+      status: "invalid",
+      phase: null,
+      planId: null,
+      path: null,
+      schemaPath: null,
+      baseSchema: null,
+      taskSchema: null,
+      knownRequirements: [],
+      knownEvidenceArtifacts: [],
+      allowedDependencyPlanIds: [],
+      modelOnly: true,
+      reason: error2 instanceof Error ? error2.message : String(error2),
+      warnings: []
+    };
+  }
+}
+async function blueprintPhasePlanValidateModel(args) {
+  let context;
+  try {
+    context = await resolvePhasePlanAuthoringContextData(args);
+  } catch (error2) {
+    const diagnostics = [
+      phasePlanDiagnostic({
+        source: "scope",
+        path: "phase",
+        code: "scope.invalid",
+        message: error2 instanceof Error ? error2.message : String(error2),
+        context: {},
+        suggestion: "Resolve a valid phase and plan slot before authoring a phase.plan model."
+      })
+    ];
+    return {
+      status: "invalid",
+      valid: false,
+      phase: null,
+      planId: null,
+      path: null,
+      schemaPath: null,
+      taskSchema: null,
+      diagnostics,
+      diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+      normalizedModel: null,
+      renderPreview: null,
+      warnings: []
+    };
+  }
+  return validatePhasePlanModelWithContext({
+    model: args.model,
+    context
+  });
+}
 async function blueprintPhasePlanWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
+  const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
     const existingIndex = await blueprintPhasePlanIndex({
@@ -30587,17 +31549,38 @@ async function blueprintPhasePlanWrite(args) {
         warnings: []
       };
     }
+    if (modelOnly && hasContent) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: [
+            "Phase plan model-only writes must supply the validated structured model, not Markdown content."
+          ],
+          warnings: []
+        },
+        warnings: []
+      };
+    }
     let normalizedContent;
     let modelCoverageIssues = [];
     let modelWarnings = [];
     if (hasModel) {
-      const modelRender = await phasePlanModelToContent(
-        args.model,
-        projectRoot,
-        resolved,
-        planId2,
-        pathValue
-      );
+      const authoringContext = await resolvePhasePlanAuthoringContextData({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        planId: planId2
+      });
+      const modelRender = await phasePlanModelToContent(args.model, authoringContext);
       if (!modelRender.content) {
         return {
           phaseNumber: resolved.phaseNumber,
@@ -31614,10 +32597,11 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationRenderInputSchema, phaseValidationRenderSchema, phaseValidationModelStringSchema, phaseVerificationStructuredModelSchema, phaseUatStructuredModelSchema, phasePlanModelStringSchema, phasePlanModelTaskSchema, phasePlanStructuredModelSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, PHASE_VALIDATION_MODEL_IDENTITY_KEYS, PHASE_PLAN_MODEL_IDENTITY_KEYS, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var import__, SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationRenderInputSchema, phaseValidationRenderSchema, phaseValidationModelStringSchema, phaseVerificationStructuredModelSchema, phaseUatStructuredModelSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, PHASE_VALIDATION_MODEL_IDENTITY_KEYS, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
+    import__ = __toESM(require__(), 1);
     init_v4();
     init_artifact_contracts();
     init_command_paths();
@@ -31905,71 +32889,6 @@ var init_phase = __esm({
       followUpFixes: array(phaseValidationModelStringSchema).min(1),
       nextSafeAction: phaseValidationModelStringSchema
     }).strict();
-    phasePlanModelStringSchema = string2().min(1);
-    phasePlanModelTaskSchema = object2({
-      id: phasePlanModelStringSchema.regex(/^[A-Za-z0-9._-]+$/),
-      title: phasePlanModelStringSchema,
-      readFirst: array(phasePlanModelStringSchema).min(1),
-      action: array(phasePlanModelStringSchema).min(1),
-      acceptanceCriteria: array(phasePlanModelStringSchema).min(1),
-      requirements: array(phasePlanModelStringSchema).min(1),
-      filesModified: array(phasePlanModelStringSchema).min(1)
-    }).strict();
-    phasePlanStructuredModelSchema = object2({
-      title: phasePlanModelStringSchema,
-      wave: number2().int().positive(),
-      status: _enum(["planned"]),
-      objective: phasePlanModelStringSchema,
-      gapClosure: boolean2().optional(),
-      dependsOn: array(phasePlanModelStringSchema.regex(/^[0-9]+$/)),
-      requirements: array(phasePlanModelStringSchema).min(1),
-      filesModified: array(phasePlanModelStringSchema).min(1),
-      readFirst: array(phasePlanModelStringSchema).min(1),
-      autonomous: boolean2(),
-      goal: phasePlanModelStringSchema,
-      scope: array(phasePlanModelStringSchema).min(1),
-      tasks: array(phasePlanModelTaskSchema).min(1),
-      verification: array(
-        object2({
-          item: phasePlanModelStringSchema,
-          method: _enum(["test", "grep", "command", "file-read", "artifact-validation"]),
-          evidence: phasePlanModelStringSchema
-        }).strict()
-      ).min(1),
-      mustHaves: array(phasePlanModelStringSchema).min(1),
-      requirementCoverage: array(
-        object2({
-          requirement: phasePlanModelStringSchema,
-          status: _enum(["covered", "deferred", "irrelevant"]),
-          coveredByTasks: array(phasePlanModelStringSchema),
-          evidence: phasePlanModelStringSchema,
-          rationale: phasePlanModelStringSchema
-        }).strict()
-      ).min(1),
-      evidenceCoverage: array(
-        object2({
-          artifact: phasePlanModelStringSchema,
-          status: _enum(["used", "deferred", "irrelevant", "unavailable"]),
-          rationale: phasePlanModelStringSchema
-        }).strict()
-      ).min(1),
-      fileSurfaceCoverage: array(
-        object2({
-          surface: phasePlanModelStringSchema,
-          coveredByTasks: array(phasePlanModelStringSchema).min(1),
-          verification: phasePlanModelStringSchema,
-          rationale: phasePlanModelStringSchema
-        }).strict()
-      ).min(1),
-      unknownsAndDeferrals: array(
-        object2({
-          item: phasePlanModelStringSchema,
-          disposition: _enum(["unknown", "deferred", "blocked", "none"]),
-          rationale: phasePlanModelStringSchema,
-          followUp: phasePlanModelStringSchema
-        }).strict()
-      ).min(1)
-    }).strict();
     phasePlanReadInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
@@ -31979,12 +32898,24 @@ var init_phase = __esm({
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional()
     };
+    phasePlanAuthoringContextInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      planId: numericBlueprintInputSchema.optional()
+    };
+    phasePlanValidateModelInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      planId: numericBlueprintInputSchema.optional(),
+      model: unknown()
+    };
     phasePlanWriteInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
       planId: numericBlueprintInputSchema.optional(),
       content: string2().optional(),
-      model: record(string2(), unknown()).optional(),
+      model: unknown().optional(),
+      authoringMode: _enum(["content-compatible", "model-only"]).optional(),
       overwrite: boolean2().optional(),
       validationMode: _enum(["strict", "warn"]).optional()
     };
@@ -32117,19 +33048,6 @@ var init_phase = __esm({
       "path",
       "content"
     ]);
-    PHASE_PLAN_MODEL_IDENTITY_KEYS = /* @__PURE__ */ new Set([
-      "cwd",
-      "phase",
-      "phaseNumber",
-      "phasePrefix",
-      "phaseName",
-      "phaseDir",
-      "planId",
-      "plan_id",
-      "artifact",
-      "path",
-      "content"
-    ]);
     phasePlanImplementedCommandNamesPromise = null;
     phaseToolDefinitions = [
       {
@@ -32241,6 +33159,18 @@ var init_phase = __esm({
         handler: async (args) => blueprintPhasePlanValidate(args)
       },
       {
+        name: "blueprint_phase_plan_authoring_context",
+        description: "Return the schema-first phase.plan authoring context, including the base model schema and runtime-narrowed task schema for the selected phase and plan slot.",
+        inputSchema: phasePlanAuthoringContextInputSchema,
+        handler: async (args) => blueprintPhasePlanAuthoringContext(args)
+      },
+      {
+        name: "blueprint_phase_plan_validate_model",
+        description: "Validate a structured phase.plan model against the runtime-narrowed task schema and return a canonical PLAN markdown preview without writing files.",
+        inputSchema: phasePlanValidateModelInputSchema,
+        handler: async (args) => blueprintPhasePlanValidateModel(args)
+      },
+      {
         name: "blueprint_phase_plan_write",
         description: "Persist a phase-scoped PLAN artifact from canonical markdown content or a structured phase.plan model with overwrite protection and validation.",
         inputSchema: phasePlanWriteInputSchema,
@@ -32286,835 +33216,11 @@ var init_phase = __esm({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
-var require_dynamicAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.dynamicAnchor = void 0;
-    var codegen_1 = require_codegen();
-    var names_1 = require_names();
-    var compile_1 = require_compile();
-    var ref_1 = require_ref();
-    var def = {
-      keyword: "$dynamicAnchor",
-      schemaType: "string",
-      code: (cxt) => dynamicAnchor(cxt, cxt.schema)
-    };
-    function dynamicAnchor(cxt, anchor) {
-      const { gen, it } = cxt;
-      it.schemaEnv.root.dynamicAnchors[anchor] = true;
-      const v = (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`;
-      const validate = it.errSchemaPath === "#" ? it.validateName : _getValidate(cxt);
-      gen.if((0, codegen_1._)`!${v}`, () => gen.assign(v, validate));
-    }
-    exports.dynamicAnchor = dynamicAnchor;
-    function _getValidate(cxt) {
-      const { schemaEnv, schema, self } = cxt.it;
-      const { root, baseId, localRefs, meta: meta3 } = schemaEnv.root;
-      const { schemaId } = self.opts;
-      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta: meta3 });
-      compile_1.compileSchema.call(self, sch);
-      return (0, ref_1.getValidate)(cxt, sch);
-    }
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
-var require_dynamicRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.dynamicRef = void 0;
-    var codegen_1 = require_codegen();
-    var names_1 = require_names();
-    var ref_1 = require_ref();
-    var def = {
-      keyword: "$dynamicRef",
-      schemaType: "string",
-      code: (cxt) => dynamicRef(cxt, cxt.schema)
-    };
-    function dynamicRef(cxt, ref) {
-      const { gen, keyword, it } = cxt;
-      if (ref[0] !== "#")
-        throw new Error(`"${keyword}" only supports hash fragment reference`);
-      const anchor = ref.slice(1);
-      if (it.allErrors) {
-        _dynamicRef();
-      } else {
-        const valid = gen.let("valid", false);
-        _dynamicRef(valid);
-        cxt.ok(valid);
-      }
-      function _dynamicRef(valid) {
-        if (it.schemaEnv.root.dynamicAnchors[anchor]) {
-          const v = gen.let("_v", (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`);
-          gen.if(v, _callRef(v, valid), _callRef(it.validateName, valid));
-        } else {
-          _callRef(it.validateName, valid)();
-        }
-      }
-      function _callRef(validate, valid) {
-        return valid ? () => gen.block(() => {
-          (0, ref_1.callRef)(cxt, validate);
-          gen.let(valid, true);
-        }) : () => (0, ref_1.callRef)(cxt, validate);
-      }
-    }
-    exports.dynamicRef = dynamicRef;
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
-var require_recursiveAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dynamicAnchor_1 = require_dynamicAnchor();
-    var util_1 = require_util();
-    var def = {
-      keyword: "$recursiveAnchor",
-      schemaType: "boolean",
-      code(cxt) {
-        if (cxt.schema)
-          (0, dynamicAnchor_1.dynamicAnchor)(cxt, "");
-        else
-          (0, util_1.checkStrictMode)(cxt.it, "$recursiveAnchor: false is ignored");
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
-var require_recursiveRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dynamicRef_1 = require_dynamicRef();
-    var def = {
-      keyword: "$recursiveRef",
-      schemaType: "string",
-      code: (cxt) => (0, dynamicRef_1.dynamicRef)(cxt, cxt.schema)
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/index.js
-var require_dynamic = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dynamicAnchor_1 = require_dynamicAnchor();
-    var dynamicRef_1 = require_dynamicRef();
-    var recursiveAnchor_1 = require_recursiveAnchor();
-    var recursiveRef_1 = require_recursiveRef();
-    var dynamic = [dynamicAnchor_1.default, dynamicRef_1.default, recursiveAnchor_1.default, recursiveRef_1.default];
-    exports.default = dynamic;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
-var require_dependentRequired = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dependencies_1 = require_dependencies();
-    var def = {
-      keyword: "dependentRequired",
-      type: "object",
-      schemaType: "object",
-      error: dependencies_1.error,
-      code: (cxt) => (0, dependencies_1.validatePropertyDeps)(cxt)
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
-var require_dependentSchemas = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dependencies_1 = require_dependencies();
-    var def = {
-      keyword: "dependentSchemas",
-      type: "object",
-      schemaType: "object",
-      code: (cxt) => (0, dependencies_1.validateSchemaDeps)(cxt)
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/validation/limitContains.js
-var require_limitContains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var util_1 = require_util();
-    var def = {
-      keyword: ["maxContains", "minContains"],
-      type: "array",
-      schemaType: "number",
-      code({ keyword, parentSchema, it }) {
-        if (parentSchema.contains === void 0) {
-          (0, util_1.checkStrictMode)(it, `"${keyword}" without "contains" is ignored`);
-        }
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/next.js
-var require_next = __commonJS({
-  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dependentRequired_1 = require_dependentRequired();
-    var dependentSchemas_1 = require_dependentSchemas();
-    var limitContains_1 = require_limitContains();
-    var next = [dependentRequired_1.default, dependentSchemas_1.default, limitContains_1.default];
-    exports.default = next;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
-var require_unevaluatedProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var codegen_1 = require_codegen();
-    var util_1 = require_util();
-    var names_1 = require_names();
-    var error2 = {
-      message: "must NOT have unevaluated properties",
-      params: ({ params }) => (0, codegen_1._)`{unevaluatedProperty: ${params.unevaluatedProperty}}`
-    };
-    var def = {
-      keyword: "unevaluatedProperties",
-      type: "object",
-      schemaType: ["boolean", "object"],
-      trackErrors: true,
-      error: error2,
-      code(cxt) {
-        const { gen, schema, data, errsCount, it } = cxt;
-        if (!errsCount)
-          throw new Error("ajv implementation error");
-        const { allErrors, props } = it;
-        if (props instanceof codegen_1.Name) {
-          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key) => gen.if(unevaluatedDynamic(props, key), () => unevaluatedPropCode(key))));
-        } else if (props !== true) {
-          gen.forIn("key", data, (key) => props === void 0 ? unevaluatedPropCode(key) : gen.if(unevaluatedStatic(props, key), () => unevaluatedPropCode(key)));
-        }
-        it.props = true;
-        cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
-        function unevaluatedPropCode(key) {
-          if (schema === false) {
-            cxt.setParams({ unevaluatedProperty: key });
-            cxt.error();
-            if (!allErrors)
-              gen.break();
-            return;
-          }
-          if (!(0, util_1.alwaysValidSchema)(it, schema)) {
-            const valid = gen.name("valid");
-            cxt.subschema({
-              keyword: "unevaluatedProperties",
-              dataProp: key,
-              dataPropType: util_1.Type.Str
-            }, valid);
-            if (!allErrors)
-              gen.if((0, codegen_1.not)(valid), () => gen.break());
-          }
-        }
-        function unevaluatedDynamic(evaluatedProps, key) {
-          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key}]`;
-        }
-        function unevaluatedStatic(evaluatedProps, key) {
-          const ps = [];
-          for (const p in evaluatedProps) {
-            if (evaluatedProps[p] === true)
-              ps.push((0, codegen_1._)`${key} !== ${p}`);
-          }
-          return (0, codegen_1.and)(...ps);
-        }
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
-var require_unevaluatedItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var codegen_1 = require_codegen();
-    var util_1 = require_util();
-    var error2 = {
-      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
-      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
-    };
-    var def = {
-      keyword: "unevaluatedItems",
-      type: "array",
-      schemaType: ["boolean", "object"],
-      error: error2,
-      code(cxt) {
-        const { gen, schema, data, it } = cxt;
-        const items = it.items || 0;
-        if (items === true)
-          return;
-        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
-        if (schema === false) {
-          cxt.setParams({ len: items });
-          cxt.fail((0, codegen_1._)`${len} > ${items}`);
-        } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
-          const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items}`);
-          gen.if((0, codegen_1.not)(valid), () => validateItems(valid, items));
-          cxt.ok(valid);
-        }
-        it.items = true;
-        function validateItems(valid, from) {
-          gen.forRange("i", from, len, (i) => {
-            cxt.subschema({ keyword: "unevaluatedItems", dataProp: i, dataPropType: util_1.Type.Num }, valid);
-            if (!it.allErrors)
-              gen.if((0, codegen_1.not)(valid), () => gen.break());
-          });
-        }
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/unevaluated/index.js
-var require_unevaluated = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var unevaluatedProperties_1 = require_unevaluatedProperties();
-    var unevaluatedItems_1 = require_unevaluatedItems();
-    var unevaluated = [unevaluatedProperties_1.default, unevaluatedItems_1.default];
-    exports.default = unevaluated;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/draft2020.js
-var require_draft2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var core_1 = require_core2();
-    var validation_1 = require_validation();
-    var applicator_1 = require_applicator();
-    var dynamic_1 = require_dynamic();
-    var next_1 = require_next();
-    var unevaluated_1 = require_unevaluated();
-    var format_1 = require_format2();
-    var metadata_1 = require_metadata();
-    var draft2020Vocabularies = [
-      dynamic_1.default,
-      core_1.default,
-      validation_1.default,
-      (0, applicator_1.default)(true),
-      format_1.default,
-      metadata_1.metadataVocabulary,
-      metadata_1.contentVocabulary,
-      next_1.default,
-      unevaluated_1.default
-    ];
-    exports.default = draft2020Vocabularies;
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
-var require_schema = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/schema",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/core": true,
-        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
-        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
-        "https://json-schema.org/draft/2020-12/vocab/validation": true,
-        "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
-        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
-        "https://json-schema.org/draft/2020-12/vocab/content": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Core and Validation specifications meta-schema",
-      allOf: [
-        { $ref: "meta/core" },
-        { $ref: "meta/applicator" },
-        { $ref: "meta/unevaluated" },
-        { $ref: "meta/validation" },
-        { $ref: "meta/meta-data" },
-        { $ref: "meta/format-annotation" },
-        { $ref: "meta/content" }
-      ],
-      type: ["object", "boolean"],
-      $comment: "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.",
-      properties: {
-        definitions: {
-          $comment: '"definitions" has been replaced by "$defs".',
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          deprecated: true,
-          default: {}
-        },
-        dependencies: {
-          $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.',
-          type: "object",
-          additionalProperties: {
-            anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }]
-          },
-          deprecated: true,
-          default: {}
-        },
-        $recursiveAnchor: {
-          $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".',
-          $ref: "meta/core#/$defs/anchorString",
-          deprecated: true
-        },
-        $recursiveRef: {
-          $comment: '"$recursiveRef" has been replaced by "$dynamicRef".',
-          $ref: "meta/core#/$defs/uriReferenceString",
-          deprecated: true
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
-var require_applicator2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/applicator",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/applicator": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Applicator vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        prefixItems: { $ref: "#/$defs/schemaArray" },
-        items: { $dynamicRef: "#meta" },
-        contains: { $dynamicRef: "#meta" },
-        additionalProperties: { $dynamicRef: "#meta" },
-        properties: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          default: {}
-        },
-        patternProperties: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          propertyNames: { format: "regex" },
-          default: {}
-        },
-        dependentSchemas: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          default: {}
-        },
-        propertyNames: { $dynamicRef: "#meta" },
-        if: { $dynamicRef: "#meta" },
-        then: { $dynamicRef: "#meta" },
-        else: { $dynamicRef: "#meta" },
-        allOf: { $ref: "#/$defs/schemaArray" },
-        anyOf: { $ref: "#/$defs/schemaArray" },
-        oneOf: { $ref: "#/$defs/schemaArray" },
-        not: { $dynamicRef: "#meta" }
-      },
-      $defs: {
-        schemaArray: {
-          type: "array",
-          minItems: 1,
-          items: { $dynamicRef: "#meta" }
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
-var require_unevaluated2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Unevaluated applicator vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        unevaluatedItems: { $dynamicRef: "#meta" },
-        unevaluatedProperties: { $dynamicRef: "#meta" }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
-var require_content = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/content",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/content": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Content vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        contentEncoding: { type: "string" },
-        contentMediaType: { type: "string" },
-        contentSchema: { $dynamicRef: "#meta" }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
-var require_core3 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/core",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/core": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Core vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        $id: {
-          $ref: "#/$defs/uriReferenceString",
-          $comment: "Non-empty fragments not allowed.",
-          pattern: "^[^#]*#?$"
-        },
-        $schema: { $ref: "#/$defs/uriString" },
-        $ref: { $ref: "#/$defs/uriReferenceString" },
-        $anchor: { $ref: "#/$defs/anchorString" },
-        $dynamicRef: { $ref: "#/$defs/uriReferenceString" },
-        $dynamicAnchor: { $ref: "#/$defs/anchorString" },
-        $vocabulary: {
-          type: "object",
-          propertyNames: { $ref: "#/$defs/uriString" },
-          additionalProperties: {
-            type: "boolean"
-          }
-        },
-        $comment: {
-          type: "string"
-        },
-        $defs: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" }
-        }
-      },
-      $defs: {
-        anchorString: {
-          type: "string",
-          pattern: "^[A-Za-z_][-A-Za-z0-9._]*$"
-        },
-        uriString: {
-          type: "string",
-          format: "uri"
-        },
-        uriReferenceString: {
-          type: "string",
-          format: "uri-reference"
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
-var require_format_annotation = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Format vocabulary meta-schema for annotation results",
-      type: ["object", "boolean"],
-      properties: {
-        format: { type: "string" }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
-var require_meta_data = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/meta-data": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Meta-data vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        title: {
-          type: "string"
-        },
-        description: {
-          type: "string"
-        },
-        default: true,
-        deprecated: {
-          type: "boolean",
-          default: false
-        },
-        readOnly: {
-          type: "boolean",
-          default: false
-        },
-        writeOnly: {
-          type: "boolean",
-          default: false
-        },
-        examples: {
-          type: "array",
-          items: true
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
-var require_validation2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/validation",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/validation": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Validation vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        type: {
-          anyOf: [
-            { $ref: "#/$defs/simpleTypes" },
-            {
-              type: "array",
-              items: { $ref: "#/$defs/simpleTypes" },
-              minItems: 1,
-              uniqueItems: true
-            }
-          ]
-        },
-        const: true,
-        enum: {
-          type: "array",
-          items: true
-        },
-        multipleOf: {
-          type: "number",
-          exclusiveMinimum: 0
-        },
-        maximum: {
-          type: "number"
-        },
-        exclusiveMaximum: {
-          type: "number"
-        },
-        minimum: {
-          type: "number"
-        },
-        exclusiveMinimum: {
-          type: "number"
-        },
-        maxLength: { $ref: "#/$defs/nonNegativeInteger" },
-        minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
-        pattern: {
-          type: "string",
-          format: "regex"
-        },
-        maxItems: { $ref: "#/$defs/nonNegativeInteger" },
-        minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
-        uniqueItems: {
-          type: "boolean",
-          default: false
-        },
-        maxContains: { $ref: "#/$defs/nonNegativeInteger" },
-        minContains: {
-          $ref: "#/$defs/nonNegativeInteger",
-          default: 1
-        },
-        maxProperties: { $ref: "#/$defs/nonNegativeInteger" },
-        minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
-        required: { $ref: "#/$defs/stringArray" },
-        dependentRequired: {
-          type: "object",
-          additionalProperties: {
-            $ref: "#/$defs/stringArray"
-          }
-        }
-      },
-      $defs: {
-        nonNegativeInteger: {
-          type: "integer",
-          minimum: 0
-        },
-        nonNegativeIntegerDefault0: {
-          $ref: "#/$defs/nonNegativeInteger",
-          default: 0
-        },
-        simpleTypes: {
-          enum: ["array", "boolean", "integer", "null", "number", "object", "string"]
-        },
-        stringArray: {
-          type: "array",
-          items: { type: "string" },
-          uniqueItems: true,
-          default: []
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
-var require_json_schema_2020_12 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var metaSchema = require_schema();
-    var applicator = require_applicator2();
-    var unevaluated = require_unevaluated2();
-    var content = require_content();
-    var core = require_core3();
-    var format = require_format_annotation();
-    var metadata = require_meta_data();
-    var validation = require_validation2();
-    var META_SUPPORT_DATA = ["/properties"];
-    function addMetaSchema2020($data) {
-      ;
-      [
-        metaSchema,
-        applicator,
-        unevaluated,
-        content,
-        core,
-        with$data(this, format),
-        metadata,
-        with$data(this, validation)
-      ].forEach((sch) => this.addMetaSchema(sch, void 0, false));
-      return this;
-      function with$data(ajv, sch) {
-        return $data ? ajv.$dataMetaSchema(sch, META_SUPPORT_DATA) : sch;
-      }
-    }
-    exports.default = addMetaSchema2020;
-  }
-});
-
-// node_modules/ajv/dist/2020.js
-var require__ = __commonJS({
-  "node_modules/ajv/dist/2020.js"(exports, module) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
-    var core_1 = require_core();
-    var draft2020_1 = require_draft2020();
-    var discriminator_1 = require_discriminator();
-    var json_schema_2020_12_1 = require_json_schema_2020_12();
-    var META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
-    var Ajv20202 = class extends core_1.default {
-      constructor(opts = {}) {
-        super({
-          ...opts,
-          dynamicRef: true,
-          next: true,
-          unevaluated: true
-        });
-      }
-      _addVocabularies() {
-        super._addVocabularies();
-        draft2020_1.default.forEach((v) => this.addVocabulary(v));
-        if (this.opts.discriminator)
-          this.addKeyword(discriminator_1.default);
-      }
-      _addDefaultMetaSchema() {
-        super._addDefaultMetaSchema();
-        const { $data, meta: meta3 } = this.opts;
-        if (!meta3)
-          return;
-        json_schema_2020_12_1.default.call(this, $data);
-        this.refs["http://json-schema.org/schema"] = META_SCHEMA_ID;
-      }
-      defaultMeta() {
-        return this.opts.defaultMeta = super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : void 0);
-      }
-    };
-    exports.Ajv2020 = Ajv20202;
-    module.exports = exports = Ajv20202;
-    module.exports.Ajv2020 = Ajv20202;
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.default = Ajv20202;
-    var validate_1 = require_validate();
-    Object.defineProperty(exports, "KeywordCxt", { enumerable: true, get: function() {
-      return validate_1.KeywordCxt;
-    } });
-    var codegen_1 = require_codegen();
-    Object.defineProperty(exports, "_", { enumerable: true, get: function() {
-      return codegen_1._;
-    } });
-    Object.defineProperty(exports, "str", { enumerable: true, get: function() {
-      return codegen_1.str;
-    } });
-    Object.defineProperty(exports, "stringify", { enumerable: true, get: function() {
-      return codegen_1.stringify;
-    } });
-    Object.defineProperty(exports, "nil", { enumerable: true, get: function() {
-      return codegen_1.nil;
-    } });
-    Object.defineProperty(exports, "Name", { enumerable: true, get: function() {
-      return codegen_1.Name;
-    } });
-    Object.defineProperty(exports, "CodeGen", { enumerable: true, get: function() {
-      return codegen_1.CodeGen;
-    } });
-    var validation_error_1 = require_validation_error();
-    Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function() {
-      return validation_error_1.default;
-    } });
-    var ref_error_1 = require_ref_error();
-    Object.defineProperty(exports, "MissingRefError", { enumerable: true, get: function() {
-      return ref_error_1.default;
-    } });
-  }
-});
-
 // src/mcp/tools/review.ts
 import { promises as fs5 } from "node:fs";
 import path7 from "node:path";
-function createAjvValidator() {
-  return new import__.Ajv2020({
+function createAjvValidator2() {
+  return new import__2.Ajv2020({
     allErrors: true,
     strict: false,
     validateSchema: true
@@ -33140,7 +33246,7 @@ function collectModelStringEntries(value, pathValue = "model") {
   }
   return [];
 }
-function cloneJsonObject2(value) {
+function cloneJsonObject3(value) {
   return JSON.parse(JSON.stringify(value));
 }
 function modelDiagnostic(args) {
@@ -33264,21 +33370,21 @@ function buildTaskLocationSchema(scopeFiles) {
     examples: scopeFiles.slice(0, 1).map((scopeFile) => `${scopeFile}:1`)
   };
 }
-function asJsonObject(value) {
+function asJsonObject2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty(value, key) {
-  return asJsonObject(value[key]);
+function getJsonObjectProperty2(value, key) {
+  return asJsonObject2(value[key]);
 }
 function buildCodeReviewTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
-  const finding = defs ? getJsonObjectProperty(defs, "finding") : null;
-  const findingProperties = finding ? getJsonObjectProperty(finding, "properties") : null;
-  const location = findingProperties ? getJsonObjectProperty(findingProperties, "location") : null;
+  const schema = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty2(schema, "properties");
+  const defs = getJsonObjectProperty2(schema, "$defs");
+  const finding = defs ? getJsonObjectProperty2(defs, "finding") : null;
+  const findingProperties = finding ? getJsonObjectProperty2(finding, "properties") : null;
+  const location = findingProperties ? getJsonObjectProperty2(findingProperties, "location") : null;
   if (properties) {
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -33312,7 +33418,7 @@ async function buildCodeReviewAuthoringContext(args) {
     throw new Error("review.code-review modelContract does not expose a schemaPath.");
   }
   const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
   const taskSchema = buildCodeReviewTaskSchema({
     baseSchema,
     scopeFiles: args.files,
@@ -33719,7 +33825,7 @@ function ajvPathToModelPath(instancePath) {
     return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
   }).join("")}`;
 }
-function schemaDiagnosticFromAjvError(error2) {
+function schemaDiagnosticFromAjvError2(error2) {
   const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
   const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
   const basePath = ajvPathToModelPath(error2.instancePath);
@@ -33744,7 +33850,7 @@ function normalizeStringArray(value) {
   return value.map((item) => item.trim());
 }
 function normalizeCodeReviewFinding(finding) {
-  const findingObject = asJsonObject(finding);
+  const findingObject = asJsonObject2(finding);
   if (!findingObject || typeof findingObject.severity !== "string" || typeof findingObject.disposition !== "string" || typeof findingObject.location !== "string" || typeof findingObject.evidence !== "string" || typeof findingObject.impact !== "string" || typeof findingObject.recommendation !== "string") {
     return null;
   }
@@ -33760,7 +33866,7 @@ function normalizeCodeReviewFinding(finding) {
 function normalizeEvidenceCoverage(evidenceCoverage) {
   const normalized = {};
   for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
-    const coverageObject = asJsonObject(coverage);
+    const coverageObject = asJsonObject2(coverage);
     if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
       return null;
     }
@@ -33773,7 +33879,7 @@ function normalizeEvidenceCoverage(evidenceCoverage) {
 }
 function normalizeCodeReviewModel(model) {
   const findings = Array.isArray(model.findings) ? model.findings : null;
-  const evidenceCoverage = asJsonObject(model.evidenceCoverage);
+  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
   const reviewSummary = normalizeStringArray(model.reviewSummary);
   const positiveSignals = normalizeStringArray(model.positiveSignals);
   const followUps = normalizeStringArray(model.followUps);
@@ -33800,7 +33906,7 @@ function normalizeCodeReviewModelForResiduals(model) {
     const normalized = normalizeCodeReviewFinding(finding);
     return normalized ? [normalized] : [];
   }) : [];
-  const evidenceCoverage = asJsonObject(model.evidenceCoverage);
+  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
   return {
     verdict: typeof model.verdict === "string" ? model.verdict : "",
     reviewSummary: normalizeStringArray(model.reviewSummary) ?? [],
@@ -34814,7 +34920,7 @@ async function blueprintReviewValidateModel(args) {
       warnings: scoped.warnings
     };
   }
-  const modelObject = asJsonObject(args.model);
+  const modelObject = asJsonObject2(args.model);
   const diagnostics = [];
   if (!modelObject) {
     diagnostics.push(
@@ -34832,10 +34938,10 @@ async function blueprintReviewValidateModel(args) {
   if (modelObject) {
     normalizedModel = normalizeCodeReviewModel(modelObject);
     const residualModel = normalizeCodeReviewModelForResiduals(modelObject);
-    const validate = createAjvValidator().compile(scoped.authoringContext.taskSchema);
+    const validate = createAjvValidator2().compile(scoped.authoringContext.taskSchema);
     const schemaValid = validate(modelObject);
     if (!schemaValid) {
-      diagnostics.push(...(validate.errors ?? []).map(schemaDiagnosticFromAjvError));
+      diagnostics.push(...(validate.errors ?? []).map(schemaDiagnosticFromAjvError2));
     }
     diagnostics.push(
       ...await collectCodeReviewResidualDiagnostics({
@@ -35221,11 +35327,11 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var import__, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__2, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
-    import__ = __toESM(require__(), 1);
+    import__2 = __toESM(require__(), 1);
     init_v4();
     init_security();
     init_artifact_contracts();

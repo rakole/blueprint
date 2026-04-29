@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import * as z from "zod/v4";
 
 import {
@@ -379,9 +380,18 @@ type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
 type PhasePlanWriteArgs = PhaseLookupArgs & {
   planId?: NumericInput;
   content?: string;
-  model?: Record<string, unknown>;
+  model?: unknown;
+  authoringMode?: "content-compatible" | "model-only";
   overwrite?: boolean;
   validationMode?: "strict" | "warn";
+};
+
+type PhasePlanAuthoringContextArgs = PhaseLookupArgs & {
+  planId?: NumericInput;
+};
+
+type PhasePlanValidateModelArgs = PhasePlanAuthoringContextArgs & {
+  model: unknown;
 };
 
 type PhaseSummaryReadArgs = PhaseLookupArgs & {
@@ -826,6 +836,52 @@ type PhasePlanWriteResult = {
     issues: string[];
     warnings: string[];
   };
+  warnings: string[];
+};
+
+type PhasePlanAuthoringContextResult = {
+  status: "ready" | "invalid";
+  phase: ResolvedPhaseLocation | null;
+  planId: string | null;
+  path: string | null;
+  schemaPath: string | null;
+  baseSchema: Record<string, unknown> | null;
+  taskSchema: Record<string, unknown> | null;
+  knownRequirements: string[];
+  knownEvidenceArtifacts: string[];
+  allowedDependencyPlanIds: string[];
+  modelOnly: boolean;
+  reason: string | null;
+  warnings: string[];
+};
+
+type PhasePlanModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+
+type PhasePlanModelDiagnostic = {
+  source: PhasePlanModelDiagnosticSource;
+  path: string;
+  code: string;
+  message: string;
+  context: Record<string, unknown>;
+  suggestion: string;
+};
+
+type PhasePlanValidateModelResult = {
+  status: "valid" | "invalid";
+  valid: boolean;
+  phase: ResolvedPhaseLocation | null;
+  planId: string | null;
+  path: string | null;
+  schemaPath: string | null;
+  taskSchema: Record<string, unknown> | null;
+  diagnostics: PhasePlanModelDiagnostic[];
+  diagnosticCounts: {
+    total: number;
+    bySource: Record<PhasePlanModelDiagnosticSource, number>;
+    byCode: Record<string, number>;
+  };
+  normalizedModel: PhasePlanStructuredModel | null;
+  renderPreview: string | null;
   warnings: string[];
 };
 
@@ -1332,96 +1388,59 @@ const phaseUatStructuredModelSchema = z
     nextSafeAction: phaseValidationModelStringSchema
   })
   .strict();
-const phasePlanModelStringSchema = z.string().min(1);
-const phasePlanModelTaskSchema = z
-  .object({
-    id: phasePlanModelStringSchema.regex(/^[A-Za-z0-9._-]+$/),
-    title: phasePlanModelStringSchema,
-    readFirst: z.array(phasePlanModelStringSchema).min(1),
-    action: z.array(phasePlanModelStringSchema).min(1),
-    acceptanceCriteria: z.array(phasePlanModelStringSchema).min(1),
-    requirements: z.array(phasePlanModelStringSchema).min(1),
-    filesModified: z.array(phasePlanModelStringSchema).min(1)
-  })
-  .strict();
-const phasePlanStructuredModelSchema = z
-  .object({
-    title: phasePlanModelStringSchema,
-    wave: z.number().int().positive(),
-    status: z.enum(["planned"]),
-    objective: phasePlanModelStringSchema,
-    gapClosure: z.boolean().optional(),
-    dependsOn: z.array(phasePlanModelStringSchema.regex(/^[0-9]+$/)),
-    requirements: z.array(phasePlanModelStringSchema).min(1),
-    filesModified: z.array(phasePlanModelStringSchema).min(1),
-    readFirst: z.array(phasePlanModelStringSchema).min(1),
-    autonomous: z.boolean(),
-    goal: phasePlanModelStringSchema,
-    scope: z.array(phasePlanModelStringSchema).min(1),
-    tasks: z.array(phasePlanModelTaskSchema).min(1),
-    verification: z
-      .array(
-        z
-          .object({
-            item: phasePlanModelStringSchema,
-            method: z.enum(["test", "grep", "command", "file-read", "artifact-validation"]),
-            evidence: phasePlanModelStringSchema
-          })
-          .strict()
-      )
-      .min(1),
-    mustHaves: z.array(phasePlanModelStringSchema).min(1),
-    requirementCoverage: z
-      .array(
-        z
-          .object({
-            requirement: phasePlanModelStringSchema,
-            status: z.enum(["covered", "deferred", "irrelevant"]),
-            coveredByTasks: z.array(phasePlanModelStringSchema),
-            evidence: phasePlanModelStringSchema,
-            rationale: phasePlanModelStringSchema
-          })
-          .strict()
-      )
-      .min(1),
-    evidenceCoverage: z
-      .array(
-        z
-          .object({
-            artifact: phasePlanModelStringSchema,
-            status: z.enum(["used", "deferred", "irrelevant", "unavailable"]),
-            rationale: phasePlanModelStringSchema
-          })
-          .strict()
-      )
-      .min(1),
-    fileSurfaceCoverage: z
-      .array(
-        z
-          .object({
-            surface: phasePlanModelStringSchema,
-            coveredByTasks: z.array(phasePlanModelStringSchema).min(1),
-            verification: phasePlanModelStringSchema,
-            rationale: phasePlanModelStringSchema
-          })
-          .strict()
-      )
-      .min(1),
-    unknownsAndDeferrals: z
-      .array(
-        z
-          .object({
-            item: phasePlanModelStringSchema,
-            disposition: z.enum(["unknown", "deferred", "blocked", "none"]),
-            rationale: phasePlanModelStringSchema,
-            followUp: phasePlanModelStringSchema
-          })
-          .strict()
-      )
-      .min(1)
-  })
-  .strict();
-type PhasePlanStructuredModel = z.infer<typeof phasePlanStructuredModelSchema>;
+type PhasePlanStructuredModel = {
+  title: string;
+  wave: number;
+  status: "planned";
+  objective: string;
+  gapClosure?: boolean;
+  dependsOn: string[];
+  requirements: string[];
+  filesModified: string[];
+  readFirst: string[];
+  autonomous: boolean;
+  goal: string;
+  scope: string[];
+  tasks: Array<{
+    id: string;
+    title: string;
+    readFirst: string[];
+    action: string[];
+    acceptanceCriteria: string[];
+    requirements: string[];
+    filesModified: string[];
+  }>;
+  verification: Array<{
+    item: string;
+    method: "test" | "grep" | "command" | "file-read" | "artifact-validation";
+    evidence: string;
+  }>;
+  mustHaves: string[];
+  requirementCoverage: Array<{
+    requirement: string;
+    status: "covered" | "deferred" | "irrelevant";
+    coveredByTasks: string[];
+    evidence: string;
+    rationale: string;
+  }>;
+  evidenceCoverage: Array<{
+    artifact: string;
+    status: "used" | "deferred" | "irrelevant" | "unavailable";
+    rationale: string;
+  }>;
+  fileSurfaceCoverage: Array<{
+    surface: string;
+    coveredByTasks: string[];
+    verification: string;
+    rationale: string;
+  }>;
+  unknownsAndDeferrals: Array<{
+    item: string;
+    disposition: "unknown" | "deferred" | "blocked" | "none";
+    rationale: string;
+    followUp: string;
+  }>;
+};
 const phasePlanReadInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
@@ -1431,12 +1450,24 @@ const phasePlanValidateInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional()
 };
+const phasePlanAuthoringContextInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  planId: numericBlueprintInputSchema.optional()
+};
+const phasePlanValidateModelInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  planId: numericBlueprintInputSchema.optional(),
+  model: z.unknown()
+};
 const phasePlanWriteInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   planId: numericBlueprintInputSchema.optional(),
   content: z.string().optional(),
-  model: z.record(z.string(), z.unknown()).optional(),
+  model: z.unknown().optional(),
+  authoringMode: z.enum(["content-compatible", "model-only"]).optional(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
 };
@@ -4396,20 +4427,6 @@ const PHASE_VALIDATION_MODEL_IDENTITY_KEYS = new Set([
   "path",
   "content"
 ]);
-const PHASE_PLAN_MODEL_IDENTITY_KEYS = new Set([
-  "cwd",
-  "phase",
-  "phaseNumber",
-  "phasePrefix",
-  "phaseName",
-  "phaseDir",
-  "planId",
-  "plan_id",
-  "artifact",
-  "path",
-  "content"
-]);
-
 type CommandCatalogResult = {
   commands: Record<string, { implemented: boolean }>;
 };
@@ -4432,8 +4449,175 @@ function collectModelStringValues(value: unknown): string[] {
   return [];
 }
 
+function cloneJsonObject<T extends Record<string, unknown>>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function asJsonObject(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function getJsonObjectProperty(
+  value: Record<string, unknown>,
+  key: string
+): Record<string, unknown> | null {
+  return asJsonObject(value[key]);
+}
+
+function createAjvValidator(): Ajv2020 {
+  return new Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  });
+}
+
+function phasePlanDiagnostic(args: PhasePlanModelDiagnostic): PhasePlanModelDiagnostic {
+  return args;
+}
+
+function emptyPhasePlanDiagnosticCounts(): PhasePlanValidateModelResult["diagnosticCounts"] {
+  return {
+    total: 0,
+    bySource: {
+      scope: 0,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    },
+    byCode: {}
+  };
+}
+
+function countPhasePlanDiagnostics(
+  diagnostics: PhasePlanModelDiagnostic[]
+): PhasePlanValidateModelResult["diagnosticCounts"] {
+  const counts = emptyPhasePlanDiagnosticCounts();
+
+  for (const diagnostic of diagnostics) {
+    counts.total += 1;
+    counts.bySource[diagnostic.source] += 1;
+    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+  }
+
+  return counts;
+}
+
+function formatPhasePlanDiagnostic(diagnostic: PhasePlanModelDiagnostic): string {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+
 function formatZodIssuePath(pathSegments: PropertyKey[]): string {
   return pathSegments.length > 0 ? pathSegments.map(String).join(".") : "model";
+}
+
+function ajvPathToPhasePlanModelPath(instancePath: string): string {
+  if (instancePath.length === 0) {
+    return "model";
+  }
+
+  return `model${instancePath
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => {
+      const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+    })
+    .join("")}`;
+}
+
+function schemaDiagnosticFromAjvError(error: ErrorObject): PhasePlanModelDiagnostic {
+  const missingProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "missingProperty" in error.params &&
+    typeof error.params.missingProperty === "string"
+      ? error.params.missingProperty
+      : null;
+  const additionalProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "additionalProperty" in error.params &&
+    typeof error.params.additionalProperty === "string"
+      ? error.params.additionalProperty
+      : null;
+  const basePath = ajvPathToPhasePlanModelPath(error.instancePath);
+  const pathValue =
+    missingProperty !== null
+      ? `${basePath}.${missingProperty}`
+      : additionalProperty !== null
+        ? `${basePath}.${additionalProperty}`
+        : basePath;
+
+  return phasePlanDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error.keyword}`,
+    message: error.message ?? "Model does not match the phase.plan task schema.",
+    context: {
+      keyword: error.keyword,
+      params: error.params,
+      schemaPath: error.schemaPath
+    },
+    suggestion:
+      missingProperty !== null
+        ? `Add required field ${missingProperty}.`
+        : additionalProperty !== null
+          ? `Remove unsupported field ${additionalProperty}.`
+          : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
+  });
+}
+
+function schemaDiagnosticFromPhasePlanAjvError(
+  error: ErrorObject,
+  taskSchema: Record<string, unknown>
+): PhasePlanModelDiagnostic {
+  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
+  const knownRequirements = Array.isArray(runtimeContext?.knownRequirements)
+    ? runtimeContext.knownRequirements.filter((value): value is string => typeof value === "string")
+    : [];
+  const knownEvidenceArtifacts = Array.isArray(runtimeContext?.knownEvidenceArtifacts)
+    ? runtimeContext.knownEvidenceArtifacts.filter(
+        (value): value is string => typeof value === "string"
+      )
+    : [];
+  const exactContainsMatch = error.schemaPath.match(
+    /\/properties\/(requirementCoverage|evidenceCoverage)\/allOf\/(\d+)/
+  );
+
+  if (error.keyword === "contains" && exactContainsMatch) {
+    const collection = exactContainsMatch[1] ?? "";
+    const index = Number.parseInt(exactContainsMatch[2] ?? "", 10);
+    const requiredValue =
+      collection === "requirementCoverage"
+        ? knownRequirements[index]
+        : knownEvidenceArtifacts[index];
+
+    if (requiredValue) {
+      const noun =
+        collection === "requirementCoverage"
+          ? "known roadmap requirement"
+          : "known saved evidence artifact";
+
+      return phasePlanDiagnostic({
+        source: "schema",
+        path: `model.${collection}`,
+        code: "schema.exactCoverage",
+        message: `Phase plan model ${collection} must include exactly one row for ${noun} ${requiredValue}.`,
+        context: {
+          requiredValue,
+          keyword: error.keyword,
+          params: error.params,
+          schemaPath: error.schemaPath
+        },
+        suggestion: `Add one ${collection} row for ${requiredValue}, or remove duplicate rows for that value.`
+      });
+    }
+  }
+
+  return schemaDiagnosticFromAjvError(error);
 }
 
 async function getPhasePlanImplementedCommandNames(): Promise<Set<string> | null> {
@@ -4500,50 +4684,21 @@ function hasPhasePlanModelPlaceholderLanguage(value: string): boolean {
   );
 }
 
-function validatePhasePlanModelPlainText(model: Record<string, unknown>): string[] {
-  return collectModelStringValues(model)
-    .filter((value) => hasPhasePlanModelPlaceholderLanguage(value))
-    .map((value) => `Phase plan model contains placeholder language: ${value}.`);
-}
-
-function phasePlanModelContractIssues(model: Record<string, unknown>): string[] {
-  const issues: string[] = [];
-  const identityKeys = Object.keys(model).filter((key) => PHASE_PLAN_MODEL_IDENTITY_KEYS.has(key));
-
-  if (identityKeys.length > 0) {
-    issues.push(
-      `Phase plan model must not include MCP-owned identity keys: ${identityKeys.join(", ")}.`
-    );
-  }
-
+function phasePlanModelResidualDiagnostics(model: Record<string, unknown>): PhasePlanModelDiagnostic[] {
+  const diagnostics: PhasePlanModelDiagnostic[] = [];
   const modelContract = readArtifactContract("phase.plan").modelContract;
+
   if (!modelContract) {
-    issues.push("phase.plan does not support structured model writes.");
-    return issues;
-  }
-
-  const requiredKeys = Array.isArray(modelContract.jsonSchema.required)
-    ? modelContract.jsonSchema.required.filter((key): key is string => typeof key === "string")
-    : [];
-  const properties =
-    typeof modelContract.jsonSchema.properties === "object" &&
-    modelContract.jsonSchema.properties !== null
-      ? modelContract.jsonSchema.properties
-      : {};
-  const allowedKeys = new Set(Object.keys(properties));
-  const missingKeys = requiredKeys.filter((key) => !(key in model));
-  const unknownKeys = Object.keys(model).filter((key) => !allowedKeys.has(key));
-
-  if (missingKeys.length > 0) {
-    issues.push(
-      `Phase plan model for ${modelContract.schemaId} is missing required fields: ${missingKeys.join(", ")}.`
-    );
-  }
-
-  if (unknownKeys.length > 0) {
-    issues.push(
-      `Phase plan model for ${modelContract.schemaId} includes unsupported fields: ${unknownKeys.join(", ")}.`
-    );
+    return [
+      phasePlanDiagnostic({
+        source: "scope",
+        path: "model",
+        code: "contract.missing",
+        message: "phase.plan does not support structured model writes.",
+        context: {},
+        suggestion: "Read the live phase.plan artifact contract before authoring."
+      })
+    ];
   }
 
   const modelStrings = collectModelStringValues(model);
@@ -4552,14 +4707,143 @@ function phasePlanModelContractIssues(model: Record<string, unknown>): string[] 
   );
 
   for (const signal of leakedSignals) {
-    issues.push(
-      `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.example_leakage",
+        message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        context: { signal },
+        suggestion: "Replace copied example wording with evidence from the selected phase."
+      })
     );
   }
 
-  issues.push(...validatePhasePlanModelPlainText(model));
+  for (const value of collectModelStringValues(model).filter((item) =>
+    hasPhasePlanModelPlaceholderLanguage(item)
+  )) {
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.placeholder",
+        message: `Phase plan model contains placeholder language: ${value}.`,
+        context: { value },
+        suggestion: "Replace placeholder language with concrete phase-specific evidence."
+      })
+    );
+  }
 
-  return issues;
+  return diagnostics;
+}
+
+function setArrayItemEnum(schema: Record<string, unknown> | null, values: string[]): void {
+  if (!schema || values.length === 0) {
+    return;
+  }
+
+  const items = getJsonObjectProperty(schema, "items");
+  if (items) {
+    items.enum = values;
+  }
+}
+
+function exactObjectPropertyContains(propertyName: string, value: string): Record<string, unknown> {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+
+function buildPhasePlanTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  knownRequirements: string[];
+  knownEvidenceArtifacts: string[];
+  allowedDependencyPlanIds: string[];
+}): Record<string, unknown> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const task = defs ? getJsonObjectProperty(defs, "task") : null;
+  const taskProperties = task ? getJsonObjectProperty(task, "properties") : null;
+  const requirementCoverageRow = defs
+    ? getJsonObjectProperty(defs, "requirementCoverageRow")
+    : null;
+  const requirementCoverageRowProperties = requirementCoverageRow
+    ? getJsonObjectProperty(requirementCoverageRow, "properties")
+    : null;
+  const evidenceCoverageRow = defs ? getJsonObjectProperty(defs, "evidenceCoverageRow") : null;
+  const evidenceCoverageRowProperties = evidenceCoverageRow
+    ? getJsonObjectProperty(evidenceCoverageRow, "properties")
+    : null;
+
+  if (!properties) {
+    return schema;
+  }
+
+  const dependsOn = getJsonObjectProperty(properties, "dependsOn");
+  if (dependsOn) {
+    if (args.allowedDependencyPlanIds.length > 0) {
+      setArrayItemEnum(dependsOn, args.allowedDependencyPlanIds);
+    } else {
+      dependsOn.maxItems = 0;
+    }
+  }
+
+  if (args.knownRequirements.length > 0) {
+    setArrayItemEnum(getJsonObjectProperty(properties, "requirements"), args.knownRequirements);
+    if (taskProperties) {
+      setArrayItemEnum(
+        getJsonObjectProperty(taskProperties, "requirements"),
+        args.knownRequirements
+      );
+    }
+
+    const requirement = requirementCoverageRowProperties
+      ? getJsonObjectProperty(requirementCoverageRowProperties, "requirement")
+      : null;
+    if (requirement) {
+      requirement.enum = args.knownRequirements;
+    }
+
+    const requirementCoverage = getJsonObjectProperty(properties, "requirementCoverage");
+    if (requirementCoverage) {
+      requirementCoverage.allOf = args.knownRequirements.map((requirementId) =>
+        exactObjectPropertyContains("requirement", requirementId)
+      );
+    }
+  }
+
+  if (args.knownEvidenceArtifacts.length > 0) {
+    const artifact = evidenceCoverageRowProperties
+      ? getJsonObjectProperty(evidenceCoverageRowProperties, "artifact")
+      : null;
+    if (artifact) {
+      artifact.enum = args.knownEvidenceArtifacts;
+    }
+
+    const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
+    if (evidenceCoverage) {
+      evidenceCoverage.allOf = args.knownEvidenceArtifacts.map((artifactPath) =>
+        exactObjectPropertyContains("artifact", artifactPath)
+      );
+    }
+  }
+
+  schema["x-blueprint-runtimeContext"] = {
+    knownRequirements: args.knownRequirements,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    allowedDependencyPlanIds: args.allowedDependencyPlanIds
+  };
+
+  return schema;
 }
 
 function uniquePreservingOrder(values: string[]): string[] {
@@ -4595,13 +4879,6 @@ function listDuplicateValues(values: string[]): string[] {
     .filter(([, count]) => count > 1)
     .map(([value]) => value)
     .sort((left, right) => left.localeCompare(right));
-}
-
-function evidenceArtifactMatches(knownArtifact: string, declaredArtifact: string): boolean {
-  const normalizedKnown = normalizePhasePlanModelSurface(knownArtifact);
-  const normalizedDeclared = normalizePhasePlanModelSurface(declaredArtifact);
-
-  return normalizedKnown === normalizedDeclared || path.posix.basename(normalizedKnown) === normalizedDeclared;
 }
 
 function isPhasePlanEvidenceArtifact(artifactPath: string, targetPath: string): boolean {
@@ -4640,15 +4917,78 @@ async function collectKnownPhasePlanEvidenceArtifacts(
   return located.artifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
 }
 
-async function validatePhasePlanStructuredModelCoverage(
-  model: PhasePlanStructuredModel,
-  projectRoot: string,
-  resolved: ResolvedPhaseLocation,
-  targetPath: string
-): Promise<{ issues: string[]; warnings: string[] }> {
+async function resolvePhasePlanAuthoringContextData(
+  args: PhasePlanAuthoringContextArgs
+): Promise<{
+  projectRoot: string;
+  resolved: ResolvedPhaseLocation;
+  planId: string;
+  pathValue: string;
+  schemaPath: string;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+  knownRequirements: string[];
+  knownEvidenceArtifacts: string[];
+  allowedDependencyPlanIds: string[];
+}> {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const existingIndex = await blueprintPhasePlanIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const nextPlanNumber =
+    existingIndex.plans.length === 0
+      ? 1
+      : Math.max(...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))) + 1;
+  const planId = args.planId
+    ? normalizePlanId(args.planId)
+    : normalizePlanId(String(nextPlanNumber));
+  const pathValue = planPathFor(resolved, planId);
+  const modelContract = readArtifactContract("phase.plan").modelContract;
+
+  if (!modelContract) {
+    throw new Error("phase.plan does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("phase.plan modelContract does not expose a schemaPath.");
+  }
+
+  const knownRequirements = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const knownEvidenceArtifacts = await collectKnownPhasePlanEvidenceArtifacts(
+    projectRoot,
+    resolved,
+    pathValue
+  );
+  const allowedDependencyPlanIds = existingIndex.plans
+    .map((plan) => plan.planId)
+    .filter((existingPlanId) => existingPlanId !== planId);
+  const baseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const taskSchema = buildPhasePlanTaskSchema({
+    baseSchema,
+    knownRequirements,
+    knownEvidenceArtifacts,
+    allowedDependencyPlanIds
+  });
+
+  return {
+    projectRoot,
+    resolved,
+    planId,
+    pathValue,
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema,
+    knownRequirements,
+    knownEvidenceArtifacts,
+    allowedDependencyPlanIds
+  };
+}
+
+function validatePhasePlanStructuredModelCoverage(
+  model: PhasePlanStructuredModel
+): { issues: string[]; warnings: string[] } {
   const issues: string[] = [];
   const warnings: string[] = [];
-  const knownRequirementIds = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
   const taskIds = model.tasks.map((task) => task.id);
   const taskIdSet = new Set(taskIds);
   const declaredRequirements = new Set(model.requirements);
@@ -4662,11 +5002,6 @@ async function validatePhasePlanStructuredModelCoverage(
     normalizePhasePlanModelSurface(row.surface)
   );
   const duplicateFileSurfaceRows = listDuplicateValues(fileSurfaceRows);
-  const knownEvidenceArtifacts = await collectKnownPhasePlanEvidenceArtifacts(
-    projectRoot,
-    resolved,
-    targetPath
-  );
 
   for (const duplicate of duplicateTaskIds) {
     issues.push(`Phase plan model task id "${duplicate}" must be unique.`);
@@ -4682,22 +5017,6 @@ async function validatePhasePlanStructuredModelCoverage(
 
   for (const duplicate of duplicateFileSurfaceRows) {
     issues.push(`Phase plan model fileSurfaceCoverage duplicates surface "${duplicate}".`);
-  }
-
-  for (const requirementId of knownRequirementIds) {
-    const matchingRows = model.requirementCoverage.filter(
-      (row) => row.requirement === requirementId
-    );
-
-    if (matchingRows.length === 0) {
-      issues.push(
-        `Known roadmap requirement ${requirementId} is missing from requirementCoverage.`
-      );
-    } else if (matchingRows.length > 1) {
-      issues.push(
-        `Known roadmap requirement ${requirementId} appears more than once in requirementCoverage.`
-      );
-    }
   }
 
   for (const row of model.requirementCoverage) {
@@ -4836,28 +5155,6 @@ async function validatePhasePlanStructuredModelCoverage(
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
       issues.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
-      );
-    }
-  }
-
-  for (const artifact of knownEvidenceArtifacts) {
-    const coverage = model.evidenceCoverage.find((row) =>
-      evidenceArtifactMatches(artifact, row.artifact)
-    );
-
-    if (!coverage) {
-      issues.push(`Known evidence artifact ${artifact} is missing from evidenceCoverage.`);
-    }
-  }
-
-  for (const row of model.evidenceCoverage) {
-    const known = knownEvidenceArtifacts.some((artifact) =>
-      evidenceArtifactMatches(artifact, row.artifact)
-    );
-
-    if (!known && row.status === "used") {
-      warnings.push(
-        `Evidence coverage references ${row.artifact}, which is not a known saved phase evidence artifact.`
       );
     }
   }
@@ -5015,61 +5312,135 @@ ${unknownRows}
 `);
 }
 
+async function validatePhasePlanModelWithContext(args: {
+  model: unknown;
+  context: Awaited<ReturnType<typeof resolvePhasePlanAuthoringContextData>>;
+}): Promise<PhasePlanValidateModelResult> {
+  const diagnostics: PhasePlanModelDiagnostic[] = [];
+  const modelObject = asJsonObject(args.model);
+
+  if (!modelObject) {
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "schema",
+        path: "model",
+        code: "schema.type",
+        message: "Phase plan model must be a JSON object.",
+        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        suggestion: "Return a JSON object that matches taskSchema."
+      })
+    );
+  }
+
+  let normalizedModel: PhasePlanStructuredModel | null = null;
+
+  if (modelObject) {
+    const validate = createAjvValidator().compile(args.context.taskSchema);
+    const schemaValid = validate(modelObject);
+    if (!schemaValid) {
+      diagnostics.push(
+        ...(validate.errors ?? []).map((error) =>
+          schemaDiagnosticFromPhasePlanAjvError(error, args.context.taskSchema)
+        )
+      );
+    }
+
+    diagnostics.push(...phasePlanModelResidualDiagnostics(modelObject));
+
+    for (const issue of await validatePhasePlanModelCommands(modelObject)) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          source: "residual",
+          path: "model",
+          code: "content.non_implemented_command",
+          message: issue,
+          context: {},
+          suggestion: "Use only implemented Blueprint command references, or route to /blu-progress."
+        })
+      );
+    }
+
+    if (schemaValid) {
+      normalizedModel = modelObject as PhasePlanStructuredModel;
+      const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
+
+      for (const issue of coverage.issues) {
+        diagnostics.push(
+          phasePlanDiagnostic({
+            source: "residual",
+            path: "model",
+            code: "coverage.invalid",
+            message: issue,
+            context: {},
+            suggestion: "Repair the cross-field requirement, task, file, verification, or deferral coverage."
+          })
+        );
+      }
+    }
+  }
+
+  let renderPreview: string | null = null;
+
+  if (diagnostics.length === 0 && normalizedModel) {
+    const rendered = renderPhasePlanModelContent(
+      normalizedModel,
+      args.context.resolved,
+      args.context.planId
+    );
+    const validation = validatePlanArtifactContent(rendered, args.context.resolved.phaseNumber, {
+      strict: true
+    });
+
+    for (const issue of validation.issues) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+        })
+      );
+    }
+
+    if (validation.issues.length === 0) {
+      renderPreview = rendered;
+    }
+  }
+
+  return {
+    status: diagnostics.length === 0 ? "valid" : "invalid",
+    valid: diagnostics.length === 0,
+    phase: args.context.resolved,
+    planId: args.context.planId,
+    path: args.context.pathValue,
+    schemaPath: args.context.schemaPath,
+    taskSchema: args.context.taskSchema,
+    diagnostics,
+    diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
+      ? null
+      : normalizedModel,
+    renderPreview,
+    warnings: []
+  };
+}
+
 async function phasePlanModelToContent(
-  model: Record<string, unknown> | undefined,
-  projectRoot: string,
-  resolved: ResolvedPhaseLocation,
-  planId: string,
-  targetPath: string
+  model: unknown,
+  context: Awaited<ReturnType<typeof resolvePhasePlanAuthoringContextData>>
 ): Promise<{
   content: string | null;
   issues: string[];
   warnings: string[];
 }> {
-  if (typeof model !== "object" || model === null || Array.isArray(model)) {
-    return {
-      content: null,
-      issues: ["Phase plan model must be a JSON object."],
-      warnings: []
-    };
-  }
-
-  const contractIssues = phasePlanModelContractIssues(model);
-  const commandIssues = await validatePhasePlanModelCommands(model);
-
-  if (contractIssues.length > 0 || commandIssues.length > 0) {
-    return {
-      content: null,
-      issues: [...contractIssues, ...commandIssues],
-      warnings: []
-    };
-  }
-
-  const parsedModel = phasePlanStructuredModelSchema.safeParse(model);
-
-  if (!parsedModel.success) {
-    return {
-      content: null,
-      issues: parsedModel.error.issues.map(
-        (issue) =>
-          `Phase plan model field ${formatZodIssuePath(issue.path)} is invalid: ${issue.message}.`
-      ),
-      warnings: []
-    };
-  }
-
-  const content = renderPhasePlanModelContent(parsedModel.data, resolved, planId);
-  const coverage = await validatePhasePlanStructuredModelCoverage(
-    parsedModel.data,
-    projectRoot,
-    resolved,
-    targetPath
-  );
+  const validation = await validatePhasePlanModelWithContext({ model, context });
 
   return {
-    content,
-    issues: coverage.issues,
-    warnings: coverage.warnings
+    content: validation.renderPreview,
+    issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
+    warnings: validation.warnings
   };
 }
 
@@ -7804,12 +8175,94 @@ export async function blueprintPhasePlanValidate(
   return validatePhasePlanSet(projectRoot, resolved);
 }
 
+export async function blueprintPhasePlanAuthoringContext(
+  args: PhasePlanAuthoringContextArgs = {}
+): Promise<PhasePlanAuthoringContextResult> {
+  try {
+    const context = await resolvePhasePlanAuthoringContextData(args);
+
+    return {
+      status: "ready",
+      phase: context.resolved,
+      planId: context.planId,
+      path: context.pathValue,
+      schemaPath: context.schemaPath,
+      baseSchema: context.baseSchema,
+      taskSchema: context.taskSchema,
+      knownRequirements: context.knownRequirements,
+      knownEvidenceArtifacts: context.knownEvidenceArtifacts,
+      allowedDependencyPlanIds: context.allowedDependencyPlanIds,
+      modelOnly: true,
+      reason: null,
+      warnings: []
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      phase: null,
+      planId: null,
+      path: null,
+      schemaPath: null,
+      baseSchema: null,
+      taskSchema: null,
+      knownRequirements: [],
+      knownEvidenceArtifacts: [],
+      allowedDependencyPlanIds: [],
+      modelOnly: true,
+      reason: error instanceof Error ? error.message : String(error),
+      warnings: []
+    };
+  }
+}
+
+export async function blueprintPhasePlanValidateModel(
+  args: PhasePlanValidateModelArgs
+): Promise<PhasePlanValidateModelResult> {
+  let context: Awaited<ReturnType<typeof resolvePhasePlanAuthoringContextData>>;
+
+  try {
+    context = await resolvePhasePlanAuthoringContextData(args);
+  } catch (error) {
+    const diagnostics = [
+      phasePlanDiagnostic({
+        source: "scope",
+        path: "phase",
+        code: "scope.invalid",
+        message: error instanceof Error ? error.message : String(error),
+        context: {},
+        suggestion: "Resolve a valid phase and plan slot before authoring a phase.plan model."
+      })
+    ];
+
+    return {
+      status: "invalid",
+      valid: false,
+      phase: null,
+      planId: null,
+      path: null,
+      schemaPath: null,
+      taskSchema: null,
+      diagnostics,
+      diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+      normalizedModel: null,
+      renderPreview: null,
+      warnings: []
+    };
+  }
+
+  return validatePhasePlanModelWithContext({
+    model: args.model,
+    context
+  });
+}
+
 export async function blueprintPhasePlanWrite(
   args: PhasePlanWriteArgs
 ): Promise<PhasePlanWriteResult> {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
+  const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
     const existingIndex = await blueprintPhasePlanIndex({
@@ -7849,18 +8302,40 @@ export async function blueprintPhasePlanWrite(
       };
     }
 
+    if (modelOnly && hasContent) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        validation: {
+          valid: false,
+          issues: [
+            "Phase plan model-only writes must supply the validated structured model, not Markdown content."
+          ],
+          warnings: []
+        },
+        warnings: []
+      };
+    }
+
     let normalizedContent: string;
     let modelCoverageIssues: string[] = [];
     let modelWarnings: string[] = [];
 
     if (hasModel) {
-      const modelRender = await phasePlanModelToContent(
-        args.model,
-        projectRoot,
-        resolved,
-        planId,
-        pathValue
-      );
+      const authoringContext = await resolvePhasePlanAuthoringContextData({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        planId
+      });
+      const modelRender = await phasePlanModelToContent(args.model, authoringContext);
 
       if (!modelRender.content) {
         return {
@@ -9219,6 +9694,22 @@ export const phaseToolDefinitions = [
     inputSchema: phasePlanValidateInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhasePlanValidate(args as PhasePlanValidateArgs)
+  },
+  {
+    name: "blueprint_phase_plan_authoring_context",
+    description:
+      "Return the schema-first phase.plan authoring context, including the base model schema and runtime-narrowed task schema for the selected phase and plan slot.",
+    inputSchema: phasePlanAuthoringContextInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhasePlanAuthoringContext(args as PhasePlanAuthoringContextArgs)
+  },
+  {
+    name: "blueprint_phase_plan_validate_model",
+    description:
+      "Validate a structured phase.plan model against the runtime-narrowed task schema and return a canonical PLAN markdown preview without writing files.",
+    inputSchema: phasePlanValidateModelInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhasePlanValidateModel(args as PhasePlanValidateModelArgs)
   },
   {
     name: "blueprint_phase_plan_write",

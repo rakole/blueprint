@@ -68,6 +68,8 @@ does not grant broader tool scope to a command.
 - `blueprint_phase_plan_index`
 - `blueprint_phase_plan_read`
 - `blueprint_phase_plan_validate`
+- `blueprint_phase_plan_authoring_context`
+- `blueprint_phase_plan_validate_model`
 - `blueprint_phase_plan_write`
 - `blueprint_config_get`
 - `blueprint_state_load`
@@ -82,13 +84,13 @@ does not grant broader tool scope to a command.
 
 1. Resolve the target phase before drafting anything and stop if it cannot be inferred safely.
 2. Treat `workflow.research`, `workflow.ui_phase`, `workflow.ui_safety_gate`, and `workflow.plan_check` from normalized effective config as the source of truth for planning gates.
-3. Read the live `phase.plan` contract, `blueprint_phase_research_status.planningReadiness`, actual saved discovery artifact bodies, saved validation or review evidence when present, plan inventory, effective config, and state before replanning. Reuse `blueprint_phase_context.codebase` when the mapped codebase bundle is present.
+3. Read the live `phase.plan` contract, `blueprint_phase_plan_authoring_context`, `blueprint_phase_research_status.planningReadiness`, actual saved discovery artifact bodies, saved validation or review evidence when present, plan inventory, effective config, and state before replanning. Reuse `blueprint_phase_context.codebase` when the mapped codebase bundle is present.
 4. Treat `blueprint_phase_research_status.planningReadiness` as the config-aware handoff gate. If `readyForPlanPhase=false`, stop before drafting and route to `nextSafeAction`; report its blocker instead of guessing from raw missing-artifact lists. If research is enabled and missing or invalid, route to `/blu-research-phase` before finalizing the plan. Use saved research for unstable technical decisions instead of browsing live web docs during planning.
 5. Only require the reuse/revise/replace gate when the current write would revise or replace saved plan ids or the saved plan set. Additive new plan ids may be appended without that gate when no saved content is being overwritten.
-6. Use `blueprint-planner` to draft execution-ready plan bodies when suitable. If suitable planning agents are unavailable, use the no-subagent fallback from `references/plan-phase-runtime-contract.md`.
-7. Normalize finalized content to `contract.authoringTemplate`, then persist it through `blueprint_phase_plan_write` with `validationMode: "strict"`. Omit `planId` to auto-assign the next slot, or pass only the numeric plan id when targeting a specific plan; use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`. Do not rely on scaffold text as the finished plan.
+6. Use `blueprint-planner` to draft execution-ready structured plan models when suitable. If suitable planning agents are unavailable, use the no-subagent fallback from `references/plan-phase-runtime-contract.md`.
+7. Author a structured `phase.plan` JSON model against `blueprint_phase_plan_authoring_context.taskSchema`, validate it with `blueprint_phase_plan_validate_model`, then persist the same model through `blueprint_phase_plan_write` with `validationMode: "strict"` and `authoringMode: "model-only"`. Omit `planId` to auto-assign the next slot, or pass only the numeric plan id when targeting a specific plan; use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`. Do not send `content` from `/blu-plan-phase`, do not rely on scaffold text as the finished plan, and do not use Markdown fallback after model validation fails.
 8. When `workflow.plan_check=true`, run the bounded review loop from the runtime contract: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
-9. If `blueprint_phase_plan_write` or `blueprint_phase_plan_validate` reports invalid content, repair against the live contract and retry through MCP before presenting completion; never bypass validation with raw `.blueprint/` edits.
+9. If `blueprint_phase_plan_validate_model`, `blueprint_phase_plan_write`, or `blueprint_phase_plan_validate` reports invalid model content, repair all diagnostics against the live task schema and contract in one pass before retrying through MCP; never bypass validation with raw `.blueprint/` edits.
 10. After persistence, prefer `blueprint_state_update` with `base: "synced"` so `STATE.md` recomputes the next safe action from the updated artifact inventory instead of leaving stale routing behind. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
 11. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
 

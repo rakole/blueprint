@@ -18,8 +18,12 @@ Blueprint-native.
 ### Read
 
 - Read `mcp_blueprint_blueprint_artifact_contract_read` with
-  `artifactId: "phase.plan"` and use `contract.authoringTemplate` as the plan
-  shape authority.
+  `artifactId: "phase.plan"` and use `contract.modelContract.schemaPath` plus
+  the returned JSON Schema as the base model authority.
+- Read `mcp_blueprint_blueprint_phase_plan_authoring_context` for the selected
+  phase and plan slot. Use its `taskSchema` as the effective authoring
+  contract; it narrows roadmap requirement ids, saved evidence artifact rows,
+  and allowed dependency plan ids for this exact write.
 - Read `mcp_blueprint_blueprint_phase_context` for roadmap, requirement, and
   mapped codebase signals.
 - Read `mcp_blueprint_blueprint_phase_research_status` for context, research,
@@ -76,39 +80,43 @@ Blueprint-native.
 - The parent command owns MCP calls, user gates, persistence, validation, state
   updates, and final routing.
 - Planner input must include the resolved phase, live plan contract, roadmap
-  and requirements, actual context text, actual research/UI/validation/review
-  content when present, effective config, mapped codebase summaries, existing
-  plan contents when revising, and the current checker findings during
-  revision.
-- Planner output must be complete `XX-YY-PLAN.md` bodies, not outlines, notes,
-  or scaffold text.
+  and requirements, `phase_plan_authoring_context.taskSchema`, actual context
+  text, actual research/UI/validation/review content when present, effective
+  config, mapped codebase summaries, existing plan contents when revising, and
+  the current checker findings during revision.
+- Planner output must be a complete structured `phase.plan` JSON model, not
+  Markdown, outlines, notes, or scaffold text.
 - Checker input must include the saved plan bodies plus the same phase evidence
   used by the planner.
 
 ### Persist
 
 - Do not seed `XX-YY-PLAN.md` with scaffold placeholders. Draft the finalized
-  body first, then persist it directly.
-- Persist only through `mcp_blueprint_blueprint_phase_plan_write`.
+  structured model first, then validate and persist it directly.
+- Validate the model with `mcp_blueprint_blueprint_phase_plan_validate_model`
+  before persistence.
+- Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the same
+  validated `model` payload and `authoringMode: "model-only"`.
 - Use `validationMode: "strict"` for `/blu-plan-phase`; `validationMode:
   "warn"` is not part of this command's write contract.
-- Pass `phase` as the resolved numeric phase and `content` as the full plan
-  body. Omit `planId` to auto-assign, or pass only a numeric plan id when
+- Pass `phase` as the resolved numeric phase and `model` as the complete
+  structured phase.plan payload. Omit `planId` to auto-assign, or pass only a numeric plan id when
   targeting an existing plan. If passing `planId`, use the JSON string value
   `planId: "01"` or numeric value `planId: 1`, never the double-encoded string
   `planId: "\"01\""`.
 - Do not write raw `.blueprint/` files and do not pass phase directories,
-  slugs, filenames, combined tokens like `02-01`, or frontmatter key names as
-  plan ids.
+  slugs, filenames, combined tokens like `02-01`, frontmatter key names as
+  plan ids, or Markdown `content` from `/blu-plan-phase`.
 
 ### Validate
 
 - Call `mcp_blueprint_blueprint_phase_plan_validate` after the final write
   path.
-- If `phase_plan_write` returns `status: "invalid"` or scoped plan-validation
-  issues appear, do not present the plan as complete. Repair the draft against
-  the live contract, rerun the targeted planner/checker path if needed, then
-  write again.
+- If `phase_plan_validate_model`, `phase_plan_write`, or scoped plan-validation
+  returns invalid diagnostics, do not present the plan as complete and do not
+  fall back to Markdown. Repair all diagnostics together against the live task
+  schema and contract, rerun the targeted planner/checker path if needed, then
+  retry through MCP at most once unless a new deterministic issue appears.
 - If validation or checker repair stalls, preserve the best coherent draft
   only when it is saved truthfully, report the remaining blocker or split point,
   and route to `/blu-progress`.
@@ -199,8 +207,8 @@ When planner/checker agents are unavailable, continue sequentially:
 1. Compress the read context into a carry-forward note containing phase goal,
    requirements, locked decisions, deferred ideas, config gates, codebase
    evidence, and uncertainties.
-2. Draft one plan or one coherent topic at a time from the live
-   `authoringTemplate`.
+2. Draft one structured plan model or one coherent topic at a time from the
+   live runtime-narrowed task schema.
 3. Run an inline checklist for requirement coverage, decision fidelity,
    dependency correctness, task specificity, scope sanity, verification
    readiness, must-have quality, and invalid scope-reduction language. This
@@ -226,8 +234,9 @@ When planner/checker agents are unavailable, continue sequentially:
 - Existing plans: additive new plan writes may proceed without the
   reuse/revise/replace gate when no saved plan id is being overwritten; never
   replace without the explicit `replace` decision and overwrite confirmation.
-- Invalid write: repair the content using validation issues, then retry the
-  same MCP write. Do not bypass validation with raw file writes.
+- Invalid model validation or write: repair all diagnostics using the task
+  schema and validation issues, then retry the same MCP path. Do not bypass
+  validation with raw file writes or Markdown fallback.
 - Scoped plan validation failure: repair only the affected plan ids or split
   point, then rerun the same scoped validation before completion.
 - Checker `REVISE`: when `workflow.plan_check=true`, revise only affected plan

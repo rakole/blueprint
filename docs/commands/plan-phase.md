@@ -18,7 +18,7 @@
 ## Purpose
 
 
-`plan-phase` is Blueprint's command for create a detailed phase plan with verification loop. Blueprint now implements it with the plan index plus dedicated plan read/write/validate tools so it can read existing plans, read the actual current context and relevant discovery artifact content, run a requirements-coverage check before finalization, persist real `XX-YY-PLAN.md` content, validate the saved plan set in phase scope, and update state deterministically while staying host-native.
+`plan-phase` is Blueprint's command for creating a detailed phase plan with a verification loop. Blueprint now implements it with the plan index plus dedicated plan read/schema-context/model-validation/write/validate tools so it can read existing plans, read the actual current context and relevant discovery artifact content, run schema-backed requirements/evidence/dependency checks before finalization, persist real `XX-YY-PLAN.md` content from a structured `phase.plan` model, validate the saved plan set in phase scope, and update state deterministically while staying host-native.
 
 Interactive planning UX rules:
 - Prefer Gemini CLI's built-in `ask_user` dialog over plain assistant prose whenever you need overwrite confirmation or a structured reuse/revise/replace decision about an existing plan.
@@ -74,6 +74,8 @@ Interactive planning UX rules:
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_plan_authoring_context` -> `{status, phase, planId, path, schemaPath, baseSchema, taskSchema, knownRequirements, knownEvidenceArtifacts, allowedDependencyPlanIds}`
+- `blueprint_phase_plan_validate_model` -> `{status, valid, phase, planId, path, schemaPath, taskSchema, diagnostics, normalizedModel, renderPreview, warnings}`
 - `blueprint_phase_plan_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, written, created, overwritten, status, validation, warnings}`
 - `blueprint_phase_plan_validate` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, status, issues, warnings, planCount, planIds, roadmapRequirementIds, coveredRequirementIds, uncoveredRequirementIds, unexpectedRequirementIds, missingDependencyIds, cyclicDependencyPlanIds}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
@@ -83,15 +85,15 @@ Interactive planning UX rules:
 ## Plan Persistence Contract
 
 
-- Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` before drafting or revising `XX-YY-PLAN.md`, and normalize the final draft to `contract.authoringTemplate`. Use the live contract object as the source of truth rather than a copied local template.
+- Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` and the narrowed task schema through `blueprint_phase_plan_authoring_context` before drafting or revising plans. Use `contract.modelContract.schemaPath`, `contract.modelContract.jsonSchema`, and `phase_plan_authoring_context.taskSchema` as the model-authoring authority rather than a copied local template.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone. Read saved validation evidence through `blueprint_phase_validation_read` and saved review findings through `blueprint_review_load_findings` when those artifacts exist before replanning around them.
 - Use saved research for unstable technical choices. If needed research is missing or stale under the active gates, route to `/blu-research-phase` instead of browsing live web docs during planning.
 - Treat `blueprint_phase_research_status.planningReadiness` as the config-aware pre-draft handoff gate. If it reports `readyForPlanPhase=false`, route to its `nextSafeAction` before drafting. If it reports `readyForPlanPhase=true`, do not block only because raw missing-artifact or suggested-repair fields mention research or UI artifacts that normalized config disabled.
-- Persist final plan bodies through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly. `/blu-plan-phase` writes must use `validationMode: "strict"`; do not use warn-mode writes from this command.
-- After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion. If `blueprint_phase_plan_write` or final scoped plan validation rejects a plan, repair against the live contract and retry through MCP before presenting completion.
+- Validate the structured model through `blueprint_phase_plan_validate_model`, then persist the same model through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly. `/blu-plan-phase` writes must use `validationMode: "strict"` and `authoringMode: "model-only"`, and must not pass Markdown `content`; do not use warn-mode writes or Markdown fallback from this command.
+- After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion. If model validation, `blueprint_phase_plan_write`, or final scoped plan validation rejects a plan, repair all diagnostics against the live task schema and contract in one pass and retry through MCP before presenting completion.
 - When `workflow.plan_check=true`, run the bounded review loop from the runtime contract before finalization: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
-- Pass `content` as the full finalized `XX-YY-PLAN.md` body, not scaffold placeholder text.
+- Pass `model` as the full validated structured `phase.plan` JSON object, not scaffold placeholder text or Markdown.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
 - If targeting a specific plan, pass only the numeric plan id. Use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`.
 - Do not derive `planId` manually from a scaffold path and do not pass phase slugs, filenames, or combined tokens such as `02-01` as `planId`.
@@ -162,15 +164,15 @@ Interactive planning UX rules:
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes and prefers synced recomputation after persistence with `base: "synced"` so routing follows the updated artifact inventory.
 - Creates or updates only the declared artifacts for this command.
-- Uses the plan index plus dedicated plan read/write/validate tools to persist actual plan content instead of scaffold-only placeholders.
+- Uses the plan index plus dedicated plan read/schema-context/model-validation/write/validate tools to persist actual plan content instead of scaffold-only placeholders.
 - Uses the scoped plan validation tool to validate the saved plan set instead of relying on a global artifact sweep.
 - Reads actual current context content and relevant discovery artifact content before drafting or revising plans instead of relying on status-only discovery signals.
-- Reads the canonical `phase.plan` contract and normalizes the final draft to `contract.authoringTemplate` before writing.
+- Reads the canonical `phase.plan` contract and narrowed task schema before writing.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Derives research, plan-check, Nyquist, UI-gate, and planning-confirmation behavior from normalized effective config instead of re-deriving defaults inside the command.
 - Keeps the plan-check loop conditional, bounded, requirements-aware, and split-friendly when the phase is too broad for a single coherent plan.
-- Reads the live `phase.plan` contract before writing instead of copying local template text.
+- Reads the live `phase.plan` schema contract before writing instead of copying local template text.
 - Loads the local plan-phase runtime contract and applies its anti-shallow output criteria, no-subagent fallback, and validation repair loop.
 
 

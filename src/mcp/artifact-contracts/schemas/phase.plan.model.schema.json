@@ -1,0 +1,397 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.phase.plan.model",
+  "title": "Blueprint Phase Plan Model",
+  "description": "Model-authored payload for phase.plan. Runtime-owned phase identity, plan id, phase directory, canonical filename, output path, and final Markdown persistence are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "wave",
+    "status",
+    "objective",
+    "dependsOn",
+    "requirements",
+    "filesModified",
+    "readFirst",
+    "autonomous",
+    "goal",
+    "scope",
+    "tasks",
+    "verification",
+    "mustHaves",
+    "requirementCoverage",
+    "evidenceCoverage",
+    "fileSurfaceCoverage",
+    "unknownsAndDeferrals"
+  ],
+  "properties": {
+    "title": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Human-readable plan title without the phase number or plan id; MCP renders the canonical filename and heading."
+    },
+    "wave": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Execution wave for this plan. Dependencies must be in earlier waves; the writer verifies the final saved plan set."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned"
+      ],
+      "description": "Phase plans are authored before execution, so the only valid model status is planned."
+    },
+    "objective": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Concrete objective rendered into frontmatter."
+    },
+    "gapClosure": {
+      "type": "boolean",
+      "description": "Optional true value renders gap_closure: true frontmatter for explicit gap-repair plans."
+    },
+    "dependsOn": {
+      "type": "array",
+      "description": "Existing plan ids this plan depends on. The task schema narrows this to saved plan ids for the selected phase and excludes the target plan id.",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "description": "Roadmap requirement ids this plan will cover. The task schema narrows values to the selected phase's known roadmap requirements.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "filesModified": {
+      "type": "array",
+      "description": "Concrete repo-relative files or generated Blueprint artifact paths this plan owns.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/repoRelativePath"
+      }
+    },
+    "readFirst": {
+      "type": "array",
+      "description": "Concrete repo-relative files or saved artifacts the executor must read before editing.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/repoRelativePath"
+      }
+    },
+    "autonomous": {
+      "type": "boolean",
+      "description": "Whether the plan can be executed without further human input after persistence."
+    },
+    "goal": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Execution-ready goal rendered under ## Goal."
+    },
+    "scope": {
+      "type": "array",
+      "description": "Exact work owned by this plan, rendered under ## Scope.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "Concrete execution tasks. Each task id must be stable because coverage ledgers reference it.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    },
+    "verification": {
+      "type": "array",
+      "description": "Objective verification items rendered under ## Verification.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/verificationItem"
+      }
+    },
+    "mustHaves": {
+      "type": "array",
+      "description": "Goal-backward facts the plan cannot drop.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "requirementCoverage": {
+      "type": "array",
+      "description": "Coverage decisions for the selected phase's roadmap requirements. The task schema requires every known requirement exactly once.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/requirementCoverageRow"
+      }
+    },
+    "evidenceCoverage": {
+      "type": "array",
+      "description": "Coverage decisions for saved phase evidence artifacts. The task schema narrows artifact values and requires every known saved evidence artifact exactly once.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidenceCoverageRow"
+      }
+    },
+    "fileSurfaceCoverage": {
+      "type": "array",
+      "description": "Coverage decisions for every declared filesModified surface.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fileSurfaceCoverageRow"
+      }
+    },
+    "unknownsAndDeferrals": {
+      "type": "array",
+      "description": "Known unknowns, deferrals, blockers, or a concrete no-open-items row. Generic placeholder rows are still rejected by residual validation.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/unknownOrDeferralRow"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repoRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!~)(?![A-Za-z]:[\\\\/])(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[*?\\[\\]{}]).+$",
+      "description": "Concrete repo-relative path. No absolute paths, home-relative paths, traversal, backslashes, or glob metacharacters."
+    },
+    "taskId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "readFirst",
+        "action",
+        "acceptanceCriteria",
+        "requirements",
+        "filesModified"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/taskId"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "readFirst": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/repoRelativePath"
+          }
+        },
+        "action": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "filesModified": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/repoRelativePath"
+          }
+        }
+      }
+    },
+    "verificationMethod": {
+      "type": "string",
+      "enum": [
+        "test",
+        "grep",
+        "command",
+        "file-read",
+        "artifact-validation"
+      ]
+    },
+    "verificationItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "method",
+        "evidence"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "method": {
+          "$ref": "#/$defs/verificationMethod"
+        },
+        "evidence": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "requirementCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "covered",
+        "deferred",
+        "irrelevant"
+      ]
+    },
+    "requirementCoverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement",
+        "status",
+        "coveredByTasks",
+        "evidence",
+        "rationale"
+      ],
+      "properties": {
+        "requirement": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "$ref": "#/$defs/requirementCoverageStatus"
+        },
+        "coveredByTasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/taskId"
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "evidenceCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "used",
+        "deferred",
+        "irrelevant",
+        "unavailable"
+      ]
+    },
+    "evidenceCoverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "status",
+        "rationale"
+      ],
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/repoRelativePath"
+        },
+        "status": {
+          "$ref": "#/$defs/evidenceCoverageStatus"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "fileSurfaceCoverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "coveredByTasks",
+        "verification",
+        "rationale"
+      ],
+      "properties": {
+        "surface": {
+          "$ref": "#/$defs/repoRelativePath"
+        },
+        "coveredByTasks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/taskId"
+          }
+        },
+        "verification": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "unknownDisposition": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "deferred",
+        "blocked",
+        "none"
+      ]
+    },
+    "unknownOrDeferralRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "disposition",
+        "rationale",
+        "followUp"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "disposition": {
+          "$ref": "#/$defs/unknownDisposition"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "followUp": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}

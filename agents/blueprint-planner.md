@@ -4,8 +4,8 @@ description: >
   Phase-planning specialist for Blueprint lifecycle work. Use this agent when
   `/blu-plan-phase` needs execution-ready plan drafts grounded in phase
   context, discovery artifacts, current Blueprint constraints, and the live
-  phase.plan contract. Example scenarios: drafting new `XX-YY-PLAN.md`
-  content, splitting a phase into dependency-aware waves, and translating
+  phase.plan contract. Example scenarios: drafting new structured `phase.plan`
+  models, splitting a phase into dependency-aware waves, and translating
   research or UI findings into concrete implementation steps.
 kind: local
 tools:
@@ -20,15 +20,16 @@ timeout_mins: 12
 
 ## Purpose
 
-Create execution-ready Blueprint phase plans for one selected phase so the
-parent command can persist real `XX-YY-PLAN.md` content through MCP without
-guessing plan structure or dependency order.
+Create execution-ready structured Blueprint phase plan models for one selected
+phase so the parent command can validate and persist real `XX-YY-PLAN.md`
+content through MCP without guessing plan structure or dependency order.
 
 ## Parent-Owned Responsibilities
 
 - The parent command owns orchestration, visible stage narration, user
   checkpoints, and any reuse/revise/replace or overwrite decision.
 - The parent command owns artifact scaffolding, `blueprint_phase_plan_write`,
+  `blueprint_phase_plan_authoring_context`, `blueprint_phase_plan_validate_model`,
   `blueprint_state_update`, and every other MCP-backed persistence step.
 - The parent command decides whether to accept warnings, re-run the
   planner/checker loop, or route to the next safe implemented command.
@@ -36,8 +37,8 @@ guessing plan structure or dependency order.
 ## Required Reads
 
 - resolved phase context, roadmap slice, requirements, live phase.plan contract,
-  active-state summary, and any current revision-checkpoint notes supplied by
-  the parent command
+  `phase_plan_authoring_context.taskSchema`, active-state summary, and any
+  current revision-checkpoint notes supplied by the parent command
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
 - existing plan inventory plus any current `-PLAN.md` artifacts when the parent
@@ -64,9 +65,9 @@ guessing plan structure or dependency order.
    verification boundaries justify it. If the phase is too broad for one
    coherent plan, narrow it, prioritize it, or split it into smaller slices
    instead of forcing a monolith.
-6. Use the live `phase.plan` contract and its `authoringTemplate` returned by
-   the parent command as the structural source of truth; do not rely on copied
-   local template text alone.
+6. Use the live `phase.plan` JSON Schema and runtime-narrowed task schema
+   returned by the parent command as the structural source of truth; do not rely
+   on copied local template text alone.
 7. Prefer targeted revision of existing plans over full replanning when only
    part of the plan set is stale.
 8. Keep every plan's write scope concrete and repo-specific so downstream
@@ -88,51 +89,31 @@ guessing plan structure or dependency order.
 
 ## Outputs
 
-- one or more complete `XX-YY-PLAN.md` drafts ready for
-  `blueprint_phase_plan_write` by the parent command
+- one or more complete structured `phase.plan` JSON models ready for
+  `blueprint_phase_plan_validate_model` and `blueprint_phase_plan_write` by the
+  parent command
 - requirement-to-plan coverage mapping
 - dependency-wave and sequencing notes
 - split/prioritization rationale when the phase is too broad for one plan
 - explicit blockers, assumptions, revision notes, or follow-up warnings for the
   parent command
 
-## Required Plan Contract
+## Required Model Contract
 
-- Treat the `phase` tool argument and frontmatter field differently:
-  - tool argument `phase`: only the resolved numeric phase reference such as
-    `2` or `02`
-  - frontmatter `phase`: the same numeric phase reference normalized inside the
-    plan body
-- Treat the `planId` tool argument and frontmatter `plan_id` differently:
-  - tool argument `planId`: only the numeric plan id such as `1` or `01`
-  - frontmatter `plan_id`: the same numeric id rendered inside the YAML
-- Never pass a phase directory, slug, filename, or combined token like
-  `02-invoice-ingestion`, `02-01`, or `02-01-PLAN.md` to
-  `blueprint_phase_plan_write`.
-- Return full plan bodies, not outline notes or scaffold placeholders.
-- Every plan must include YAML frontmatter with:
-  - `phase`
-  - `plan_id`
-  - `title`
-  - `wave`
-  - `status`
-  - `objective`
-  - `depends_on`
-  - `requirements`
-  - `files_modified`
-  - `read_first`
-  - `acceptance_criteria`
-  - `autonomous`
-- Every plan body must include these sections exactly once:
-  - `## Goal`
-  - `## Scope`
-  - `## Tasks`
-  - `## Verification`
-  - `## Must Haves`
-- Every task under `## Tasks` must include:
-  - `#### Read First`
-  - `#### Action`
-  - `#### Acceptance Criteria`
+- Treat `phase`, `planId`, phase directory, filename, path, and Markdown
+  `content` as MCP-owned identity/provenance. Do not include them in the model.
+- Return full structured model objects, not outline notes, Markdown bodies, or
+  scaffold placeholders.
+- Every model must satisfy the task schema supplied by the parent command,
+  including exact allowed roadmap requirement ids, saved evidence artifacts,
+  and dependency plan ids.
+- Every model must include these top-level fields: `title`, `wave`, `status`,
+  `objective`, `dependsOn`, `requirements`, `filesModified`, `readFirst`,
+  `autonomous`, `goal`, `scope`, `tasks`, `verification`, `mustHaves`,
+  `requirementCoverage`, `evidenceCoverage`, `fileSurfaceCoverage`, and
+  `unknownsAndDeferrals`.
+- Every task object must include `id`, `title`, `readFirst`, `action`,
+  `acceptanceCriteria`, `requirements`, and `filesModified`.
 - `#### Read First` must cite exact repo-relative paths for files being
   modified plus source-of-truth docs, schemas, interfaces, tests, patterns, or
   config that constrain the task.

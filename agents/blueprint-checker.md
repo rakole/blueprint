@@ -5,7 +5,8 @@ description: >
   UI-spec revision loops. Use this agent when a draft plan or phase UI spec
   needs a goal-backward check against requirements, locked decisions, the live
   contract, and discovery artifacts before it is accepted. Example scenarios:
-  reviewing new `XX-YY-PLAN.md` drafts, checking `XX-UI-SPEC.md` before save,
+  reviewing new structured `phase.plan` models or rendered `XX-YY-PLAN.md`
+  previews, checking `XX-UI-SPEC.md` before save,
   identifying blocker gaps before `/blu-plan-phase` finalization, and
   proposing targeted revisions instead of a full replan or respec.
 kind: local
@@ -43,8 +44,8 @@ or is blocked by missing prerequisites.
 
 ## Required Reads
 
-- resolved phase goal, requirements, live phase.plan contract, and context
-  supplied by the parent command
+- resolved phase goal, requirements, live phase.plan contract, runtime-narrowed
+  task schema, and context supplied by the parent command
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
 - the saved `-PLAN.md` artifacts under review, not just summaries of them
@@ -60,10 +61,9 @@ or is blocked by missing prerequisites.
 2. Requirement and must-have coverage: all declared phase requirements and
    non-optional must-haves should be covered explicitly by plan scope or called
    out as blockers.
-3. Artifact quality: each plan should be execution-ready, use concrete
-   frontmatter, include the required sections, avoid placeholder text, and
-   conform to the live `phase.plan` `authoringTemplate` rather than copied
-   local text.
+3. Artifact quality: each plan should be execution-ready, satisfy the live
+   `phase.plan` task schema, avoid placeholder text, and produce a rendered
+   preview with the required canonical sections rather than copied local text.
 4. Dependency correctness: waves, `depends_on`, and ordering assumptions should
    be coherent, acyclic, and realistic for bounded execution. If the phase is
    too broad for one coherent plan, the checker should recommend a split into
