@@ -399,7 +399,7 @@ Exercise code-review follow-up routing.
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/05-review-scope/05-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 

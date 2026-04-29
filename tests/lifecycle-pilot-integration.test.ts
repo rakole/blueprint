@@ -352,7 +352,7 @@ function validVerificationContent(options: {
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-lifecycle-pilot/${summaryFile} | none |
+| none | none | none | none |
 
 ## Gaps Found
 

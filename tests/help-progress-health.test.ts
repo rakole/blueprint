@@ -807,7 +807,7 @@ Exercise milestone closeout summary coverage.
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/02-validation-hardening/02-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -1133,7 +1133,7 @@ Close the milestone.
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
