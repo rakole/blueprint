@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.phase.verification.model",
+  "title": "Blueprint Phase Verification Model",
+  "description": "Model-authored payload for phase.verification. Runtime-owned phase identity, artifact kind, paths, completed summary inventory, and final Markdown persistence are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "coverageSummary",
+    "gateState",
+    "signOff",
+    "validationSummary",
+    "requirementCoverage",
+    "evidenceReviewedSummaryPaths",
+    "evidenceMetadata",
+    "manualOrDeferredCoverage",
+    "gapClassification",
+    "gapsFound",
+    "suggestedRepairs",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "coverageSummary": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Single-line summary rendered in the top Validation Summary metadata."
+    },
+    "gateState": {
+      "$ref": "#/$defs/gateState"
+    },
+    "signOff": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Single-line sign-off text rendered in metadata and the Gate State section."
+    },
+    "validationSummary": {
+      "type": "array",
+      "description": "Concrete validation observations rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "requirementCoverage": {
+      "type": "array",
+      "description": "Requirement and task coverage rows rendered into the Requirement / Task Coverage Markdown table.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/requirementCoverageRow"
+      }
+    },
+    "evidenceReviewedSummaryPaths": {
+      "type": "array",
+      "description": "Repo-relative completed execution summary artifacts reviewed during validation.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/phaseSummaryPath"
+      }
+    },
+    "evidenceMetadata": {
+      "type": "array",
+      "description": "Concrete test, command, harness, artifact, or infrastructure metadata rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "manualOrDeferredCoverage": {
+      "type": "array",
+      "description": "Manual-only or deferred coverage rows rendered into a Markdown table. Use an explicit NONE row when no manual or deferred coverage remains.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/manualOrDeferredCoverageRow"
+      }
+    },
+    "gapClassification": {
+      "type": "array",
+      "description": "Gap classification rows rendered into a Markdown table. Use an explicit none row when no gaps remain.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/gapClassificationRow"
+      }
+    },
+    "gapsFound": {
+      "type": "array",
+      "description": "Concrete gaps or a single explicit none value rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "suggestedRepairs": {
+      "type": "array",
+      "description": "Concrete repairs or a single explicit none value rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/blueprintCommandAction",
+      "description": "One single-line Blueprint command token with optional arguments. The task schema may narrow this to the allowed next actions for the current phase."
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line string with at least one non-whitespace character. CR/LF is rejected because model strings are rendered into Markdown metadata, bullets, or tables."
+    },
+    "markdownTableCellString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
+      "description": "Non-empty single-line Markdown table cell with at least one non-whitespace character. CR/LF and pipe delimiters are rejected to prevent table shape changes."
+    },
+    "phaseSummaryPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+-SUMMARY\\.md$",
+      "description": "Repo-relative Blueprint execution summary path under .blueprint/phases with no traversal, absolute path, backslash, glob, or table delimiter surface."
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*)(?:\\s+[A-Za-z0-9._:/=@+-]+)*$",
+      "description": "Single Blueprint command token plus optional tokenized arguments. Natural-language wrapping, backticks, pipes, and multi-line text are rejected."
+    },
+    "gateState": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "coverageState": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "MANUAL",
+        "DEFERRED",
+        "BLOCKED"
+      ]
+    },
+    "manualCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "MANUAL",
+        "DEFERRED",
+        "NONE"
+      ]
+    },
+    "gapClass": {
+      "type": "string",
+      "enum": [
+        "missing-evidence",
+        "partial-coverage",
+        "manual-only",
+        "deferred-test",
+        "contradiction",
+        "none"
+      ]
+    },
+    "requirementCoverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement",
+        "taskOrCheck",
+        "evidence",
+        "coverageState",
+        "notes"
+      ],
+      "properties": {
+        "requirement": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "taskOrCheck": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "coverageState": {
+          "$ref": "#/$defs/coverageState"
+        },
+        "notes": {
+          "$ref": "#/$defs/markdownTableCellString"
+        }
+      }
+    },
+    "manualOrDeferredCoverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "whyManualOrDeferred",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "whyManualOrDeferred": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "followUp": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/manualCoverageStatus"
+        }
+      }
+    },
+    "gapClassificationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gapClass",
+        "scope",
+        "evidence",
+        "repair"
+      ],
+      "properties": {
+        "gapClass": {
+          "$ref": "#/$defs/gapClass"
+        },
+        "scope": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "repair": {
+          "$ref": "#/$defs/markdownTableCellString"
+        }
+      }
+    }
+  }
+}

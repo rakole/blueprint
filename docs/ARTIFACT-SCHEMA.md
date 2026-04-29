@@ -58,7 +58,7 @@ Contract notes:
 
 ## Structured Model Schema Assets
 
-Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model.
+Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model. For `phase.verification`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths and allowed next actions before `/blu-validate-phase` validates and writes the model.
 
 ## Core Top-Level Artifacts
 
@@ -480,7 +480,7 @@ Minimum expected structure:
 
 Validation expectations:
 - must be grounded in the saved execution summaries for the phase
-- may be authored as a structured `blueprint.phase.verification.model` payload; MCP owns phase identity, path derivation, canonical Markdown rendering, example-leakage rejection, and the final Markdown validation pass
+- may be authored as a structured `blueprint.phase.verification.model` payload; MCP owns phase identity, path derivation, runtime task-schema narrowing, canonical Markdown rendering, example-leakage rejection, and the final Markdown validation pass
 - should describe gaps and pass signals explicitly rather than only restating artifact content
 - should keep the locked markers `**Coverage:**`, `**Gate State:**`, and `**Sign-off:**` exactly as written
 - should keep the full heading set above so the persisted artifact matches the runtime validator and authoring template

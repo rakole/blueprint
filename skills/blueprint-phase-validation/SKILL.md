@@ -85,6 +85,7 @@ Load the shared validation inputs first, then load only the command-specific inp
 - `blueprint_phase_validation_read`
 - `blueprint_phase_validation_authoring_context`
 - `blueprint_phase_validation_render`
+- `blueprint_phase_validation_validate_model`
 - `blueprint_phase_validation_write`
 - `blueprint_artifact_contract_read`
 - `blueprint_artifact_list`
@@ -102,16 +103,17 @@ Load the shared validation inputs first, then load only the command-specific inp
 ## Shared MCP Contracts
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories or filenames.
-- `blueprint_phase_validation_authoring_context`: read this before rendering validation artifacts so canonical contracts, mandatory valid summary citations, compact saved-summary evidence, existing baselines, prerequisite blockers, allowed values, and routing rules are explicit.
+- `blueprint_phase_validation_authoring_context`: read this before rendering validation artifacts so canonical contracts, mandatory valid summary citations, compact saved-summary evidence, existing baselines, prerequisite blockers, allowed values, routing rules, and any schema-first `taskSchema` are explicit.
 - `blueprint_phase_validation_render`: pass a structured `verification` or `uat` evidence payload and use its returned `content` only when `readyToWrite` is `true`. Treat `issues`, `validation`, `summaryPaths`, and `referencedSummaryPaths` as the pre-write self-check result.
-- `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and exactly one of the exact full artifact `content` returned by `blueprint_phase_validation_render` or the same structured `model` after a ready render. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Model writes reject model-owned identity keys, copied contract examples, missing required ledgers, unsupported fields, and invalid field types before rendering. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
+- `blueprint_phase_validation_validate_model`: for `phase.verification`, validate the structured model against the narrowed task schema and use the returned diagnostics plus `renderPreview` before persistence.
+- `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and exactly one of the exact full artifact `content` returned by `blueprint_phase_validation_render` or a structured `model`. For `/blu-validate-phase`, pass the same validated `phase.verification` model with `authoringMode: "model-only"` and do not use Markdown fallback. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Model writes reject model-owned identity keys, copied contract examples, missing required ledgers, unsupported fields, and invalid field types before rendering. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
 - `blueprint_artifact_contract_read`: read canonical authoring templates, validation metadata, and optional `modelContract` metadata by contract id such as `phase.verification` or `phase.uat` instead of relying on copied prompt-local templates.
 - `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. Use the returned `path` as authoritative.
 - `blueprint_artifact_validate`: run after every validation or UAT write so the persisted artifact is checked before the next state update is written.
 
 ## Canonical Validation Contracts
 
-- For `XX-VERIFICATION.md`, use `blueprint_phase_validation_authoring_context`, `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`, then `blueprint_phase_validation_render` before persistence. Persist either the returned `content` or the same structured `model`, never both.
+- For `XX-VERIFICATION.md`, use `blueprint_phase_validation_authoring_context`, `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`, then `blueprint_phase_validation_validate_model` before `/blu-validate-phase` persistence. Persist the same structured `model` with `authoringMode: "model-only"` for validate-phase, never Markdown fallback.
 - For `XX-UAT.md`, use `blueprint_phase_validation_authoring_context`, `blueprint_artifact_contract_read` with `artifactId: "phase.uat"`, then `blueprint_phase_validation_render` before persistence. Persist either the returned `content` or the same structured `model`, never both.
 - For `.blueprint/reports/add-tests-<phase>.md`, use `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` and normalize the final report draft to the returned `authoringTemplate`.
 - Keep each contract's locked markers and required section names unchanged.
@@ -125,7 +127,7 @@ Load the shared validation inputs first, then load only the command-specific inp
 1. Load `references/validate-phase-runtime-contract.md` and treat it as the canonical detailed contract for stage mapping, State A/B/C handling, verifier use, the no-subagent fallback, retry behavior, and output quality.
 2. Keep validation saved-summary-first, phase-scoped, and MCP-owned: execution summaries are the baseline, existing `XX-VERIFICATION.md` is the audit baseline when present, and direct repo mutation is out of scope.
 3. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when deciding whether verifier analysis runs and whether Nyquist-style gap language is active or informational.
-4. Read `blueprint_phase_validation_authoring_context` and `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final authoring, build a structured verification evidence payload, call `blueprint_phase_validation_render`, keep every completed summary filename or path in the contract-defined evidence section, and persist only through `blueprint_phase_validation_write` with the `verification` artifact when the render result has `readyToWrite: true`, passing exactly one of rendered `content` or the structured `model`.
+4. Read `blueprint_phase_validation_authoring_context` and `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final authoring, build a structured verification evidence payload against the returned `taskSchema`, call `blueprint_phase_validation_validate_model`, keep every completed summary filename or path in the contract-defined evidence section, and persist only through `blueprint_phase_validation_write` with the `verification` artifact when validation returns `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
 5. Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome, then sync `STATE.md` through `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"`. Route explicit test-generation gaps to `/blu-add-tests <phase>` and implementation/behavior gaps to `/blu-audit-fix <phase>` only when the saved artifact keeps the gate `PARTIAL` or `BLOCKED` and makes that follow-up necessary.
 
 ### `verify-work`

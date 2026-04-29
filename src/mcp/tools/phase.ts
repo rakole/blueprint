@@ -129,6 +129,7 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
   artifact: PhaseValidationArtifactKind;
   content?: string;
   model?: Record<string, unknown>;
+  authoringMode?: "content-compatible" | "model-only";
   overwrite?: boolean;
 };
 
@@ -171,6 +172,7 @@ type PhaseValidationAllowedValues = {
 };
 
 type PhaseValidationAuthoringContextResult = {
+  status: "ready" | "invalid";
   phaseFound: boolean;
   phaseNumber: string | null;
   phasePrefix: string | null;
@@ -185,6 +187,9 @@ type PhaseValidationAuthoringContextResult = {
   verification: PhaseValidationReadResult | null;
   prerequisiteBlockers: string[];
   readyForDraft: boolean;
+  schemaPath: string | null;
+  baseSchema: Record<string, unknown> | null;
+  taskSchema: Record<string, unknown> | null;
   allowedValues: PhaseValidationAllowedValues;
   routingRules: string[];
   warnings: string[];
@@ -227,6 +232,77 @@ type VerificationRenderArgs = PhaseLookupArgs & {
   gapsFound?: string[];
   suggestedRepairs?: string[];
   nextSafeAction?: string;
+};
+
+type PhaseVerificationStructuredModel = {
+  coverageSummary: string;
+  gateState: "PASS" | "PARTIAL" | "BLOCKED";
+  signOff: string;
+  validationSummary: string[];
+  requirementCoverage: Array<{
+    requirement: string;
+    taskOrCheck: string;
+    evidence: string;
+    coverageState: "PASS" | "MANUAL" | "DEFERRED" | "BLOCKED";
+    notes: string;
+  }>;
+  evidenceReviewedSummaryPaths: string[];
+  evidenceMetadata: string[];
+  manualOrDeferredCoverage: Array<{
+    item: string;
+    whyManualOrDeferred: string;
+    followUp: string;
+    status: "MANUAL" | "DEFERRED" | "NONE";
+  }>;
+  gapClassification: Array<{
+    gapClass:
+      | "missing-evidence"
+      | "partial-coverage"
+      | "manual-only"
+      | "deferred-test"
+      | "contradiction"
+      | "none";
+    scope: string;
+    evidence: string;
+    repair: string;
+  }>;
+  gapsFound: string[];
+  suggestedRepairs: string[];
+  nextSafeAction: string;
+};
+
+type PhaseValidationDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+
+type PhaseValidationModelDiagnostic = {
+  source: PhaseValidationDiagnosticSource;
+  path: string;
+  code: string;
+  message: string;
+  context: Record<string, unknown>;
+  suggestion: string;
+};
+
+type PhaseValidationValidateModelArgs = PhaseValidationAuthoringContextArgs & {
+  model: unknown;
+};
+
+type PhaseValidationValidateModelResult = {
+  status: "valid" | "invalid";
+  valid: boolean;
+  phase: ResolvedPhaseLocation | null;
+  artifact: "verification";
+  path: string | null;
+  schemaPath: string | null;
+  taskSchema: Record<string, unknown> | null;
+  diagnostics: PhaseValidationModelDiagnostic[];
+  diagnosticCounts: {
+    total: number;
+    bySource: Record<PhaseValidationDiagnosticSource, number>;
+    byCode: Record<string, number>;
+  };
+  normalizedModel: PhaseVerificationStructuredModel | null;
+  renderPreview: string | null;
+  warnings: string[];
 };
 
 type UatRenderCurrentTest = {
@@ -1171,7 +1247,14 @@ const phaseValidationWriteInputSchema = {
   artifact: z.enum(["verification", "uat"]),
   content: z.string().optional(),
   model: z.record(z.string(), z.unknown()).optional(),
+  authoringMode: z.enum(["content-compatible", "model-only"]).optional(),
   overwrite: z.boolean().optional()
+};
+const phaseValidationValidateModelInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  artifact: z.enum(["verification"]),
+  model: z.unknown()
 };
 const phaseValidationRenderInputSchema = {
   cwd: z.string().optional(),
@@ -1271,63 +1354,6 @@ const phaseValidationRenderInputSchema = {
 };
 const phaseValidationRenderSchema = z.object(phaseValidationRenderInputSchema).strict();
 const phaseValidationModelStringSchema = z.string().min(1);
-const phaseVerificationStructuredModelSchema = z
-  .object({
-    coverageSummary: phaseValidationModelStringSchema,
-    gateState: z.enum(["PASS", "PARTIAL", "BLOCKED"]),
-    signOff: phaseValidationModelStringSchema,
-    validationSummary: z.array(phaseValidationModelStringSchema).min(1),
-    requirementCoverage: z
-      .array(
-        z
-          .object({
-            requirement: phaseValidationModelStringSchema,
-            taskOrCheck: phaseValidationModelStringSchema,
-            evidence: phaseValidationModelStringSchema,
-            coverageState: z.enum(["PASS", "MANUAL", "DEFERRED", "BLOCKED"]),
-            notes: phaseValidationModelStringSchema
-          })
-          .strict()
-      )
-      .min(1),
-    evidenceReviewedSummaryPaths: z.array(phaseValidationModelStringSchema).min(1),
-    evidenceMetadata: z.array(phaseValidationModelStringSchema).min(1),
-    manualOrDeferredCoverage: z
-      .array(
-        z
-          .object({
-            item: phaseValidationModelStringSchema,
-            whyManualOrDeferred: phaseValidationModelStringSchema,
-            followUp: phaseValidationModelStringSchema,
-            status: z.enum(["MANUAL", "DEFERRED", "NONE"])
-          })
-          .strict()
-      )
-      .min(1),
-    gapClassification: z
-      .array(
-        z
-          .object({
-            gapClass: z.enum([
-              "missing-evidence",
-              "partial-coverage",
-              "manual-only",
-              "deferred-test",
-              "contradiction",
-              "none"
-            ]),
-            scope: phaseValidationModelStringSchema,
-            evidence: phaseValidationModelStringSchema,
-            repair: phaseValidationModelStringSchema
-          })
-          .strict()
-      )
-      .min(1),
-    gapsFound: z.array(phaseValidationModelStringSchema).min(1),
-    suggestedRepairs: z.array(phaseValidationModelStringSchema).min(1),
-    nextSafeAction: phaseValidationModelStringSchema
-  })
-  .strict();
 const phaseUatStructuredModelSchema = z
   .object({
     status: z.enum(["PASS", "FAIL", "PARTIAL"]),
@@ -5492,6 +5518,458 @@ async function phasePlanModelToContent(
   };
 }
 
+function phaseValidationDiagnostic(
+  args: PhaseValidationModelDiagnostic
+): PhaseValidationModelDiagnostic {
+  return args;
+}
+
+function emptyPhaseValidationDiagnosticCounts(): PhaseValidationValidateModelResult["diagnosticCounts"] {
+  return {
+    total: 0,
+    bySource: {
+      scope: 0,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    },
+    byCode: {}
+  };
+}
+
+function countPhaseValidationDiagnostics(
+  diagnostics: PhaseValidationModelDiagnostic[]
+): PhaseValidationValidateModelResult["diagnosticCounts"] {
+  const counts = emptyPhaseValidationDiagnosticCounts();
+
+  for (const diagnostic of diagnostics) {
+    counts.total += 1;
+    counts.bySource[diagnostic.source] += 1;
+    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+  }
+
+  return counts;
+}
+
+function formatPhaseValidationDiagnostic(diagnostic: PhaseValidationModelDiagnostic): string {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+
+function ajvPathToPhaseValidationModelPath(instancePath: string): string {
+  if (instancePath.length === 0) {
+    return "model";
+  }
+
+  return `model${instancePath
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => {
+      const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+    })
+    .join("")}`;
+}
+
+function schemaDiagnosticFromPhaseValidationAjvError(
+  error: ErrorObject
+): PhaseValidationModelDiagnostic {
+  const missingProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "missingProperty" in error.params &&
+    typeof error.params.missingProperty === "string"
+      ? error.params.missingProperty
+      : null;
+  const additionalProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "additionalProperty" in error.params &&
+    typeof error.params.additionalProperty === "string"
+      ? error.params.additionalProperty
+      : null;
+  const basePath = ajvPathToPhaseValidationModelPath(error.instancePath);
+  const pathValue =
+    missingProperty !== null
+      ? `${basePath}.${missingProperty}`
+      : additionalProperty !== null
+        ? `${basePath}.${additionalProperty}`
+        : basePath;
+
+  return phaseValidationDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error.keyword}`,
+    message: error.message ?? "Model does not match the phase.verification task schema.",
+    context: {
+      keyword: error.keyword,
+      params: error.params,
+      schemaPath: error.schemaPath
+    },
+    suggestion:
+      missingProperty !== null
+        ? `Add required field ${missingProperty}.`
+        : additionalProperty !== null
+          ? `Remove unsupported field ${additionalProperty}.`
+          : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
+  });
+}
+
+function collectModelStringEntries(
+  value: unknown,
+  pathValue = "model"
+): Array<{ path: string; value: string }> {
+  if (typeof value === "string") {
+    return [{ path: pathValue, value }];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      collectModelStringEntries(item, `${pathValue}[${index}]`)
+    );
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).flatMap(([key, item]) =>
+      collectModelStringEntries(item, `${pathValue}.${key}`)
+    );
+  }
+
+  return [];
+}
+
+function isGenericNoneValue(value: string): boolean {
+  return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
+}
+
+function hasPhaseValidationPlaceholderLanguage(value: string): boolean {
+  return /\b(?:todo|tbd|placeholder|replace with|replace me|fill in|insert here|coming soon|static for now)\b/i.test(
+    value
+  );
+}
+
+async function buildPhaseVerificationAllowedNextActions(phaseNumber: string): Promise<{
+  readyAction: string;
+  repairActions: string[];
+  allowedActions: string[];
+}> {
+  const readyAction = `/blu-verify-work ${phaseNumber}`;
+  const repairActions = [`/blu-add-tests ${phaseNumber}`, `/blu-audit-fix ${phaseNumber}`];
+  const implementedCommands = await getPhasePlanImplementedCommandNames();
+
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return {
+      readyAction,
+      repairActions,
+      allowedActions: [readyAction, ...repairActions]
+    };
+  }
+
+  const filterImplemented = (actions: string[]): string[] =>
+    actions.filter((action) =>
+      extractBlueprintDirectCommands(action).every((command) =>
+        implementedCommands.has(command)
+      )
+    );
+  const implementedReady = filterImplemented([readyAction])[0] ?? readyAction;
+  const implementedRepairs = filterImplemented(repairActions);
+
+  return {
+    readyAction: implementedReady,
+    repairActions: implementedRepairs.length > 0 ? implementedRepairs : repairActions,
+    allowedActions: [implementedReady, ...(implementedRepairs.length > 0 ? implementedRepairs : repairActions)]
+  };
+}
+
+function exactStringArrayContains(value: string): Record<string, unknown> {
+  return {
+    contains: { const: value },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+
+function buildPhaseVerificationTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  summaryPaths: string[];
+  readyAction: string;
+  repairActions: string[];
+  allowedActions: string[];
+}): Record<string, unknown> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+
+  if (properties) {
+    const evidenceReviewedSummaryPaths = getJsonObjectProperty(
+      properties,
+      "evidenceReviewedSummaryPaths"
+    );
+    if (evidenceReviewedSummaryPaths) {
+      evidenceReviewedSummaryPaths.minItems = args.summaryPaths.length;
+      evidenceReviewedSummaryPaths.maxItems = args.summaryPaths.length;
+      evidenceReviewedSummaryPaths.uniqueItems = true;
+      evidenceReviewedSummaryPaths.items = args.summaryPaths.length > 0
+        ? { type: "string", enum: args.summaryPaths }
+        : { type: "string" };
+      if (args.summaryPaths.length > 0) {
+        evidenceReviewedSummaryPaths.allOf = args.summaryPaths.map(exactStringArrayContains);
+      } else {
+        delete evidenceReviewedSummaryPaths.allOf;
+      }
+    }
+
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["gateState"],
+        properties: {
+          gateState: { const: "PASS" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.readyAction },
+          manualOrDeferredCoverage: {
+            items: {
+              type: "object",
+              required: ["status"],
+              properties: {
+                status: { const: "NONE" }
+              }
+            }
+          },
+          gapClassification: {
+            items: {
+              type: "object",
+              required: ["gapClass"],
+              properties: {
+                gapClass: { const: "none" }
+              }
+            }
+          },
+          gapsFound: {
+            items: { const: "none" }
+          },
+          suggestedRepairs: {
+            items: { const: "none" }
+          }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["gateState"],
+        properties: {
+          gateState: { enum: ["PARTIAL", "BLOCKED"] }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.repairActions },
+          gapClassification: {
+            contains: {
+              type: "object",
+              required: ["gapClass"],
+              properties: {
+                gapClass: {
+                  enum: [
+                    "missing-evidence",
+                    "partial-coverage",
+                    "manual-only",
+                    "deferred-test",
+                    "contradiction"
+                  ]
+                }
+              }
+            },
+            minContains: 1
+          },
+          gapsFound: {
+            contains: { not: { const: "none" } },
+            minContains: 1
+          },
+          suggestedRepairs: {
+            contains: { not: { const: "none" } },
+            minContains: 1
+          }
+        }
+      }
+    }
+  ];
+
+  schema["x-blueprint-runtimeContext"] = {
+    summaryPaths: args.summaryPaths,
+    readyAction: args.readyAction,
+    repairActions: args.repairActions,
+    allowedActions: args.allowedActions
+  };
+
+  return schema;
+}
+
+async function phaseVerificationModelSchemas(args: {
+  contract: ArtifactContractReadResult;
+  phaseNumber: string;
+  summaryPaths: string[];
+}): Promise<{
+  schemaPath: string;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+}> {
+  const modelContract = args.contract.modelContract;
+
+  if (!modelContract) {
+    throw new Error("phase.verification does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("phase.verification modelContract does not expose a schemaPath.");
+  }
+
+  const baseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(args.phaseNumber);
+  const taskSchema = buildPhaseVerificationTaskSchema({
+    baseSchema,
+    summaryPaths: args.summaryPaths,
+    ...allowedNextActions
+  });
+
+  return {
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema
+  };
+}
+
+function phaseValidationResidualDiagnostics(
+  model: Record<string, unknown>,
+  modelContract: ArtifactContractReadResult["modelContract"]
+): PhaseValidationModelDiagnostic[] {
+  const diagnostics: PhaseValidationModelDiagnostic[] = [];
+
+  if (!modelContract) {
+    return [
+      phaseValidationDiagnostic({
+        source: "scope",
+        path: "model",
+        code: "contract.missing",
+        message: "phase.verification does not support structured model writes.",
+        context: {},
+        suggestion: "Read the live phase.verification artifact contract before authoring."
+      })
+    ];
+  }
+
+  const modelStrings = collectModelStringEntries(model);
+  const leakedSignals = modelContract.exampleLeakageSignals.filter((signal) =>
+    modelStrings.some((entry) => entry.value.includes(signal))
+  );
+
+  for (const signal of leakedSignals) {
+    diagnostics.push(
+      phaseValidationDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.example_leakage",
+        message: `Phase verification model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        context: { signal },
+        suggestion: "Replace copied example wording with evidence from the selected phase summaries."
+      })
+    );
+  }
+
+  for (const entry of modelStrings) {
+    if (hasPhaseValidationPlaceholderLanguage(entry.value)) {
+      diagnostics.push(
+        phaseValidationDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.placeholder",
+          message: `Phase verification model contains placeholder language: ${entry.value}.`,
+          context: { value: entry.value },
+          suggestion: "Replace placeholder language with concrete validation evidence."
+        })
+      );
+    }
+  }
+
+  for (const entry of modelStrings.filter((candidate) =>
+    [
+      "model.coverageSummary",
+      "model.signOff",
+      "model.validationSummary"
+    ].some((pathPrefix) => candidate.path.startsWith(pathPrefix))
+  )) {
+    if (isGenericNoneValue(entry.value)) {
+      diagnostics.push(
+        phaseValidationDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.generic_text",
+          message: "Phase verification model must use concrete evidence text instead of generic none.",
+          context: { value: entry.value },
+          suggestion: "Replace the generic value with a specific saved-summary-backed claim."
+        })
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
+async function validatePhaseVerificationModelCommands(
+  model: Record<string, unknown>
+): Promise<string[]> {
+  const commands = [
+    ...new Set(
+      collectModelStringValues(model).flatMap((value) => extractBlueprintDirectCommands(value))
+    )
+  ];
+
+  if (commands.length === 0) {
+    return [];
+  }
+
+  const implementedCommands = await getPhasePlanImplementedCommandNames();
+
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return [
+      "Phase verification model Blueprint command references could not be checked because the implemented command catalog was unavailable."
+    ];
+  }
+
+  const nonImplementedCommands = commands.filter((command) => !implementedCommands.has(command));
+
+  return nonImplementedCommands.length > 0
+    ? [
+        `Phase verification model references non-implemented Blueprint command(s): ${nonImplementedCommands.join(", ")}.`
+      ]
+    : [];
+}
+
+function resolvedPhaseFromValidationContext(
+  context: PhaseValidationAuthoringContextResult
+): ResolvedPhaseLocation | null {
+  return context.phaseFound &&
+    context.phaseNumber &&
+    context.phasePrefix &&
+    context.phaseName &&
+    context.phaseDir
+    ? {
+        phaseNumber: context.phaseNumber,
+        phasePrefix: context.phasePrefix,
+        phaseName: context.phaseName,
+        phaseDir: context.phaseDir
+      }
+    : null;
+}
+
 function phaseValidationModelToRenderArgs(
   args: PhaseValidationWriteArgs,
   resolved: ResolvedPhaseLocation,
@@ -5502,6 +5980,15 @@ function phaseValidationModelToRenderArgs(
 } {
   const model = args.model;
   const issues: string[] = [];
+
+  if (args.artifact === "verification") {
+    return {
+      renderArgs: null,
+      issues: [
+        "phase.verification model writes must validate through blueprint_phase_validation_validate_model."
+      ]
+    };
+  }
 
   if (typeof model !== "object" || model === null || Array.isArray(model)) {
     return {
@@ -5565,11 +6052,7 @@ function phaseValidationModelToRenderArgs(
     return { renderArgs: null, issues };
   }
 
-  const artifactModelSchema =
-    args.artifact === "verification"
-      ? phaseVerificationStructuredModelSchema
-      : phaseUatStructuredModelSchema;
-  const parsedModel = artifactModelSchema.safeParse(model);
+  const parsedModel = phaseUatStructuredModelSchema.safeParse(model);
 
   if (!parsedModel.success) {
     return {
@@ -5991,6 +6474,7 @@ export async function blueprintPhaseValidationAuthoringContext(
     const reason = located.reason ?? "Phase could not be resolved for validation authoring.";
 
     return {
+      status: "invalid",
       phaseFound: false,
       phaseNumber: null,
       phasePrefix: null,
@@ -6005,6 +6489,9 @@ export async function blueprintPhaseValidationAuthoringContext(
       verification: null,
       prerequisiteBlockers: [reason],
       readyForDraft: false,
+      schemaPath: null,
+      baseSchema: null,
+      taskSchema: null,
       allowedValues,
       routingRules: phaseValidationRoutingRules(null),
       warnings: [],
@@ -6032,8 +6519,18 @@ export async function blueprintPhaseValidationAuthoringContext(
     summaryEvidence.summaryPaths
   );
   const verification = args.artifact === "verification" ? existing : prerequisites.verification;
+  const verificationSchemas =
+    args.artifact === "verification"
+      ? await phaseVerificationModelSchemas({
+          contract,
+          phaseNumber: resolved.phaseNumber,
+          summaryPaths: summaryEvidence.summaryPaths
+        })
+      : null;
+  const readyForDraft = prerequisites.blockers.length === 0;
 
   return {
+    status: readyForDraft ? "ready" : "invalid",
     phaseFound: true,
     phaseNumber: resolved.phaseNumber,
     phasePrefix: resolved.phasePrefix,
@@ -6047,11 +6544,148 @@ export async function blueprintPhaseValidationAuthoringContext(
     existing,
     verification,
     prerequisiteBlockers: prerequisites.blockers,
-    readyForDraft: prerequisites.blockers.length === 0,
+    readyForDraft,
+    schemaPath: verificationSchemas?.schemaPath ?? null,
+    baseSchema: verificationSchemas?.baseSchema ?? null,
+    taskSchema: verificationSchemas?.taskSchema ?? null,
     allowedValues,
     routingRules: phaseValidationRoutingRules(resolved.phaseNumber),
     warnings: summaryEvidence.warnings,
-    reason: null
+    reason: readyForDraft ? null : prerequisites.blockers.join(" ")
+  };
+}
+
+export async function blueprintPhaseValidationValidateModel(
+  args: PhaseValidationValidateModelArgs
+): Promise<PhaseValidationValidateModelResult> {
+  const context = await blueprintPhaseValidationAuthoringContext({
+    cwd: args.cwd,
+    phase: args.phase,
+    artifact: "verification"
+  });
+  const resolved = resolvedPhaseFromValidationContext(context);
+  const diagnostics: PhaseValidationModelDiagnostic[] = context.prerequisiteBlockers.map((message) =>
+    phaseValidationDiagnostic({
+      source: "scope",
+      path: "phase.summaryPaths",
+      code: "scope.prerequisite_blocker",
+      message,
+      context: { phase: context.phaseNumber },
+      suggestion:
+        "Create valid completed execution summaries before authoring phase.verification evidence."
+    })
+  );
+  const modelObject = asJsonObject(args.model);
+
+  if (!modelObject) {
+    diagnostics.push(
+      phaseValidationDiagnostic({
+        source: "schema",
+        path: "model",
+        code: "schema.type",
+        message: "Phase verification model must be a JSON object.",
+        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        suggestion: "Return a JSON object that matches taskSchema."
+      })
+    );
+  }
+
+  if (!context.taskSchema) {
+    diagnostics.push(
+      phaseValidationDiagnostic({
+        source: "scope",
+        path: "taskSchema",
+        code: "contract.missing_schema",
+        message: "phase.verification did not expose a runtime task schema.",
+        context: {},
+        suggestion: "Read the live phase.verification contract and authoring context before writing."
+      })
+    );
+  }
+
+  let normalizedModel: PhaseVerificationStructuredModel | null = null;
+
+  if (modelObject && context.taskSchema) {
+    const validate = createAjvValidator().compile(context.taskSchema);
+    const schemaValid = validate(modelObject);
+
+    if (!schemaValid) {
+      diagnostics.push(
+        ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseValidationAjvError)
+      );
+    }
+
+    diagnostics.push(
+      ...phaseValidationResidualDiagnostics(modelObject, context.contract.modelContract)
+    );
+
+    for (const issue of await validatePhaseVerificationModelCommands(modelObject)) {
+      diagnostics.push(
+        phaseValidationDiagnostic({
+          source: "residual",
+          path: "model",
+          code: "content.non_implemented_command",
+          message: issue,
+          context: {},
+          suggestion: "Use only implemented Blueprint command references from the task schema."
+        })
+      );
+    }
+
+    if (schemaValid) {
+      normalizedModel = modelObject as PhaseVerificationStructuredModel;
+    }
+  }
+
+  let renderPreview: string | null = null;
+
+  if (diagnostics.length === 0 && normalizedModel && resolved) {
+    const rendered = renderVerificationContent(
+      {
+        cwd: args.cwd,
+        phase: resolved.phaseNumber,
+        artifact: "verification",
+        ...normalizedModel
+      },
+      resolved,
+      context.summaryPaths
+    );
+    const validation = validateVerificationArtifactContent(rendered, context.summaryPaths);
+
+    for (const issue of validation.issues) {
+      diagnostics.push(
+        phaseValidationDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue,
+          context: {},
+          suggestion:
+            "Repair the model so MCP-rendered Markdown satisfies the phase.verification artifact contract."
+        })
+      );
+    }
+
+    if (validation.issues.length === 0) {
+      renderPreview = rendered;
+    }
+  }
+
+  return {
+    status: diagnostics.length === 0 ? "valid" : "invalid",
+    valid: diagnostics.length === 0,
+    phase: resolved,
+    artifact: "verification",
+    path: context.path,
+    schemaPath: context.schemaPath,
+    taskSchema: context.taskSchema,
+    diagnostics,
+    diagnosticCounts: countPhaseValidationDiagnostics(diagnostics),
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
+      ? null
+      : normalizedModel,
+    renderPreview,
+    warnings: context.warnings
   };
 }
 
@@ -7761,6 +8395,26 @@ export async function blueprintPhaseValidationWrite(
     };
   }
 
+  if (args.authoringMode === "model-only" && hasContent) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      artifact: args.artifact,
+      path: artifactPath,
+      summaryPaths: [],
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues: [
+        "Phase validation model-only writes must supply the validated structured model, not Markdown content."
+      ],
+      warnings: []
+    };
+  }
+
   const summaryIndex = await blueprintPhaseSummaryIndex({
     cwd: projectRoot,
     phase: resolved.phaseNumber
@@ -7789,47 +8443,76 @@ export async function blueprintPhaseValidationWrite(
   let normalizedContent: string;
 
   if (hasModel) {
-    const modelRender = phaseValidationModelToRenderArgs(args, resolved, projectRoot);
+    if (args.artifact === "verification") {
+      const modelValidation = await blueprintPhaseValidationValidateModel({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        artifact: "verification",
+        model: args.model
+      });
 
-    if (!modelRender.renderArgs) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        artifact: args.artifact,
-        path: artifactPath,
-        summaryPaths,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        issues: modelRender.issues,
-        warnings
-      };
+      if (!modelValidation.valid || !modelValidation.renderPreview) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          summaryPaths,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: modelValidation.diagnostics.map(formatPhaseValidationDiagnostic),
+          warnings: [...warnings, ...modelValidation.warnings]
+        };
+      }
+
+      normalizedContent = normalizeTextContent(modelValidation.renderPreview);
+    } else {
+      const modelRender = phaseValidationModelToRenderArgs(args, resolved, projectRoot);
+
+      if (!modelRender.renderArgs) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          summaryPaths,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: modelRender.issues,
+          warnings
+        };
+      }
+
+      renderedModel = await blueprintPhaseValidationRender(modelRender.renderArgs);
+
+      if (!renderedModel.readyToWrite) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          artifact: args.artifact,
+          path: artifactPath,
+          summaryPaths: renderedModel.referencedSummaryPaths,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          issues: renderedModel.issues,
+          warnings: [...warnings, ...renderedModel.warnings]
+        };
+      }
+
+      normalizedContent = normalizeTextContent(renderedModel.content);
     }
-
-    renderedModel = await blueprintPhaseValidationRender(modelRender.renderArgs);
-
-    if (!renderedModel.readyToWrite) {
-      return {
-        phaseNumber: resolved.phaseNumber,
-        phasePrefix: resolved.phasePrefix,
-        phaseName: resolved.phaseName,
-        phaseDir: resolved.phaseDir,
-        artifact: args.artifact,
-        path: artifactPath,
-        summaryPaths: renderedModel.referencedSummaryPaths,
-        written: false,
-        created: false,
-        overwritten: false,
-        status: "invalid",
-        issues: renderedModel.issues,
-        warnings: [...warnings, ...renderedModel.warnings]
-      };
-    }
-
-    normalizedContent = normalizeTextContent(renderedModel.content);
   } else {
     normalizedContent = normalizeTextContent(args.content ?? "");
   }
@@ -9719,6 +10402,14 @@ export const phaseToolDefinitions = [
     inputSchema: phaseValidationRenderInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseValidationRender(args as PhaseValidationRenderArgs)
+  },
+  {
+    name: "blueprint_phase_validation_validate_model",
+    description:
+      "Validate a structured phase.verification model against the runtime task schema and return a canonical VERIFICATION render preview without writing files.",
+    inputSchema: phaseValidationValidateModelInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseValidationValidateModel(args as PhaseValidationValidateModelArgs)
   },
   {
     name: "blueprint_phase_validation_write",

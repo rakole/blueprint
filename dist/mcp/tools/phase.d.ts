@@ -66,6 +66,7 @@ type PhaseValidationWriteArgs = PhaseLookupArgs & {
     artifact: PhaseValidationArtifactKind;
     content?: string;
     model?: Record<string, unknown>;
+    authoringMode?: "content-compatible" | "model-only";
     overwrite?: boolean;
 };
 type PhaseValidationAuthoringContextArgs = PhaseLookupArgs & {
@@ -104,6 +105,7 @@ type PhaseValidationAllowedValues = {
     };
 };
 type PhaseValidationAuthoringContextResult = {
+    status: "ready" | "invalid";
     phaseFound: boolean;
     phaseNumber: string | null;
     phasePrefix: string | null;
@@ -118,6 +120,9 @@ type PhaseValidationAuthoringContextResult = {
     verification: PhaseValidationReadResult | null;
     prerequisiteBlockers: string[];
     readyForDraft: boolean;
+    schemaPath: string | null;
+    baseSchema: Record<string, unknown> | null;
+    taskSchema: Record<string, unknown> | null;
     allowedValues: PhaseValidationAllowedValues;
     routingRules: string[];
     warnings: string[];
@@ -156,6 +161,66 @@ type VerificationRenderArgs = PhaseLookupArgs & {
     gapsFound?: string[];
     suggestedRepairs?: string[];
     nextSafeAction?: string;
+};
+type PhaseVerificationStructuredModel = {
+    coverageSummary: string;
+    gateState: "PASS" | "PARTIAL" | "BLOCKED";
+    signOff: string;
+    validationSummary: string[];
+    requirementCoverage: Array<{
+        requirement: string;
+        taskOrCheck: string;
+        evidence: string;
+        coverageState: "PASS" | "MANUAL" | "DEFERRED" | "BLOCKED";
+        notes: string;
+    }>;
+    evidenceReviewedSummaryPaths: string[];
+    evidenceMetadata: string[];
+    manualOrDeferredCoverage: Array<{
+        item: string;
+        whyManualOrDeferred: string;
+        followUp: string;
+        status: "MANUAL" | "DEFERRED" | "NONE";
+    }>;
+    gapClassification: Array<{
+        gapClass: "missing-evidence" | "partial-coverage" | "manual-only" | "deferred-test" | "contradiction" | "none";
+        scope: string;
+        evidence: string;
+        repair: string;
+    }>;
+    gapsFound: string[];
+    suggestedRepairs: string[];
+    nextSafeAction: string;
+};
+type PhaseValidationDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type PhaseValidationModelDiagnostic = {
+    source: PhaseValidationDiagnosticSource;
+    path: string;
+    code: string;
+    message: string;
+    context: Record<string, unknown>;
+    suggestion: string;
+};
+type PhaseValidationValidateModelArgs = PhaseValidationAuthoringContextArgs & {
+    model: unknown;
+};
+type PhaseValidationValidateModelResult = {
+    status: "valid" | "invalid";
+    valid: boolean;
+    phase: ResolvedPhaseLocation | null;
+    artifact: "verification";
+    path: string | null;
+    schemaPath: string | null;
+    taskSchema: Record<string, unknown> | null;
+    diagnostics: PhaseValidationModelDiagnostic[];
+    diagnosticCounts: {
+        total: number;
+        bySource: Record<PhaseValidationDiagnosticSource, number>;
+        byCode: Record<string, number>;
+    };
+    normalizedModel: PhaseVerificationStructuredModel | null;
+    renderPreview: string | null;
+    warnings: string[];
 };
 type UatRenderCurrentTest = {
     number?: string;
@@ -949,6 +1014,7 @@ type PhasePlanStructuredModel = {
     }>;
 };
 export declare function blueprintPhaseValidationAuthoringContext(args: PhaseValidationAuthoringContextArgs): Promise<PhaseValidationAuthoringContextResult>;
+export declare function blueprintPhaseValidationValidateModel(args: PhaseValidationValidateModelArgs): Promise<PhaseValidationValidateModelResult>;
 export declare function blueprintPhaseValidationRender(args: PhaseValidationRenderArgs): Promise<PhaseValidationRenderResult>;
 export declare function blueprintRoadmapRead(args?: RoadmapReadArgs): Promise<RoadmapReadResult>;
 export declare function blueprintRoadmapAddPhase(args: RoadmapAddPhaseArgs): Promise<RoadmapAddPhaseResult>;
@@ -996,8 +1062,8 @@ export declare const phaseToolDefinitions: ({
             repairRequirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
             gapGroups: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 category: z.ZodEnum<{
-                    requirement: "requirement";
                     optional: "optional";
+                    requirement: "requirement";
                     integration: "integration";
                     flow: "flow";
                 }>;
@@ -1226,10 +1292,26 @@ export declare const phaseToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             verification: "verification";
+        }>;
+        model: z.ZodUnknown;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseValidationValidateModelResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        artifact: z.ZodEnum<{
+            verification: "verification";
             uat: "uat";
         }>;
         content: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        authoringMode: z.ZodOptional<z.ZodEnum<{
+            "content-compatible": "content-compatible";
+            "model-only": "model-only";
+        }>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseValidationWriteResult>;

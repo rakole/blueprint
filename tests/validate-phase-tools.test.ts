@@ -17,6 +17,7 @@ import {
   blueprintPhaseContext,
   blueprintPhaseValidationAuthoringContext,
   blueprintPhaseValidationRender,
+  blueprintPhaseValidationValidateModel,
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead,
   blueprintPhaseValidationRead,
@@ -516,7 +517,7 @@ function verificationRenderInput(
     ],
     gapsFound: ["none"],
     suggestedRepairs: ["none"],
-    nextSafeAction: "Continue with conversational UAT through `/blu-verify-work 3`.",
+    nextSafeAction: "/blu-verify-work 3",
     ...overrides
   };
 }
@@ -581,6 +582,7 @@ test("validate-phase tools are registered in the Blueprint server", () => {
     "blueprint_phase_validation_read",
     "blueprint_phase_validation_authoring_context",
     "blueprint_phase_validation_render",
+    "blueprint_phase_validation_validate_model",
     "blueprint_phase_validation_write"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
@@ -611,8 +613,15 @@ test("validation authoring context and render produce write-ready VERIFICATION c
   });
 
   assert.equal(context.readyForDraft, true);
+  assert.equal(context.status, "ready");
   assert.deepEqual(context.summaryPaths, [summaryPath]);
   assert.equal(context.contract.id, "phase.verification");
+  assert.equal(
+    context.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json"
+  );
+  assert.match(JSON.stringify(context.taskSchema), /03-01-SUMMARY\.md/);
+  assert.match(JSON.stringify(context.taskSchema), /x-blueprint-runtimeContext/);
   assert.deepEqual(context.allowedValues.verification.coverageStates, [
     "PASS",
     "MANUAL",
@@ -625,6 +634,89 @@ test("validation authoring context and render produce write-ready VERIFICATION c
   assert.deepEqual(rendered.referencedSummaryPaths, [summaryPath]);
   assert.doesNotMatch(rendered.content, /PASS\|PARTIAL\|BLOCKED|<Phase Name>|03\.1-YY-SUMMARY/);
   assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+});
+
+test("verification model authoring blocks when completed summary context is missing", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const summaryAbsolutePath = path.join(repoPath, summaryPath);
+  const summaryContent = await readFile(summaryAbsolutePath, "utf8");
+  await writeFile(
+    summaryAbsolutePath,
+    summaryContent.replace("**Status:** COMPLETED", "**Status:** PARTIAL"),
+    "utf8"
+  );
+
+  const context = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification"
+  });
+  const { artifact: _artifact, phase: _phase, ...emptySummaryModel } = verificationRenderInput(
+    [],
+    {
+      evidenceReviewedSummaryPaths: [],
+      requirementCoverage: [
+        {
+          requirement: "VAL-01",
+          taskOrCheck: "Review completed execution evidence",
+          evidence: summaryPath,
+          coverageState: "PASS",
+          notes: "Saved summary evidence remains authoritative."
+        }
+      ],
+      gapClassification: [
+        {
+          gapClass: "none",
+          scope: "none",
+          evidence: summaryPath,
+          repair: "none"
+        }
+      ]
+    }
+  );
+  const validatedEmpty = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: emptySummaryModel
+  });
+  const validatedInventedSummary = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...emptySummaryModel,
+      evidenceReviewedSummaryPaths: [summaryPath]
+    }
+  });
+  const writeAttempt = blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: emptySummaryModel,
+    authoringMode: "model-only"
+  });
+
+  assert.equal(context.status, "invalid");
+  assert.equal(context.readyForDraft, false);
+  assert.match(context.prerequisiteBlockers.join("\n"), /valid completed execution summaries/i);
+  assert.match(JSON.stringify(context.taskSchema), /"evidenceReviewedSummaryPaths".*"maxItems":0/s);
+  assert.equal(validatedEmpty.status, "invalid");
+  assert.match(
+    validatedEmpty.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /scope\.prerequisite_blocker/
+  );
+  assert.equal(validatedInventedSummary.status, "invalid");
+  assert.match(
+    validatedInventedSummary.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /more than 0 items|must NOT have more than 0 items/i
+  );
+  await assert.rejects(writeAttempt, /valid execution summaries/);
 });
 
 test("validation write accepts a structured VERIFICATION model and rejects invalid model usage", async (t) => {
@@ -640,14 +732,32 @@ test("validation write accepts a structured VERIFICATION model and rejects inval
       evidenceReviewedSummaryPaths: [summaryPath]
     }
   );
-  const written = await blueprintPhaseValidationWrite({
+  const validated = await blueprintPhaseValidationValidateModel({
     cwd: repoPath,
     phase: "3",
     artifact: "verification",
     model
   });
+  const written = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model,
+    authoringMode: "model-only"
+  });
   const savedContent = await readFile(path.join(repoPath, written.path), "utf8");
+  const modelOnlyMarkdownFallback = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: savedContent,
+    authoringMode: "model-only",
+    overwrite: true
+  });
 
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(validated.schemaPath, "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json");
+  assert.match(validated.renderPreview ?? "", /# Phase 03: Phase Discovery - Verification/);
   assert.equal(written.status, "created", JSON.stringify(written, null, 2));
   assert.match(savedContent, /## Requirement \/ Task Coverage/);
   assert.match(savedContent, /## Evidence Reviewed/);
@@ -657,6 +767,8 @@ test("validation write accepts a structured VERIFICATION model and rejects inval
     true,
     "rendered model should preserve saved summary evidence"
   );
+  assert.equal(modelOnlyMarkdownFallback.status, "invalid");
+  assert.match(modelOnlyMarkdownFallback.issues.join("\n"), /model-only writes must supply/i);
 
   const bothContentAndModel = await blueprintPhaseValidationWrite({
     cwd: repoPath,
@@ -708,6 +820,43 @@ test("validation write accepts a structured VERIFICATION model and rejects inval
     },
     overwrite: true
   });
+  const modelWithOutOfScopeSummary = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      evidenceReviewedSummaryPaths: [
+        ".blueprint/phases/03-phase-discovery/03-99-SUMMARY.md"
+      ]
+    }
+  });
+  const modelWithNewlineInjection = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      validationSummary: ["Execution evidence matches.\nInjected heading"]
+    }
+  });
+  const modelWithTableDelimiterInjection = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      requirementCoverage: [
+        {
+          requirement: "VAL-01",
+          taskOrCheck: "Review | break table",
+          evidence: summaryPath,
+          coverageState: "PASS",
+          notes: "Saved summary evidence remains authoritative."
+        }
+      ]
+    }
+  });
   const uatModelWithBlankNestedObjects = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "3",
@@ -745,16 +894,31 @@ test("validation write accepts a structured VERIFICATION model and rejects inval
   assert.equal(leakedExample.status, "invalid");
   assert.match(leakedExample.issues.join("\n"), /copied example leakage signal/);
   assert.equal(modelWithIdentity.status, "invalid");
-  assert.match(modelWithIdentity.issues.join("\n"), /MCP-owned identity keys: phase/);
+  assert.match(modelWithIdentity.issues.join("\n"), /schema\.additionalProperties|additional properties/i);
   assert.equal(modelMissingRequiredLedger.status, "invalid");
   assert.match(
     modelMissingRequiredLedger.issues.join("\n"),
-    /missing required fields: evidenceReviewedSummaryPaths/
+    /schema\.required|required property/i
   );
   assert.equal(modelWithBlankCoverageRow.status, "invalid");
   assert.match(
     modelWithBlankCoverageRow.issues.join("\n"),
-    /requirementCoverage\.0\.requirement/
+    /model\.requirementCoverage\[0\]\.requirement/
+  );
+  assert.equal(modelWithOutOfScopeSummary.status, "invalid");
+  assert.match(
+    modelWithOutOfScopeSummary.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of the allowed values|must be equal to constant/i
+  );
+  assert.equal(modelWithNewlineInjection.status, "invalid");
+  assert.match(
+    modelWithNewlineInjection.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /pattern/i
+  );
+  assert.equal(modelWithTableDelimiterInjection.status, "invalid");
+  assert.match(
+    modelWithTableDelimiterInjection.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /pattern/i
   );
   assert.equal(uatModelWithBlankNestedObjects.status, "invalid");
   assert.match(
