@@ -420,6 +420,14 @@ function cloneStructuredPlanModel(
   >;
 }
 
+async function removeSavedPhaseEvidence(repoPath: string): Promise<void> {
+  const phaseDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+
+  await rm(path.join(phaseDir, "03-CONTEXT.md"), { force: true });
+  await rm(path.join(phaseDir, "03-RESEARCH.md"), { force: true });
+  await rm(path.join(phaseDir, "03-UI-SPEC.md"), { force: true });
+}
+
 function hollowPlanContent(planId: string, wave: number): string {
   return hollowPlanContentWithOptions(planId, wave);
 }
@@ -776,6 +784,164 @@ test("phase plan model schema rejects unsupported, missing, and out-of-scope val
   assert.match(
     outOfScopeEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /allowed values|must be equal to one of/i
+  );
+});
+
+test("phase plan model schema rejects newline injection in frontmatter-rendered fields", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const cases: Array<{
+    name: string;
+    mutate: (model: Record<string, unknown>) => void;
+    expectedPath: RegExp;
+  }> = [
+    {
+      name: "title",
+      mutate: (model) => {
+        model.title = "Plan 01\ngap_closure: true";
+      },
+      expectedPath: /model\.title/
+    },
+    {
+      name: "objective",
+      mutate: (model) => {
+        model.objective = "Ship structured phase plan model writes.\ngap_closure: true";
+      },
+      expectedPath: /model\.objective/
+    },
+    {
+      name: "frontmatter list item",
+      mutate: (model) => {
+        model.filesModified = ["src/mcp/tools/phase.ts\ngap_closure: true"];
+      },
+      expectedPath: /model\.filesModified/
+    }
+  ];
+
+  for (const testCase of cases) {
+    const model = cloneStructuredPlanModel();
+    testCase.mutate(model);
+    const validated = await blueprintPhasePlanValidateModel({
+      cwd: repoPath,
+      phase: "3",
+      model
+    });
+    const written = await blueprintPhasePlanWrite({
+      cwd: repoPath,
+      phase: "3",
+      model,
+      overwrite: true
+    });
+    const diagnostics = validated.diagnostics
+      .map((diagnostic) => `${diagnostic.path}: ${diagnostic.message}`)
+      .join("\n");
+
+    assert.equal(validated.status, "invalid", testCase.name);
+    assert.match(diagnostics, testCase.expectedPath, testCase.name);
+    assert.match(diagnostics, /pattern/i, testCase.name);
+    assert.equal(written.status, "invalid", testCase.name);
+    assert.equal(written.written, false, testCase.name);
+    assert.match(written.validation.issues.join("\n"), /pattern/i, testCase.name);
+  }
+
+  const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
+  assert.deepEqual(index.plans, []);
+});
+
+test("phase plan authoring rejects invented requirement coverage when roadmap requirements are absent", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel()
+  });
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel(),
+    overwrite: true
+  });
+  const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(context.status, "invalid");
+  assert.deepEqual(context.knownRequirements, []);
+  assert.match(context.reason ?? "", /no roadmap requirements/i);
+  assert.match(JSON.stringify(context.taskSchema), /"maxItems":0/);
+  assert.equal(validated.status, "invalid");
+  assert.match(
+    validated.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /no roadmap requirements|more than 0 items/i
+  );
+  assert.equal(written.status, "invalid");
+  assert.equal(written.written, false);
+  assert.match(written.validation.issues.join("\n"), /no roadmap requirements|more than 0 items/i);
+  assert.deepEqual(index.plans, []);
+});
+
+test("phase plan task schema permits empty evidence coverage only when no saved evidence exists", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await removeSavedPhaseEvidence(repoPath);
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const emptyEvidenceModel = cloneStructuredPlanModel({
+    evidenceCoverage: []
+  });
+  const emptyEvidence = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: emptyEvidenceModel
+  });
+  const inventedEvidence = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel()
+  });
+
+  assert.equal(context.status, "ready", JSON.stringify(context, null, 2));
+  assert.deepEqual(context.knownEvidenceArtifacts, []);
+  assert.match(JSON.stringify(context.taskSchema), /"evidenceCoverage".*"maxItems":0/s);
+  assert.equal(emptyEvidence.status, "valid", JSON.stringify(emptyEvidence.diagnostics, null, 2));
+  assert.equal(inventedEvidence.status, "invalid");
+  assert.match(
+    inventedEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /more than 0 items/i
   );
 });
 

@@ -4,9 +4,10 @@ description: >
   Phase-planning specialist for Blueprint lifecycle work. Use this agent when
   `/blu-plan-phase` needs execution-ready plan drafts grounded in phase
   context, discovery artifacts, current Blueprint constraints, and the live
-  phase.plan contract. Example scenarios: drafting new structured `phase.plan`
-  models, splitting a phase into dependency-aware waves, and translating
-  research or UI findings into concrete implementation steps.
+  phase.plan contract. Example scenarios: drafting new `XX-YY-PLAN.md` content
+  from structured `phase.plan` models, splitting a phase into dependency-aware
+  waves, and translating research or UI findings into concrete implementation
+  steps.
 kind: local
 tools:
   - list_directory
@@ -92,6 +93,8 @@ content through MCP without guessing plan structure or dependency order.
 - one or more complete structured `phase.plan` JSON models ready for
   `blueprint_phase_plan_validate_model` and `blueprint_phase_plan_write` by the
   parent command
+- after schema validation, the same models are ready for
+  `blueprint_phase_plan_write` by the parent command
 - requirement-to-plan coverage mapping
 - dependency-wave and sequencing notes
 - split/prioritization rationale when the phase is too broad for one plan

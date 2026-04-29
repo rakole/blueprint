@@ -28720,6 +28720,19 @@ function setArrayItemEnum(schema, values) {
     items.enum = values;
   }
 }
+function setArrayMaxItems(schema, maxItems) {
+  if (!schema) {
+    return;
+  }
+  schema.maxItems = maxItems;
+}
+function allowOnlyEmptyArray(schema) {
+  if (!schema) {
+    return;
+  }
+  schema.minItems = 0;
+  schema.maxItems = 0;
+}
 function exactObjectPropertyContains(propertyName, value) {
   return {
     contains: {
@@ -28772,6 +28785,12 @@ function buildPhasePlanTaskSchema(args) {
         (requirementId) => exactObjectPropertyContains("requirement", requirementId)
       );
     }
+  } else {
+    setArrayMaxItems(getJsonObjectProperty(properties, "requirements"), 0);
+    if (taskProperties) {
+      setArrayMaxItems(getJsonObjectProperty(taskProperties, "requirements"), 0);
+    }
+    setArrayMaxItems(getJsonObjectProperty(properties, "requirementCoverage"), 0);
   }
   if (args.knownEvidenceArtifacts.length > 0) {
     const artifact = evidenceCoverageRowProperties ? getJsonObjectProperty(evidenceCoverageRowProperties, "artifact") : null;
@@ -28784,6 +28803,8 @@ function buildPhasePlanTaskSchema(args) {
         (artifactPath) => exactObjectPropertyContains("artifact", artifactPath)
       );
     }
+  } else {
+    allowOnlyEmptyArray(getJsonObjectProperty(properties, "evidenceCoverage"));
   }
   schema["x-blueprint-runtimeContext"] = {
     knownRequirements: args.knownRequirements,
@@ -28791,6 +28812,11 @@ function buildPhasePlanTaskSchema(args) {
     allowedDependencyPlanIds: args.allowedDependencyPlanIds
   };
   return schema;
+}
+function phasePlanAuthoringContextBlockers(context) {
+  return context.knownRequirements.length === 0 ? [
+    `Phase ${context.resolved.phaseNumber} has no roadmap requirements; phase.plan model authoring cannot invent requirement coverage.`
+  ] : [];
 }
 function uniquePreservingOrder(values) {
   const seen = /* @__PURE__ */ new Set();
@@ -29161,7 +29187,18 @@ ${unknownRows}
 `);
 }
 async function validatePhasePlanModelWithContext(args) {
-  const diagnostics = [];
+  const diagnostics = phasePlanAuthoringContextBlockers(
+    args.context
+  ).map(
+    (message) => phasePlanDiagnostic({
+      source: "scope",
+      path: "phase.requirements",
+      code: "scope.missing_requirements",
+      message,
+      context: { phase: args.context.resolved.phaseNumber },
+      suggestion: "Add roadmap requirements for the selected phase before authoring a phase.plan model."
+    })
+  );
   const modelObject = asJsonObject(args.model);
   if (!modelObject) {
     diagnostics.push(
@@ -31444,8 +31481,9 @@ async function blueprintPhasePlanValidate(args = {}) {
 async function blueprintPhasePlanAuthoringContext(args = {}) {
   try {
     const context = await resolvePhasePlanAuthoringContextData(args);
+    const blockers = phasePlanAuthoringContextBlockers(context);
     return {
-      status: "ready",
+      status: blockers.length === 0 ? "ready" : "invalid",
       phase: context.resolved,
       planId: context.planId,
       path: context.pathValue,
@@ -31456,7 +31494,7 @@ async function blueprintPhasePlanAuthoringContext(args = {}) {
       knownEvidenceArtifacts: context.knownEvidenceArtifacts,
       allowedDependencyPlanIds: context.allowedDependencyPlanIds,
       modelOnly: true,
-      reason: null,
+      reason: blockers.length === 0 ? null : blockers.join(" "),
       warnings: []
     };
   } catch (error2) {
