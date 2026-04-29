@@ -2113,8 +2113,8 @@ const PHASE_VERIFICATION_MODEL_CONTRACT: ArtifactModelContract = {
     gapClassification: [
       {
         gapClass: "none",
-        scope: "phase validation",
-        evidence: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+        scope: "none",
+        evidence: "none",
         repair: "none"
       }
     ],

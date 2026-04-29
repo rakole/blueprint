@@ -416,7 +416,7 @@ test("blueprint artifact validation inspects UAT and verification content and pr
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | \`${summaryPath}\` | none |
+| none | none | none | none |
 
 ## Gaps Found
 

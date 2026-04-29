@@ -384,7 +384,13 @@ function renderVerificationArtifact(
     gateState?: "PASS" | "PARTIAL" | "BLOCKED";
     coverageState?: string;
     manualStatus?: string;
+    manualItem?: string;
+    manualReason?: string;
+    manualFollowUp?: string;
     gapClass?: string;
+    gapScope?: string;
+    gapEvidence?: string;
+    gapRepair?: string;
     readiness?: "ready for UAT" | "not ready for UAT";
     signOff?: string;
     nextAction?: string;
@@ -395,6 +401,9 @@ function renderVerificationArtifact(
   const readiness = options.readiness ?? (gateState === "PASS" ? "ready for UAT" : "not ready for UAT");
   const coverageState = options.coverageState ?? (gateState === "PASS" ? "PASS" : "DEFERRED");
   const manualStatus = options.manualStatus ?? (gateState === "PASS" ? "NONE" : "DEFERRED");
+  const manualItem = options.manualItem ?? "none";
+  const manualReason = options.manualReason ?? "none";
+  const manualFollowUp = options.manualFollowUp ?? "none";
   const gapClass = options.gapClass ?? (gateState === "PASS" ? "none" : "deferred-test");
   const signOff = options.signOff ?? (gateState === "PASS" ? "validation lead" : "pending");
   const nextAction =
@@ -414,7 +423,13 @@ function renderVerificationArtifact(
     )
     .join("\n");
   const evidenceReviewed = summaryPaths.map((summaryPath) => `- ${summaryPath}`).join("\n");
-  const gapEvidence = summaryPaths[0] ?? ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const gapScope = options.gapScope ?? (gateState === "PASS" ? "none" : "follow-up confirmation");
+  const gapEvidence =
+    options.gapEvidence ??
+    (gateState === "PASS"
+      ? "none"
+      : summaryPaths[0] ?? ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md");
+  const gapRepair = options.gapRepair ?? (gateState === "PASS" ? "none" : "Repair through /blu-validate-phase 3");
 
   return `# Phase 03: Phase Discovery - Verification
 
@@ -447,7 +462,7 @@ ${evidenceReviewed}
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| none | none | none | ${manualStatus} |
+| ${manualItem} | ${manualReason} | ${manualFollowUp} | ${manualStatus} |
 
 ## Gate State
 
@@ -459,7 +474,7 @@ ${evidenceReviewed}
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| ${gapClass} | ${gateState === "PASS" ? "none" : "follow-up confirmation"} | ${gapEvidence} | ${gateState === "PASS" ? "none" : "Repair through /blu-validate-phase 3"} |
+| ${gapClass} | ${gapScope} | ${gapEvidence} | ${gapRepair} |
 
 ## Gaps Found
 
@@ -511,7 +526,7 @@ function verificationRenderInput(
       {
         gapClass: "none",
         scope: "none",
-        evidence: summaryPaths[0] ?? ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+        evidence: "none",
         repair: "none"
       }
     ],
@@ -673,7 +688,7 @@ test("verification model authoring blocks when completed summary context is miss
         {
           gapClass: "none",
           scope: "none",
-          evidence: summaryPath,
+          evidence: "none",
           repair: "none"
         }
       ]
@@ -924,6 +939,76 @@ test("validation write accepts a structured VERIFICATION model and rejects inval
   assert.match(
     uatModelWithBlankNestedObjects.issues.join("\n"),
     /currentTest\.number/
+  );
+});
+
+test("validation PASS task schema rejects manual coverage and non-empty none rows", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const { artifact: _artifact, phase: _phase, ...model } = verificationRenderInput([summaryPath], {
+    evidenceReviewedSummaryPaths: [summaryPath]
+  });
+  const baseline = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model
+  });
+  const manualRequirementCoverage = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      requirementCoverage: (model.requirementCoverage ?? []).map((row) => ({
+        ...row,
+        coverageState: "MANUAL"
+      }))
+    }
+  });
+  const nonEmptyNoneRows = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      manualOrDeferredCoverage: [
+        {
+          item: "manual smoke test",
+          whyManualOrDeferred: "manual work remains pending",
+          followUp: "rerun manually before UAT",
+          status: "NONE"
+        }
+      ],
+      gapClassification: [
+        {
+          gapClass: "none",
+          scope: "automation gap",
+          evidence: summaryPath,
+          repair: "add missing automation"
+        }
+      ]
+    }
+  });
+
+  assert.equal(baseline.status, "valid", JSON.stringify(baseline.diagnostics, null, 2));
+  assert.equal(manualRequirementCoverage.status, "invalid");
+  assert.match(
+    manualRequirementCoverage.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.requirementCoverage\[0\]\.coverageState/
+  );
+  assert.equal(nonEmptyNoneRows.status, "invalid");
+  assert.match(
+    nonEmptyNoneRows.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.manualOrDeferredCoverage\[0\]\.item/
+  );
+  assert.match(
+    nonEmptyNoneRows.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.gapClassification\[0\]\.scope/
   );
 });
 
@@ -1416,7 +1501,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -1483,7 +1568,7 @@ test("validation tools persist VERIFICATION artifacts and advance routing toward
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -1606,6 +1691,59 @@ test("validation writes require every completed summary to be cited in verificat
   assert.match(singleSummaryWrite.issues.join("\n"), /03-02-SUMMARY\.md/);
 });
 
+test("validation read and UAT preflight reject stale verification missing current summaries", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await markValidationPlanCompleted(repoPath, "02");
+  const completedSummaryPaths = [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+    ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"
+  ];
+  const staleVerification = renderVerificationArtifact([completedSummaryPaths[0]]);
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    staleVerification,
+    "utf8"
+  );
+
+  const read = await blueprintPhaseValidationRead({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification"
+  });
+  const uatContext = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat"
+  });
+  const uatRender = await blueprintPhaseValidationRender({
+    cwd: repoPath,
+    ...uatRenderInput(completedSummaryPaths[0])
+  });
+
+  assert.equal(read.found, true);
+  assert.equal(read.validation?.valid, false);
+  assert.equal(read.verificationReadyForUat, false);
+  assert.deepEqual(read.summaryPaths, completedSummaryPaths);
+  assert.match(read.validation?.issues.join("\n") ?? "", /03-02-SUMMARY\.md/);
+  assert.equal(uatContext.readyForDraft, false);
+  assert.match(uatContext.prerequisiteBlockers.join("\n"), /valid VERIFICATION artifact/i);
+  assert.equal(uatRender.readyToWrite, false);
+  assert.match(uatRender.issues.join("\n"), /valid VERIFICATION artifact/i);
+  await assert.rejects(
+    blueprintPhaseValidationWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "uat",
+      content: uatRender.content
+    }),
+    /valid VERIFICATION artifact/
+  );
+});
+
 test("verification validation enforces semantic coverage enums, gap classes, and next-step routing", () => {
   const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
   const enumValidation = validateVerificationArtifactContent(
@@ -1629,6 +1767,36 @@ test("verification validation enforces semantic coverage enums, gap classes, and
     }),
     [summaryPath]
   );
+  const manualCoveragePass = validateVerificationArtifactContent(
+    renderVerificationArtifact([summaryPath], {
+      coverageState: "MANUAL"
+    }),
+    [summaryPath]
+  );
+  const manualStatusPass = validateVerificationArtifactContent(
+    renderVerificationArtifact([summaryPath], {
+      manualStatus: "MANUAL"
+    }),
+    [summaryPath]
+  );
+  const contradictoryManualNone = validateVerificationArtifactContent(
+    renderVerificationArtifact([summaryPath], {
+      manualItem: "manual smoke test",
+      manualReason: "manual work remains pending",
+      manualFollowUp: "rerun manually before UAT",
+      manualStatus: "NONE"
+    }),
+    [summaryPath]
+  );
+  const contradictoryGapNone = validateVerificationArtifactContent(
+    renderVerificationArtifact([summaryPath], {
+      gapClass: "none",
+      gapScope: "automation gap",
+      gapEvidence: summaryPath,
+      gapRepair: "add missing automation"
+    }),
+    [summaryPath]
+  );
 
   assert.equal(enumValidation.valid, false);
   assert.match(enumValidation.issues.join("\n"), /unsupported coverage state: SKIPPED/);
@@ -1641,6 +1809,20 @@ test("verification validation enforces semantic coverage enums, gap classes, and
   assert.match(
     readyRouteMismatch.issues.join("\n"),
     /must route ready-for-UAT validation to \/blu-verify-work/
+  );
+  assert.equal(manualCoveragePass.valid, false);
+  assert.match(manualCoveragePass.issues.join("\n"), /must not declare PASS/i);
+  assert.equal(manualStatusPass.valid, false);
+  assert.match(manualStatusPass.issues.join("\n"), /must not declare PASS/i);
+  assert.equal(contradictoryManualNone.valid, false);
+  assert.match(
+    contradictoryManualNone.issues.join("\n"),
+    /Manual-Only or Deferred Coverage must use literal none cells/i
+  );
+  assert.equal(contradictoryGapNone.valid, false);
+  assert.match(
+    contradictoryGapNone.issues.join("\n"),
+    /Gap Classification must use literal none cells/i
   );
   assert.equal(blockedRouteMismatch.valid, false);
   assert.match(
@@ -1891,7 +2073,7 @@ test("validation tools reject scaffold placeholder evidence for verification and
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | \`${summaryPath}\` | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -2021,7 +2203,7 @@ test("validation tools do not re-check roadmap completion when a plan summary is
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -2202,7 +2384,7 @@ test("validation tools reject template-grade verification and UAT placeholder bo
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -2586,7 +2768,7 @@ test("verification writes do not rewrite roadmap completion state before UAT clo
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 

@@ -476,7 +476,7 @@ Preserve earlier milestone execution evidence.
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-execution/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -794,7 +794,7 @@ await blueprintArtifactReportWrite({ cwd: repoPath, reportName: "milestone-audit
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 

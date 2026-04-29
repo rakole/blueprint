@@ -4190,6 +4190,10 @@ function hasActionableValidationListSignal(section: string): boolean {
     .some((line) => !isNoValidationGapSignal(line));
 }
 
+function isLiteralNoneValidationCell(value: string | undefined): boolean {
+  return normalizeValidationSignal(value ?? "") === "none";
+}
+
 function validateModelExampleLeakage(
   content: string,
   contractId: ArtifactContractId,
@@ -4313,7 +4317,7 @@ export function validateVerificationArtifactContent(
         `Verification artifact section Requirement / Task Coverage uses an unsupported coverage state: ${cells[3] ?? ""}.`
       );
     }
-    if (coverageState === "DEFERRED" || coverageState === "BLOCKED") {
+    if (coverageState === "MANUAL" || coverageState === "DEFERRED" || coverageState === "BLOCKED") {
       hasUnresolvedCoverageState = true;
     }
   }
@@ -4350,7 +4354,16 @@ export function validateVerificationArtifactContent(
         `Verification artifact section Manual-Only or Deferred Coverage uses an unsupported status: ${cells[3] ?? ""}.`
       );
     }
-    if (status === "DEFERRED") {
+    if (
+      status === "NONE" &&
+      !cells.slice(0, 3).every((cell) => isLiteralNoneValidationCell(cell))
+    ) {
+      issues.push(
+        "Verification artifact section Manual-Only or Deferred Coverage must use literal none cells when Status is NONE."
+      );
+      hasUnresolvedManualCoverage = true;
+    }
+    if (status === "MANUAL" || status === "DEFERRED") {
       hasUnresolvedManualCoverage = true;
     }
   }
@@ -4376,6 +4389,15 @@ export function validateVerificationArtifactContent(
       issues.push(
         `Verification artifact section Gap Classification uses an unsupported gap class: ${cells[0] ?? ""}.`
       );
+    }
+    if (
+      gapClass === "none" &&
+      !cells.slice(1, 4).every((cell) => isLiteralNoneValidationCell(cell))
+    ) {
+      issues.push(
+        "Verification artifact section Gap Classification must use literal none cells when Gap class is none."
+      );
+      hasActionableGapClass = true;
     }
     if (VALID_VERIFICATION_GAP_CLASSES.has(gapClass) && gapClass !== "none") {
       hasActionableGapClass = true;

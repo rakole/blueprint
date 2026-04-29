@@ -196,7 +196,7 @@ const validVerification = `# Phase 04: Validation - Verification
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 

@@ -202,7 +202,7 @@ Exercise verification and UAT handoff.
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-execution/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -728,7 +728,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -797,7 +797,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -929,7 +929,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -1116,7 +1116,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -1339,7 +1339,7 @@ test("verify-work refuses to persist UAT when the verification artifact is valid
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 

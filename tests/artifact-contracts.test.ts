@@ -658,7 +658,7 @@ test("canonical lifecycle contracts allow additional top-level headings without 
 
 | Gap class | Scope | Evidence | Repair |
 |-----------|-------|----------|--------|
-| none | none | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | none |
+| none | none | none | none |
 
 ## Gaps Found
 

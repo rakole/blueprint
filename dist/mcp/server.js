@@ -16337,8 +16337,8 @@ var init_artifact_contracts = __esm({
         gapClassification: [
           {
             gapClass: "none",
-            scope: "phase validation",
-            evidence: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+            scope: "none",
+            evidence: "none",
             repair: "none"
           }
         ],
@@ -21057,6 +21057,9 @@ function isNoValidationGapSignal(value) {
 function hasActionableValidationListSignal(section) {
   return section.split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("|")).some((line) => !isNoValidationGapSignal(line));
 }
+function isLiteralNoneValidationCell(value) {
+  return normalizeValidationSignal(value ?? "") === "none";
+}
 function validateModelExampleLeakage(content, contractId, artifactLabel) {
   const modelContract = readArtifactContract(contractId).modelContract;
   if (!modelContract) {
@@ -21147,7 +21150,7 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
         `Verification artifact section Requirement / Task Coverage uses an unsupported coverage state: ${cells[3] ?? ""}.`
       );
     }
-    if (coverageState === "DEFERRED" || coverageState === "BLOCKED") {
+    if (coverageState === "MANUAL" || coverageState === "DEFERRED" || coverageState === "BLOCKED") {
       hasUnresolvedCoverageState = true;
     }
   }
@@ -21179,7 +21182,13 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
         `Verification artifact section Manual-Only or Deferred Coverage uses an unsupported status: ${cells[3] ?? ""}.`
       );
     }
-    if (status === "DEFERRED") {
+    if (status === "NONE" && !cells.slice(0, 3).every((cell) => isLiteralNoneValidationCell(cell))) {
+      issues.push(
+        "Verification artifact section Manual-Only or Deferred Coverage must use literal none cells when Status is NONE."
+      );
+      hasUnresolvedManualCoverage = true;
+    }
+    if (status === "MANUAL" || status === "DEFERRED") {
       hasUnresolvedManualCoverage = true;
     }
   }
@@ -21203,6 +21212,12 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
       issues.push(
         `Verification artifact section Gap Classification uses an unsupported gap class: ${cells[0] ?? ""}.`
       );
+    }
+    if (gapClass === "none" && !cells.slice(1, 4).every((cell) => isLiteralNoneValidationCell(cell))) {
+      issues.push(
+        "Verification artifact section Gap Classification must use literal none cells when Gap class is none."
+      );
+      hasActionableGapClass = true;
     }
     if (VALID_VERIFICATION_GAP_CLASSES.has(gapClass) && gapClass !== "none") {
       hasActionableGapClass = true;
@@ -29341,12 +29356,24 @@ function buildPhaseVerificationTaskSchema(args) {
       },
       then: {
         properties: {
+          requirementCoverage: {
+            items: {
+              type: "object",
+              required: ["coverageState"],
+              properties: {
+                coverageState: { const: "PASS" }
+              }
+            }
+          },
           nextSafeAction: { const: args.readyAction },
           manualOrDeferredCoverage: {
             items: {
               type: "object",
-              required: ["status"],
+              required: ["item", "whyManualOrDeferred", "followUp", "status"],
               properties: {
+                item: { const: "none" },
+                whyManualOrDeferred: { const: "none" },
+                followUp: { const: "none" },
                 status: { const: "NONE" }
               }
             }
@@ -29354,9 +29381,12 @@ function buildPhaseVerificationTaskSchema(args) {
           gapClassification: {
             items: {
               type: "object",
-              required: ["gapClass"],
+              required: ["gapClass", "scope", "evidence", "repair"],
               properties: {
-                gapClass: { const: "none" }
+                gapClass: { const: "none" },
+                scope: { const: "none" },
+                evidence: { const: "none" },
+                repair: { const: "none" }
               }
             }
           },
@@ -31397,20 +31427,25 @@ async function blueprintPhaseValidationRead(args) {
     cwd: projectRoot,
     phase: resolved.phaseNumber
   });
-  const completedSummaryPlanIds = new Set(
-    completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId)
-  );
-  const summaryPaths = collectReferencedValidatedSummaryPaths(
+  const completedSummaries = completedSummaryRecords(summaryIndex.summaries);
+  const completedSummaryPlanIds = new Set(completedSummaries.map((summary) => summary.planId));
+  const { summaryPaths: completedSummaryPaths, warnings: completedSummaryWarnings } = await collectValidatedSummaryPaths(projectRoot, completedSummaries);
+  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
     content,
     summaryIndex.summaries,
     completedSummaryPlanIds
   );
-  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths, {
+  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, completedSummaryPaths) : validateUatArtifactContent(content, referencedSummaryPaths, {
     requireReadyVerificationEvidence: true
   });
+  const validationWithSummaryWarnings = {
+    ...validation,
+    warnings: [...completedSummaryWarnings, ...validation.warnings]
+  };
   const uatState = args.artifact === "uat" ? readUatArtifactState(content) : null;
-  const verificationReadyForUat = args.artifact === "verification" && validation.valid ? isVerificationArtifactReadyForUat(content) : false;
-  const complete = args.artifact === "verification" ? validation.valid && verificationReadyForUat : validation.valid && Boolean(uatState?.complete);
+  const verificationReadyForUat = args.artifact === "verification" && validationWithSummaryWarnings.valid && completedSummaryPaths.length > 0 ? isVerificationArtifactReadyForUat(content) : false;
+  const complete = args.artifact === "verification" ? validationWithSummaryWarnings.valid && verificationReadyForUat : validationWithSummaryWarnings.valid && Boolean(uatState?.complete);
+  const resultSummaryPaths = args.artifact === "verification" ? completedSummaryPaths : referencedSummaryPaths;
   return {
     phaseFound: true,
     found: true,
@@ -31421,13 +31456,13 @@ async function blueprintPhaseValidationRead(args) {
     artifact: args.artifact,
     path: artifactPath,
     content,
-    validation,
+    validation: validationWithSummaryWarnings,
     verificationReadyForUat,
     uatStatus: uatState?.status ?? null,
     resumeState: uatState?.resumeState ?? null,
     checkpoint: uatState?.checkpoint ?? null,
     complete,
-    summaryPaths,
+    summaryPaths: resultSummaryPaths,
     reason: null
   };
 }
@@ -31588,14 +31623,9 @@ async function blueprintPhaseValidationWrite(args) {
       );
     }
     const verificationContent = await fs4.readFile(verificationAbsolutePath, "utf8");
-    const verificationSummaryPaths = collectReferencedValidatedSummaryPaths(
-      verificationContent,
-      summaryIndex.summaries,
-      new Set(completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId))
-    );
     const verificationValidation = validateVerificationArtifactContent(
       verificationContent,
-      verificationSummaryPaths
+      completedSummaryPaths
     );
     if (!verificationValidation.valid) {
       throw new Error(

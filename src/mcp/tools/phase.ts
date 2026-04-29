@@ -5735,12 +5735,24 @@ function buildPhaseVerificationTaskSchema(args: {
       },
       then: {
         properties: {
+          requirementCoverage: {
+            items: {
+              type: "object",
+              required: ["coverageState"],
+              properties: {
+                coverageState: { const: "PASS" }
+              }
+            }
+          },
           nextSafeAction: { const: args.readyAction },
           manualOrDeferredCoverage: {
             items: {
               type: "object",
-              required: ["status"],
+              required: ["item", "whyManualOrDeferred", "followUp", "status"],
               properties: {
+                item: { const: "none" },
+                whyManualOrDeferred: { const: "none" },
+                followUp: { const: "none" },
                 status: { const: "NONE" }
               }
             }
@@ -5748,9 +5760,12 @@ function buildPhaseVerificationTaskSchema(args: {
           gapClassification: {
             items: {
               type: "object",
-              required: ["gapClass"],
+              required: ["gapClass", "scope", "evidence", "repair"],
               properties: {
-                gapClass: { const: "none" }
+                gapClass: { const: "none" },
+                scope: { const: "none" },
+                evidence: { const: "none" },
+                repair: { const: "none" }
               }
             }
           },
@@ -8321,29 +8336,38 @@ export async function blueprintPhaseValidationRead(
     cwd: projectRoot,
     phase: resolved.phaseNumber
   });
-  const completedSummaryPlanIds = new Set(
-    completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId)
-  );
-  const summaryPaths = collectReferencedValidatedSummaryPaths(
+  const completedSummaries = completedSummaryRecords(summaryIndex.summaries);
+  const completedSummaryPlanIds = new Set(completedSummaries.map((summary) => summary.planId));
+  const { summaryPaths: completedSummaryPaths, warnings: completedSummaryWarnings } =
+    await collectValidatedSummaryPaths(projectRoot, completedSummaries);
+  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
     content,
     summaryIndex.summaries,
     completedSummaryPlanIds
   );
   const validation =
     args.artifact === "verification"
-      ? validateVerificationArtifactContent(content, summaryPaths)
-      : validateUatArtifactContent(content, summaryPaths, {
+      ? validateVerificationArtifactContent(content, completedSummaryPaths)
+      : validateUatArtifactContent(content, referencedSummaryPaths, {
           requireReadyVerificationEvidence: true
         });
+  const validationWithSummaryWarnings = {
+    ...validation,
+    warnings: [...completedSummaryWarnings, ...validation.warnings]
+  };
   const uatState = args.artifact === "uat" ? readUatArtifactState(content) : null;
   const verificationReadyForUat =
-    args.artifact === "verification" && validation.valid
+    args.artifact === "verification" &&
+    validationWithSummaryWarnings.valid &&
+    completedSummaryPaths.length > 0
       ? isVerificationArtifactReadyForUat(content)
       : false;
   const complete =
     args.artifact === "verification"
-      ? validation.valid && verificationReadyForUat
-      : validation.valid && Boolean(uatState?.complete);
+      ? validationWithSummaryWarnings.valid && verificationReadyForUat
+      : validationWithSummaryWarnings.valid && Boolean(uatState?.complete);
+  const resultSummaryPaths =
+    args.artifact === "verification" ? completedSummaryPaths : referencedSummaryPaths;
 
   return {
     phaseFound: true,
@@ -8355,13 +8379,13 @@ export async function blueprintPhaseValidationRead(
     artifact: args.artifact,
     path: artifactPath,
     content,
-    validation,
+    validation: validationWithSummaryWarnings,
     verificationReadyForUat,
     uatStatus: uatState?.status ?? null,
     resumeState: uatState?.resumeState ?? null,
     checkpoint: uatState?.checkpoint ?? null,
     complete,
-    summaryPaths,
+    summaryPaths: resultSummaryPaths,
     reason: null
   };
 }
@@ -8548,14 +8572,9 @@ export async function blueprintPhaseValidationWrite(
     }
 
     const verificationContent = await fs.readFile(verificationAbsolutePath, "utf8");
-    const verificationSummaryPaths = collectReferencedValidatedSummaryPaths(
-      verificationContent,
-      summaryIndex.summaries,
-      new Set(completedSummaryRecords(summaryIndex.summaries).map((summary) => summary.planId))
-    );
     const verificationValidation = validateVerificationArtifactContent(
       verificationContent,
-      verificationSummaryPaths
+      completedSummaryPaths
     );
 
     if (!verificationValidation.valid) {
