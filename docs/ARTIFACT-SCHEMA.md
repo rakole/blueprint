@@ -741,6 +741,10 @@ Minimum expected structure:
 
 Code review expectations:
 - must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
+- `/blu-code-review` authors JSON first and validates it through `blueprint_review_validate_model`; `blueprint_review_record` rejects Markdown `content` for `review.code-review`
+- the authored model may contain only `verdict`, `reviewSummary`, `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and `nextSafeAction`
+- `evidenceCoverage` keys must exactly match the known evidence artifacts returned by `blueprint_review_scope.authoringContext`, each with `used`, `deferred`, or `irrelevant` plus a concrete rationale
+- runtime-owned depth, scope source, scope reviewed, evidence inventory rendering, severity counts, paths, and canonical Markdown are computed by MCP rather than authored JSON
 - severity summary must maintain machine-extractable counts for critical/high/medium/low/unknown counts
 - findings must cite evidence and impact for each issue
 - follow-up work should be explicit rather than buried in findings prose

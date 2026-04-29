@@ -10,11 +10,13 @@ evidence, not merely valid markdown.
 
 - `mcp_blueprint_blueprint_artifact_contract_read` is the heading and schema
   authority for `review.code-review`.
-- The returned `contract.authoringTemplate` is the canonical shape for
-  `XX-REVIEW.md` before drafting, repair, or persistence.
-- The returned `contract.modelContract` is the preferred structured authoring
-  shape when the host can provide JSON. The write tool renders that model to
-  canonical Markdown before persistence.
+- The returned `contract.modelContract.schemaPath` and JSON schema are the base
+  model-authoring authority for `review.code-review`.
+- The returned `contract.authoringTemplate` is Markdown shape reference only;
+  `/blu-code-review` does not persist Markdown authored by the model.
+- The narrowed `blueprint_review_scope.authoringContext.taskSchema` is the
+  active task schema for the current phase, exact files, evidence inventory, and
+  allowed next actions.
 - This reference is the output-quality authority: it defines scope handling,
   review depth, finding anatomy, fallback behavior, and write repair.
 - Do not add new public command names, `.planning/` runtime dependencies, shell
@@ -25,8 +27,8 @@ evidence, not merely valid markdown.
 - This reference is the single detailed source for `/blu-code-review` stage labels,
   in-flight status fields, and progress semantics.
 - Execution profile: `long-running-mutation`.
-- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`,
-  `Validate`, `Route`.
+- Shared stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Validate`,
+  `Persist`, `Route`.
 - In-flight status fields: resolved scope, active stage, pending gate,
   execution mode, next safe action.
 
@@ -43,10 +45,10 @@ Map `/blu-code-review` to those stages:
    reused or overwritten, and whether to use `blueprint-reviewer`.
 4. `Execute`: perform depth-appropriate review over only the resolved file set
    and saved evidence.
-5. `Persist`: call `mcp_blueprint_blueprint_review_record` with the full final
-   markdown body and `artifact: "code-review"`.
-6. `Validate`: inspect the returned status, counts, follow-ups, warnings, and
-   any invalid result before concluding.
+5. `Validate`: call `mcp_blueprint_blueprint_review_validate_model` with the
+   authored JSON model and repair all returned diagnostics together.
+6. `Persist`: call `mcp_blueprint_blueprint_review_record` with the validated
+   model and `artifact: "code-review"`. MCP renders canonical Markdown.
 7. `Route`: summarize findings or pass evidence and end with the next safe
    implemented command.
 
@@ -65,6 +67,8 @@ Call these tools in this order unless the command must stop early:
 3. `mcp_blueprint_blueprint_review_scope`
    - Controls whether review is enabled, the exact repo files, scope source,
      effective review depth, saved evidence inventory, and scope warnings.
+   - Use `includeAuthoringContext: true` for code-review so the model sees exact
+     evidence keys, scoped location narrowing, allowed next actions, and schema.
    - Explicit `files` must be repo-relative file paths only, and any invalid
      explicit entry must fail the whole explicit scope.
    - Do not add siblings, generated files, `.blueprint/**`, directories,
@@ -74,42 +78,39 @@ Call these tools in this order unless the command must stop early:
    - Controls structured baseline findings, follow-ups, severity counts, and
      the saved review path before overwrite decisions.
    - Use read-only repo file access only if full-body comparison is needed.
-5. `mcp_blueprint_blueprint_review_record`
+5. `mcp_blueprint_blueprint_review_validate_model`
+   - Controls JSON Schema validation, residual quality diagnostics, normalized
+     model output, and render preview.
+   - Diagnostics are aggregated; repair all of them before retrying once.
+6. `mcp_blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
-   - Accepts exactly one of canonical Markdown `content` or a structured
-     `model` for `review.code-review`; prefer the model path when available.
+   - For `review.code-review`, accepts a structured `model` only. Markdown
+     `content` is invalid for this artifact.
    - Never write `XX-REVIEW.md` directly.
 
 ## Artifact Authoring Rules
 
-Use the canonical `review.code-review` authoring template as the section
-authority and fill it with substantive, evidence-backed content.
+Author a JSON model first; MCP owns Markdown rendering.
 
-The final artifact must include:
+The model-authored payload must include only:
 
-- `**Verdict:** PASS`, `FOLLOW_UP`, or `BLOCKED`.
-- `Review Summary` with phase, depth, scope source, file count, and severity
-  counts.
-- `Scope Reviewed` with every reviewed repo-relative file, one per bullet or
-  table row.
-- `Evidence Reviewed` with saved summaries, plans, validation, UAT, existing
-  review, or security artifacts that influenced the result.
-- `Positive Signals` with concrete pass evidence or `none`.
-- `Severity Summary` with critical, high, medium, low, and unknown counts.
-- `Findings` with one entry per material issue. Each entry must include
-  severity, disposition, file and line or line range, evidence, impact, and a
-  concrete fix or verification suggestion.
-- `Follow-Ups` with actionable follow-up fixes, test gaps, validation steps, or
-  `none`.
-- `Next Safe Action` using only implemented Blueprint commands.
+- `verdict`: `PASS`, `FOLLOW_UP`, or `BLOCKED`
+- `reviewSummary`: concrete review summary bullets without runtime-owned scope
+  metadata
+- `positiveSignals`: concrete pass evidence or safeguards
+- `findings`: each finding includes severity, disposition, scoped file:line or
+  line-range location, evidence, impact, and recommendation
+- `evidenceCoverage`: exact keys from `authoringContext.knownEvidenceArtifacts`,
+  each with `{status: "used"|"deferred"|"irrelevant", rationale}`
+- `followUps`: actionable follow-up fixes, test gaps, validation steps, or a
+  verdict-consistent no-follow-up statement
+- `nextSafeAction`: one exact value from `authoringContext.allowedNextActions`
 
-The structured model must include verdict, depth, scope source, review summary,
-scope reviewed, evidence reviewed, evidence deferrals, positive signals,
-findings, follow-ups, and next safe action. Do not include MCP-owned identity
-keys such as `phase`, `artifact`, path, or `content`; the tool call owns them.
-Every known saved phase evidence artifact must be cited or explicitly deferred
-with rationale.
+Do not author runtime-owned fields such as `depth`, `scopeSource`,
+`scopeReviewed`, `evidenceReviewed`, `evidenceDeferrals`, `severityCounts`,
+`phase`, `artifact`, path, `content`, or Markdown sections; MCP computes those
+from scope, phase metadata, evidence inventory, findings, and the renderer.
 
 Do not persist placeholder examples, generic "reviewed code" prose, or findings
 without file evidence. If no issue is found, explain which files and saved
@@ -181,9 +182,12 @@ Do not replace the missing subagent with browser/web/search-only analysis.
   question, and keep the waiting state visible as `scope-confirmation`.
 - If `XX-REVIEW.md` already exists and the new body differs, require explicit
   overwrite confirmation before passing `overwrite: true`.
-- If `blueprint_review_record` returns `status: "invalid"`, repair the authored
-  structured model against `contract.modelContract` or the authored markdown
-  against `contract.authoringTemplate` and the returned warnings, then retry once through `blueprint_review_record`.
+- If `blueprint_review_validate_model` returns `status: "invalid"`, repair the
+  authored model against `authoringContext.taskSchema` and every diagnostic,
+  then retry validation once before persistence.
+- If `blueprint_review_record` returns `status: "invalid"`, repair the same
+  model against the returned validator diagnostics, then retry once through
+  `blueprint_review_record`.
 - If the retry is still invalid, stop with the invalid reasons and do not
   hand-edit `.blueprint/`.
 - If the record call throws because overwrite was not confirmed, surface the
@@ -195,9 +199,10 @@ The review is strong enough to persist only when:
 
 - the resolved phase, depth, scope source, file count, and pending gate are
   visible before persistence
-- every reviewed file appears in `Scope Reviewed`
-- every saved artifact that influenced the review appears in `Evidence Reviewed`
-- the persisted review keeps `Scope Reviewed` aligned to the resolved
+- the authored model passed `blueprint_review_validate_model`
+- every known evidence artifact appears as an exact `evidenceCoverage` key with a
+  concrete status and rationale
+- the persisted review keeps rendered `Scope Reviewed` aligned to the resolved
   `blueprint_review_scope.files` list
 - each material finding has severity, disposition, file:line evidence, impact,
   and fix or verification guidance
@@ -214,7 +219,7 @@ Complete the command only after:
 1. scope is ready or a precise invalid-scope recovery is reported
 2. any required confirmation gate has cleared
 3. review analysis has run at the effective depth
-4. `XX-REVIEW.md` content satisfies the canonical contract and this reference
+4. the authored model satisfies the narrowed task schema and this reference
 5. `blueprint_review_record` returns `created`, `updated`, or `reused`
 6. the final response reports phase, depth, scope source, artifact status,
    severity/follow-up posture, warnings, and next safe implemented action

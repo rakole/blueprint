@@ -74,6 +74,7 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_artifact_list`
 - `blueprint_review_scope`
 - `blueprint_review_load_findings`
+- `blueprint_review_validate_model`
 - `blueprint_review_record`
 - `blueprint_artifact_contract_read`
 - `blueprint_artifact_report_write`
@@ -99,8 +100,9 @@ non-routable until their extra MCP substrate lands.
 
 ## Shared MCP Contracts
 
-- `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, treat returned `files` as authoritative, and use `confirmationRecommended` instead of prompt-only heuristics for scope-confirmation gates.
-- `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, full report content, and the resolved `scopeFiles` list for `code-review`. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, treat returned `files` as authoritative, use `confirmationRecommended` instead of prompt-only heuristics for scope-confirmation gates, and request `includeAuthoringContext` for code-review model authoring.
+- `blueprint_review_validate_model`: validate `review.code-review` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid.
+- `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content for non-code-review artifacts. For `code-review`, pass only the validated structured `model` plus resolved `scopeFiles`; Markdown `content` is invalid. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
@@ -117,10 +119,10 @@ non-routable until their extra MCP substrate lands.
    invalid-write repair for `/blu-code-review`.
 2. Resolve the target phase first and read the current Blueprint artifact
    inventory before reviewing code.
-3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEW.md`, then use the returned `modelContract` and template as the baseline for the persisted artifact.
+3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting the model that will render to `XX-REVIEW.md`, then use the returned `modelContract.schemaPath`, JSON schema, and template metadata as the baseline.
 4. Use `blueprint_review_scope` to derive the deterministic repo file list from
    executed plan metadata or explicit file arguments; do not guess from git
-   diff alone.
+   diff alone. Pass `includeAuthoringContext: true` before authoring JSON.
 5. Keep the shared review posture from the local runtime contract legible
    throughout the run.
 6. For non-trivial code-review runs, prefer update_topic plus `write_todos` so
@@ -143,15 +145,16 @@ non-routable until their extra MCP substrate lands.
     `blueprint_review_scope.confirmationRecommended` says the resolved review
     crossed deterministic thresholds, and keep rolling finding counts or
     severity buckets visible while the review is in flight.
-13. Persist the finished review through `blueprint_review_record` with the
-   `code-review` artifact, the resolved `scopeFiles`, and exactly one of a
-   structured `model` matching `contract.modelContract` or canonical Markdown
-   `content`. Prefer the structured model path when JSON authoring is available.
-14. If `blueprint_review_record` returns invalid, repair the structured model
-   against `contract.modelContract` or the markdown against `contract.authoringTemplate`
-   and the returned warnings, then retry once
-   through MCP. Do not hand-edit `.blueprint/`.
-15. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+13. Author only the code-review JSON model fields: `verdict`, `reviewSummary`,
+   `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and
+   `nextSafeAction`. Let MCP own depth, scope/source, evidence inventory,
+   severity counts, path, and Markdown rendering.
+14. Validate through `blueprint_review_validate_model`; repair every returned
+   diagnostic against `authoringContext.taskSchema`, then retry validation once.
+15. Persist the validated model through `blueprint_review_record` with the
+   `code-review` artifact and resolved `scopeFiles`. Do not pass Markdown
+   `content` for code-review, and do not hand-edit `.blueprint/`.
+16. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-secure-phase <phase>` when the phase still lacks a security artifact,
    `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
    otherwise `/blu-progress`.

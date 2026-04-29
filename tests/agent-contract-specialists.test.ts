@@ -230,7 +230,7 @@ test("review-family specialist agents encode parent-owned orchestration and boun
     reviewer,
     /Do not invent shell commands, external reviewers, web research, or manual\s+persistence paths/i
   );
-  assert.match(reviewer, /Keep the artifact draft bounded to the parent-selected scope and evidence/i);
+  assert.match(reviewer, /Keep the JSON model bounded to the parent-selected scope and evidence/i);
 
   assert.match(verifier, /## Parent-Owned Responsibilities/);
   assert.match(verifier, /follow-up fix capture gates/i);

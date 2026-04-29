@@ -943,7 +943,8 @@ test("code-review is implemented once manifest, review skill, and review MCP too
     "blueprint_phase_locate",
     "blueprint_review_load_findings",
     "blueprint_review_record",
-    "blueprint_review_scope"
+    "blueprint_review_scope",
+    "blueprint_review_validate_model"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
   assert.deepEqual(entry.blockedBy, []);
@@ -953,14 +954,14 @@ test("code-review runtime reference keeps the long-running review posture explic
   const runtimeReference = await readRelativePath("docs/RUNTIME-REFERENCE.md");
 
   assert.ok(runtimeReference);
-  assert.match(
+ assert.match(
     runtimeReference,
-    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_load_findings`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_load_findings`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
   );
   assert.match(runtimeReference, /Long-running-mutation profile for deterministic phase-scoped review/i);
   assert.match(
     runtimeReference,
-    /Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+    /Resolve\/Read\/Decide\/Execute\/Validate\/Persist\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
   );
   assert.match(runtimeReference, /use Gemini-native `update_topic` and `write_todos` for non-trivial review runs/i);
 });

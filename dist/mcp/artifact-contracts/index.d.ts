@@ -3,6 +3,7 @@ export type ArtifactContractFreehandPolicy = "additional-top-level-headings" | "
 export type ArtifactModelContract = {
     schemaId: string;
     schemaVersion: string;
+    schemaPath?: string;
     jsonSchema: Record<string, unknown>;
     qualityRules: string[];
     contextBindings: string[];

@@ -2,6 +2,8 @@ import * as z from "zod/v4";
 type ReviewArtifactKind = "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
 type NumericInput = string | number;
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
+type ReviewFindingDisposition = "follow-up" | "observation" | "blocked" | "accepted-risk";
+type CodeReviewEvidenceCoverageStatus = "used" | "deferred" | "irrelevant";
 type ReviewFinding = {
     id: string;
     severity: ReviewFindingSeverity;
@@ -13,9 +15,10 @@ type ReviewRecordArgs = {
     phase?: NumericInput;
     artifact: ReviewArtifactKind;
     content?: string;
-    model?: Record<string, unknown>;
+    model?: unknown;
     overwrite?: boolean;
     scopeFiles?: string[];
+    depth?: ReviewDepth;
 };
 type ReviewRecordResult = {
     phaseNumber: string;
@@ -60,16 +63,31 @@ type ReviewScopeArgs = {
     phase?: NumericInput;
     files?: string[];
     depth?: ReviewDepth;
+    includeAuthoringContext?: boolean;
+};
+type ReviewScopePhase = {
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
+    resolvedFrom: "explicit" | "state" | "roadmap";
+};
+type CodeReviewAuthoringContext = {
+    phase: ReviewScopePhase;
+    files: string[];
+    reviewMode: {
+        depth: ReviewDepth;
+        source: ReviewModeSource;
+    };
+    knownEvidenceArtifacts: string[];
+    allowedNextActions: string[];
+    schemaPath: string;
+    baseSchema: Record<string, unknown>;
+    taskSchema: Record<string, unknown>;
 };
 type ReviewScopeResult = {
     status: "ready" | "invalid";
-    phase: {
-        phaseNumber: string;
-        phasePrefix: string;
-        phaseName: string;
-        phaseDir: string;
-        resolvedFrom: "explicit" | "state" | "roadmap";
-    } | null;
+    phase: ReviewScopePhase | null;
     files: string[];
     reviewMode: {
         depth: ReviewDepth;
@@ -84,6 +102,7 @@ type ReviewScopeResult = {
         existingReview: string | null;
         security: string | null;
     };
+    authoringContext?: CodeReviewAuthoringContext;
     reason: string | null;
     warnings: string[];
 };
@@ -107,7 +126,61 @@ type ReviewLoadFindingsResult = {
     reason: string | null;
     warnings: string[];
 };
+type CodeReviewStructuredModel = {
+    verdict: "PASS" | "FOLLOW_UP" | "BLOCKED";
+    reviewSummary: string[];
+    positiveSignals: string[];
+    findings: Array<{
+        severity: ReviewFindingSeverity;
+        disposition: ReviewFindingDisposition;
+        location: string;
+        evidence: string;
+        impact: string;
+        recommendation: string;
+    }>;
+    evidenceCoverage: Record<string, {
+        status: CodeReviewEvidenceCoverageStatus;
+        rationale: string;
+    }>;
+    followUps: string[];
+    nextSafeAction: string;
+};
+type ReviewDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type ReviewModelDiagnostic = {
+    source: ReviewDiagnosticSource;
+    path: string;
+    code: string;
+    message: string;
+    context: Record<string, unknown>;
+    suggestion: string;
+};
+type ReviewValidateModelArgs = {
+    cwd?: string;
+    phase?: NumericInput;
+    files?: string[];
+    depth?: ReviewDepth;
+    model: unknown;
+};
+type ReviewValidateModelResult = {
+    status: "valid" | "invalid";
+    valid: boolean;
+    phase: ReviewScopeResult["phase"];
+    files: string[];
+    reviewMode: ReviewScopeResult["reviewMode"];
+    schemaPath: string | null;
+    taskSchema: Record<string, unknown> | null;
+    diagnostics: ReviewModelDiagnostic[];
+    diagnosticCounts: {
+        total: number;
+        bySource: Record<ReviewDiagnosticSource, number>;
+        byCode: Record<string, number>;
+    };
+    normalizedModel: CodeReviewStructuredModel | null;
+    renderPreview: string | null;
+    warnings: string[];
+};
 export declare function blueprintReviewScope(args: ReviewScopeArgs): Promise<ReviewScopeResult>;
+export declare function blueprintReviewValidateModel(args: ReviewValidateModelArgs): Promise<ReviewValidateModelResult>;
 export declare function blueprintReviewRecord(args: ReviewRecordArgs): Promise<ReviewRecordResult>;
 export declare function blueprintReviewLoadFindings(args: ReviewLoadFindingsArgs): Promise<ReviewLoadFindingsResult>;
 export declare const reviewToolDefinitions: ({
@@ -118,10 +191,11 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
-            quick: "quick";
             standard: "standard";
+            quick: "quick";
             deep: "deep";
         }>>;
+        includeAuthoringContext: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewScopeResult>;
 } | {
@@ -145,6 +219,21 @@ export declare const reviewToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        files: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        depth: z.ZodOptional<z.ZodEnum<{
+            standard: "standard";
+            quick: "quick";
+            deep: "deep";
+        }>>;
+        model: z.ZodUnknown;
+    };
+    handler: (args: Record<string, unknown>) => Promise<ReviewValidateModelResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             "code-review": "code-review";
             "peer-review": "peer-review";
@@ -153,9 +242,14 @@ export declare const reviewToolDefinitions: ({
             "ui-review": "ui-review";
         }>;
         content: z.ZodOptional<z.ZodString>;
-        model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        model: z.ZodOptional<z.ZodUnknown>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         scopeFiles: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        depth: z.ZodOptional<z.ZodEnum<{
+            standard: "standard";
+            quick: "quick";
+            deep: "deep";
+        }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewRecordResult>;
 })[];

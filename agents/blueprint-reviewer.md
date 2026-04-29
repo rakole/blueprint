@@ -31,8 +31,9 @@ artifact without guessing scope, risks, stale evidence, or follow-up fixes.
   Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns scope resolution through `blueprint_review_scope`,
   any overwrite or scope confirmation, and all final routing.
-- The parent command owns `blueprint_review_record` and every other
-  MCP-backed persistence step.
+- The parent command owns `blueprint_review_validate_model`,
+  `blueprint_review_record`, and every other MCP-backed validation or
+  persistence step.
 - The parent command owns any non-code-review reuse contract and must provide
   an explicit output shape if it reuses this agent outside pure
   `/blu-code-review`.
@@ -97,8 +98,8 @@ do not dismiss them as documentation-only when they are in the resolved scope.
    or line range, the observed evidence, why it matters, and a concrete fix or
    verification suggestion.
 9. Keep severity and disposition separate: severity is
-   `critical|high|medium|low|unknown`; disposition is `blocker`, `follow-up`,
-   `observation`, or `pass`.
+   `critical|high|medium|low|unknown`; disposition is `follow-up`,
+   `observation`, `blocked`, or `accepted-risk`.
 10. If the evidence is missing or too thin for a credible pass, return
     `BLOCKED` with a precise narrowing or evidence request instead of widening
     scope on your own.
@@ -117,28 +118,30 @@ do not dismiss them as documentation-only when they are in the resolved scope.
 
 ## Required Output Contract
 
-- Return one posture result: `PASS`, `FOLLOW_UP`, or `BLOCKED`.
-- Separate findings by classification and tie each one to concrete evidence.
-- Include:
-  - reviewed repo files and Blueprint artifacts
-  - main bugs or regression risks found
-  - security or correctness concerns that surfaced during review
-  - missing or thin test coverage when relevant
-  - severity counts for critical/high/medium/low/unknown
-  - file:line evidence plus concrete fix or verification guidance for each
-    blocker or follow-up finding
-  - a concise artifact draft for `XX-REVIEW.md`
-- Keep the artifact draft bounded to the parent-selected scope and evidence; it
-  should be ready for the parent command to persist without adding new files,
+- Return one model posture result: `PASS`, `FOLLOW_UP`, or `BLOCKED`.
+- Return JSON fields compatible with the parent-provided
+  `review.code-review` task schema: `verdict`, `reviewSummary`,
+  `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and
+  `nextSafeAction`.
+- For `evidenceCoverage`, use only exact artifact-path keys supplied by the
+  parent, and give every key a `used`, `deferred`, or `irrelevant` status plus
+  rationale.
+- Keep findings tied to concrete evidence. Each finding must include severity,
+  disposition, scoped file:line evidence, impact, and concrete fix or
+  verification guidance.
+- Do not include runtime-owned fields such as scope reviewed, depth, scope
+  source, severity counts, file count, report path, or Markdown headings; the
+  parent command and MCP renderer own those.
+- Keep the JSON model bounded to the parent-selected scope and evidence; it
+  should be ready for the parent command to validate without adding new files,
   new reviewers, or a second persistence path.
 - If the parent explicitly reuses this agent outside `/blu-code-review`, follow
   the parent-provided output contract and stay read-only instead of assuming a
   different review-family mode on your own.
 - If there are no material findings, say so plainly and explain why the saved
   evidence and reviewed files are sufficient.
-- The artifact draft must preserve the canonical `review.code-review` headings:
-  `Review Summary`, `Scope Reviewed`, `Evidence Reviewed`, `Positive Signals`,
-  `Severity Summary`, `Findings`, `Follow-Ups`, and `Next Safe Action`.
+- The parent MCP renderer will preserve the canonical `review.code-review`
+  headings after the JSON model validates.
 
 ## Boundaries
 

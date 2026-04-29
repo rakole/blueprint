@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path11) {
-  if (!path11)
+function getElementAtPath(obj, path12) {
+  if (!path12)
     return obj;
-  return path11.reduce((acc, key) => acc?.[key], obj);
+  return path12.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path11, issues) {
+function prefixIssues(path12, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path11);
+    iss.path.unshift(path12);
     return iss;
   });
 }
@@ -10713,8 +10713,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path11) {
-      let input = path11;
+    function removeDotSegments(path12) {
+      let input = path12;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10913,8 +10913,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path11, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path11 && path11 !== "/" ? path11 : void 0;
+        const [path12, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path12 && path12 !== "/" ? path12 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -11435,7 +11435,7 @@ var require_core = __commonJS({
       constructor(opts = {}) {
         this.schemas = {};
         this.refs = {};
-        this.formats = {};
+        this.formats = /* @__PURE__ */ Object.create(null);
         this._compilations = /* @__PURE__ */ new Set();
         this._loading = {};
         this._cache = /* @__PURE__ */ new Map();
@@ -14290,6 +14290,9 @@ var require_dist = __commonJS({
 });
 
 // src/mcp/artifact-contracts/index.ts
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 function phaseLabel(context) {
   return context?.phaseLabel?.trim() || "Phase XX: <Phase Name>";
 }
@@ -14329,6 +14332,26 @@ function withScaffoldFooter(content) {
 }
 function cloneJsonObject(value) {
   return JSON.parse(JSON.stringify(value));
+}
+function readJsonSchemaAsset(schemaFileName) {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidatePaths = [
+    path.join(moduleDir, "schemas", schemaFileName),
+    path.join(moduleDir, "artifact-contracts", "schemas", schemaFileName)
+  ];
+  const failures = [];
+  for (const candidatePath of candidatePaths) {
+    try {
+      return JSON.parse(readFileSync(candidatePath, "utf8"));
+    } catch (error2) {
+      failures.push(
+        error2 instanceof Error ? `${candidatePath}: ${error2.message}` : `${candidatePath}: unknown error`
+      );
+    }
+  }
+  throw new Error(
+    `Could not load artifact model schema asset ${schemaFileName}. Tried: ${failures.join("; ")}`
+  );
 }
 function renderBootstrapProjectTemplate() {
   return `# <project name>
@@ -15833,6 +15856,7 @@ function readArtifactContract(contractId, context) {
     modelContract: contract.modelContract ? {
       schemaId: contract.modelContract.schemaId,
       schemaVersion: contract.modelContract.schemaVersion,
+      schemaPath: contract.modelContract.schemaPath,
       jsonSchema: cloneJsonObject(contract.modelContract.jsonSchema),
       qualityRules: [...contract.modelContract.qualityRules],
       contextBindings: [...contract.modelContract.contextBindings],
@@ -15937,7 +15961,7 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_PLAN_MODEL_CONTRACT, CODE_REVIEW_LINE_LOCATION_PATTERN, CODE_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var PHASE_PLAN_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
@@ -16236,118 +16260,25 @@ var init_artifact_contracts = __esm({
         "The contract read path returns schema metadata for phase.plan."
       ]
     };
-    CODE_REVIEW_LINE_LOCATION_PATTERN = "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$";
+    CODE_REVIEW_MODEL_SCHEMA_FILE = "review.code-review.model.schema.json";
+    CODE_REVIEW_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/review.code-review.model.schema.json";
     CODE_REVIEW_MODEL_CONTRACT = {
       schemaId: "blueprint.review.code-review.model",
       schemaVersion: "1.0.0",
-      jsonSchema: {
-        $schema: "https://json-schema.org/draft/2020-12/schema",
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "verdict",
-          "depth",
-          "scopeSource",
-          "reviewSummary",
-          "scopeReviewed",
-          "evidenceReviewed",
-          "evidenceDeferrals",
-          "positiveSignals",
-          "findings",
-          "followUps",
-          "nextSafeAction"
-        ],
-        properties: {
-          verdict: { type: "string", enum: ["PASS", "FOLLOW_UP", "BLOCKED"] },
-          depth: { type: "string", enum: ["quick", "standard", "deep"] },
-          scopeSource: {
-            type: "string",
-            enum: ["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]
-          },
-          reviewSummary: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          scopeReviewed: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          evidenceReviewed: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          evidenceDeferrals: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["artifact", "rationale"],
-              properties: {
-                artifact: { type: "string", minLength: 1 },
-                rationale: { type: "string", minLength: 1 }
-              }
-            }
-          },
-          positiveSignals: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          findings: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: [
-                "severity",
-                "disposition",
-                "location",
-                "evidence",
-                "impact",
-                "recommendation"
-              ],
-              properties: {
-                severity: {
-                  type: "string",
-                  enum: ["critical", "high", "medium", "low", "unknown"]
-                },
-                disposition: {
-                  type: "string",
-                  enum: ["follow-up", "observation", "blocked", "accepted-risk"]
-                },
-                location: {
-                  type: "string",
-                  minLength: 1,
-                  pattern: CODE_REVIEW_LINE_LOCATION_PATTERN
-                },
-                evidence: { type: "string", minLength: 1 },
-                impact: { type: "string", minLength: 1 },
-                recommendation: { type: "string", minLength: 1 }
-              }
-            }
-          },
-          followUps: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 }
-          },
-          nextSafeAction: { type: "string", minLength: 1 }
-        }
-      },
+      schemaPath: CODE_REVIEW_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(CODE_REVIEW_MODEL_SCHEMA_FILE),
       qualityRules: [
         "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, reportPath, or content; the write tool owns identity and path derivation.",
-        "Keep scopeReviewed aligned with blueprint_review_scope.files; every resolved scoped file must be visible in the rendered Scope Reviewed section.",
-        "Every known saved evidence artifact from the phase must appear in evidenceReviewed or evidenceDeferrals with a concrete rationale.",
+        "Do not author runtime-owned fields such as depth, scopeSource, scopeReviewed, evidenceReviewed, evidenceDeferrals, severityCounts, or report paths; MCP resolves and renders them.",
+        "Author against the narrowed taskSchema returned by blueprint_review_scope authoringContext or blueprint_review_validate_model so scoped finding locations, exact evidenceCoverage keys, and nextSafeAction stay deterministic.",
+        "Every known saved evidence artifact from the phase must appear as an exact evidenceCoverage key with status used, deferred, or irrelevant plus a concrete rationale.",
         "Every finding must include severity, disposition, repo-relative file:line location, evidence, impact, and concrete fix or verification guidance.",
-        "Use only implemented Blueprint commands in nextSafeAction, and do not copy minimal example wording or placeholder review prose."
+        "Use only the allowed nextSafeAction values returned by the authoring context, and do not copy minimal example wording or placeholder review prose."
       ],
       contextBindings: [
         "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus the write tool arguments.",
-        "scopeReviewed is checked against the scopeFiles supplied from blueprint_review_scope when present.",
-        "Known evidence artifacts are read from the selected phase artifact inventory and rendered visibly into Evidence Reviewed or as explicit deferrals.",
+        "depth, source, scopeReviewed, and severity counts come from blueprint_review_scope plus MCP rendering, not from authored JSON.",
+        "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into evidenceCoverage keys, and rendered visibly into Evidence Reviewed.",
         "existing review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
       ],
       renderedHeadings: [
@@ -16362,19 +16293,11 @@ var init_artifact_contracts = __esm({
       ],
       minimalValidExample: {
         verdict: "FOLLOW_UP",
-        depth: "standard",
-        scopeSource: "phase-evidence",
         reviewSummary: [
-          "Phase 5 standard review covered two scoped repo files with one high follow-up."
+          "The reviewed source path preserves the happy path but leaves negative input behavior uncovered."
         ],
-        scopeReviewed: ["src/feature.ts", "tests/feature.test.ts"],
-        evidenceReviewed: [
-          ".blueprint/phases/05-review-scope/05-01-PLAN.md",
-          ".blueprint/phases/05-review-scope/05-01-SUMMARY.md"
-        ],
-        evidenceDeferrals: [],
         positiveSignals: [
-          "Plan and summary evidence agree on the bounded source and test scope."
+          "The saved plan and summary agree on the bounded source and test scope."
         ],
         findings: [
           {
@@ -16386,13 +16309,24 @@ var init_artifact_contracts = __esm({
             recommendation: "Add an explicit negative-input guard and focused regression test."
           }
         ],
+        evidenceCoverage: {
+          ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+            status: "used",
+            rationale: "Plan metadata defined the source files and acceptance criteria reviewed."
+          },
+          ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
+            status: "used",
+            rationale: "Summary evidence confirmed the completed implementation slice."
+          }
+        },
         followUps: ["Add the negative-input guard and rerun focused verification."],
         nextSafeAction: "/blu-code-review-fix 5"
       },
       exampleLeakageSignals: [
-        "Phase 5 standard review covered two scoped repo files with one high follow-up.",
-        "Plan and summary evidence agree on the bounded source and test scope.",
+        "The reviewed source path preserves the happy path but leaves negative input behavior uncovered.",
+        "The saved plan and summary agree on the bounded source and test scope.",
         "The changed branch accepts negative input without a guard.",
+        "Plan metadata defined the source files and acceptance criteria reviewed.",
         "Add the negative-input guard and rerun focused verification."
       ]
     };
@@ -17610,7 +17544,7 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
-          "Structured model writes are supported for code review and render through MCP-owned canonical Markdown before persistence.",
+          "Code-review writes are model-only and render through MCP-owned canonical Markdown before persistence.",
           "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
           "Scope Reviewed must list every repo-relative file in the resolved review scope before the artifact can persist.",
           "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance.",
@@ -18061,7 +17995,7 @@ var init_artifact_contracts = __esm({
 
 // src/shared/security.ts
 import { existsSync, realpathSync } from "node:fs";
-import path from "node:path";
+import path2 from "node:path";
 function isPlainObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -18081,26 +18015,26 @@ function shannonEntropy(value) {
   return entropy;
 }
 function resolveRealishPathSync(targetPath) {
-  const absoluteTarget = path.resolve(targetPath);
+  const absoluteTarget = path2.resolve(targetPath);
   if (existsSync(absoluteTarget)) {
     return realpathSync.native(absoluteTarget);
   }
   const pendingSegments = [];
   let current = absoluteTarget;
   while (!existsSync(current)) {
-    const parent = path.dirname(current);
+    const parent = path2.dirname(current);
     if (parent === current) {
       return absoluteTarget;
     }
-    pendingSegments.unshift(path.basename(current));
+    pendingSegments.unshift(path2.basename(current));
     current = parent;
   }
   const realExistingPath = realpathSync.native(current);
-  return path.join(realExistingPath, ...pendingSegments);
+  return path2.join(realExistingPath, ...pendingSegments);
 }
 function isEscapingRoot(rootPath, candidatePath) {
-  const relative = path.relative(rootPath, candidatePath);
-  return relative.startsWith("..") || path.isAbsolute(relative);
+  const relative = path2.relative(rootPath, candidatePath);
+  return relative.startsWith("..") || path2.isAbsolute(relative);
 }
 function findSuspiciousEncodedPayload(text) {
   const tokens = text.match(/[A-Za-z0-9+/=]{128,}|[A-Fa-f0-9]{128,}/g) ?? [];
@@ -18126,7 +18060,7 @@ function ensurePathWithinRootSync(rootPath, candidatePath, options = {}) {
   if (isEscapingRoot(resolvedRoot, resolvedCandidate)) {
     throw new Error(`${label} escapes the allowed root: ${candidatePath}`);
   }
-  return path.resolve(candidatePath);
+  return path2.resolve(candidatePath);
 }
 function isPathWithinRootSync(rootPath, candidatePath) {
   try {
@@ -18142,10 +18076,10 @@ function resolveRepoRelativeInputPathSync(rootPath, candidatePath, options = {})
   if (candidatePath.trim().length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  if (path.isAbsolute(candidatePath)) {
+  if (path2.isAbsolute(candidatePath)) {
     throw new Error(`${label} must be repo-relative, not absolute: ${candidatePath}`);
   }
-  const absolutePath = path.resolve(rootPath, candidatePath);
+  const absolutePath = path2.resolve(rootPath, candidatePath);
   return ensurePathWithinRootSync(rootPath, absolutePath, options);
 }
 function safeJsonParse(raw, options = {}) {
@@ -18324,7 +18258,7 @@ var init_security = __esm({
 });
 
 // src/mcp/runtime-host.ts
-import path2 from "node:path";
+import path3 from "node:path";
 function normalizeHostId(value) {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) {
@@ -18340,10 +18274,10 @@ function inferHostFromExtensionPath(extensionPath) {
   if (!normalizedPath) {
     return null;
   }
-  if (normalizedPath.includes(`${path2.sep}.tabnine${path2.sep}`)) {
+  if (normalizedPath.includes(`${path3.sep}.tabnine${path3.sep}`)) {
     return "tabnine";
   }
-  if (normalizedPath.includes(`${path2.sep}.gemini${path2.sep}`)) {
+  if (normalizedPath.includes(`${path3.sep}.gemini${path3.sep}`)) {
     return "gemini";
   }
   const slashNormalizedPath = normalizedPath.replaceAll("\\", "/");
@@ -18377,10 +18311,10 @@ function buildRuntimeHost(env = process.env) {
     manifestFileName,
     extensionPath,
     globalBlueprintDir,
-    defaultsPath: path2.join(globalBlueprintDir, "defaults.json"),
-    patchRegistryPath: path2.join(globalBlueprintDir, "patches"),
-    workspaceRegistryPath: path2.join(globalBlueprintDir, "workspaces.json"),
-    updatesDir: path2.join(globalBlueprintDir, "updates")
+    defaultsPath: path3.join(globalBlueprintDir, "defaults.json"),
+    patchRegistryPath: path3.join(globalBlueprintDir, "patches"),
+    workspaceRegistryPath: path3.join(globalBlueprintDir, "workspaces.json"),
+    updatesDir: path3.join(globalBlueprintDir, "updates")
   };
 }
 function resolveBlueprintRuntimeHost(env = process.env) {
@@ -19069,7 +19003,7 @@ var init_config = __esm({
 
 // src/mcp/tools/artifacts.ts
 import { promises as fs } from "node:fs";
-import path3 from "node:path";
+import path4 from "node:path";
 async function assessRootBootstrapShape(projectRoot) {
   const entries = await fs.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
@@ -19919,20 +19853,20 @@ async function pathExists(targetPath) {
   }
 }
 function toPosixPath(relativePath) {
-  return relativePath.split(path3.sep).join("/");
+  return relativePath.split(path4.sep).join("/");
 }
 function getProjectRoot(cwd) {
-  return path3.resolve(cwd ?? process.cwd());
+  return path4.resolve(cwd ?? process.cwd());
 }
 function getBlueprintRoot(cwd) {
-  return path3.join(getProjectRoot(cwd), BLUEPRINT_DIR);
+  return path4.join(getProjectRoot(cwd), BLUEPRINT_DIR);
 }
 async function blueprintPathExists(targetPath) {
   return pathExists(targetPath);
 }
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
-  const gitPath = path3.join(projectRoot, ".git");
+  const gitPath = path4.join(projectRoot, ".git");
   if (!await pathExists(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
@@ -19941,7 +19875,7 @@ async function ensureRepoRoot(cwd) {
   return projectRoot;
 }
 function toRepoRelativePath(projectRoot, absolutePath) {
-  return toPosixPath(path3.relative(projectRoot, absolutePath));
+  return toPosixPath(path4.relative(projectRoot, absolutePath));
 }
 function resolveRepoRelativePath(projectRoot, relativePath) {
   try {
@@ -19957,7 +19891,7 @@ function resolveRepoRelativePath(projectRoot, relativePath) {
 }
 function resolveBlueprintPath(projectRoot, relativePath) {
   assertNoNullBytes(relativePath, "Blueprint path");
-  if (path3.isAbsolute(relativePath)) {
+  if (path4.isAbsolute(relativePath)) {
     throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
   }
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
@@ -19976,7 +19910,7 @@ function resolveBlueprintPath(projectRoot, relativePath) {
   return absolutePath;
 }
 async function ensureParentDirectory(targetPath) {
-  await fs.mkdir(path3.dirname(targetPath), { recursive: true });
+  await fs.mkdir(path4.dirname(targetPath), { recursive: true });
 }
 async function readJsonIfPresent(filePath) {
   if (!await pathExists(filePath)) {
@@ -19995,7 +19929,7 @@ async function writeTextFile(filePath, value, options = {}) {
     content: value.replace(/\r\n/g, "\n"),
     warnings: []
   } : prepareTextForPersistence(value, {
-    label: options.label ?? path3.basename(filePath)
+    label: options.label ?? path4.basename(filePath)
   });
   await ensureParentDirectory(filePath);
   await fs.writeFile(filePath, prepared.content, "utf8");
@@ -20320,7 +20254,7 @@ function isRepoRelativePlanPath(value) {
   if (rawValue.length === 0) {
     return false;
   }
-  if (path3.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+  if (path4.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
     return false;
   }
   const normalized = normalizePlanPathForValidation(rawValue);
@@ -22195,7 +22129,7 @@ function validateSummaryPlanReference(content, options = {}) {
       issues.push("Summary artifact must reference a matching plan artifact.");
     } else {
       const expectedPlanPath = options.linkedPlanPath;
-      const expectedPlanFile = path3.basename(expectedPlanPath);
+      const expectedPlanFile = path4.basename(expectedPlanPath);
       if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
         issues.push(
           `Summary artifact **Plan:** marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}.`
@@ -22343,7 +22277,7 @@ async function listRelativeFiles(rootPath, projectRoot) {
   const entries = await fs.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path3.join(rootPath, entry.name);
+    const absolutePath = path4.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listRelativeFiles(absolutePath, projectRoot));
       continue;
@@ -22649,7 +22583,7 @@ function inferProjectName(projectRoot, requestedName) {
   if (trimmed) {
     return trimmed;
   }
-  return path3.basename(projectRoot);
+  return path4.basename(projectRoot);
 }
 async function blueprintArtifactScaffold(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -23710,7 +23644,7 @@ async function buildArtifactDigestSections(projectRoot, artifactPaths) {
     const summary = summarizeArtifactContent(raw);
     digest.push({
       artifact: artifactPath,
-      title: summary.title.length > 0 ? summary.title : path3.basename(artifactPath, path3.extname(artifactPath)),
+      title: summary.title.length > 0 ? summary.title : path4.basename(artifactPath, path4.extname(artifactPath)),
       summary: summary.summary,
       evidence: [artifactPath]
     });
@@ -26044,7 +25978,7 @@ __export(phase_exports, {
   phaseToolDefinitions: () => phaseToolDefinitions
 });
 import { promises as fs4 } from "node:fs";
-import path5 from "node:path";
+import path6 from "node:path";
 function normalizeBlueprintInput(value) {
   if (typeof value === "number") {
     return String(value);
@@ -26731,7 +26665,7 @@ async function listPhaseArtifacts(rootPath, projectRoot) {
   const entries = await fs4.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path5.join(rootPath, entry.name);
+    const absolutePath = path6.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listPhaseArtifacts(absolutePath, projectRoot));
       continue;
@@ -26767,7 +26701,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
     };
   }
   return {
-    phaseDir: toRepoRelativePath(projectRoot, path5.join(phasesRoot, matches[0])),
+    phaseDir: toRepoRelativePath(projectRoot, path6.join(phasesRoot, matches[0])),
     reason: null
   };
 }
@@ -27257,7 +27191,7 @@ function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
   return recovery;
 }
 function fallbackPhaseName(phaseDir) {
-  return slugToTitle2(path5.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
+  return slugToTitle2(path6.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -27714,7 +27648,7 @@ function summaryPathFor(located, planId2) {
 function normalizeExecutionSurfacePath(value) {
   const normalized = value.replaceAll("\\", "/").trim();
   const withoutDotPrefix = normalized.replace(/^\.\//, "");
-  const collapsed = path5.posix.normalize(withoutDotPrefix);
+  const collapsed = path6.posix.normalize(withoutDotPrefix);
   if (collapsed === ".") {
     return withoutDotPrefix.replace(/\/+$/u, "");
   }
@@ -28802,9 +28736,9 @@ async function renamePhaseArtifactsInPlace(projectRoot, rootDirectoryPath, oldPh
   const renamedArtifacts = [];
   const entries = await fs4.readdir(rootDirectoryPath, { withFileTypes: true });
   for (const entry of entries) {
-    const currentPath = path5.join(rootDirectoryPath, entry.name);
+    const currentPath = path6.join(rootDirectoryPath, entry.name);
     const renamedEntry = renameLeadingPhaseToken(entry.name, oldPhaseNumber, newPhasePrefix);
-    const nextPath = renamedEntry ? path5.join(rootDirectoryPath, renamedEntry) : currentPath;
+    const nextPath = renamedEntry ? path6.join(rootDirectoryPath, renamedEntry) : currentPath;
     if (renamedEntry) {
       await fs4.rename(currentPath, nextPath);
       renamedArtifacts.push({
@@ -28942,7 +28876,7 @@ async function blueprintRoadmapRemovePhase(args) {
   await fs4.rm(targetPhaseDirPath, { recursive: true, force: true });
   for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
     const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-    const previousDirectoryName = path5.basename(previousPhaseDirPath);
+    const previousDirectoryName = path6.basename(previousPhaseDirPath);
     const newPhasePrefix = formatPhasePrefix3(newPhaseNumber);
     const renamedDirectoryName = renameLeadingPhaseToken(
       previousDirectoryName,
@@ -28954,7 +28888,7 @@ async function blueprintRoadmapRemovePhase(args) {
         `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
       );
     }
-    const newPhaseDirPath = path5.join(path5.dirname(previousPhaseDirPath), renamedDirectoryName);
+    const newPhaseDirPath = path6.join(path6.dirname(previousPhaseDirPath), renamedDirectoryName);
     await fs4.rename(previousPhaseDirPath, newPhaseDirPath);
     const renamedArtifacts = await renamePhaseArtifactsInPlace(
       projectRoot,
@@ -29007,7 +28941,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path5.basename(reservedPhaseDirPath),
+        path6.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix2
       );
@@ -29016,8 +28950,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path5.join(
-        path5.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path6.join(
+        path6.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists2(promotedPhaseDirPath)) {
@@ -31740,27 +31674,889 @@ var init_phase = __esm({
   }
 });
 
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+var require_dynamicAnchor = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.dynamicAnchor = void 0;
+    var codegen_1 = require_codegen();
+    var names_1 = require_names();
+    var compile_1 = require_compile();
+    var ref_1 = require_ref();
+    var def = {
+      keyword: "$dynamicAnchor",
+      schemaType: "string",
+      code: (cxt) => dynamicAnchor(cxt, cxt.schema)
+    };
+    function dynamicAnchor(cxt, anchor) {
+      const { gen, it } = cxt;
+      it.schemaEnv.root.dynamicAnchors[anchor] = true;
+      const v = (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`;
+      const validate = it.errSchemaPath === "#" ? it.validateName : _getValidate(cxt);
+      gen.if((0, codegen_1._)`!${v}`, () => gen.assign(v, validate));
+    }
+    exports.dynamicAnchor = dynamicAnchor;
+    function _getValidate(cxt) {
+      const { schemaEnv, schema, self } = cxt.it;
+      const { root, baseId, localRefs, meta: meta3 } = schemaEnv.root;
+      const { schemaId } = self.opts;
+      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta: meta3 });
+      compile_1.compileSchema.call(self, sch);
+      return (0, ref_1.getValidate)(cxt, sch);
+    }
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+var require_dynamicRef = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.dynamicRef = void 0;
+    var codegen_1 = require_codegen();
+    var names_1 = require_names();
+    var ref_1 = require_ref();
+    var def = {
+      keyword: "$dynamicRef",
+      schemaType: "string",
+      code: (cxt) => dynamicRef(cxt, cxt.schema)
+    };
+    function dynamicRef(cxt, ref) {
+      const { gen, keyword, it } = cxt;
+      if (ref[0] !== "#")
+        throw new Error(`"${keyword}" only supports hash fragment reference`);
+      const anchor = ref.slice(1);
+      if (it.allErrors) {
+        _dynamicRef();
+      } else {
+        const valid = gen.let("valid", false);
+        _dynamicRef(valid);
+        cxt.ok(valid);
+      }
+      function _dynamicRef(valid) {
+        if (it.schemaEnv.root.dynamicAnchors[anchor]) {
+          const v = gen.let("_v", (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`);
+          gen.if(v, _callRef(v, valid), _callRef(it.validateName, valid));
+        } else {
+          _callRef(it.validateName, valid)();
+        }
+      }
+      function _callRef(validate, valid) {
+        return valid ? () => gen.block(() => {
+          (0, ref_1.callRef)(cxt, validate);
+          gen.let(valid, true);
+        }) : () => (0, ref_1.callRef)(cxt, validate);
+      }
+    }
+    exports.dynamicRef = dynamicRef;
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+var require_recursiveAnchor = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicAnchor_1 = require_dynamicAnchor();
+    var util_1 = require_util();
+    var def = {
+      keyword: "$recursiveAnchor",
+      schemaType: "boolean",
+      code(cxt) {
+        if (cxt.schema)
+          (0, dynamicAnchor_1.dynamicAnchor)(cxt, "");
+        else
+          (0, util_1.checkStrictMode)(cxt.it, "$recursiveAnchor: false is ignored");
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+var require_recursiveRef = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicRef_1 = require_dynamicRef();
+    var def = {
+      keyword: "$recursiveRef",
+      schemaType: "string",
+      code: (cxt) => (0, dynamicRef_1.dynamicRef)(cxt, cxt.schema)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/index.js
+var require_dynamic = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicAnchor_1 = require_dynamicAnchor();
+    var dynamicRef_1 = require_dynamicRef();
+    var recursiveAnchor_1 = require_recursiveAnchor();
+    var recursiveRef_1 = require_recursiveRef();
+    var dynamic = [dynamicAnchor_1.default, dynamicRef_1.default, recursiveAnchor_1.default, recursiveRef_1.default];
+    exports.default = dynamic;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+var require_dependentRequired = __commonJS({
+  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependencies_1 = require_dependencies();
+    var def = {
+      keyword: "dependentRequired",
+      type: "object",
+      schemaType: "object",
+      error: dependencies_1.error,
+      code: (cxt) => (0, dependencies_1.validatePropertyDeps)(cxt)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+var require_dependentSchemas = __commonJS({
+  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependencies_1 = require_dependencies();
+    var def = {
+      keyword: "dependentSchemas",
+      type: "object",
+      schemaType: "object",
+      code: (cxt) => (0, dependencies_1.validateSchemaDeps)(cxt)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/validation/limitContains.js
+var require_limitContains = __commonJS({
+  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var util_1 = require_util();
+    var def = {
+      keyword: ["maxContains", "minContains"],
+      type: "array",
+      schemaType: "number",
+      code({ keyword, parentSchema, it }) {
+        if (parentSchema.contains === void 0) {
+          (0, util_1.checkStrictMode)(it, `"${keyword}" without "contains" is ignored`);
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/next.js
+var require_next = __commonJS({
+  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependentRequired_1 = require_dependentRequired();
+    var dependentSchemas_1 = require_dependentSchemas();
+    var limitContains_1 = require_limitContains();
+    var next = [dependentRequired_1.default, dependentSchemas_1.default, limitContains_1.default];
+    exports.default = next;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+var require_unevaluatedProperties = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var codegen_1 = require_codegen();
+    var util_1 = require_util();
+    var names_1 = require_names();
+    var error2 = {
+      message: "must NOT have unevaluated properties",
+      params: ({ params }) => (0, codegen_1._)`{unevaluatedProperty: ${params.unevaluatedProperty}}`
+    };
+    var def = {
+      keyword: "unevaluatedProperties",
+      type: "object",
+      schemaType: ["boolean", "object"],
+      trackErrors: true,
+      error: error2,
+      code(cxt) {
+        const { gen, schema, data, errsCount, it } = cxt;
+        if (!errsCount)
+          throw new Error("ajv implementation error");
+        const { allErrors, props } = it;
+        if (props instanceof codegen_1.Name) {
+          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key) => gen.if(unevaluatedDynamic(props, key), () => unevaluatedPropCode(key))));
+        } else if (props !== true) {
+          gen.forIn("key", data, (key) => props === void 0 ? unevaluatedPropCode(key) : gen.if(unevaluatedStatic(props, key), () => unevaluatedPropCode(key)));
+        }
+        it.props = true;
+        cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
+        function unevaluatedPropCode(key) {
+          if (schema === false) {
+            cxt.setParams({ unevaluatedProperty: key });
+            cxt.error();
+            if (!allErrors)
+              gen.break();
+            return;
+          }
+          if (!(0, util_1.alwaysValidSchema)(it, schema)) {
+            const valid = gen.name("valid");
+            cxt.subschema({
+              keyword: "unevaluatedProperties",
+              dataProp: key,
+              dataPropType: util_1.Type.Str
+            }, valid);
+            if (!allErrors)
+              gen.if((0, codegen_1.not)(valid), () => gen.break());
+          }
+        }
+        function unevaluatedDynamic(evaluatedProps, key) {
+          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key}]`;
+        }
+        function unevaluatedStatic(evaluatedProps, key) {
+          const ps = [];
+          for (const p in evaluatedProps) {
+            if (evaluatedProps[p] === true)
+              ps.push((0, codegen_1._)`${key} !== ${p}`);
+          }
+          return (0, codegen_1.and)(...ps);
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+var require_unevaluatedItems = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var codegen_1 = require_codegen();
+    var util_1 = require_util();
+    var error2 = {
+      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
+      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+    };
+    var def = {
+      keyword: "unevaluatedItems",
+      type: "array",
+      schemaType: ["boolean", "object"],
+      error: error2,
+      code(cxt) {
+        const { gen, schema, data, it } = cxt;
+        const items = it.items || 0;
+        if (items === true)
+          return;
+        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+        if (schema === false) {
+          cxt.setParams({ len: items });
+          cxt.fail((0, codegen_1._)`${len} > ${items}`);
+        } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
+          const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items}`);
+          gen.if((0, codegen_1.not)(valid), () => validateItems(valid, items));
+          cxt.ok(valid);
+        }
+        it.items = true;
+        function validateItems(valid, from) {
+          gen.forRange("i", from, len, (i) => {
+            cxt.subschema({ keyword: "unevaluatedItems", dataProp: i, dataPropType: util_1.Type.Num }, valid);
+            if (!it.allErrors)
+              gen.if((0, codegen_1.not)(valid), () => gen.break());
+          });
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/index.js
+var require_unevaluated = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var unevaluatedProperties_1 = require_unevaluatedProperties();
+    var unevaluatedItems_1 = require_unevaluatedItems();
+    var unevaluated = [unevaluatedProperties_1.default, unevaluatedItems_1.default];
+    exports.default = unevaluated;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/draft2020.js
+var require_draft2020 = __commonJS({
+  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var core_1 = require_core2();
+    var validation_1 = require_validation();
+    var applicator_1 = require_applicator();
+    var dynamic_1 = require_dynamic();
+    var next_1 = require_next();
+    var unevaluated_1 = require_unevaluated();
+    var format_1 = require_format2();
+    var metadata_1 = require_metadata();
+    var draft2020Vocabularies = [
+      dynamic_1.default,
+      core_1.default,
+      validation_1.default,
+      (0, applicator_1.default)(true),
+      format_1.default,
+      metadata_1.metadataVocabulary,
+      metadata_1.contentVocabulary,
+      next_1.default,
+      unevaluated_1.default
+    ];
+    exports.default = draft2020Vocabularies;
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+var require_schema = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/schema",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true,
+        "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+        "https://json-schema.org/draft/2020-12/vocab/content": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Core and Validation specifications meta-schema",
+      allOf: [
+        { $ref: "meta/core" },
+        { $ref: "meta/applicator" },
+        { $ref: "meta/unevaluated" },
+        { $ref: "meta/validation" },
+        { $ref: "meta/meta-data" },
+        { $ref: "meta/format-annotation" },
+        { $ref: "meta/content" }
+      ],
+      type: ["object", "boolean"],
+      $comment: "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.",
+      properties: {
+        definitions: {
+          $comment: '"definitions" has been replaced by "$defs".',
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          deprecated: true,
+          default: {}
+        },
+        dependencies: {
+          $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.',
+          type: "object",
+          additionalProperties: {
+            anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }]
+          },
+          deprecated: true,
+          default: {}
+        },
+        $recursiveAnchor: {
+          $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".',
+          $ref: "meta/core#/$defs/anchorString",
+          deprecated: true
+        },
+        $recursiveRef: {
+          $comment: '"$recursiveRef" has been replaced by "$dynamicRef".',
+          $ref: "meta/core#/$defs/uriReferenceString",
+          deprecated: true
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+var require_applicator2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/applicator",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Applicator vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        prefixItems: { $ref: "#/$defs/schemaArray" },
+        items: { $dynamicRef: "#meta" },
+        contains: { $dynamicRef: "#meta" },
+        additionalProperties: { $dynamicRef: "#meta" },
+        properties: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          default: {}
+        },
+        patternProperties: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          propertyNames: { format: "regex" },
+          default: {}
+        },
+        dependentSchemas: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          default: {}
+        },
+        propertyNames: { $dynamicRef: "#meta" },
+        if: { $dynamicRef: "#meta" },
+        then: { $dynamicRef: "#meta" },
+        else: { $dynamicRef: "#meta" },
+        allOf: { $ref: "#/$defs/schemaArray" },
+        anyOf: { $ref: "#/$defs/schemaArray" },
+        oneOf: { $ref: "#/$defs/schemaArray" },
+        not: { $dynamicRef: "#meta" }
+      },
+      $defs: {
+        schemaArray: {
+          type: "array",
+          minItems: 1,
+          items: { $dynamicRef: "#meta" }
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+var require_unevaluated2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Unevaluated applicator vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        unevaluatedItems: { $dynamicRef: "#meta" },
+        unevaluatedProperties: { $dynamicRef: "#meta" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+var require_content = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/content",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/content": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Content vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        contentEncoding: { type: "string" },
+        contentMediaType: { type: "string" },
+        contentSchema: { $dynamicRef: "#meta" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+var require_core3 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/core",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/core": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Core vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        $id: {
+          $ref: "#/$defs/uriReferenceString",
+          $comment: "Non-empty fragments not allowed.",
+          pattern: "^[^#]*#?$"
+        },
+        $schema: { $ref: "#/$defs/uriString" },
+        $ref: { $ref: "#/$defs/uriReferenceString" },
+        $anchor: { $ref: "#/$defs/anchorString" },
+        $dynamicRef: { $ref: "#/$defs/uriReferenceString" },
+        $dynamicAnchor: { $ref: "#/$defs/anchorString" },
+        $vocabulary: {
+          type: "object",
+          propertyNames: { $ref: "#/$defs/uriString" },
+          additionalProperties: {
+            type: "boolean"
+          }
+        },
+        $comment: {
+          type: "string"
+        },
+        $defs: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" }
+        }
+      },
+      $defs: {
+        anchorString: {
+          type: "string",
+          pattern: "^[A-Za-z_][-A-Za-z0-9._]*$"
+        },
+        uriString: {
+          type: "string",
+          format: "uri"
+        },
+        uriReferenceString: {
+          type: "string",
+          format: "uri-reference"
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+var require_format_annotation = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Format vocabulary meta-schema for annotation results",
+      type: ["object", "boolean"],
+      properties: {
+        format: { type: "string" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+var require_meta_data = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/meta-data": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Meta-data vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        title: {
+          type: "string"
+        },
+        description: {
+          type: "string"
+        },
+        default: true,
+        deprecated: {
+          type: "boolean",
+          default: false
+        },
+        readOnly: {
+          type: "boolean",
+          default: false
+        },
+        writeOnly: {
+          type: "boolean",
+          default: false
+        },
+        examples: {
+          type: "array",
+          items: true
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+var require_validation2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/validation",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Validation vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        type: {
+          anyOf: [
+            { $ref: "#/$defs/simpleTypes" },
+            {
+              type: "array",
+              items: { $ref: "#/$defs/simpleTypes" },
+              minItems: 1,
+              uniqueItems: true
+            }
+          ]
+        },
+        const: true,
+        enum: {
+          type: "array",
+          items: true
+        },
+        multipleOf: {
+          type: "number",
+          exclusiveMinimum: 0
+        },
+        maximum: {
+          type: "number"
+        },
+        exclusiveMaximum: {
+          type: "number"
+        },
+        minimum: {
+          type: "number"
+        },
+        exclusiveMinimum: {
+          type: "number"
+        },
+        maxLength: { $ref: "#/$defs/nonNegativeInteger" },
+        minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        pattern: {
+          type: "string",
+          format: "regex"
+        },
+        maxItems: { $ref: "#/$defs/nonNegativeInteger" },
+        minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        uniqueItems: {
+          type: "boolean",
+          default: false
+        },
+        maxContains: { $ref: "#/$defs/nonNegativeInteger" },
+        minContains: {
+          $ref: "#/$defs/nonNegativeInteger",
+          default: 1
+        },
+        maxProperties: { $ref: "#/$defs/nonNegativeInteger" },
+        minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        required: { $ref: "#/$defs/stringArray" },
+        dependentRequired: {
+          type: "object",
+          additionalProperties: {
+            $ref: "#/$defs/stringArray"
+          }
+        }
+      },
+      $defs: {
+        nonNegativeInteger: {
+          type: "integer",
+          minimum: 0
+        },
+        nonNegativeIntegerDefault0: {
+          $ref: "#/$defs/nonNegativeInteger",
+          default: 0
+        },
+        simpleTypes: {
+          enum: ["array", "boolean", "integer", "null", "number", "object", "string"]
+        },
+        stringArray: {
+          type: "array",
+          items: { type: "string" },
+          uniqueItems: true,
+          default: []
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+var require_json_schema_2020_12 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var metaSchema = require_schema();
+    var applicator = require_applicator2();
+    var unevaluated = require_unevaluated2();
+    var content = require_content();
+    var core = require_core3();
+    var format = require_format_annotation();
+    var metadata = require_meta_data();
+    var validation = require_validation2();
+    var META_SUPPORT_DATA = ["/properties"];
+    function addMetaSchema2020($data) {
+      ;
+      [
+        metaSchema,
+        applicator,
+        unevaluated,
+        content,
+        core,
+        with$data(this, format),
+        metadata,
+        with$data(this, validation)
+      ].forEach((sch) => this.addMetaSchema(sch, void 0, false));
+      return this;
+      function with$data(ajv, sch) {
+        return $data ? ajv.$dataMetaSchema(sch, META_SUPPORT_DATA) : sch;
+      }
+    }
+    exports.default = addMetaSchema2020;
+  }
+});
+
+// node_modules/ajv/dist/2020.js
+var require__ = __commonJS({
+  "node_modules/ajv/dist/2020.js"(exports, module) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
+    var core_1 = require_core();
+    var draft2020_1 = require_draft2020();
+    var discriminator_1 = require_discriminator();
+    var json_schema_2020_12_1 = require_json_schema_2020_12();
+    var META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
+    var Ajv20202 = class extends core_1.default {
+      constructor(opts = {}) {
+        super({
+          ...opts,
+          dynamicRef: true,
+          next: true,
+          unevaluated: true
+        });
+      }
+      _addVocabularies() {
+        super._addVocabularies();
+        draft2020_1.default.forEach((v) => this.addVocabulary(v));
+        if (this.opts.discriminator)
+          this.addKeyword(discriminator_1.default);
+      }
+      _addDefaultMetaSchema() {
+        super._addDefaultMetaSchema();
+        const { $data, meta: meta3 } = this.opts;
+        if (!meta3)
+          return;
+        json_schema_2020_12_1.default.call(this, $data);
+        this.refs["http://json-schema.org/schema"] = META_SCHEMA_ID;
+      }
+      defaultMeta() {
+        return this.opts.defaultMeta = super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : void 0);
+      }
+    };
+    exports.Ajv2020 = Ajv20202;
+    module.exports = exports = Ajv20202;
+    module.exports.Ajv2020 = Ajv20202;
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = Ajv20202;
+    var validate_1 = require_validate();
+    Object.defineProperty(exports, "KeywordCxt", { enumerable: true, get: function() {
+      return validate_1.KeywordCxt;
+    } });
+    var codegen_1 = require_codegen();
+    Object.defineProperty(exports, "_", { enumerable: true, get: function() {
+      return codegen_1._;
+    } });
+    Object.defineProperty(exports, "str", { enumerable: true, get: function() {
+      return codegen_1.str;
+    } });
+    Object.defineProperty(exports, "stringify", { enumerable: true, get: function() {
+      return codegen_1.stringify;
+    } });
+    Object.defineProperty(exports, "nil", { enumerable: true, get: function() {
+      return codegen_1.nil;
+    } });
+    Object.defineProperty(exports, "Name", { enumerable: true, get: function() {
+      return codegen_1.Name;
+    } });
+    Object.defineProperty(exports, "CodeGen", { enumerable: true, get: function() {
+      return codegen_1.CodeGen;
+    } });
+    var validation_error_1 = require_validation_error();
+    Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function() {
+      return validation_error_1.default;
+    } });
+    var ref_error_1 = require_ref_error();
+    Object.defineProperty(exports, "MissingRefError", { enumerable: true, get: function() {
+      return ref_error_1.default;
+    } });
+  }
+});
+
 // src/mcp/tools/review.ts
 import { promises as fs5 } from "node:fs";
-import path6 from "node:path";
+import path7 from "node:path";
+function createAjvValidator() {
+  return new import__.Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  });
+}
 function normalizeTextContent3(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
 }
-function collectModelStringValues2(value) {
+function collectModelStringEntries(value, pathValue = "model") {
   if (typeof value === "string") {
-    return [value];
+    return [{ path: pathValue, value }];
   }
   if (Array.isArray(value)) {
-    return value.flatMap((item) => collectModelStringValues2(item));
+    return value.flatMap(
+      (item, index) => collectModelStringEntries(item, `${pathValue}[${index}]`)
+    );
   }
   if (typeof value === "object" && value !== null) {
-    return Object.values(value).flatMap((item) => collectModelStringValues2(item));
+    return Object.entries(value).flatMap(
+      ([key, item]) => collectModelStringEntries(item, `${pathValue}.${key}`)
+    );
   }
   return [];
 }
-function formatZodIssuePath2(pathSegments) {
-  return pathSegments.length > 0 ? pathSegments.map(String).join(".") : "model";
+function cloneJsonObject2(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function modelDiagnostic(args) {
+  return args;
+}
+function emptyDiagnosticCounts() {
+  return {
+    total: 0,
+    bySource: {
+      scope: 0,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    },
+    byCode: {}
+  };
+}
+function countDiagnostics(diagnostics) {
+  const counts = emptyDiagnosticCounts();
+  for (const diagnostic of diagnostics) {
+    counts.total += 1;
+    counts.bySource[diagnostic.source] += 1;
+    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+  }
+  return counts;
+}
+function formatReviewDiagnostic(diagnostic) {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
 function renderBulletList2(items, fallback = "none") {
   const lines = items.map((item) => item.trim()).filter((item) => item.length > 0);
@@ -31826,6 +32622,90 @@ async function validateImplementedNextSafeAction(value, sourceLabel = "Code-revi
     ];
   }
   return [];
+}
+async function buildAllowedCodeReviewNextActions(phaseNumber) {
+  const candidates = CODE_REVIEW_NEXT_ACTION_BUILDERS.map(
+    (buildAction) => buildAction(phaseNumber)
+  );
+  const implementedCommands = await getImplementedCommandNames2();
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return candidates;
+  }
+  return candidates.filter(
+    (action) => extractBlueprintDirectCommands(action).every(
+      (command) => implementedCommands.has(command)
+    )
+  );
+}
+function escapePatternLiteral(value) {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+}
+function buildScopedLocationPattern(scopeFiles) {
+  const filePattern = scopeFiles.length === 0 ? "(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+)" : `(?:${scopeFiles.map(escapePatternLiteral).join("|")})`;
+  return `^${filePattern}:\\d+(?:-\\d+)?$`;
+}
+function asJsonObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function getJsonObjectProperty(value, key) {
+  return asJsonObject(value[key]);
+}
+function buildCodeReviewTaskSchema(args) {
+  const schema = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const finding = defs ? getJsonObjectProperty(defs, "finding") : null;
+  const findingProperties = finding ? getJsonObjectProperty(finding, "properties") : null;
+  const location = findingProperties ? getJsonObjectProperty(findingProperties, "location") : null;
+  if (properties) {
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedNextActions;
+    }
+    properties.evidenceCoverage = {
+      type: "object",
+      description: "Exhaustive coverage decisions for the exact known evidence artifacts in this phase.",
+      additionalProperties: false,
+      required: args.knownEvidenceArtifacts,
+      properties: Object.fromEntries(
+        args.knownEvidenceArtifacts.map((artifactPath) => [
+          artifactPath,
+          { $ref: "#/$defs/evidenceCoverageEntry" }
+        ])
+      )
+    };
+  }
+  if (location) {
+    location.pattern = buildScopedLocationPattern(args.scopeFiles);
+  }
+  return schema;
+}
+async function buildCodeReviewAuthoringContext(args) {
+  const modelContract = readArtifactContract("review.code-review").modelContract;
+  if (!modelContract) {
+    throw new Error("review.code-review does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("review.code-review modelContract does not expose a schemaPath.");
+  }
+  const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
+  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const taskSchema = buildCodeReviewTaskSchema({
+    baseSchema,
+    scopeFiles: args.files,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    allowedNextActions
+  });
+  return {
+    phase: args.phase,
+    files: [...args.files],
+    reviewMode: { ...args.reviewMode },
+    knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
+    allowedNextActions,
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema
+  };
 }
 async function pathExists3(targetPath) {
   try {
@@ -32147,14 +33027,21 @@ function codeReviewModelSeverityCounts(findings) {
 function renderCodeReviewFinding(finding) {
   return `- [${finding.severity}][${finding.disposition}] \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
 }
-function renderCodeReviewModelContent(model, located) {
+function renderCodeReviewEvidenceCoverage(args) {
+  if (args.knownEvidenceArtifacts.length === 0) {
+    return ["none"];
+  }
+  return args.knownEvidenceArtifacts.map((artifactPath) => {
+    const coverage = args.model.evidenceCoverage[artifactPath];
+    return `${artifactPath} - ${coverage.status}: ${coverage.rationale}`;
+  });
+}
+function renderCodeReviewModelContent(model, located, authoringContext) {
   const severityCounts = codeReviewModelSeverityCounts(model.findings);
-  const evidenceReviewed = [
-    ...model.evidenceReviewed,
-    ...model.evidenceDeferrals.map(
-      (deferral) => `${deferral.artifact} (deferred: ${deferral.rationale})`
-    )
-  ];
+  const evidenceReviewed = renderCodeReviewEvidenceCoverage({
+    model,
+    knownEvidenceArtifacts: authoringContext.knownEvidenceArtifacts
+  });
   const findings = model.findings.length > 0 ? model.findings.map(renderCodeReviewFinding) : ["none"];
   return normalizeTextContent3(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Code Review
 
@@ -32162,14 +33049,14 @@ function renderCodeReviewModelContent(model, located) {
 
 ## Review Summary
 
-- Depth: ${model.depth}
-- Scope source: ${model.scopeSource}
-- File count: ${model.scopeReviewed.length}
+- Depth: ${authoringContext.reviewMode.depth}
+- Scope source: ${authoringContext.reviewMode.source}
+- File count: ${authoringContext.files.length}
 ${renderBulletList2(model.reviewSummary)}
 
 ## Scope Reviewed
 
-${renderBulletList2(model.scopeReviewed)}
+${renderBulletList2(authoringContext.files)}
 
 ## Evidence Reviewed
 
@@ -32200,142 +33087,481 @@ ${renderBulletList2(model.followUps)}
 - ${model.nextSafeAction}
 `);
 }
-async function codeReviewModelToContent(args) {
-  const model = args.model;
-  const issues = [];
-  if (typeof model !== "object" || model === null || Array.isArray(model)) {
-    return {
-      content: null,
-      issues: ["Code-review model must be a JSON object."]
-    };
+function ajvPathToModelPath(instancePath) {
+  if (instancePath.length === 0) {
+    return "model";
   }
-  const identityKeys = Object.keys(model).filter(
-    (key) => CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
-  );
-  if (identityKeys.length > 0) {
-    issues.push(
-      `Code-review model must not include MCP-owned identity keys: ${identityKeys.join(", ")}.`
+  return `model${instancePath.split("/").filter((segment) => segment.length > 0).map((segment) => {
+    const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+    return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+  }).join("")}`;
+}
+function schemaDiagnosticFromAjvError(error2) {
+  const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
+  const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
+  const basePath = ajvPathToModelPath(error2.instancePath);
+  const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  return modelDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error2.keyword}`,
+    message: error2.message ?? "Model does not match the code-review task schema.",
+    context: {
+      keyword: error2.keyword,
+      params: error2.params,
+      schemaPath: error2.schemaPath
+    },
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
+  });
+}
+function normalizeCodeReviewModel(model) {
+  const findings = Array.isArray(model.findings) ? model.findings : null;
+  const evidenceCoverage = asJsonObject(model.evidenceCoverage);
+  if (typeof model.verdict !== "string" || !Array.isArray(model.reviewSummary) || !Array.isArray(model.positiveSignals) || findings === null || evidenceCoverage === null || !Array.isArray(model.followUps) || typeof model.nextSafeAction !== "string") {
+    return null;
+  }
+  return {
+    verdict: model.verdict,
+    reviewSummary: model.reviewSummary.map(String).map((value) => value.trim()),
+    positiveSignals: model.positiveSignals.map(String).map((value) => value.trim()),
+    findings: findings.map((finding) => {
+      const findingObject = asJsonObject(finding) ?? {};
+      return {
+        severity: findingObject.severity,
+        disposition: findingObject.disposition,
+        location: String(findingObject.location ?? "").trim(),
+        evidence: String(findingObject.evidence ?? "").trim(),
+        impact: String(findingObject.impact ?? "").trim(),
+        recommendation: String(findingObject.recommendation ?? "").trim()
+      };
+    }),
+    evidenceCoverage: Object.fromEntries(
+      Object.entries(evidenceCoverage).map(([artifactPath, coverage]) => {
+        const coverageObject = asJsonObject(coverage) ?? {};
+        return [
+          artifactPath,
+          {
+            status: coverageObject.status,
+            rationale: String(coverageObject.rationale ?? "").trim()
+          }
+        ];
+      })
+    ),
+    followUps: model.followUps.map(String).map((value) => value.trim()),
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+function parseCodeReviewLocation(location) {
+  const match = location.match(CODE_REVIEW_LOCATION_PATTERN);
+  if (!match) {
+    return null;
+  }
+  const lineMatch = location.match(/:(\d+)(?:-(\d+))?$/);
+  if (!lineMatch) {
+    return null;
+  }
+  const file2 = location.slice(0, location.length - lineMatch[0].length);
+  const startLine = Number(lineMatch[1]);
+  const endLine = lineMatch[2] ? Number(lineMatch[2]) : startLine;
+  return {
+    file: file2,
+    startLine,
+    endLine
+  };
+}
+async function countFileLines(filePath) {
+  const content = await fs5.readFile(filePath, "utf8");
+  return content.length === 0 ? 0 : content.split(/\r\n|\r|\n/).length;
+}
+function addGenericValueDiagnostics(args) {
+  for (const [field, values] of [
+    ["reviewSummary", args.model.reviewSummary],
+    ["positiveSignals", args.model.positiveSignals]
+  ]) {
+    values.forEach((value, index) => {
+      if (isGenericNoneValue(value)) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.${field}[${index}]`,
+            code: "residual.generic_text",
+            message: `Code-review model ${field} cannot use generic none values.`,
+            context: { value },
+            suggestion: "Replace the generic value with concrete review evidence."
+          })
+        );
+      }
+    });
+  }
+  if (args.model.findings.length > 0 && args.model.followUps.every((followUp) => isGenericNoneValue(followUp))) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.followUps",
+        code: "residual.generic_text",
+        message: "Code-review model with findings must include concrete followUps instead of generic none.",
+        context: { findingCount: args.model.findings.length },
+        suggestion: "Add a concrete fix, test, or validation follow-up for the findings."
+      })
     );
   }
-  const modelContract = readArtifactContract("review.code-review").modelContract;
-  if (!modelContract) {
-    issues.push("review.code-review does not support structured model writes.");
-  } else {
-    const requiredKeys = Array.isArray(modelContract.jsonSchema.required) ? modelContract.jsonSchema.required.filter((key) => typeof key === "string") : [];
-    const properties = typeof modelContract.jsonSchema.properties === "object" && modelContract.jsonSchema.properties !== null ? modelContract.jsonSchema.properties : {};
-    const allowedKeys = new Set(Object.keys(properties));
-    const missingKeys = requiredKeys.filter((key) => !(key in model));
-    const unknownKeys = Object.keys(model).filter((key) => !allowedKeys.has(key));
-    if (missingKeys.length > 0) {
-      issues.push(
-        `Code-review model for ${modelContract.schemaId} is missing required fields: ${missingKeys.join(", ")}.`
-      );
-    }
-    if (unknownKeys.length > 0) {
-      issues.push(
-        `Code-review model for ${modelContract.schemaId} includes unsupported fields: ${unknownKeys.join(", ")}.`
-      );
-    }
-    const modelStrings = collectModelStringValues2(model);
-    const leakedSignals = modelContract.exampleLeakageSignals.filter(
-      (signal) => modelStrings.some((value) => value.includes(signal))
-    );
-    for (const signal of leakedSignals) {
-      issues.push(
-        `Code-review model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`
-      );
-    }
-    const placeholderSignals = modelStrings.filter(hasPlaceholderLanguage);
-    if (placeholderSignals.length > 0) {
-      issues.push(
-        `Code-review model still contains placeholder language: ${placeholderSignals.slice(0, 3).join("; ")}.`
-      );
-    }
-  }
-  if (issues.length > 0) {
-    return { content: null, issues };
-  }
-  const parsed = codeReviewStructuredModelSchema.safeParse(model);
-  if (!parsed.success) {
-    return {
-      content: null,
-      issues: parsed.error.issues.map(
-        (issue2) => `Code-review model field ${formatZodIssuePath2(issue2.path)} is invalid: ${issue2.message}.`
-      )
-    };
-  }
-  const parsedModel = parsed.data;
-  const scopeSet = new Set(args.scopeFiles);
-  const knownEvidenceArtifacts = collectKnownCodeReviewEvidenceArtifacts(
-    args.located,
-    args.reportPath
-  );
-  const citedEvidence = /* @__PURE__ */ new Set([
-    ...parsedModel.evidenceReviewed,
-    ...parsedModel.evidenceDeferrals.map((deferral) => deferral.artifact)
-  ]);
-  const missingEvidence = knownEvidenceArtifacts.filter(
-    (artifactPath) => !citedEvidence.has(artifactPath)
-  );
-  if (missingEvidence.length > 0) {
-    issues.push(
-      `Code-review model must cite or explicitly defer every saved phase evidence artifact. Missing: ${missingEvidence.join(", ")}.`
-    );
-  }
-  if (args.scopeFiles.length > 0) {
-    const reviewed = new Set(parsedModel.scopeReviewed);
-    const missingScopeFiles = args.scopeFiles.filter((scopeFile) => !reviewed.has(scopeFile));
-    if (missingScopeFiles.length > 0) {
-      issues.push(
-        `Code-review model scopeReviewed must list every resolved scoped file. Missing: ${missingScopeFiles.join(", ")}.`
-      );
-    }
-  }
-  const scopedFindingLocations = parsedModel.findings.map((finding) => ({
-    location: finding.location,
-    file: finding.location.replace(/:\d+(?:-\d+)?$/, "")
-  })).filter(({ file: file2 }) => scopeSet.size > 0 && !scopeSet.has(file2));
-  if (scopedFindingLocations.length > 0) {
-    issues.push(
-      `Code-review model findings must cite files inside the resolved review scope. Outside scope: ${scopedFindingLocations.map((entry) => entry.location).join(", ")}.`
-    );
-  }
-  if (parsedModel.findings.length > 0 && parsedModel.followUps.every((followUp) => isGenericNoneValue(followUp))) {
-    issues.push("Code-review model with findings must include concrete followUps instead of generic none.");
-  }
-  for (const field of ["reviewSummary", "scopeReviewed", "evidenceReviewed"]) {
-    const genericValues = parsedModel[field].filter(isGenericNoneValue);
-    if (genericValues.length > 0) {
-      issues.push(`Code-review model ${field} cannot use generic none values.`);
-    }
-  }
-  if (parsedModel.positiveSignals.some(isGenericNoneValue)) {
-    issues.push("Code-review model positiveSignals cannot use generic none values.");
-  }
-  parsedModel.findings.forEach((finding, index) => {
+  args.model.findings.forEach((finding, index) => {
     for (const field of ["evidence", "impact", "recommendation"]) {
       if (isGenericNoneValue(finding[field])) {
-        issues.push(
-          `Code-review model findings.${index}.${field} must be concrete instead of generic none.`
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].${field}`,
+            code: "residual.generic_text",
+            message: `Code-review model findings.${index}.${field} must be concrete instead of generic none.`,
+            context: { value: finding[field] },
+            suggestion: "Replace the generic value with specific line-backed review reasoning."
+          })
         );
       }
     }
   });
-  for (const deferral of parsedModel.evidenceDeferrals) {
-    if (isGenericNoneValue(deferral.rationale)) {
-      issues.push(
-        `Code-review model evidenceDeferrals rationale for ${deferral.artifact} must be concrete.`
+  for (const [artifactPath, coverage] of Object.entries(args.model.evidenceCoverage)) {
+    if (isGenericNoneValue(coverage.rationale)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.evidenceCoverage.${artifactPath}.rationale`,
+          code: "residual.generic_text",
+          message: `Code-review model evidenceCoverage rationale for ${artifactPath} must be concrete.`,
+          context: { artifactPath, value: coverage.rationale },
+          suggestion: "Explain why this exact evidence artifact was used, deferred, or irrelevant."
+        })
       );
     }
   }
-  issues.push(...await validateImplementedNextSafeAction(parsedModel.nextSafeAction));
-  if (issues.length > 0) {
-    return { content: null, issues };
+}
+function addPlaceholderDiagnostics(args) {
+  const modelContract = readArtifactContract("review.code-review").modelContract;
+  const stringEntries = collectModelStringEntries(args.model);
+  for (const entry of stringEntries) {
+    if (hasPlaceholderLanguage(entry.value)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.placeholder_text",
+          message: "Code-review model still contains placeholder language.",
+          context: { value: entry.value },
+          suggestion: "Replace placeholder wording with concrete review evidence."
+        })
+      );
+    }
   }
-  return {
-    content: renderCodeReviewModelContent(parsedModel, args.located),
-    issues: []
-  };
+  if (!modelContract) {
+    return;
+  }
+  for (const signal of modelContract.exampleLeakageSignals) {
+    const leakedEntry = stringEntries.find((entry) => entry.value.includes(signal));
+    if (leakedEntry) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: leakedEntry.path,
+          code: "residual.example_leakage",
+          message: `Code-review model copied example leakage signal from ${modelContract.schemaId}.`,
+          context: { signal },
+          suggestion: "Replace copied example wording with review-specific evidence."
+        })
+      );
+    }
+  }
+}
+function addEvidenceCoverageDiagnostics(args) {
+  const knownEvidence = new Set(args.knownEvidenceArtifacts);
+  const coverageKeys = Object.keys(args.model.evidenceCoverage);
+  const missing = args.knownEvidenceArtifacts.filter(
+    (artifactPath) => !(artifactPath in args.model.evidenceCoverage)
+  );
+  const unknown2 = coverageKeys.filter((artifactPath) => !knownEvidence.has(artifactPath));
+  if (missing.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.evidenceCoverage",
+        code: "residual.evidence_missing",
+        message: `Code-review model evidenceCoverage must include every known evidence artifact. Missing: ${missing.join(", ")}.`,
+        context: { missing },
+        suggestion: "Add exact evidenceCoverage keys from authoringContext.knownEvidenceArtifacts."
+      })
+    );
+  }
+  if (unknown2.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.evidenceCoverage",
+        code: "residual.evidence_unknown",
+        message: `Code-review model evidenceCoverage contains artifacts outside the live phase inventory: ${unknown2.join(", ")}.`,
+        context: { unknown: unknown2 },
+        suggestion: "Remove invented or stale evidence keys and use only exact known evidence artifact paths."
+      })
+    );
+  }
+}
+async function addFindingLocationDiagnostics(args) {
+  const scopeSet = new Set(args.scopeFiles);
+  const seenLocations = /* @__PURE__ */ new Map();
+  const rangesByFile = /* @__PURE__ */ new Map();
+  for (const [index, finding] of args.model.findings.entries()) {
+    const parsed = parseCodeReviewLocation(finding.location);
+    if (!parsed) {
+      continue;
+    }
+    if (scopeSet.size > 0 && !scopeSet.has(parsed.file)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.findings[${index}].location`,
+          code: "residual.location_out_of_scope",
+          message: `Code-review model finding location is outside the resolved review scope: ${finding.location}.`,
+          context: { location: finding.location, scopeFiles: args.scopeFiles },
+          suggestion: "Use a file:line citation from the resolved blueprint_review_scope.files list."
+        })
+      );
+    }
+    if (parsed.startLine < 1 || parsed.endLine < parsed.startLine) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.findings[${index}].location`,
+          code: "residual.invalid_line_range",
+          message: `Code-review model finding has an invalid line range: ${finding.location}.`,
+          context: { location: finding.location, startLine: parsed.startLine, endLine: parsed.endLine },
+          suggestion: "Use one-based line numbers with an end line greater than or equal to the start line."
+        })
+      );
+      continue;
+    }
+    let absolutePath;
+    try {
+      absolutePath = resolveRepoRelativePath(args.projectRoot, parsed.file);
+    } catch (error2) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.findings[${index}].location`,
+          code: "residual.location_path_invalid",
+          message: error2 instanceof Error ? error2.message : `Code-review model finding path could not be resolved: ${parsed.file}.`,
+          context: { location: finding.location, file: parsed.file },
+          suggestion: "Use a repo-relative file path inside the resolved review scope."
+        })
+      );
+      continue;
+    }
+    try {
+      const stats = await fs5.stat(absolutePath);
+      if (!stats.isFile()) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].location`,
+            code: "residual.location_not_file",
+            message: `Code-review model finding path is not a file: ${parsed.file}.`,
+            context: { location: finding.location, file: parsed.file },
+            suggestion: "Use a repo-relative file path to an existing file."
+          })
+        );
+        continue;
+      }
+      const lineCount = await countFileLines(absolutePath);
+      if (parsed.endLine > lineCount) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].location`,
+            code: "residual.line_range_missing",
+            message: `Code-review model finding line range exceeds ${parsed.file}'s ${lineCount} line(s): ${finding.location}.`,
+            context: { location: finding.location, file: parsed.file, lineCount },
+            suggestion: "Update the finding to cite an existing line or line range."
+          })
+        );
+      }
+    } catch {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.findings[${index}].location`,
+          code: "residual.location_missing_file",
+          message: `Code-review model finding cites a file that does not exist: ${parsed.file}.`,
+          context: { location: finding.location, file: parsed.file },
+          suggestion: "Use a file returned by blueprint_review_scope.files."
+        })
+      );
+    }
+    const previousIndex = seenLocations.get(finding.location);
+    if (previousIndex !== void 0) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.findings[${index}].location`,
+          code: "residual.duplicate_location",
+          message: `Code-review model repeats the same finding location: ${finding.location}.`,
+          context: { location: finding.location, firstFindingIndex: previousIndex, duplicateFindingIndex: index },
+          suggestion: "Merge duplicate findings or cite distinct line-backed evidence."
+        })
+      );
+    } else {
+      seenLocations.set(finding.location, index);
+    }
+    const ranges = rangesByFile.get(parsed.file) ?? [];
+    const overlapping = ranges.find(
+      (range) => parsed.startLine <= range.endLine && parsed.endLine >= range.startLine
+    );
+    if (overlapping) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.findings[${index}].location`,
+          code: "residual.conflicting_location",
+          message: `Code-review model has overlapping finding locations in ${parsed.file}.`,
+          context: {
+            file: parsed.file,
+            firstFindingIndex: overlapping.index,
+            conflictingFindingIndex: index
+          },
+          suggestion: "Merge overlapping findings unless they cite distinct, non-overlapping evidence."
+        })
+      );
+    }
+    ranges.push({
+      index,
+      startLine: parsed.startLine,
+      endLine: parsed.endLine
+    });
+    rangesByFile.set(parsed.file, ranges);
+  }
+}
+function addVerdictContradictionDiagnostics(args) {
+  const followUpFindings = args.model.findings.filter(
+    (finding) => finding.disposition === "follow-up"
+  );
+  const blockedFindings = args.model.findings.filter(
+    (finding) => finding.disposition === "blocked"
+  );
+  const nextAction = args.model.nextSafeAction;
+  if (args.model.verdict === "PASS" && args.model.findings.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.verdict",
+        code: "residual.verdict_contradiction",
+        message: "Code-review model verdict PASS contradicts non-empty findings.",
+        context: { verdict: args.model.verdict, findingCount: args.model.findings.length },
+        suggestion: "Use FOLLOW_UP or BLOCKED when findings remain, or remove non-actionable findings."
+      })
+    );
+  }
+  if (args.model.verdict === "FOLLOW_UP" && followUpFindings.length === 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.verdict",
+        code: "residual.verdict_contradiction",
+        message: "Code-review model verdict FOLLOW_UP requires at least one follow-up finding.",
+        context: { verdict: args.model.verdict },
+        suggestion: "Add a follow-up finding or change the verdict to PASS when no follow-up remains."
+      })
+    );
+  }
+  if (args.model.verdict === "BLOCKED" && blockedFindings.length === 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.verdict",
+        code: "residual.verdict_contradiction",
+        message: "Code-review model verdict BLOCKED requires at least one blocked finding.",
+        context: { verdict: args.model.verdict },
+        suggestion: "Mark the blocking finding disposition as blocked or use FOLLOW_UP for non-blocking fixes."
+      })
+    );
+  }
+  if (followUpFindings.length > 0 && nextAction === "/blu-progress") {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_contradiction",
+        message: "Code-review model routes to /blu-progress while follow-up findings remain.",
+        context: { nextSafeAction: nextAction, followUpFindingCount: followUpFindings.length },
+        suggestion: "Route to /blu-code-review-fix <phase> or another allowed repair/validation action."
+      })
+    );
+  }
+  if (args.model.findings.length === 0 && /\/blu-code-review-fix\b/i.test(nextAction)) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_contradiction",
+        message: "Code-review model routes to code-review-fix without findings.",
+        context: { nextSafeAction: nextAction },
+        suggestion: "Use /blu-progress or another allowed non-fix next action when no findings remain."
+      })
+    );
+  }
+}
+async function collectCodeReviewResidualDiagnostics(args) {
+  const diagnostics = [];
+  const identityKeys = Object.keys(args.model).filter(
+    (key) => CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
+  );
+  if (identityKeys.length > 0) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "residual.runtime_owned_field",
+        message: `Code-review model must not include MCP-owned identity or rendering keys: ${identityKeys.join(", ")}.`,
+        context: { identityKeys },
+        suggestion: "Remove runtime-owned fields and author only the review.code-review model fields."
+      })
+    );
+  }
+  addPlaceholderDiagnostics({ diagnostics, model: args.model });
+  if (!args.normalizedModel) {
+    return diagnostics;
+  }
+  addGenericValueDiagnostics({
+    diagnostics,
+    model: args.normalizedModel
+  });
+  addEvidenceCoverageDiagnostics({
+    diagnostics,
+    model: args.normalizedModel,
+    knownEvidenceArtifacts: args.authoringContext.knownEvidenceArtifacts
+  });
+  await addFindingLocationDiagnostics({
+    diagnostics,
+    projectRoot: args.projectRoot,
+    model: args.normalizedModel,
+    scopeFiles: args.authoringContext.files
+  });
+  addVerdictContradictionDiagnostics({
+    diagnostics,
+    model: args.normalizedModel
+  });
+  const nextSafeActionIssues = await validateImplementedNextSafeAction(
+    args.normalizedModel.nextSafeAction
+  );
+  for (const issue2 of nextSafeActionIssues) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_unimplemented",
+        message: issue2,
+        context: { nextSafeAction: args.normalizedModel.nextSafeAction },
+        suggestion: "Use one of authoringContext.allowedNextActions."
+      })
+    );
+  }
+  return diagnostics;
 }
 function parsePlanIdForSuffix(pathValue, phasePrefix2, suffix) {
   const match = pathValue.match(
@@ -32368,7 +33594,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path6.isAbsolute(requestedPath)) {
+    if (path7.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -32705,7 +33931,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path6.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -32739,7 +33965,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path6.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -32807,7 +34033,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path6.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -32828,20 +34054,39 @@ async function blueprintReviewScope(args) {
       warnings: [...warnings, ...reviewSettings.warnings]
     };
   }
-  return {
-    status: "ready",
-    phase: {
+  const phase = {
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom
+  };
+  const reviewMode = {
+    depth: reviewSettings.depth,
+    source
+  };
+  const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES["code-review"]}`;
+  const knownEvidenceArtifacts = collectKnownCodeReviewEvidenceArtifacts(
+    {
       phaseNumber: located.phaseNumber,
       phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path6.basename(located.phaseDir)}`,
+      phaseName: located.phaseName,
       phaseDir: located.phaseDir,
-      resolvedFrom: located.resolvedFrom
+      artifacts: located.artifacts
     },
+    reportPath
+  );
+  const authoringContext = args.includeAuthoringContext ? await buildCodeReviewAuthoringContext({
+    phase,
     files,
-    reviewMode: {
-      depth: reviewSettings.depth,
-      source
-    },
+    reviewMode,
+    knownEvidenceArtifacts
+  }) : void 0;
+  return {
+    status: "ready",
+    phase,
+    files,
+    reviewMode,
     confirmationRecommended: buildReviewScopeConfirmation({
       fileCount: files.length,
       summaryCount,
@@ -32850,8 +34095,147 @@ async function blueprintReviewScope(args) {
       source
     }),
     artifacts,
+    authoringContext,
     reason: null,
     warnings: [...warnings, ...reviewSettings.warnings]
+  };
+}
+async function blueprintReviewValidateModel(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const scoped = await blueprintReviewScope({
+    cwd: projectRoot,
+    phase: args.phase,
+    files: args.files,
+    depth: args.depth,
+    includeAuthoringContext: true
+  });
+  if (scoped.status !== "ready" || !scoped.phase || !scoped.authoringContext) {
+    const diagnostics2 = [
+      modelDiagnostic({
+        source: "scope",
+        path: "phase",
+        code: "scope.invalid",
+        message: scoped.reason ?? "Code-review model validation could not resolve a ready review scope.",
+        context: {
+          reason: scoped.reason,
+          warnings: scoped.warnings
+        },
+        suggestion: "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+      })
+    ];
+    return {
+      status: "invalid",
+      valid: false,
+      phase: scoped.phase,
+      files: scoped.files,
+      reviewMode: scoped.reviewMode,
+      schemaPath: null,
+      taskSchema: null,
+      diagnostics: diagnostics2,
+      diagnosticCounts: countDiagnostics(diagnostics2),
+      normalizedModel: null,
+      renderPreview: null,
+      warnings: scoped.warnings
+    };
+  }
+  const modelObject = asJsonObject(args.model);
+  const diagnostics = [];
+  if (!modelObject) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "schema",
+        path: "model",
+        code: "schema.type",
+        message: "Code-review model must be a JSON object.",
+        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        suggestion: "Return a JSON object that matches authoringContext.taskSchema."
+      })
+    );
+  }
+  let normalizedModel = null;
+  if (modelObject) {
+    const validate = createAjvValidator().compile(scoped.authoringContext.taskSchema);
+    const schemaValid = validate(modelObject);
+    if (!schemaValid) {
+      diagnostics.push(...(validate.errors ?? []).map(schemaDiagnosticFromAjvError));
+    } else {
+      normalizedModel = normalizeCodeReviewModel(modelObject);
+    }
+    diagnostics.push(
+      ...await collectCodeReviewResidualDiagnostics({
+        projectRoot,
+        model: modelObject,
+        normalizedModel,
+        authoringContext: scoped.authoringContext
+      })
+    );
+  }
+  let renderPreview = null;
+  if (diagnostics.length === 0 && normalizedModel) {
+    const located = {
+      phaseNumber: scoped.phase.phaseNumber,
+      phasePrefix: scoped.phase.phasePrefix,
+      phaseName: scoped.phase.phaseName,
+      phaseDir: scoped.phase.phaseDir,
+      artifacts: [
+        ...scoped.artifacts.plans,
+        ...scoped.artifacts.summaries,
+        scoped.artifacts.verification,
+        scoped.artifacts.uat,
+        scoped.artifacts.existingReview,
+        scoped.artifacts.security
+      ].filter((artifactPath) => artifactPath !== null)
+    };
+    const rendered = renderCodeReviewModelContent(
+      normalizedModel,
+      located,
+      scoped.authoringContext
+    );
+    const markdownValidation = validateReviewArtifactContent(rendered, "code-review");
+    const scopedValidation = validateReviewArtifactScopeCoverage(
+      rendered,
+      scoped.authoringContext.files
+    );
+    const evidenceCoverageIssues = validateCodeReviewEvidenceCoverage(
+      rendered,
+      scoped.authoringContext.knownEvidenceArtifacts
+    );
+    const nextSafeActionIssues = await validateCodeReviewNextSafeAction(rendered);
+    const markdownIssues = [
+      ...markdownValidation.issues,
+      ...scopedValidation.issues,
+      ...evidenceCoverageIssues,
+      ...nextSafeActionIssues
+    ];
+    for (const issue2 of markdownIssues) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue2,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the canonical review artifact contract."
+        })
+      );
+    }
+    if (markdownIssues.length === 0) {
+      renderPreview = rendered;
+    }
+  }
+  return {
+    status: diagnostics.length === 0 ? "valid" : "invalid",
+    valid: diagnostics.length === 0,
+    phase: scoped.phase,
+    files: scoped.files,
+    reviewMode: scoped.reviewMode,
+    schemaPath: scoped.authoringContext.schemaPath,
+    taskSchema: scoped.authoringContext.taskSchema,
+    diagnostics,
+    diagnosticCounts: countDiagnostics(diagnostics),
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    renderPreview,
+    warnings: scoped.warnings
   };
 }
 async function blueprintReviewRecord(args) {
@@ -32876,18 +34260,27 @@ async function blueprintReviewRecord(args) {
     phaseDir: located.phaseDir,
     artifacts: located.artifacts
   };
-  if (hasContent === hasModel) {
+  if (args.artifact === "code-review" && hasContent) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
       warnings: [
-        "Review artifact writes must supply exactly one of content or model."
+        "review.code-review is model-only; content is invalid. Call blueprint_review_validate_model with JSON first, then persist the same model through blueprint_review_record."
       ]
     });
   }
-  const normalizedScopeFiles = args.artifact === "code-review" ? await normalizeReviewFiles(projectRoot, args.scopeFiles ?? [], warnings, "review scope") : { files: [], rejected: false };
-  if (hasModel && args.artifact !== "code-review") {
+  if (args.artifact === "code-review" && !hasModel) {
+    return reviewRecordInvalidResult({
+      located: locatedReviewPhase,
+      artifact: args.artifact,
+      reportPath,
+      warnings: [
+        "review.code-review requires a structured model. Markdown content fallback is not supported."
+      ]
+    });
+  }
+  if (args.artifact !== "code-review" && hasModel) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
@@ -32897,34 +34290,39 @@ async function blueprintReviewRecord(args) {
       ]
     });
   }
-  if (args.artifact === "code-review" && normalizedScopeFiles.rejected) {
+  if (args.artifact !== "code-review" && !hasContent) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
       warnings: [
-        ...warnings,
-        "Code-review persistence received invalid scoped repo files. Re-run with the repo-relative `files` returned by blueprint_review_scope."
+        "Review artifact writes must supply Markdown content for non-code-review artifacts."
       ]
     });
   }
   let content = args.content ?? "";
-  if (hasModel) {
-    const modelRender = await codeReviewModelToContent({
-      model: args.model,
-      located: locatedReviewPhase,
-      reportPath,
-      scopeFiles: normalizedScopeFiles.files
+  let codeReviewScopeFiles = [];
+  if (args.artifact === "code-review") {
+    const validation2 = await blueprintReviewValidateModel({
+      cwd: projectRoot,
+      phase: args.phase,
+      files: args.scopeFiles,
+      depth: args.depth,
+      model: args.model
     });
-    if (!modelRender.content) {
+    if (!validation2.valid || !validation2.renderPreview) {
       return reviewRecordInvalidResult({
         located: locatedReviewPhase,
         artifact: args.artifact,
         reportPath,
-        warnings: [...warnings, ...modelRender.issues]
+        warnings: [
+          ...warnings,
+          ...validation2.diagnostics.map(formatReviewDiagnostic)
+        ]
       });
     }
-    content = modelRender.content;
+    content = validation2.renderPreview;
+    codeReviewScopeFiles = validation2.files;
   }
   const prepared = prepareTextForPersistence(normalizeTextContent3(content), {
     label: reportPath
@@ -32980,10 +34378,10 @@ async function blueprintReviewRecord(args) {
       warnings: [...warnings, ...nextSafeActionIssues]
     });
   }
-  if (args.artifact === "code-review" && normalizedScopeFiles.files.length > 0) {
+  if (args.artifact === "code-review" && codeReviewScopeFiles.length > 0) {
     const scopedValidation = validateReviewArtifactScopeCoverage(
       normalizedContent,
-      normalizedScopeFiles.files
+      codeReviewScopeFiles
     );
     if (!scopedValidation.valid) {
       return reviewRecordInvalidResult({
@@ -33118,10 +34516,11 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, codeReviewModelStringSchema, codeReviewModelLineLocationSchema, codeReviewStructuredModelSchema, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
+    import__ = __toESM(require__(), 1);
     init_v4();
     init_security();
     init_artifact_contracts();
@@ -33148,20 +34547,29 @@ var init_review = __esm({
         "ui-review"
       ]),
       content: string2().optional(),
-      model: record(string2(), unknown()).optional(),
+      model: unknown().optional(),
       overwrite: boolean2().optional(),
-      scopeFiles: array(string2()).optional()
+      scopeFiles: array(string2()).optional(),
+      depth: _enum(["quick", "standard", "deep"]).optional()
     };
     reviewScopeInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
       files: array(string2()).optional(),
-      depth: _enum(["quick", "standard", "deep"]).optional()
+      depth: _enum(["quick", "standard", "deep"]).optional(),
+      includeAuthoringContext: boolean2().optional()
     };
     reviewLoadFindingsInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["code-review", "peer-review", "review-fix", "security", "ui-review"]).optional()
+    };
+    reviewValidateModelInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema2.optional(),
+      files: array(string2()).optional(),
+      depth: _enum(["quick", "standard", "deep"]).optional(),
+      model: unknown()
     };
     CODE_REVIEW_MODEL_IDENTITY_KEYS = /* @__PURE__ */ new Set([
       "cwd",
@@ -33175,38 +34583,15 @@ var init_review = __esm({
       "reportPath",
       "content"
     ]);
-    codeReviewModelStringSchema = string2().min(1);
-    codeReviewModelLineLocationSchema = codeReviewModelStringSchema.regex(
-      /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?$/,
-      "must be a repo-relative file:line or file:line-line reference"
-    );
-    codeReviewStructuredModelSchema = object2({
-      verdict: _enum(["PASS", "FOLLOW_UP", "BLOCKED"]),
-      depth: _enum(["quick", "standard", "deep"]),
-      scopeSource: _enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]),
-      reviewSummary: array(codeReviewModelStringSchema).min(1),
-      scopeReviewed: array(codeReviewModelStringSchema).min(1),
-      evidenceReviewed: array(codeReviewModelStringSchema).min(1),
-      evidenceDeferrals: array(
-        object2({
-          artifact: codeReviewModelStringSchema,
-          rationale: codeReviewModelStringSchema
-        }).strict()
-      ).default([]),
-      positiveSignals: array(codeReviewModelStringSchema).min(1),
-      findings: array(
-        object2({
-          severity: _enum(["critical", "high", "medium", "low", "unknown"]),
-          disposition: _enum(["follow-up", "observation", "blocked", "accepted-risk"]),
-          location: codeReviewModelLineLocationSchema,
-          evidence: codeReviewModelStringSchema,
-          impact: codeReviewModelStringSchema,
-          recommendation: codeReviewModelStringSchema
-        }).strict()
-      ),
-      followUps: array(codeReviewModelStringSchema).min(1),
-      nextSafeAction: codeReviewModelStringSchema
-    }).strict();
+    CODE_REVIEW_LOCATION_PATTERN = /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
+    CODE_REVIEW_NEXT_ACTION_BUILDERS = [
+      (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
+      (phaseNumber) => `/blu-secure-phase ${phaseNumber}`,
+      (phaseNumber) => `/blu-verify-work ${phaseNumber}`,
+      (phaseNumber) => `/blu-add-tests ${phaseNumber}`,
+      (phaseNumber) => `/blu-validate-phase ${phaseNumber}`,
+      () => "/blu-progress"
+    ];
     implementedCommandNamesPromise2 = null;
     REVIEW_SCOPE_CONFIRMATION_THRESHOLDS = {
       broadFileCount: 5,
@@ -33227,8 +34612,14 @@ var init_review = __esm({
         handler: async (args) => blueprintReviewLoadFindings(args)
       },
       {
+        name: "blueprint_review_validate_model",
+        description: "Validate a model-authored review.code-review JSON payload against the scoped task schema, residual quality checks, and canonical Markdown render before persistence.",
+        inputSchema: reviewValidateModelInputSchema,
+        handler: async (args) => blueprintReviewValidateModel(args)
+      },
+      {
         name: "blueprint_review_record",
-        description: "Persist a phase-scoped Blueprint review artifact such as SECURITY, REVIEW, or UI-REVIEW with overwrite protection.",
+        description: "Persist a phase-scoped Blueprint review artifact such as SECURITY, REVIEW, or UI-REVIEW with overwrite protection; code-review persists model-authored JSON only after validator replay.",
         inputSchema: reviewRecordInputSchema,
         handler: async (args) => blueprintReviewRecord(args)
       }
@@ -33240,7 +34631,7 @@ var init_review = __esm({
 import { execFile } from "node:child_process";
 import { promises as fs6 } from "node:fs";
 import os from "node:os";
-import path7 from "node:path";
+import path8 from "node:path";
 import { promisify } from "node:util";
 function defaultUpdatePlanMode(host) {
   return host === "gemini" ? "ask_user" : "manual";
@@ -33251,7 +34642,7 @@ function expandHomePath(value) {
     return os.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path7.join(os.homedir(), trimmed.slice(2));
+    return path8.join(os.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -33334,19 +34725,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path7.resolve(extensionPath);
+  const normalizedExtensionPath = path8.resolve(extensionPath);
   if (!await pathExists4(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path7.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path8.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path7.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path8.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path7.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path8.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -33604,7 +34995,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env);
-  const extensionPath = runtimeHost.extensionPath ? path7.resolve(expandHomePath(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path8.resolve(expandHomePath(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -33847,7 +35238,7 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path7.basename(plan.savedPaths.checklistPath)
+      label: path8.basename(plan.savedPaths.checklistPath)
     });
     if (await pathExists4(plan.savedPaths.metadataPath)) {
       await fs6.rename(plan.savedPaths.metadataPath, metadataBackupPath);
@@ -33903,9 +35294,9 @@ async function blueprintUpdatePlan(args = {}, env = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env);
   const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env);
-  const updatesDir = path7.resolve(expandHomePath(runtimeHost.updatesDir));
-  const metadataPath = path7.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path7.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const updatesDir = path8.resolve(expandHomePath(runtimeHost.updatesDir));
+  const metadataPath = path8.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path8.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const created = !(await pathExists4(metadataPath) || await pathExists4(checklistPath));
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const savedPaths = {
@@ -33974,7 +35365,7 @@ import { execFile as execFile2 } from "node:child_process";
 import { createHash } from "node:crypto";
 import { promises as fs7 } from "node:fs";
 import os2 from "node:os";
-import path8 from "node:path";
+import path9 from "node:path";
 import { promisify as promisify2 } from "node:util";
 function expandHomePath2(value) {
   const trimmed = value.trim();
@@ -33982,7 +35373,7 @@ function expandHomePath2(value) {
     return os2.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path8.join(os2.homedir(), trimmed.slice(2));
+    return path9.join(os2.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -34023,7 +35414,7 @@ async function canonicalizePath(candidatePath) {
   try {
     return await fs7.realpath(candidatePath);
   } catch {
-    return path8.resolve(candidatePath);
+    return path9.resolve(candidatePath);
   }
 }
 function normalizeTextForComparison(value) {
@@ -34227,7 +35618,7 @@ function renderWorkstreamsIndex(workstreams) {
 }
 async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await fs7.mkdir(path8.dirname(filePath), { recursive: true });
+  await fs7.mkdir(path9.dirname(filePath), { recursive: true });
   await fs7.writeFile(tempPath, content, "utf8");
   await fs7.rename(tempPath, filePath);
 }
@@ -34267,7 +35658,7 @@ async function restoreFileSnapshots(snapshots) {
       await fs7.rm(snapshot.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs7.mkdir(path8.dirname(snapshot.path), { recursive: true });
+    await fs7.mkdir(path9.dirname(snapshot.path), { recursive: true });
     await fs7.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
   }
 }
@@ -34284,7 +35675,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path8.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path9.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -34325,7 +35716,7 @@ function buildResumeStatePatch(snapshot) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path8.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path9.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   if (!await pathExists5(blueprintRoot)) {
@@ -34370,7 +35761,7 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path8.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      const statePath = path9.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
       if (!await pathExists5(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
@@ -34482,7 +35873,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path8.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path9.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -34539,7 +35930,7 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path8.resolve(injectedFailure) === path8.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path9.resolve(injectedFailure) === path9.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
@@ -34725,10 +36116,10 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path8.dirname(registryPath);
-  const tempPath = path8.join(
+  const directory = path9.dirname(registryPath);
+  const tempPath = path9.join(
     directory,
-    `${path8.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path9.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
   await fs7.mkdir(directory, { recursive: true });
   await fs7.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
@@ -34743,9 +36134,9 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     await fs7.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path8.join(
+  const backupPath = path9.join(
     directory,
-    `${path8.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path9.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
@@ -34766,10 +36157,10 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   await fs7.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path8.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path8.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 async function writeWorkspaceRegistryLockFile(filePath, contents) {
   await fs7.writeFile(filePath, `${contents}
@@ -34831,7 +36222,7 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs7.mkdir(path8.dirname(lockPath), { recursive: true });
+  await fs7.mkdir(path9.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
       await fs7.mkdir(lockPath);
@@ -34909,16 +36300,16 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path8.join(registryPath, "index.json");
+  return path9.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path8.join(registryPath, `${patchId}.json`);
+  return path9.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path8.join(registryPath, `${patchId}.patch`);
+  return path9.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path8.join(registryPath, `${patchId}.audit.ndjson`);
+  return path9.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -34927,11 +36318,11 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath = path8.isAbsolute(trackedFile) ? path8.resolve(trackedFile) : path8.resolve(repoRoot, trackedFile);
+    const candidatePath = path9.isAbsolute(trackedFile) ? path9.resolve(trackedFile) : path9.resolve(repoRoot, trackedFile);
     ensurePathWithinRootSync(repoRoot, candidatePath, {
       label: "Patch tracked file"
     });
-    const relativePath = path8.relative(repoRoot, candidatePath).replaceAll(path8.sep, "/");
+    const relativePath = path9.relative(repoRoot, candidatePath).replaceAll(path9.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -35067,9 +36458,9 @@ function assertNotInstalledExtensionTarget(repoRoot) {
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path8.resolve(repoRoot);
-  const resolvedExtensionPath = path8.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path8.sep}`)) {
+  const resolvedRepoRoot = path9.resolve(repoRoot);
+  const resolvedExtensionPath = path9.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path9.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -35089,7 +36480,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path8.basename(repoRoot);
+  const repoName = path9.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -35150,14 +36541,14 @@ async function resolveDefaultWorkspaceRoot(cwd) {
       throw error2;
     }
   }
-  return path8.join(os2.homedir(), "blueprint-workspaces");
+  return path9.join(os2.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path8.resolve(expandHomePath2(args.path));
+    return path9.resolve(expandHomePath2(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path8.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path9.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -35187,18 +36578,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath = path8.resolve(cwd ?? process.cwd(), expandHomePath2(repoInput));
+    const candidatePath = path9.resolve(cwd ?? process.cwd(), expandHomePath2(repoInput));
     const sourcePath = await resolveGitRepoRoot(candidatePath);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path8.basename(sourcePath)),
+      name: slugifyRepoName(path9.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists5(path8.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists5(path9.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -35220,10 +36611,10 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path8.resolve(cwd ?? process.cwd(), expandHomePath2(value));
+  return path9.resolve(cwd ?? process.cwd(), expandHomePath2(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path8.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path9.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
 function assertNotInstalledExtensionPath(candidatePath, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
@@ -35232,7 +36623,7 @@ function assertNotInstalledExtensionPath(candidatePath, label) {
   }
   if (isPathWithinRootSync(extensionPath, candidatePath)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path8.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path9.resolve(extensionPath)}`
     );
   }
 }
@@ -35259,7 +36650,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path8.join(workspacePath, candidateName);
+  const memberPath = path9.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
@@ -35382,7 +36773,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path8.resolve(workspace.path) === workspacePath
+      (workspace) => path9.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -35411,12 +36802,12 @@ async function ensurePathRemoved(targetPath, label) {
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path8.resolve(registryEntry.path) !== path8.resolve(manifestEntry.path) || path8.resolve(registryEntry.manifestPath) !== path8.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path9.resolve(registryEntry.path) !== path9.resolve(manifestEntry.path) || path9.resolve(registryEntry.manifestPath) !== path9.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path8.resolve(member.sourcePath) === path8.resolve(manifestMember.sourcePath) && path8.resolve(member.path) === path8.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path9.resolve(member.sourcePath) === path9.resolve(manifestMember.sourcePath) && path9.resolve(member.path) === path9.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
@@ -35434,9 +36825,9 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path8.resolve(entry.path);
-  const manifestPath = path8.resolve(entry.manifestPath);
-  const expectedManifestPath = path8.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path9.resolve(entry.path);
+  const manifestPath = path9.resolve(entry.manifestPath);
+  const expectedManifestPath = path9.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
@@ -35460,7 +36851,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path8.resolve(member.path);
+    const memberPath = path9.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
@@ -35648,7 +37039,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path8.resolve(workspace.path) === path8.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path9.resolve(workspace.path) === path9.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -35658,7 +37049,7 @@ async function blueprintWorkspaceCreate(args) {
     const usedTargetNames = /* @__PURE__ */ new Set();
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     try {
-      await fs7.mkdir(path8.dirname(workspacePath), { recursive: true });
+      await fs7.mkdir(path9.dirname(workspacePath), { recursive: true });
       await fs7.mkdir(workspacePath, { recursive: false });
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
@@ -36094,7 +37485,7 @@ async function blueprintPatchRecord(args) {
     sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
     compatibility = {
       host: args.compatibility?.host ?? runtimeHost.host,
-      repoRootName: args.compatibility?.repoRootName ?? path8.basename(repoRoot),
+      repoRootName: args.compatibility?.repoRootName ?? path9.basename(repoRoot),
       remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
     };
   }
@@ -36104,9 +37495,9 @@ async function blueprintPatchRecord(args) {
     label: args.label?.trim() || null,
     createdAt: existingManifest?.createdAt ?? createdAt,
     sourceVersion,
-    repoRootName: path8.basename(repoRoot),
+    repoRootName: path9.basename(repoRoot),
     repoRemote,
-    patchFile: path8.basename(patchPath),
+    patchFile: path9.basename(patchPath),
     patchHash,
     trackedFiles,
     compatibility,
@@ -36127,7 +37518,7 @@ async function blueprintPatchRecord(args) {
     timestamp: createdAt,
     action: args.audit?.action ?? "record",
     outcome: args.audit?.outcome ?? "recorded",
-    cwd: path8.resolve(args.cwd ?? process.cwd()),
+    cwd: path9.resolve(args.cwd ?? process.cwd()),
     repoRoot,
     targetHead: args.audit?.targetHead ?? sourceVersion,
     trackedFiles,
@@ -36392,7 +37783,7 @@ import { execFile as execFile3 } from "node:child_process";
 import { createHash as createHash2 } from "node:crypto";
 import { promises as fs8 } from "node:fs";
 import os3 from "node:os";
-import path9 from "node:path";
+import path10 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function stableHash(value) {
   return createHash2("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
@@ -36467,7 +37858,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path9.posix.basename(filePath);
+  const basename = path10.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -36477,7 +37868,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path9.posix.extname(filePath).toLowerCase();
+  const extension = path10.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -36524,8 +37915,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path9.posix.basename(normalizedPath);
-  const extension = path9.posix.extname(normalizedPath).toLowerCase();
+  const basename = path10.posix.basename(normalizedPath);
+  const extension = path10.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -37213,7 +38604,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path9.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path10.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -37256,7 +38647,7 @@ function expandHomePath3(value) {
     return os3.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path9.join(os3.homedir(), trimmed.slice(2));
+    return path10.join(os3.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -37273,7 +38664,7 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath = path9.isAbsolute(trimmed) ? trimmed : path9.resolve(projectRoot, trimmed);
+  const candidatePath = path10.isAbsolute(trimmed) ? trimmed : path10.resolve(projectRoot, trimmed);
   return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
@@ -37338,15 +38729,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path9.resolve(
+  return path10.resolve(
     expandHomePath3(
-      path9.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+      path10.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path9.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path10.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -37726,7 +39117,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path9.join(projectRoot, root);
+    const absoluteRoot = path10.join(projectRoot, root);
     if (!await pathExists6(absoluteRoot)) {
       continue;
     }
@@ -37736,7 +39127,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists6(path9.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists6(path10.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
@@ -37744,7 +39135,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
   return uniqueSorted2(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path9.join(projectRoot, "package.json");
+  const packagePath = path10.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -37781,7 +39172,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent(
-        path9.join(projectRoot, workspacePath, "package.json"),
+        path10.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -37811,7 +39202,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent(
-      path9.join(projectRoot, workspacePath, "package.json"),
+      path10.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -37845,7 +39236,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path9.join(projectRoot, "package-lock.json");
+  const lockPath = path10.join(projectRoot, "package-lock.json");
   if (!await pathExists6(lockPath)) {
     return false;
   }
@@ -37899,7 +39290,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists6(path9.join(projectRoot, root))) {
+    if (await pathExists6(path10.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -37908,7 +39299,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path9.join(projectRoot, current.relativePath);
+    const absolutePath = path10.join(projectRoot, current.relativePath);
     const entries = await fs8.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
@@ -37923,13 +39314,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path9.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path10.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path9.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path10.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -37939,7 +39330,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path9.posix.normalize(path9.posix.join(path9.posix.dirname(importerPath), specifier));
+  const base = path10.posix.normalize(path10.posix.join(path10.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -37985,7 +39376,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path9.join(projectRoot, file2);
+    const absolutePath = path10.join(projectRoot, file2);
     if (!await pathExists6(absolutePath)) {
       continue;
     }
@@ -38962,7 +40353,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = mcpOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists6(path9.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists6(path10.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -39470,7 +40861,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path9.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path10.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -39890,7 +41281,7 @@ async function blueprintImpactScopeResolve(args = {}) {
   return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path9.join(projectRoot, "package.json");
+  const packageJsonPath = path10.join(projectRoot, "package.json");
   if (!await pathExists6(packageJsonPath)) {
     return {
       loaded: false,
@@ -39933,7 +41324,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists6(path9.join(projectRoot, candidate))) {
+    if (await pathExists6(path10.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -40548,17 +41939,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path9.isAbsolute(trimmed) || path9.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path10.isAbsolute(trimmed) || path10.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path9.posix.normalize(slashNormalized);
+  const normalizedPath = path10.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path9.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path10.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -40579,7 +41970,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path9.isAbsolute(trimmed) || path9.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path10.isAbsolute(trimmed) || path10.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -41315,10 +42706,10 @@ function renderImpactHumanText(report, verbosity) {
 `;
 }
 function ensureImpactBundleDir(projectRoot, impactId) {
-  const impactRoot = ensurePathWithinRootSync(projectRoot, path9.join(projectRoot, IMPACT_REPORT_ROOT), {
+  const impactRoot = ensurePathWithinRootSync(projectRoot, path10.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
-  const impactDir = ensurePathWithinRootSync(impactRoot, path9.join(impactRoot, impactId), {
+  const impactDir = ensurePathWithinRootSync(impactRoot, path10.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
@@ -41330,7 +42721,7 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
@@ -41356,7 +42747,7 @@ async function pruneImpactStaleBundleFiles(projectRoot, impactDir, files) {
   const entries = await fs8.readdir(impactDir, { withFileTypes: true });
   for (const entry of entries) {
     if (!files.has(entry.name)) {
-      const stalePath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, entry.name), {
+      const stalePath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, entry.name), {
         label: "stale impact report file"
       });
       ensurePathWithinRootSync(projectRoot, stalePath, { label: "stale impact report file" });
@@ -41366,7 +42757,7 @@ async function pruneImpactStaleBundleFiles(projectRoot, impactDir, files) {
 }
 async function writeImpactBundleFilesAtomically(projectRoot, impactDir, files) {
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
@@ -41377,7 +42768,7 @@ async function writeImpactBundleFilesAtomically(projectRoot, impactDir, files) {
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path9.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
   if (!await pathExists6(reportPath)) {
@@ -42183,7 +43574,7 @@ __export(project_exports, {
   projectToolDefinitions: () => projectToolDefinitions
 });
 import { promises as fs9 } from "node:fs";
-import path10 from "node:path";
+import path11 from "node:path";
 function bundledUrl(relativePath) {
   return new URL(`../../../${relativePath}`, import.meta.url);
 }
@@ -42197,7 +43588,7 @@ async function pathExists7(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs9.readFile(path10.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs9.readFile(path11.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -42209,7 +43600,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs9.readFile(path10.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs9.readFile(path11.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -42224,13 +43615,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path10.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path11.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs9.readFile(path10.join(projectRoot, candidate), "utf8");
+      const raw = await fs9.readFile(path11.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -43232,8 +44623,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path11, errorMaps, issueData } = params;
-  const fullPath = [...path11, ...issueData.path || []];
+  const { data, path: path12, errorMaps, issueData } = params;
+  const fullPath = [...path12, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -43348,11 +44739,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path11, key) {
+  constructor(parent, value, path12, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path11;
+    this._path = path12;
     this._key = key;
   }
   get path() {
@@ -52695,7 +54086,7 @@ import { pathToFileURL } from "node:url";
 // src/mcp/write-failure-log.ts
 init_artifacts();
 import { promises as fs2 } from "node:fs";
-import path4 from "node:path";
+import path5 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
 var LOG_SCHEMA_VERSION = 1;
@@ -52775,8 +54166,8 @@ function toLoggedError(error2) {
 async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path4.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs2.mkdir(path4.dirname(absoluteLogPath), { recursive: true });
+    const absoluteLogPath = path5.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs2.mkdir(path5.dirname(absoluteLogPath), { recursive: true });
     await fs2.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
@@ -53020,7 +54411,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path11) => typeof path11 === "string" && path11.length > 0)
+    ].filter((path12) => typeof path12 === "string" && path12.length > 0)
   );
   for (const candidatePath of candidatePaths) {
     const content = await readRelativePath(candidatePath);
@@ -53608,7 +54999,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path11 = findSummaryPath(result);
+  const path12 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -53624,8 +55015,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path11) {
-    details.push(`at \`${path11}\``);
+  if (path12) {
+    details.push(`at \`${path12}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
