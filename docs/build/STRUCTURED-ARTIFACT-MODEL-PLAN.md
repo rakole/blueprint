@@ -95,6 +95,10 @@ MCP must reject the model when:
 - example phrases or placeholder language survive
 - next action points to non-implemented commands
 
+Completion note:
+
+- 2026-04-29: Completed the `phase.plan` structured model pilot. `blueprint_phase_plan_write` now accepts structured `model` input for `phase.plan`, keeps phase identity and auto-assigned `planId` ownership in MCP args, validates identity-key exclusion, required and unknown fields, copied examples, typed schema shape, requirement/evidence/file coverage, objective verification, and implemented-command references, renders canonical PLAN Markdown with visible coverage ledgers, and then reuses the existing plan artifact validation and persistence path. `report.quick-run` model rendering remains intentionally out of scope for this unit.
+
 ### 4. Pilot `report.quick-run` Structured Model
 
 Use a generic sectioned report model for simple reports:

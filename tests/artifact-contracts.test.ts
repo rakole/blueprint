@@ -134,6 +134,12 @@ test("artifact contract read exposes structured model contracts for phase plan a
       /auto-assigned by the existing phase plan writer/i.test(binding)
     )
   );
+  const planModelProperties = planContract.contract.modelContract?.jsonSchema.properties as
+    | Record<string, unknown>
+    | undefined;
+  assert.equal(Boolean(planModelProperties && "planId" in planModelProperties), false);
+  assert.ok(planModelProperties && "requirementCoverage" in planModelProperties);
+  assert.ok(planModelProperties && "fileSurfaceCoverage" in planModelProperties);
 
   assert.equal(
     quickRunContract.contract.modelContract?.schemaId,
