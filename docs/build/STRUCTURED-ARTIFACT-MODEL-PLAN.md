@@ -62,6 +62,10 @@ Each should accept:
 
 Validation rule: exactly one must be supplied. Existing `content` behavior stays available.
 
+Completion note:
+
+- 2026-04-29: Completed input-surface extension for this unit. `blueprint_phase_plan_write` and `blueprint_artifact_report_write` now accept optional `content` or `model` inputs, enforce that exactly one is supplied, preserve existing Markdown `content` persistence, and return explicit `invalid` not-yet-supported results for `model`-only writes until the later structured rendering units land.
+
 ### 3. Pilot `phase.plan` Structured Model
 
 Use MCP-owned identity:

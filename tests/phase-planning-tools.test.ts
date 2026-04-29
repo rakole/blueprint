@@ -489,6 +489,42 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.match(writtenBody, /Plan 02/);
 });
 
+test("phase plan writes accept the content or model input surface with exact-one validation", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const missingInput = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const bothInputs = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    model: { title: "Plan 01" }
+  });
+  const modelOnly = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: { title: "Plan 01" }
+  });
+  const index = await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(missingInput.status, "invalid");
+  assert.match(missingInput.validation.issues.join("\n"), /exactly one of content or model/i);
+  assert.equal(bothInputs.status, "invalid");
+  assert.match(bothInputs.validation.issues.join("\n"), /exactly one of content or model/i);
+  assert.equal(modelOnly.status, "invalid");
+  assert.match(modelOnly.validation.issues.join("\n"), /not yet supported/i);
+  assert.equal(modelOnly.written, false);
+  assert.deepEqual(index.plans, []);
+});
+
 test("phase planning strict writes reject hollow verification and must-have sections", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

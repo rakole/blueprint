@@ -653,3 +653,36 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
   assert.match(roadmapBody, /- \[x\] \*\*Phase 3: Lifecycle Pilot\*\* - Prove lifecycle pilot coherence/);
   assert.match(roadmapBody, /### Phase 3: Lifecycle Pilot[\s\S]*\*\*Status\*\*: completed/);
 });
+
+test("artifact report writes accept the content or model input surface with exact-one validation", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const reportPath = path.join(repoPath, ".blueprint/reports/quick-run-latest.md");
+  const missingInput = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "quick-run-latest"
+  });
+  const bothInputs = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    content: validAddTestsReportContent(),
+    model: { taskSummary: ["Completed a focused quick run."] }
+  });
+  const modelOnly = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: { taskSummary: ["Completed a focused quick run."] }
+  });
+
+  assert.equal(missingInput.status, "invalid");
+  assert.match(missingInput.warnings.join("\n"), /exactly one of content or model/i);
+  assert.equal(bothInputs.status, "invalid");
+  assert.match(bothInputs.warnings.join("\n"), /exactly one of content or model/i);
+  assert.equal(modelOnly.status, "invalid");
+  assert.match(modelOnly.warnings.join("\n"), /not yet supported/i);
+  assert.equal(modelOnly.written, false);
+  await assert.rejects(readFile(reportPath, "utf8"), /ENOENT/);
+});

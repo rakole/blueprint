@@ -192,7 +192,8 @@ type ArtifactContractReadArgs = {
 type ArtifactReportWriteArgs = {
     cwd?: string;
     reportName: string;
-    content: string;
+    content?: string;
+    model?: Record<string, unknown>;
     overwrite?: boolean;
 };
 type ArtifactSummaryDigestSection = {
@@ -461,8 +462,8 @@ export declare const artifactToolDefinitions: ({
             requirements: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
                 scope: z.ZodOptional<z.ZodEnum<{
-                    committed: "committed";
                     deferred: "deferred";
+                    committed: "committed";
                     out_of_scope: "out_of_scope";
                 }>>;
                 group: z.ZodOptional<z.ZodString>;
@@ -587,7 +588,8 @@ export declare const artifactToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         reportName: z.ZodString;
-        content: z.ZodString;
+        content: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<ArtifactReportWriteResult>;
