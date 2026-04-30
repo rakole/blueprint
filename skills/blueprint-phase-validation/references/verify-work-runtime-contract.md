@@ -14,7 +14,7 @@ bounded read-only UAT analysis when a suitable agent is available.
 | Read | Gather saved execution evidence, ready verification evidence, existing UAT state, effective config, artifact health, and current state. | Summary index, every completed valid summary body, `verification` read, `uat` read, config, artifact validation, and state load results. |
 | Decide | Select view, resume, update, create, or stop behavior. | Missing prerequisites, existing UAT decision, overwrite gate, verifier and Nyquist config, active checkpoint, and next safe action. |
 | Execute | Run bounded conversational UAT over user-observable outcomes. | Test queue, current test, response classification, result counts, structured gaps, blocked prerequisites, and verifier result. |
-| Persist | Render and write only the canonical UAT artifact. | `phase.uat` authoring context, `modelContract`, locked markers, structured render result, and `blueprint_phase_validation_write` response. |
+| Persist | Validate and write only the canonical UAT artifact. | `phase.uat` authoring context, `modelContract`, narrowed `taskSchema`, model validation result, and `blueprint_phase_validation_write` response. |
 | Validate | Re-validate persisted Blueprint artifacts and repair if needed. | `blueprint_artifact_validate.valid`, write status, issues, warnings, and suggested repairs. |
 | Route | Update state and report the next implemented action. | `blueprint_state_update` plus saved UAT status, checkpoint state, blockers, and readiness. |
 
@@ -35,7 +35,8 @@ the authority for control flow.
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
 | `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. |
 | `blueprint_phase_validation_authoring_context` with `artifact: "uat"` | Mandatory summary evidence, ready-verification prerequisite status, existing UAT baseline, allowed values, and routing rules. |
-| `blueprint_phase_validation_render` with `artifact: "uat"` | Canonical UAT markdown rendering and pre-write validation from the structured UAT payload. |
+| `blueprint_phase_validation_validate_model` with `artifact: "uat"` | Canonical UAT schema validation, narrowed runtime checks, diagnostics, and render preview from the structured UAT payload. |
+| `blueprint_phase_validation_render` with `artifact: "uat"` | Compatibility canonical UAT markdown rendering for lower-level repair paths. |
 | `blueprint_phase_validation_write` with `artifact: "uat"` | The only allowed persistence path for `XX-UAT.md`. |
 | `blueprint_state_update` with `base: "synced"` | Final state sync and next-action derivation. |
 
@@ -123,9 +124,9 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
 
 1. Read `phase.uat` with `blueprint_artifact_contract_read` before drafting
    final content.
-2. Read `blueprint_phase_validation_authoring_context` before rendering so ready
+2. Read `blueprint_phase_validation_authoring_context` before authoring so ready
    verification, mandatory summary evidence, existing UAT state, allowed values,
-   and routing rules are explicit.
+   narrowed `taskSchema`, and routing rules are explicit.
 3. Treat `contract.authoringTemplate`, `modelContract`, `requiredHeadings`,
    `lockedMarkers`, and `freehandPolicy` as schema authority.
 4. Preserve all locked markers exactly, including `**Status:**`,
@@ -150,12 +151,12 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
     UAT evidence without an extra confirmation gate. Keep follow-up-fix entries
     explicit enough for the parent command to ask for confirmation before
     persisting or acting on them.
-13. Call `blueprint_phase_validation_render` with the structured UAT payload
-    shaped by `phase.uat.modelContract` and treat `readyToWrite: true` as the
-    pre-write self-check.
-14. Call `blueprint_phase_validation_write` only with exactly one of the
-    returned `content` or the same structured `model`; do not hand-build the
-    final markdown body.
+13. Call `blueprint_phase_validation_validate_model` with the structured UAT
+    payload shaped by `phase.uat.modelContract` and the returned `taskSchema`;
+    treat `status: "valid"` plus `renderPreview` as the pre-write self-check.
+14. Call `blueprint_phase_validation_write` only with the same structured
+    `model` and `authoringMode: "model-only"`; do not hand-build the final
+    markdown body or pass Markdown fallback from `/blu-verify-work`.
 
 ## Capability-Gated Subagent Path
 
@@ -208,18 +209,19 @@ This fallback must preserve the same output quality bar as the subagent path.
 
 ## Retry And Repair Behavior
 
-- If `blueprint_phase_validation_render` returns `readyToWrite: false`, report the
-  issues, repair the structured UAT payload against the canonical contract, and
-  render again before calling the writer.
+- If `blueprint_phase_validation_validate_model` returns `status: "invalid"`,
+  report the diagnostics, repair the structured UAT payload against the
+  canonical contract, and validate again before calling the writer.
 - If `blueprint_phase_validation_write` returns `status: "invalid"` or
-  `written: false` after a ready render, treat that as a race, overwrite, or
-  prerequisite failure, repair once through MCP when safe, and stop with the
-  issues otherwise.
+  `written: false` after a valid model preview, treat that as a race,
+  overwrite, or prerequisite failure, repair once through MCP when safe, and
+  stop with the issues otherwise.
 - Re-read the saved UAT through `blueprint_phase_validation_read` after a
   write and use its typed `validation`, `uatStatus`, `resumeState`,
   `checkpoint`, and `complete` fields as the artifact-scoped truth.
 - If the write result or the post-write UAT re-read says the saved UAT artifact
-  is invalid, repair it once against the canonical contract before stopping.
+  is invalid after a valid model preview, repair it once against the canonical
+  contract before stopping.
 - If `blueprint_artifact_validate` reports unrelated repo issues after a write,
   surface them as broader repo-health follow-ups instead of rewriting the UAT
   draft.

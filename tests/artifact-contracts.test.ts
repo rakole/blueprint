@@ -104,8 +104,9 @@ Read the contract, then normalize before writing.
 `;
 }
 
-test("artifact contract read exposes structured model contracts for phase plan and quick run", async () => {
+test("artifact contract read exposes structured model contracts for phase plan, phase UAT, and quick run", async () => {
   const planContract = await blueprintArtifactContractRead({ artifactId: "phase.plan" });
+  const uatContract = await blueprintArtifactContractRead({ artifactId: "phase.uat" });
   const quickRunContract = await blueprintArtifactContractRead({
     artifactId: "report.quick-run"
   });
@@ -115,6 +116,9 @@ test("artifact contract read exposes structured model contracts for phase plan a
   );
   const listedQuickRunContract = listedContracts.contracts.find(
     (contract) => contract.id === "report.quick-run"
+  );
+  const listedUatContract = listedContracts.contracts.find(
+    (contract) => contract.id === "phase.uat"
   );
 
   assert.equal(planContract.contract.modelContract?.schemaId, "blueprint.phase.plan.model");
@@ -145,6 +149,23 @@ test("artifact contract read exposes structured model contracts for phase plan a
   assert.ok(planModelProperties && "requirementCoverage" in planModelProperties);
   assert.ok(planModelProperties && "fileSurfaceCoverage" in planModelProperties);
 
+  assert.equal(uatContract.contract.modelContract?.schemaId, "blueprint.phase.uat.model");
+  assert.equal(uatContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    uatContract.contract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json"
+  );
+  assert.deepEqual(
+    (uatContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "resumeState", "checkpoint", "uatSummary"]
+  );
+  assert.ok(
+    uatContract.contract.modelContract?.renderedHeadings.includes("Test Matrix")
+  );
+  assert.ok(
+    uatContract.contract.modelContract?.renderedHeadings.includes("Structured Gaps")
+  );
+
   assert.equal(
     quickRunContract.contract.modelContract?.schemaId,
     "blueprint.report.quick-run.model"
@@ -165,6 +186,7 @@ test("artifact contract read exposes structured model contracts for phase plan a
   );
 
   assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");
+  assert.equal(listedUatContract?.modelContract?.schemaId, "blueprint.phase.uat.model");
   assert.equal(
     listedQuickRunContract?.modelContract?.schemaId,
     "blueprint.report.quick-run.model"
