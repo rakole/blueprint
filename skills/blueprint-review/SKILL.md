@@ -107,9 +107,9 @@ non-routable until their extra MCP substrate lands.
 ## Shared MCP Contracts
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, treat returned `files` as authoritative, use `confirmationRecommended` instead of prompt-only heuristics for scope-confirmation gates, and request `includeAuthoringContext` for code-review model authoring.
-- `blueprint_review_authoring_context`: request this for `review.security` and `review.review-fix` authoring before drafting the model. For review-fix, treat saved code-review findings plus phase execution plan, summary, and dependency evidence as schema-owned runtime context. Pass the exact selected saved target ids as `targetIds` when remediation is intentionally scoped to a subset, and keep that same array through validation and persistence. Treat `status: "invalid"` as an early blocker rather than an invitation to invent summaries, finding rows, threat rows, evidence keys, or next actions.
-- `blueprint_review_validate_model`: validate `review.code-review`, `review.review-fix`, and `review.security` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid. For review-fix subset remediation, pass the same `targetIds` used for authoring context.
-- `blueprint_review_record`: pass numeric `phase` and the correct review `artifact` enum. For model-only artifacts (`code-review`, `review-fix`, and `security`), pass only the validated structured `model`; `code-review` also passes resolved `scopeFiles` and `scopeSource`, and `review-fix` also passes the same `targetIds` selection when the model covers a subset. Markdown `content` is invalid for all three. For other review artifacts, pass full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_review_authoring_context`: request this for `review.security`, `review.review-fix`, and `review.ui-review` authoring before drafting the model. For review-fix, treat saved code-review findings plus phase execution plan, summary, and dependency evidence as schema-owned runtime context. For ui-review, treat completed summaries, pending plans, exact evidence keys, existing UI-review path, and allowed next actions as schema-owned runtime context. Pass the exact selected saved target ids as `targetIds` when remediation is intentionally scoped to a subset, and keep that same array through validation and persistence. Treat `status: "invalid"` as an early blocker rather than an invitation to invent summaries, finding rows, threat rows, evidence keys, or next actions.
+- `blueprint_review_validate_model`: validate `review.code-review`, `review.review-fix`, `review.security`, and `review.ui-review` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid. For review-fix subset remediation, pass the same `targetIds` used for authoring context.
+- `blueprint_review_record`: pass numeric `phase` and the correct review `artifact` enum. For model-only artifacts (`code-review`, `review-fix`, `security`, and `ui-review`), pass only the validated structured `model`; `code-review` also passes resolved `scopeFiles` and `scopeSource`, and `review-fix` also passes the same `targetIds` selection when the model covers a subset. Markdown `content` is invalid for all four. For peer-review artifacts, pass full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
@@ -354,50 +354,59 @@ non-routable until their extra MCP substrate lands.
    summaries, `XX-UI-SPEC.md`, validation, and UAT artifacts when they exist.
 4. Read the canonical `review.ui-review` contract through
    `blueprint_artifact_contract_read` before drafting or revising
-   `XX-UI-REVIEW.md`, and use `contract.authoringTemplate` as the heading and
-   schema authority.
-5. Inspect any existing `XX-UI-REVIEW.md` before proposing replacement and
+   `XX-UI-REVIEW.md`, and use `contract.modelContract.schemaPath`,
+   `contract.modelContract.jsonSchema`, and the narrowed task schema as the
+   model-authoring authority.
+5. Read `blueprint_review_authoring_context` before drafting. Use its
+   `authoringContext.taskSchema`, completed summaries, pending plans, evidence
+   keys, existing UI-review path, allowed overwrite posture, and allowed next
+   actions as authoritative.
+6. Inspect any existing `XX-UI-REVIEW.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update.
-6. Keep the audit grounded in saved repo evidence, the phase goal, the saved
+7. Keep the audit grounded in saved repo evidence, the phase goal, the saved
    UI-spec baseline when present, and the actual frontend or UX surface under
    review.
-7. Produce a scored six-pillar audit: Copywriting, Visual Hierarchy, Color,
+8. Produce a scored six-pillar JSON model: Copywriting, Visual Hierarchy, Color,
    Typography, Spacing, and Experience Design, each scored 1-4 with evidence,
    plus an overall `/24` score and up to three concrete priority fixes.
-8. Treat accessibility, responsiveness, interaction states, consistency, and
+9. Treat accessibility, responsiveness, interaction states, consistency, and
    polish as required evidence dimensions inside those scored pillars. If
    screenshot, browser, or visual-runtime evidence is unavailable, record that
    limitation instead of claiming visual certainty.
-9. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+10. Keep the active stage visible as the run moves through `Resolve`, `Read`,
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, active stage, pending gate, execution mode, and next safe
    action legible throughout the run.
-10. For non-trivial ui-review runs, prefer update_topic plus `write_todos` so
+11. For non-trivial ui-review runs, prefer update_topic plus `write_todos` so
     saved-evidence review, bounded UI analysis, artifact persistence,
     validation, and routing stay visible without becoming persistence.
-11. Report the resolved phase, saved execution and UI-spec coverage, whether
+12. Report the resolved phase, saved execution and UI-spec coverage, whether
     the existing `XX-UI-REVIEW.md` artifact is being created, reused, or
     revised, the current overall score or findings-or-pass posture, and next
     safe action while work is in flight. Let execution mode reflect inline
     versus `blueprint-ui-auditor`-assisted analysis, and keep pending gates
     limited to overwrite confirmation only.
-12. Use `blueprint-ui-auditor` when the phase spans multiple screens, includes
+13. Use `blueprint-ui-auditor` when the phase spans multiple screens, includes
     richer interaction work, has user-supplied visual evidence, needs prior
     UI-review comparison, or benefits from a higher-confidence six-pillar UI
     audit.
-13. Reject browser-only, web-search-only, shell-only, or generic agents as
+14. Reject browser-only, web-search-only, shell-only, or generic agents as
     substitutes for `blueprint-ui-auditor`. When a suitable auditor is
     unavailable or unnecessary, use the no-subagent fallback from the runtime
     contract: read saved evidence, identify the UI surface, audit one pillar at
     a time, compress carry-forward context after each pillar, then run a final
     score/evidence consistency pass.
-14. Persist finished UI audit evidence through `blueprint_review_record` with
-    the `ui-review` artifact.
-15. If `blueprint_review_record` rejects the artifact or reports missing
-    required headings, repair against `review.ui-review` and the runtime
-    contract, then retry once through MCP. If the retry still fails, stop with
-    the MCP reason and do not write `.blueprint/` by hand.
-16. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+15. Validate through `blueprint_review_validate_model`; repair every returned
+    schema and residual diagnostic together against the task schema before the
+    single validation retry.
+16. Persist finished UI audit evidence through `blueprint_review_record` with
+    the `ui-review` artifact and the same structured `model`; Markdown
+    `content` is invalid for ui-review.
+17. If `blueprint_review_validate_model` or `blueprint_review_record` rejects
+    the model, repair against `review.ui-review`, the narrowed task schema, and
+    the runtime contract, then retry once through MCP. If the retry still
+    fails, stop with the MCP reason and do not write `.blueprint/` by hand.
+18. Keep next-step guidance inside implemented Blueprint commands only. Prefer
     `/blu-validate-phase`, then `/blu-verify-work`, and otherwise
     `/blu-progress` depending on which lifecycle artifacts already exist and
     whether follow-up UI work remains.

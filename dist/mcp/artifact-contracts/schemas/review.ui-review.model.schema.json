@@ -1,0 +1,670 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.review.ui-review.model",
+  "title": "Blueprint UI Review Model",
+  "description": "Model-authored payload for review.ui-review. Runtime-owned phase identity, report path, live evidence inventory, existing-review posture, allowed next actions, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "readiness",
+    "completionState",
+    "uiReviewSummary",
+    "overallScore",
+    "evidenceCoverage",
+    "pillarScores",
+    "priorityFixes",
+    "findings",
+    "followUps",
+    "auditTrail",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "verdict": {
+      "$ref": "#/$defs/verdict"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "completionState": {
+      "$ref": "#/$defs/completionState"
+    },
+    "uiReviewSummary": {
+      "type": "array",
+      "description": "Concrete UI review outcome bullets. Mention the reviewed surface, baseline, overall /24 score, visual-evidence posture, execution mode, and verdict rationale. Do not include Markdown headings or runtime-owned path metadata.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "overallScore": {
+      "type": "integer",
+      "description": "Total score out of 24. Residual validation checks this equals the six pillar scores.",
+      "minimum": 6,
+      "maximum": 24
+    },
+    "evidenceCoverage": {
+      "type": "object",
+      "description": "Coverage decisions keyed by exact live evidence artifact paths returned by the UI-review authoring context. The task schema narrows this to exhaustive exact keys.",
+      "propertyNames": {
+        "$ref": "#/$defs/evidencePath"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/evidenceCoverageEntry"
+      }
+    },
+    "pillarScores": {
+      "type": "array",
+      "description": "Exactly one score row for each required UI review pillar.",
+      "minItems": 6,
+      "maxItems": 6,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "pillar"
+            ],
+            "properties": {
+              "pillar": {
+                "const": "Copywriting"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "pillar"
+            ],
+            "properties": {
+              "pillar": {
+                "const": "Visual Hierarchy"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "pillar"
+            ],
+            "properties": {
+              "pillar": {
+                "const": "Color"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "pillar"
+            ],
+            "properties": {
+              "pillar": {
+                "const": "Typography"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "pillar"
+            ],
+            "properties": {
+              "pillar": {
+                "const": "Spacing"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "pillar"
+            ],
+            "properties": {
+              "pillar": {
+                "const": "Experience Design"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/pillarScore"
+      }
+    },
+    "priorityFixes": {
+      "type": "array",
+      "description": "Up to three concrete priority fixes, or the exact no-priority-fix sentinel row.",
+      "minItems": 1,
+      "maxItems": 3,
+      "allOf": [
+        {
+          "if": {
+            "contains": {
+              "$ref": "#/$defs/noPriorityFixRow"
+            }
+          },
+          "then": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noPriorityFixRow"
+            }
+          }
+        }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/priorityFixRow"
+          },
+          {
+            "$ref": "#/$defs/noPriorityFixRow"
+          }
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Material UI findings, blocked evidence gaps, or the exact no-finding sentinel row.",
+      "minItems": 1,
+      "allOf": [
+        {
+          "if": {
+            "contains": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          },
+          "then": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          }
+        }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/findingRow"
+          },
+          {
+            "$ref": "#/$defs/noFindingRow"
+          }
+        ]
+      }
+    },
+    "followUps": {
+      "type": "array",
+      "description": "Concrete UI repair, visual verification, registry-safety, validation, or exact single none sentinel.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "auditTrail": {
+      "$ref": "#/$defs/auditTrail"
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/nextSafeAction"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "verdict"
+        ],
+        "properties": {
+          "verdict": {
+            "const": "PASS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "ready-for-routing"
+          },
+          "completionState": {
+            "const": "complete"
+          },
+          "pillarScores": {
+            "items": {
+              "type": "object",
+              "required": [
+                "score"
+              ],
+              "properties": {
+                "score": {
+                  "minimum": 3
+                }
+              }
+            }
+          },
+          "priorityFixes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noPriorityFixRow"
+            }
+          },
+          "findings": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          },
+          "followUps": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "verdict"
+        ],
+        "properties": {
+          "verdict": {
+            "const": "FOLLOW_UP"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "needs-follow-up"
+          },
+          "completionState": {
+            "const": "partial"
+          },
+          "priorityFixes": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noPriorityFixRow"
+              }
+            }
+          },
+          "findings": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noFindingRow"
+              }
+            }
+          },
+          "followUps": {
+            "not": {
+              "items": {
+                "const": "none"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "verdict"
+        ],
+        "properties": {
+          "verdict": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "blocked"
+          },
+          "completionState": {
+            "const": "blocked"
+          },
+          "findings": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1,
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noFindingRow"
+              }
+            }
+          },
+          "followUps": {
+            "not": {
+              "items": {
+                "const": "none"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "safeLine": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n|]+$"
+    },
+    "bulletString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "evidencePath": {
+      "type": "string",
+      "pattern": "^\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\\.md$"
+    },
+    "repoPathOrEvidence": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\\.md|(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+:\\d+(?:-\\d+)?|screenshots?: [^\\r\\n|]+|visual observation: [^\\r\\n|]+|not supplied: [^\\r\\n|]+)$"
+    },
+    "nextSafeAction": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^/blu-[a-z0-9-]+(?: [0-9]+)?$"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FOLLOW_UP",
+        "BLOCKED"
+      ]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "ready-for-routing",
+        "needs-follow-up",
+        "blocked"
+      ]
+    },
+    "completionState": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "partial",
+        "blocked"
+      ]
+    },
+    "pillar": {
+      "type": "string",
+      "enum": [
+        "Copywriting",
+        "Visual Hierarchy",
+        "Color",
+        "Typography",
+        "Spacing",
+        "Experience Design"
+      ]
+    },
+    "evidenceCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "used",
+        "unavailable"
+      ]
+    },
+    "evidenceCoverageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "rationale"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/evidenceCoverageStatus"
+        },
+        "rationale": {
+          "$ref": "#/$defs/bulletString"
+        }
+      }
+    },
+    "pillarScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pillar",
+        "score",
+        "evidence",
+        "keyFinding"
+      ],
+      "properties": {
+        "pillar": {
+          "$ref": "#/$defs/pillar"
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "evidence": {
+          "$ref": "#/$defs/repoPathOrEvidence"
+        },
+        "keyFinding": {
+          "$ref": "#/$defs/safeLine"
+        }
+      }
+    },
+    "priorityFixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "userImpact",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/safeLine"
+        },
+        "userImpact": {
+          "$ref": "#/$defs/safeLine"
+        },
+        "repair": {
+          "$ref": "#/$defs/safeLine"
+        },
+        "status": {
+          "const": "OPEN"
+        }
+      }
+    },
+    "noPriorityFixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "userImpact",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "userImpact": {
+          "const": "none"
+        },
+        "repair": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "findingRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pillar",
+        "severity",
+        "evidence",
+        "userImpact",
+        "recommendation",
+        "status"
+      ],
+      "properties": {
+        "pillar": {
+          "$ref": "#/$defs/pillar"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/repoPathOrEvidence"
+        },
+        "userImpact": {
+          "$ref": "#/$defs/safeLine"
+        },
+        "recommendation": {
+          "$ref": "#/$defs/safeLine"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "OPEN",
+            "BLOCKED"
+          ]
+        }
+      }
+    },
+    "noFindingRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pillar",
+        "severity",
+        "evidence",
+        "userImpact",
+        "recommendation",
+        "status"
+      ],
+      "properties": {
+        "pillar": {
+          "const": "none"
+        },
+        "severity": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "userImpact": {
+          "const": "none"
+        },
+        "recommendation": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "auditTrail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auditDate",
+        "executionMode",
+        "existingReviewPosture",
+        "visualEvidence",
+        "auditorPath",
+        "scoreConsistencyNote",
+        "confidenceLimitations"
+      ],
+      "properties": {
+        "auditDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "executionMode": {
+          "type": "string",
+          "enum": [
+            "inline",
+            "ui-auditor-assisted"
+          ]
+        },
+        "existingReviewPosture": {
+          "type": "string",
+          "enum": [
+            "none",
+            "reused",
+            "overwrite-confirmed"
+          ]
+        },
+        "visualEvidence": {
+          "type": "string",
+          "enum": [
+            "captured",
+            "supplied",
+            "not-supplied"
+          ]
+        },
+        "auditorPath": {
+          "type": "string",
+          "enum": [
+            "blueprint-ui-auditor",
+            "no-subagent-fallback"
+          ]
+        },
+        "scoreConsistencyNote": {
+          "$ref": "#/$defs/bulletString"
+        },
+        "confidenceLimitations": {
+          "$ref": "#/$defs/bulletString"
+        }
+      }
+    }
+  }
+}

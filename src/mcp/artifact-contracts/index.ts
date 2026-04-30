@@ -1742,6 +1742,134 @@ const SECURITY_MODEL_CONTRACT: ArtifactModelContract = {
   ]
 };
 
+const UI_REVIEW_MODEL_SCHEMA_FILE = "review.ui-review.model.schema.json";
+const UI_REVIEW_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/review.ui-review.model.schema.json";
+
+const UI_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.review.ui-review.model",
+  schemaVersion: "1.0.0",
+  schemaPath: UI_REVIEW_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(UI_REVIEW_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, summaryPath, linkedPlanPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
+    "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so live evidence artifact keys and status-safe next actions stay deterministic.",
+    "PASS UI reviews require ready-for-routing, complete state, no priority fixes, no findings, none followUps, score consistency, and a routed implemented next action.",
+    "FOLLOW_UP UI reviews require concrete priority fixes, findings, followUps, partial state, and /blu-progress rather than a ready/complete next action.",
+    "BLOCKED UI reviews require blocked state, at least one blocked finding, concrete followUps, and /blu-progress rather than a ready/complete next action.",
+    "Use concrete artifact, repo path, screenshot, visual observation, or explicit unavailable-evidence notes. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, and report path come from blueprint_phase_locate plus blueprint_review_record arguments.",
+    "Completed summaries are required upstream context and come from blueprint_phase_summary_index/read; UI spec, verification, UAT, and prior UI review evidence come from the live phase artifact inventory when present.",
+    "Evidence coverage keys are narrowed to the current live upstream inventory so stale or self-cited-only artifacts cannot close UI-review readiness.",
+    "Allowed nextSafeAction values come from the verdict truth table, saved verification/UAT inventory, and implemented command catalog.",
+    "Existing UI-review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+  ],
+  renderedHeadings: [
+    "UI Review Summary",
+    "Evidence Reviewed",
+    "Pillar Scores",
+    "Priority Fixes",
+    "Findings",
+    "Follow-Ups",
+    "Audit Trail",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    verdict: "PASS",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    uiReviewSummary: [
+      "The completed dashboard UI was checked against saved summary and UI-spec evidence with a 21/24 code/static-evidence score."
+    ],
+    overallScore: 21,
+    evidenceCoverage: {
+      ".blueprint/phases/06-ui-audit/06-01-SUMMARY.md": {
+        status: "used",
+        rationale: "Completed summary evidence identified the implemented dashboard surface."
+      },
+      ".blueprint/phases/06-ui-audit/06-UI-SPEC.md": {
+        status: "used",
+        rationale: "UI-spec evidence supplied the layout and hierarchy baseline."
+      }
+    },
+    pillarScores: [
+      {
+        pillar: "Copywriting",
+        score: 3,
+        evidence: ".blueprint/phases/06-ui-audit/06-UI-SPEC.md",
+        keyFinding: "Primary labels match the saved UI contract."
+      },
+      {
+        pillar: "Visual Hierarchy",
+        score: 4,
+        evidence: ".blueprint/phases/06-ui-audit/06-UI-SPEC.md",
+        keyFinding: "The saved hierarchy requirements are represented in the implemented surface."
+      },
+      {
+        pillar: "Color",
+        score: 4,
+        evidence: ".blueprint/phases/06-ui-audit/06-UI-SPEC.md",
+        keyFinding: "No semantic color drift is visible in the saved evidence."
+      },
+      {
+        pillar: "Typography",
+        score: 3,
+        evidence: ".blueprint/phases/06-ui-audit/06-UI-SPEC.md",
+        keyFinding: "Type scale usage stays consistent with the saved contract."
+      },
+      {
+        pillar: "Spacing",
+        score: 3,
+        evidence: ".blueprint/phases/06-ui-audit/06-01-SUMMARY.md",
+        keyFinding: "Responsive spacing was implemented with no saved blocker."
+      },
+      {
+        pillar: "Experience Design",
+        score: 4,
+        evidence: ".blueprint/phases/06-ui-audit/06-01-SUMMARY.md",
+        keyFinding: "The completed interaction flow matches the phase outcome."
+      }
+    ],
+    priorityFixes: [
+      {
+        item: "none",
+        userImpact: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    findings: [
+      {
+        pillar: "none",
+        severity: "none",
+        evidence: "none",
+        userImpact: "none",
+        recommendation: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    auditTrail: {
+      auditDate: "2026-04-30",
+      executionMode: "inline",
+      existingReviewPosture: "none",
+      visualEvidence: "not-supplied",
+      auditorPath: "no-subagent-fallback",
+      scoreConsistencyNote: "Overall score equals the six pillar scores.",
+      confidenceLimitations: "Screenshots were not supplied, so the audit is limited to saved code/static evidence."
+    },
+    nextSafeAction: "/blu-validate-phase 6"
+  },
+  exampleLeakageSignals: [
+    "The completed dashboard UI was checked against saved summary and UI-spec evidence with a 21/24 code/static-evidence score.",
+    "Completed summary evidence identified the implemented dashboard surface.",
+    "Primary labels match the saved UI contract.",
+    "Overall score equals the six pillar scores."
+  ]
+};
+
 function renderUiReviewTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - UI Review
 
@@ -3578,8 +3706,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     lockedMarkers: ["**Verdict:**"],
     placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
     notes: [
-      "UI review artifacts stay phase-scoped and evidence-backed. Authoring should include scored six-pillar evidence, overall /24 score, priority fixes or explicit pass evidence, visual-evidence limitations, and an audit trail before persistence."
+      "UI review artifacts are model-only and render through MCP-owned canonical Markdown before persistence.",
+      "UI review artifacts stay phase-scoped and evidence-backed. Authoring should include scored six-pillar evidence, overall /24 score, priority fixes or explicit pass evidence, visual-evidence limitations, and an audit trail before persistence.",
+      "PASS/FOLLOW_UP/BLOCKED truth-table rules live in the review.ui-review JSON Schema and are narrowed by live summary, UI-spec, verification, UAT, prior-review, and next-action context."
     ],
+    modelContract: UI_REVIEW_MODEL_CONTRACT,
     renderScaffoldTemplate: renderUiReviewTemplate,
     renderAuthoringTemplate: renderUiReviewTemplate
   },

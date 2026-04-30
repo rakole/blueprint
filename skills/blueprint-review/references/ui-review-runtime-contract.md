@@ -7,10 +7,12 @@ optional UI auditor performs bounded read-only analysis.
 
 ## Contract Authority
 
-- `mcp_blueprint_blueprint_artifact_contract_read` is the heading and schema
-  authority for `review.ui-review`.
-- The returned `contract.authoringTemplate` is the canonical shape for
-  `XX-UI-REVIEW.md` before drafting, repair, or persistence.
+- `mcp_blueprint_blueprint_artifact_contract_read` exposes the base model
+  schema and rendered heading contract for `review.ui-review`.
+- The returned `contract.modelContract.schemaPath`,
+  `contract.modelContract.jsonSchema`, and
+  `blueprint_review_authoring_context.authoringContext.taskSchema` are the
+  schema authority before drafting, repair, or persistence.
 - This reference is the output-quality authority: it defines evidence depth,
   scored pillar expectations, capability-gated auditor use, fallback behavior,
   and write repair.
@@ -38,10 +40,15 @@ Map `/blu-ui-review` to the shared stages:
 - Read `review.ui-review` with
   `mcp_blueprint_blueprint_artifact_contract_read` before drafting,
   validating, or repairing the UI-review artifact.
+- Read `mcp_blueprint_blueprint_review_authoring_context` with
+  `artifact: "ui-review"` before drafting. Treat missing completed summaries as
+  a blocker, and treat returned evidence keys and allowed next actions as exact.
 - Read saved summaries, matching plans when available through artifact paths or
   command context, the saved `XX-UI-SPEC.md` contract when present, validation
-  or UAT evidence when present, prior `XX-UI-REVIEW.md` when present, and the
-  actual repo surface implicated by the saved phase evidence.
+  or UAT evidence when present, and the actual repo surface implicated by the
+  saved phase evidence. Inspect a prior `XX-UI-REVIEW.md` when present for the
+  reuse-or-overwrite decision, but do not cite the replacement path as reviewed
+  evidence because it will be overwritten in place.
 - Use explicitly supplied screenshots, recordings, browser observations, or
   visual descriptions as evidence when available. When they are unavailable,
   record the audit as code/static-evidence-only instead of claiming visual
@@ -84,16 +91,19 @@ Map `/blu-ui-review` to the shared stages:
 
 ### Persist
 
-- Author `XX-UI-REVIEW.md` against the canonical `review.ui-review` contract.
+- Author the `review.ui-review` JSON model against the narrowed task schema.
 - Persist only through `mcp_blueprint_blueprint_review_record` with numeric
-  `phase`, `artifact: "ui-review"`, and the full final markdown body.
+  `phase`, `artifact: "ui-review"`, and the same validated structured `model`.
+  Markdown `content` fallback is invalid; MCP renders canonical Markdown.
 - Treat the returned `reportPath`, `counts`, `followUps`, `status`, and
   `warnings` as authoritative.
 - Never hand-write `XX-UI-REVIEW.md`.
 
 ### Validate
 
-- Ensure the final artifact includes the canonical headings:
+- Validate the model through `mcp_blueprint_blueprint_review_validate_model`
+  before persistence and repair all diagnostics together against the task schema.
+- Ensure the rendered artifact includes the canonical headings:
   `UI Review Summary`, `Evidence Reviewed`, `Findings`, `Follow-Ups`, and
   `Next Safe Action`.
 - Also include the richer authoring sections from the canonical template:
@@ -102,8 +112,8 @@ Map `/blu-ui-review` to the shared stages:
   the overall score equals the six pillar scores, priority fixes appear in
   `Findings` or `Follow-Ups`, unavailable visual evidence is stated plainly,
   and next-step guidance names only implemented Blueprint commands.
-- If `blueprint_review_record` rejects the body or reports missing headings,
-  repair once against `review.ui-review` and retry through MCP. If the retry
+- If `blueprint_review_validate_model` or `blueprint_review_record` rejects the
+  model, repair once against `review.ui-review` and retry through MCP. If the retry
   still fails, stop with the exact MCP reason and do not write the artifact by
   hand.
 
@@ -126,16 +136,22 @@ Call these tools in this order unless the command must stop early:
    - Controls saved-evidence inventory, existing UI-review state, UI-spec
      presence, validation/UAT presence, and missing-summary recovery.
 3. `mcp_blueprint_blueprint_artifact_contract_read` for `review.ui-review`
-   - Controls required headings, locked markers, authoring template, and repair
-     target.
-4. `mcp_blueprint_blueprint_review_record`
+   - Controls base schema, required headings, locked markers, authoring template,
+     and repair target.
+4. `mcp_blueprint_blueprint_review_authoring_context`
+   - Controls completed-summary prerequisites, live evidence keys, existing
+     UI-review path, pending-plan narrowing, and allowed next actions.
+5. `mcp_blueprint_blueprint_review_validate_model`
+   - Controls AJV schema diagnostics, residual quality diagnostics, and the
+     canonical Markdown render preview.
+6. `mcp_blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
      follow-ups, warnings, and validation failures.
 
 ## Artifact Authoring Rules
 
-The UI-review artifact must be useful standalone review evidence, not merely
-valid Markdown.
+The UI-review model must be useful standalone review evidence after MCP renders
+it, not merely valid JSON.
 
 - `**Verdict:** PASS`, `FOLLOW_UP`, or `BLOCKED`.
 - `## UI Review Summary`: phase, UI surface, baseline (`XX-UI-SPEC.md` or
@@ -181,7 +197,7 @@ Pass the auditor only:
 
 - the resolved phase and phase evidence inventory
 - saved summaries, UI spec, context or plans when available, prior UI review,
-  and selected repo paths
+  for comparison only, and selected repo paths
 - explicit screenshots or visual observations supplied in the session
 - the canonical `review.ui-review` authoring requirements and scored-pillar
   expectations
@@ -199,8 +215,8 @@ If `blueprint-ui-auditor` is unavailable or unnecessary, continue sequentially
 in the parent session.
 
 1. Read saved evidence first: summaries, UI spec, context or plans when
-   available, validation or UAT artifacts, existing UI review, and implicated
-   repo files.
+   available, validation or UAT artifacts, existing UI review for comparison
+   only, and implicated repo files.
 2. Identify the actual UI surfaces from saved evidence and repo paths. If the
    surface cannot be identified, record that uncertainty instead of widening
    the audit.
@@ -226,8 +242,9 @@ Do not replace the missing subagent with browser/web/search-only analysis.
 - Missing screenshot or visual runtime evidence: continue code/static-evidence
   audit, record `Screenshots: not captured or not supplied`, and avoid claims
   that require visual inspection.
-- Invalid UI-review write: repair once against `review.ui-review` headings and
-  this reference's richness requirements, then retry through
+- Invalid UI-review model or write: repair once against `review.ui-review`,
+  `authoringContext.taskSchema`, and this reference's richness requirements,
+  then retry through `blueprint_review_validate_model` and
   `blueprint_review_record`.
 - Failed retry: stop without manual `.blueprint/` writes.
 
@@ -256,8 +273,8 @@ Complete the command only after:
 2. required execution evidence exists or the command routed to execute-phase
 3. any overwrite gate has cleared
 4. the UI audit has produced scored pillar evidence
-5. `XX-UI-REVIEW.md` content satisfies the canonical contract and this
-   reference
+5. the model validates and the rendered `XX-UI-REVIEW.md` content satisfies the
+   canonical contract and this reference
 6. `blueprint_review_record` returns `created`, `updated`, or `reused`
 7. the final response reports phase, artifact status, overall score, top
    findings or pass signals, warnings, and next safe implemented action
