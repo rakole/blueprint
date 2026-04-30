@@ -32,6 +32,71 @@ const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/help-progress-health");
 const CODEBASE_ARTIFACTS_SORTED = [...CODEBASE_ARTIFACTS].sort();
 
+function completedSummaryContent(args: {
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  planId?: string;
+  check?: string;
+  command?: string;
+}): string {
+  const planId = args.planId ?? "01";
+  const summaryPath = `${args.phaseDir}/${args.phasePrefix}-${planId}-SUMMARY.md`;
+  const check = args.check ?? "tests/help-progress-health.test.ts exits 0";
+  const command = args.command ?? "npx tsx --test tests/help-progress-health.test.ts";
+
+  return `# Phase ${args.phasePrefix}: ${args.phaseName} - Summary ${planId}
+
+**Plan:** \`${args.phasePrefix}-${planId}-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase ${Number.parseInt(args.phasePrefix, 10)}
+
+## Outcome
+
+- Execution finished and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the completed execution in the phase summary.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| ${check} | ${command} | pass | Wrote the summary artifact at ${summaryPath}. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | ${summaryPath} | Saved summary artifact. |
+`;
+}
+
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await access(targetPath, fsConstants.F_OK);
@@ -618,31 +683,11 @@ async function createMilestoneCloseoutRepo(
 
 - Earlier milestone execution evidence drifted out of shape.
 `
-      : `# Phase 02: Validation Hardening - Summary 01
-
-**Plan:** \`02-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Earlier milestone execution evidence is complete.
-
-## Changes Made
-
-- Captured the earlier milestone execution summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/02-validation-hardening/02-01-SUMMARY.md\`
-`,
+      : completedSummaryContent({
+          phasePrefix: "02",
+          phaseName: "Validation Hardening",
+          phaseDir: ".blueprint/phases/02-validation-hardening"
+        }),
     "utf8"
   );
   await writeFile(
@@ -1061,31 +1106,11 @@ Close the milestone.
   );
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Milestone Closeout - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution completed and the milestone is ready for closeout routing.
-
-## Changes Made
-
-- Captured the completed milestone closeout execution.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-milestone-closeout/03-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "03",
+      phaseName: "Milestone Closeout",
+      phaseDir: ".blueprint/phases/03-milestone-closeout"
+    }),
     "utf8"
   );
   await writeFile(
@@ -1500,31 +1525,11 @@ test("project status recommends validate-phase once execution summaries exist wi
 
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced durable summary evidence.
-
-## Changes Made
-
-- Captured the completed execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "03",
+      phaseName: "Phase Discovery",
+      phaseDir: ".blueprint/phases/03-phase-discovery"
+    }),
     "utf8"
   );
 
@@ -1546,31 +1551,11 @@ test("project status routes deferred validation test gaps to add-tests instead o
 
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced durable summary evidence.
-
-## Changes Made
-
-- Captured the completed execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- Add backend smoke coverage before validation can pass.
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "03",
+      phaseName: "Phase Discovery",
+      phaseDir: ".blueprint/phases/03-phase-discovery"
+    }),
     "utf8"
   );
   await writeFile(
@@ -1715,31 +1700,11 @@ Exercise the execute-phase router.
 
   await writeFile(
     path.join(phaseRoot, "03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced durable summary evidence.
-
-## Changes Made
-
-- Captured the completed execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "03",
+      phaseName: "Phase Discovery",
+      phaseDir: ".blueprint/phases/03-phase-discovery"
+    }),
     "utf8"
   );
 

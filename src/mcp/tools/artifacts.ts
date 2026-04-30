@@ -2914,6 +2914,11 @@ function isMarkdownTableHeaderRow(line: string): boolean {
     ["requirement", "task or check", "evidence", "coverage state"],
     ["#", "test", "expected behavior", "evidence", "result", "notes"],
     ["test", "truth", "status", "severity", "reason", "follow-up"],
+    ["check", "command", "result", "evidence", "notes"],
+    ["plan", "status", "evidence"],
+    ["item", "reason", "follow-up", "status"],
+    ["gap", "evidence", "repair", "status"],
+    ["kind", "source", "summary"],
     ["gap id", "surface", "evidence", "repair"],
     ["item", "why manual or deferred", "follow-up", "status"],
     ["gap class", "scope", "evidence", "repair"]
@@ -5262,6 +5267,227 @@ export function extractSummaryStatus(content: string): "COMPLETED" | "PARTIAL" |
   return null;
 }
 
+function extractSummaryMarkerValue(content: string, marker: string): string | null {
+  const match = content.match(
+    new RegExp(`^\\*\\*${escapeRegex(marker)}:\\*\\*\\s*(.+)$`, "m")
+  );
+
+  return match?.[1]?.trim() ?? null;
+}
+
+function normalizeSummaryMarkerValue(value: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  return normalizeSummaryPlanReference(value.replace(/^`|`$/g, ""));
+}
+
+function extractMarkdownListItems(section: string): string[] {
+  return section
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter((line) => line.length > 0);
+}
+
+function isNoneValue(value: string): boolean {
+  return value.trim().toLowerCase() === "none";
+}
+
+function isExactSentinelRow(row: string[], expected: string[]): boolean {
+  return (
+    row.length === expected.length &&
+    expected.every((value, index) => row[index]?.trim() === value)
+  );
+}
+
+function validateSummaryDependencyRows(rows: string[]): string[] {
+  const issues: string[] = [];
+  const dependencyRows = extractMarkdownTableRows(rows.join("\n"));
+
+  if (dependencyRows.length === 0) {
+    issues.push("Summary artifact Dependency Plans section must include a table row.");
+    return issues;
+  }
+
+  for (const row of dependencyRows) {
+    if (isExactSentinelRow(row, ["none", "none", "none"])) {
+      continue;
+    }
+
+    if (row.length !== 3 || row[1] !== "satisfied") {
+      issues.push(
+        "Summary artifact Dependency Plans rows must either be the exact none sentinel or use status satisfied."
+      );
+    }
+  }
+
+  return issues;
+}
+
+function validateSummaryLifecycleContract(content: string): string[] {
+  const issues: string[] = [];
+  const status = extractSummaryStatus(content);
+
+  if (!status) {
+    return issues;
+  }
+
+  const readiness = normalizeSummaryMarkerValue(extractSummaryMarkerValue(content, "Readiness"));
+  const completionState = normalizeSummaryMarkerValue(
+    extractSummaryMarkerValue(content, "Completion State")
+  );
+  const nextSafeAction = normalizeSummaryMarkerValue(
+    extractSummaryMarkerValue(content, "Next Safe Action")
+  );
+  const expected = {
+    COMPLETED: {
+      readiness: "ready-for-validation",
+      completionState: "complete",
+      nextSafeActionPattern: /^\/blu-validate-phase(?:\s+\S+)?$/
+    },
+    PARTIAL: {
+      readiness: "not-ready-for-validation",
+      completionState: "pending",
+      nextSafeActionPattern: /^\/blu-execute-phase(?:\s+\S+)?$/
+    },
+    BLOCKED: {
+      readiness: "blocked",
+      completionState: "blocked",
+      nextSafeActionPattern: /^\/blu-progress$/
+    }
+  }[status];
+
+  if (readiness === null) {
+    issues.push("Summary artifact must include a **Readiness:** marker.");
+  } else if (readiness !== expected.readiness) {
+    issues.push(
+      `Summary artifact status ${status} requires **Readiness:** ${expected.readiness}.`
+    );
+  }
+
+  if (completionState === null) {
+    issues.push("Summary artifact must include a **Completion State:** marker.");
+  } else if (completionState !== expected.completionState) {
+    issues.push(
+      `Summary artifact status ${status} requires **Completion State:** ${expected.completionState}.`
+    );
+  }
+
+  if (nextSafeAction === null) {
+    issues.push("Summary artifact must include a **Next Safe Action:** marker.");
+  } else if (!expected.nextSafeActionPattern.test(nextSafeAction)) {
+    issues.push(
+      `Summary artifact status ${status} has an invalid **Next Safe Action:** ${nextSafeAction}.`
+    );
+  }
+
+  const verificationRows = extractMarkdownTableRows(
+    extractMarkdownSection(content, "Verification")
+  );
+  const dependencyRowsSection = extractMarkdownSection(content, "Dependency Plans");
+  const manualRows = extractMarkdownTableRows(
+    extractMarkdownSection(content, "Manual / Deferred Work")
+  );
+  const gapRows = extractMarkdownTableRows(
+    extractMarkdownSection(content, "Gap / Repair Routes")
+  );
+  const followUps = extractMarkdownListItems(extractMarkdownSection(content, "Follow-Ups"));
+
+  issues.push(...validateSummaryDependencyRows([dependencyRowsSection]));
+
+  if (verificationRows.length === 0) {
+    issues.push("Summary artifact Verification section must include a table row.");
+  }
+
+  if (manualRows.length === 0) {
+    issues.push("Summary artifact Manual / Deferred Work section must include a table row.");
+  }
+
+  if (gapRows.length === 0) {
+    issues.push("Summary artifact Gap / Repair Routes section must include a table row.");
+  }
+
+  for (const row of manualRows) {
+    if (row[3] === "NONE" && !isExactSentinelRow(row, ["none", "none", "none", "NONE"])) {
+      issues.push(
+        "Summary artifact Manual / Deferred Work NONE row must be exactly: none | none | none | NONE."
+      );
+    }
+  }
+
+  for (const row of gapRows) {
+    if (row[3] === "NONE" && !isExactSentinelRow(row, ["none", "none", "none", "NONE"])) {
+      issues.push(
+        "Summary artifact Gap / Repair Routes NONE row must be exactly: none | none | none | NONE."
+      );
+    }
+  }
+
+  if (status === "COMPLETED") {
+    if (verificationRows.some((row) => row[2] !== "pass")) {
+      issues.push("Summary artifact COMPLETED status requires every Verification result to be pass.");
+    }
+
+    if (
+      manualRows.length !== 1 ||
+      !isExactSentinelRow(manualRows[0], ["none", "none", "none", "NONE"])
+    ) {
+      issues.push(
+        "Summary artifact COMPLETED status requires the exact Manual / Deferred Work none sentinel row."
+      );
+    }
+
+    if (
+      gapRows.length !== 1 ||
+      !isExactSentinelRow(gapRows[0], ["none", "none", "none", "NONE"])
+    ) {
+      issues.push(
+        "Summary artifact COMPLETED status requires the exact Gap / Repair Routes none sentinel row."
+      );
+    }
+
+    if (followUps.length !== 1 || !isNoneValue(followUps[0])) {
+      issues.push("Summary artifact COMPLETED status requires Follow-Ups to be exactly none.");
+    }
+  } else {
+    const hasNonPassVerification = verificationRows.some((row) =>
+      ["fail", "blocked", "not-run"].includes(row[2] ?? "")
+    );
+    const requiredGapStatus = status === "BLOCKED" ? "BLOCKED" : null;
+    const hasRequiredGap =
+      requiredGapStatus === null
+        ? gapRows.some((row) => ["OPEN", "BLOCKED"].includes(row[3] ?? ""))
+        : gapRows.some((row) => row[3] === requiredGapStatus);
+    const hasConcreteFollowUp = followUps.some((item) => !isNoneValue(item));
+
+    if (!hasNonPassVerification) {
+      issues.push(
+        `Summary artifact ${status} status requires at least one non-pass Verification result.`
+      );
+    }
+
+    if (!hasRequiredGap) {
+      issues.push(
+        status === "BLOCKED"
+          ? "Summary artifact BLOCKED status requires at least one BLOCKED Gap / Repair Routes row."
+          : "Summary artifact PARTIAL status requires at least one OPEN or BLOCKED Gap / Repair Routes row."
+      );
+    }
+
+    if (!hasConcreteFollowUp) {
+      issues.push(
+        `Summary artifact ${status} status requires at least one concrete non-none Follow-Ups item.`
+      );
+    }
+  }
+
+  return issues;
+}
+
 export function validateSummaryArtifactContent(
   content: string,
 ): {
@@ -5299,6 +5525,8 @@ export function validateSummaryArtifactContent(
       "Summary artifact **Status:** marker must be one of COMPLETED, PARTIAL, or BLOCKED."
     );
   }
+
+  issues.push(...validateSummaryLifecycleContract(normalizedContent));
 
   return {
     valid: issues.length === 0,

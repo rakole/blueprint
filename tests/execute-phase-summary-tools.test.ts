@@ -10,10 +10,13 @@ import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseContext,
   blueprintPhaseExecutionTargets,
+  blueprintPhaseSummaryAuthoringContext,
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead,
+  blueprintPhaseSummaryValidateModel,
   blueprintPhaseSummaryWrite,
-  blueprintPhaseValidationWrite
+  blueprintPhaseValidationWrite,
+  phaseToolDefinitions
 } from "../src/mcp/tools/phase.js";
 
 async function createExecutionRepo(): Promise<string> {
@@ -179,10 +182,39 @@ function validSummaryContent(
   planId = "01",
   status: "COMPLETED" | "PARTIAL" | "BLOCKED" = "COMPLETED"
 ): string {
+  const isComplete = status === "COMPLETED";
+  const isBlocked = status === "BLOCKED";
+  const readiness = isComplete
+    ? "ready-for-validation"
+    : isBlocked
+      ? "blocked"
+      : "not-ready-for-validation";
+  const completionState = isComplete ? "complete" : isBlocked ? "blocked" : "pending";
+  const nextSafeAction = isComplete
+    ? "/blu-validate-phase 3"
+    : isBlocked
+      ? "/blu-progress"
+      : "/blu-execute-phase 3";
+  const verificationResult = isComplete ? "pass" : isBlocked ? "blocked" : "fail";
+  const gapRow = isComplete
+    ? "| none | none | none | NONE |"
+    : `| ${isBlocked ? "Execution blocked before completion" : "Verification did not pass"} | Targeted verification evidence is not passing. | ${isBlocked ? "Resolve the blocker before retrying." : "Rerun execute-phase after repair."} | ${isBlocked ? "BLOCKED" : "OPEN"} |`;
+  const manualRow = isComplete
+    ? "| none | none | none | NONE |"
+    : `| Plan ${planId} verification follow-up | ${isBlocked ? "A blocker stopped verification." : "Verification still needs repair."} | ${nextSafeAction} | ${isBlocked ? "MANUAL" : "DEFERRED"} |`;
+  const followUp = isComplete
+    ? "none"
+    : isBlocked
+      ? "Resolve the execution blocker."
+      : "Repair and rerun the targeted verification.";
+
   return `# Phase 03: Phase Discovery - Summary ${planId}
 
 **Plan:** \`03-${planId}-PLAN.md\`
 **Status:** ${status}
+**Readiness:** ${readiness}
+**Completion State:** ${completionState}
+**Next Safe Action:** ${nextSafeAction}
 
 ## Outcome
 
@@ -194,16 +226,125 @@ function validSummaryContent(
 
 ## Verification
 
-- Ran the summary tooling test slice.
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| tests/phase-planning-tools.test.ts exits 0 | npm test -- tests/phase-planning-tools.test.ts | ${verificationResult} | Focused plan tooling tests ${isComplete ? "passed" : "did not pass"}. | The selected acceptance criterion ${isComplete ? "passed" : "remains unresolved"}. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+${manualRow}
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+${gapRow}
 
 ## Follow-Ups
 
-- none
+- ${followUp}
 
 ## Evidence
 
-- \`.blueprint/phases/03-phase-discovery/03-${planId}-SUMMARY.md\`
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | .blueprint/phases/03-phase-discovery/03-${planId}-SUMMARY.md | Saved summary artifact. |
 `;
+}
+
+function validSummaryModel(
+  planId = "01",
+  status: "COMPLETED" | "PARTIAL" | "BLOCKED" = "COMPLETED",
+  patch: Record<string, unknown> = {}
+): Record<string, unknown> {
+  const isComplete = status === "COMPLETED";
+  const isBlocked = status === "BLOCKED";
+
+  return {
+    status,
+    readiness: isComplete
+      ? "ready-for-validation"
+      : isBlocked
+        ? "blocked"
+        : "not-ready-for-validation",
+    completionState: isComplete ? "complete" : isBlocked ? "blocked" : "pending",
+    outcome: isComplete
+      ? [`Execution finished for plan ${planId} and produced durable summary evidence.`]
+      : [`Execution made bounded progress for plan ${planId} but still has open execution debt.`],
+    changesMade: [
+      `Updated the execute-phase summary tooling surfaces owned by plan ${planId}.`
+    ],
+    targetedVerification: [
+      {
+        check: "tests/phase-planning-tools.test.ts exits 0",
+        command: "npm test -- tests/phase-planning-tools.test.ts",
+        result: isComplete ? "pass" : isBlocked ? "blocked" : "fail",
+        evidence: isComplete
+          ? "Focused plan tooling tests passed."
+          : "Focused plan tooling tests did not reach a passing state.",
+        notes: isComplete
+          ? "The selected acceptance criterion passed."
+          : "The selected acceptance criterion remains unresolved."
+      }
+    ],
+    dependencyPlans: [],
+    manualOrDeferredWork: isComplete
+      ? [
+          {
+            item: "none",
+            reason: "none",
+            followUp: "none",
+            status: "NONE"
+          }
+        ]
+      : [
+          {
+            item: `Plan ${planId} verification follow-up`,
+            reason: isBlocked ? "A blocker stopped verification." : "Verification still needs repair.",
+            followUp: isBlocked ? "/blu-progress" : "/blu-execute-phase 3",
+            status: isBlocked ? "MANUAL" : "DEFERRED"
+          }
+        ],
+    gapRoutes: isComplete
+      ? [
+          {
+            gap: "none",
+            evidence: "none",
+            repair: "none",
+            status: "NONE"
+          }
+        ]
+      : [
+          {
+            gap: isBlocked ? "Execution blocked before completion" : "Verification did not pass",
+            evidence: "Targeted verification evidence is not passing.",
+            repair: isBlocked ? "Resolve the blocker before retrying." : "Rerun execute-phase after repair.",
+            status: isBlocked ? "BLOCKED" : "OPEN"
+          }
+        ],
+    followUps: isComplete ? ["none"] : [isBlocked ? "Resolve the execution blocker." : "Repair and rerun the targeted verification."],
+    evidence: [
+      {
+        kind: "test",
+        source: "npm test -- tests/phase-planning-tools.test.ts",
+        summary: `Targeted verification evidence for plan ${planId}.`
+      }
+    ],
+    nextSafeAction: isComplete
+      ? "/blu-validate-phase 3"
+      : isBlocked
+        ? "/blu-progress"
+        : "/blu-execute-phase 3",
+    ...patch
+  };
 }
 
 function summaryWithUntouchedScaffoldSections(planId = "01"): string {
@@ -322,10 +463,20 @@ test("execute-phase summary tools are registered in the Blueprint server", () =>
     "blueprint_phase_execution_targets",
     "blueprint_phase_summary_index",
     "blueprint_phase_summary_read",
+    "blueprint_phase_summary_authoring_context",
+    "blueprint_phase_summary_validate_model",
     "blueprint_phase_summary_write"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
   }
+
+  const writeTool = phaseToolDefinitions.find(
+    (definition) => definition.name === "blueprint_phase_summary_write"
+  );
+  assert.ok(writeTool);
+  assert.ok("model" in writeTool.inputSchema);
+  assert.equal("content" in writeTool.inputSchema, false);
+  assert.match(writeTool.description, /Markdown content fallback is not supported/i);
 });
 
 test("phase context indexes execution summaries alongside plans", async (t) => {
@@ -339,7 +490,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
     cwd: repoPath,
     phase: "3",
     planId: "1",
-    content: validSummaryContent("01")
+    model: validSummaryModel("01")
   });
   const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
   const read = await blueprintPhaseSummaryRead({
@@ -351,7 +502,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validSummaryContent("01")
+    model: validSummaryModel("01")
   });
   const invalid = await blueprintPhaseSummaryWrite({
     cwd: repoPath,
@@ -376,23 +527,223 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.deepEqual(index.completedPlans, ["01"]);
   assert.deepEqual(index.pendingPlans, []);
   assert.equal(read.found, true);
-  assert.equal(read.metadata?.linkedPlanPath, "03-01-PLAN.md");
+  assert.equal(
+    read.metadata?.linkedPlanPath,
+    ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+  );
   assert.equal(read.metadata?.status, "COMPLETED");
   assert.equal(read.validation?.valid, true);
   assert.deepEqual(read.validation?.issues, []);
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
-  assert.match(invalid.issues.join("\n"), /must not be empty/i);
+  assert.match(invalid.issues.join("\n"), /model-only|content is invalid/i);
   assert.deepEqual(context.phase?.artifacts.plans, [planPath]);
   assert.deepEqual(context.phase?.artifacts.summaries, [summaryPath]);
   assert.ok(context.phase?.artifacts.all.includes(summaryPath));
   assert.ok(listed.artifacts.phases.includes(planPath));
   assert.ok(listed.artifacts.phases.includes(summaryPath));
   assert.match(afterStatus.nextAction, /\/blu-validate-phase 3/);
-  assert.match(summaryBody, /summary artifact/i);
+  assert.match(summaryBody, /Targeted verification evidence for plan 01/i);
 });
 
-test("phase summary writes reject untouched templates and repo validation reports malformed summaries as issues", async (t) => {
+test("phase summary authoring context narrows optional empty dependency context exactly", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const context = await blueprintPhaseSummaryAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const taskSchemaText = JSON.stringify(context.taskSchema);
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(context.dependencyPlans, []);
+  assert.match(taskSchemaText, /"dependencyPlans"/);
+  assert.match(taskSchemaText, /"maxItems":0/);
+
+  const invalid = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01", "COMPLETED", {
+      dependencyPlans: [
+        {
+          planId: "99",
+          path: ".blueprint/phases/03-phase-discovery/03-99-PLAN.md",
+          status: "satisfied",
+          evidence: "Injected dependency evidence."
+        }
+      ]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    invalid.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have more than 0 items/i
+  );
+});
+
+test("phase summary authoring context blocks missing required upstream plan context early", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const context = await blueprintPhaseSummaryAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+  const validation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: validSummaryModel("02")
+  });
+
+  assert.equal(context.status, "invalid");
+  assert.equal(context.taskSchema, null);
+  assert.match(context.reason ?? "", /does not exist yet/i);
+  assert.equal(validation.status, "invalid");
+  assert.match(
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /does not exist yet|runtime task schema/i
+  );
+});
+
+test("phase summary schema rejects unsupported fields, missing required fields, and unsafe rendered sinks", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const unsupported = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01", "COMPLETED", {
+      linkedPlanPath: "03-99-PLAN.md"
+    })
+  });
+  const missingModel = validSummaryModel("01");
+  delete missingModel.evidence;
+  const missing = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: missingModel
+  });
+  const injected = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01", "COMPLETED", {
+      targetedVerification: [
+        {
+          check: "tests/phase-planning-tools.test.ts exits 0",
+          command: "npm test -- tests/phase-planning-tools.test.ts\n## Injected",
+          result: "pass",
+          evidence: "targeted output",
+          notes: "safe note"
+        }
+      ]
+    })
+  });
+
+  assert.equal(unsupported.status, "invalid");
+  assert.match(
+    unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have additional properties/i
+  );
+  assert.equal(missing.status, "invalid");
+  assert.match(
+    missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must have required property 'evidence'/i
+  );
+  assert.equal(injected.status, "invalid");
+  assert.match(
+    injected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must match pattern/i
+  );
+});
+
+test("phase summary runtime narrowing rejects out-of-scope acceptance criteria without mutating later schemas", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1).replace(
+      "tests/phase-planning-tools.test.ts exits 0",
+      "tests/execute-phase-summary-tools.test.ts exits 0"
+    ),
+    "utf8"
+  );
+
+  const contextOne = await blueprintPhaseSummaryAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const contextTwo = await blueprintPhaseSummaryAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+  const invalidTwo = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: validSummaryModel("02")
+  });
+  const validTwo = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: validSummaryModel("02", "COMPLETED", {
+      targetedVerification: [
+        {
+          check: "tests/execute-phase-summary-tools.test.ts exits 0",
+          command: "npm test -- tests/execute-phase-summary-tools.test.ts",
+          result: "pass",
+          evidence: "Focused execute summary tests passed.",
+          notes: "The selected acceptance criterion passed."
+        }
+      ],
+      evidence: [
+        {
+          kind: "test",
+          source: "npm test -- tests/execute-phase-summary-tools.test.ts",
+          summary: "Focused execute-phase summary tests passed."
+        }
+      ]
+    })
+  });
+
+  assert.equal(contextOne.status, "ready");
+  assert.equal(contextTwo.status, "ready");
+  assert.match(JSON.stringify(contextOne.taskSchema), /phase-planning-tools/);
+  assert.doesNotMatch(JSON.stringify(contextTwo.taskSchema), /phase-planning-tools/);
+  assert.match(JSON.stringify(contextTwo.taskSchema), /execute-phase-summary-tools/);
+  assert.equal(invalidTwo.status, "invalid");
+  assert.match(
+    invalidTwo.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of|must be equal to constant/i
+  );
+  assert.equal(validTwo.status, "valid");
+  assert.match(
+    validTwo.renderPreview ?? "",
+    /\*\*Plan:\*\* `\.blueprint\/phases\/03-phase-discovery\/03-02-PLAN\.md`/
+  );
+});
+
+test("phase summary writer rejects markdown fallback and repo validation reports malformed summaries as issues", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -451,7 +802,7 @@ test("phase summary writes reject untouched templates and repo validation report
   assert.equal(invalidRead.metadata?.linkedPlanPath, "03-01-PLAN.md");
   assert.equal(invalidRead.validation?.valid, false);
   assert.match(invalidRead.validation?.issues.join("\n") ?? "", /placeholder scaffold text|must start|locked marker/i);
-  assert.match(rejected.issues.join("\n"), /locked marker|placeholder scaffold text|must start/i);
+  assert.match(rejected.issues.join("\n"), /model-only|content is invalid/i);
 });
 
 test("phase summary reads expose mismatched plan markers without inventing linked plan paths", async (t) => {
@@ -510,7 +861,7 @@ test("phase summary reads expose mismatched plan markers without inventing linke
   assert.deepEqual(index.pendingPlans, ["01"]);
 });
 
-test("phase summary writes reject summaries whose H1 appears after body text", async (t) => {
+test("phase summary reads reject summaries whose H1 appears after body text", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -544,19 +895,18 @@ test("phase summary writes reject summaries whose H1 appears after body text", a
 - \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
 `;
 
-  const rejected = await blueprintPhaseSummaryWrite({
-    cwd: repoPath,
-    phase: "3",
-    planId: "01",
-    content: prefacedSummary,
-    overwrite: true
-  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
+    prefacedSummary,
+    "utf8"
+  );
+  const read = await blueprintPhaseSummaryRead({ cwd: repoPath, phase: "3", planId: "01" });
 
-  assert.equal(rejected.status, "invalid");
-  assert.match(rejected.issues.join("\n"), /must start with a '# \.\.\. - Summary' heading/i);
+  assert.equal(read.validation?.valid, false);
+  assert.match(read.validation?.issues.join("\n") ?? "", /must start with a '# \.\.\. - Summary' heading/i);
 });
 
-test("phase summary writes reject summaries whose Plan marker does not match the linked plan path", async (t) => {
+test("phase summary reads reject summaries whose Plan marker does not match the linked plan path", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -588,16 +938,46 @@ test("phase summary writes reject summaries whose Plan marker does not match the
 - \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
 `;
 
-  const rejected = await blueprintPhaseSummaryWrite({
-    cwd: repoPath,
-    phase: "3",
-    planId: "01",
-    content: mismatchedPlanSummary,
-    overwrite: true
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
+    mismatchedPlanSummary,
+    "utf8"
+  );
+  const read = await blueprintPhaseSummaryRead({ cwd: repoPath, phase: "3", planId: "01" });
+
+  assert.equal(read.validation?.valid, false);
+  assert.match(read.validation?.issues.join("\n") ?? "", /does not match linked plan path/i);
+});
+
+test("phase summary reads reject raw markdown that contradicts lifecycle truth table", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  assert.equal(rejected.status, "invalid");
-  assert.match(rejected.issues.join("\n"), /does not match linked plan path/i);
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
+    validSummaryContent("01").replace(
+      "**Readiness:** ready-for-validation",
+      "**Readiness:** blocked"
+    ),
+    "utf8"
+  );
+
+  const read = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(read.validation?.valid, false);
+  assert.match(
+    read.validation?.issues.join("\n") ?? "",
+    /status COMPLETED requires \*\*Readiness:\*\* ready-for-validation/i
+  );
+  assert.deepEqual(index.completedPlans, []);
+  assert.deepEqual(index.pendingPlans, ["01"]);
 });
 
 test("partial and blocked summaries are valid evidence but do not close execution debt", async (t) => {
@@ -616,13 +996,13 @@ test("partial and blocked summaries are valid evidence but do not close executio
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validSummaryContent("01", "PARTIAL")
+    model: validSummaryModel("01", "PARTIAL")
   });
   const blocked = await blueprintPhaseSummaryWrite({
     cwd: repoPath,
     phase: "3",
     planId: "02",
-    content: validSummaryContent("02", "BLOCKED")
+    model: validSummaryModel("02", "BLOCKED")
   });
   const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
   const readPartial = await blueprintPhaseSummaryRead({
@@ -666,24 +1046,36 @@ test("completed summaries linked to stale plans do not close execution debt", as
     index.warnings.join("\n"),
     /03-02-SUMMARY\.md: linked plan .*03-02-PLAN\.md is missing dependency plan artifacts/i
   );
+  await assert.rejects(
+    blueprintPhaseValidationWrite({
+      cwd: repoPath,
+      phase: "3",
+      artifact: "verification",
+      content: validVerificationContent("03-02-SUMMARY.md"),
+      overwrite: true
+    }),
+    /valid execution summaries/i
+  );
 });
 
-test("phase summary writes reject invalid summary status markers", async (t) => {
+test("phase summary schema rejects invalid summary statuses", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const rejected = await blueprintPhaseSummaryWrite({
+  const rejected = await blueprintPhaseSummaryValidateModel({
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validSummaryContent("01").replace("**Status:** COMPLETED", "**Status:** DONE"),
-    overwrite: true
+    model: validSummaryModel("01", "COMPLETED", { status: "DONE" })
   });
 
   assert.equal(rejected.status, "invalid");
-  assert.match(rejected.issues.join("\n"), /must be one of COMPLETED, PARTIAL, or BLOCKED/);
+  assert.match(
+    rejected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to one of the allowed values/i
+  );
 });
 
 test("phase summary writes reject execution evidence for invalid saved plans", async (t) => {
@@ -702,7 +1094,7 @@ test("phase summary writes reject execution evidence for invalid saved plans", a
     cwd: repoPath,
     phase: "3",
     planId: "02",
-    content: validSummaryContent("02")
+    model: validSummaryModel("02")
   });
 
   assert.equal(rejected.status, "invalid");
@@ -727,7 +1119,7 @@ test("phase summary writes reject execution evidence when linked dependency plan
     cwd: repoPath,
     phase: "3",
     planId: "02",
-    content: validSummaryContent("02")
+    model: validSummaryModel("02")
   });
   const summaryRead = await blueprintPhaseSummaryRead({
     cwd: repoPath,
@@ -742,32 +1134,42 @@ test("phase summary writes reject execution evidence when linked dependency plan
   assert.equal(summaryRead.found, false);
 });
 
-test("phase summary writes reject untouched scaffold prose in the summary sections", async (t) => {
+test("phase summary model validation rejects untouched scaffold prose in summary fields", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const rejected = await blueprintPhaseSummaryWrite({
+  const rejected = await blueprintPhaseSummaryValidateModel({
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: summaryWithUntouchedScaffoldSections("01"),
-    overwrite: true
+    model: validSummaryModel("01", "COMPLETED", {
+      changesMade: ["Explicit code, config, or artifact changes completed for this plan."],
+      targetedVerification: [
+        {
+          check: "tests/phase-planning-tools.test.ts exits 0",
+          command: "npm test -- tests/phase-planning-tools.test.ts",
+          result: "pass",
+          evidence: "Command, test, or evidence that supports the reported outcome.",
+          notes: "Replace with concrete evidence."
+        }
+      ],
+      evidence: [
+        {
+          kind: "artifact",
+          source: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+          summary: "or other saved repo evidence if helpful."
+        }
+      ]
+    })
   });
 
   assert.equal(rejected.status, "invalid");
-  assert.match(rejected.issues.join("\n"), /placeholder scaffold text/i);
   assert.match(
-    rejected.issues.join("\n"),
-    /Explicit code, config, or artifact changes completed for this plan\./
+    rejected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /placeholder language|or other saved repo evidence if helpful|Replace with concrete evidence/i
   );
-  assert.match(
-    rejected.issues.join("\n"),
-    /Command, test, or evidence that supports the reported outcome\./
-  );
-  assert.match(rejected.issues.join("\n"), /Remaining gap, handoff, or `none`\./);
-  assert.match(rejected.issues.join("\n"), /or other saved repo evidence if helpful\./);
 });
 
 test("phase summary indexing ignores malformed summaries when computing completion state", async (t) => {
@@ -843,13 +1245,13 @@ test("phase execution targets select the earliest runnable wave, expose overlap 
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validSummaryContent("01")
+    model: validSummaryModel("01")
   });
   await blueprintPhaseSummaryWrite({
     cwd: repoPath,
     phase: "3",
     planId: "03",
-    content: validSummaryContent("03", "PARTIAL")
+    model: validSummaryModel("03", "PARTIAL")
   });
 
   const defaultTargets = await blueprintPhaseExecutionTargets({
@@ -983,7 +1385,7 @@ test("phase summary tools accept numeric phase and plan identifiers from runtime
     cwd: repoPath,
     phase: 3,
     planId: 1,
-    content: validSummaryContent("01")
+    model: validSummaryModel("01")
   });
   const read = await blueprintPhaseSummaryRead({
     cwd: repoPath,

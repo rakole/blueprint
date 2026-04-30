@@ -84,15 +84,27 @@ helper guidance.
 - Read `mcp_blueprint_blueprint_artifact_contract_read` with
   `artifactId: "phase.summary"` before drafting or replacing any summary, and
   use `contract.authoringTemplate` as the summary shape authority.
+- Read `mcp_blueprint_blueprint_phase_summary_authoring_context` for the
+  selected `planId` before final drafting. If it returns `status: "invalid"`,
+  stop with the prerequisite blockers instead of inventing acceptance checks,
+  dependency rows, plan provenance, or next actions.
+- Author the structured `phase.summary` model against the returned
+  `taskSchema`, then call `mcp_blueprint_blueprint_phase_summary_validate_model`
+  and repair all diagnostics together before persistence. The task schema is
+  the truth source for exact targeted verification rows, dependency-plan rows,
+  status/readiness/completion consistency, sentinel rows, and allowed next
+  actions.
 - Persist one `XX-YY-SUMMARY.md` artifact per executed plan through
   `mcp_blueprint_blueprint_phase_summary_write`.
 - Pass the resolved numeric `phase`, the numeric `planId` for the matching
-  saved plan, and the full final summary content.
+  saved plan, and the same validated structured `model`. Do not pass Markdown
+  `content`.
 - The matching plan must already exist before the summary write.
 - Treat the returned `path` and `linkedPlanPath` as authoritative instead of
   rebuilding summary filenames manually.
-- Do not pass summary filenames, phase directories, slugs, or combined tokens
-  such as `03-01` where the tool expects `planId`.
+- Do not pass summary filenames, phase directories, slugs, combined tokens
+  such as `03-01`, or model-owned path/provenance fields where the tool expects
+  `planId`.
 - Do not persist execute-phase reports. `/blu-execute-phase` writes summaries
   plus synced state only.
 
@@ -169,6 +181,8 @@ When suitable execution agents are unavailable, continue sequentially:
   not executed.
 - The canonical `phase.summary` contract was read before summary authoring or
   replacement.
+- The summary authoring context and model validator were used before every new
+  summary write.
 - One summary per executed plan was persisted only through
   `mcp_blueprint_blueprint_phase_summary_write`.
 - Valid `PARTIAL` and `BLOCKED` summaries remained pending carry-forward

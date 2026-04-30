@@ -10,6 +10,59 @@ import {
 } from "../src/mcp/tools/phase.js";
 import { blueprintArtifactValidate } from "../src/mcp/tools/artifacts.js";
 
+function completedSummaryContent(): string {
+  return `# Phase 04: Validation - Summary 01
+
+**Plan:** \`04-01-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase 4
+
+## Outcome
+
+- Execution completed and produced a summary artifact.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| tests/verify-work-roadmap-sync.test.ts exits 0 | npx tsx --test tests/verify-work-roadmap-sync.test.ts | pass | Wrote the summary artifact at .blueprint/phases/04-phase-validation/04-01-SUMMARY.md. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | Saved summary artifact. |
+`;
+}
+
 async function createRepoFixture(options: {
   verificationContent: string;
   uatContent: string;
@@ -116,31 +169,7 @@ Persist verification and UAT evidence.
   );
   await writeFile(
     path.join(phaseDir, "04-01-SUMMARY.md"),
-    `# Phase 04: Validation - Summary 01
-
-**Plan:** \`04-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution completed and produced a summary artifact.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`
-`,
+    completedSummaryContent(),
     "utf8"
   );
   await writeFile(

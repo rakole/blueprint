@@ -523,7 +523,7 @@ test("phase execution skill and bounded execution agent are marked implemented i
   );
 });
 
-test("execute-phase runtime references keep the topic/todo contract, summary contract read, and lower-wave gating explicit", async () => {
+test("execute-phase runtime references keep the topic/todo contract, summary model tools, and lower-wave gating explicit", async () => {
   const [runtimeReference, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/RUNTIME-REFERENCE.md"),
     readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
@@ -531,11 +531,12 @@ test("execute-phase runtime references keep the topic/todo contract, summary con
 
   assert.match(
     runtimeReference,
-    /\| `execute-phase` \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+    /\| `execute-phase` \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_phase_summary_authoring_context`<br>`blueprint_phase_summary_validate_model`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
   );
   assert.match(runtimeReference, /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration/i);
   assert.match(runtimeReference, /pair Gemini-native `update_topic` and `write_todos` for long execution runs without turning them into persistence/i);
-  assert.match(runtimeReference, /read the canonical `phase\.summary` contract before any summary write or replacement/i);
+  assert.match(runtimeReference, /read the canonical `phase\.summary` contract plus the schema-first summary authoring context before any summary write or replacement/i);
+  assert.match(runtimeReference, /validate structured summary models before persistence/i);
   assert.match(runtimeReference, /keep later-wave work blocked until any lower-wave pending plan is closed/i);
   assert.match(
     runtimeReference,

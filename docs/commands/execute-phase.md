@@ -100,6 +100,8 @@ and no-subagent fallback behavior, read the rich runtime contract in
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_summary_authoring_context` -> `{status, phase, planId, path, linkedPlanPath, plan, existing, dependencyPlans, acceptanceCriteria, allowedNextActions, schemaPath, baseSchema, taskSchema, prerequisiteBlockers, warnings}`
+- `blueprint_phase_summary_validate_model` -> `{status, valid, phase, planId, path, linkedPlanPath, schemaPath, taskSchema, diagnostics, diagnosticCounts, normalizedModel, renderPreview, warnings}`
 - `blueprint_phase_summary_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
@@ -113,14 +115,33 @@ and no-subagent fallback behavior, read the rich runtime contract in
   write raw `XX-YY-SUMMARY.md` files directly.
 - Pass `phase` as the resolved numeric phase reference and `planId` as the
   numeric id of the matching saved plan.
+- Read `blueprint_phase_summary_authoring_context` before final summary
+  drafting so the exact acceptance criteria, dependency plan rows, linked plan
+  provenance, summary path, allowed next actions, `schemaPath`, base schema,
+  and narrowed `taskSchema` are explicit.
+- Validate the structured `phase.summary` model through
+  `blueprint_phase_summary_validate_model`; repair all diagnostics together
+  and persist the same model through `blueprint_phase_summary_write`.
+- New summary writes are model-only. Markdown content fallback is rejected by
+  the writer, while existing Markdown summaries may still be read and indexed
+  for compatibility.
 - The matching `XX-YY-PLAN.md` must already exist before a summary can be
   written.
 - Treat the returned `path` plus `linkedPlanPath` as authoritative instead of
   rebuilding summary filenames manually.
-- Do not pass summary filenames, phase slugs, phase directories, or combined
-  tokens such as `03-01` where the tool expects `planId`.
+- Do not pass summary filenames, phase slugs, phase directories, combined
+  tokens such as `03-01`, or model-owned path/provenance fields where the tool
+  expects `planId`.
 - `COMPLETED` is the only summary status that closes execution debt. `PARTIAL`
   and `BLOCKED` remain pending carry-forward evidence.
+- Truth table: `COMPLETED` requires `ready-for-validation`, completion state
+  `complete`, passing targeted verification rows, exact `none` sentinel rows
+  for manual/deferred work and gaps, and `/blu-validate-phase <phase>`.
+  `PARTIAL` requires `not-ready-for-validation`, completion state `pending`,
+  at least one non-pass targeted verification row, a concrete open repair
+  route, and `/blu-execute-phase <phase>`. `BLOCKED` requires `blocked`,
+  completion state `blocked`, at least one blocked repair route, and
+  `/blu-progress`.
 
 ## Skills And Subagents
 

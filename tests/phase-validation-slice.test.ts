@@ -20,6 +20,68 @@ import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 
 const repoRoot = process.cwd();
 
+function completedSummaryContent(args: {
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  planId: string;
+  check: string;
+  command: string;
+}): string {
+  const summaryPath = `${args.phaseDir}/${args.phasePrefix}-${args.planId}-SUMMARY.md`;
+
+  return `# Phase ${args.phasePrefix}: ${args.phaseName} - Summary ${args.planId}
+
+**Plan:** \`${args.phasePrefix}-${args.planId}-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase ${Number.parseInt(args.phasePrefix, 10)}
+
+## Outcome
+
+- Execution completed and produced a summary artifact.
+
+## Changes Made
+
+- Captured the completed validation-plan execution in the phase summary.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| ${args.check} | ${args.command} | pass | Wrote the summary artifact at ${summaryPath}. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | ${summaryPath} | Saved summary artifact. |
+`;
+}
+
 async function createValidationRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-validation-slice-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -130,31 +192,14 @@ Exercise verification and UAT handoff.
   );
   await writeFile(
     path.join(completedPhaseDir, "03-01-SUMMARY.md"),
-    `# Phase 03: Execution - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution completed and produced a summary artifact.
-
-## Changes Made
-
-- Captured the completed execution-plan work in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "03",
+      phaseName: "Execution",
+      phaseDir: ".blueprint/phases/03-execution",
+      planId: "01",
+      check: "tests/phase-validation-slice.test.ts exits 0",
+      command: "npx tsx --test tests/phase-validation-slice.test.ts"
+    }),
     "utf8"
   );
   await writeFile(
@@ -344,61 +389,84 @@ Exercise validation artifact routing.
     "utf8"
   );
   await writeFile(
-    path.join(phaseDir, "04-01-SUMMARY.md"),
-    `# Phase 04: Validation - Summary 01
+    path.join(phaseDir, "04-02-PLAN.md"),
+    `---
+phase: 4
+plan_id: "02"
+title: "Validation Plan 02"
+wave: 1
+status: planned
+objective: "Exercise secondary validation summary routing."
+depends_on: []
+requirements:
+  - EXEC-01
+files_modified:
+  - src/mcp/tools/phase.ts
+read_first:
+  - src/mcp/tools/phase.ts
+acceptance_criteria:
+  - tests/phase-validation-slice.test.ts exits 0
+autonomous: true
+---
 
-**Plan:** \`04-01-PLAN.md\`
-**Status:** COMPLETED
+# Phase 04: Validation - Plan 02
 
-## Outcome
+## Goal
 
-- Execution completed and produced a summary artifact.
+Exercise secondary validation summary routing.
 
-## Changes Made
+## Scope
 
-- Captured the completed validation-plan execution in the phase summary.
+- Persist a second valid summary for validation artifact coverage.
+
+## Tasks
+
+### Task 1: Keep multi-summary validation grounded
+
+#### Read First
+
+- src/mcp/tools/phase.ts
+
+#### Action
+
+- Confirm validation artifacts consume both live completed summaries.
+
+#### Acceptance Criteria
+
+- tests/phase-validation-slice.test.ts exits 0
 
 ## Verification
 
-- Wrote the summary artifact at \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+- Re-run the validation slice after persisting the phase 4 artifacts.
 
-## Follow-Ups
+## Must Haves
 
-- none
-
-## Evidence
-
-- \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`
+- Keep validation routing grounded in live saved summary evidence.
 `,
     "utf8"
   );
   await writeFile(
+    path.join(phaseDir, "04-01-SUMMARY.md"),
+    completedSummaryContent({
+      phasePrefix: "04",
+      phaseName: "Validation",
+      phaseDir: ".blueprint/phases/04-phase-validation",
+      planId: "01",
+      check: "tests/phase-validation-slice.test.ts exits 0",
+      command: "npx tsx --test tests/phase-validation-slice.test.ts"
+    }),
+    "utf8"
+  );
+  await writeFile(
     path.join(phaseDir, "04-02-SUMMARY.md"),
-    `# Phase 04: Validation - Summary 02
-
-**Plan:** \`04-99-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution completed and produced a summary artifact.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "04",
+      phaseName: "Validation",
+      phaseDir: ".blueprint/phases/04-phase-validation",
+      planId: "02",
+      check: "tests/phase-validation-slice.test.ts exits 0",
+      command: "npx tsx --test tests/phase-validation-slice.test.ts"
+    }),
     "utf8"
   );
   await writeFile(

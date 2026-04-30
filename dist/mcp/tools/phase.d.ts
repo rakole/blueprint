@@ -366,8 +366,16 @@ type PhaseSummaryReadArgs = PhaseLookupArgs & {
 };
 type PhaseSummaryWriteArgs = PhaseLookupArgs & {
     planId: NumericInput;
-    content: string;
+    content?: string;
+    model?: unknown;
+    authoringMode?: "content-compatible" | "model-only";
     overwrite?: boolean;
+};
+type PhaseSummaryAuthoringContextArgs = PhaseLookupArgs & {
+    planId: NumericInput;
+};
+type PhaseSummaryValidateModelArgs = PhaseSummaryAuthoringContextArgs & {
+    model: unknown;
 };
 type ResolvedPhaseLocation = {
     phaseNumber: string;
@@ -847,6 +855,102 @@ type PhaseSummaryReadResult = {
     } | null;
     reason: string | null;
 };
+type PhaseSummaryStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type PhaseSummaryReadiness = "ready-for-validation" | "not-ready-for-validation" | "blocked";
+type PhaseSummaryCompletionState = "complete" | "pending" | "blocked";
+type PhaseSummaryVerificationResult = "pass" | "fail" | "blocked" | "not-run";
+type PhaseSummaryManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type PhaseSummaryGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type PhaseSummaryEvidenceKind = "artifact" | "repo-path" | "command" | "test" | "other";
+type PhaseSummaryStructuredModel = {
+    status: PhaseSummaryStatus;
+    readiness: PhaseSummaryReadiness;
+    completionState: PhaseSummaryCompletionState;
+    outcome: string[];
+    changesMade: string[];
+    targetedVerification: Array<{
+        check: string;
+        command: string;
+        result: PhaseSummaryVerificationResult;
+        evidence: string;
+        notes: string;
+    }>;
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+        status: "satisfied";
+        evidence: string;
+    }>;
+    manualOrDeferredWork: Array<{
+        item: string;
+        reason: string;
+        followUp: string;
+        status: PhaseSummaryManualStatus;
+    }>;
+    gapRoutes: Array<{
+        gap: string;
+        evidence: string;
+        repair: string;
+        status: PhaseSummaryGapStatus;
+    }>;
+    followUps: string[];
+    evidence: Array<{
+        kind: PhaseSummaryEvidenceKind;
+        source: string;
+        summary: string;
+    }>;
+    nextSafeAction: string;
+};
+type PhaseSummaryAuthoringContextResult = {
+    status: "ready" | "invalid";
+    phase: ResolvedPhaseLocation | null;
+    planId: string | null;
+    path: string | null;
+    linkedPlanPath: string | null;
+    plan: PhasePlanRecord | null;
+    existing: PhaseSummaryReadResult | null;
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+    }>;
+    acceptanceCriteria: string[];
+    allowedNextActions: string[];
+    schemaPath: string | null;
+    baseSchema: Record<string, unknown> | null;
+    taskSchema: Record<string, unknown> | null;
+    modelOnly: boolean;
+    prerequisiteBlockers: string[];
+    reason: string | null;
+    warnings: string[];
+};
+type PhaseSummaryModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type PhaseSummaryModelDiagnostic = {
+    source: PhaseSummaryModelDiagnosticSource;
+    path: string;
+    code: string;
+    message: string;
+    context: Record<string, unknown>;
+    suggestion: string;
+};
+type PhaseSummaryValidateModelResult = {
+    status: "valid" | "invalid";
+    valid: boolean;
+    phase: ResolvedPhaseLocation | null;
+    planId: string | null;
+    path: string | null;
+    linkedPlanPath: string | null;
+    schemaPath: string | null;
+    taskSchema: Record<string, unknown> | null;
+    diagnostics: PhaseSummaryModelDiagnostic[];
+    diagnosticCounts: {
+        total: number;
+        bySource: Record<PhaseSummaryModelDiagnosticSource, number>;
+        byCode: Record<string, number>;
+    };
+    normalizedModel: PhaseSummaryStructuredModel | null;
+    renderPreview: string | null;
+    warnings: string[];
+};
 type PhaseSummaryWriteResult = {
     phaseNumber: string;
     phasePrefix: string;
@@ -1035,6 +1139,8 @@ export declare function blueprintPhasePlanAuthoringContext(args?: PhasePlanAutho
 export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanValidateModelResult>;
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
+export declare function blueprintPhaseSummaryAuthoringContext(args: PhaseSummaryAuthoringContextArgs): Promise<PhaseSummaryAuthoringContextResult>;
+export declare function blueprintPhaseSummaryValidateModel(args: PhaseSummaryValidateModelArgs): Promise<PhaseSummaryValidateModelResult>;
 export declare function blueprintPhaseSummaryRead(args: PhaseSummaryReadArgs): Promise<PhaseSummaryReadResult>;
 export declare function blueprintPhaseExecutionTargets(args?: PhaseExecutionTargetsArgs): Promise<PhaseExecutionTargetsResult>;
 export declare function blueprintPhaseSummaryWrite(args: PhaseSummaryWriteArgs): Promise<PhaseSummaryWriteResult>;
@@ -1395,7 +1501,26 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
-        content: z.ZodString;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseSummaryAuthoringContextResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+        model: z.ZodUnknown;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseSummaryValidateModelResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
+        model: z.ZodUnknown;
         overwrite: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseSummaryWriteResult>;

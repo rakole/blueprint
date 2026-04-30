@@ -19,7 +19,9 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
     mcpToolsDoc,
     /Review-family commands must use `blueprint_artifact_contract_read` to fetch the canonical review artifact contract/i
   );
-  assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and full summary `content`/i);
+  assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and a validated structured summary `model`/i);
+  assert.match(mcpToolsDoc, /blueprint_phase_summary_authoring_context/);
+  assert.match(mcpToolsDoc, /blueprint_phase_summary_validate_model/);
   assert.match(mcpToolsDoc, /`blueprint_review_scope` accepts repo-relative file paths only/i);
   assert.match(mcpToolsDoc, /`blueprint_config_set` defaults `scope` to `project`, and `patch` must be a JSON object/i);
   assert.match(mcpToolsDoc, /`blueprint_project_init` is the first persistent bootstrap write/i);
