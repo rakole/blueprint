@@ -4,6 +4,14 @@ type NumericInput = string | number;
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
 type ReviewFindingDisposition = "follow-up" | "observation" | "blocked" | "accepted-risk";
 type CodeReviewEvidenceCoverageStatus = "used" | "deferred" | "irrelevant";
+type ReviewFixStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type ReviewFixReadiness = "ready-for-validation" | "not-ready-for-validation" | "blocked";
+type ReviewFixCompletionState = "complete" | "pending" | "blocked";
+type ReviewFixFindingStatus = "fixed" | "deferred" | "skipped";
+type ReviewFixVerificationResult = "pass" | "fail" | "blocked" | "not-run";
+type ReviewFixManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type ReviewFixGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type ReviewFixEvidenceKind = "review" | "summary" | "plan" | "repo-path" | "command" | "test" | "other";
 type ReviewFinding = {
     id: string;
     severity: ReviewFindingSeverity;
@@ -20,6 +28,7 @@ type ReviewRecordArgs = {
     scopeFiles?: string[];
     scopeSource?: ReviewModeSource;
     depth?: ReviewDepth;
+    targetIds?: string[];
 };
 type ReviewRecordResult = {
     phaseNumber: string;
@@ -146,6 +155,81 @@ type CodeReviewStructuredModel = {
     followUps: string[];
     nextSafeAction: string;
 };
+type ReviewFixTarget = {
+    targetId: string;
+    source: "finding" | "follow-up";
+    severity: ReviewFindingSeverity;
+    summary: string;
+    sourceSection: string | null;
+};
+type ReviewFixStructuredModel = {
+    status: ReviewFixStatus;
+    readiness: ReviewFixReadiness;
+    completionState: ReviewFixCompletionState;
+    remediationSummary: string[];
+    findingsAddressed: Array<{
+        findingId: string;
+        status: ReviewFixFindingStatus;
+        evidence: string;
+        disposition: string;
+    }>;
+    changesMade: Array<{
+        file: string;
+        summary: string;
+    }>;
+    verification: Array<{
+        check: string;
+        command: string;
+        result: ReviewFixVerificationResult;
+        evidence: string;
+    }>;
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+        status: "satisfied";
+        evidence: string;
+    }>;
+    manualOrDeferredWork: Array<{
+        item: string;
+        reason: string;
+        followUp: string;
+        status: ReviewFixManualStatus;
+    }>;
+    gapRoutes: Array<{
+        gap: string;
+        evidence: string;
+        repair: string;
+        status: ReviewFixGapStatus;
+    }>;
+    followUps: string[];
+    evidence: Array<{
+        kind: ReviewFixEvidenceKind;
+        source: string;
+        summary: string;
+    }>;
+    nextSafeAction: string;
+};
+type ReviewFixAuthoringContext = {
+    phase: ReviewScopePhase;
+    path: string;
+    sourceReviewPath: string;
+    targets: ReviewFixTarget[];
+    selectedTargetIds: string[];
+    completedSummaries: string[];
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+    }>;
+    knownEvidenceArtifacts: string[];
+    existingReviewFix: string | null;
+    completedNextSafeAction: string;
+    partialNextSafeActions: string[];
+    blockedNextSafeActions: string[];
+    allowedNextActions: string[];
+    schemaPath: string;
+    baseSchema: Record<string, unknown>;
+    taskSchema: Record<string, unknown>;
+};
 type SecurityReviewStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
 type SecurityReviewReadiness = "ready-for-routing" | "needs-follow-up" | "blocked";
 type SecurityReviewCompletionState = "complete" | "partial" | "blocked";
@@ -250,9 +334,10 @@ type ReviewModelDiagnostic = {
 type ReviewValidateModelArgs = {
     cwd?: string;
     phase?: NumericInput;
-    artifact?: "code-review" | "security";
+    artifact?: "code-review" | "review-fix" | "security";
     files?: string[];
     depth?: ReviewDepth;
+    targetIds?: string[];
     model: unknown;
 };
 type ReviewValidateModelResult = {
@@ -269,20 +354,21 @@ type ReviewValidateModelResult = {
         bySource: Record<ReviewDiagnosticSource, number>;
         byCode: Record<string, number>;
     };
-    normalizedModel: CodeReviewStructuredModel | SecurityStructuredModel | null;
+    normalizedModel: CodeReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
 };
 type ReviewAuthoringContextArgs = {
     cwd?: string;
     phase?: NumericInput;
-    artifact: "code-review" | "security";
+    artifact: "code-review" | "review-fix" | "security";
     files?: string[];
     depth?: ReviewDepth;
+    targetIds?: string[];
 };
 type ReviewAuthoringContextResult = {
     status: "ready" | "invalid";
-    artifact: "code-review" | "security";
+    artifact: "code-review" | "review-fix" | "security";
     phase: ReviewScopePhase | null;
     files: string[];
     reviewMode: ReviewScopeResult["reviewMode"] | null;
@@ -290,7 +376,7 @@ type ReviewAuthoringContextResult = {
     baseSchema: Record<string, unknown> | null;
     taskSchema: Record<string, unknown> | null;
     modelOnly: boolean;
-    authoringContext: CodeReviewAuthoringContext | SecurityAuthoringContext | null;
+    authoringContext: CodeReviewAuthoringContext | ReviewFixAuthoringContext | SecurityAuthoringContext | null;
     prerequisiteBlockers: string[];
     reason: string | null;
     warnings: string[];
@@ -338,6 +424,7 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodOptional<z.ZodEnum<{
             "code-review": "code-review";
+            "review-fix": "review-fix";
             security: "security";
         }>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
@@ -346,6 +433,7 @@ export declare const reviewToolDefinitions: ({
             quick: "quick";
             deep: "deep";
         }>>;
+        targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
         model: z.ZodUnknown;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewValidateModelResult>;
@@ -357,6 +445,7 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             "code-review": "code-review";
+            "review-fix": "review-fix";
             security: "security";
         }>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
@@ -365,6 +454,7 @@ export declare const reviewToolDefinitions: ({
             quick: "quick";
             deep: "deep";
         }>>;
+        targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewAuthoringContextResult>;
 } | {
@@ -395,6 +485,7 @@ export declare const reviewToolDefinitions: ({
             quick: "quick";
             deep: "deep";
         }>>;
+        targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewRecordResult>;
 })[];

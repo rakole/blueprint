@@ -17,8 +17,9 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   assert.match(mcpToolsDoc, /`blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract/i);
   assert.match(
     mcpToolsDoc,
-    /Review-family commands must use `blueprint_artifact_contract_read` to fetch the canonical review artifact contract/i
+    /Review-family commands must use runtime-owned contract context before drafting or updating/i
   );
+  assert.match(mcpToolsDoc, /For code-review-fix, `blueprint_review_authoring_context\.authoringContext\.taskSchema` is the model-authoring authority/i);
   assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and a validated structured summary `model`/i);
   assert.match(mcpToolsDoc, /blueprint_phase_summary_authoring_context/);
   assert.match(mcpToolsDoc, /blueprint_phase_summary_validate_model/);
@@ -520,12 +521,14 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(codeReviewDoc, /Directories, wildcards, `?\.blueprint\/\*\*`?, and absolute paths are invalid/i);
 
   assert.match(codeReviewFixCommand, /authoritative remediation baseline/i);
-  assert.match(codeReviewFixCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
+  assert.match(codeReviewFixCommand, /mcp_blueprint_blueprint_review_authoring_context/i);
+  assert.match(codeReviewFixCommand, /mcp_blueprint_blueprint_review_validate_model/i);
   assert.match(codeReviewFixCommand, /ask_user/i);
   assert.match(codeReviewFixCommand, /bounded automatic finding selection only/i);
   assert.match(codeReviewFixCommand, /returned `reportPath` as authoritative/i);
   assert.match(codeReviewFixDoc, /## Remediation Contract/);
-  assert.match(codeReviewFixDoc, /`blueprint_artifact_contract_read`/i);
+  assert.match(codeReviewFixDoc, /`blueprint_review_authoring_context`/i);
+  assert.match(codeReviewFixDoc, /`blueprint_review_validate_model`/i);
   assert.match(codeReviewFixDoc, /## In-Flight Progress Contract/);
   assert.match(codeReviewFixDoc, /Do not recreate finding ids or severity/i);
 
@@ -555,7 +558,7 @@ test("review contracts stay explicit across code-review, remediation, and review
     /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/i
   );
   assert.match(reviewSkill, /update_topic plus `write_todos`/i);
-  assert.match(reviewSkill, /Read the canonical review-fix contract through\s+`blueprint_artifact_contract_read` before drafting `XX-REVIEW-FIX\.md`/i);
+  assert.match(reviewSkill, /Read the review-fix authoring context through\s+`blueprint_review_authoring_context` before drafting `XX-REVIEW-FIX\.md`/i);
   assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS\.md`/i);
   assert.match(reviewSkill, /Directories, wildcards, absolute paths, and `?\.blueprint\/\*\*`? paths are invalid or skipped/i);
   assert.match(reviewSkill, /returned `findings` and `severityCounts` as the authoritative fix baseline/i);

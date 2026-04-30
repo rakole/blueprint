@@ -39,6 +39,21 @@ type NumericInput = string | number;
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
 type ReviewFindingDisposition = "follow-up" | "observation" | "blocked" | "accepted-risk";
 type CodeReviewEvidenceCoverageStatus = "used" | "deferred" | "irrelevant";
+type ReviewFixStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type ReviewFixReadiness = "ready-for-validation" | "not-ready-for-validation" | "blocked";
+type ReviewFixCompletionState = "complete" | "pending" | "blocked";
+type ReviewFixFindingStatus = "fixed" | "deferred" | "skipped";
+type ReviewFixVerificationResult = "pass" | "fail" | "blocked" | "not-run";
+type ReviewFixManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type ReviewFixGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type ReviewFixEvidenceKind =
+  | "review"
+  | "summary"
+  | "plan"
+  | "repo-path"
+  | "command"
+  | "test"
+  | "other";
 
 type ReviewFinding = {
   id: string;
@@ -57,6 +72,7 @@ type ReviewRecordArgs = {
   scopeFiles?: string[];
   scopeSource?: ReviewModeSource;
   depth?: ReviewDepth;
+  targetIds?: string[];
 };
 
 type ReviewRecordResult = {
@@ -206,6 +222,81 @@ type CodeReviewStructuredModel = {
   nextSafeAction: string;
 };
 
+type ReviewFixTarget = {
+  targetId: string;
+  source: "finding" | "follow-up";
+  severity: ReviewFindingSeverity;
+  summary: string;
+  sourceSection: string | null;
+};
+
+type ReviewFixStructuredModel = {
+  status: ReviewFixStatus;
+  readiness: ReviewFixReadiness;
+  completionState: ReviewFixCompletionState;
+  remediationSummary: string[];
+  findingsAddressed: Array<{
+    findingId: string;
+    status: ReviewFixFindingStatus;
+    evidence: string;
+    disposition: string;
+  }>;
+  changesMade: Array<{
+    file: string;
+    summary: string;
+  }>;
+  verification: Array<{
+    check: string;
+    command: string;
+    result: ReviewFixVerificationResult;
+    evidence: string;
+  }>;
+  dependencyPlans: Array<{
+    planId: string;
+    path: string;
+    status: "satisfied";
+    evidence: string;
+  }>;
+  manualOrDeferredWork: Array<{
+    item: string;
+    reason: string;
+    followUp: string;
+    status: ReviewFixManualStatus;
+  }>;
+  gapRoutes: Array<{
+    gap: string;
+    evidence: string;
+    repair: string;
+    status: ReviewFixGapStatus;
+  }>;
+  followUps: string[];
+  evidence: Array<{
+    kind: ReviewFixEvidenceKind;
+    source: string;
+    summary: string;
+  }>;
+  nextSafeAction: string;
+};
+
+type ReviewFixAuthoringContext = {
+  phase: ReviewScopePhase;
+  path: string;
+  sourceReviewPath: string;
+  targets: ReviewFixTarget[];
+  selectedTargetIds: string[];
+  completedSummaries: string[];
+  dependencyPlans: Array<{ planId: string; path: string }>;
+  knownEvidenceArtifacts: string[];
+  existingReviewFix: string | null;
+  completedNextSafeAction: string;
+  partialNextSafeActions: string[];
+  blockedNextSafeActions: string[];
+  allowedNextActions: string[];
+  schemaPath: string;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+};
+
 type SecurityReviewStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
 type SecurityReviewReadiness = "ready-for-routing" | "needs-follow-up" | "blocked";
 type SecurityReviewCompletionState = "complete" | "partial" | "blocked";
@@ -321,9 +412,10 @@ type ReviewModelDiagnostic = {
 type ReviewValidateModelArgs = {
   cwd?: string;
   phase?: NumericInput;
-  artifact?: "code-review" | "security";
+  artifact?: "code-review" | "review-fix" | "security";
   files?: string[];
   depth?: ReviewDepth;
+  targetIds?: string[];
   model: unknown;
 };
 
@@ -341,7 +433,7 @@ type ReviewValidateModelResult = {
     bySource: Record<ReviewDiagnosticSource, number>;
     byCode: Record<string, number>;
   };
-  normalizedModel: CodeReviewStructuredModel | SecurityStructuredModel | null;
+  normalizedModel: CodeReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | null;
   renderPreview: string | null;
   warnings: string[];
 };
@@ -349,14 +441,15 @@ type ReviewValidateModelResult = {
 type ReviewAuthoringContextArgs = {
   cwd?: string;
   phase?: NumericInput;
-  artifact: "code-review" | "security";
+  artifact: "code-review" | "review-fix" | "security";
   files?: string[];
   depth?: ReviewDepth;
+  targetIds?: string[];
 };
 
 type ReviewAuthoringContextResult = {
   status: "ready" | "invalid";
-  artifact: "code-review" | "security";
+  artifact: "code-review" | "review-fix" | "security";
   phase: ReviewScopePhase | null;
   files: string[];
   reviewMode: ReviewScopeResult["reviewMode"] | null;
@@ -364,7 +457,7 @@ type ReviewAuthoringContextResult = {
   baseSchema: Record<string, unknown> | null;
   taskSchema: Record<string, unknown> | null;
   modelOnly: boolean;
-  authoringContext: CodeReviewAuthoringContext | SecurityAuthoringContext | null;
+  authoringContext: CodeReviewAuthoringContext | ReviewFixAuthoringContext | SecurityAuthoringContext | null;
   prerequisiteBlockers: string[];
   reason: string | null;
   warnings: string[];
@@ -397,7 +490,8 @@ const reviewRecordInputSchema = {
   scopeSource: z
     .enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"])
     .optional(),
-  depth: z.enum(["quick", "standard", "deep"]).optional()
+  depth: z.enum(["quick", "standard", "deep"]).optional(),
+  targetIds: z.array(z.string()).optional()
 };
 
 const reviewScopeInputSchema = {
@@ -419,18 +513,20 @@ const reviewLoadFindingsInputSchema = {
 const reviewValidateModelInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
-  artifact: z.enum(["code-review", "security"]).optional(),
+  artifact: z.enum(["code-review", "review-fix", "security"]).optional(),
   files: z.array(z.string()).optional(),
   depth: z.enum(["quick", "standard", "deep"]).optional(),
+  targetIds: z.array(z.string()).optional(),
   model: z.unknown()
 };
 
 const reviewAuthoringContextInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
-  artifact: z.enum(["code-review", "security"]),
+  artifact: z.enum(["code-review", "review-fix", "security"]),
   files: z.array(z.string()).optional(),
-  depth: z.enum(["quick", "standard", "deep"]).optional()
+  depth: z.enum(["quick", "standard", "deep"]).optional(),
+  targetIds: z.array(z.string()).optional()
 };
 
 const CODE_REVIEW_MODEL_IDENTITY_KEYS = new Set([
@@ -794,6 +890,501 @@ async function buildCodeReviewAuthoringContext(args: {
     schemaPath: modelContract.schemaPath,
     baseSchema,
     taskSchema
+  };
+}
+
+function allowOnlyEmptyArray(schema: Record<string, unknown>): void {
+  schema.minItems = 0;
+  schema.maxItems = 0;
+  delete schema.items;
+}
+
+function reviewFixTargetsFromFindings(loaded: ReviewLoadFindingsResult): ReviewFixTarget[] {
+  const findingTargets: ReviewFixTarget[] = loaded.findings.map((finding) => ({
+    targetId: finding.id,
+    source: "finding",
+    severity: finding.severity,
+    summary: finding.summary,
+    sourceSection: finding.sourceSection
+  }));
+  const followUpTargets: ReviewFixTarget[] = loaded.followUps.map((followUp, index) => ({
+    targetId: `FU-${String(index + 1).padStart(2, "0")}`,
+    source: "follow-up",
+    severity: "unknown",
+    summary: followUp,
+    sourceSection: "Follow-Ups"
+  }));
+
+  return [...findingTargets, ...followUpTargets];
+}
+
+function resolveReviewFixSelectedTargetIds(args: {
+  targets: ReviewFixTarget[];
+  targetIds?: string[];
+}): { selectedTargetIds: string[]; issues: string[] } {
+  const available = new Set(args.targets.map((target) => target.targetId));
+  const requested = args.targetIds?.map((targetId) => targetId.trim()).filter(Boolean);
+  const selectedTargetIds = requested && requested.length > 0
+    ? [...new Set(requested)]
+    : args.targets.map((target) => target.targetId);
+  const unknown = selectedTargetIds.filter((targetId) => !available.has(targetId));
+  const issues: string[] = [];
+
+  if (selectedTargetIds.length === 0) {
+    issues.push("review.review-fix requires at least one selected saved review target.");
+  }
+  if (unknown.length > 0) {
+    issues.push(`Selected review-fix target ids are not present in the saved review baseline: ${unknown.join(", ")}.`);
+  }
+
+  return { selectedTargetIds, issues };
+}
+
+async function buildAllowedReviewFixNextActions(phaseNumber: string): Promise<{
+  completedNextSafeAction: string;
+  partialNextSafeActions: string[];
+  blockedNextSafeActions: string[];
+  allowedNextActions: string[];
+}> {
+  const completedNextSafeAction = `/blu-validate-phase ${phaseNumber}`;
+  const partialCandidates = [
+    `/blu-code-review-fix ${phaseNumber}`,
+    `/blu-add-tests ${phaseNumber}`
+  ];
+  const blockedCandidates = [
+    "/blu-progress"
+  ];
+  const implementedCommands = await getImplementedCommandNames();
+  const keepImplemented = (candidate: string): boolean => {
+    if (implementedCommands === null || implementedCommands.size === 0) {
+      return true;
+    }
+
+    return extractBlueprintDirectCommands(candidate).every((command) =>
+      implementedCommands.has(command)
+    );
+  };
+  const partialNextSafeActions = partialCandidates.filter(keepImplemented);
+  const blockedNextSafeActions = blockedCandidates.filter(keepImplemented);
+  const completedAction = keepImplemented(completedNextSafeAction)
+    ? completedNextSafeAction
+    : "/blu-progress";
+
+  return {
+    completedNextSafeAction: completedAction,
+    partialNextSafeActions,
+    blockedNextSafeActions,
+    allowedNextActions: uniqueSortedStrings([
+      completedAction,
+      ...partialNextSafeActions,
+      ...blockedNextSafeActions
+    ])
+  };
+}
+
+function dependencyPlanRowsForReviewFix(
+  dependsOn: string[],
+  phasePrefix: string,
+  phaseDir: string,
+  knownPlanIds: Set<string>
+): Array<{ planId: string; path: string }> {
+  return dependsOn.flatMap((dependency) => {
+    const trimmed = dependency.trim();
+    const candidates = [
+      trimmed,
+      /^\d+$/.test(trimmed) ? trimmed.padStart(2, "0") : trimmed,
+      trimmed.replace(/^0+(?=\d)/, "")
+    ];
+    const normalized = candidates.find((candidate) => knownPlanIds.has(candidate));
+
+    if (!normalized || !/^\d+(?:\.\d+)?$/.test(normalized)) {
+      return [];
+    }
+
+    const dependencyPrefix = `${phasePrefix}-${normalized}`;
+
+    return [{
+      planId: normalized,
+      path: `${phaseDir}/${dependencyPrefix}-PLAN.md`
+    }];
+  });
+}
+
+async function buildReviewFixTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  selectedTargetIds: string[];
+  dependencyPlans: Array<{ planId: string; path: string }>;
+  knownEvidenceArtifacts: string[];
+  completedNextSafeAction: string;
+  partialNextSafeActions: string[];
+  blockedNextSafeActions: string[];
+  allowedNextActions: string[];
+}): Promise<Record<string, unknown>> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+
+  if (properties) {
+    const findingsAddressed = getJsonObjectProperty(properties, "findingsAddressed");
+    if (findingsAddressed) {
+      findingsAddressed.minItems = args.selectedTargetIds.length;
+      findingsAddressed.maxItems = args.selectedTargetIds.length;
+      const items = getJsonObjectProperty(findingsAddressed, "items");
+      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+      const findingId = itemProperties ? getJsonObjectProperty(itemProperties, "findingId") : null;
+      if (findingId) {
+        findingId.enum = args.selectedTargetIds;
+      }
+      findingsAddressed.allOf = args.selectedTargetIds.map((targetId) =>
+        exactObjectPropertyContains("findingId", targetId)
+      );
+    }
+
+    const dependencyPlans = getJsonObjectProperty(properties, "dependencyPlans");
+    if (dependencyPlans) {
+      if (args.dependencyPlans.length === 0) {
+        allowOnlyEmptyArray(dependencyPlans);
+      } else {
+        dependencyPlans.minItems = args.dependencyPlans.length;
+        dependencyPlans.maxItems = args.dependencyPlans.length;
+        const items = getJsonObjectProperty(dependencyPlans, "items");
+        const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+        const planId = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
+        const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+        if (planId) {
+          planId.enum = args.dependencyPlans.map((dependency) => dependency.planId);
+        }
+        if (pathProperty) {
+          pathProperty.enum = args.dependencyPlans.map((dependency) => dependency.path);
+        }
+        dependencyPlans.allOf = args.dependencyPlans.map((dependency) => ({
+          contains: {
+            type: "object",
+            required: ["planId", "path", "status"],
+            properties: {
+              planId: { const: dependency.planId },
+              path: { const: dependency.path },
+              status: { const: "satisfied" }
+            }
+          },
+          minContains: 1,
+          maxContains: 1
+        }));
+      }
+    }
+
+    const evidence = getJsonObjectProperty(properties, "evidence");
+    if (evidence) {
+      evidence.minItems = args.knownEvidenceArtifacts.length;
+      evidence.maxItems = args.knownEvidenceArtifacts.length;
+      const items = getJsonObjectProperty(evidence, "items");
+      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+      const source = itemProperties ? getJsonObjectProperty(itemProperties, "source") : null;
+      if (source) {
+        source.enum = args.knownEvidenceArtifacts;
+      }
+      evidence.allOf = args.knownEvidenceArtifacts.map((artifactPath) =>
+        exactObjectPropertyContains("source", artifactPath)
+      );
+    }
+
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedNextActions;
+    }
+  }
+
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "COMPLETED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.completedNextSafeAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PARTIAL" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.partialNextSafeActions }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "BLOCKED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.blockedNextSafeActions }
+        }
+      }
+    }
+  ];
+
+  schema["x-blueprint-runtimeContext"] = {
+    selectedTargetIds: args.selectedTargetIds,
+    dependencyPlans: args.dependencyPlans,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    completedNextSafeAction: args.completedNextSafeAction,
+    partialNextSafeActions: args.partialNextSafeActions,
+    blockedNextSafeActions: args.blockedNextSafeActions
+  };
+
+  return schema;
+}
+
+async function buildReviewFixAuthoringContext(args: {
+  projectRoot: string;
+  phase?: NumericInput;
+  targetIds?: string[];
+}): Promise<ReviewAuthoringContextResult> {
+  const located = await blueprintPhaseLocate({
+    cwd: args.projectRoot,
+    phase: args.phase
+  });
+  const modelContract = readArtifactContract("review.review-fix").modelContract;
+  const baseSchema = modelContract ? cloneJsonObject(modelContract.jsonSchema) : null;
+
+  if (
+    !located.found ||
+    !located.phaseNumber ||
+    !located.phasePrefix ||
+    !located.phaseDir
+  ) {
+    const reason = located.reason ?? "Phase could not be resolved for review-fix authoring.";
+
+    return {
+      status: "invalid",
+      artifact: "review-fix",
+      phase: null,
+      files: [],
+      reviewMode: null,
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema,
+      taskSchema: null,
+      modelOnly: true,
+      authoringContext: null,
+      prerequisiteBlockers: [reason],
+      reason,
+      warnings: located.warnings
+    };
+  }
+
+  if (!modelContract || !modelContract.schemaPath) {
+    const reason = "review.review-fix does not expose a modelContract schema path.";
+
+    return {
+      status: "invalid",
+      artifact: "review-fix",
+      phase: null,
+      files: [],
+      reviewMode: null,
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema,
+      taskSchema: null,
+      modelOnly: true,
+      authoringContext: null,
+      prerequisiteBlockers: [reason],
+      reason,
+      warnings: located.warnings
+    };
+  }
+
+  const phaseNumber = located.phaseNumber;
+  const phase: ReviewScopePhase = {
+    phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName:
+      located.phaseName ??
+      `Phase ${located.phasePrefix} ${path.basename(located.phaseDir)}`,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom
+  };
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: args.projectRoot,
+    phase: phaseNumber,
+    artifact: "code-review"
+  });
+  const blockers: string[] = [];
+
+  if (!loaded.found || !loaded.path) {
+    blockers.push(
+      loaded.reason ??
+      `Phase ${phaseNumber} does not have a saved code-review artifact for review-fix authoring.`
+    );
+  }
+
+  const targets = reviewFixTargetsFromFindings(loaded);
+  if (targets.length === 0) {
+    blockers.push(
+      `Phase ${phaseNumber} saved code-review artifact does not contain structured findings or follow-ups to remediate.`
+    );
+  }
+
+  const selected = resolveReviewFixSelectedTargetIds({
+    targets,
+    targetIds: args.targetIds
+  });
+  blockers.push(...selected.issues);
+
+  const [planIndex, summaryIndex, executionTargets] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
+    blueprintPhaseSummaryIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
+    blueprintPhaseExecutionTargets({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    })
+  ]);
+  const planReads = await Promise.all(
+    planIndex.plans.map((plan) =>
+      blueprintPhasePlanRead({
+        cwd: args.projectRoot,
+        phase: phaseNumber,
+        planId: plan.planId
+      })
+    )
+  );
+  const summaryReads = await Promise.all(
+    summaryIndex.completedPlans.map((planId) =>
+      blueprintPhaseSummaryRead({
+        cwd: args.projectRoot,
+        phase: phaseNumber,
+        planId
+      })
+    )
+  );
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
+  const dependencyPlans = uniqueSortedStrings(
+    planReads.flatMap((planRead) =>
+      planRead.found && planRead.metadata
+        ? dependencyPlanRowsForReviewFix(
+            planRead.metadata.dependsOn,
+            located.phasePrefix!,
+            located.phaseDir!,
+            knownPlanIds
+          ).map((dependency) => `${dependency.planId}\t${dependency.path}`)
+        : []
+    )
+  ).map((entry) => {
+    const [planId, dependencyPath] = entry.split("\t");
+    return { planId, path: dependencyPath };
+  });
+  const completedSummaries = summaryReads
+    .filter((summaryRead) => summaryRead.found && summaryRead.path && summaryRead.validation?.valid)
+    .map((summaryRead) => summaryRead.path!)
+    .sort((left, right) => left.localeCompare(right));
+  const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
+  const unsatisfiedDependencyPlans = dependencyPlans.filter(
+    (dependency) => !completedDependencyPlanIds.has(dependency.planId)
+  );
+
+  if (summaryIndex.pendingPlans.length > 0) {
+    blockers.push(
+      `Phase ${phaseNumber} still has pending execution plans: ${summaryIndex.pendingPlans.join(", ")}. Run /blu-execute-phase ${phaseNumber} before persisting review-fix completion evidence.`
+    );
+  }
+
+  if (completedSummaries.length === 0) {
+    blockers.push(
+      `Phase ${phaseNumber} has no valid completed SUMMARY artifacts. Run /blu-execute-phase ${phaseNumber} before persisting review-fix evidence.`
+    );
+  }
+
+  if (executionTargets.blockers.lowerWavePendingPlanIds.length > 0) {
+    blockers.push(
+      `Lower-wave pending plans block full review-fix coverage: ${executionTargets.blockers.lowerWavePendingPlanIds.join(", ")}.`
+    );
+  }
+
+  if (unsatisfiedDependencyPlans.length > 0) {
+    blockers.push(
+      `Linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
+        .map((dependency) => `${dependency.planId} (${dependency.path})`)
+        .join(", ")}.`
+    );
+  }
+
+  const existingReviewFix =
+    located.artifacts.find((artifact) =>
+      artifact.endsWith(REVIEW_ARTIFACT_SUFFIXES["review-fix"])
+    ) ?? null;
+  const knownEvidenceArtifacts = uniqueSortedStrings([
+    ...(loaded.path ? [loaded.path] : []),
+    ...planIndex.plans.map((plan) => plan.path),
+    ...completedSummaries
+  ]);
+  const nextActions = await buildAllowedReviewFixNextActions(phaseNumber);
+  const reviewFixBaseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const taskSchema =
+    blockers.length === 0
+      ? await buildReviewFixTaskSchema({
+          baseSchema: reviewFixBaseSchema,
+          selectedTargetIds: selected.selectedTargetIds,
+          dependencyPlans,
+          knownEvidenceArtifacts,
+          ...nextActions
+        })
+      : null;
+  const authoringContext: ReviewFixAuthoringContext | null = taskSchema && loaded.path
+    ? {
+        phase,
+        path: `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES["review-fix"]}`,
+        sourceReviewPath: loaded.path,
+        targets,
+        selectedTargetIds: selected.selectedTargetIds,
+        completedSummaries,
+        dependencyPlans,
+        knownEvidenceArtifacts,
+        existingReviewFix,
+        ...nextActions,
+        schemaPath: modelContract.schemaPath,
+        baseSchema: reviewFixBaseSchema,
+        taskSchema
+      }
+    : null;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "invalid",
+    artifact: "review-fix",
+    phase,
+    files: [],
+    reviewMode: null,
+    schemaPath: modelContract.schemaPath,
+    baseSchema: reviewFixBaseSchema,
+    taskSchema,
+    modelOnly: true,
+    authoringContext,
+    prerequisiteBlockers: blockers,
+    reason: blockers.length > 0 ? blockers.join(" ") : null,
+    warnings: uniqueSortedStrings([
+      ...located.warnings,
+      ...loaded.warnings,
+      ...planIndex.warnings,
+      ...summaryIndex.warnings,
+      ...executionTargets.warnings
+    ])
   };
 }
 
@@ -1894,15 +2485,32 @@ function inferFindingSeverity(
 function normalizeFindingSummary(item: string): string {
   return item
     .replace(
-      /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|pass)\]\s*)+/i,
+      /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|pass|fixed|deferred|skipped)\]\s*)+/i,
       ""
     )
+    .replace(/^`?(?:F|FU)-\d{2,}`?\s*[-:]\s*/i, "")
     .replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "")
     .replace(
       /^severity\s*[:\-]\s*(?:critical|high|medium|low|unknown)\s*[:\-]?\s*/i,
       ""
     )
     .trim();
+}
+
+function extractReviewFixTargetId(item: string): string | null {
+  const match = item.match(/`?((?:F|FU)-\d{2,})`?\s*[-:]\s*/i);
+
+  return match ? match[1].toUpperCase() : null;
+}
+
+function normalizeReviewFixFindingSummary(item: string): string {
+  const match = item.match(/`?((?:F|FU)-\d{2,})`?\s*[-:]\s*/i);
+
+  if (!match) {
+    return normalizeFindingSummary(item);
+  }
+
+  return item.slice((match.index ?? 0) + match[0].length).trim();
 }
 
 function resolveFindingsHeadingPattern(artifact: ReviewArtifactKind): RegExp {
@@ -2017,7 +2625,7 @@ function parseFindingsFromArtifact(
 } {
   const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings: ReviewFinding[] = [];
-  const seenSummaries = new Set<string>();
+  const seenFindingKeys = new Set<string>();
   const severityCounts = emptySeverityCounts();
 
   for (const entry of entries) {
@@ -2026,17 +2634,23 @@ function parseFindingsFromArtifact(
         continue;
       }
 
-      const summary = normalizeFindingSummary(item);
+      const reviewFixTargetId = artifact === "review-fix"
+        ? extractReviewFixTargetId(item)
+        : null;
+      const summary = reviewFixTargetId
+        ? normalizeReviewFixFindingSummary(item)
+        : normalizeFindingSummary(item);
+      const findingKey = reviewFixTargetId ?? summary;
 
-      if (summary.length === 0 || seenSummaries.has(summary)) {
+      if (summary.length === 0 || seenFindingKeys.has(findingKey)) {
         continue;
       }
 
       const severity = inferFindingSeverity(entry.heading, item);
-      seenSummaries.add(summary);
+      seenFindingKeys.add(findingKey);
       severityCounts[severity] += 1;
       findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        id: reviewFixTargetId ?? `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity,
         summary,
         sourceSection: entry.heading
@@ -2046,11 +2660,11 @@ function parseFindingsFromArtifact(
 
   if (artifact === "security") {
     for (const tableFinding of parseSecurityFindingsTableFindings(content)) {
-      if (seenSummaries.has(tableFinding.summary)) {
+      if (seenFindingKeys.has(tableFinding.summary)) {
         continue;
       }
 
-      seenSummaries.add(tableFinding.summary);
+      seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
       findings.push({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
@@ -2061,11 +2675,11 @@ function parseFindingsFromArtifact(
     }
 
     for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
-      if (seenSummaries.has(threatFinding.summary)) {
+      if (seenFindingKeys.has(threatFinding.summary)) {
         continue;
       }
 
-      seenSummaries.add(threatFinding.summary);
+      seenFindingKeys.add(threatFinding.summary);
       severityCounts[threatFinding.severity] += 1;
       findings.push({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
@@ -2284,6 +2898,101 @@ function renderMarkdownTable(headers: string[], rows: string[][]): string {
   ]
     .map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`)
     .join("\n");
+}
+
+function renderReviewFixModelContent(
+  model: ReviewFixStructuredModel,
+  located: LocatedReviewPhase,
+  authoringContext: ReviewFixAuthoringContext
+): string {
+  const targetById = new Map(
+    authoringContext.targets.map((target) => [target.targetId, target])
+  );
+  const findingsRows = model.findingsAddressed.map((row) => {
+    const target = targetById.get(row.findingId);
+    const severity = target?.severity ?? "unknown";
+    const summary = target?.summary ?? "Saved review target summary unavailable.";
+
+    return `- [${severity}][${row.status}] \`${row.findingId}\` - ${summary} Evidence: ${row.evidence} Disposition: ${row.disposition}`;
+  });
+
+  return normalizeTextContent(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Review Fix
+
+**Status:** ${model.status}
+**Readiness:** ${model.readiness}
+**Completion State:** ${model.completionState}
+**Source Review:** ${authoringContext.sourceReviewPath}
+**Next Safe Action:** ${model.nextSafeAction}
+
+## Remediation Summary
+
+${renderBulletList(model.remediationSummary)}
+
+## Findings Addressed
+
+${findingsRows.join("\n")}
+
+## Changes Made
+
+${renderMarkdownTable(
+  ["File", "Summary"],
+  model.changesMade.map((row) => [row.file, row.summary])
+)}
+
+## Verification
+
+${renderMarkdownTable(
+  ["Check", "Command", "Result", "Evidence"],
+  model.verification.map((row) => [row.check, row.command, row.result, row.evidence])
+)}
+
+## Dependency Plans
+
+${renderMarkdownTable(
+  ["Plan", "Status", "Evidence"],
+  model.dependencyPlans.length > 0
+    ? model.dependencyPlans.map((row) => [
+        `${row.planId} (${row.path})`,
+        row.status,
+        row.evidence
+      ])
+    : [["none", "none", "none"]]
+)}
+
+## Manual / Deferred Work
+
+${renderMarkdownTable(
+  ["Item", "Reason", "Follow-Up", "Status"],
+  model.manualOrDeferredWork.map((row) => [
+    row.item,
+    row.reason,
+    row.followUp,
+    row.status
+  ])
+)}
+
+## Gap / Repair Routes
+
+${renderMarkdownTable(
+  ["Gap", "Evidence", "Repair", "Status"],
+  model.gapRoutes.map((row) => [row.gap, row.evidence, row.repair, row.status])
+)}
+
+## Follow-Ups
+
+${renderBulletList(model.followUps)}
+
+## Evidence
+
+${renderMarkdownTable(
+  ["Kind", "Source", "Summary"],
+  model.evidence.map((row) => [row.kind, row.source, row.summary])
+)}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`);
 }
 
 function securityThreatCounts(model: SecurityStructuredModel): {
@@ -2637,6 +3346,204 @@ function normalizeCodeReviewModelForResiduals(
       ? normalizeEvidenceCoverage(evidenceCoverage) ?? {}
       : {},
     followUps: normalizeStringArray(model.followUps) ?? [],
+    nextSafeAction:
+      typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
+  };
+}
+
+function normalizeReviewFixModel(
+  model: Record<string, unknown>
+): ReviewFixStructuredModel | null {
+  const remediationSummary = normalizeStringArray(model.remediationSummary);
+  const findingsAddressed = Array.isArray(model.findingsAddressed)
+    ? model.findingsAddressed
+    : null;
+  const changesMade = Array.isArray(model.changesMade) ? model.changesMade : null;
+  const verification = Array.isArray(model.verification) ? model.verification : null;
+  const dependencyPlans = Array.isArray(model.dependencyPlans) ? model.dependencyPlans : null;
+  const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork)
+    ? model.manualOrDeferredWork
+    : null;
+  const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
+  const followUps = normalizeStringArray(model.followUps);
+  const evidence = Array.isArray(model.evidence) ? model.evidence : null;
+
+  if (
+    typeof model.status !== "string" ||
+    typeof model.readiness !== "string" ||
+    typeof model.completionState !== "string" ||
+    remediationSummary === null ||
+    findingsAddressed === null ||
+    changesMade === null ||
+    verification === null ||
+    dependencyPlans === null ||
+    manualOrDeferredWork === null ||
+    gapRoutes === null ||
+    followUps === null ||
+    evidence === null ||
+    typeof model.nextSafeAction !== "string"
+  ) {
+    return null;
+  }
+
+  const normalizedFindings = findingsAddressed.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.findingId === "string" &&
+      typeof rowObject.status === "string" &&
+      typeof rowObject.evidence === "string" &&
+      typeof rowObject.disposition === "string"
+      ? {
+          findingId: rowObject.findingId.trim(),
+          status: rowObject.status as ReviewFixFindingStatus,
+          evidence: rowObject.evidence.trim(),
+          disposition: rowObject.disposition.trim()
+        }
+      : null;
+  });
+  const normalizedChanges = changesMade.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.file === "string" &&
+      typeof rowObject.summary === "string"
+      ? {
+          file: rowObject.file.trim(),
+          summary: rowObject.summary.trim()
+        }
+      : null;
+  });
+  const normalizedVerification = verification.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.check === "string" &&
+      typeof rowObject.command === "string" &&
+      typeof rowObject.result === "string" &&
+      typeof rowObject.evidence === "string"
+      ? {
+          check: rowObject.check.trim(),
+          command: rowObject.command.trim(),
+          result: rowObject.result as ReviewFixVerificationResult,
+          evidence: rowObject.evidence.trim()
+        }
+      : null;
+  });
+  const normalizedDependencies = dependencyPlans.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.planId === "string" &&
+      typeof rowObject.path === "string" &&
+      typeof rowObject.status === "string" &&
+      typeof rowObject.evidence === "string"
+      ? {
+          planId: rowObject.planId.trim(),
+          path: rowObject.path.trim(),
+          status: rowObject.status as "satisfied",
+          evidence: rowObject.evidence.trim()
+        }
+      : null;
+  });
+  const normalizedManual = manualOrDeferredWork.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.item === "string" &&
+      typeof rowObject.reason === "string" &&
+      typeof rowObject.followUp === "string" &&
+      typeof rowObject.status === "string"
+      ? {
+          item: rowObject.item.trim(),
+          reason: rowObject.reason.trim(),
+          followUp: rowObject.followUp.trim(),
+          status: rowObject.status as ReviewFixManualStatus
+        }
+      : null;
+  });
+  const normalizedGaps = gapRoutes.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.gap === "string" &&
+      typeof rowObject.evidence === "string" &&
+      typeof rowObject.repair === "string" &&
+      typeof rowObject.status === "string"
+      ? {
+          gap: rowObject.gap.trim(),
+          evidence: rowObject.evidence.trim(),
+          repair: rowObject.repair.trim(),
+          status: rowObject.status as ReviewFixGapStatus
+        }
+      : null;
+  });
+  const normalizedEvidence = evidence.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.kind === "string" &&
+      typeof rowObject.source === "string" &&
+      typeof rowObject.summary === "string"
+      ? {
+          kind: rowObject.kind as ReviewFixEvidenceKind,
+          source: rowObject.source.trim(),
+          summary: rowObject.summary.trim()
+        }
+      : null;
+  });
+
+  if (
+    normalizedFindings.some((row) => row === null) ||
+    normalizedChanges.some((row) => row === null) ||
+    normalizedVerification.some((row) => row === null) ||
+    normalizedDependencies.some((row) => row === null) ||
+    normalizedManual.some((row) => row === null) ||
+    normalizedGaps.some((row) => row === null) ||
+    normalizedEvidence.some((row) => row === null)
+  ) {
+    return null;
+  }
+
+  return {
+    status: model.status as ReviewFixStatus,
+    readiness: model.readiness as ReviewFixReadiness,
+    completionState: model.completionState as ReviewFixCompletionState,
+    remediationSummary,
+    findingsAddressed: normalizedFindings as ReviewFixStructuredModel["findingsAddressed"],
+    changesMade: normalizedChanges as ReviewFixStructuredModel["changesMade"],
+    verification: normalizedVerification as ReviewFixStructuredModel["verification"],
+    dependencyPlans: normalizedDependencies as ReviewFixStructuredModel["dependencyPlans"],
+    manualOrDeferredWork: normalizedManual as ReviewFixStructuredModel["manualOrDeferredWork"],
+    gapRoutes: normalizedGaps as ReviewFixStructuredModel["gapRoutes"],
+    followUps,
+    evidence: normalizedEvidence as ReviewFixStructuredModel["evidence"],
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+
+function normalizeReviewFixModelForResiduals(
+  model: Record<string, unknown>
+): ReviewFixStructuredModel {
+  return normalizeReviewFixModel(model) ?? {
+    status: typeof model.status === "string" ? model.status as ReviewFixStatus : "PARTIAL",
+    readiness:
+      typeof model.readiness === "string"
+        ? model.readiness as ReviewFixReadiness
+        : "not-ready-for-validation",
+    completionState:
+      typeof model.completionState === "string"
+        ? model.completionState as ReviewFixCompletionState
+        : "pending",
+    remediationSummary: normalizeStringArray(model.remediationSummary) ?? [],
+    findingsAddressed: [],
+    changesMade: [],
+    verification: [],
+    dependencyPlans: [],
+    manualOrDeferredWork: [],
+    gapRoutes: [],
+    followUps: normalizeStringArray(model.followUps) ?? [],
+    evidence: [],
     nextSafeAction:
       typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
@@ -3338,6 +4245,226 @@ async function collectCodeReviewResidualDiagnostics(args: {
       })
     );
   }
+
+  return diagnostics;
+}
+
+function addReviewFixPlaceholderDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  model: Record<string, unknown>;
+}): void {
+  const modelContract = readArtifactContract("review.review-fix").modelContract;
+  const stringEntries = collectModelStringEntries(args.model);
+
+  for (const entry of stringEntries) {
+    if (hasPlaceholderLanguage(entry.value)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.placeholder_text",
+          message: "Review-fix model still contains placeholder language.",
+          context: { value: entry.value },
+          suggestion: "Replace placeholder wording with saved-finding, file, command, or artifact evidence."
+        })
+      );
+    }
+  }
+
+  if (!modelContract) {
+    return;
+  }
+
+  for (const signal of modelContract.exampleLeakageSignals) {
+    const leakedEntry = stringEntries.find((entry) => entry.value.includes(signal));
+
+    if (leakedEntry) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: leakedEntry.path,
+          code: "residual.example_leakage",
+          message: `Review-fix model copied example leakage signal from ${modelContract.schemaId}.`,
+          context: { signal },
+          suggestion: "Replace copied example wording with phase-specific remediation evidence."
+        })
+      );
+    }
+  }
+}
+
+function addReviewFixGenericValueDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  model: ReviewFixStructuredModel;
+}): void {
+  args.model.remediationSummary.forEach((value, index) => {
+    if (isGenericNoneValue(value)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.remediationSummary[${index}]`,
+          code: "residual.generic_text",
+          message: "Review-fix remediationSummary cannot use generic none values.",
+          context: { value },
+          suggestion: "Describe the bounded remediation result or blocker concretely."
+        })
+      );
+    }
+  });
+
+  for (const [index, row] of args.model.findingsAddressed.entries()) {
+    for (const field of ["evidence", "disposition"] as const) {
+      if (isGenericNoneValue(row[field])) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findingsAddressed[${index}].${field}`,
+            code: "residual.generic_text",
+            message: `Review-fix findingsAddressed.${index}.${field} must be concrete.`,
+            context: { value: row[field] },
+            suggestion: "Tie the row to saved review evidence, code changes, verification, or a concrete blocker."
+          })
+        );
+      }
+    }
+  }
+
+  for (const [index, row] of args.model.changesMade.entries()) {
+    if (row.file === "none") {
+      continue;
+    }
+    if (isGenericNoneValue(row.summary)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.changesMade[${index}].summary`,
+          code: "residual.generic_text",
+          message: "Review-fix changesMade summary must be concrete for real changed files.",
+          context: { file: row.file, value: row.summary },
+          suggestion: "Name what changed in this file for the selected saved finding."
+        })
+      );
+    }
+  }
+
+  for (const [index, row] of args.model.verification.entries()) {
+    if (row.result === "not-run" && row.check === "none" && row.command === "none") {
+      continue;
+    }
+    for (const field of ["check", "command", "evidence"] as const) {
+      if (isGenericNoneValue(row[field])) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.verification[${index}].${field}`,
+            code: "residual.generic_text",
+            message: `Review-fix verification.${index}.${field} must be concrete unless it is the exact not-run sentinel.`,
+            context: { value: row[field] },
+            suggestion: "Record the focused command/check evidence or a concrete reason it could not run."
+          })
+        );
+      }
+    }
+  }
+
+  for (const [index, row] of args.model.evidence.entries()) {
+    if (isGenericNoneValue(row.summary)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.evidence[${index}].summary`,
+          code: "residual.generic_text",
+          message: "Review-fix evidence summary must be concrete.",
+          context: { source: row.source, value: row.summary },
+          suggestion: "Explain what this exact upstream artifact or repo path proves."
+        })
+      );
+    }
+  }
+}
+
+async function addReviewFixChangedFileDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  projectRoot: string;
+  model: ReviewFixStructuredModel;
+}): Promise<void> {
+  for (const [index, row] of args.model.changesMade.entries()) {
+    if (row.file === "none") {
+      continue;
+    }
+
+    let absolutePath: string;
+    try {
+      absolutePath = resolveRepoRelativePath(args.projectRoot, row.file);
+    } catch (error) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.changesMade[${index}].file`,
+          code: "residual.changed_file_invalid",
+          message:
+            error instanceof Error
+              ? error.message
+              : `Review-fix changed file path could not be resolved: ${row.file}.`,
+          context: { file: row.file },
+          suggestion: "Use a repo-relative file path inside the repository."
+        })
+      );
+      continue;
+    }
+
+    try {
+      const stats = await fs.stat(absolutePath);
+      if (!stats.isFile()) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.changesMade[${index}].file`,
+            code: "residual.changed_file_not_file",
+            message: `Review-fix changed file path is not a file: ${row.file}.`,
+            context: { file: row.file },
+            suggestion: "Use a repo-relative path to a real changed file, or the exact none sentinel when no file changed."
+          })
+        );
+      }
+    } catch {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.changesMade[${index}].file`,
+          code: "residual.changed_file_missing",
+          message: `Review-fix changed file path does not exist: ${row.file}.`,
+          context: { file: row.file },
+          suggestion: "Use an existing repo-relative file touched by the remediation."
+        })
+      );
+    }
+  }
+}
+
+async function collectReviewFixResidualDiagnostics(args: {
+  projectRoot: string;
+  model: Record<string, unknown>;
+  normalizedModel: ReviewFixStructuredModel | null;
+  authoringContext: ReviewFixAuthoringContext;
+}): Promise<ReviewModelDiagnostic[]> {
+  const diagnostics: ReviewModelDiagnostic[] = [];
+
+  addReviewFixPlaceholderDiagnostics({ diagnostics, model: args.model });
+
+  if (!args.normalizedModel) {
+    return diagnostics;
+  }
+
+  addReviewFixGenericValueDiagnostics({
+    diagnostics,
+    model: args.normalizedModel
+  });
+  await addReviewFixChangedFileDiagnostics({
+    diagnostics,
+    projectRoot: args.projectRoot,
+    model: args.normalizedModel
+  });
 
   return diagnostics;
 }
@@ -4418,6 +5545,14 @@ export async function blueprintReviewAuthoringContext(
     });
   }
 
+  if (artifact === "review-fix") {
+    return buildReviewFixAuthoringContext({
+      projectRoot,
+      phase: args.phase,
+      targetIds: args.targetIds
+    });
+  }
+
   const scoped = await blueprintReviewScope({
     cwd: projectRoot,
     phase: args.phase,
@@ -4475,7 +5610,8 @@ export async function blueprintReviewValidateModel(
     phase: args.phase,
     artifact,
     files: args.files,
-    depth: args.depth
+    depth: args.depth,
+    targetIds: args.targetIds
   });
 
   if (context.status !== "ready" || !context.phase || !context.taskSchema || !context.authoringContext) {
@@ -4493,7 +5629,9 @@ export async function blueprintReviewValidateModel(
             suggestion:
               artifact === "security"
                 ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security."
-                : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+                : artifact === "review-fix"
+                  ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix."
+                  : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
           })
         )
       : [
@@ -4509,7 +5647,9 @@ export async function blueprintReviewValidateModel(
         suggestion:
           artifact === "security"
             ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security."
-            : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+            : artifact === "review-fix"
+              ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix."
+              : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
       })
     ];
 
@@ -4541,7 +5681,7 @@ export async function blueprintReviewValidateModel(
         source: "schema",
         path: "model",
         code: "schema.type",
-        message: `${artifact === "security" ? "Security review" : "Code-review"} model must be a JSON object.`,
+        message: `${artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : "Code-review"} model must be a JSON object.`,
         context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
         suggestion: "Return a JSON object that matches authoringContext.taskSchema."
       })
@@ -4549,6 +5689,7 @@ export async function blueprintReviewValidateModel(
   }
 
   let normalizedModel: CodeReviewStructuredModel | null = null;
+  let normalizedReviewFixModel: ReviewFixStructuredModel | null = null;
   let normalizedSecurityModel: SecurityStructuredModel | null = null;
 
   if (modelObject) {
@@ -4565,6 +5706,16 @@ export async function blueprintReviewValidateModel(
           model: modelObject,
           normalizedModel: normalizeSecurityModelForResiduals(modelObject),
           authoringContext: context.authoringContext as SecurityAuthoringContext
+        })
+      );
+    } else if (artifact === "review-fix") {
+      normalizedReviewFixModel = normalizeReviewFixModel(modelObject);
+      diagnostics.push(
+        ...await collectReviewFixResidualDiagnostics({
+          projectRoot,
+          model: modelObject,
+          normalizedModel: normalizeReviewFixModelForResiduals(modelObject),
+          authoringContext: context.authoringContext as ReviewFixAuthoringContext
         })
       );
     } else {
@@ -4633,6 +5784,41 @@ export async function blueprintReviewValidateModel(
     }
   }
 
+  if (artifact === "review-fix" && diagnostics.length === 0 && normalizedReviewFixModel) {
+    const reviewFixContext = context.authoringContext as ReviewFixAuthoringContext;
+    const located: LocatedReviewPhase = {
+      phaseNumber: context.phase.phaseNumber,
+      phasePrefix: context.phase.phasePrefix,
+      phaseName: context.phase.phaseName,
+      phaseDir: context.phase.phaseDir,
+      artifacts: reviewFixContext.knownEvidenceArtifacts
+    };
+    const rendered = renderReviewFixModelContent(
+      normalizedReviewFixModel,
+      located,
+      reviewFixContext
+    );
+    const markdownValidation = validateReviewArtifactContent(rendered, "review-fix");
+    const markdownIssues = [...markdownValidation.issues];
+
+    for (const issue of markdownIssues) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the canonical review-fix artifact contract."
+        })
+      );
+    }
+
+    if (markdownIssues.length === 0) {
+      renderPreview = rendered;
+    }
+  }
+
   if (artifact === "security" && diagnostics.length === 0 && normalizedSecurityModel) {
     const securityContext = context.authoringContext as SecurityAuthoringContext;
     const located: LocatedReviewPhase = {
@@ -4685,6 +5871,8 @@ export async function blueprintReviewValidateModel(
       ? null
       : artifact === "security"
         ? normalizedSecurityModel
+        : artifact === "review-fix"
+          ? normalizedReviewFixModel
         : normalizedModel,
     renderPreview,
     warnings: context.warnings
@@ -4756,7 +5944,10 @@ export async function blueprintReviewRecord(
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
   const warnings: string[] = [];
-  const modelOnlyArtifact = args.artifact === "code-review" || args.artifact === "security";
+  const modelOnlyArtifact =
+    args.artifact === "code-review" ||
+    args.artifact === "review-fix" ||
+    args.artifact === "security";
   const locatedReviewPhase: LocatedReviewPhase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
@@ -4771,7 +5962,7 @@ export async function blueprintReviewRecord(
       artifact: args.artifact,
       reportPath,
       warnings: [
-        `review.${args.artifact === "security" ? "security" : "code-review"} is model-only; content is invalid. Call blueprint_review_validate_model with JSON first, then persist the same model through blueprint_review_record.`
+        `review.${args.artifact} is model-only; content is invalid. Call blueprint_review_validate_model with JSON first, then persist the same model through blueprint_review_record.`
       ]
     });
   }
@@ -4782,7 +5973,7 @@ export async function blueprintReviewRecord(
       artifact: args.artifact,
       reportPath,
       warnings: [
-        `review.${args.artifact === "security" ? "security" : "code-review"} requires a structured model. Markdown content fallback is not supported.`
+        `review.${args.artifact} requires a structured model. Markdown content fallback is not supported.`
       ]
     });
   }
@@ -4813,7 +6004,7 @@ export async function blueprintReviewRecord(
   let codeReviewScopeFiles: string[] = [];
 
   if (modelOnlyArtifact) {
-    const modelArtifact = args.artifact === "security" ? "security" : "code-review";
+    const modelArtifact = args.artifact as "code-review" | "review-fix" | "security";
     const validationFiles =
       args.artifact === "code-review"
         ? await resolveCodeReviewRecordValidationFiles({
@@ -4827,6 +6018,7 @@ export async function blueprintReviewRecord(
       artifact: modelArtifact,
       files: validationFiles,
       depth: args.depth,
+      targetIds: args.targetIds,
       model: args.model
     });
 
@@ -5097,7 +6289,7 @@ export const reviewToolDefinitions = [
   {
     name: "blueprint_review_validate_model",
     description:
-      "Validate a model-authored review.code-review or review.security JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
+      "Validate a model-authored review.code-review, review.review-fix, or review.security JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
     inputSchema: reviewValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintReviewValidateModel(args as ReviewValidateModelArgs)
@@ -5105,7 +6297,7 @@ export const reviewToolDefinitions = [
   {
     name: "blueprint_review_authoring_context",
     description:
-      "Build the model-only review authoring context and narrowed task schema for review.code-review or review.security before model drafting.",
+      "Build the model-only review authoring context and narrowed task schema for review.code-review, review.review-fix, or review.security before model drafting.",
     inputSchema: reviewAuthoringContextInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintReviewAuthoringContext(args as ReviewAuthoringContextArgs)
@@ -5113,7 +6305,7 @@ export const reviewToolDefinitions = [
   {
     name: "blueprint_review_record",
     description:
-      "Persist a phase-scoped Blueprint review artifact such as SECURITY, REVIEW, or UI-REVIEW with overwrite protection; code-review and security persist model-authored JSON only after validator replay.",
+      "Persist a phase-scoped Blueprint review artifact with overwrite protection; code-review, review-fix, and security persist model-authored JSON only after validator replay.",
     inputSchema: reviewRecordInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintReviewRecord(args as ReviewRecordArgs)

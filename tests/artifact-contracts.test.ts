@@ -245,6 +245,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const summaryContract = readArtifactContract("phase.summary");
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
+  const reviewFixContract = readArtifactContract("review.review-fix");
   const securityContract = readArtifactContract("review.security");
   const verificationContract = readArtifactContract("phase.verification");
   const uatContract = readArtifactContract("phase.uat");
@@ -661,6 +662,40 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$"
   );
   assert.match(JSON.stringify(reviewContract.modelContract?.jsonSchema), /examples|evidenceCoverage/);
+  assert.deepEqual(reviewFixContract.requiredHeadings, [
+    "Remediation Summary",
+    "Findings Addressed",
+    "Changes Made",
+    "Verification",
+    "Dependency Plans",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Evidence",
+    "Next Safe Action"
+  ]);
+  assert.deepEqual(reviewFixContract.lockedMarkers, [
+    "**Status:**",
+    "**Readiness:**",
+    "**Completion State:**",
+    "**Next Safe Action:**"
+  ]);
+  assert.equal(reviewFixContract.modelContract?.schemaId, "blueprint.review.review-fix.model");
+  assert.equal(reviewFixContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    reviewFixContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/review.review-fix.model.schema.json"
+  );
+  assert.ok(reviewFixContract.modelContract?.renderedHeadings.includes("Dependency Plans"));
+  assert.ok(
+    reviewFixContract.modelContract?.qualityRules.some((rule) =>
+      /COMPLETED review-fix models require every selected saved finding fixed/i.test(rule)
+    )
+  );
+  assert.deepEqual(
+    (reviewFixContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "remediationSummary"]
+  );
   assert.match(securityContract.authoringTemplate, /\*\*Status:\*\* COMPLETED\|PARTIAL\|BLOCKED/);
   assert.match(securityContract.authoringTemplate, /\*\*Readiness:\*\* ready-for-routing\|needs-follow-up\|blocked/);
   assert.match(securityContract.authoringTemplate, /\*\*Completion State:\*\* complete\|partial\|blocked/);

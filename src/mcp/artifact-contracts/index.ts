@@ -1377,28 +1377,170 @@ const CODE_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
 function renderReviewFixTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Review Fix
 
-**Status:** APPLIED|PARTIAL|SKIPPED
+**Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-validation|not-ready-for-validation|blocked
+**Completion State:** complete|pending|blocked
+**Source Review:** .blueprint/phases/<phase-slug>/XX-REVIEW.md
+**Next Safe Action:** /blu-validate-phase <phase>|/blu-code-review-fix <phase>|/blu-add-tests <phase>|/blu-progress
+
+## Remediation Summary
+
+- Concrete summary of this bounded remediation pass.
 
 ## Findings Addressed
 
-- Finding id or summary addressed in this remediation pass.
+- Saved finding id and remediation disposition.
 
 ## Changes Made
 
-- Concrete remediation completed.
+| File | Summary |
+|------|---------|
+| path/to/file.ts | Concrete remediation completed. |
 
 ## Verification
 
-- Validation or test evidence for the applied fix, or \`none\`.
+| Check | Command | Result | Evidence |
+|-------|---------|--------|----------|
+| Focused check | npm test -- tests/example.test.ts | pass|fail|blocked|not-run | Validation or test evidence for the applied fix. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
 
 ## Follow-Ups
 
 - Remaining work, deferred item, or \`none\`.
 
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| review | .blueprint/phases/<phase-slug>/XX-REVIEW.md | Saved review findings baseline. |
+
 ## Next Safe Action
 
-- /blu-progress`;
+- /blu-validate-phase <phase>`;
 }
+
+const REVIEW_FIX_MODEL_SCHEMA_FILE = "review.review-fix.model.schema.json";
+const REVIEW_FIX_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/review.review-fix.model.schema.json";
+
+const REVIEW_FIX_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.review.review-fix.model",
+  schemaVersion: "1.0.0",
+  schemaPath: REVIEW_FIX_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(REVIEW_FIX_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, sourceReviewPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
+    "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so saved finding ids, evidence paths, dependency plans, and status-safe next actions stay deterministic.",
+    "COMPLETED review-fix models require every selected saved finding fixed, all verification rows passing, exact none sentinel rows for manual/deferred work and gap routes, followUps set to none, and the current phase validation next action.",
+    "PARTIAL review-fix models require concrete pending remediation or non-passing verification, at least one open or blocked gap route, and a concrete follow-up.",
+    "BLOCKED review-fix models require skipped or deferred selected findings, a blocked verification or not-run row, at least one blocked gap route, concrete blocker evidence, and the blocked next action.",
+    "Use concrete saved-review, plan, summary, changed-file, and verification evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, report path, and sourceReviewPath come from blueprint_phase_locate plus blueprint_review_load_findings and blueprint_review_record arguments.",
+    "Selected finding ids and finding summaries come from the saved code-review artifact loaded by blueprint_review_load_findings, not from chat memory or repo drift.",
+    "Dependency plans, completed summary paths, pending plans, and summary provenance come from blueprint_phase_execution_targets, blueprint_phase_plan_read, blueprint_phase_summary_index, and blueprint_phase_summary_read.",
+    "Allowed nextSafeAction values come from the review-fix status truth table and the implemented command catalog.",
+    "Existing review-fix content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+  ],
+  renderedHeadings: [
+    "Remediation Summary",
+    "Findings Addressed",
+    "Changes Made",
+    "Verification",
+    "Dependency Plans",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Evidence",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    status: "COMPLETED",
+    readiness: "ready-for-validation",
+    completionState: "complete",
+    remediationSummary: [
+      "The selected negative-input finding was fixed and verified with focused coverage."
+    ],
+    findingsAddressed: [
+      {
+        findingId: "F-01",
+        status: "fixed",
+        evidence: "The guard now rejects negative input before returning a success value.",
+        disposition: "Focused implementation and regression coverage completed."
+      }
+    ],
+    changesMade: [
+      {
+        file: "src/example.ts",
+        summary: "Added the negative-input guard required by the saved review finding."
+      }
+    ],
+    verification: [
+      {
+        check: "Negative input regression passes",
+        command: "npm test -- tests/example.test.ts",
+        result: "pass",
+        evidence: "Focused regression command exited 0 after the fix."
+      }
+    ],
+    dependencyPlans: [],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    evidence: [
+      {
+        kind: "review",
+        source: ".blueprint/phases/05-review-fix/05-REVIEW.md",
+        summary: "Saved review finding F-01 defined the remediation target."
+      },
+      {
+        kind: "summary",
+        source: ".blueprint/phases/05-review-fix/05-01-SUMMARY.md",
+        summary: "Completed summary evidence supplied the current execution baseline."
+      }
+    ],
+    nextSafeAction: "/blu-validate-phase 5"
+  },
+  exampleLeakageSignals: [
+    "The selected negative-input finding was fixed and verified with focused coverage.",
+    "The guard now rejects negative input before returning a success value.",
+    "Added the negative-input guard required by the saved review finding.",
+    "Focused regression command exited 0 after the fix.",
+    "Saved review finding F-01 defined the remediation target."
+  ]
+};
 
 function renderPeerReviewTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Peer Reviews
@@ -3180,10 +3322,34 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Review Fix",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-REVIEW-FIX.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Findings Addressed", "Changes Made", "Verification", "Follow-Ups", "Next Safe Action"],
-    lockedMarkers: ["**Status:**"],
-    placeholderSignals: ["APPLIED|PARTIAL|SKIPPED"],
-    notes: ["Review-fix artifacts summarize bounded remediation only."],
+    requiredHeadings: [
+      "Remediation Summary",
+      "Findings Addressed",
+      "Changes Made",
+      "Verification",
+      "Dependency Plans",
+      "Manual / Deferred Work",
+      "Gap / Repair Routes",
+      "Follow-Ups",
+      "Evidence",
+      "Next Safe Action"
+    ],
+    lockedMarkers: ["**Status:**", "**Readiness:**", "**Completion State:**", "**Next Safe Action:**"],
+    placeholderSignals: [
+      "COMPLETED|PARTIAL|BLOCKED",
+      "ready-for-validation|not-ready-for-validation|blocked",
+      "complete|pending|blocked",
+      "pass|fail|blocked|not-run",
+      "Concrete summary of this bounded remediation pass.",
+      "Saved finding id and remediation disposition.",
+      "path/to/file.ts"
+    ],
+    notes: [
+      "Review-fix artifacts summarize bounded remediation only.",
+      "Structured model authoring is schema-first: runtime context supplies phase identity, source review path, selected finding ids, dependency plans, summary evidence, report path, and status-safe next actions.",
+      "`COMPLETED` review-fix evidence proves all selected saved findings were fixed and verified; `PARTIAL` and `BLOCKED` remain carry-forward remediation evidence."
+    ],
+    modelContract: REVIEW_FIX_MODEL_CONTRACT,
     renderScaffoldTemplate: renderReviewFixTemplate,
     renderAuthoringTemplate: renderReviewFixTemplate
   },
