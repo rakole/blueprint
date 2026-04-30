@@ -9,9 +9,20 @@ type ReviewFixReadiness = "ready-for-validation" | "not-ready-for-validation" | 
 type ReviewFixCompletionState = "complete" | "pending" | "blocked";
 type ReviewFixFindingStatus = "fixed" | "deferred" | "skipped";
 type ReviewFixVerificationResult = "pass" | "fail" | "blocked" | "not-run";
+type ReviewFixDependencyStatus = "satisfied" | "pending" | "blocked";
 type ReviewFixManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type ReviewFixGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type ReviewFixEvidenceKind = "review" | "summary" | "plan" | "repo-path" | "command" | "test" | "other";
+type ReviewFixExecutionDebt = {
+    pendingPlans: string[];
+    lowerWavePendingPlanIds: string[];
+    missingCompletedSummaries: boolean;
+    unsatisfiedDependencyPlans: Array<{
+        planId: string;
+        path: string;
+    }>;
+    blockers: string[];
+};
 type ReviewFinding = {
     id: string;
     severity: ReviewFindingSeverity;
@@ -186,7 +197,7 @@ type ReviewFixStructuredModel = {
     dependencyPlans: Array<{
         planId: string;
         path: string;
-        status: "satisfied";
+        status: ReviewFixDependencyStatus;
         evidence: string;
     }>;
     manualOrDeferredWork: Array<{
@@ -220,11 +231,14 @@ type ReviewFixAuthoringContext = {
         planId: string;
         path: string;
     }>;
+    executionDebt: ReviewFixExecutionDebt;
     knownEvidenceArtifacts: string[];
     existingReviewFix: string | null;
+    allowCompleted: boolean;
     completedNextSafeAction: string;
     partialNextSafeActions: string[];
     blockedNextSafeActions: string[];
+    blockedRequiredNextSafeAction: string | null;
     allowedNextActions: string[];
     schemaPath: string;
     baseSchema: Record<string, unknown>;

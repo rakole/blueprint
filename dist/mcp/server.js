@@ -16312,9 +16312,9 @@ var init_artifact_contracts = __esm({
       qualityRules: [
         "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, sourceReviewPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
         "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so saved finding ids, evidence paths, dependency plans, and status-safe next actions stay deterministic.",
-        "COMPLETED review-fix models require every selected saved finding fixed, all verification rows passing, exact none sentinel rows for manual/deferred work and gap routes, followUps set to none, and the current phase validation next action.",
+        "COMPLETED review-fix models require every selected saved finding fixed, no live execution debt, all verification rows passing, exact none sentinel rows for manual/deferred work and gap routes, followUps set to none, and the current phase validation next action.",
         "PARTIAL review-fix models require concrete pending remediation or non-passing verification, at least one open or blocked gap route, and a concrete follow-up.",
-        "BLOCKED review-fix models require skipped or deferred selected findings, a blocked verification or not-run row, at least one blocked gap route, concrete blocker evidence, and the blocked next action.",
+        "BLOCKED review-fix models require skipped or deferred selected findings, a blocked verification or not-run row, either real changed-file rows or the exact no-change sentinel, at least one blocked gap route, concrete blocker evidence, and the blocked next action.",
         "Use concrete saved-review, plan, summary, changed-file, and verification evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
       ],
       contextBindings: [
@@ -35461,13 +35461,16 @@ function resolveReviewFixSelectedTargetIds(args) {
   }
   return { selectedTargetIds, issues };
 }
-async function buildAllowedReviewFixNextActions(phaseNumber) {
-  const completedNextSafeAction = `/blu-validate-phase ${phaseNumber}`;
+async function buildAllowedReviewFixNextActions(args) {
+  const completedNextSafeAction = `/blu-validate-phase ${args.phaseNumber}`;
+  const executionRepairAction = `/blu-execute-phase ${args.phaseNumber}`;
   const partialCandidates = [
-    `/blu-code-review-fix ${phaseNumber}`,
-    `/blu-add-tests ${phaseNumber}`
+    ...args.includeExecutionRepairAction ? [executionRepairAction] : [],
+    `/blu-code-review-fix ${args.phaseNumber}`,
+    `/blu-add-tests ${args.phaseNumber}`
   ];
   const blockedCandidates = [
+    ...args.includeExecutionRepairAction ? [executionRepairAction] : [],
     "/blu-progress"
   ];
   const implementedCommands = await getImplementedCommandNames2();
@@ -35481,11 +35484,13 @@ async function buildAllowedReviewFixNextActions(phaseNumber) {
   };
   const partialNextSafeActions = partialCandidates.filter(keepImplemented);
   const blockedNextSafeActions = blockedCandidates.filter(keepImplemented);
+  const blockedRequiredNextSafeAction = args.includeExecutionRepairAction && blockedNextSafeActions.includes(executionRepairAction) ? executionRepairAction : null;
   const completedAction = keepImplemented(completedNextSafeAction) ? completedNextSafeAction : "/blu-progress";
   return {
     completedNextSafeAction: completedAction,
     partialNextSafeActions,
     blockedNextSafeActions,
+    blockedRequiredNextSafeAction,
     allowedNextActions: uniqueSortedStrings2([
       completedAction,
       ...partialNextSafeActions,
@@ -35512,10 +35517,26 @@ function dependencyPlanRowsForReviewFix(dependsOn, phasePrefix2, phaseDir, known
     }];
   });
 }
+function reviewFixEvidenceKindForSource(source) {
+  if (source.endsWith(REVIEW_ARTIFACT_SUFFIXES["code-review"])) {
+    return "review";
+  }
+  if (source.endsWith("-PLAN.md")) {
+    return "plan";
+  }
+  if (source.endsWith("-SUMMARY.md")) {
+    return "summary";
+  }
+  return "other";
+}
 async function buildReviewFixTaskSchema(args) {
   const schema = cloneJsonObject3(args.baseSchema);
   const properties = getJsonObjectProperty2(schema, "properties");
   if (properties) {
+    const status = getJsonObjectProperty2(properties, "status");
+    if (status && !args.allowCompleted) {
+      status.enum = ["PARTIAL", "BLOCKED"];
+    }
     const findingsAddressed = getJsonObjectProperty2(properties, "findingsAddressed");
     if (findingsAddressed) {
       findingsAddressed.minItems = args.selectedTargetIds.length;
@@ -35541,11 +35562,18 @@ async function buildReviewFixTaskSchema(args) {
         const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
         const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
         const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
+        const statusProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "status") : null;
+        const unsatisfiedDependencyIds = new Set(
+          args.executionDebt.unsatisfiedDependencyPlans.map((dependency) => dependency.planId)
+        );
         if (planId2) {
           planId2.enum = args.dependencyPlans.map((dependency) => dependency.planId);
         }
         if (pathProperty) {
           pathProperty.enum = args.dependencyPlans.map((dependency) => dependency.path);
+        }
+        if (statusProperty) {
+          statusProperty.enum = args.allowCompleted ? ["satisfied"] : ["satisfied", "pending", "blocked"];
         }
         dependencyPlans.allOf = args.dependencyPlans.map((dependency) => ({
           contains: {
@@ -35554,7 +35582,7 @@ async function buildReviewFixTaskSchema(args) {
             properties: {
               planId: { const: dependency.planId },
               path: { const: dependency.path },
-              status: { const: "satisfied" }
+              status: unsatisfiedDependencyIds.has(dependency.planId) ? { enum: ["pending", "blocked"] } : { const: "satisfied" }
             }
           },
           minContains: 1,
@@ -35565,15 +35593,76 @@ async function buildReviewFixTaskSchema(args) {
     const evidence = getJsonObjectProperty2(properties, "evidence");
     if (evidence) {
       evidence.minItems = args.knownEvidenceArtifacts.length;
-      evidence.maxItems = args.knownEvidenceArtifacts.length;
+      delete evidence.maxItems;
+      const upstreamEvidenceByKind = {
+        review: args.knownEvidenceArtifacts.filter(
+          (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "review"
+        ),
+        plan: args.knownEvidenceArtifacts.filter(
+          (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "plan"
+        ),
+        summary: args.knownEvidenceArtifacts.filter(
+          (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "summary"
+        )
+      };
       const items = getJsonObjectProperty2(evidence, "items");
-      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
-      const source = itemProperties ? getJsonObjectProperty2(itemProperties, "source") : null;
-      if (source) {
-        source.enum = args.knownEvidenceArtifacts;
+      if (items) {
+        items.allOf = [
+          ...Array.isArray(items.allOf) ? items.allOf : [],
+          ...Object.entries(upstreamEvidenceByKind).map(([kind, sources]) => ({
+            if: {
+              required: ["kind"],
+              properties: {
+                kind: { const: kind }
+              }
+            },
+            then: {
+              properties: {
+                source: { enum: sources }
+              }
+            }
+          })),
+          {
+            if: {
+              required: ["source"],
+              properties: {
+                source: { pattern: "^\\.blueprint/.+-(?:REVIEW|PLAN|SUMMARY)\\.md$" }
+              }
+            },
+            then: {
+              properties: {
+                source: { enum: args.knownEvidenceArtifacts }
+              }
+            }
+          },
+          ...args.knownEvidenceArtifacts.map((artifactPath) => ({
+            if: {
+              required: ["source"],
+              properties: {
+                source: { const: artifactPath }
+              }
+            },
+            then: {
+              properties: {
+                kind: { const: reviewFixEvidenceKindForSource(artifactPath) }
+              }
+            }
+          }))
+        ];
       }
       evidence.allOf = args.knownEvidenceArtifacts.map(
-        (artifactPath) => exactObjectPropertyContains2("source", artifactPath)
+        (artifactPath) => ({
+          contains: {
+            type: "object",
+            required: ["kind", "source"],
+            properties: {
+              kind: { const: reviewFixEvidenceKindForSource(artifactPath) },
+              source: { const: artifactPath }
+            }
+          },
+          minContains: 1,
+          maxContains: 1
+        })
       );
     }
     const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
@@ -35619,7 +35708,7 @@ async function buildReviewFixTaskSchema(args) {
       },
       then: {
         properties: {
-          nextSafeAction: { enum: args.blockedNextSafeActions }
+          nextSafeAction: args.blockedRequiredNextSafeAction ? { const: args.blockedRequiredNextSafeAction } : { enum: args.blockedNextSafeActions }
         }
       }
     }
@@ -35628,9 +35717,12 @@ async function buildReviewFixTaskSchema(args) {
     selectedTargetIds: args.selectedTargetIds,
     dependencyPlans: args.dependencyPlans,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    executionDebt: args.executionDebt,
+    allowCompleted: args.allowCompleted,
     completedNextSafeAction: args.completedNextSafeAction,
     partialNextSafeActions: args.partialNextSafeActions,
-    blockedNextSafeActions: args.blockedNextSafeActions
+    blockedNextSafeActions: args.blockedNextSafeActions,
+    blockedRequiredNextSafeAction: args.blockedRequiredNextSafeAction
   };
   return schema;
 }
@@ -35690,15 +35782,15 @@ async function buildReviewFixAuthoringContext(args) {
     phase: phaseNumber,
     artifact: "code-review"
   });
-  const blockers = [];
+  const hardBlockers = [];
   if (!loaded.found || !loaded.path) {
-    blockers.push(
+    hardBlockers.push(
       loaded.reason ?? `Phase ${phaseNumber} does not have a saved code-review artifact for review-fix authoring.`
     );
   }
   const targets = reviewFixTargetsFromFindings(loaded);
   if (targets.length === 0) {
-    blockers.push(
+    hardBlockers.push(
       `Phase ${phaseNumber} saved code-review artifact does not contain structured findings or follow-ups to remediate.`
     );
   }
@@ -35706,7 +35798,7 @@ async function buildReviewFixAuthoringContext(args) {
     targets,
     targetIds: args.targetIds
   });
-  blockers.push(...selected.issues);
+  hardBlockers.push(...selected.issues);
   const [planIndex, summaryIndex, executionTargets] = await Promise.all([
     blueprintPhasePlanIndex({
       cwd: args.projectRoot,
@@ -35758,23 +35850,24 @@ async function buildReviewFixAuthoringContext(args) {
   const unsatisfiedDependencyPlans = dependencyPlans.filter(
     (dependency) => !completedDependencyPlanIds.has(dependency.planId)
   );
+  const executionDebtBlockers = [];
   if (summaryIndex.pendingPlans.length > 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Phase ${phaseNumber} still has pending execution plans: ${summaryIndex.pendingPlans.join(", ")}. Run /blu-execute-phase ${phaseNumber} before persisting review-fix completion evidence.`
     );
   }
   if (completedSummaries.length === 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Phase ${phaseNumber} has no valid completed SUMMARY artifacts. Run /blu-execute-phase ${phaseNumber} before persisting review-fix evidence.`
     );
   }
   if (executionTargets.blockers.lowerWavePendingPlanIds.length > 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Lower-wave pending plans block full review-fix coverage: ${executionTargets.blockers.lowerWavePendingPlanIds.join(", ")}.`
     );
   }
   if (unsatisfiedDependencyPlans.length > 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}.`
     );
   }
@@ -35786,13 +35879,26 @@ async function buildReviewFixAuthoringContext(args) {
     ...planIndex.plans.map((plan) => plan.path),
     ...completedSummaries
   ]);
-  const nextActions = await buildAllowedReviewFixNextActions(phaseNumber);
+  const executionDebt = {
+    pendingPlans: summaryIndex.pendingPlans,
+    lowerWavePendingPlanIds: executionTargets.blockers.lowerWavePendingPlanIds,
+    missingCompletedSummaries: completedSummaries.length === 0,
+    unsatisfiedDependencyPlans,
+    blockers: executionDebtBlockers
+  };
+  const allowCompleted = executionDebt.blockers.length === 0;
+  const nextActions = await buildAllowedReviewFixNextActions({
+    phaseNumber,
+    includeExecutionRepairAction: !allowCompleted
+  });
   const reviewFixBaseSchema = cloneJsonObject3(modelContract.jsonSchema);
-  const taskSchema = blockers.length === 0 ? await buildReviewFixTaskSchema({
+  const taskSchema = hardBlockers.length === 0 && loaded.path ? await buildReviewFixTaskSchema({
     baseSchema: reviewFixBaseSchema,
     selectedTargetIds: selected.selectedTargetIds,
     dependencyPlans,
+    executionDebt,
     knownEvidenceArtifacts,
+    allowCompleted,
     ...nextActions
   }) : null;
   const authoringContext = taskSchema && loaded.path ? {
@@ -35803,15 +35909,17 @@ async function buildReviewFixAuthoringContext(args) {
     selectedTargetIds: selected.selectedTargetIds,
     completedSummaries,
     dependencyPlans,
+    executionDebt,
     knownEvidenceArtifacts,
     existingReviewFix,
+    allowCompleted,
     ...nextActions,
     schemaPath: modelContract.schemaPath,
     baseSchema: reviewFixBaseSchema,
     taskSchema
   } : null;
   return {
-    status: blockers.length === 0 ? "ready" : "invalid",
+    status: hardBlockers.length === 0 ? "ready" : "invalid",
     artifact: "review-fix",
     phase,
     files: [],
@@ -35821,8 +35929,8 @@ async function buildReviewFixAuthoringContext(args) {
     taskSchema,
     modelOnly: true,
     authoringContext,
-    prerequisiteBlockers: blockers,
-    reason: blockers.length > 0 ? blockers.join(" ") : null,
+    prerequisiteBlockers: hardBlockers,
+    reason: hardBlockers.length > 0 ? hardBlockers.join(" ") : null,
     warnings: uniqueSortedStrings2([
       ...located.warnings,
       ...loaded.warnings,

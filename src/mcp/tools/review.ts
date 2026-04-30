@@ -44,6 +44,7 @@ type ReviewFixReadiness = "ready-for-validation" | "not-ready-for-validation" | 
 type ReviewFixCompletionState = "complete" | "pending" | "blocked";
 type ReviewFixFindingStatus = "fixed" | "deferred" | "skipped";
 type ReviewFixVerificationResult = "pass" | "fail" | "blocked" | "not-run";
+type ReviewFixDependencyStatus = "satisfied" | "pending" | "blocked";
 type ReviewFixManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type ReviewFixGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type ReviewFixEvidenceKind =
@@ -54,6 +55,14 @@ type ReviewFixEvidenceKind =
   | "command"
   | "test"
   | "other";
+
+type ReviewFixExecutionDebt = {
+  pendingPlans: string[];
+  lowerWavePendingPlanIds: string[];
+  missingCompletedSummaries: boolean;
+  unsatisfiedDependencyPlans: Array<{ planId: string; path: string }>;
+  blockers: string[];
+};
 
 type ReviewFinding = {
   id: string;
@@ -254,7 +263,7 @@ type ReviewFixStructuredModel = {
   dependencyPlans: Array<{
     planId: string;
     path: string;
-    status: "satisfied";
+    status: ReviewFixDependencyStatus;
     evidence: string;
   }>;
   manualOrDeferredWork: Array<{
@@ -286,11 +295,14 @@ type ReviewFixAuthoringContext = {
   selectedTargetIds: string[];
   completedSummaries: string[];
   dependencyPlans: Array<{ planId: string; path: string }>;
+  executionDebt: ReviewFixExecutionDebt;
   knownEvidenceArtifacts: string[];
   existingReviewFix: string | null;
+  allowCompleted: boolean;
   completedNextSafeAction: string;
   partialNextSafeActions: string[];
   blockedNextSafeActions: string[];
+  blockedRequiredNextSafeAction: string | null;
   allowedNextActions: string[];
   schemaPath: string;
   baseSchema: Record<string, unknown>;
@@ -940,18 +952,25 @@ function resolveReviewFixSelectedTargetIds(args: {
   return { selectedTargetIds, issues };
 }
 
-async function buildAllowedReviewFixNextActions(phaseNumber: string): Promise<{
+async function buildAllowedReviewFixNextActions(args: {
+  phaseNumber: string;
+  includeExecutionRepairAction: boolean;
+}): Promise<{
   completedNextSafeAction: string;
   partialNextSafeActions: string[];
   blockedNextSafeActions: string[];
+  blockedRequiredNextSafeAction: string | null;
   allowedNextActions: string[];
 }> {
-  const completedNextSafeAction = `/blu-validate-phase ${phaseNumber}`;
+  const completedNextSafeAction = `/blu-validate-phase ${args.phaseNumber}`;
+  const executionRepairAction = `/blu-execute-phase ${args.phaseNumber}`;
   const partialCandidates = [
-    `/blu-code-review-fix ${phaseNumber}`,
-    `/blu-add-tests ${phaseNumber}`
+    ...(args.includeExecutionRepairAction ? [executionRepairAction] : []),
+    `/blu-code-review-fix ${args.phaseNumber}`,
+    `/blu-add-tests ${args.phaseNumber}`
   ];
   const blockedCandidates = [
+    ...(args.includeExecutionRepairAction ? [executionRepairAction] : []),
     "/blu-progress"
   ];
   const implementedCommands = await getImplementedCommandNames();
@@ -966,6 +985,10 @@ async function buildAllowedReviewFixNextActions(phaseNumber: string): Promise<{
   };
   const partialNextSafeActions = partialCandidates.filter(keepImplemented);
   const blockedNextSafeActions = blockedCandidates.filter(keepImplemented);
+  const blockedRequiredNextSafeAction =
+    args.includeExecutionRepairAction && blockedNextSafeActions.includes(executionRepairAction)
+      ? executionRepairAction
+      : null;
   const completedAction = keepImplemented(completedNextSafeAction)
     ? completedNextSafeAction
     : "/blu-progress";
@@ -974,6 +997,7 @@ async function buildAllowedReviewFixNextActions(phaseNumber: string): Promise<{
     completedNextSafeAction: completedAction,
     partialNextSafeActions,
     blockedNextSafeActions,
+    blockedRequiredNextSafeAction,
     allowedNextActions: uniqueSortedStrings([
       completedAction,
       ...partialNextSafeActions,
@@ -1010,20 +1034,42 @@ function dependencyPlanRowsForReviewFix(
   });
 }
 
+function reviewFixEvidenceKindForSource(source: string): "review" | "plan" | "summary" | "other" {
+  if (source.endsWith(REVIEW_ARTIFACT_SUFFIXES["code-review"])) {
+    return "review";
+  }
+  if (source.endsWith("-PLAN.md")) {
+    return "plan";
+  }
+  if (source.endsWith("-SUMMARY.md")) {
+    return "summary";
+  }
+
+  return "other";
+}
+
 async function buildReviewFixTaskSchema(args: {
   baseSchema: Record<string, unknown>;
   selectedTargetIds: string[];
   dependencyPlans: Array<{ planId: string; path: string }>;
+  executionDebt: ReviewFixExecutionDebt;
   knownEvidenceArtifacts: string[];
+  allowCompleted: boolean;
   completedNextSafeAction: string;
   partialNextSafeActions: string[];
   blockedNextSafeActions: string[];
+  blockedRequiredNextSafeAction: string | null;
   allowedNextActions: string[];
 }): Promise<Record<string, unknown>> {
   const schema = cloneJsonObject(args.baseSchema);
   const properties = getJsonObjectProperty(schema, "properties");
 
   if (properties) {
+    const status = getJsonObjectProperty(properties, "status");
+    if (status && !args.allowCompleted) {
+      status.enum = ["PARTIAL", "BLOCKED"];
+    }
+
     const findingsAddressed = getJsonObjectProperty(properties, "findingsAddressed");
     if (findingsAddressed) {
       findingsAddressed.minItems = args.selectedTargetIds.length;
@@ -1050,11 +1096,20 @@ async function buildReviewFixTaskSchema(args: {
         const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
         const planId = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
         const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+        const statusProperty = itemProperties ? getJsonObjectProperty(itemProperties, "status") : null;
+        const unsatisfiedDependencyIds = new Set(
+          args.executionDebt.unsatisfiedDependencyPlans.map((dependency) => dependency.planId)
+        );
         if (planId) {
           planId.enum = args.dependencyPlans.map((dependency) => dependency.planId);
         }
         if (pathProperty) {
           pathProperty.enum = args.dependencyPlans.map((dependency) => dependency.path);
+        }
+        if (statusProperty) {
+          statusProperty.enum = args.allowCompleted
+            ? ["satisfied"]
+            : ["satisfied", "pending", "blocked"];
         }
         dependencyPlans.allOf = args.dependencyPlans.map((dependency) => ({
           contains: {
@@ -1063,7 +1118,9 @@ async function buildReviewFixTaskSchema(args: {
             properties: {
               planId: { const: dependency.planId },
               path: { const: dependency.path },
-              status: { const: "satisfied" }
+              status: unsatisfiedDependencyIds.has(dependency.planId)
+                ? { enum: ["pending", "blocked"] }
+                : { const: "satisfied" }
             }
           },
           minContains: 1,
@@ -1075,15 +1132,76 @@ async function buildReviewFixTaskSchema(args: {
     const evidence = getJsonObjectProperty(properties, "evidence");
     if (evidence) {
       evidence.minItems = args.knownEvidenceArtifacts.length;
-      evidence.maxItems = args.knownEvidenceArtifacts.length;
+      delete evidence.maxItems;
+      const upstreamEvidenceByKind = {
+        review: args.knownEvidenceArtifacts.filter(
+          (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "review"
+        ),
+        plan: args.knownEvidenceArtifacts.filter(
+          (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "plan"
+        ),
+        summary: args.knownEvidenceArtifacts.filter(
+          (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "summary"
+        )
+      };
       const items = getJsonObjectProperty(evidence, "items");
-      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
-      const source = itemProperties ? getJsonObjectProperty(itemProperties, "source") : null;
-      if (source) {
-        source.enum = args.knownEvidenceArtifacts;
+      if (items) {
+        items.allOf = [
+          ...(Array.isArray(items.allOf) ? items.allOf : []),
+          ...Object.entries(upstreamEvidenceByKind).map(([kind, sources]) => ({
+            if: {
+              required: ["kind"],
+              properties: {
+                kind: { const: kind }
+              }
+            },
+            then: {
+              properties: {
+                source: { enum: sources }
+              }
+            }
+          })),
+          {
+            if: {
+              required: ["source"],
+              properties: {
+                source: { pattern: "^\\.blueprint/.+-(?:REVIEW|PLAN|SUMMARY)\\.md$" }
+              }
+            },
+            then: {
+              properties: {
+                source: { enum: args.knownEvidenceArtifacts }
+              }
+            }
+          },
+          ...args.knownEvidenceArtifacts.map((artifactPath) => ({
+            if: {
+              required: ["source"],
+              properties: {
+                source: { const: artifactPath }
+              }
+            },
+            then: {
+              properties: {
+                kind: { const: reviewFixEvidenceKindForSource(artifactPath) }
+              }
+            }
+          }))
+        ];
       }
       evidence.allOf = args.knownEvidenceArtifacts.map((artifactPath) =>
-        exactObjectPropertyContains("source", artifactPath)
+        ({
+          contains: {
+            type: "object",
+            required: ["kind", "source"],
+            properties: {
+              kind: { const: reviewFixEvidenceKindForSource(artifactPath) },
+              source: { const: artifactPath }
+            }
+          },
+          minContains: 1,
+          maxContains: 1
+        })
       );
     }
 
@@ -1131,7 +1249,9 @@ async function buildReviewFixTaskSchema(args: {
       },
       then: {
         properties: {
-          nextSafeAction: { enum: args.blockedNextSafeActions }
+          nextSafeAction: args.blockedRequiredNextSafeAction
+            ? { const: args.blockedRequiredNextSafeAction }
+            : { enum: args.blockedNextSafeActions }
         }
       }
     }
@@ -1141,9 +1261,12 @@ async function buildReviewFixTaskSchema(args: {
     selectedTargetIds: args.selectedTargetIds,
     dependencyPlans: args.dependencyPlans,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    executionDebt: args.executionDebt,
+    allowCompleted: args.allowCompleted,
     completedNextSafeAction: args.completedNextSafeAction,
     partialNextSafeActions: args.partialNextSafeActions,
-    blockedNextSafeActions: args.blockedNextSafeActions
+    blockedNextSafeActions: args.blockedNextSafeActions,
+    blockedRequiredNextSafeAction: args.blockedRequiredNextSafeAction
   };
 
   return schema;
@@ -1221,10 +1344,10 @@ async function buildReviewFixAuthoringContext(args: {
     phase: phaseNumber,
     artifact: "code-review"
   });
-  const blockers: string[] = [];
+  const hardBlockers: string[] = [];
 
   if (!loaded.found || !loaded.path) {
-    blockers.push(
+    hardBlockers.push(
       loaded.reason ??
       `Phase ${phaseNumber} does not have a saved code-review artifact for review-fix authoring.`
     );
@@ -1232,7 +1355,7 @@ async function buildReviewFixAuthoringContext(args: {
 
   const targets = reviewFixTargetsFromFindings(loaded);
   if (targets.length === 0) {
-    blockers.push(
+    hardBlockers.push(
       `Phase ${phaseNumber} saved code-review artifact does not contain structured findings or follow-ups to remediate.`
     );
   }
@@ -1241,7 +1364,7 @@ async function buildReviewFixAuthoringContext(args: {
     targets,
     targetIds: args.targetIds
   });
-  blockers.push(...selected.issues);
+  hardBlockers.push(...selected.issues);
 
   const [planIndex, summaryIndex, executionTargets] = await Promise.all([
     blueprintPhasePlanIndex({
@@ -1299,27 +1422,28 @@ async function buildReviewFixAuthoringContext(args: {
   const unsatisfiedDependencyPlans = dependencyPlans.filter(
     (dependency) => !completedDependencyPlanIds.has(dependency.planId)
   );
+  const executionDebtBlockers: string[] = [];
 
   if (summaryIndex.pendingPlans.length > 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Phase ${phaseNumber} still has pending execution plans: ${summaryIndex.pendingPlans.join(", ")}. Run /blu-execute-phase ${phaseNumber} before persisting review-fix completion evidence.`
     );
   }
 
   if (completedSummaries.length === 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Phase ${phaseNumber} has no valid completed SUMMARY artifacts. Run /blu-execute-phase ${phaseNumber} before persisting review-fix evidence.`
     );
   }
 
   if (executionTargets.blockers.lowerWavePendingPlanIds.length > 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Lower-wave pending plans block full review-fix coverage: ${executionTargets.blockers.lowerWavePendingPlanIds.join(", ")}.`
     );
   }
 
   if (unsatisfiedDependencyPlans.length > 0) {
-    blockers.push(
+    executionDebtBlockers.push(
       `Linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
         .join(", ")}.`
@@ -1335,15 +1459,28 @@ async function buildReviewFixAuthoringContext(args: {
     ...planIndex.plans.map((plan) => plan.path),
     ...completedSummaries
   ]);
-  const nextActions = await buildAllowedReviewFixNextActions(phaseNumber);
+  const executionDebt: ReviewFixExecutionDebt = {
+    pendingPlans: summaryIndex.pendingPlans,
+    lowerWavePendingPlanIds: executionTargets.blockers.lowerWavePendingPlanIds,
+    missingCompletedSummaries: completedSummaries.length === 0,
+    unsatisfiedDependencyPlans,
+    blockers: executionDebtBlockers
+  };
+  const allowCompleted = executionDebt.blockers.length === 0;
+  const nextActions = await buildAllowedReviewFixNextActions({
+    phaseNumber,
+    includeExecutionRepairAction: !allowCompleted
+  });
   const reviewFixBaseSchema = cloneJsonObject(modelContract.jsonSchema);
   const taskSchema =
-    blockers.length === 0
+    hardBlockers.length === 0 && loaded.path
       ? await buildReviewFixTaskSchema({
           baseSchema: reviewFixBaseSchema,
           selectedTargetIds: selected.selectedTargetIds,
           dependencyPlans,
+          executionDebt,
           knownEvidenceArtifacts,
+          allowCompleted,
           ...nextActions
         })
       : null;
@@ -1356,8 +1493,10 @@ async function buildReviewFixAuthoringContext(args: {
         selectedTargetIds: selected.selectedTargetIds,
         completedSummaries,
         dependencyPlans,
+        executionDebt,
         knownEvidenceArtifacts,
         existingReviewFix,
+        allowCompleted,
         ...nextActions,
         schemaPath: modelContract.schemaPath,
         baseSchema: reviewFixBaseSchema,
@@ -1366,7 +1505,7 @@ async function buildReviewFixAuthoringContext(args: {
     : null;
 
   return {
-    status: blockers.length === 0 ? "ready" : "invalid",
+    status: hardBlockers.length === 0 ? "ready" : "invalid",
     artifact: "review-fix",
     phase,
     files: [],
@@ -1376,8 +1515,8 @@ async function buildReviewFixAuthoringContext(args: {
     taskSchema,
     modelOnly: true,
     authoringContext,
-    prerequisiteBlockers: blockers,
-    reason: blockers.length > 0 ? blockers.join(" ") : null,
+    prerequisiteBlockers: hardBlockers,
+    reason: hardBlockers.length > 0 ? hardBlockers.join(" ") : null,
     warnings: uniqueSortedStrings([
       ...located.warnings,
       ...loaded.warnings,
@@ -3441,7 +3580,7 @@ function normalizeReviewFixModel(
       ? {
           planId: rowObject.planId.trim(),
           path: rowObject.path.trim(),
-          status: rowObject.status as "satisfied",
+          status: rowObject.status as ReviewFixDependencyStatus,
           evidence: rowObject.evidence.trim()
         }
       : null;
