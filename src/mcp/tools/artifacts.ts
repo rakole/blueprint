@@ -2883,15 +2883,39 @@ function validateMilestoneReportReferences(
   return issues;
 }
 
+function isEscapedMarkdownPipe(line: string, index: number): boolean {
+  let backslashCount = 0;
+
+  for (let cursor = index - 1; cursor >= 0 && line[cursor] === "\\"; cursor -= 1) {
+    backslashCount += 1;
+  }
+
+  return backslashCount % 2 === 1;
+}
+
 function parseMarkdownTableCells(line: string): string[] {
   if (!/^\|.*\|$/.test(line)) {
     return [];
   }
 
-  return line
-    .slice(1, -1)
-    .split("|")
-    .map((cell) => cell.trim());
+  const cells: string[] = [];
+  let current = "";
+
+  for (let index = 1; index < line.length - 1; index += 1) {
+    const character = line[index];
+
+    if (character === "|" && !isEscapedMarkdownPipe(line, index)) {
+      cells.push(current.replace(/\\\|/g, "|").trim());
+      current = "";
+      continue;
+    }
+
+    current += character;
+  }
+
+  cells.push(current.replace(/\\\|/g, "|").trim());
+
+  return cells;
 }
 
 function isMarkdownTableRow(line: string): boolean {
@@ -5504,14 +5528,24 @@ export function validateSummaryArtifactContent(
     issues.push("Summary artifact must start with a '# ... - Summary' heading.");
   }
 
+  const requiredSectionIssues = validateRequiredMarkdownSections(
+    normalizedContent,
+    "Summary artifact",
+    contract.requiredHeadings
+  );
+  const hasLegacyConciseSummary = ["Outcome", "Changes Made", "Verification", "Follow-Ups", "Evidence"]
+    .every((heading) => extractMarkdownSection(normalizedContent, heading).trim().length > 0);
+
   issues.push(
     ...validateLockedMarkers(normalizedContent, "Summary artifact", contract.lockedMarkers),
-    ...validateRequiredMarkdownSections(
-      normalizedContent,
-      "Summary artifact",
-      contract.requiredHeadings
-    )
+    ...requiredSectionIssues
   );
+
+  if (requiredSectionIssues.length > 0 && hasLegacyConciseSummary) {
+    warnings.push(
+      "Summary artifact uses a legacy concise format; it remains readable for compatibility but must be migrated to the canonical model-rendered summary before it can close execution debt."
+    );
+  }
 
   issues.push(
     ...contract.placeholderSignals

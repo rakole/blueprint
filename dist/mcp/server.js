@@ -20219,11 +20219,30 @@ function validateMilestoneReportReferences(content, artifactLabel, sectionHeadin
   }
   return issues;
 }
+function isEscapedMarkdownPipe(line, index) {
+  let backslashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && line[cursor] === "\\"; cursor -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
+}
 function parseMarkdownTableCells(line) {
   if (!/^\|.*\|$/.test(line)) {
     return [];
   }
-  return line.slice(1, -1).split("|").map((cell) => cell.trim());
+  const cells = [];
+  let current = "";
+  for (let index = 1; index < line.length - 1; index += 1) {
+    const character = line[index];
+    if (character === "|" && !isEscapedMarkdownPipe(line, index)) {
+      cells.push(current.replace(/\\\|/g, "|").trim());
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  cells.push(current.replace(/\\\|/g, "|").trim());
+  return cells;
 }
 function isMarkdownTableRow(line) {
   const cells = parseMarkdownTableCells(line);
@@ -21987,14 +22006,21 @@ function validateSummaryArtifactContent(content) {
   if (!/^# .+ - Summary(?:\s+\d+)?(?:\n|$)/.test(normalizedContent)) {
     issues.push("Summary artifact must start with a '# ... - Summary' heading.");
   }
+  const requiredSectionIssues = validateRequiredMarkdownSections(
+    normalizedContent,
+    "Summary artifact",
+    contract.requiredHeadings
+  );
+  const hasLegacyConciseSummary = ["Outcome", "Changes Made", "Verification", "Follow-Ups", "Evidence"].every((heading) => extractMarkdownSection(normalizedContent, heading).trim().length > 0);
   issues.push(
     ...validateLockedMarkers(normalizedContent, "Summary artifact", contract.lockedMarkers),
-    ...validateRequiredMarkdownSections(
-      normalizedContent,
-      "Summary artifact",
-      contract.requiredHeadings
-    )
+    ...requiredSectionIssues
   );
+  if (requiredSectionIssues.length > 0 && hasLegacyConciseSummary) {
+    warnings.push(
+      "Summary artifact uses a legacy concise format; it remains readable for compatibility but must be migrated to the canonical model-rendered summary before it can close execution debt."
+    );
+  }
   issues.push(
     ...contract.placeholderSignals.filter((signal) => signal.length > 0 && normalizedContent.includes(signal)).map((signal) => `Summary artifact still contains placeholder scaffold text: ${signal}.`)
   );
@@ -28473,6 +28499,188 @@ function collectMissingDependencyPlanPaths(dependsOn, availablePlanIds, resolved
     }
   });
 }
+function normalizeSummaryMarkerValue2(value) {
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed.startsWith("`") && trimmed.endsWith("`") || trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+function extractPhaseSummaryMarkerValue(content, marker) {
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(new RegExp(`^\\*\\*${escapedMarker}:\\*\\*\\s*(.+)$`, "m"));
+  return normalizeSummaryMarkerValue2(match?.[1] ?? null);
+}
+function dependencyPlanRowsForPlan(dependsOn, availablePlanIds, resolved) {
+  return dependsOn.flatMap((dependency) => {
+    try {
+      const normalizedDependency = normalizePlanId(dependency);
+      return availablePlanIds.has(normalizedDependency) ? [
+        {
+          planId: normalizedDependency,
+          path: planPathFor(resolved, normalizedDependency)
+        }
+      ] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+function normalizeDependencyPlanIds(dependsOn) {
+  return dependsOn.flatMap((dependency) => {
+    try {
+      return [normalizePlanId(dependency)];
+    } catch {
+      return [];
+    }
+  });
+}
+function consumeExpectedInventoryValues(actualValues, expectedValues) {
+  const remainingExpected = /* @__PURE__ */ new Map();
+  for (const expected of expectedValues) {
+    remainingExpected.set(expected, (remainingExpected.get(expected) ?? 0) + 1);
+  }
+  const unexpected = [];
+  for (const actual of actualValues) {
+    const remaining = remainingExpected.get(actual) ?? 0;
+    if (remaining > 0) {
+      remainingExpected.set(actual, remaining - 1);
+    } else {
+      unexpected.push(actual);
+    }
+  }
+  const missing = [...remainingExpected.entries()].flatMap(
+    ([value, count]) => Array.from({ length: count }, () => value)
+  );
+  return { missing, unexpected };
+}
+function collectExactInventoryIssues(actualValues, expectedValues, label) {
+  const issues = [];
+  const { missing, unexpected } = consumeExpectedInventoryValues(actualValues, expectedValues);
+  if (actualValues.length !== expectedValues.length) {
+    issues.push(
+      `Summary artifact ${label} must contain exactly ${expectedValues.length} row(s); found ${actualValues.length}.`
+    );
+  }
+  if (missing.length > 0) {
+    issues.push(
+      `Summary artifact ${label} is missing live plan value(s): ${uniqueSortedStrings(missing).join(", ")}.`
+    );
+  }
+  if (unexpected.length > 0) {
+    issues.push(
+      `Summary artifact ${label} contains out-of-scope value(s): ${uniqueSortedStrings(unexpected).join(", ")}.`
+    );
+  }
+  return issues;
+}
+function validateSummaryAgainstLivePlanInventory(content, args) {
+  const issues = [];
+  const warnings = [];
+  const normalizedContent = content.replace(/\r\n/g, "\n");
+  const status = extractSummaryStatus(normalizedContent);
+  const nextSafeAction = extractPhaseSummaryMarkerValue(normalizedContent, "Next Safe Action");
+  if (status) {
+    const expectedNextSafeAction = {
+      COMPLETED: `/blu-validate-phase ${args.resolved.phaseNumber}`,
+      PARTIAL: `/blu-execute-phase ${args.resolved.phaseNumber}`,
+      BLOCKED: "/blu-progress"
+    }[status];
+    if (nextSafeAction !== null && nextSafeAction !== expectedNextSafeAction) {
+      issues.push(
+        `Summary artifact status ${status} requires **Next Safe Action:** ${expectedNextSafeAction} for phase ${args.resolved.phaseNumber}.`
+      );
+    }
+  }
+  if (!args.plan) {
+    issues.push(
+      `Summary artifact ${args.planId} must be linked to an existing live plan artifact before it can count as execution evidence.`
+    );
+    return { valid: issues.length === 0, issues, warnings };
+  }
+  if (!args.plan.valid) {
+    issues.push(
+      `linked plan ${args.plan.path} is invalid, so the summary cannot count as execution evidence.`
+    );
+  }
+  const missingDependencyPlans = collectMissingDependencyPlanPaths(
+    args.plan.dependsOn,
+    args.knownPlanIds,
+    args.resolved
+  );
+  if (missingDependencyPlans.length > 0) {
+    issues.push(
+      `linked plan ${args.plan.path} is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}.`
+    );
+  }
+  if (status !== "COMPLETED") {
+    return { valid: issues.length === 0, issues, warnings };
+  }
+  const verificationRows = extractMarkdownTableRows(
+    extractMarkdownSection4(normalizedContent, "Verification")
+  );
+  const verificationChecks = verificationRows.map((row) => row[0] ?? "");
+  issues.push(
+    ...collectExactInventoryIssues(
+      verificationChecks,
+      args.plan.acceptanceCriteria,
+      "Verification checks"
+    )
+  );
+  const dependencyRows = extractMarkdownTableRows(
+    extractMarkdownSection4(normalizedContent, "Dependency Plans")
+  );
+  const expectedDependencyPlans = dependencyPlanRowsForPlan(
+    args.plan.dependsOn,
+    args.knownPlanIds,
+    args.resolved
+  );
+  if (expectedDependencyPlans.length === 0) {
+    const isExactNoneSentinel = dependencyRows.length === 1 && dependencyRows[0]?.length === 3 && dependencyRows[0][0] === "none" && dependencyRows[0][1] === "none" && dependencyRows[0][2] === "none";
+    if (!isExactNoneSentinel) {
+      issues.push(
+        "Summary artifact Dependency Plans section must use exactly the none | none | none sentinel when the live plan has no dependencies."
+      );
+    }
+  } else {
+    const expectedDependencyCells = expectedDependencyPlans.map(
+      (dependency) => `${dependency.planId} (${dependency.path})`
+    );
+    const actualDependencyCells = dependencyRows.map((row) => row[0] ?? "");
+    issues.push(
+      ...collectExactInventoryIssues(
+        actualDependencyCells,
+        expectedDependencyCells,
+        "Dependency Plans"
+      )
+    );
+    for (const row of dependencyRows) {
+      if (row[1] !== "satisfied") {
+        issues.push(
+          "Summary artifact Dependency Plans rows for live dependencies must use status satisfied."
+        );
+      }
+    }
+  }
+  if (args.completedDependencyPlanIds) {
+    const unsatisfiedDependencyPlanIds = normalizeDependencyPlanIds(args.plan.dependsOn).filter(
+      (dependencyPlanId) => args.knownPlanIds.has(dependencyPlanId) && !args.completedDependencyPlanIds?.has(dependencyPlanId)
+    );
+    if (unsatisfiedDependencyPlanIds.length > 0) {
+      issues.push(
+        `linked plan ${args.plan.path} depends on incomplete execution plan(s): ${uniqueSortedStrings(unsatisfiedDependencyPlanIds).join(", ")}.`
+      );
+    }
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings
+  };
+}
 function normalizeTextContent2(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
@@ -32967,6 +33175,7 @@ async function blueprintPhaseSummaryIndex(args = {}) {
   const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
   const knownPlanPaths = new Map(planIndex.plans.map((plan) => [plan.planId, plan.path]));
   const planRecordsById = new Map(planIndex.plans.map((plan) => [plan.planId, plan]));
+  const loadedSummaries = [];
   for (const summaryPath2 of summaryPaths) {
     const planId2 = parseSummaryArtifactPath(summaryPath2, resolved.phasePrefix);
     if (!planId2) {
@@ -32975,42 +33184,62 @@ async function blueprintPhaseSummaryIndex(args = {}) {
     }
     const content = await fs4.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
     const linkedPlanPath = extractSummaryPlanReference(content);
-    const validation = validateStrictSummaryArtifactContent(content, {
+    const strictValidation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: knownPlanPaths.get(planId2) ?? null
     });
+    const linkedPlan = planRecordsById.get(planId2) ?? null;
+    const livePlanValidation = validateSummaryAgainstLivePlanInventory(content, {
+      resolved,
+      planId: planId2,
+      plan: linkedPlan,
+      knownPlanIds
+    });
+    const validation = {
+      valid: strictValidation.valid && livePlanValidation.valid,
+      issues: [...strictValidation.issues, ...livePlanValidation.issues],
+      warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
+    };
     summaries.push(toPhaseSummaryRecord(planId2, summaryPath2, content, linkedPlanPath));
     const summaryStatus = extractSummaryStatus(content);
-    const linkedPlan = planRecordsById.get(planId2);
-    const missingDependencyPlans = linkedPlan ? collectMissingDependencyPlanPaths(linkedPlan.dependsOn, knownPlanIds, resolved) : [];
-    if (validation.valid && summaryStatus === "COMPLETED") {
-      if (!linkedPlan) {
-        warnings.push(
-          `${summaryPath2}: no matching plan artifact exists for this summary, so it does not close execution coverage.`
-        );
-      } else if (!linkedPlan.valid) {
-        warnings.push(
-          `${summaryPath2}: linked plan ${linkedPlan.path} is invalid, so this summary does not close execution coverage.`
-        );
-      } else if (missingDependencyPlans.length > 0) {
-        warnings.push(
-          `${summaryPath2}: linked plan ${linkedPlan.path} is missing dependency plan artifacts (${missingDependencyPlans.join(", ")}), so this summary does not close execution coverage.`
-        );
-      } else {
-        completedPlans.add(planId2);
+    loadedSummaries.push({
+      planId: planId2,
+      path: summaryPath2,
+      status: summaryStatus,
+      validation,
+      linkedPlan,
+      dependencyPlanIds: linkedPlan ? normalizeDependencyPlanIds(linkedPlan.dependsOn) : []
+    });
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const loaded of loadedSummaries) {
+      if (completedPlans.has(loaded.planId) || loaded.status !== "COMPLETED" || !loaded.validation.valid || !loaded.linkedPlan || !loaded.linkedPlan.valid) {
+        continue;
       }
-    } else if (validation.valid && summaryStatus) {
+      if (loaded.dependencyPlanIds.every((dependencyPlanId) => completedPlans.has(dependencyPlanId))) {
+        completedPlans.add(loaded.planId);
+        changed = true;
+      }
+    }
+  }
+  for (const loaded of loadedSummaries) {
+    if (loaded.validation.valid && loaded.status === "COMPLETED") {
+      if (!completedPlans.has(loaded.planId)) {
+        warnings.push(
+          `${loaded.path}: linked plan ${loaded.linkedPlan?.path ?? loaded.planId} depends on incomplete execution plan(s): ${loaded.dependencyPlanIds.filter((dependencyPlanId) => !completedPlans.has(dependencyPlanId)).join(", ")}, so this summary does not close execution coverage.`
+        );
+      }
+    } else if (loaded.validation.valid && loaded.status) {
       warnings.push(
-        `${summaryPath2}: summary status is ${summaryStatus}, so it remains pending execution debt.`
+        `${loaded.path}: summary status is ${loaded.status}, so it remains pending execution debt.`
       );
     } else {
       warnings.push(
-        `${summaryPath2}: summary artifact is invalid and does not count as completed execution evidence.`
+        `${loaded.path}: summary artifact is invalid and does not count as completed execution evidence.`
       );
-      warnings.push(...validation.issues.map((issue2) => `${summaryPath2}: ${issue2}`));
-      warnings.push(...validation.warnings.map((warning) => `${summaryPath2}: ${warning}`));
-    }
-    if (!knownPlanPaths.has(planId2) && !(validation.valid && summaryStatus === "COMPLETED")) {
-      warnings.push(`${summaryPath2}: no matching plan artifact exists for this summary.`);
+      warnings.push(...loaded.validation.issues.map((issue2) => `${loaded.path}: ${issue2}`));
+      warnings.push(...loaded.validation.warnings.map((warning) => `${loaded.path}: ${warning}`));
     }
   }
   const pendingPlans = planIndex.plans.map((plan) => plan.planId).filter((planId2) => !completedPlans.has(planId2));
@@ -33069,6 +33298,10 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     phase: resolved.phaseNumber,
     planId: planId2
   });
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
   const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId2) ?? null;
   const linkedPlanPath = planRead.path ?? indexedPlan?.path ?? planPathFor(resolved, planId2);
   const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
@@ -33088,6 +33321,10 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     }
   });
   const acceptanceCriteria = indexedPlan?.acceptanceCriteria ?? planRead.metadata?.acceptanceCriteria ?? [];
+  const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
+  const unsatisfiedDependencyPlans = dependencyPlans.filter(
+    (dependency) => !completedDependencyPlanIds.has(dependency.planId)
+  );
   const blockers = [];
   if (!planRead.found || !planRead.path) {
     blockers.push(
@@ -33105,6 +33342,11 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   if (missingDependencyPlans.length > 0) {
     blockers.push(
       `${linkedPlanPath}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
+    );
+  }
+  if (unsatisfiedDependencyPlans.length > 0) {
+    blockers.push(
+      `${linkedPlanPath}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}`
     );
   }
   const allowedNextActions = await buildPhaseSummaryAllowedNextActions(resolved.phaseNumber);
@@ -33133,7 +33375,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     modelOnly: true,
     prerequisiteBlockers: blockers,
     reason: blockers.length > 0 ? blockers.join(" ") : null,
-    warnings: [...planIndex.warnings]
+    warnings: [...planIndex.warnings, ...summaryIndex.warnings]
   };
 }
 async function blueprintPhaseSummaryValidateModel(args) {
@@ -33218,7 +33460,23 @@ async function blueprintPhaseSummaryValidateModel(args) {
       linkedPlanPath: context.linkedPlanPath,
       requirePlanMarker: true
     });
-    for (const issue2 of validation.issues) {
+    const planIndex = await blueprintPhasePlanIndex({
+      cwd: args.cwd,
+      phase: context.phase.phaseNumber
+    });
+    const summaryIndex = await blueprintPhaseSummaryIndex({
+      cwd: args.cwd,
+      phase: context.phase.phaseNumber
+    });
+    const livePlanValidation = validateSummaryAgainstLivePlanInventory(rendered, {
+      resolved: context.phase,
+      planId: context.planId,
+      plan: context.plan,
+      knownPlanIds: new Set(planIndex.plans.map((plan) => plan.planId)),
+      completedDependencyPlanIds: new Set(summaryIndex.completedPlans)
+    });
+    const markdownIssues = [...validation.issues, ...livePlanValidation.issues];
+    for (const issue2 of markdownIssues) {
       diagnostics.push(
         phaseSummaryDiagnostic({
           source: "markdown",
@@ -33230,7 +33488,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
         })
       );
     }
-    if (validation.issues.length === 0) {
+    if (markdownIssues.length === 0) {
       renderPreview = rendered;
     }
   }
@@ -33292,10 +33550,32 @@ async function blueprintPhaseSummaryRead(args) {
   const content = await fs4.readFile(absolutePath, "utf8");
   const metadata = summarizeMarkdownContent(content);
   const linkedPlanPath = extractSummaryPlanReference(content);
-  const validation = validateStrictSummaryArtifactContent(content, {
+  const strictValidation = validateStrictSummaryArtifactContent(content, {
     linkedPlanPath: planPathFor(resolved, planId2),
     requirePlanMarker: true
   });
+  const planIndex = await blueprintPhasePlanIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
+  const linkedPlan = planIndex.plans.find((plan) => plan.planId === planId2) ?? null;
+  const livePlanValidation = validateSummaryAgainstLivePlanInventory(content, {
+    resolved,
+    planId: planId2,
+    plan: linkedPlan,
+    knownPlanIds,
+    completedDependencyPlanIds: new Set(summaryIndex.completedPlans)
+  });
+  const validation = {
+    valid: strictValidation.valid && livePlanValidation.valid,
+    issues: [...strictValidation.issues, ...livePlanValidation.issues],
+    warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
+  };
   return {
     phaseFound: true,
     found: true,
@@ -33657,8 +33937,9 @@ async function blueprintPhaseSummaryWrite(args) {
   });
   const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId2) ?? null;
   const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
+  const dependsOn = indexedPlan?.dependsOn ?? plan.metadata?.dependsOn ?? [];
   const missingDependencyPlans = collectMissingDependencyPlanPaths(
-    indexedPlan?.dependsOn ?? plan.metadata?.dependsOn ?? [],
+    dependsOn,
     knownPlanIds,
     resolved
   );
@@ -33679,6 +33960,34 @@ async function blueprintPhaseSummaryWrite(args) {
         `${plan.path}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
       ],
       warnings: plan.validation?.warnings ?? []
+    };
+  }
+  const summaryIndex = await blueprintPhaseSummaryIndex({
+    cwd: projectRoot,
+    phase: resolved.phaseNumber
+  });
+  const dependencyPlans = dependencyPlanRowsForPlan(dependsOn, knownPlanIds, resolved);
+  const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
+  const unsatisfiedDependencyPlans = dependencyPlans.filter(
+    (dependency) => !completedDependencyPlanIds.has(dependency.planId)
+  );
+  if (unsatisfiedDependencyPlans.length > 0) {
+    return {
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: pathValue,
+      linkedPlanPath: plan.path,
+      written: false,
+      created: false,
+      overwritten: false,
+      status: "invalid",
+      issues: [
+        `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}`
+      ],
+      warnings: [...plan.validation?.warnings ?? [], ...summaryIndex.warnings]
     };
   }
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
@@ -33749,10 +34058,22 @@ async function blueprintPhaseSummaryWrite(args) {
   }
   normalizedContent = normalizeTextContent2(modelValidation.renderPreview);
   modelWarnings.push(...modelValidation.warnings);
-  const validation = validateStrictSummaryArtifactContent(normalizedContent, {
+  const strictValidation = validateStrictSummaryArtifactContent(normalizedContent, {
     linkedPlanPath: plan.path,
     requirePlanMarker: true
   });
+  const livePlanValidation = validateSummaryAgainstLivePlanInventory(normalizedContent, {
+    resolved,
+    planId: planId2,
+    plan: indexedPlan,
+    knownPlanIds,
+    completedDependencyPlanIds
+  });
+  const validation = {
+    valid: strictValidation.valid && livePlanValidation.valid,
+    issues: [...strictValidation.issues, ...livePlanValidation.issues],
+    warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
+  };
   const issues = normalizedContent.trim().length === 0 ? ["Execution summary content must not be empty."] : validation.issues;
   const warnings = [...validation.warnings];
   const exists = await pathExists2(absolutePath);
