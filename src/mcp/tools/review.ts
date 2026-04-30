@@ -223,6 +223,13 @@ type SecurityDeclaredThreat = {
   mitigation: string;
 };
 
+type SecuritySummaryThreatFlag = {
+  flagId: string;
+  sourceSummary: string;
+  threatId: string | null;
+  evidence: string;
+};
+
 type SecurityThreatRegisterRow = {
   threatId: string;
   status: SecurityThreatStatus;
@@ -288,6 +295,7 @@ type SecurityAuthoringContext = {
   completedSummaries: string[];
   pendingPlans: string[];
   declaredThreats: SecurityDeclaredThreat[];
+  summaryThreatFlags: SecuritySummaryThreatFlag[];
   knownEvidenceArtifacts: string[];
   existingSecurity: string | null;
   allowedNextActions: string[];
@@ -865,19 +873,51 @@ async function buildAllowedSecurityNextActions(args: {
   };
 }
 
+function splitMarkdownTableRow(line: string): string[] {
+  const trimmed = line.trim();
+  const withoutLeadingPipe = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
+  const withoutOuterPipes = withoutLeadingPipe.endsWith("|")
+    ? withoutLeadingPipe.slice(0, -1)
+    : withoutLeadingPipe;
+  const cells: string[] = [];
+  let current = "";
+
+  for (let index = 0; index < withoutOuterPipes.length; index += 1) {
+    const char = withoutOuterPipes[index];
+    const next = withoutOuterPipes[index + 1];
+
+    if (char === "\\" && next === "|") {
+      current += "|";
+      index += 1;
+      continue;
+    }
+
+    if (char === "|") {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+
+  return cells;
+}
+
+function isMarkdownTableSeparatorRow(cells: string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
 function parseMarkdownTableRows(section: string): string[][] {
   return section
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.startsWith("|"))
-    .map((line) =>
-      line
-        .split("|")
-        .map((cell) => cell.trim())
-        .slice(1, -1)
-    )
+    .map(splitMarkdownTableRow)
     .filter((cells) => cells.length > 0)
-    .filter((cells) => !cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+    .filter((cells) => !isMarkdownTableSeparatorRow(cells));
 }
 
 function normalizeThreatCell(value: string, fallback: string): string {
@@ -893,6 +933,21 @@ function normalizeThreatId(value: string, fallback: string): string {
     .replace(/^-+|-+$/g, "");
 
   return normalized.length > 0 ? normalized : fallback;
+}
+
+function isThreatIdSentinel(value: string): boolean {
+  const normalized = value
+    .trim()
+    .replace(/^`+|`+$/g, "")
+    .replace(/\s+/g, " ");
+
+  return /^(?:none|n\/a|na)$/i.test(normalized);
+}
+
+function looksLikeExplicitThreatId(value: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9._-]*-\d[A-Za-z0-9._-]*$/.test(
+    value.trim().replace(/^`+|`+$/g, "")
+  );
 }
 
 function extractThreatModelContent(content: string): string[] {
@@ -967,11 +1022,13 @@ function parseThreatRowsFromPlanContent(content: string, sourcePlan: string): Se
 
       rows.forEach((row, index) => {
         const fallbackId = `T-${String(threats.length + index + 1).padStart(2, "0")}`;
-        const threatId = normalizeThreatId(row[threatIdIndex] ?? "", fallbackId);
+        const rawThreatId = row[threatIdIndex] ?? "";
 
-        if (/^(?:none|n\/a|na)$/i.test(threatId)) {
+        if (isThreatIdSentinel(rawThreatId)) {
           return;
         }
+
+        const threatId = normalizeThreatId(rawThreatId, fallbackId);
 
         threats.push({
           threatId,
@@ -988,11 +1045,21 @@ function parseThreatRowsFromPlanContent(content: string, sourcePlan: string): Se
 
     const bullets = collectListItems(section);
     bullets.forEach((item, index) => {
+      const rawMatch = item.match(/^`?([^`:\-]+?)`?\s*[:\-]\s*(.+)$/);
+
+      if (rawMatch && isThreatIdSentinel(rawMatch[1])) {
+        return;
+      }
+
+      if (!rawMatch && isThreatIdSentinel(item)) {
+        return;
+      }
+
       const match = item.match(/^`?([A-Za-z0-9._-]+)`?\s*[:\-]\s*(.+)$/);
       const threatId = normalizeThreatId(match?.[1] ?? "", `T-${String(index + 1).padStart(2, "0")}`);
       const mitigation = normalizeThreatCell(match?.[2] ?? item, "No mitigation text found in the saved plan.");
 
-      if (/^(?:none|n\/a|na)$/i.test(threatId)) {
+      if (match && isThreatIdSentinel(match[1])) {
         return;
       }
 
@@ -1010,9 +1077,110 @@ function parseThreatRowsFromPlanContent(content: string, sourcePlan: string): Se
   return disambiguateDeclaredThreatIds(threats);
 }
 
+function normalizeMarkdownHeaderCell(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function findHeaderIndex(headers: string[], patterns: RegExp[]): number {
+  return headers.findIndex((header) => patterns.some((pattern) => pattern.test(header)));
+}
+
+function parsePotentialThreatFlagId(value: string, headerImpliesThreatId: boolean): string | null {
+  const raw = value.trim();
+
+  if (raw.length === 0 || isThreatIdSentinel(raw)) {
+    return null;
+  }
+
+  if (!headerImpliesThreatId && !looksLikeExplicitThreatId(raw)) {
+    return null;
+  }
+
+  const normalized = normalizeThreatId(raw, "");
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+function parseThreatFlagsFromSummaryContent(
+  content: string,
+  sourceSummary: string
+): SecuritySummaryThreatFlag[] {
+  const flags: SecuritySummaryThreatFlag[] = [];
+
+  for (const section of extractMarkdownSectionContent(content, /^Threat Flags?$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+
+    if (tableRows.length > 0) {
+      const header = tableRows[0].map(normalizeMarkdownHeaderCell);
+      const hasHeader = header.some((cell) =>
+        /^(?:threat id|id|flag|finding|evidence|summary|description|status)$/.test(cell)
+      );
+      const rows = hasHeader ? tableRows.slice(1) : tableRows;
+      const threatIdIndex = hasHeader
+        ? findHeaderIndex(header, [/^(?:threat )?id$/])
+        : -1;
+      const evidenceIndex = hasHeader
+        ? findHeaderIndex(header, [/^flag$/, /^finding$/, /^evidence$/, /^summary$/, /^description$/, /^notes?$/])
+        : -1;
+
+      rows.forEach((row) => {
+        if (row.every((cell) => isPlaceholderReviewListItem(cell))) {
+          return;
+        }
+
+        const fallbackEvidence = row.filter((cell) => cell.trim().length > 0).join(" | ");
+        const evidence = normalizeThreatCell(
+          row[evidenceIndex >= 0 ? evidenceIndex : threatIdIndex >= 0 ? Math.min(threatIdIndex + 1, row.length - 1) : 0] ??
+            fallbackEvidence,
+          fallbackEvidence
+        );
+        const threatId = parsePotentialThreatFlagId(
+          threatIdIndex >= 0 ? row[threatIdIndex] ?? "" : row[0] ?? "",
+          threatIdIndex >= 0
+        );
+
+        if (evidence.length === 0 || isPlaceholderReviewListItem(evidence)) {
+          return;
+        }
+
+        flags.push({
+          flagId: `${sourceSummary}#TF-${String(flags.length + 1).padStart(2, "0")}`,
+          sourceSummary,
+          threatId,
+          evidence
+        });
+      });
+
+      continue;
+    }
+
+    for (const item of collectListItems(section)) {
+      if (isPlaceholderReviewListItem(item)) {
+        continue;
+      }
+
+      const match =
+        item.match(/^`?([A-Za-z][A-Za-z0-9._-]*-\d[A-Za-z0-9._-]*)`?\s*[:\-]\s*(.+)$/) ??
+        item.match(/^(?:threat\s+)?`?([A-Za-z][A-Za-z0-9._-]*-\d[A-Za-z0-9._-]*)`?\s*[:\-]\s*(.+)$/i);
+      const threatId = match ? parsePotentialThreatFlagId(match[1], false) : null;
+      const evidence = normalizeThreatCell(match?.[2] ?? item, item);
+
+      flags.push({
+        flagId: `${sourceSummary}#TF-${String(flags.length + 1).padStart(2, "0")}`,
+        sourceSummary,
+        threatId,
+        evidence
+      });
+    }
+  }
+
+  return flags;
+}
+
 function buildSecurityTaskSchema(args: {
   baseSchema: Record<string, unknown>;
   declaredThreats: SecurityDeclaredThreat[];
+  summaryThreatFlags: SecuritySummaryThreatFlag[];
   knownEvidenceArtifacts: string[];
   allowedNextActions: string[];
   completedNextSafeAction: string;
@@ -1083,6 +1251,8 @@ function buildSecurityTaskSchema(args: {
         threatId.enum = definitionName === "findingRow"
           ? [...threatIdEnum, "unregistered"]
           : threatIdEnum;
+      } else if (threatId && definitionName === "findingRow") {
+        threatId.enum = ["unregistered"];
       }
     }
 
@@ -1145,6 +1315,7 @@ function buildSecurityTaskSchema(args: {
 
   schema["x-blueprint-runtimeContext"] = {
     declaredThreats: args.declaredThreats,
+    summaryThreatFlags: args.summaryThreatFlags,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     completedNextSafeAction: args.completedNextSafeAction,
     partialNextSafeAction: args.partialNextSafeAction,
@@ -1331,12 +1502,16 @@ async function buildSecurityAuthoringContext(args: {
         : []
     )
   );
+  const summaryThreatFlags = summaryReads.flatMap((summaryRead) =>
+    summaryRead.path && summaryRead.content
+      ? parseThreatFlagsFromSummaryContent(summaryRead.content, summaryRead.path)
+      : []
+  );
   const knownEvidenceArtifacts = uniqueSortedStrings([
     ...planIndex.plans.map((plan) => plan.path),
     ...completedSummaries,
     ...(artifacts.verification ? [artifacts.verification] : []),
-    ...(artifacts.uat ? [artifacts.uat] : []),
-    ...(artifacts.existingSecurity ? [artifacts.existingSecurity] : [])
+    ...(artifacts.uat ? [artifacts.uat] : [])
   ]);
   const allowedNextActions = await buildAllowedSecurityNextActions({
     phaseNumber,
@@ -1347,6 +1522,7 @@ async function buildSecurityAuthoringContext(args: {
       ? buildSecurityTaskSchema({
           baseSchema: securityBaseSchema,
           declaredThreats,
+          summaryThreatFlags,
           knownEvidenceArtifacts,
           allowCompleted: declaredThreats.length > 0,
           ...allowedNextActions
@@ -1359,6 +1535,7 @@ async function buildSecurityAuthoringContext(args: {
         completedSummaries,
         pendingPlans: summaryIndex.pendingPlans,
         declaredThreats,
+        summaryThreatFlags,
         knownEvidenceArtifacts,
         existingSecurity: artifacts.existingSecurity,
         ...allowedNextActions,
@@ -1537,31 +1714,20 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
   const seenSummaries = new Set<string>();
 
   for (const section of extractMarkdownSectionContent(content, /^Threat Register$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+
+    if (tableRows.length === 0) {
+      continue;
+    }
+
     let headers: string[] | null = null;
 
-    for (const line of section.split("\n")) {
-      const trimmed = line.trim();
-
-      if (!trimmed.startsWith("|")) {
-        continue;
-      }
-
-      const cells = trimmed
-        .split("|")
-        .map((cell) => cell.trim())
-        .slice(1, -1);
-
+    for (const cells of tableRows) {
       if (cells.length < 4) {
         continue;
       }
 
-      if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) {
-        continue;
-      }
-
-      const normalizedCells = cells.map((cell) =>
-        cell.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
-      );
+      const normalizedCells = cells.map(normalizeMarkdownHeaderCell);
 
       if (
         headers === null &&
@@ -1571,14 +1737,13 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
         continue;
       }
 
-      const findHeaderIndex = (patterns: RegExp[]): number =>
-        headers?.findIndex((header) => patterns.some((pattern) => pattern.test(header))) ?? -1;
-
-      const threatIdIndex = findHeaderIndex([/^threat id$/]);
-      const dispositionIndex = findHeaderIndex([/^disposition$/]);
-      const mitigationIndex = findHeaderIndex([/^mitigation$/]);
-      const statusIndex = findHeaderIndex([/^status$/]);
-      const evidenceIndex = findHeaderIndex([/^evidence(?: note)?$/, /^evidence .* note$/]);
+      const threatIdIndex = headers ? findHeaderIndex(headers, [/^threat id$/]) : -1;
+      const dispositionIndex = headers ? findHeaderIndex(headers, [/^disposition$/]) : -1;
+      const mitigationIndex = headers ? findHeaderIndex(headers, [/^mitigation$/]) : -1;
+      const statusIndex = headers ? findHeaderIndex(headers, [/^status$/]) : -1;
+      const evidenceIndex = headers
+        ? findHeaderIndex(headers, [/^evidence(?: note)?$/, /^evidence .* note$/])
+        : -1;
       const hasRichFallbackShape = cells.length >= 7;
 
       const threatId = cells[threatIdIndex >= 0 ? threatIdIndex : 0] ?? "";
@@ -1603,7 +1768,7 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
           statusIndex >= 0
             ? statusIndex
             : hasRichFallbackShape
-              ? 5
+              ? 6
               : 2
         ] ?? "";
       const evidence =
@@ -1611,7 +1776,7 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
           evidenceIndex >= 0
             ? evidenceIndex
             : hasRichFallbackShape
-              ? 6
+              ? 7
               : 3
         ] ?? "";
 
@@ -1748,6 +1913,100 @@ function resolveFindingsHeadingPattern(artifact: ReviewArtifactKind): RegExp {
   return /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i;
 }
 
+function normalizeSecurityFindingSeverity(value: string): ReviewFindingSeverity {
+  const normalized = value.toLowerCase();
+
+  return (["critical", "high", "medium", "low", "unknown"] as const).includes(
+    normalized as ReviewFindingSeverity
+  )
+    ? normalized as ReviewFindingSeverity
+    : "unknown";
+}
+
+function parseSecurityFindingsTableFindings(content: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const seenSummaries = new Set<string>();
+
+  for (const section of extractMarkdownSectionContent(content, /^Findings$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+
+    if (tableRows.length === 0) {
+      continue;
+    }
+
+    let headers: string[] | null = null;
+
+    for (const cells of tableRows) {
+      if (cells.length < 6) {
+        continue;
+      }
+
+      const normalizedCells = cells.map(normalizeMarkdownHeaderCell);
+
+      if (
+        headers === null &&
+        normalizedCells.includes("kind") &&
+        normalizedCells.includes("severity")
+      ) {
+        headers = normalizedCells;
+        continue;
+      }
+
+      const kindIndex = headers ? findHeaderIndex(headers, [/^kind$/]) : 0;
+      const severityIndex = headers ? findHeaderIndex(headers, [/^severity$/]) : 1;
+      const threatIdIndex = headers ? findHeaderIndex(headers, [/^threat id$/]) : 2;
+      const statusIndex = headers ? findHeaderIndex(headers, [/^status$/]) : 3;
+      const evidenceIndex = headers ? findHeaderIndex(headers, [/^evidence$/]) : 4;
+      const recommendationIndex = headers ? findHeaderIndex(headers, [/^recommendation$/]) : 5;
+      const kind = cells[kindIndex >= 0 ? kindIndex : 0] ?? "";
+      const severity = cells[severityIndex >= 0 ? severityIndex : 1] ?? "";
+      const threatId = cells[threatIdIndex >= 0 ? threatIdIndex : 2] ?? "";
+      const status = cells[statusIndex >= 0 ? statusIndex : 3] ?? "";
+      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : 4] ?? "";
+      const recommendation = cells[recommendationIndex >= 0 ? recommendationIndex : 5] ?? "";
+
+      if (
+        kind === "none" &&
+        severity === "none" &&
+        threatId === "none" &&
+        status === "none" &&
+        evidence === "none" &&
+        recommendation === "none"
+      ) {
+        continue;
+      }
+
+      if (kind.length === 0 || isPlaceholderReviewListItem(evidence)) {
+        continue;
+      }
+
+      const summary = normalizeFindingSummary(
+        kind === "open-threat"
+          ? `Open threat ${threatId}: ${evidence}`
+          : `${kind}${threatId && threatId !== "none" ? ` ${threatId}` : ""}: ${evidence}${
+              recommendation && !isPlaceholderReviewListItem(recommendation)
+                ? ` Recommendation: ${recommendation}`
+                : ""
+            }`
+      );
+
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+
+      seenSummaries.add(summary);
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: normalizeSecurityFindingSeverity(severity),
+        summary,
+        sourceSection: "Findings"
+      });
+    }
+  }
+
+  return findings;
+}
+
 function parseFindingsFromArtifact(
   content: string,
   artifact: ReviewArtifactKind
@@ -1786,6 +2045,21 @@ function parseFindingsFromArtifact(
   }
 
   if (artifact === "security") {
+    for (const tableFinding of parseSecurityFindingsTableFindings(content)) {
+      if (seenSummaries.has(tableFinding.summary)) {
+        continue;
+      }
+
+      seenSummaries.add(tableFinding.summary);
+      severityCounts[tableFinding.severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: tableFinding.severity,
+        summary: tableFinding.summary,
+        sourceSection: tableFinding.sourceSection
+      });
+    }
+
     for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
       if (seenSummaries.has(threatFinding.summary)) {
         continue;
@@ -3168,6 +3442,45 @@ function addSecurityGenericValueDiagnostics(args: {
   }
 }
 
+function normalizeThreatFlagMatchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/`/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function securityFindingMentionsThreatFlag(
+  finding: SecurityStructuredModel["findings"][number],
+  flag: SecuritySummaryThreatFlag
+): boolean {
+  const flagText = normalizeThreatFlagMatchText(flag.evidence);
+  const findingText = normalizeThreatFlagMatchText(
+    `${finding.evidence} ${finding.recommendation}`
+  );
+
+  return (
+    flagText.length > 0 &&
+    findingText.length > 0 &&
+    findingText.includes(flagText)
+  );
+}
+
+function securityThreatRegisterMentionsThreatFlag(
+  row: SecurityThreatRegisterRow,
+  flag: SecuritySummaryThreatFlag
+): boolean {
+  const flagText = normalizeThreatFlagMatchText(flag.evidence);
+  const rowText = normalizeThreatFlagMatchText(`${row.evidence} ${row.verifierNote}`);
+
+  return (
+    flagText.length > 0 &&
+    rowText.length > 0 &&
+    rowText.includes(flagText)
+  );
+}
+
 function addSecuritySemanticDiagnostics(args: {
   diagnostics: ReviewModelDiagnostic[];
   model: SecurityStructuredModel;
@@ -3192,6 +3505,7 @@ function addSecuritySemanticDiagnostics(args: {
     .filter((row) => row.threatId !== "none")
     .map((row) => row.threatId)
     .filter((threatId) => !declaredThreatIds.has(threatId));
+  const realFindings = args.model.findings.filter((row) => row.kind !== "none");
 
   if (unknownThreatIds.length > 0) {
     args.diagnostics.push(
@@ -3205,6 +3519,55 @@ function addSecuritySemanticDiagnostics(args: {
       })
     );
   }
+
+  args.authoringContext.summaryThreatFlags.forEach((flag, index) => {
+    if (flag.threatId && declaredThreatIds.has(flag.threatId)) {
+      const hasThreatRegisterCoverage = args.model.threatRegister.some(
+        (row) =>
+          row.threatId === flag.threatId &&
+          row.status !== "none" &&
+          securityThreatRegisterMentionsThreatFlag(row, flag)
+      );
+      const hasFindingCoverage = realFindings.some(
+        (row) => securityFindingMentionsThreatFlag(row, flag)
+      );
+
+      if (!hasThreatRegisterCoverage && !hasFindingCoverage) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `authoringContext.summaryThreatFlags[${index}]`,
+            code: "residual.summary_threat_flag_uncovered",
+            message: `Summary threat flag ${flag.flagId} maps to declared threat ${flag.threatId} but is not covered by the security model.`,
+            context: { flag },
+            suggestion: "Cover the flag with the matching threatRegister row or a concrete security finding."
+          })
+        );
+      }
+
+      return;
+    }
+
+    const matchingUnregisteredFindings = realFindings.filter(
+      (row) => row.kind === "unregistered-flag" && row.threatId === "unregistered"
+    );
+    const hasExplicitCoverage = matchingUnregisteredFindings.some((row) =>
+      securityFindingMentionsThreatFlag(row, flag)
+    );
+
+    if (!hasExplicitCoverage) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `authoringContext.summaryThreatFlags[${index}]`,
+          code: "residual.summary_threat_flag_uncovered",
+          message: `Summary threat flag ${flag.flagId} is not registered in saved plan threats and must be covered by an unregistered-flag finding.`,
+          context: { flag },
+          suggestion: "Add a findings row with kind unregistered-flag, threatId unregistered, concrete evidence, and a follow-up route."
+        })
+      );
+    }
+  });
 
   if (missingAcceptedRisks.length > 0) {
     args.diagnostics.push(

@@ -276,16 +276,16 @@
           },
           "auditTrail": {
             "properties": {
-              "pendingOpenThreatStatus": {
-                "enum": [
-                  "none",
-                  "accepted"
-                ]
-              },
               "verifyOrAcceptDecision": {
                 "enum": [
                   "none",
                   "verified",
+                  "accepted"
+                ]
+              },
+              "pendingOpenThreatStatus": {
+                "enum": [
+                  "none",
                   "accepted"
                 ]
               }
@@ -380,6 +380,13 @@
           },
           "auditTrail": {
             "properties": {
+              "verifyOrAcceptDecision": {
+                "enum": [
+                  "none",
+                  "verified",
+                  "accepted"
+                ]
+              },
               "pendingOpenThreatStatus": {
                 "enum": [
                   "none",

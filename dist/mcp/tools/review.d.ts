@@ -161,6 +161,12 @@ type SecurityDeclaredThreat = {
     disposition: string;
     mitigation: string;
 };
+type SecuritySummaryThreatFlag = {
+    flagId: string;
+    sourceSummary: string;
+    threatId: string | null;
+    evidence: string;
+};
 type SecurityThreatRegisterRow = {
     threatId: string;
     status: SecurityThreatStatus;
@@ -221,6 +227,7 @@ type SecurityAuthoringContext = {
     completedSummaries: string[];
     pendingPlans: string[];
     declaredThreats: SecurityDeclaredThreat[];
+    summaryThreatFlags: SecuritySummaryThreatFlag[];
     knownEvidenceArtifacts: string[];
     existingSecurity: string | null;
     allowedNextActions: string[];
