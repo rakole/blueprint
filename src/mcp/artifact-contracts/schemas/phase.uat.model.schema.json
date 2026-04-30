@@ -1,0 +1,479 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.phase.uat.model",
+  "title": "Blueprint Phase UAT Model",
+  "description": "Model-authored payload for phase.uat. Runtime-owned phase identity, artifact kind, paths, saved summary inventory, ready verification context, exact allowed next actions, and final Markdown persistence are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "resumeState",
+    "checkpoint",
+    "uatSummary",
+    "sessionState",
+    "currentTest",
+    "testMatrix",
+    "resultSummary",
+    "questionsAsked",
+    "observedBehavior",
+    "unresolvedGaps",
+    "structuredGaps",
+    "followUpFixes",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/uatStatus"
+    },
+    "resumeState": {
+      "$ref": "#/$defs/resumeState"
+    },
+    "checkpoint": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Single-line in-artifact checkpoint label. PASS must use exactly none; FAIL and PARTIAL must use a non-none label."
+    },
+    "uatSummary": {
+      "type": "array",
+      "description": "Summary-backed UAT outcome notes rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "sessionState": {
+      "type": "array",
+      "description": "Resumable UAT session state rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "currentTest": {
+      "$ref": "#/$defs/currentTest"
+    },
+    "testMatrix": {
+      "type": "array",
+      "description": "UAT test rows rendered into the Test Matrix Markdown table.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/testMatrixRow"
+      }
+    },
+    "resultSummary": {
+      "$ref": "#/$defs/resultSummary"
+    },
+    "questionsAsked": {
+      "type": "array",
+      "description": "Questions asked during UAT, or an explicit none value when no questions were needed.",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "observedBehavior": {
+      "type": "array",
+      "description": "Observed behavior from the UAT pass rendered as Markdown bullets.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "unresolvedGaps": {
+      "type": "array",
+      "description": "Unresolved user-acceptance gaps, or an explicit none value when no gaps remain.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "structuredGaps": {
+      "type": "array",
+      "description": "Structured gap rows rendered into the Structured Gaps Markdown table. Use an explicit none row when no active structured gaps remain.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/structuredGapRow"
+      }
+    },
+    "followUpFixes": {
+      "type": "array",
+      "description": "Explicit follow-up fixes, acceptance notes, or an explicit none value.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/blueprintCommandAction",
+      "description": "One single-line Blueprint command token with optional arguments. The task schema narrows this to the allowed next actions for the current phase."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PASS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "checkpoint": {
+            "const": "none"
+          },
+          "testMatrix": {
+            "items": {
+              "properties": {
+                "result": {
+                  "const": "pass"
+                }
+              }
+            }
+          },
+          "resultSummary": {
+            "properties": {
+              "issues": {
+                "const": 0
+              },
+              "pending": {
+                "const": 0
+              },
+              "skipped": {
+                "const": 0
+              },
+              "blocked": {
+                "const": 0
+              }
+            }
+          },
+          "structuredGaps": {
+            "items": {
+              "properties": {
+                "status": {
+                  "const": "none"
+                },
+                "severity": {
+                  "const": "none"
+                }
+              }
+            }
+          },
+          "unresolvedGaps": {
+            "items": {
+              "const": "none"
+            }
+          },
+          "followUpFixes": {
+            "items": {
+              "const": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "FAIL",
+              "PARTIAL"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "checkpoint": {
+            "not": {
+              "pattern": "^\\s*[Nn][Oo][Nn][Ee]\\s*$"
+            }
+          },
+          "unresolvedGaps": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          },
+          "structuredGaps": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "failed",
+                    "partial",
+                    "blocked"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUpFixes": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line string with at least one non-whitespace character. CR/LF is rejected because model strings are rendered into Markdown metadata, bullets, or tables."
+    },
+    "markdownTableCellString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
+      "description": "Non-empty single-line Markdown table cell with at least one non-whitespace character. CR/LF and pipe delimiters are rejected to prevent table shape changes."
+    },
+    "phaseEvidencePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+-(?:SUMMARY|VERIFICATION)\\.md$",
+      "description": "Repo-relative Blueprint summary or ready verification evidence path under .blueprint/phases with no traversal, absolute path, backslash, glob, or table delimiter surface."
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*)(?:\\s+[A-Za-z0-9._:/=@+-]+)*$",
+      "description": "Single Blueprint command token plus optional tokenized arguments. Natural-language wrapping, backticks, pipes, and multi-line text are rejected."
+    },
+    "uatStatus": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "PARTIAL"
+      ]
+    },
+    "resumeState": {
+      "type": "string",
+      "enum": [
+        "RESUMED",
+        "NEW",
+        "CONTINUED"
+      ]
+    },
+    "testResult": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "pass",
+        "issue",
+        "skipped",
+        "blocked"
+      ]
+    },
+    "gapStatus": {
+      "type": "string",
+      "enum": [
+        "failed",
+        "partial",
+        "blocked",
+        "none"
+      ]
+    },
+    "gapSeverity": {
+      "type": "string",
+      "enum": [
+        "blocker",
+        "major",
+        "minor",
+        "cosmetic",
+        "none"
+      ]
+    },
+    "currentTest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "name",
+        "expected",
+        "awaiting"
+      ],
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "expected": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "awaiting": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "testMatrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "test",
+        "expectedBehavior",
+        "evidence",
+        "result",
+        "notes"
+      ],
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "test": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "expectedBehavior": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/phaseEvidencePath"
+        },
+        "result": {
+          "$ref": "#/$defs/testResult"
+        },
+        "notes": {
+          "$ref": "#/$defs/markdownTableCellString"
+        }
+      }
+    },
+    "resultSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "passed",
+        "issues",
+        "pending",
+        "skipped",
+        "blocked"
+      ],
+      "properties": {
+        "total": {
+          "$ref": "#/$defs/nonnegativeInteger"
+        },
+        "passed": {
+          "$ref": "#/$defs/nonnegativeInteger"
+        },
+        "issues": {
+          "$ref": "#/$defs/nonnegativeInteger"
+        },
+        "pending": {
+          "$ref": "#/$defs/nonnegativeInteger"
+        },
+        "skipped": {
+          "$ref": "#/$defs/nonnegativeInteger"
+        },
+        "blocked": {
+          "$ref": "#/$defs/nonnegativeInteger"
+        }
+      }
+    },
+    "nonnegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "structuredGapRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "test",
+        "truth",
+        "status",
+        "severity",
+        "reason",
+        "followUp"
+      ],
+      "properties": {
+        "test": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "truth": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/gapStatus"
+        },
+        "severity": {
+          "$ref": "#/$defs/gapSeverity"
+        },
+        "reason": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "followUp": {
+          "$ref": "#/$defs/markdownTableCellString"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "none"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "severity": {
+                "const": "none"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "failed",
+                  "partial",
+                  "blocked"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "severity": {
+                "enum": [
+                  "blocker",
+                  "major",
+                  "minor",
+                  "cosmetic"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

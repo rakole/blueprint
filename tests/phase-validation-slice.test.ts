@@ -655,6 +655,7 @@ test("validate-phase and verify-work manifests reference registered validation t
   assert.ok(blueprintToolNames.includes("blueprint_phase_validation_render"));
   assert.ok(blueprintToolNames.includes("blueprint_phase_validation_validate_model"));
   assert.match(validateManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_validate_model")));
+  assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_validate_model")));
   assert.match(verifyManifest, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
 
   assert.match(validateManifest, /Use the `blueprint-phase-validation` skill/);
@@ -1438,6 +1439,7 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(verifyDoc, /blueprint_phase_summary_read/);
   assert.match(verifyDoc, /blueprint_phase_validation_read/);
   assert.match(verifyDoc, /blueprint_phase_validation_authoring_context/);
+  assert.match(verifyDoc, /blueprint_phase_validation_validate_model/);
   assert.match(verifyDoc, /blueprint_phase_validation_render/);
   assert.match(verifyDoc, /blueprint_phase_validation_write/);
   assert.match(verifyDoc, /blueprint_config_get/);

@@ -671,6 +671,11 @@ test("verification model authoring blocks when completed summary context is miss
     phase: "3",
     artifact: "verification"
   });
+  const uatContext = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat"
+  });
   const { artifact: _artifact, phase: _phase, ...emptySummaryModel } = verificationRenderInput(
     [],
     {
@@ -709,6 +714,14 @@ test("verification model authoring blocks when completed summary context is miss
       evidenceReviewedSummaryPaths: [summaryPath]
     }
   });
+  const { artifact: _uatArtifact, phase: _uatPhase, ...inventedUatModel } =
+    uatRenderInput(summaryPath);
+  const uatValidatedInventedSummary = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: inventedUatModel
+  });
   const writeAttempt = blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "3",
@@ -721,6 +734,10 @@ test("verification model authoring blocks when completed summary context is miss
   assert.equal(context.readyForDraft, false);
   assert.match(context.prerequisiteBlockers.join("\n"), /valid completed execution summaries/i);
   assert.match(JSON.stringify(context.taskSchema), /"evidenceReviewedSummaryPaths".*"maxItems":0/s);
+  assert.equal(uatContext.status, "invalid");
+  assert.equal(uatContext.readyForDraft, false);
+  assert.match(uatContext.prerequisiteBlockers.join("\n"), /valid completed execution summaries/i);
+  assert.match(JSON.stringify(uatContext.taskSchema), /"testMatrix".*"maxItems":0/s);
   assert.equal(validatedEmpty.status, "invalid");
   assert.match(
     validatedEmpty.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
@@ -729,6 +746,11 @@ test("verification model authoring blocks when completed summary context is miss
   assert.equal(validatedInventedSummary.status, "invalid");
   assert.match(
     validatedInventedSummary.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /more than 0 items|must NOT have more than 0 items/i
+  );
+  assert.equal(uatValidatedInventedSummary.status, "invalid");
+  assert.match(
+    uatValidatedInventedSummary.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /more than 0 items|must NOT have more than 0 items/i
   );
   await assert.rejects(writeAttempt, /valid execution summaries/);
@@ -1040,20 +1062,194 @@ test("validation write accepts a structured UAT model after ready verification e
       `Observed behavior matched ${summaryPath} and the ready verification artifact.`
     ]
   });
-  const uat = await blueprintPhaseValidationWrite({
+  const context = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat"
+  });
+  const validated = await blueprintPhaseValidationValidateModel({
     cwd: repoPath,
     phase: "3",
     artifact: "uat",
     model
   });
-
-  assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
-  assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
-  assert.equal(uat.written, true);
-  assert.deepEqual(uat.summaryPaths, [summaryPath]);
+  const optionalEmptyQuestions = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      questionsAsked: []
+    }
+  });
+  const uat = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model,
+    authoringMode: "model-only"
+  });
   const savedUat = await readFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UAT.md"),
     "utf8"
+  );
+  const modelOnlyMarkdownFallback = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: savedUat,
+    authoringMode: "model-only",
+    overwrite: true
+  });
+  const unsupportedField = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      phase: "4"
+    }
+  });
+  const { testMatrix: _testMatrix, ...missingRequired } = model;
+  const missingRequiredField = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: missingRequired
+  });
+  const outOfScopeEvidence = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      testMatrix: [
+        {
+          ...model.testMatrix[0],
+          evidence: ".blueprint/phases/03-phase-discovery/03-99-SUMMARY.md"
+        }
+      ]
+    }
+  });
+  const delimiterInjection = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      testMatrix: [
+        {
+          ...model.testMatrix[0],
+          test: "Saved execution behavior | injected column"
+        }
+      ]
+    }
+  });
+  const newlineInjection = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      observedBehavior: [`Observed behavior matched ${summaryPath}.\nInjected heading`]
+    }
+  });
+  const genericLowEffort = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      uatSummary: ["none"]
+    }
+  });
+  const contradictoryPass = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      testMatrix: [
+        {
+          ...model.testMatrix[0],
+          result: "issue",
+          notes: "User reported a mismatch."
+        }
+      ],
+      resultSummary: {
+        total: 1,
+        passed: 0,
+        issues: 1,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      },
+      unresolvedGaps: ["User reported a mismatch."],
+      structuredGaps: [
+        {
+          test: "1",
+          truth: "User reported a mismatch.",
+          status: "failed",
+          severity: "major",
+          reason: "User-reported issue remains active.",
+          followUp: "Repair before returning to /blu-progress."
+        }
+      ]
+    }
+  });
+
+  assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
+  assert.equal(context.status, "ready");
+  assert.equal(
+    context.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json"
+  );
+  assert.match(JSON.stringify(context.taskSchema), /03-01-SUMMARY\.md/);
+  assert.match(JSON.stringify(context.taskSchema), /03-VERIFICATION\.md/);
+  assert.match(JSON.stringify(context.taskSchema), /x-blueprint-runtimeContext/);
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(validated.schemaPath, "src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json");
+  assert.match(validated.renderPreview ?? "", /# Phase 03: Phase Discovery - UAT/);
+  assert.equal(optionalEmptyQuestions.status, "valid", JSON.stringify(optionalEmptyQuestions.diagnostics, null, 2));
+  assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
+  assert.equal(uat.written, true);
+  assert.deepEqual(uat.summaryPaths, [summaryPath]);
+  assert.equal(modelOnlyMarkdownFallback.status, "invalid");
+  assert.match(modelOnlyMarkdownFallback.issues.join("\n"), /model-only writes must supply/i);
+  assert.equal(unsupportedField.status, "invalid");
+  assert.match(
+    unsupportedField.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /additional properties/i
+  );
+  assert.equal(missingRequiredField.status, "invalid");
+  assert.match(
+    missingRequiredField.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /required property/i
+  );
+  assert.equal(outOfScopeEvidence.status, "invalid");
+  assert.match(
+    outOfScopeEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of the allowed values|must be equal to constant/i
+  );
+  assert.equal(delimiterInjection.status, "invalid");
+  assert.match(
+    delimiterInjection.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /pattern/i
+  );
+  assert.equal(newlineInjection.status, "invalid");
+  assert.match(
+    newlineInjection.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /pattern/i
+  );
+  assert.equal(genericLowEffort.status, "invalid");
+  assert.match(
+    genericLowEffort.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /content\.generic_text/
+  );
+  assert.equal(contradictoryPass.status, "invalid");
+  assert.match(
+    contradictoryPass.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to constant|must be equal to one of the allowed values/i
   );
   assert.match(savedUat, /## Test Matrix/);
   assert.match(savedUat, /## Structured Gaps/);
@@ -1196,11 +1392,34 @@ test("validation render handles UAT prerequisites, summary citations, checkpoint
   });
 
   const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const missingVerificationContext = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat"
+  });
   const missingVerification = await blueprintPhaseValidationRender({
     cwd: repoPath,
     ...uatRenderInput(summaryPath)
   });
+  const { artifact: _missingArtifact, phase: _missingPhase, ...missingVerificationModel } =
+    uatRenderInput(summaryPath);
+  const missingVerificationModelValidation = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: missingVerificationModel
+  });
 
+  assert.equal(missingVerificationContext.status, "invalid");
+  assert.equal(missingVerificationContext.readyForDraft, false);
+  assert.match(missingVerificationContext.prerequisiteBlockers.join("\n"), /VERIFICATION artifact/i);
+  assert.match(JSON.stringify(missingVerificationContext.taskSchema), /03-01-SUMMARY\.md/);
+  assert.doesNotMatch(JSON.stringify(missingVerificationContext.taskSchema), /03-VERIFICATION\.md/);
+  assert.equal(missingVerificationModelValidation.status, "invalid");
+  assert.match(
+    missingVerificationModelValidation.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /scope\.prerequisite_blocker/
+  );
   assert.equal(missingVerification.readyToWrite, false);
   assert.match(missingVerification.issues.join("\n"), /VERIFICATION artifact before UAT/);
 
