@@ -50,6 +50,8 @@ type ImpactAnalyzeArgs = {
 type ImpactReportWriteArgs = {
     cwd?: string;
     impactId?: string;
+    expectedScopeFingerprint?: string;
+    expectedFiles?: string[];
     report?: Record<string, unknown>;
     overwrite?: boolean;
     writeEvidenceLog?: boolean;
@@ -481,6 +483,8 @@ export declare const impactToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         impactId: z.ZodOptional<z.ZodString>;
+        expectedScopeFingerprint: z.ZodOptional<z.ZodString>;
+        expectedFiles: z.ZodOptional<z.ZodArray<z.ZodString>>;
         report: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         writeEvidenceLog: z.ZodOptional<z.ZodBoolean>;

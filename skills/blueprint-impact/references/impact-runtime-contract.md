@@ -70,9 +70,13 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 
 ### Validate
 
-- Report writer validation is authoritative for `blueprint.impact.report.v1`
-  structure, required Markdown sections, placeholder rejection, evidence refs,
-  confidence explanation, reviewer/test/action provenance, and status
+- Report writer validation is authoritative for `blueprint.impact.report.v1`.
+  It validates the structured payload against the `report.impact` JSON Schema,
+  narrows the effective task schema to exact impact id, optional MCP-owned
+  expected scope fingerprint and expected files, evidence ids, and finding
+  projections, then runs residual
+  checks for rendered Markdown sections, placeholder rejection, unknown evidence
+  refs, confidence proof, reviewer/test/action provenance, and semantic status
   consistency.
 - If report writing returns invalid, repair the report model through the
   analysis or rendering inputs if possible and retry once through MCP. Do not

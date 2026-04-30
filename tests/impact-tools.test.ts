@@ -2431,6 +2431,128 @@ test("impact report writer rejects invalid report quality without writing", asyn
   }
 });
 
+test("impact report writer rejects schema violations before persistence", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const unsupportedFieldReport = {
+      ...analysis.report,
+      content: "# Markdown fallback should not be accepted"
+    };
+    const missingRequiredReport = structuredClone(analysis.report) as Record<string, unknown>;
+    const newlineInjectionReport = {
+      ...analysis.report,
+      summary: `${analysis.report.summary}\n- injected bullet`
+    };
+    const duplicateReviewerReport = {
+      ...analysis.report,
+      requiredReviewers: [
+        ...(analysis.report.requiredReviewers.length > 0
+          ? analysis.report.requiredReviewers
+          : ["@reviewer"]),
+        ...(analysis.report.requiredReviewers.length > 0
+          ? [analysis.report.requiredReviewers[0]]
+          : ["@reviewer"])
+      ]
+    };
+
+    delete missingRequiredReport.evidence;
+
+    const unsupported = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: unsupportedFieldReport
+    });
+    const missingRequired = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: missingRequiredReport
+    });
+    const newlineInjection = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: newlineInjectionReport
+    });
+    const duplicateReviewer = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: duplicateReviewerReport
+    });
+    const markdownFallback = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: "# Impact Report\n\nMarkdown fallback"
+    } as unknown as Parameters<typeof blueprintImpactReportWrite>[0]);
+
+    assert.equal(unsupported.status, "invalid");
+    assert.match(unsupported.errors.join("\n"), /Unsupported field: content/);
+    assert.equal(missingRequired.status, "invalid");
+    assert.match(missingRequired.errors.join("\n"), /must have required property 'evidence'/);
+    assert.equal(newlineInjection.status, "invalid");
+    assert.match(newlineInjection.errors.join("\n"), /summary: must match pattern/);
+    assert.equal(duplicateReviewer.status, "invalid");
+    assert.match(duplicateReviewer.errors.join("\n"), /requiredReviewers.*must NOT have duplicate items/);
+    assert.equal(markdownFallback.status, "invalid");
+    assert.match(markdownFallback.errors.join("\n"), /must be a JSON object/);
+    await assert.rejects(access(path.join(repoPath, unsupported.paths.impactMarkdown)));
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report task schema narrows report provenance and evidence refs", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["tests/impact-tools.test.ts"],
+      config: lowNoiseConfig()
+    });
+    const staleFilesReport = {
+      ...analysis.report,
+      files: ["README.md"]
+    };
+    const staleFingerprintReport = {
+      ...analysis.report,
+      scope: {
+        ...analysis.report.scope,
+        fingerprint: "stale-fingerprint"
+      }
+    };
+    const staleEvidenceReport = structuredClone(analysis.report) as ImpactAnalysis["report"];
+
+    staleEvidenceReport.ownership.matches[0] = {
+      ...staleEvidenceReport.ownership.matches[0],
+      evidenceRefs: ["ev.stale"]
+    };
+
+    const staleFiles = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      expectedFiles: analysis.report.files,
+      report: staleFilesReport
+    });
+    const staleFingerprint = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      expectedScopeFingerprint: analysis.report.scope.fingerprint,
+      report: staleFingerprintReport
+    });
+    const staleEvidence = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      report: staleEvidenceReport
+    });
+
+    assert.equal(staleFiles.status, "invalid");
+    assert.match(staleFiles.errors.join("\n"), /files: must be equal to constant/);
+    assert.equal(staleFingerprint.status, "invalid");
+    assert.match(staleFingerprint.errors.join("\n"), /scope\.fingerprint: must be equal to constant/);
+    assert.equal(staleEvidence.status, "invalid");
+    assert.match(staleEvidence.errors.join("\n"), /must be equal to one of the allowed values/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
 test("impact report writer rejects unsafe diff-file scope source without writing", async () => {
   const repoPath = await createTempRepo();
 
@@ -2456,7 +2578,10 @@ test("impact report writer rejects unsafe diff-file scope source without writing
 
       assert.equal(write.status, "invalid");
       assert.equal(write.written, false);
-      assert.match(write.errors.join("\n"), /report\.scope\.source/);
+      assert.match(
+        write.errors.join("\n"),
+        /scope\.source: must match pattern|source must not contain traversal|scope\.source must be repo-relative/
+      );
       await assert.rejects(access(path.join(repoPath, write.paths.impactMarkdown)));
     }
   } finally {
@@ -2492,18 +2617,15 @@ test("impact report writer and renderer reject unsafe report paths without writi
 
     assert.equal(traversalWrite.status, "invalid");
     assert.equal(traversalWrite.written, false);
-    assert.match(traversalWrite.errors.join("\n"), /report\.files\[0\].*escapes the repository/);
-    assert.match(traversalWrite.errors.join("\n"), /report\.surfaces\[0\]\.path/);
-    assert.match(
-      traversalWrite.errors.join("\n"),
-      /report\.dependencyGraph\.reverseDependentsByPath key/
-    );
+    assert.match(traversalWrite.errors.join("\n"), /files\.0: must match pattern/);
+    assert.match(traversalWrite.errors.join("\n"), /surfaces\.0\.path: must match pattern/);
+    assert.match(traversalWrite.errors.join("\n"), /reverseDependentsByPath.*must match pattern/);
     assert.equal(absoluteWrite.status, "invalid");
     assert.equal(absoluteWrite.written, false);
-    assert.match(absoluteWrite.errors.join("\n"), /report\.files\[0\].*not absolute: \/etc\/passwd/);
+    assert.match(absoluteWrite.errors.join("\n"), /files\.0: must match pattern/);
     assert.equal(nullByteWrite.status, "invalid");
     assert.equal(nullByteWrite.written, false);
-    assert.match(nullByteWrite.errors.join("\n"), /report\.files\[0\].*null bytes/);
+    assert.match(nullByteWrite.errors.join("\n"), /files\.0: must match pattern/);
 
     await assert.rejects(
       blueprintImpactOutputRender({
@@ -2511,7 +2633,7 @@ test("impact report writer and renderer reject unsafe report paths without writi
         mode: "summary",
         report: traversalReport
       }),
-      /report\.files\[0\].*escapes the repository/
+      /files\.0: must match pattern/
     );
     await assert.rejects(access(path.join(repoPath, traversalWrite.paths.impactMarkdown)));
     await assert.rejects(access(path.join(repoPath, absoluteWrite.paths.impactMarkdown)));
@@ -2587,11 +2709,11 @@ test("impact report writer rejects inconsistent blocking and warning finding pro
     });
 
     assert.equal(hiddenBlocking.status, "invalid");
-    assert.match(hiddenBlocking.errors.join("\n"), /blockingFindings ids must exactly match/);
+    assert.match(hiddenBlocking.errors.join("\n"), /blockingFindings: must be equal to constant/);
     assert.equal(hiddenWarning.status, "invalid");
-    assert.match(hiddenWarning.errors.join("\n"), /warningFindings ids must exactly match/);
+    assert.match(hiddenWarning.errors.join("\n"), /warningFindings: must be equal to constant/);
     assert.equal(mismatchedEvidence.status, "invalid");
-    assert.match(mismatchedEvidence.errors.join("\n"), /blockingFindings .* evidenceRefs/);
+    assert.match(mismatchedEvidence.errors.join("\n"), /must NOT have fewer than 1 items/);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
@@ -2662,20 +2784,13 @@ test("impact output renderer supports in-memory and saved report modes without w
     assert.ok(surfaceSummary);
     areaSummary.files.push(areaSummary.files[0]);
     surfaceSummary.files.push(surfaceSummary.files[0]);
-    const normalizedJson = await blueprintImpactOutputRender({
-      cwd: repoPath,
-      mode: "json",
-      report: reportWithDuplicateSummaryFiles
-    });
-    const normalizedReport = JSON.parse(normalizedJson.content);
-
-    assert.equal(
-      normalizedReport.areaSummary[0].count,
-      normalizedReport.areaSummary[0].files.length
-    );
-    assert.equal(
-      normalizedReport.surfaceSummary[0].count,
-      normalizedReport.surfaceSummary[0].files.length
+    await assert.rejects(
+      blueprintImpactOutputRender({
+        cwd: repoPath,
+        mode: "json",
+        report: reportWithDuplicateSummaryFiles
+      }),
+      /duplicate items|count must equal its files length/
     );
 
     const human = await blueprintImpactOutputRender({

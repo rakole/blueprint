@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import * as z from "zod/v4";
 
 import {
@@ -23,7 +24,7 @@ import { reviewToolDefinitions } from "./review.js";
 import { stateToolDefinitions } from "./state.js";
 import { updateToolDefinitions } from "./update.js";
 import { workspaceToolDefinitions } from "./workspace.js";
-import { listArtifactContracts } from "../artifact-contracts/index.js";
+import { listArtifactContracts, readArtifactContract } from "../artifact-contracts/index.js";
 import { resolveBlueprintRuntimeHost } from "../runtime-host.js";
 import {
   ensurePathWithinRootSync,
@@ -91,6 +92,8 @@ type ImpactAnalyzeArgs = {
 type ImpactReportWriteArgs = {
   cwd?: string;
   impactId?: string;
+  expectedScopeFingerprint?: string;
+  expectedFiles?: string[];
   report?: Record<string, unknown>;
   overwrite?: boolean;
   writeEvidenceLog?: boolean;
@@ -781,6 +784,8 @@ const impactAnalyzeInputSchema = {
 const impactReportWriteInputSchema = {
   cwd: z.string().optional(),
   impactId: impactIdSchema.optional(),
+  expectedScopeFingerprint: nonEmptyStringSchema.optional(),
+  expectedFiles: z.array(nonEmptyStringSchema).optional(),
   report: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional(),
   writeEvidenceLog: z.boolean().optional()
@@ -923,271 +928,7 @@ const dependencyGraphMetadataSchema = z.object({
     .optional()
     .default([])
 });
-const impactStatusSchema = z.enum(["PASS", "WARN", "BLOCK"]);
-const impactRiskLevelSchema = z.enum(["low", "medium", "high", "critical", "unknown"]);
-const impactConfidenceLevelSchema = z.enum(["low", "medium", "high"]);
-const impactSeveritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
-const impactSurfaceSchema = z.enum([
-  "secret-sensitive",
-  "env-config",
-  "command-catalog",
-  "command-manifest",
-  "command-doc",
-  "runtime-reference",
-  "mcp-server",
-  "mcp-tool",
-  "mcp-resource",
-  "artifact-contract",
-  "skill",
-  "agent",
-  "extension-manifest",
-  "hook",
-  "package-runtime",
-  "build-config",
-  "test",
-  "docs",
-  "generated",
-  "config",
-  "source",
-  "repo-root",
-  "unknown"
-]);
-const impactConfidenceSchema = z
-  .object({
-    score: z.number().min(0).max(1),
-    level: impactConfidenceLevelSchema,
-    reasons: stringArraySchema
-  })
-  .strict();
-const impactRiskSchema = z
-  .object({
-    level: impactRiskLevelSchema,
-    reasons: stringArraySchema
-  })
-  .strict();
-const impactReportScopeSchema = z
-  .object({
-    kind: nonEmptyStringSchema,
-    source: z.string().nullable(),
-    description: z.string().nullable(),
-    fingerprint: nonEmptyStringSchema,
-    confidence: impactConfidenceSchema
-  })
-  .strict();
-const impactScoringSchema = z
-  .object({
-    status: impactStatusSchema,
-    riskLevel: impactRiskLevelSchema,
-    confidenceScore: z.number().min(0).max(1),
-    confidenceLevel: impactConfidenceLevelSchema,
-    maxSeverity: impactSeveritySchema.nullable(),
-    blocking: z.boolean(),
-    drivers: z.array(z.string()),
-    reducers: z.array(z.string()),
-    policy: z
-      .object({
-        blockOnCritical: z.boolean(),
-        blockOnBreakingContract: z.boolean(),
-        blockOnSensitiveUnknownOwner: z.boolean(),
-        warnBelowConfidence: z.number().min(0).max(1),
-        blockBelowConfidenceForSensitiveAreas: z.number().min(0).max(1)
-      })
-      .strict()
-  })
-  .strict();
-const impactSummaryRecordSchema = z
-  .object({
-    name: nonEmptyStringSchema,
-    files: z.array(nonEmptyStringSchema),
-    count: z.number().int().min(0)
-  })
-  .strict();
-const impactEvidenceSchema = z
-  .object({
-    id: nonEmptyStringSchema,
-    kind: z.enum([
-      "scope",
-      "surface",
-      "ownership",
-      "dependency",
-      "metadata",
-      "config",
-      "contract",
-      "obligation",
-      "build"
-    ]),
-    source: nonEmptyStringSchema,
-    summary: nonEmptyStringSchema,
-    paths: z.array(nonEmptyStringSchema),
-    data: z.record(z.string(), z.unknown()).optional()
-  })
-  .strict();
-const impactFindingSchema = z
-  .object({
-    id: nonEmptyStringSchema,
-    checkId: nonEmptyStringSchema,
-    title: nonEmptyStringSchema,
-    severity: impactSeveritySchema,
-    status: impactStatusSchema,
-    confidence: z.number().min(0).max(1),
-    impactedFiles: z.array(nonEmptyStringSchema),
-    impactedAreas: z.array(nonEmptyStringSchema),
-    owners: z.array(nonEmptyStringSchema),
-    requiredActions: z.array(nonEmptyStringSchema),
-    evidenceRefs: z.array(nonEmptyStringSchema)
-  })
-  .strict();
-const impactObligationSchema = z
-  .object({
-    id: nonEmptyStringSchema,
-    category: z.enum([
-      "contract-review",
-      "docs",
-      "tests",
-      "release",
-      "migration",
-      "security",
-      "deployment",
-      "build"
-    ]),
-    title: nonEmptyStringSchema,
-    severity: impactSeveritySchema,
-    status: impactStatusSchema,
-    impactedFiles: z.array(nonEmptyStringSchema),
-    sourceSurfaces: z.array(impactSurfaceSchema),
-    requiredActions: z.array(nonEmptyStringSchema),
-    evidenceRefs: z.array(nonEmptyStringSchema)
-  })
-  .strict();
-const impactUnknownSchema = z
-  .object({
-    id: nonEmptyStringSchema,
-    category: z.enum(["scope", "ownership", "dependency", "contract", "obligation"]),
-    title: nonEmptyStringSchema,
-    severity: impactSeveritySchema,
-    impactedFiles: z.array(nonEmptyStringSchema),
-    reason: nonEmptyStringSchema,
-    resolution: nonEmptyStringSchema,
-    evidenceRefs: z.array(nonEmptyStringSchema)
-  })
-  .strict();
-const impactSurfaceRecordSchema = z
-  .object({
-    path: nonEmptyStringSchema,
-    surfaces: z.array(impactSurfaceSchema).min(1),
-    primarySurface: impactSurfaceSchema,
-    area: nonEmptyStringSchema,
-    reasons: stringArraySchema
-  })
-  .strict();
-const impactOwnershipRuleSchema = z
-  .object({
-    source: z.enum(["codeowners", "metadata"]),
-    sourcePath: nonEmptyStringSchema,
-    pattern: nonEmptyStringSchema,
-    owners: z.array(nonEmptyStringSchema),
-    sensitive: z.boolean(),
-    line: z.number().int().min(1).nullable(),
-    order: z.number().int().min(0)
-  })
-  .strict();
-const impactOwnershipSchema = z
-  .object({
-    coverage: z
-      .object({
-        status: z.enum(["none", "partial", "complete"]),
-        sourcesConfigured: z.array(nonEmptyStringSchema),
-        sourcesUsed: z.array(nonEmptyStringSchema),
-        fallbackReviewers: z.array(nonEmptyStringSchema),
-        filesWithOwners: z.number().int().min(0),
-        filesMissingOwners: z.number().int().min(0),
-        gaps: z.array(z.string())
-      })
-      .strict(),
-    codeownersPath: z.string().nullable(),
-    metadataPaths: z.array(nonEmptyStringSchema),
-    rules: z.array(impactOwnershipRuleSchema),
-    matches: z.array(
-      z
-        .object({
-          path: nonEmptyStringSchema,
-          owners: z.array(nonEmptyStringSchema),
-          matchedRules: z.array(impactOwnershipRuleSchema),
-          fallbackReviewers: z.array(nonEmptyStringSchema),
-          fallbackUsed: z.boolean(),
-          sensitive: z.boolean(),
-          ownerMissing: z.boolean(),
-          evidenceRefs: z.array(nonEmptyStringSchema)
-        })
-        .strict()
-    )
-  })
-  .strict();
-const impactDependencySchema = z
-  .object({
-    coverage: z
-      .object({
-        status: z.enum(["none", "partial", "complete-ish"]),
-        sourcesConfigured: z.array(nonEmptyStringSchema),
-        sourcesUsed: z.array(nonEmptyStringSchema),
-        filesCovered: z.array(nonEmptyStringSchema),
-        filesUncovered: z.array(nonEmptyStringSchema),
-        gaps: z.array(z.string())
-      })
-      .strict(),
-    nodes: z.array(
-      z
-        .object({
-          id: nonEmptyStringSchema,
-          path: z.string().nullable(),
-          kind: z.enum(["package", "workspace", "file", "external", "custom"]),
-          source: nonEmptyStringSchema
-        })
-        .strict()
-    ),
-    edges: z.array(
-      z
-        .object({
-          from: nonEmptyStringSchema,
-          to: nonEmptyStringSchema,
-          type: nonEmptyStringSchema,
-          source: nonEmptyStringSchema
-        })
-        .strict()
-    ),
-    reverseDependentsByPath: z.record(z.string(), z.array(nonEmptyStringSchema))
-  })
-  .strict();
-const impactReportSchema = z
-  .object({
-    schemaVersion: z.literal(IMPACT_REPORT_SCHEMA_VERSION),
-    impactId: impactIdSchema,
-    status: impactStatusSchema,
-    impactStatus: impactStatusSchema,
-    summary: nonEmptyStringSchema,
-    scope: impactReportScopeSchema,
-    files: z.array(nonEmptyStringSchema),
-    risk: impactRiskSchema,
-    confidence: impactConfidenceSchema,
-    scoring: impactScoringSchema,
-    topImpactedAreas: z.array(impactSummaryRecordSchema),
-    requiredReviewers: z.array(nonEmptyStringSchema),
-    requiredTests: z.array(nonEmptyStringSchema),
-    requiredActions: z.array(nonEmptyStringSchema),
-    blockingFindings: z.array(impactFindingSchema),
-    warningFindings: z.array(impactFindingSchema),
-    surfaces: z.array(impactSurfaceRecordSchema),
-    areaSummary: z.array(impactSummaryRecordSchema),
-    surfaceSummary: z.array(impactSummaryRecordSchema),
-    ownership: impactOwnershipSchema,
-    dependencyGraph: impactDependencySchema,
-    findings: z.array(impactFindingSchema),
-    obligations: z.array(impactObligationSchema),
-    unknowns: z.array(impactUnknownSchema),
-    evidence: z.array(impactEvidenceSchema)
-  })
-  .strict();
-type ParsedImpactReport = z.infer<typeof impactReportSchema>;
+type ParsedImpactReport = ImpactAnalysisReport;
 
 function stableHash(value: unknown): string {
   return createHash("sha256")
@@ -2534,6 +2275,157 @@ function formatZodIssues(prefix: string, error: z.ZodError): string[] {
     const issuePath = issue.path.length > 0 ? issue.path.join(".") : "(root)";
     return `${prefix} ${issuePath}: ${issue.message}`;
   });
+}
+
+function cloneJsonObject<T extends Record<string, unknown>>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function createAjvValidator(): Ajv2020 {
+  return new Ajv2020({
+    allErrors: true,
+    strict: false,
+    allowUnionTypes: true
+  });
+}
+
+function getJsonObjectProperty(
+  value: Record<string, unknown> | null | undefined,
+  key: string
+): Record<string, unknown> | null {
+  const candidate = value?.[key];
+  return isPlainObject(candidate) ? candidate : null;
+}
+
+function impactSchemaDiagnostic(error: ErrorObject): string {
+  const pathLabel = error.instancePath ? error.instancePath.slice(1).replaceAll("/", ".") : "report";
+  const allowedValues =
+    error.keyword === "enum" && Array.isArray(error.params?.allowedValues)
+      ? ` Allowed values: ${error.params.allowedValues.join(", ")}.`
+      : "";
+  const additionalProperty =
+    error.keyword === "additionalProperties" &&
+    error.params &&
+    typeof error.params === "object" &&
+    "additionalProperty" in error.params
+      ? ` Unsupported field: ${String(error.params.additionalProperty)}.`
+      : "";
+
+  return `${pathLabel}: ${error.message ?? "does not match report.impact schema"}.${allowedValues}${additionalProperty}`;
+}
+
+function reportImpactBaseSchema(): Record<string, unknown> {
+  const modelContract = readArtifactContract("report.impact").modelContract;
+
+  if (!modelContract?.schemaPath) {
+    throw new Error("report.impact modelContract does not expose a schemaPath.");
+  }
+
+  return cloneJsonObject(modelContract.jsonSchema);
+}
+
+function buildImpactReportTaskSchema(
+  report: ParsedImpactReport,
+  expectations: {
+    impactId?: string;
+    scopeFingerprint?: string;
+    files?: string[];
+  } = {}
+): Record<string, unknown> {
+  const schema = reportImpactBaseSchema();
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const expectedImpactId = expectations.impactId ?? report.impactId;
+  const expectedScopeFingerprint = expectations.scopeFingerprint ?? report.scope.fingerprint;
+  const expectedFiles =
+    expectations.files ?? report.surfaces.map((surface) => surface.path).sort();
+
+  if (properties) {
+    const impactId = getJsonObjectProperty(properties, "impactId");
+    if (impactId) {
+      impactId.const = expectedImpactId;
+    }
+
+    const files = getJsonObjectProperty(properties, "files");
+    if (files) {
+      files.const = expectedFiles;
+    }
+
+    const blockingFindings = getJsonObjectProperty(properties, "blockingFindings");
+    if (blockingFindings) {
+      blockingFindings.const = report.findings.filter((finding) => finding.status === "BLOCK");
+    }
+
+    const warningFindings = getJsonObjectProperty(properties, "warningFindings");
+    if (warningFindings) {
+      warningFindings.const = report.findings.filter((finding) => finding.status === "WARN");
+    }
+  }
+
+  const scope = defs ? getJsonObjectProperty(defs, "scope") : null;
+  const scopeProperties = scope ? getJsonObjectProperty(scope, "properties") : null;
+  const fingerprint = scopeProperties ? getJsonObjectProperty(scopeProperties, "fingerprint") : null;
+  if (fingerprint) {
+    fingerprint.const = expectedScopeFingerprint;
+  }
+
+  const evidenceIds = report.evidence.map((evidence) => evidence.id);
+  for (const definitionName of ["finding", "obligation", "unknown"] as const) {
+    const definition = defs ? getJsonObjectProperty(defs, definitionName) : null;
+    const definitionProperties = definition ? getJsonObjectProperty(definition, "properties") : null;
+    const evidenceRefs = definitionProperties ? getJsonObjectProperty(definitionProperties, "evidenceRefs") : null;
+
+    if (evidenceRefs) {
+      evidenceRefs.items = {
+        type: "string",
+        enum: evidenceIds
+      };
+    }
+  }
+
+  const ownership = defs ? getJsonObjectProperty(defs, "ownership") : null;
+  const ownershipProperties = ownership ? getJsonObjectProperty(ownership, "properties") : null;
+  const matches = ownershipProperties ? getJsonObjectProperty(ownershipProperties, "matches") : null;
+  const matchItems = matches ? getJsonObjectProperty(matches, "items") : null;
+  const matchProperties = matchItems ? getJsonObjectProperty(matchItems, "properties") : null;
+  const matchEvidenceRefs = matchProperties
+    ? getJsonObjectProperty(matchProperties, "evidenceRefs")
+    : null;
+
+  if (matchEvidenceRefs) {
+    matchEvidenceRefs.items = {
+      type: "string",
+      enum: evidenceIds
+    };
+  }
+
+  schema["x-blueprint-runtimeContext"] = {
+    impactId: expectedImpactId,
+    scopeFingerprint: expectedScopeFingerprint,
+    files: expectedFiles,
+    evidenceIds,
+    blockingFindingIds: report.findings
+      .filter((finding) => finding.status === "BLOCK")
+      .map((finding) => finding.id),
+    warningFindingIds: report.findings
+      .filter((finding) => finding.status === "WARN")
+      .map((finding) => finding.id)
+  };
+
+  return schema;
+}
+
+function validateImpactReportAgainstSchema(
+  report: Record<string, unknown>,
+  schema: Record<string, unknown>
+): string[] {
+  const validate = createAjvValidator().compile(schema);
+
+  if (validate(report)) {
+    return [];
+  }
+
+  return (validate.errors ?? []).map(impactSchemaDiagnostic);
 }
 
 function sanitizeConfigLayer(
@@ -6538,7 +6430,11 @@ export async function blueprintImpactAnalyze(
 function normalizeImpactReportForPersistence(
   rawReport: unknown,
   requestedImpactId: string | undefined,
-  projectRoot: string
+  projectRoot: string,
+  expectations: {
+    expectedScopeFingerprint?: string;
+    expectedFiles?: string[];
+  } = {}
 ): {
   impactId: string;
   report: ParsedImpactReport | null;
@@ -6564,20 +6460,33 @@ function normalizeImpactReportForPersistence(
     return { impactId, report: null, errors, warnings };
   }
 
-  const parsedReport = impactReportSchema.safeParse(rawReport);
-
-  if (!parsedReport.success) {
-    errors.push(
-      ...parsedReport.error.issues.map((issue) => {
-        const issuePath = issue.path.length > 0 ? issue.path.join(".") : "report";
-
-        return `${issuePath}: ${issue.message}`;
-      })
-    );
+  if (!isPlainObject(rawReport)) {
+    errors.push("Impact report payload must be a JSON object.");
     return { impactId, report: null, errors: uniqueSorted(errors), warnings };
   }
 
-  const report = normalizeParsedImpactReport(parsedReport.data);
+  const baseSchema = reportImpactBaseSchema();
+  const baseErrors = validateImpactReportAgainstSchema(rawReport, baseSchema);
+
+  if (baseErrors.length > 0) {
+    errors.push(...baseErrors);
+    return { impactId, report: null, errors: uniqueSorted(errors), warnings };
+  }
+
+  const report = rawReport as unknown as ParsedImpactReport;
+  const taskErrors = validateImpactReportAgainstSchema(
+    report as unknown as Record<string, unknown>,
+    buildImpactReportTaskSchema(report, {
+      impactId: requestedImpactId,
+      scopeFingerprint: expectations.expectedScopeFingerprint,
+      files: expectations.expectedFiles
+    })
+  );
+
+  if (taskErrors.length > 0) {
+    errors.push(...taskErrors);
+    return { impactId, report: null, errors: uniqueSorted(errors), warnings };
+  }
 
   if (requestedImpactId && requestedImpactId !== report.impactId) {
     errors.push(
@@ -6597,79 +6506,6 @@ function normalizeImpactReportForPersistence(
   };
 }
 
-function normalizeParsedImpactReport(report: ParsedImpactReport): ParsedImpactReport {
-  return {
-    ...report,
-    files: uniqueSorted(report.files),
-    topImpactedAreas: sortSummaryRecords(report.topImpactedAreas),
-    requiredReviewers: uniqueSorted(report.requiredReviewers),
-    requiredTests: uniqueSorted(report.requiredTests),
-    requiredActions: uniqueSorted(report.requiredActions),
-    blockingFindings: sortFindings(report.blockingFindings),
-    warningFindings: sortFindings(report.warningFindings),
-    surfaces: [...report.surfaces]
-      .map((surface) => ({
-        ...surface,
-        surfaces: [...new Set(surface.surfaces)].sort(compareImpactSurfaces),
-        reasons: uniqueSorted(surface.reasons)
-      }))
-      .sort((left, right) => left.path.localeCompare(right.path)),
-    areaSummary: sortSummaryRecords(report.areaSummary),
-    surfaceSummary: sortSummaryRecords(report.surfaceSummary),
-    ownership: {
-      ...report.ownership,
-      rules: [...report.ownership.rules].sort(
-        (left, right) =>
-          left.order - right.order ||
-          left.sourcePath.localeCompare(right.sourcePath) ||
-          left.pattern.localeCompare(right.pattern)
-      ),
-      matches: [...report.ownership.matches].sort((left, right) =>
-        left.path.localeCompare(right.path)
-      )
-    },
-    dependencyGraph: {
-      ...report.dependencyGraph,
-      nodes: [...report.dependencyGraph.nodes].sort((left, right) =>
-        left.id.localeCompare(right.id)
-      ),
-      edges: [...report.dependencyGraph.edges].sort(
-        (left, right) =>
-          left.from.localeCompare(right.from) ||
-          left.to.localeCompare(right.to) ||
-          left.type.localeCompare(right.type)
-      ),
-      reverseDependentsByPath: Object.fromEntries(
-        Object.entries(report.dependencyGraph.reverseDependentsByPath)
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([key, values]) => [key, uniqueSorted(values)])
-      )
-    },
-    findings: sortFindings(report.findings),
-    obligations: sortObligations(report.obligations),
-    unknowns: sortUnknownRecords(report.unknowns),
-    evidence: sortEvidenceRecords(report.evidence)
-  };
-}
-
-function sortSummaryRecords(records: ImpactSummaryRecord[]): ImpactSummaryRecord[] {
-  return [...records]
-    .map((record) => {
-      const files = uniqueSorted(record.files);
-
-      return {
-        ...record,
-        files,
-        count: files.length
-      };
-    })
-    .sort(
-      (left, right) =>
-        right.count - left.count ||
-        left.name.localeCompare(right.name)
-    );
-}
-
 function validateImpactReportQuality(
   report: ParsedImpactReport,
   projectRoot: string
@@ -6679,21 +6515,12 @@ function validateImpactReportQuality(
 } {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const evidenceIds = new Set(report.evidence.map((evidence) => evidence.id));
-
   validateImpactReportRepoPaths(report, projectRoot, errors);
-  validateEvidenceBackedRecords(report, evidenceIds, errors);
+  validateEvidenceBackedRecords(report, errors);
   validateRequiredSignalGrounding(report, errors);
+  validateSummaryCounts(report, errors);
   validateReportContradictions(report, errors);
   validateConfidenceGrounding(report, errors);
-
-  if (report.confidence.reasons.length === 0) {
-    errors.push("Impact report confidence requires at least one explanation.");
-  }
-
-  if (report.risk.reasons.length === 0) {
-    errors.push("Impact report risk requires at least one explanation.");
-  }
 
   const markdown = renderImpactMarkdown(report);
   validateRenderedImpactMarkdown(markdown, errors, warnings);
@@ -6982,48 +6809,10 @@ function validateImpactReportRepoPaths(
   );
 }
 
-function validateEvidenceBackedRecords(
-  report: ParsedImpactReport,
-  evidenceIds: Set<string>,
-  errors: string[]
-): void {
-  for (const finding of report.findings) {
-    if (finding.evidenceRefs.length === 0) {
-      errors.push(`Finding ${finding.id} is missing evidence refs.`);
-    }
-
-    for (const evidenceRef of finding.evidenceRefs) {
-      if (!evidenceIds.has(evidenceRef)) {
-        errors.push(`Finding ${finding.id} references unknown evidence ${evidenceRef}.`);
-      }
-    }
-  }
-
-  for (const obligation of report.obligations) {
-    if (obligation.evidenceRefs.length === 0) {
-      errors.push(`Obligation ${obligation.id} is missing evidence refs.`);
-    }
-
-    for (const evidenceRef of obligation.evidenceRefs) {
-      if (!evidenceIds.has(evidenceRef)) {
-        errors.push(`Obligation ${obligation.id} references unknown evidence ${evidenceRef}.`);
-      }
-    }
-  }
-
+function validateEvidenceBackedRecords(report: ParsedImpactReport, errors: string[]): void {
   for (const unknown of report.unknowns) {
-    if (unknown.evidenceRefs.length === 0) {
-      errors.push(`Unknown ${unknown.id} is missing evidence refs.`);
-    }
-
     if (isGenericFiller(unknown.reason) || isGenericFiller(unknown.resolution)) {
       errors.push(`Unknown ${unknown.id} must include a specific reason and resolution.`);
-    }
-
-    for (const evidenceRef of unknown.evidenceRefs) {
-      if (!evidenceIds.has(evidenceRef)) {
-        errors.push(`Unknown ${unknown.id} references unknown evidence ${evidenceRef}.`);
-      }
     }
   }
 }
@@ -7064,6 +6853,22 @@ function validateRequiredSignalGrounding(report: ParsedImpactReport, errors: str
   }
 }
 
+function validateSummaryCounts(report: ParsedImpactReport, errors: string[]): void {
+  for (const [label, records] of [
+    ["topImpactedAreas", report.topImpactedAreas],
+    ["areaSummary", report.areaSummary],
+    ["surfaceSummary", report.surfaceSummary]
+  ] as const) {
+    records.forEach((record, index) => {
+      if (record.count !== record.files.length) {
+        errors.push(
+          `${label}[${index}].count must equal its files length (${record.files.length}).`
+        );
+      }
+    });
+  }
+}
+
 function validateReportContradictions(report: ParsedImpactReport, errors: string[]): void {
   const hasBlockingSignals =
     report.findings.some((finding) => finding.status === "BLOCK") ||
@@ -7072,77 +6877,8 @@ function validateReportContradictions(report: ParsedImpactReport, errors: string
       (unknown) => unknown.severity === "HIGH" || unknown.severity === "CRITICAL"
     );
 
-  if (report.status !== report.impactStatus || report.status !== report.scoring.status) {
-    errors.push("Impact report status, impactStatus, and scoring.status must agree.");
-  }
-
-  if (report.status === "PASS" && hasBlockingSignals) {
-    errors.push("Impact report cannot be PASS while blocking findings, obligations, or unknowns remain.");
-  }
-
   if (report.status === "BLOCK" && !hasBlockingSignals && !report.scoring.blocking) {
     errors.push("Impact report cannot be BLOCK without a blocking signal or scoring.blocking=true.");
-  }
-
-  validateFindingProjection(
-    report.findings,
-    report.blockingFindings,
-    "BLOCK",
-    "blockingFindings",
-    errors
-  );
-  validateFindingProjection(
-    report.findings,
-    report.warningFindings,
-    "WARN",
-    "warningFindings",
-    errors
-  );
-}
-
-function validateFindingProjection(
-  findings: ImpactFindingRecord[],
-  projectedFindings: ImpactFindingRecord[],
-  status: "BLOCK" | "WARN",
-  label: string,
-  errors: string[]
-): void {
-  const expected = findings.filter((finding) => finding.status === status);
-  const expectedById = new Map(expected.map((finding) => [finding.id, finding]));
-  const projectedById = new Map(projectedFindings.map((finding) => [finding.id, finding]));
-  const missingIds = expected
-    .filter((finding) => !projectedById.has(finding.id))
-    .map((finding) => finding.id);
-  const extraIds = projectedFindings
-    .filter((finding) => !expectedById.has(finding.id))
-    .map((finding) => finding.id);
-
-  if (missingIds.length > 0 || extraIds.length > 0) {
-    errors.push(
-      `${label} ids must exactly match findings with status ${status}; missing: ${
-        missingIds.join(", ") || "none"
-      }; extra: ${extraIds.join(", ") || "none"}.`
-    );
-  }
-
-  for (const finding of projectedFindings) {
-    const canonical = expectedById.get(finding.id);
-
-    if (finding.status !== status) {
-      errors.push(`${label} ${finding.id} status ${finding.status} does not match ${status}.`);
-    }
-
-    if (!canonical) {
-      continue;
-    }
-
-    if (stableStringify(canonical.evidenceRefs) !== stableStringify(finding.evidenceRefs)) {
-      errors.push(`${label} ${finding.id} evidenceRefs do not match canonical finding evidence.`);
-    }
-
-    if (stableStringify(canonical) !== stableStringify(finding)) {
-      errors.push(`${label} ${finding.id} details do not match canonical finding.`);
-    }
   }
 }
 
@@ -7831,7 +7567,14 @@ export async function blueprintImpactReportWrite(
   args: ImpactReportWriteArgs = {}
 ): Promise<ImpactReportWriteResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot);
+  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot, {
+    expectedScopeFingerprint: args.expectedScopeFingerprint,
+    expectedFiles: args.expectedFiles
+      ? uniqueSorted(args.expectedFiles.map((file) =>
+          toRepoRelativeInputPath(projectRoot, file, "Impact report expected file")
+        ))
+      : undefined
+  });
   const impactId = parsed.impactId;
   const paths = impactBundleRelativePaths(impactId, parsed.report, args.writeEvidenceLog);
 

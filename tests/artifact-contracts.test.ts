@@ -385,6 +385,17 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.equal(impactContract.ownerTool, "blueprint_impact_report_write");
   assert.equal(impactContract.pathOwner, "blueprint_impact_report_write");
   assert.equal(impactContract.canonicalFilePattern, ".blueprint/impact/<impact-id>/IMPACT.md");
+  assert.equal(impactContract.modelContract?.schemaId, "blueprint.report.impact.model");
+  assert.equal(
+    impactContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/report.impact.model.schema.json"
+  );
+  assert.deepEqual((impactContract.modelContract?.jsonSchema.required as string[]).slice(0, 4), [
+    "schemaVersion",
+    "impactId",
+    "status",
+    "impactStatus"
+  ]);
   assert.deepEqual(impactContract.requiredHeadings, [
     "Summary",
     "Change Scope",
