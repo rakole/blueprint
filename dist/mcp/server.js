@@ -16039,7 +16039,7 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, PHASE_SUMMARY_MODEL_SCHEMA_FILE, PHASE_SUMMARY_MODEL_SCHEMA_PATH, PHASE_SUMMARY_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, PHASE_SUMMARY_MODEL_SCHEMA_FILE, PHASE_SUMMARY_MODEL_SCHEMA_PATH, PHASE_SUMMARY_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
@@ -16646,6 +16646,162 @@ var init_artifact_contracts = __esm({
         "Clarified the install wording.",
         "The user requested a documentation-only quick fix.",
         "Confirmed the updated sentence is present."
+      ]
+    };
+    IMPACT_REPORT_MODEL_SCHEMA_FILE = "report.impact.model.schema.json";
+    IMPACT_REPORT_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/report.impact.model.schema.json";
+    IMPACT_REPORT_MODEL_CONTRACT = {
+      schemaId: "blueprint.report.impact.model",
+      schemaVersion: "1.0.0",
+      schemaPath: IMPACT_REPORT_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(IMPACT_REPORT_MODEL_SCHEMA_FILE),
+      qualityRules: [
+        "Author or persist only structured JSON that matches the report.impact schema; markdown fallback is not accepted by blueprint_impact_report_write.",
+        "Keep advisory status, impactStatus, and scoring.status aligned: PASS requires no warning/blocking findings, no obligations, and no unknowns; WARN rejects blocking signals; BLOCK requires scoring.blocking plus concrete actions.",
+        "Every finding, obligation, unknown, and ownership match must cite exact evidence ids from the same report payload.",
+        "Use only repo-relative, single-line path and Markdown sink values; do not include newline, delimiter, placeholder, TODO, TBD, or unexplained N/A content.",
+        "Do not copy minimal example wording or invent missing ownership, dependency, test, compliance, or scope metadata as proof of safety."
+      ],
+      contextBindings: [
+        "impactId may be supplied by blueprint_impact_report_write arguments, but it must match the report impactId when both are present.",
+        "The analyzer supplies scope fingerprint, resolved files, risk, confidence, findings, obligations, unknowns, and evidence before persistence.",
+        "blueprint_impact_report_write narrows validation to the exact report impactId, scope fingerprint, files, evidence ids, and finding projections before writing.",
+        "Bundle paths and rendered Markdown are MCP-owned and derived under .blueprint/impact/<impact-id>/."
+      ],
+      renderedHeadings: [
+        "Summary",
+        "Change Scope",
+        "Top Impacted Areas",
+        "Required Reviewers",
+        "Required Tests",
+        "Blocking Findings",
+        "Warnings",
+        "Contract And Compatibility Impact",
+        "Database, Config, Infra, And Deployment Impact",
+        "Unknowns And Missing Metadata",
+        "Evidence",
+        "Suggested Next Actions"
+      ],
+      minimalValidExample: {
+        schemaVersion: "blueprint.impact.report.v1",
+        impactId: "impact-example",
+        status: "PASS",
+        impactStatus: "PASS",
+        summary: "Impact status PASS with low risk and high confidence (0.8) across 1 changed file; findings=0, obligations=0, unknowns=0.",
+        scope: {
+          kind: "files",
+          source: "explicit-files",
+          description: null,
+          fingerprint: "example-fingerprint",
+          confidence: {
+            score: 0.8,
+            level: "high",
+            reasons: ["Explicit file scope was provided."]
+          }
+        },
+        files: ["README.md"],
+        risk: {
+          level: "low",
+          reasons: ["No findings, obligations, or unknowns remained after deterministic analysis."]
+        },
+        confidence: {
+          score: 0.8,
+          level: "high",
+          reasons: ["Explicit file scope was provided."]
+        },
+        scoring: {
+          status: "PASS",
+          riskLevel: "low",
+          confidenceScore: 0.8,
+          confidenceLevel: "high",
+          maxSeverity: null,
+          blocking: false,
+          drivers: ["No blocking or warning impact signals remain above policy thresholds."],
+          reducers: [],
+          policy: {
+            blockOnCritical: true,
+            blockOnBreakingContract: true,
+            blockOnSensitiveUnknownOwner: true,
+            warnBelowConfidence: 0.7,
+            blockBelowConfidenceForSensitiveAreas: 0.5
+          }
+        },
+        topImpactedAreas: [{ name: "docs", files: ["README.md"], count: 1 }],
+        requiredReviewers: [],
+        requiredTests: [],
+        requiredActions: [],
+        blockingFindings: [],
+        warningFindings: [],
+        surfaces: [
+          {
+            path: "README.md",
+            surfaces: ["docs", "repo-root"],
+            primarySurface: "docs",
+            area: "docs",
+            reasons: ["Path matched documentation file extension."]
+          }
+        ],
+        areaSummary: [{ name: "docs", files: ["README.md"], count: 1 }],
+        surfaceSummary: [
+          { name: "docs", files: ["README.md"], count: 1 },
+          { name: "repo-root", files: ["README.md"], count: 1 }
+        ],
+        ownership: {
+          coverage: {
+            status: "complete",
+            sourcesConfigured: [],
+            sourcesUsed: [],
+            fallbackReviewers: [],
+            filesWithOwners: 1,
+            filesMissingOwners: 0,
+            gaps: []
+          },
+          codeownersPath: null,
+          metadataPaths: [],
+          rules: [],
+          matches: [
+            {
+              path: "README.md",
+              owners: ["@docs"],
+              matchedRules: [],
+              fallbackReviewers: ["@docs"],
+              fallbackUsed: true,
+              sensitive: false,
+              ownerMissing: false,
+              evidenceRefs: ["ev.scope.example"]
+            }
+          ]
+        },
+        dependencyGraph: {
+          coverage: {
+            status: "none",
+            sourcesConfigured: [],
+            sourcesUsed: [],
+            filesCovered: [],
+            filesUncovered: [],
+            gaps: []
+          },
+          nodes: [],
+          edges: [],
+          reverseDependentsByPath: { "README.md": [] }
+        },
+        findings: [],
+        obligations: [],
+        unknowns: [],
+        evidence: [
+          {
+            id: "ev.scope.example",
+            kind: "scope",
+            source: "explicit-files",
+            summary: "Explicit file scope included README.md.",
+            paths: ["README.md"]
+          }
+        ]
+      },
+      exampleLeakageSignals: [
+        "Impact status PASS with low risk and high confidence",
+        "Explicit file scope was provided.",
+        "No blocking or warning impact signals remain above policy thresholds."
       ]
     };
     PHASE_VERIFICATION_MODEL_CONTRACT = {
@@ -17670,9 +17826,10 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Impact reports are bounded bundles under .blueprint/impact/<impact-id>/ and are written only through blueprint_impact_report_write.",
-          "The writer validates the structured report payload plus rendered Markdown quality before persistence.",
+          "The writer validates the structured report payload against the report.impact JSON Schema plus rendered Markdown quality before persistence.",
           "/blu-impact is implemented as an advisory command; report writes stay bounded to the impact bundle and do not mutate source, roadmap, PR, deployment, command-catalog, or installed-extension state."
         ],
+        modelContract: IMPACT_REPORT_MODEL_CONTRACT,
         renderScaffoldTemplate: renderImpactTemplate,
         renderAuthoringTemplate: renderImpactTemplate
       },
@@ -25440,7 +25597,7 @@ var require__ = __commonJS({
     var discriminator_1 = require_discriminator();
     var json_schema_2020_12_1 = require_json_schema_2020_12();
     var META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
-    var Ajv20203 = class extends core_1.default {
+    var Ajv20204 = class extends core_1.default {
       constructor(opts = {}) {
         super({
           ...opts,
@@ -25467,11 +25624,11 @@ var require__ = __commonJS({
         return this.opts.defaultMeta = super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : void 0);
       }
     };
-    exports.Ajv2020 = Ajv20203;
-    module.exports = exports = Ajv20203;
-    module.exports.Ajv2020 = Ajv20203;
+    exports.Ajv2020 = Ajv20204;
+    module.exports = exports = Ajv20204;
+    module.exports.Ajv2020 = Ajv20204;
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.default = Ajv20203;
+    exports.default = Ajv20204;
     var validate_1 = require_validate();
     Object.defineProperty(exports, "KeywordCxt", { enumerable: true, get: function() {
       return validate_1.KeywordCxt;
@@ -43723,6 +43880,105 @@ function formatZodIssues(prefix, error2) {
     return `${prefix} ${issuePath}: ${issue2.message}`;
   });
 }
+function cloneJsonObject4(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function createAjvValidator3() {
+  return new import__3.Ajv2020({
+    allErrors: true,
+    strict: false,
+    allowUnionTypes: true
+  });
+}
+function getJsonObjectProperty3(value, key) {
+  const candidate = value?.[key];
+  return isPlainObject6(candidate) ? candidate : null;
+}
+function impactSchemaDiagnostic(error2) {
+  const pathLabel = error2.instancePath ? error2.instancePath.slice(1).replaceAll("/", ".") : "report";
+  const allowedValues = error2.keyword === "enum" && Array.isArray(error2.params?.allowedValues) ? ` Allowed values: ${error2.params.allowedValues.join(", ")}.` : "";
+  const additionalProperty = error2.keyword === "additionalProperties" && error2.params && typeof error2.params === "object" && "additionalProperty" in error2.params ? ` Unsupported field: ${String(error2.params.additionalProperty)}.` : "";
+  return `${pathLabel}: ${error2.message ?? "does not match report.impact schema"}.${allowedValues}${additionalProperty}`;
+}
+function reportImpactBaseSchema() {
+  const modelContract = readArtifactContract("report.impact").modelContract;
+  if (!modelContract?.schemaPath) {
+    throw new Error("report.impact modelContract does not expose a schemaPath.");
+  }
+  return cloneJsonObject4(modelContract.jsonSchema);
+}
+function buildImpactReportTaskSchema(report, expectations = {}) {
+  const schema = reportImpactBaseSchema();
+  const properties = getJsonObjectProperty3(schema, "properties");
+  const defs = getJsonObjectProperty3(schema, "$defs");
+  const expectedImpactId = expectations.impactId ?? report.impactId;
+  const expectedScopeFingerprint = expectations.scopeFingerprint ?? report.scope.fingerprint;
+  const expectedFiles = expectations.files ?? report.surfaces.map((surface) => surface.path).sort();
+  if (properties) {
+    const impactId = getJsonObjectProperty3(properties, "impactId");
+    if (impactId) {
+      impactId.const = expectedImpactId;
+    }
+    const files = getJsonObjectProperty3(properties, "files");
+    if (files) {
+      files.const = expectedFiles;
+    }
+    const blockingFindings = getJsonObjectProperty3(properties, "blockingFindings");
+    if (blockingFindings) {
+      blockingFindings.const = report.findings.filter((finding) => finding.status === "BLOCK");
+    }
+    const warningFindings = getJsonObjectProperty3(properties, "warningFindings");
+    if (warningFindings) {
+      warningFindings.const = report.findings.filter((finding) => finding.status === "WARN");
+    }
+  }
+  const scope = defs ? getJsonObjectProperty3(defs, "scope") : null;
+  const scopeProperties = scope ? getJsonObjectProperty3(scope, "properties") : null;
+  const fingerprint = scopeProperties ? getJsonObjectProperty3(scopeProperties, "fingerprint") : null;
+  if (fingerprint) {
+    fingerprint.const = expectedScopeFingerprint;
+  }
+  const evidenceIds = report.evidence.map((evidence) => evidence.id);
+  for (const definitionName of ["finding", "obligation", "unknown"]) {
+    const definition = defs ? getJsonObjectProperty3(defs, definitionName) : null;
+    const definitionProperties = definition ? getJsonObjectProperty3(definition, "properties") : null;
+    const evidenceRefs = definitionProperties ? getJsonObjectProperty3(definitionProperties, "evidenceRefs") : null;
+    if (evidenceRefs) {
+      evidenceRefs.items = {
+        type: "string",
+        enum: evidenceIds
+      };
+    }
+  }
+  const ownership = defs ? getJsonObjectProperty3(defs, "ownership") : null;
+  const ownershipProperties = ownership ? getJsonObjectProperty3(ownership, "properties") : null;
+  const matches = ownershipProperties ? getJsonObjectProperty3(ownershipProperties, "matches") : null;
+  const matchItems = matches ? getJsonObjectProperty3(matches, "items") : null;
+  const matchProperties = matchItems ? getJsonObjectProperty3(matchItems, "properties") : null;
+  const matchEvidenceRefs = matchProperties ? getJsonObjectProperty3(matchProperties, "evidenceRefs") : null;
+  if (matchEvidenceRefs) {
+    matchEvidenceRefs.items = {
+      type: "string",
+      enum: evidenceIds
+    };
+  }
+  schema["x-blueprint-runtimeContext"] = {
+    impactId: expectedImpactId,
+    scopeFingerprint: expectedScopeFingerprint,
+    files: expectedFiles,
+    evidenceIds,
+    blockingFindingIds: report.findings.filter((finding) => finding.status === "BLOCK").map((finding) => finding.id),
+    warningFindingIds: report.findings.filter((finding) => finding.status === "WARN").map((finding) => finding.id)
+  };
+  return schema;
+}
+function validateImpactReportAgainstSchema(report, schema) {
+  const validate = createAjvValidator3().compile(schema);
+  if (validate(report)) {
+    return [];
+  }
+  return (validate.errors ?? []).map(impactSchemaDiagnostic);
+}
 function sanitizeConfigLayer(layer, label, strictConfig, warnings, errors) {
   const sanitized = {};
   const knownKeys = new Set(KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS);
@@ -46768,7 +47024,7 @@ async function blueprintImpactAnalyze(args = {}) {
     warnings: [...new Set(warnings)].sort()
   };
 }
-function normalizeImpactReportForPersistence(rawReport, requestedImpactId, projectRoot) {
+function normalizeImpactReportForPersistence(rawReport, requestedImpactId, projectRoot, expectations = {}) {
   const fallbackImpactId = requestedImpactId ?? (isPlainObject6(rawReport) && typeof rawReport.impactId === "string" ? rawReport.impactId : "impact-invalid");
   const impactIdParse = impactIdSchema.safeParse(fallbackImpactId);
   const impactId = impactIdParse.success ? impactIdParse.data : "impact-invalid";
@@ -46781,17 +47037,29 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
     errors.push("Impact report payload is required.");
     return { impactId, report: null, errors, warnings };
   }
-  const parsedReport = impactReportSchema.safeParse(rawReport);
-  if (!parsedReport.success) {
-    errors.push(
-      ...parsedReport.error.issues.map((issue2) => {
-        const issuePath = issue2.path.length > 0 ? issue2.path.join(".") : "report";
-        return `${issuePath}: ${issue2.message}`;
-      })
-    );
+  if (!isPlainObject6(rawReport)) {
+    errors.push("Impact report payload must be a JSON object.");
     return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
   }
-  const report = normalizeParsedImpactReport(parsedReport.data);
+  const baseSchema = reportImpactBaseSchema();
+  const baseErrors = validateImpactReportAgainstSchema(rawReport, baseSchema);
+  if (baseErrors.length > 0) {
+    errors.push(...baseErrors);
+    return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
+  }
+  const report = rawReport;
+  const taskErrors = validateImpactReportAgainstSchema(
+    report,
+    buildImpactReportTaskSchema(report, {
+      impactId: requestedImpactId,
+      scopeFingerprint: expectations.expectedScopeFingerprint,
+      files: expectations.expectedFiles
+    })
+  );
+  if (taskErrors.length > 0) {
+    errors.push(...taskErrors);
+    return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
+  }
   if (requestedImpactId && requestedImpactId !== report.impactId) {
     errors.push(
       `Requested impactId ${requestedImpactId} does not match report impactId ${report.impactId}.`
@@ -46807,77 +47075,15 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
     warnings: uniqueSorted2(warnings)
   };
 }
-function normalizeParsedImpactReport(report) {
-  return {
-    ...report,
-    files: uniqueSorted2(report.files),
-    topImpactedAreas: sortSummaryRecords(report.topImpactedAreas),
-    requiredReviewers: uniqueSorted2(report.requiredReviewers),
-    requiredTests: uniqueSorted2(report.requiredTests),
-    requiredActions: uniqueSorted2(report.requiredActions),
-    blockingFindings: sortFindings(report.blockingFindings),
-    warningFindings: sortFindings(report.warningFindings),
-    surfaces: [...report.surfaces].map((surface) => ({
-      ...surface,
-      surfaces: [...new Set(surface.surfaces)].sort(compareImpactSurfaces),
-      reasons: uniqueSorted2(surface.reasons)
-    })).sort((left, right) => left.path.localeCompare(right.path)),
-    areaSummary: sortSummaryRecords(report.areaSummary),
-    surfaceSummary: sortSummaryRecords(report.surfaceSummary),
-    ownership: {
-      ...report.ownership,
-      rules: [...report.ownership.rules].sort(
-        (left, right) => left.order - right.order || left.sourcePath.localeCompare(right.sourcePath) || left.pattern.localeCompare(right.pattern)
-      ),
-      matches: [...report.ownership.matches].sort(
-        (left, right) => left.path.localeCompare(right.path)
-      )
-    },
-    dependencyGraph: {
-      ...report.dependencyGraph,
-      nodes: [...report.dependencyGraph.nodes].sort(
-        (left, right) => left.id.localeCompare(right.id)
-      ),
-      edges: [...report.dependencyGraph.edges].sort(
-        (left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to) || left.type.localeCompare(right.type)
-      ),
-      reverseDependentsByPath: Object.fromEntries(
-        Object.entries(report.dependencyGraph.reverseDependentsByPath).sort(([left], [right]) => left.localeCompare(right)).map(([key, values]) => [key, uniqueSorted2(values)])
-      )
-    },
-    findings: sortFindings(report.findings),
-    obligations: sortObligations(report.obligations),
-    unknowns: sortUnknownRecords(report.unknowns),
-    evidence: sortEvidenceRecords(report.evidence)
-  };
-}
-function sortSummaryRecords(records) {
-  return [...records].map((record2) => {
-    const files = uniqueSorted2(record2.files);
-    return {
-      ...record2,
-      files,
-      count: files.length
-    };
-  }).sort(
-    (left, right) => right.count - left.count || left.name.localeCompare(right.name)
-  );
-}
 function validateImpactReportQuality(report, projectRoot) {
   const errors = [];
   const warnings = [];
-  const evidenceIds = new Set(report.evidence.map((evidence) => evidence.id));
   validateImpactReportRepoPaths(report, projectRoot, errors);
-  validateEvidenceBackedRecords(report, evidenceIds, errors);
+  validateEvidenceBackedRecords(report, errors);
   validateRequiredSignalGrounding(report, errors);
+  validateSummaryCounts(report, errors);
   validateReportContradictions(report, errors);
   validateConfidenceGrounding(report, errors);
-  if (report.confidence.reasons.length === 0) {
-    errors.push("Impact report confidence requires at least one explanation.");
-  }
-  if (report.risk.reasons.length === 0) {
-    errors.push("Impact report risk requires at least one explanation.");
-  }
   const markdown = renderImpactMarkdown(report);
   validateRenderedImpactMarkdown(markdown, errors, warnings);
   return {
@@ -47089,38 +47295,10 @@ function validateImpactReportRepoPaths(report, projectRoot, errors) {
     }
   );
 }
-function validateEvidenceBackedRecords(report, evidenceIds, errors) {
-  for (const finding of report.findings) {
-    if (finding.evidenceRefs.length === 0) {
-      errors.push(`Finding ${finding.id} is missing evidence refs.`);
-    }
-    for (const evidenceRef of finding.evidenceRefs) {
-      if (!evidenceIds.has(evidenceRef)) {
-        errors.push(`Finding ${finding.id} references unknown evidence ${evidenceRef}.`);
-      }
-    }
-  }
-  for (const obligation of report.obligations) {
-    if (obligation.evidenceRefs.length === 0) {
-      errors.push(`Obligation ${obligation.id} is missing evidence refs.`);
-    }
-    for (const evidenceRef of obligation.evidenceRefs) {
-      if (!evidenceIds.has(evidenceRef)) {
-        errors.push(`Obligation ${obligation.id} references unknown evidence ${evidenceRef}.`);
-      }
-    }
-  }
+function validateEvidenceBackedRecords(report, errors) {
   for (const unknown2 of report.unknowns) {
-    if (unknown2.evidenceRefs.length === 0) {
-      errors.push(`Unknown ${unknown2.id} is missing evidence refs.`);
-    }
     if (isGenericFiller(unknown2.reason) || isGenericFiller(unknown2.resolution)) {
       errors.push(`Unknown ${unknown2.id} must include a specific reason and resolution.`);
-    }
-    for (const evidenceRef of unknown2.evidenceRefs) {
-      if (!evidenceIds.has(evidenceRef)) {
-        errors.push(`Unknown ${unknown2.id} references unknown evidence ${evidenceRef}.`);
-      }
     }
   }
 }
@@ -47154,59 +47332,27 @@ function validateRequiredSignalGrounding(report, errors) {
     }
   }
 }
+function validateSummaryCounts(report, errors) {
+  for (const [label, records] of [
+    ["topImpactedAreas", report.topImpactedAreas],
+    ["areaSummary", report.areaSummary],
+    ["surfaceSummary", report.surfaceSummary]
+  ]) {
+    records.forEach((record2, index) => {
+      if (record2.count !== record2.files.length) {
+        errors.push(
+          `${label}[${index}].count must equal its files length (${record2.files.length}).`
+        );
+      }
+    });
+  }
+}
 function validateReportContradictions(report, errors) {
   const hasBlockingSignals = report.findings.some((finding) => finding.status === "BLOCK") || report.obligations.some((obligation) => obligation.status === "BLOCK") || report.unknowns.some(
     (unknown2) => unknown2.severity === "HIGH" || unknown2.severity === "CRITICAL"
   );
-  if (report.status !== report.impactStatus || report.status !== report.scoring.status) {
-    errors.push("Impact report status, impactStatus, and scoring.status must agree.");
-  }
-  if (report.status === "PASS" && hasBlockingSignals) {
-    errors.push("Impact report cannot be PASS while blocking findings, obligations, or unknowns remain.");
-  }
   if (report.status === "BLOCK" && !hasBlockingSignals && !report.scoring.blocking) {
     errors.push("Impact report cannot be BLOCK without a blocking signal or scoring.blocking=true.");
-  }
-  validateFindingProjection(
-    report.findings,
-    report.blockingFindings,
-    "BLOCK",
-    "blockingFindings",
-    errors
-  );
-  validateFindingProjection(
-    report.findings,
-    report.warningFindings,
-    "WARN",
-    "warningFindings",
-    errors
-  );
-}
-function validateFindingProjection(findings, projectedFindings, status, label, errors) {
-  const expected = findings.filter((finding) => finding.status === status);
-  const expectedById = new Map(expected.map((finding) => [finding.id, finding]));
-  const projectedById = new Map(projectedFindings.map((finding) => [finding.id, finding]));
-  const missingIds = expected.filter((finding) => !projectedById.has(finding.id)).map((finding) => finding.id);
-  const extraIds = projectedFindings.filter((finding) => !expectedById.has(finding.id)).map((finding) => finding.id);
-  if (missingIds.length > 0 || extraIds.length > 0) {
-    errors.push(
-      `${label} ids must exactly match findings with status ${status}; missing: ${missingIds.join(", ") || "none"}; extra: ${extraIds.join(", ") || "none"}.`
-    );
-  }
-  for (const finding of projectedFindings) {
-    const canonical = expectedById.get(finding.id);
-    if (finding.status !== status) {
-      errors.push(`${label} ${finding.id} status ${finding.status} does not match ${status}.`);
-    }
-    if (!canonical) {
-      continue;
-    }
-    if (stableStringify(canonical.evidenceRefs) !== stableStringify(finding.evidenceRefs)) {
-      errors.push(`${label} ${finding.id} evidenceRefs do not match canonical finding evidence.`);
-    }
-    if (stableStringify(canonical) !== stableStringify(finding)) {
-      errors.push(`${label} ${finding.id} details do not match canonical finding.`);
-    }
   }
 }
 function validateConfidenceGrounding(report, errors) {
@@ -47737,7 +47883,12 @@ async function readSavedImpactReport(projectRoot, impactId) {
 }
 async function blueprintImpactReportWrite(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot);
+  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot, {
+    expectedScopeFingerprint: args.expectedScopeFingerprint,
+    expectedFiles: args.expectedFiles ? uniqueSorted2(args.expectedFiles.map(
+      (file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact report expected file")
+    )) : void 0
+  });
   const impactId = parsed.impactId;
   const paths = impactBundleRelativePaths(impactId, parsed.report, args.writeEvidenceLog);
   if (parsed.errors.length > 0 || !parsed.report) {
@@ -47813,10 +47964,11 @@ async function blueprintImpactOutputRender(args = {}) {
     warnings: parsed.warnings
   };
 }
-var IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactStatusSchema, impactRiskLevelSchema, impactConfidenceLevelSchema, impactSeveritySchema, impactSurfaceSchema, impactConfidenceSchema, impactRiskSchema, impactReportScopeSchema, impactScoringSchema, impactSummaryRecordSchema, impactEvidenceSchema, impactFindingSchema, impactObligationSchema, impactUnknownSchema, impactSurfaceRecordSchema, impactOwnershipRuleSchema, impactOwnershipSchema, impactDependencySchema, impactReportSchema, impactToolDefinitions;
+var import__3, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
+    import__3 = __toESM(require__(), 1);
     init_v4();
     init_artifacts();
     init_config();
@@ -48009,6 +48161,8 @@ var init_impact = __esm({
     impactReportWriteInputSchema = {
       cwd: string2().optional(),
       impactId: impactIdSchema.optional(),
+      expectedScopeFingerprint: nonEmptyStringSchema.optional(),
+      expectedFiles: array(nonEmptyStringSchema).optional(),
       report: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
       writeEvidenceLog: boolean2().optional()
@@ -48126,230 +48280,6 @@ var init_impact = __esm({
         })
       ).optional().default([])
     });
-    impactStatusSchema = _enum(["PASS", "WARN", "BLOCK"]);
-    impactRiskLevelSchema = _enum(["low", "medium", "high", "critical", "unknown"]);
-    impactConfidenceLevelSchema = _enum(["low", "medium", "high"]);
-    impactSeveritySchema = _enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
-    impactSurfaceSchema = _enum([
-      "secret-sensitive",
-      "env-config",
-      "command-catalog",
-      "command-manifest",
-      "command-doc",
-      "runtime-reference",
-      "mcp-server",
-      "mcp-tool",
-      "mcp-resource",
-      "artifact-contract",
-      "skill",
-      "agent",
-      "extension-manifest",
-      "hook",
-      "package-runtime",
-      "build-config",
-      "test",
-      "docs",
-      "generated",
-      "config",
-      "source",
-      "repo-root",
-      "unknown"
-    ]);
-    impactConfidenceSchema = object2({
-      score: number2().min(0).max(1),
-      level: impactConfidenceLevelSchema,
-      reasons: stringArraySchema
-    }).strict();
-    impactRiskSchema = object2({
-      level: impactRiskLevelSchema,
-      reasons: stringArraySchema
-    }).strict();
-    impactReportScopeSchema = object2({
-      kind: nonEmptyStringSchema,
-      source: string2().nullable(),
-      description: string2().nullable(),
-      fingerprint: nonEmptyStringSchema,
-      confidence: impactConfidenceSchema
-    }).strict();
-    impactScoringSchema = object2({
-      status: impactStatusSchema,
-      riskLevel: impactRiskLevelSchema,
-      confidenceScore: number2().min(0).max(1),
-      confidenceLevel: impactConfidenceLevelSchema,
-      maxSeverity: impactSeveritySchema.nullable(),
-      blocking: boolean2(),
-      drivers: array(string2()),
-      reducers: array(string2()),
-      policy: object2({
-        blockOnCritical: boolean2(),
-        blockOnBreakingContract: boolean2(),
-        blockOnSensitiveUnknownOwner: boolean2(),
-        warnBelowConfidence: number2().min(0).max(1),
-        blockBelowConfidenceForSensitiveAreas: number2().min(0).max(1)
-      }).strict()
-    }).strict();
-    impactSummaryRecordSchema = object2({
-      name: nonEmptyStringSchema,
-      files: array(nonEmptyStringSchema),
-      count: number2().int().min(0)
-    }).strict();
-    impactEvidenceSchema = object2({
-      id: nonEmptyStringSchema,
-      kind: _enum([
-        "scope",
-        "surface",
-        "ownership",
-        "dependency",
-        "metadata",
-        "config",
-        "contract",
-        "obligation",
-        "build"
-      ]),
-      source: nonEmptyStringSchema,
-      summary: nonEmptyStringSchema,
-      paths: array(nonEmptyStringSchema),
-      data: record(string2(), unknown()).optional()
-    }).strict();
-    impactFindingSchema = object2({
-      id: nonEmptyStringSchema,
-      checkId: nonEmptyStringSchema,
-      title: nonEmptyStringSchema,
-      severity: impactSeveritySchema,
-      status: impactStatusSchema,
-      confidence: number2().min(0).max(1),
-      impactedFiles: array(nonEmptyStringSchema),
-      impactedAreas: array(nonEmptyStringSchema),
-      owners: array(nonEmptyStringSchema),
-      requiredActions: array(nonEmptyStringSchema),
-      evidenceRefs: array(nonEmptyStringSchema)
-    }).strict();
-    impactObligationSchema = object2({
-      id: nonEmptyStringSchema,
-      category: _enum([
-        "contract-review",
-        "docs",
-        "tests",
-        "release",
-        "migration",
-        "security",
-        "deployment",
-        "build"
-      ]),
-      title: nonEmptyStringSchema,
-      severity: impactSeveritySchema,
-      status: impactStatusSchema,
-      impactedFiles: array(nonEmptyStringSchema),
-      sourceSurfaces: array(impactSurfaceSchema),
-      requiredActions: array(nonEmptyStringSchema),
-      evidenceRefs: array(nonEmptyStringSchema)
-    }).strict();
-    impactUnknownSchema = object2({
-      id: nonEmptyStringSchema,
-      category: _enum(["scope", "ownership", "dependency", "contract", "obligation"]),
-      title: nonEmptyStringSchema,
-      severity: impactSeveritySchema,
-      impactedFiles: array(nonEmptyStringSchema),
-      reason: nonEmptyStringSchema,
-      resolution: nonEmptyStringSchema,
-      evidenceRefs: array(nonEmptyStringSchema)
-    }).strict();
-    impactSurfaceRecordSchema = object2({
-      path: nonEmptyStringSchema,
-      surfaces: array(impactSurfaceSchema).min(1),
-      primarySurface: impactSurfaceSchema,
-      area: nonEmptyStringSchema,
-      reasons: stringArraySchema
-    }).strict();
-    impactOwnershipRuleSchema = object2({
-      source: _enum(["codeowners", "metadata"]),
-      sourcePath: nonEmptyStringSchema,
-      pattern: nonEmptyStringSchema,
-      owners: array(nonEmptyStringSchema),
-      sensitive: boolean2(),
-      line: number2().int().min(1).nullable(),
-      order: number2().int().min(0)
-    }).strict();
-    impactOwnershipSchema = object2({
-      coverage: object2({
-        status: _enum(["none", "partial", "complete"]),
-        sourcesConfigured: array(nonEmptyStringSchema),
-        sourcesUsed: array(nonEmptyStringSchema),
-        fallbackReviewers: array(nonEmptyStringSchema),
-        filesWithOwners: number2().int().min(0),
-        filesMissingOwners: number2().int().min(0),
-        gaps: array(string2())
-      }).strict(),
-      codeownersPath: string2().nullable(),
-      metadataPaths: array(nonEmptyStringSchema),
-      rules: array(impactOwnershipRuleSchema),
-      matches: array(
-        object2({
-          path: nonEmptyStringSchema,
-          owners: array(nonEmptyStringSchema),
-          matchedRules: array(impactOwnershipRuleSchema),
-          fallbackReviewers: array(nonEmptyStringSchema),
-          fallbackUsed: boolean2(),
-          sensitive: boolean2(),
-          ownerMissing: boolean2(),
-          evidenceRefs: array(nonEmptyStringSchema)
-        }).strict()
-      )
-    }).strict();
-    impactDependencySchema = object2({
-      coverage: object2({
-        status: _enum(["none", "partial", "complete-ish"]),
-        sourcesConfigured: array(nonEmptyStringSchema),
-        sourcesUsed: array(nonEmptyStringSchema),
-        filesCovered: array(nonEmptyStringSchema),
-        filesUncovered: array(nonEmptyStringSchema),
-        gaps: array(string2())
-      }).strict(),
-      nodes: array(
-        object2({
-          id: nonEmptyStringSchema,
-          path: string2().nullable(),
-          kind: _enum(["package", "workspace", "file", "external", "custom"]),
-          source: nonEmptyStringSchema
-        }).strict()
-      ),
-      edges: array(
-        object2({
-          from: nonEmptyStringSchema,
-          to: nonEmptyStringSchema,
-          type: nonEmptyStringSchema,
-          source: nonEmptyStringSchema
-        }).strict()
-      ),
-      reverseDependentsByPath: record(string2(), array(nonEmptyStringSchema))
-    }).strict();
-    impactReportSchema = object2({
-      schemaVersion: literal(IMPACT_REPORT_SCHEMA_VERSION),
-      impactId: impactIdSchema,
-      status: impactStatusSchema,
-      impactStatus: impactStatusSchema,
-      summary: nonEmptyStringSchema,
-      scope: impactReportScopeSchema,
-      files: array(nonEmptyStringSchema),
-      risk: impactRiskSchema,
-      confidence: impactConfidenceSchema,
-      scoring: impactScoringSchema,
-      topImpactedAreas: array(impactSummaryRecordSchema),
-      requiredReviewers: array(nonEmptyStringSchema),
-      requiredTests: array(nonEmptyStringSchema),
-      requiredActions: array(nonEmptyStringSchema),
-      blockingFindings: array(impactFindingSchema),
-      warningFindings: array(impactFindingSchema),
-      surfaces: array(impactSurfaceRecordSchema),
-      areaSummary: array(impactSummaryRecordSchema),
-      surfaceSummary: array(impactSummaryRecordSchema),
-      ownership: impactOwnershipSchema,
-      dependencyGraph: impactDependencySchema,
-      findings: array(impactFindingSchema),
-      obligations: array(impactObligationSchema),
-      unknowns: array(impactUnknownSchema),
-      evidence: array(impactEvidenceSchema)
-    }).strict();
     impactToolDefinitions = [
       {
         name: "blueprint_impact_config_get",

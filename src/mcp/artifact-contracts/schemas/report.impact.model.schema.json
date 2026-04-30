@@ -1,0 +1,1148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.report.impact.model",
+  "title": "Blueprint Impact Report Model",
+  "description": "Structured report payload persisted by blueprint_impact_report_write. The impact id may be supplied by MCP args, but the report payload must preserve deterministic analyzer provenance and evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "impactId",
+    "status",
+    "impactStatus",
+    "summary",
+    "scope",
+    "files",
+    "risk",
+    "confidence",
+    "scoring",
+    "topImpactedAreas",
+    "requiredReviewers",
+    "requiredTests",
+    "requiredActions",
+    "blockingFindings",
+    "warningFindings",
+    "surfaces",
+    "areaSummary",
+    "surfaceSummary",
+    "ownership",
+    "dependencyGraph",
+    "findings",
+    "obligations",
+    "unknowns",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "blueprint.impact.report.v1"
+    },
+    "impactId": {
+      "$ref": "#/$defs/impactId"
+    },
+    "status": {
+      "$ref": "#/$defs/impactStatus"
+    },
+    "impactStatus": {
+      "$ref": "#/$defs/impactStatus"
+    },
+    "summary": {
+      "$ref": "#/$defs/singleLineString"
+    },
+    "scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "files": {
+      "$ref": "#/$defs/repoPathArray"
+    },
+    "risk": {
+      "$ref": "#/$defs/risk"
+    },
+    "confidence": {
+      "$ref": "#/$defs/confidence"
+    },
+    "scoring": {
+      "$ref": "#/$defs/scoring"
+    },
+    "topImpactedAreas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/summaryRecord"
+      }
+    },
+    "requiredReviewers": {
+      "$ref": "#/$defs/singleLineStringArray"
+    },
+    "requiredTests": {
+      "$ref": "#/$defs/singleLineStringArray"
+    },
+    "requiredActions": {
+      "$ref": "#/$defs/singleLineStringArray"
+    },
+    "blockingFindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "warningFindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/surfaceRecord"
+      }
+    },
+    "areaSummary": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/summaryRecord"
+      }
+    },
+    "surfaceSummary": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/summaryRecord"
+      }
+    },
+    "ownership": {
+      "$ref": "#/$defs/ownership"
+    },
+    "dependencyGraph": {
+      "$ref": "#/$defs/dependencyGraph"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "obligations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/obligation"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unknown"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PASS"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "impactStatus": {
+            "const": "PASS"
+          },
+          "scoring": {
+            "properties": {
+              "status": {
+                "const": "PASS"
+              },
+              "blocking": {
+                "const": false
+              }
+            }
+          },
+          "blockingFindings": {
+            "maxItems": 0
+          },
+          "warningFindings": {
+            "maxItems": 0
+          },
+          "findings": {
+            "maxItems": 0
+          },
+          "obligations": {
+            "maxItems": 0
+          },
+          "unknowns": {
+            "maxItems": 0
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "properties": {
+                "findings": {
+                  "contains": {
+                    "properties": {
+                      "status": {
+                        "enum": [
+                          "WARN",
+                          "BLOCK"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "obligations": {
+                  "contains": {
+                    "properties": {
+                      "status": {
+                        "enum": [
+                          "WARN",
+                          "BLOCK"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "WARN"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "impactStatus": {
+            "const": "WARN"
+          },
+          "scoring": {
+            "properties": {
+              "status": {
+                "const": "WARN"
+              },
+              "blocking": {
+                "const": false
+              }
+            }
+          },
+          "blockingFindings": {
+            "maxItems": 0
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "properties": {
+                "findings": {
+                  "contains": {
+                    "properties": {
+                      "status": {
+                        "const": "BLOCK"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "obligations": {
+                  "contains": {
+                    "properties": {
+                      "status": {
+                        "const": "BLOCK"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "BLOCK"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "impactStatus": {
+            "const": "BLOCK"
+          },
+          "scoring": {
+            "properties": {
+              "status": {
+                "const": "BLOCK"
+              },
+              "blocking": {
+                "const": true
+              }
+            }
+          },
+          "requiredActions": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "singleLineString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n\\u0000]+$"
+    },
+    "singleLineStringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/singleLineString"
+      }
+    },
+    "nonEmptySingleLineStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/singleLineString"
+      }
+    },
+    "impactId": {
+      "type": "string",
+      "pattern": "^impact-[a-z0-9][a-z0-9._-]*$"
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:[\\\\/])(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\u0000)[^\\r\\n]+$"
+    },
+    "repoPathArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/repoPath"
+      }
+    },
+    "impactStatus": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "WARN",
+        "BLOCK"
+      ]
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical",
+        "unknown"
+      ]
+    },
+    "confidenceLevel": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    "surface": {
+      "type": "string",
+      "enum": [
+        "secret-sensitive",
+        "env-config",
+        "command-catalog",
+        "command-manifest",
+        "command-doc",
+        "runtime-reference",
+        "mcp-server",
+        "mcp-tool",
+        "mcp-resource",
+        "artifact-contract",
+        "skill",
+        "agent",
+        "extension-manifest",
+        "hook",
+        "package-runtime",
+        "build-config",
+        "test",
+        "docs",
+        "generated",
+        "config",
+        "source",
+        "repo-root",
+        "unknown"
+      ]
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "level",
+        "reasons"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "level": {
+          "$ref": "#/$defs/confidenceLevel"
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/singleLineString"
+          }
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "reasons"
+      ],
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/riskLevel"
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/singleLineString"
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "description",
+        "fingerprint",
+        "confidence"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[^\\r\\n\\u0000]+$"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[^\\r\\n\\u0000]+$"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "riskLevel",
+        "confidenceScore",
+        "confidenceLevel",
+        "maxSeverity",
+        "blocking",
+        "drivers",
+        "reducers",
+        "policy"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/impactStatus"
+        },
+        "riskLevel": {
+          "$ref": "#/$defs/riskLevel"
+        },
+        "confidenceScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "confidenceLevel": {
+          "$ref": "#/$defs/confidenceLevel"
+        },
+        "maxSeverity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/severity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "drivers": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "reducers": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "blockOnCritical",
+            "blockOnBreakingContract",
+            "blockOnSensitiveUnknownOwner",
+            "warnBelowConfidence",
+            "blockBelowConfidenceForSensitiveAreas"
+          ],
+          "properties": {
+            "blockOnCritical": {
+              "type": "boolean"
+            },
+            "blockOnBreakingContract": {
+              "type": "boolean"
+            },
+            "blockOnSensitiveUnknownOwner": {
+              "type": "boolean"
+            },
+            "warnBelowConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "blockBelowConfidenceForSensitiveAreas": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "summaryRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "files",
+        "count"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "files": {
+          "$ref": "#/$defs/repoPathArray"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "source",
+        "summary",
+        "paths"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "scope",
+            "surface",
+            "ownership",
+            "dependency",
+            "metadata",
+            "config",
+            "contract",
+            "obligation",
+            "build"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "summary": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "paths": {
+          "$ref": "#/$defs/repoPathArray"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "checkId",
+        "title",
+        "severity",
+        "status",
+        "confidence",
+        "impactedFiles",
+        "impactedAreas",
+        "owners",
+        "requiredActions",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "checkId": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "title": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "status": {
+          "$ref": "#/$defs/impactStatus"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "impactedFiles": {
+          "$ref": "#/$defs/repoPathArray"
+        },
+        "impactedAreas": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "owners": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "requiredActions": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "evidenceRefs": {
+          "$ref": "#/$defs/nonEmptySingleLineStringArray"
+        }
+      }
+    },
+    "obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "title",
+        "severity",
+        "status",
+        "impactedFiles",
+        "sourceSurfaces",
+        "requiredActions",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "contract-review",
+            "docs",
+            "tests",
+            "release",
+            "migration",
+            "security",
+            "deployment",
+            "build"
+          ]
+        },
+        "title": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "status": {
+          "$ref": "#/$defs/impactStatus"
+        },
+        "impactedFiles": {
+          "$ref": "#/$defs/repoPathArray"
+        },
+        "sourceSurfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface"
+          }
+        },
+        "requiredActions": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "evidenceRefs": {
+          "$ref": "#/$defs/nonEmptySingleLineStringArray"
+        }
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "title",
+        "severity",
+        "impactedFiles",
+        "reason",
+        "resolution",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "scope",
+            "ownership",
+            "dependency",
+            "contract",
+            "obligation"
+          ]
+        },
+        "title": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "impactedFiles": {
+          "$ref": "#/$defs/repoPathArray"
+        },
+        "reason": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "resolution": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "evidenceRefs": {
+          "$ref": "#/$defs/nonEmptySingleLineStringArray"
+        }
+      }
+    },
+    "surfaceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "surfaces",
+        "primarySurface",
+        "area",
+        "reasons"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/surface"
+          }
+        },
+        "primarySurface": {
+          "$ref": "#/$defs/surface"
+        },
+        "area": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/singleLineString"
+          }
+        }
+      }
+    },
+    "ownershipRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "sourcePath",
+        "pattern",
+        "owners",
+        "sensitive",
+        "line",
+        "order"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "codeowners",
+            "metadata"
+          ]
+        },
+        "sourcePath": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "pattern": {
+          "$ref": "#/$defs/singleLineString"
+        },
+        "owners": {
+          "$ref": "#/$defs/singleLineStringArray"
+        },
+        "sensitive": {
+          "type": "boolean"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage",
+        "codeownersPath",
+        "metadataPaths",
+        "rules",
+        "matches"
+      ],
+      "properties": {
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "sourcesConfigured",
+            "sourcesUsed",
+            "fallbackReviewers",
+            "filesWithOwners",
+            "filesMissingOwners",
+            "gaps"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "none",
+                "partial",
+                "complete"
+              ]
+            },
+            "sourcesConfigured": {
+              "$ref": "#/$defs/singleLineStringArray"
+            },
+            "sourcesUsed": {
+              "$ref": "#/$defs/repoPathArray"
+            },
+            "fallbackReviewers": {
+              "$ref": "#/$defs/singleLineStringArray"
+            },
+            "filesWithOwners": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "filesMissingOwners": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "gaps": {
+              "$ref": "#/$defs/repoPathArray"
+            }
+          }
+        },
+        "codeownersPath": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/repoPath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metadataPaths": {
+          "$ref": "#/$defs/repoPathArray"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ownershipRule"
+          }
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "owners",
+              "matchedRules",
+              "fallbackReviewers",
+              "fallbackUsed",
+              "sensitive",
+              "ownerMissing",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/repoPath"
+              },
+              "owners": {
+                "$ref": "#/$defs/singleLineStringArray"
+              },
+              "matchedRules": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/ownershipRule"
+                }
+              },
+              "fallbackReviewers": {
+                "$ref": "#/$defs/singleLineStringArray"
+              },
+              "fallbackUsed": {
+                "type": "boolean"
+              },
+              "sensitive": {
+                "type": "boolean"
+              },
+              "ownerMissing": {
+                "type": "boolean"
+              },
+              "evidenceRefs": {
+                "$ref": "#/$defs/nonEmptySingleLineStringArray"
+              }
+            }
+          }
+        }
+      }
+    },
+    "dependencyGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage",
+        "nodes",
+        "edges",
+        "reverseDependentsByPath"
+      ],
+      "properties": {
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "sourcesConfigured",
+            "sourcesUsed",
+            "filesCovered",
+            "filesUncovered",
+            "gaps"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "none",
+                "partial",
+                "complete-ish"
+              ]
+            },
+            "sourcesConfigured": {
+              "$ref": "#/$defs/singleLineStringArray"
+            },
+            "sourcesUsed": {
+              "$ref": "#/$defs/singleLineStringArray"
+            },
+            "filesCovered": {
+              "$ref": "#/$defs/repoPathArray"
+            },
+            "filesUncovered": {
+              "$ref": "#/$defs/repoPathArray"
+            },
+            "gaps": {
+              "$ref": "#/$defs/singleLineStringArray"
+            }
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "path",
+              "kind",
+              "source"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/singleLineString"
+              },
+              "path": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/repoPath"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "package",
+                  "workspace",
+                  "file",
+                  "external",
+                  "custom"
+                ]
+              },
+              "source": {
+                "$ref": "#/$defs/singleLineString"
+              }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to",
+              "type",
+              "source"
+            ],
+            "properties": {
+              "from": {
+                "$ref": "#/$defs/singleLineString"
+              },
+              "to": {
+                "$ref": "#/$defs/singleLineString"
+              },
+              "type": {
+                "$ref": "#/$defs/singleLineString"
+              },
+              "source": {
+                "$ref": "#/$defs/singleLineString"
+              }
+            }
+          }
+        },
+        "reverseDependentsByPath": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/repoPath"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/singleLineStringArray"
+          }
+        }
+      }
+    }
+  }
+}

@@ -2432,6 +2432,166 @@ function renderImpactTemplate(context?: ArtifactTemplateContext): string {
 - Follow-up actions derived from findings, obligations, and unknowns, or an explicit reason no action remains.`;
 }
 
+const IMPACT_REPORT_MODEL_SCHEMA_FILE = "report.impact.model.schema.json";
+const IMPACT_REPORT_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/report.impact.model.schema.json";
+
+const IMPACT_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.report.impact.model",
+  schemaVersion: "1.0.0",
+  schemaPath: IMPACT_REPORT_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(IMPACT_REPORT_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Author or persist only structured JSON that matches the report.impact schema; markdown fallback is not accepted by blueprint_impact_report_write.",
+    "Keep advisory status, impactStatus, and scoring.status aligned: PASS requires no warning/blocking findings, no obligations, and no unknowns; WARN rejects blocking signals; BLOCK requires scoring.blocking plus concrete actions.",
+    "Every finding, obligation, unknown, and ownership match must cite exact evidence ids from the same report payload.",
+    "Use only repo-relative, single-line path and Markdown sink values; do not include newline, delimiter, placeholder, TODO, TBD, or unexplained N/A content.",
+    "Do not copy minimal example wording or invent missing ownership, dependency, test, compliance, or scope metadata as proof of safety."
+  ],
+  contextBindings: [
+    "impactId may be supplied by blueprint_impact_report_write arguments, but it must match the report impactId when both are present.",
+    "The analyzer supplies scope fingerprint, resolved files, risk, confidence, findings, obligations, unknowns, and evidence before persistence.",
+    "blueprint_impact_report_write narrows validation to the exact report impactId, scope fingerprint, files, evidence ids, and finding projections before writing.",
+    "Bundle paths and rendered Markdown are MCP-owned and derived under .blueprint/impact/<impact-id>/."
+  ],
+  renderedHeadings: [
+    "Summary",
+    "Change Scope",
+    "Top Impacted Areas",
+    "Required Reviewers",
+    "Required Tests",
+    "Blocking Findings",
+    "Warnings",
+    "Contract And Compatibility Impact",
+    "Database, Config, Infra, And Deployment Impact",
+    "Unknowns And Missing Metadata",
+    "Evidence",
+    "Suggested Next Actions"
+  ],
+  minimalValidExample: {
+    schemaVersion: "blueprint.impact.report.v1",
+    impactId: "impact-example",
+    status: "PASS",
+    impactStatus: "PASS",
+    summary:
+      "Impact status PASS with low risk and high confidence (0.8) across 1 changed file; findings=0, obligations=0, unknowns=0.",
+    scope: {
+      kind: "files",
+      source: "explicit-files",
+      description: null,
+      fingerprint: "example-fingerprint",
+      confidence: {
+        score: 0.8,
+        level: "high",
+        reasons: ["Explicit file scope was provided."]
+      }
+    },
+    files: ["README.md"],
+    risk: {
+      level: "low",
+      reasons: ["No findings, obligations, or unknowns remained after deterministic analysis."]
+    },
+    confidence: {
+      score: 0.8,
+      level: "high",
+      reasons: ["Explicit file scope was provided."]
+    },
+    scoring: {
+      status: "PASS",
+      riskLevel: "low",
+      confidenceScore: 0.8,
+      confidenceLevel: "high",
+      maxSeverity: null,
+      blocking: false,
+      drivers: ["No blocking or warning impact signals remain above policy thresholds."],
+      reducers: [],
+      policy: {
+        blockOnCritical: true,
+        blockOnBreakingContract: true,
+        blockOnSensitiveUnknownOwner: true,
+        warnBelowConfidence: 0.7,
+        blockBelowConfidenceForSensitiveAreas: 0.5
+      }
+    },
+    topImpactedAreas: [{ name: "docs", files: ["README.md"], count: 1 }],
+    requiredReviewers: [],
+    requiredTests: [],
+    requiredActions: [],
+    blockingFindings: [],
+    warningFindings: [],
+    surfaces: [
+      {
+        path: "README.md",
+        surfaces: ["docs", "repo-root"],
+        primarySurface: "docs",
+        area: "docs",
+        reasons: ["Path matched documentation file extension."]
+      }
+    ],
+    areaSummary: [{ name: "docs", files: ["README.md"], count: 1 }],
+    surfaceSummary: [
+      { name: "docs", files: ["README.md"], count: 1 },
+      { name: "repo-root", files: ["README.md"], count: 1 }
+    ],
+    ownership: {
+      coverage: {
+        status: "complete",
+        sourcesConfigured: [],
+        sourcesUsed: [],
+        fallbackReviewers: [],
+        filesWithOwners: 1,
+        filesMissingOwners: 0,
+        gaps: []
+      },
+      codeownersPath: null,
+      metadataPaths: [],
+      rules: [],
+      matches: [
+        {
+          path: "README.md",
+          owners: ["@docs"],
+          matchedRules: [],
+          fallbackReviewers: ["@docs"],
+          fallbackUsed: true,
+          sensitive: false,
+          ownerMissing: false,
+          evidenceRefs: ["ev.scope.example"]
+        }
+      ]
+    },
+    dependencyGraph: {
+      coverage: {
+        status: "none",
+        sourcesConfigured: [],
+        sourcesUsed: [],
+        filesCovered: [],
+        filesUncovered: [],
+        gaps: []
+      },
+      nodes: [],
+      edges: [],
+      reverseDependentsByPath: { "README.md": [] }
+    },
+    findings: [],
+    obligations: [],
+    unknowns: [],
+    evidence: [
+      {
+        id: "ev.scope.example",
+        kind: "scope",
+        source: "explicit-files",
+        summary: "Explicit file scope included README.md.",
+        paths: ["README.md"]
+      }
+    ]
+  },
+  exampleLeakageSignals: [
+    "Impact status PASS with low risk and high confidence",
+    "Explicit file scope was provided.",
+    "No blocking or warning impact signals remain above policy thresholds."
+  ]
+};
+
 const PHASE_VERIFICATION_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.verification.model",
   schemaVersion: "1.0.0",
@@ -3457,9 +3617,10 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Impact reports are bounded bundles under .blueprint/impact/<impact-id>/ and are written only through blueprint_impact_report_write.",
-      "The writer validates the structured report payload plus rendered Markdown quality before persistence.",
+      "The writer validates the structured report payload against the report.impact JSON Schema plus rendered Markdown quality before persistence.",
       "/blu-impact is implemented as an advisory command; report writes stay bounded to the impact bundle and do not mutate source, roadmap, PR, deployment, command-catalog, or installed-extension state."
     ],
+    modelContract: IMPACT_REPORT_MODEL_CONTRACT,
     renderScaffoldTemplate: renderImpactTemplate,
     renderAuthoringTemplate: renderImpactTemplate
   },
