@@ -193,44 +193,30 @@ test("review persistence sanitizes hidden control characters and records the war
   const written = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "5",
-    artifact: "security",
-    content: `# Phase 05: Security Audit - Security Review
+    artifact: "peer-review",
+    content: `# Phase 05: Security Audit - Peer Reviews
 
-**Posture:** FOLLOW_UP
+**Reviewers:** security-reviewer, implementation-reviewer
 
-## Security Summa\u200Bry
+## Review Summa\u200Bry
 
 - Hidden control text should be stripped before persistence.
 
-## Evidence Reviewed
+## Reviewer Results
 
-- .blueprint/phases/05-security-audit/05-01-SUMMARY.md
+- security-reviewer: Hidden control text was sanitized before persistence.
 
-## Threat Register
-
-| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
-|-----------|----------|-----------|-------------|------------|--------|-----------------|
-| T-01 | Tampering | Review substrate | mitigate | Sanitize hidden control text before persistence | closed | Hidden control text was sanitized before persistence. |
-
-## Accepted Risks
+## Disagreements
 
 - none
-
-## Findings
-
-- The review path is MCP-owned and phase-scoped.
 
 ## Follow-Ups
 
 - Add shared prompt-boundary hardening before the next maintenance rollout.
 
-## Security Audit Trail
-
-- 2026-04-19: persisted after sanitizing hidden control characters.
-
 ## Next Safe Action
 
-- Run /blu-validate-phase 5 if verification is still pending.
+- /blu-progress
 `
   });
 
@@ -238,9 +224,9 @@ test("review persistence sanitizes hidden control characters and records the war
   assert.match(written.warnings.join("\n"), /Removed 1 invisible or control character/);
 
   const saved = await readFile(
-    path.join(repoPath, ".blueprint/phases/05-security-audit/05-SECURITY.md"),
+    path.join(repoPath, written.reportPath),
     "utf8"
   );
   assert.doesNotMatch(saved, /\u200B/);
-  assert.match(saved, /## Security Summary/);
+  assert.match(saved, /## Review Summary/);
 });

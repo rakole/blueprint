@@ -897,10 +897,15 @@ test("secure-phase is implemented once manifest, review skill, and review MCP to
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
+    "blueprint_phase_execution_targets",
     "blueprint_phase_locate",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
-    "blueprint_review_record"
+    "blueprint_phase_summary_index",
+    "blueprint_phase_summary_read",
+    "blueprint_review_authoring_context",
+    "blueprint_review_record",
+    "blueprint_review_validate_model"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-security-auditor"]);
   assert.deepEqual(entry.blockedBy, []);

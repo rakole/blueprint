@@ -72,8 +72,14 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_phase_locate`
 - `blueprint_config_get`
 - `blueprint_artifact_list`
+- `blueprint_phase_plan_index`
+- `blueprint_phase_plan_read`
+- `blueprint_phase_summary_index`
+- `blueprint_phase_summary_read`
+- `blueprint_phase_execution_targets`
 - `blueprint_review_scope`
 - `blueprint_review_load_findings`
+- `blueprint_review_authoring_context`
 - `blueprint_review_validate_model`
 - `blueprint_review_record`
 - `blueprint_artifact_contract_read`
@@ -101,8 +107,9 @@ non-routable until their extra MCP substrate lands.
 ## Shared MCP Contracts
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, treat returned `files` as authoritative, use `confirmationRecommended` instead of prompt-only heuristics for scope-confirmation gates, and request `includeAuthoringContext` for code-review model authoring.
-- `blueprint_review_validate_model`: validate `review.code-review` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid.
-- `blueprint_review_record`: pass numeric `phase`, the correct review `artifact` enum, and full report content for non-code-review artifacts. For `code-review`, pass only the validated structured `model` plus resolved `scopeFiles` and the resolved `scopeSource`; Markdown `content` is invalid. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_review_authoring_context`: request this for `review.security` authoring before drafting the model. Treat `status: "invalid"` as an early blocker rather than an invitation to invent summaries, threat rows, evidence keys, or next actions.
+- `blueprint_review_validate_model`: validate `review.code-review` and `review.security` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid.
+- `blueprint_review_record`: pass numeric `phase` and the correct review `artifact` enum. For model-only artifacts (`code-review` and `security`), pass only the validated structured `model`; `code-review` also passes resolved `scopeFiles` and `scopeSource`. Markdown `content` is invalid for both. For other review artifacts, pass full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
@@ -232,14 +239,16 @@ non-routable until their extra MCP substrate lands.
    State A/B/C input handling, saved threat-model parsing, summary threat-flag
    incorporation, bounded auditor use, no-subagent fallback, retry/repair,
    threat-count consistency, and advancement blocking.
-2. Resolve the target phase and require saved execution evidence before the
-   audit begins.
+2. Resolve the target phase and require saved completed execution summaries
+   before the audit begins.
 3. Read the existing Blueprint artifact inventory first so the audit can cite
    summaries, validation, and UAT artifacts when they exist.
 4. Read the canonical `review.security` contract through
-   `blueprint_artifact_contract_read` before drafting or revising
-   `XX-SECURITY.md`, and use the returned template plus headings as the
-   baseline instead of a copied prompt-local structure.
+   `blueprint_artifact_contract_read` before drafting or revising security
+   evidence, and use `contract.modelContract.schemaPath`,
+   `contract.modelContract.jsonSchema`, and the secure-phase task schema as the
+   model-authoring authority instead of a copied prompt-local Markdown
+   structure.
 5. Inspect any existing `XX-SECURITY.md` before proposing replacement and
    default to reuse unless the user explicitly asks for an update. Use Gemini
    CLI's `ask_user` tool for overwrite confirmation before replacement.
@@ -248,51 +257,72 @@ non-routable until their extra MCP substrate lands.
    build a threat register from the declared threats and mitigations. Include
    threat id, category, component, disposition, mitigation, status, and evidence
    for each declared threat.
-7. Read executed summaries from the artifact inventory and incorporate
+7. Read `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and
+   `blueprint_phase_execution_targets` so completed summaries, pending plans,
+   lower-wave blockers, and overwrite candidates are explicit before authoring.
+   Stop before persistence when the phase has no completed summaries or still
+   has pending plan work.
+8. Read `blueprint_review_authoring_context` before drafting. Use its
+   `authoringContext.taskSchema` as the effective secure-phase model schema,
+   and stop on `status: "invalid"` instead of inventing upstream context.
+9. Read executed summaries from the artifact inventory and incorporate
    `## Threat Flags` when present. Map them to declared threats when possible,
    and record unregistered flags separately instead of widening the audit into a
    broad scan.
-8. Keep the audit bounded to that declared security scope from saved plan
+10. Keep the audit bounded to that declared security scope from saved plan
    evidence only rather than a broad scan.
-9. Keep the active stage visible as the run moves through `Resolve`, `Read`,
+11. Keep the active stage visible as the run moves through `Resolve`, `Read`,
    `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
    resolved scope, active stage, pending gate, execution mode, and next safe
    action legible throughout the run.
-10. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
+12. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
    so saved-plan review, threat verification, overwrite gates, artifact
    persistence, post-write validation, and routing stay visible without
    becoming persistence.
-11. Report the resolved scope, threat-register coverage, whether the security
+13. Report the resolved scope, threat-register coverage, whether the security
    artifact is being reused or revised, and the current pending-open-threat
    status while work is in flight. Keep the verify-versus-accept decision
    explicit whenever threats remain open. Keep pending gates limited to
    overwrite confirmation, the verify-versus-accept decision, or
    `pending-open-threat`, and let execution mode reflect inline versus
    `blueprint-security-auditor`-assisted review.
-12. Distinguish confirmed mitigations, open threats, accepted risks, suspicious
+14. Distinguish confirmed mitigations, open threats, accepted risks, suspicious
    artifact content, and follow-up hardening work explicitly inside the saved
    security artifact.
-13. Present the user with the choice to verify open threats or explicitly accept
+15. Present the user with the choice to verify open threats or explicitly accept
    them, use Gemini CLI's `ask_user` for that structured decision, and block
    advancement when any threat remains open instead of always computing a next
    action.
-14. Use `blueprint-security-auditor` only for bounded mitigation verification
+16. Use `blueprint-security-auditor` only for bounded mitigation verification
    when the phase spans multiple plans, touches risky surfaces, or needs a
    higher-confidence review of declared threats. The auditor stays read-only and
    cannot persist artifacts, mutate repo files, invent threats, or route the
    user.
-15. If `blueprint-security-auditor` is unavailable or unnecessary, use the
+17. If `blueprint-security-auditor` is unavailable or unnecessary, use the
    no-subagent fallback from the local runtime contract: read saved plans,
    summaries, prior security artifact if any, and implicated repo files; verify
    one declared threat at a time; compress carry-forward context; then run a
    final threat-count consistency pass before persistence.
-16. Persist finished security evidence through `blueprint_review_record` with
-   the `security` artifact.
-17. If `blueprint_review_record` rejects the artifact or reports missing
-   required headings, repair against the `review.security` authoring template
-   and retry once. If the retry still fails, stop with the MCP reason and do not
-   write the artifact by hand.
-18. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+18. Author only the structured `review.security` model fields: `status`,
+   `readiness`, `completionState`, `securitySummary`, `evidenceCoverage`,
+   `threatRegister`, `acceptedRisks`, `findings`, `manualOrDeferredWork`,
+   `gapRoutes`, `followUps`, `auditTrail`, and `nextSafeAction`. The task
+   schema narrows live plan, summary, threat, prior-security, validation, UAT,
+   and evidence inventory; `auditTrail` is an object; threat statuses are
+   lowercase values such as `closed`, `accepted`, `open`, and `none`; exact
+   empty-state sentinel entries must be used for empty security tables and
+   blocked next-safe-action states.
+19. Validate the model through `blueprint_review_validate_model` before
+   persistence. Repair all schema, truth-table, sentinel-entry, and residual
+   diagnostics together, and do not switch to Markdown fallback.
+20. Persist finished security evidence through `blueprint_review_record` with
+   the `security` artifact and the same structured `model`; Markdown `content`
+   is invalid for `review.security`.
+21. If `blueprint_review_validate_model` or `blueprint_review_record` rejects
+   the model, repair against the `review.security` model contract, narrowed task
+   schema, and diagnostics, then retry once. If the retry still fails, stop with
+   the MCP reason and do not write the artifact by hand.
+22. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>`, and
    otherwise `/blu-progress` only after all threats are closed or accepted.
    Do not emit next-step routing while threats remain open, and keep the

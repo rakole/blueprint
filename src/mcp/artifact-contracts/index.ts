@@ -1429,7 +1429,10 @@ function renderPeerReviewTemplate(context?: ArtifactTemplateContext): string {
 function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Security
 
-**Posture:** PASS|FOLLOW_UP|BLOCKED
+**Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-routing|needs-follow-up|blocked
+**Completion State:** complete|partial|blocked
+**Next Safe Action:** /blu-validate-phase <phase>|/blu-verify-work <phase>|/blu-progress|Blocked: pending-open-threat
 
 ## Security Summary
 
@@ -1441,17 +1444,33 @@ function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
 
 ## Threat Register
 
-| Threat ID | Category | Component | Disposition | Mitigation | Status | Evidence / Note |
-|-----------|----------|-----------|-------------|------------|--------|-----------------|
-| T-01 | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. |
+| Threat ID | Source Plan | Category | Component | Disposition | Mitigation | Status | Evidence | Verifier Note |
+|-----------|-------------|----------|-----------|-------------|------------|--------|----------|---------------|
+| T-01 | ${phasePrefix(context)}-01-PLAN.md | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. | verifier note |
 
 ## Accepted Risks
 
-- Accepted threat reference plus rationale, or \`none\`.
+| Threat ID | Rationale | Accepted By | Accepted At | Evidence |
+|-----------|-----------|-------------|-------------|----------|
+| none | none | none | none | none |
 
 ## Findings
 
-- Open threat, missing control, or risk decision that needs explicit attention, or \`none\`.
+| Kind | Severity | Threat ID | Status | Evidence | Recommendation |
+|------|----------|-----------|--------|----------|----------------|
+| none | none | none | none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
 
 ## Follow-Ups
 
@@ -1465,6 +1484,121 @@ function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
 
 - /blu-progress`;
 }
+
+const SECURITY_MODEL_SCHEMA_FILE = "review.security.model.schema.json";
+const SECURITY_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/review.security.model.schema.json";
+
+const SECURITY_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.review.security.model",
+  schemaVersion: "1.0.0",
+  schemaPath: SECURITY_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(SECURITY_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, summaryPath, linkedPlanPath, planPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
+    "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so live evidence artifact keys, declared threat ids, and status-safe next actions stay deterministic.",
+    "COMPLETED security reviews require all declared threats closed or accepted, exact none sentinel rows for manual/deferred work, gap routes, findings, and followUps, and a routed implemented next action.",
+    "PARTIAL security reviews require concrete follow-up findings, manual/deferred work, gap routes, and followUps while rejecting validation/UAT next actions.",
+    "BLOCKED security reviews require at least one open threat, a manual decision row, a blocked gap route, concrete followUps, and the exact blocked next action sentinel.",
+    "Use concrete artifact, code, user-decision, or security evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, and report path come from blueprint_phase_locate plus blueprint_review_record arguments.",
+    "Completed summaries, pending plans, linked plan paths, declared threat ids, source plan provenance, and optional verification/UAT/prior-security evidence come from blueprint_phase_summary_index/read, blueprint_phase_plan_index/read, and blueprint_phase_execution_targets.",
+    "The model supplies threat status/evidence and security decisions; MCP renders source plan, category, component, disposition, and mitigation from live plan provenance.",
+    "Allowed nextSafeAction values come from the status truth table and the implemented command catalog.",
+    "Existing security content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+  ],
+  renderedHeadings: [
+    "Security Summary",
+    "Evidence Reviewed",
+    "Threat Register",
+    "Accepted Risks",
+    "Findings",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Security Audit Trail",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    securitySummary: [
+      "Saved plan threats were checked against completed execution summaries and no open threat remains."
+    ],
+    evidenceCoverage: {
+      ".blueprint/phases/05-security-audit/05-01-PLAN.md": {
+        status: "used",
+        rationale: "Plan evidence supplied the declared threat register."
+      },
+      ".blueprint/phases/05-security-audit/05-01-SUMMARY.md": {
+        status: "used",
+        rationale: "Completed summary evidence confirmed the mitigation was delivered."
+      }
+    },
+    threatRegister: [
+      {
+        threatId: "T-01",
+        status: "closed",
+        evidence: "The completed summary cites the MCP-owned persistence path.",
+        verifierNote: "Mitigation evidence matches the saved plan threat."
+      }
+    ],
+    acceptedRisks: [
+      {
+        threatId: "none",
+        rationale: "none",
+        acceptedBy: "none",
+        acceptedAt: "none",
+        evidence: "none"
+      }
+    ],
+    findings: [
+      {
+        kind: "none",
+        severity: "none",
+        threatId: "none",
+        evidence: "none",
+        recommendation: "none",
+        status: "none"
+      }
+    ],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    auditTrail: {
+      auditDate: "2026-04-30",
+      executionMode: "inline",
+      overwriteGate: "not-needed",
+      verifyOrAcceptDecision: "verified",
+      pendingOpenThreatStatus: "none",
+      verifierNote: "Threat counts were checked against the saved plan register."
+    },
+    nextSafeAction: "/blu-validate-phase 5"
+  },
+  exampleLeakageSignals: [
+    "Saved plan threats were checked against completed execution summaries and no open threat remains.",
+    "Plan evidence supplied the declared threat register.",
+    "The completed summary cites the MCP-owned persistence path.",
+    "Threat counts were checked against the saved plan register."
+  ]
+};
 
 function renderUiReviewTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - UI Review
@@ -3082,24 +3216,27 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Threat Register",
       "Accepted Risks",
       "Findings",
+      "Manual / Deferred Work",
+      "Gap / Repair Routes",
       "Follow-Ups",
       "Security Audit Trail",
       "Next Safe Action"
     ],
-    lockedMarkers: ["**Posture:**"],
+    lockedMarkers: ["**Status:**", "**Readiness:**", "**Completion State:**", "**Next Safe Action:**"],
     placeholderSignals: [
-      "PASS|FOLLOW_UP|BLOCKED",
+      "COMPLETED|PARTIAL|BLOCKED",
       "Concise security posture grounded in saved evidence.",
       "Saved phase artifacts, repo paths, or cited references reviewed.",
-      "| T-01 | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. |",
-      "Accepted threat reference plus rationale, or `none`.",
-      "Open threat, missing control, or risk decision that needs explicit attention, or `none`.",
+      "| T-01 | XX-01-PLAN.md | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. | verifier note |",
       "Explicit hardening step, validation gap, or `none`.",
       "Audit date, threat counts, and verifier note."
     ],
     notes: [
-      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/category/component/mitigation/status/evidence coverage, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers."
+      "Security artifacts are model-only and render through MCP-owned canonical Markdown before persistence.",
+      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/status/evidence coverage against live saved-plan provenance, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers.",
+      "COMPLETED/PARTIAL/BLOCKED status truth-table rules live in the review.security JSON Schema and are narrowed by live plan, summary, threat, and next-action context."
     ],
+    modelContract: SECURITY_MODEL_CONTRACT,
     renderScaffoldTemplate: renderSecurityTemplate,
     renderAuthoringTemplate: renderSecurityTemplate
   },

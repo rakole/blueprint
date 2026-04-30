@@ -58,7 +58,7 @@ Contract notes:
 
 ## Structured Model Schema Assets
 
-Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model. For `phase.summary`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.summary.model.schema.json`; `blueprint_phase_summary_authoring_context` narrows it with the selected plan's exact acceptance checks, dependency plan inventory, linked plan path, summary path, and status-safe next actions before `/blu-execute-phase` validates and writes the model. For `phase.verification`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths and allowed next actions before `/blu-validate-phase` validates and writes the model. For `phase.uat`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths, ready verification evidence, and allowed next actions before `/blu-verify-work` validates and writes the model.
+Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model. For `phase.summary`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.summary.model.schema.json`; `blueprint_phase_summary_authoring_context` narrows it with the selected plan's exact acceptance checks, dependency plan inventory, linked plan path, summary path, and status-safe next actions before `/blu-execute-phase` validates and writes the model. For `phase.verification`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths and allowed next actions before `/blu-validate-phase` validates and writes the model. For `phase.uat`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths, ready verification evidence, and allowed next actions before `/blu-verify-work` validates and writes the model. For `review.code-review`, the base schema lives at `src/mcp/artifact-contracts/schemas/review.code-review.model.schema.json`; `blueprint_review_scope` narrows it with scoped files, evidence keys, and allowed next actions before `/blu-code-review` validates and records the model. For `review.security`, the base schema lives at `src/mcp/artifact-contracts/schemas/review.security.model.schema.json`; the secure-phase task schema narrows it with live plan, summary, threat, prior-security, validation, UAT, and evidence inventory before `/blu-secure-phase` validates and records the model.
 
 ## Core Top-Level Artifacts
 
@@ -673,13 +673,23 @@ Contract notes:
 
 `XX-SECURITY.md` is the phase-scoped security audit contract for a completed phase.
 
+Canonical model note:
+- `/blu-secure-phase` authors `review.security` JSON first, validates it against `src/mcp/artifact-contracts/schemas/review.security.model.schema.json` plus the narrowed task schema, and then persists that same model through `blueprint_review_record`.
+- Markdown fallback is invalid for `/blu-secure-phase`; MCP owns the final `XX-SECURITY.md` rendering.
+- The task schema narrows the base model to the live saved plan, summary, declared threat, prior security, validation, UAT, and evidence inventory for the selected phase.
+
 Minimum expected structure:
-- `**Posture:** PASS|FOLLOW_UP|BLOCKED`
+- `**Status:** COMPLETED|PARTIAL|BLOCKED`
+- `**Readiness:** ready-for-routing|needs-follow-up|blocked`
+- `**Completion State:** complete|partial|blocked`
+- `**Next Safe Action:** <implemented command or blocked sentinel>`
 - `## Security Summary`
 - `## Evidence Reviewed`
 - `## Threat Register`
 - `## Accepted Risks`
 - `## Findings`
+- `## Manual / Deferred Work`
+- `## Gap / Repair Routes`
 - `## Follow-Ups`
 - `## Security Audit Trail`
 - `## Next Safe Action`
@@ -688,11 +698,13 @@ Security audit expectations:
 - must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
 - should distinguish confirmed mitigations from missing or partial controls, while keeping threat dispositions and accepted-risk handling explicit
 - should keep canonical threat-register rows rich enough for audit parity: threat id, category, component, disposition, mitigation, status, and evidence or note
+- should use lowercase threat-register status values such as `closed`, `accepted`, `open`, and `none`
 - should keep the threat register or equivalent security disposition shape explicit instead of accepting scaffold-only placeholder markers as complete
 - should require the `Threat Register`, `Accepted Risks`, and `Security Audit Trail` sections so the security artifact cannot collapse back into a generic findings-only review
 - should treat `none` bullets as empty entries rather than real findings or follow-up items
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
+- model-only authoring uses `auditTrail` as an object and exact empty-state sentinel entries for no saved threat model, no accepted risks, no findings, no manual or deferred work, and no gap routes so partial placeholders cannot masquerade as completed evidence
 
 ### `XX-UI-REVIEW.md`
 
