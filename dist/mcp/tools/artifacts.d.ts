@@ -196,6 +196,13 @@ type ArtifactReportWriteArgs = {
     model?: Record<string, unknown>;
     overwrite?: boolean;
 };
+type ArtifactReportAuthoringContextArgs = {
+    cwd?: string;
+    reportName: string;
+};
+type ArtifactReportValidateModelArgs = ArtifactReportAuthoringContextArgs & {
+    model: unknown;
+};
 type ArtifactSummaryDigestSection = {
     artifact: string;
     title: string;
@@ -222,6 +229,145 @@ type ArtifactReportWriteResult = {
     overwritten: boolean;
     status: "created" | "updated" | "reused" | "invalid";
     issues: string[];
+    warnings: string[];
+};
+type AddTestsReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type AddTestsReportReadiness = "ready-for-routing" | "not-ready-for-routing" | "blocked";
+type AddTestsReportCompletionState = "complete" | "pending" | "blocked";
+type AddTestsCommandResult = "pass" | "fail" | "blocked" | "not-run";
+type AddTestsManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
+type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
+type AddTestsReportModel = {
+    status: AddTestsReportStatus;
+    readiness: AddTestsReportReadiness;
+    completionState: AddTestsReportCompletionState;
+    coverageGoal: string[];
+    evidenceUsed: string[];
+    summaryEvidence: Record<string, {
+        planId: string;
+        linkedPlanPath: string;
+        summaryStatus: "COMPLETED";
+        targetedVerification: string[];
+        coverageNote: string;
+    }>;
+    pendingPlans: Array<{
+        planId: string;
+        path: string;
+        reason: string;
+    }>;
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+        status: "satisfied";
+        evidence: string;
+    }>;
+    classification: Array<{
+        target: string;
+        category: string;
+        reason: string;
+    }>;
+    testPlan: Array<{
+        target: string;
+        scenario: string;
+        expectedAssertion: string;
+        command: string;
+    }>;
+    testsAddedOrUpdated: Array<{
+        path: string;
+        summary: string;
+    }>;
+    targetedCommands: Array<{
+        command: string;
+        result: AddTestsCommandResult;
+        evidence: string;
+    }>;
+    resultCounts: {
+        generated: number;
+        passing: number;
+        failing: number;
+        blocked: number;
+    };
+    bugsOrBlockers: Array<{
+        item: string;
+        evidence: string;
+        status: AddTestsBugStatus;
+    }>;
+    manualOrDeferredWork: Array<{
+        item: string;
+        reason: string;
+        followUp: string;
+        status: AddTestsManualStatus;
+    }>;
+    remainingGaps: Array<{
+        gap: string;
+        evidence: string;
+        repair: string;
+        status: AddTestsGapStatus;
+    }>;
+    followUpFixes: string[];
+    verificationWrite: {
+        status: AddTestsVerificationWriteStatus;
+        evidence: string;
+    };
+    nextSafeAction: string;
+};
+type AddTestsReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type AddTestsReportDiagnostic = {
+    source: AddTestsReportDiagnosticSource;
+    path: string;
+    code: string;
+    message: string;
+    context: Record<string, unknown>;
+    suggestion: string;
+};
+type AddTestsReportAuthoringContextResult = {
+    status: "ready" | "invalid";
+    reportName: string;
+    path: string;
+    phase: {
+        phaseNumber: string;
+        phasePrefix: string;
+        phaseName: string;
+        phaseDir: string;
+    } | null;
+    completedSummaries: Array<{
+        planId: string;
+        path: string;
+        linkedPlanPath: string;
+        targetedVerification: string[];
+    }>;
+    pendingPlans: Array<{
+        planId: string;
+        path: string;
+        reason: string;
+    }>;
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+    }>;
+    validationEvidencePaths: string[];
+    allowedNextActions: string[];
+    schemaPath: string | null;
+    baseSchema: Record<string, unknown> | null;
+    taskSchema: Record<string, unknown> | null;
+    modelOnly: true;
+    prerequisiteBlockers: string[];
+    reason: string | null;
+    warnings: string[];
+};
+type AddTestsReportValidateModelResult = {
+    status: "valid" | "invalid";
+    valid: boolean;
+    reportName: string;
+    path: string;
+    phase: AddTestsReportAuthoringContextResult["phase"];
+    schemaPath: string | null;
+    taskSchema: Record<string, unknown> | null;
+    diagnostics: AddTestsReportDiagnostic[];
+    normalizedModel: AddTestsReportModel | null;
+    renderPreview: string | null;
     warnings: string[];
 };
 type ArtifactCodebaseWriteArgs = {
@@ -384,6 +530,8 @@ export declare function blueprintArtifactMutateIndex(args: ArtifactMutateIndexAr
 export declare function blueprintArtifactValidate(args?: ArtifactValidateArgs): Promise<ArtifactValidateResult>;
 export declare function blueprintArtifactSummaryDigest(args?: ArtifactSummaryDigestArgs): Promise<ArtifactSummaryDigestResult>;
 export declare function blueprintArtifactContractRead(args?: ArtifactContractReadArgs): Promise<ArtifactContractReadResult>;
+export declare function blueprintArtifactReportAuthoringContext(args: ArtifactReportAuthoringContextArgs): Promise<AddTestsReportAuthoringContextResult>;
+export declare function blueprintArtifactReportValidateModel(args: ArtifactReportValidateModelArgs): Promise<AddTestsReportValidateModelResult>;
 export declare function blueprintArtifactReportWrite(args: ArtifactReportWriteArgs): Promise<ArtifactReportWriteResult>;
 export declare function blueprintCodebaseArtifactWrite(args: ArtifactCodebaseWriteArgs): Promise<ArtifactCodebaseWriteResult>;
 export declare const artifactToolDefinitions: ({
@@ -583,6 +731,23 @@ export declare const artifactToolDefinitions: ({
         artifactPaths: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ArtifactSummaryDigestResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        reportName: z.ZodString;
+    };
+    handler: (args: Record<string, unknown>) => Promise<AddTestsReportAuthoringContextResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        reportName: z.ZodString;
+        model: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<AddTestsReportValidateModelResult>;
 } | {
     name: string;
     description: string;

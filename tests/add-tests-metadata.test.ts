@@ -48,6 +48,8 @@ test("add-tests manifest references visibility, validation/report tools, bounded
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",
     "blueprint_artifact_validate",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
     "blueprint_state_load",
     "blueprint_state_update"
@@ -102,7 +104,7 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /report\.add-tests/);
   assert.match(skillFile, /generated\/passing\/failing\/blocked counts/i);
   assert.match(skillFile, /reported report status aligned with the tool-owned `written` and `status` result/i);
-  assert.match(skillFile, /repair the draft against the canonical contract and retry once/i);
+  assert.match(skillFile, /repair the model against the canonical contract and retry once/i);
   assert.match(skillFile, /add-tests-<phase>/);
   assert.match(skillFile, /\/blu-code-review <phase>/);
 });
@@ -131,6 +133,8 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_artifact_validate",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
     "blueprint_state_load",
     "blueprint_state_update"
@@ -154,7 +158,7 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
   assert.match(runtimeContract, /Do not substitute browser, web-search-only, shell-only, or generic agents/i);
   assert.match(runtimeContract, /No-Subagent Fallback/);
   assert.match(runtimeContract, /one approved test file or scenario group at a time/i);
-  assert.match(runtimeContract, /repair the report draft against\s+the `report\.add-tests` authoring template and retry once/i);
+  assert.match(runtimeContract, /repair the report model against\s+the `report\.add-tests` task schema and retry once/i);
 });
 
 test("add-tests doc and runtime reference keep bounded visibility explicit", async () => {

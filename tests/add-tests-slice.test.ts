@@ -27,9 +27,10 @@ test("add-tests docs and runtime summaries mark the test-generation slice as shi
   assert.match(commandDoc, /blueprint_phase_validation_render/);
   assert.match(commandDoc, /readyToWrite: true/i);
   assert.match(commandDoc, /artifactId: "report\.add-tests"/);
-  assert.match(commandDoc, /Normalize the durable report to the returned `authoringTemplate`/i);
+  assert.match(commandDoc, /author the durable report as structured `report\.add-tests` JSON/i);
   assert.match(commandDoc, /classification table and approved test plan/i);
   assert.match(commandDoc, /blueprint_phase_validation_write/);
+  assert.match(commandDoc, /blueprint_artifact_report_validate_model/);
   assert.match(commandDoc, /blueprint_artifact_report_write/);
   assert.match(commandDoc, /add-tests-<phase>\.md/);
   assert.match(
@@ -61,6 +62,8 @@ test("add-tests is exposed as an implemented validation follow-up command", asyn
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",
     "blueprint_artifact_validate",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
     "blueprint_state_load",
     "blueprint_state_update"

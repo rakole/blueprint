@@ -2634,6 +2634,132 @@ function renderAddTestsTemplate(context?: ArtifactTemplateContext): string {
 - /blu-progress`;
 }
 
+const ADD_TESTS_REPORT_MODEL_SCHEMA_FILE = "report.add-tests.model.schema.json";
+const ADD_TESTS_REPORT_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/report.add-tests.model.schema.json";
+
+const ADD_TESTS_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.report.add-tests.model",
+  schemaVersion: "1.0.0",
+  schemaPath: ADD_TESTS_REPORT_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(ADD_TESTS_REPORT_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, reportName, reportPath, path, content, or rendered headings; MCP owns report identity and Markdown rendering.",
+    "Author against the runtime-narrowed taskSchema for the exact add-tests report name so completed summaries, validation or UAT evidence paths, linked plans, pending plans, dependency rows, and nextSafeAction stay deterministic.",
+    "COMPLETED add-tests reports require every targeted command to pass, no pending plan rows, exact none sentinel rows for bugs or blockers, manual or deferred work, remaining gaps, and follow-up fixes, plus a written or reused verification update.",
+    "PARTIAL add-tests reports require at least one non-passing targeted command or blocker count, at least one concrete gap route, and a non-ready next action.",
+    "BLOCKED add-tests reports require a blocked or not-run targeted command, at least one blocked gap, a manual or deferred blocker row, and a blocked verification write status.",
+    "Use concrete saved-summary, verification or UAT, test-plan, command, and changed-test evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical report name, and report path come from the add-tests reportName plus Blueprint phase inventory.",
+    "Completed summary paths, linked plan paths, summary statuses, targeted verification rows, pending plans, and dependency-plan rows come from the live phase summary and plan inventory.",
+    "At least one validation or UAT artifact is required upstream context; missing validation evidence blocks authoring before the model can invent coverage.",
+    "Allowed nextSafeAction values come from the current phase, implemented command catalog, and whether code-review evidence already exists."
+  ],
+  renderedHeadings: [
+    "Coverage Goal",
+    "Evidence Used",
+    "Classification And Test Plan",
+    "Tests Added Or Updated",
+    "Remaining Gaps",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    coverageGoal: [
+      "Cover the completed phase behavior described by the saved summary and verification evidence."
+    ],
+    evidenceUsed: [
+      ".blueprint/phases/03-example/03-01-SUMMARY.md",
+      ".blueprint/phases/03-example/03-VERIFICATION.md"
+    ],
+    summaryEvidence: {
+      ".blueprint/phases/03-example/03-01-SUMMARY.md": {
+        planId: "01",
+        linkedPlanPath: ".blueprint/phases/03-example/03-01-PLAN.md",
+        summaryStatus: "COMPLETED",
+        targetedVerification: ["npm test -- tests/example.test.ts exits 0"],
+        coverageNote: "The generated test covers the saved acceptance criterion."
+      }
+    },
+    pendingPlans: [],
+    dependencyPlans: [],
+    classification: [
+      {
+        target: "tests/example.test.ts",
+        category: "Unit / TDD",
+        reason: "Existing nearby tests cover this deterministic behavior."
+      }
+    ],
+    testPlan: [
+      {
+        target: "tests/example.test.ts",
+        scenario: "Verify the completed behavior from the saved summary.",
+        expectedAssertion: "The focused command exits successfully.",
+        command: "npm test -- tests/example.test.ts"
+      }
+    ],
+    testsAddedOrUpdated: [
+      {
+        path: "tests/example.test.ts",
+        summary: "Added focused coverage for the completed summary behavior."
+      }
+    ],
+    targetedCommands: [
+      {
+        command: "npm test -- tests/example.test.ts",
+        result: "pass",
+        evidence: "The focused command exited 0."
+      }
+    ],
+    resultCounts: {
+      generated: 1,
+      passing: 1,
+      failing: 0,
+      blocked: 0
+    },
+    bugsOrBlockers: [
+      {
+        item: "none",
+        evidence: "none",
+        status: "NONE"
+      }
+    ],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    remainingGaps: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUpFixes: ["none"],
+    verificationWrite: {
+      status: "written",
+      evidence: ".blueprint/phases/03-example/03-VERIFICATION.md updated through MCP."
+    },
+    nextSafeAction: "/blu-code-review 3"
+  },
+  exampleLeakageSignals: [
+    "Cover the completed phase behavior described by the saved summary and verification evidence.",
+    "The generated test covers the saved acceptance criterion.",
+    "Existing nearby tests cover this deterministic behavior.",
+    "Verify the completed behavior from the saved summary.",
+    "The focused command exited 0."
+  ]
+};
+
 function renderAuditFixTemplate(context?: ArtifactTemplateContext): string {
   return `# Audit Fix Report
 
@@ -4210,13 +4336,22 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Add Tests Report",
     canonicalFilePattern: ".blueprint/reports/add-tests-<phase>.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Coverage Goal", "Evidence Used", "Tests Added Or Updated", "Remaining Gaps", "Next Safe Action"],
+    requiredHeadings: [
+      "Coverage Goal",
+      "Evidence Used",
+      "Classification And Test Plan",
+      "Tests Added Or Updated",
+      "Remaining Gaps",
+      "Next Safe Action"
+    ],
     lockedMarkers: [],
     placeholderSignals: [],
     notes: [
       "Add-tests reports stay phase-scoped even though they live under reports/.",
+      "Add-tests reports are model-authored and rendered by blueprint_artifact_report_write; Markdown content fallback is not supported for this report family.",
       "Authoring guidance expects the approved classification, test plan, targeted command result, generated/passing/failing/blocked counts, bugs or blockers, verification write status, and report write status to stay visible under the canonical headings."
     ],
+    modelContract: ADD_TESTS_REPORT_MODEL_CONTRACT,
     renderScaffoldTemplate: renderAddTestsTemplate,
     renderAuthoringTemplate: renderAddTestsTemplate
   },

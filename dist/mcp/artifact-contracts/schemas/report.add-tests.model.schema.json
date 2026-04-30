@@ -1,0 +1,915 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.report.add-tests.model",
+  "title": "Blueprint Add Tests Report Model",
+  "description": "Model-authored payload for report.add-tests. Runtime-owned phase identity, report path, completed summary inventory, validation/UAT prerequisite inventory, linked plan provenance, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "readiness",
+    "completionState",
+    "coverageGoal",
+    "evidenceUsed",
+    "summaryEvidence",
+    "pendingPlans",
+    "dependencyPlans",
+    "classification",
+    "testPlan",
+    "testsAddedOrUpdated",
+    "targetedCommands",
+    "resultCounts",
+    "bugsOrBlockers",
+    "manualOrDeferredWork",
+    "remainingGaps",
+    "followUpFixes",
+    "verificationWrite",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/status"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "completionState": {
+      "$ref": "#/$defs/completionState"
+    },
+    "coverageGoal": {
+      "type": "array",
+      "description": "Concrete coverage goals rendered under Coverage Goal.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "evidenceUsed": {
+      "type": "array",
+      "description": "Exact upstream evidence paths used by this add-tests run. The task schema narrows this to every current completed summary plus available verification/UAT prerequisite evidence.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/blueprintArtifactPath"
+      }
+    },
+    "summaryEvidence": {
+      "type": "object",
+      "description": "Evidence decisions keyed by exact completed summary paths. The task schema requires every current completed summary key.",
+      "additionalProperties": {
+        "$ref": "#/$defs/summaryEvidenceEntry"
+      }
+    },
+    "pendingPlans": {
+      "type": "array",
+      "description": "Current pending plan inventory. The task schema narrows this to the exact empty shape when there is no pending plan debt.",
+      "items": {
+        "$ref": "#/$defs/pendingPlanRow"
+      }
+    },
+    "dependencyPlans": {
+      "type": "array",
+      "description": "Dependency plan rows imported from completed summary evidence. The task schema narrows this to exact dependency ids and paths, or the exact empty shape when none exist.",
+      "items": {
+        "$ref": "#/$defs/dependencyPlanRow"
+      }
+    },
+    "classification": {
+      "type": "array",
+      "description": "Approved file-by-file classification rows rendered in the Classification And Test Plan table.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/classificationRow"
+      }
+    },
+    "testPlan": {
+      "type": "array",
+      "description": "Approved test-plan rows rendered in the Classification And Test Plan section.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/testPlanRow"
+      }
+    },
+    "testsAddedOrUpdated": {
+      "type": "array",
+      "description": "Tests or helpers changed by the add-tests run. BLOCKED reports with no repo mutation must use the exact no-change sentinel row.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/testChangeRow"
+      }
+    },
+    "targetedCommands": {
+      "type": "array",
+      "description": "Targeted commands or checks run for generated tests.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/targetedCommandRow"
+      }
+    },
+    "resultCounts": {
+      "$ref": "#/$defs/resultCounts"
+    },
+    "bugsOrBlockers": {
+      "type": "array",
+      "description": "Implementation bugs, test-authoring blockers, infrastructure blockers, or exact none sentinel.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bugOrBlockerRow"
+      }
+    },
+    "manualOrDeferredWork": {
+      "type": "array",
+      "description": "Manual or deferred coverage rows. COMPLETED reports must use the exact NONE sentinel row.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/manualOrDeferredRow"
+      }
+    },
+    "remainingGaps": {
+      "type": "array",
+      "description": "Remaining gap rows. COMPLETED reports must use the exact NONE sentinel row.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/gapRow"
+      }
+    },
+    "followUpFixes": {
+      "type": "array",
+      "description": "Concrete follow-up fixes, or the exact single none sentinel when no repo fix is available.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "verificationWrite": {
+      "$ref": "#/$defs/verificationWrite"
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/blueprintCommandAction",
+      "description": "One implemented Blueprint command token. The task schema narrows this to the current phase and status."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "ready-for-routing"
+          },
+          "completionState": {
+            "const": "complete"
+          },
+          "pendingPlans": {
+            "maxItems": 0
+          },
+          "targetedCommands": {
+            "items": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "const": "pass"
+                }
+              }
+            }
+          },
+          "resultCounts": {
+            "required": [
+              "generated",
+              "passing",
+              "failing",
+              "blocked"
+            ],
+            "properties": {
+              "generated": {
+                "minimum": 1
+              },
+              "passing": {
+                "minimum": 1
+              },
+              "failing": {
+                "const": 0
+              },
+              "blocked": {
+                "const": 0
+              }
+            }
+          },
+          "bugsOrBlockers": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noBugOrBlockerRow"
+            }
+          },
+          "manualOrDeferredWork": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          },
+          "remainingGaps": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noGapRow"
+            }
+          },
+          "followUpFixes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "none"
+            }
+          },
+          "verificationWrite": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "written",
+                  "reused"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "not-ready-for-routing"
+          },
+          "completionState": {
+            "const": "pending"
+          },
+          "targetedCommands": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "enum": [
+                    "fail",
+                    "blocked",
+                    "not-run"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "resultCounts": {
+            "anyOf": [
+              {
+                "required": [
+                  "failing"
+                ],
+                "properties": {
+                  "failing": {
+                    "minimum": 1
+                  }
+                }
+              },
+              {
+                "required": [
+                  "blocked"
+                ],
+                "properties": {
+                  "blocked": {
+                    "minimum": 1
+                  }
+                }
+              }
+            ]
+          },
+          "remainingGaps": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "OPEN",
+                    "BLOCKED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUpFixes": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          },
+          "verificationWrite": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "written",
+                  "reused",
+                  "invalid",
+                  "blocked"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "blocked"
+          },
+          "completionState": {
+            "const": "blocked"
+          },
+          "targetedCommands": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "enum": [
+                    "blocked",
+                    "not-run"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "resultCounts": {
+            "required": [
+              "blocked"
+            ],
+            "properties": {
+              "blocked": {
+                "minimum": 1
+              }
+            }
+          },
+          "remainingGaps": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "manualOrDeferredWork": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "verificationWrite": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "blocked"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "ready-for-routing",
+        "not-ready-for-routing",
+        "blocked"
+      ]
+    },
+    "completionState": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "pending",
+        "blocked"
+      ]
+    },
+    "commandResult": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "blocked",
+        "not-run"
+      ]
+    },
+    "classificationCategory": {
+      "type": "string",
+      "enum": [
+        "Unit / TDD",
+        "Integration / API",
+        "E2E / UI",
+        "Skip"
+      ]
+    },
+    "manualStatus": {
+      "type": "string",
+      "enum": [
+        "MANUAL",
+        "DEFERRED",
+        "NONE"
+      ]
+    },
+    "gapStatus": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "BLOCKED",
+        "NONE"
+      ]
+    },
+    "bugStatus": {
+      "type": "string",
+      "enum": [
+        "BUG",
+        "BLOCKER",
+        "NONE"
+      ]
+    },
+    "verificationWriteStatus": {
+      "type": "string",
+      "enum": [
+        "written",
+        "reused",
+        "invalid",
+        "blocked"
+      ]
+    },
+    "bulletString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$"
+    },
+    "tableCellString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$"
+    },
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!(?:/|.*(?:^|/)\\.\\.(?:/|$)))[A-Za-z0-9._@+\\-/]+$"
+    },
+    "blueprintArtifactPath": {
+      "type": "string",
+      "pattern": "^\\.blueprint/(?:phases|reports)/[A-Za-z0-9._@+\\-/]+\\.md$"
+    },
+    "phasePlanPath": {
+      "type": "string",
+      "pattern": "^\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+-PLAN\\.md$"
+    },
+    "phaseSummaryPath": {
+      "type": "string",
+      "pattern": "^\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+-SUMMARY\\.md$"
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*)(?:\\s+[A-Za-z0-9._:/=@+-]+)*$"
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "summaryEvidenceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "linkedPlanPath",
+        "summaryStatus",
+        "targetedVerification",
+        "coverageNote"
+      ],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "pattern": "^\\d{2,}$"
+        },
+        "linkedPlanPath": {
+          "$ref": "#/$defs/phasePlanPath"
+        },
+        "summaryStatus": {
+          "const": "COMPLETED"
+        },
+        "targetedVerification": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/bulletString"
+          }
+        },
+        "coverageNote": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "pendingPlanRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "path",
+        "reason"
+      ],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "pattern": "^\\d{2,}$"
+        },
+        "path": {
+          "$ref": "#/$defs/phasePlanPath"
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "dependencyPlanRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "path",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "pattern": "^\\d{2,}$"
+        },
+        "path": {
+          "$ref": "#/$defs/phasePlanPath"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "satisfied"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "classificationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "category",
+        "reason"
+      ],
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "category": {
+          "$ref": "#/$defs/classificationCategory"
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "testPlanRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "scenario",
+        "expectedAssertion",
+        "command"
+      ],
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "scenario": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "expectedAssertion": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "command": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "testChangeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "summary"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/repoPath"
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "noTestChangeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "summary"
+      ],
+      "properties": {
+        "path": {
+          "const": "none"
+        },
+        "summary": {
+          "const": "none"
+        }
+      }
+    },
+    "targetedCommandRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "result",
+        "evidence"
+      ],
+      "properties": {
+        "command": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "result": {
+          "$ref": "#/$defs/commandResult"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "resultCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generated",
+        "passing",
+        "failing",
+        "blocked"
+      ],
+      "properties": {
+        "generated": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "passing": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "failing": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "blocked": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "bugOrBlockerRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "evidence",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/bugStatus"
+        }
+      }
+    },
+    "noBugOrBlockerRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "evidence",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "manualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "followUp": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/manualStatus"
+        }
+      }
+    },
+    "noManualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "reason": {
+          "const": "none"
+        },
+        "followUp": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "gapRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "repair": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/gapStatus"
+        }
+      }
+    },
+    "noGapRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "repair": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "verificationWrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/verificationWriteStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    }
+  }
+}
