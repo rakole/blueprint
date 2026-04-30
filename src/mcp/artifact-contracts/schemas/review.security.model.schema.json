@@ -1,0 +1,938 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.review.security.model",
+  "title": "Blueprint Security Review Model",
+  "description": "Model-authored payload for review.security. Runtime-owned phase identity, report path, live plan and summary inventory, declared threat provenance, allowed next actions, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "readiness",
+    "completionState",
+    "securitySummary",
+    "evidenceCoverage",
+    "threatRegister",
+    "acceptedRisks",
+    "findings",
+    "manualOrDeferredWork",
+    "gapRoutes",
+    "followUps",
+    "auditTrail",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/status"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "completionState": {
+      "$ref": "#/$defs/completionState"
+    },
+    "securitySummary": {
+      "type": "array",
+      "description": "Concrete security outcome bullets. Do not include Markdown headings or runtime-owned path metadata.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "evidenceCoverage": {
+      "type": "object",
+      "description": "Coverage decisions keyed by exact live evidence artifact paths returned by the security authoring context. The task schema narrows this to exhaustive exact keys.",
+      "propertyNames": {
+        "$ref": "#/$defs/objectKeyString"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/evidenceCoverageEntry"
+      }
+    },
+    "threatRegister": {
+      "type": "array",
+      "description": "One model-authored status row per declared saved-plan threat. MCP renders source plan, category, component, disposition, and mitigation from live plan provenance. When no saved threat model exists, use the exact no-threat sentinel row.",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/threatRegisterRow"
+          },
+          {
+            "$ref": "#/$defs/noThreatRow"
+          }
+        ]
+      }
+    },
+    "acceptedRisks": {
+      "type": "array",
+      "description": "Explicit accepted-risk rows, or the exact no-accepted-risk sentinel row.",
+      "minItems": 1,
+      "allOf": [
+        {
+          "if": {
+            "contains": {
+              "$ref": "#/$defs/noAcceptedRiskRow"
+            }
+          },
+          "then": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noAcceptedRiskRow"
+            }
+          }
+        }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/acceptedRiskRow"
+          },
+          {
+            "$ref": "#/$defs/noAcceptedRiskRow"
+          }
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Security findings, suspicious evidence, unregistered flags, or hardening follow-ups. Use the exact no-finding sentinel row only when there are no material findings.",
+      "minItems": 1,
+      "allOf": [
+        {
+          "if": {
+            "contains": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          },
+          "then": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          }
+        }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/findingRow"
+          },
+          {
+            "$ref": "#/$defs/noFindingRow"
+          }
+        ]
+      }
+    },
+    "manualOrDeferredWork": {
+      "type": "array",
+      "description": "Manual verification or deferred security work rows, or the exact no-manual-work sentinel row.",
+      "minItems": 1,
+      "allOf": [
+        {
+          "if": {
+            "contains": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          },
+          "then": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          }
+        }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/manualOrDeferredRow"
+          },
+          {
+            "$ref": "#/$defs/noManualOrDeferredRow"
+          }
+        ]
+      }
+    },
+    "gapRoutes": {
+      "type": "array",
+      "description": "Open or blocked security gap routing rows, or the exact no-gap-route sentinel row.",
+      "minItems": 1,
+      "allOf": [
+        {
+          "if": {
+            "contains": {
+              "$ref": "#/$defs/noGapRouteRow"
+            }
+          },
+          "then": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noGapRouteRow"
+            }
+          }
+        }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/gapRouteRow"
+          },
+          {
+            "$ref": "#/$defs/noGapRouteRow"
+          }
+        ]
+      }
+    },
+    "followUps": {
+      "type": "array",
+      "description": "Concrete hardening or verification follow-up bullets, or the exact single none sentinel when the security gate is complete.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "auditTrail": {
+      "$ref": "#/$defs/auditTrail"
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/nextSafeAction"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "ready-for-routing"
+          },
+          "completionState": {
+            "const": "complete"
+          },
+          "threatRegister": {
+            "items": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "closed",
+                    "accepted"
+                  ]
+                }
+              }
+            },
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noThreatRow"
+              }
+            }
+          },
+          "acceptedRisks": {
+            "minItems": 1
+          },
+          "findings": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          },
+          "manualOrDeferredWork": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          },
+          "gapRoutes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noGapRouteRow"
+            }
+          },
+          "followUps": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "none"
+            }
+          },
+          "auditTrail": {
+            "properties": {
+              "pendingOpenThreatStatus": {
+                "enum": [
+                  "none",
+                  "accepted"
+                ]
+              },
+              "verifyOrAcceptDecision": {
+                "enum": [
+                  "none",
+                  "verified",
+                  "accepted"
+                ]
+              }
+            }
+          },
+          "nextSafeAction": {
+            "not": {
+              "const": "Blocked: pending-open-threat"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "needs-follow-up"
+          },
+          "completionState": {
+            "const": "partial"
+          },
+          "threatRegister": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "const": "open"
+                  }
+                }
+              }
+            }
+          },
+          "findings": {
+            "contains": {
+              "$ref": "#/$defs/findingRow"
+            },
+            "minContains": 1
+          },
+          "manualOrDeferredWork": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "OPEN"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUps": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          },
+          "auditTrail": {
+            "properties": {
+              "pendingOpenThreatStatus": {
+                "enum": [
+                  "none",
+                  "accepted"
+                ]
+              }
+            }
+          },
+          "nextSafeAction": {
+            "not": {
+              "const": "Blocked: pending-open-threat"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "blocked"
+          },
+          "completionState": {
+            "const": "blocked"
+          },
+          "threatRegister": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "open"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "findings": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "kind",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "open-threat"
+                },
+                "status": {
+                  "const": "open"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "manualOrDeferredWork": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "MANUAL"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUps": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          },
+          "auditTrail": {
+            "properties": {
+              "pendingOpenThreatStatus": {
+                "const": "still-open"
+              },
+              "verifyOrAcceptDecision": {
+                "const": "pending"
+              }
+            }
+          },
+          "nextSafeAction": {
+            "const": "Blocked: pending-open-threat"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "ready-for-routing",
+        "needs-follow-up",
+        "blocked"
+      ]
+    },
+    "completionState": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "partial",
+        "blocked"
+      ]
+    },
+    "singleLine": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "tableCell": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^|\\r\\n]+$"
+    },
+    "objectKeyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:\\.blueprint/[A-Za-z0-9._/-]+|[A-Za-z0-9._/-]+)$"
+    },
+    "bulletString": {
+      "$ref": "#/$defs/singleLine"
+    },
+    "threatStatus": {
+      "type": "string",
+      "enum": [
+        "closed",
+        "accepted",
+        "open",
+        "none"
+      ]
+    },
+    "threatRegisterRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threatId",
+        "status",
+        "evidence",
+        "verifierNote"
+      ],
+      "properties": {
+        "threatId": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "status": {
+          "enum": [
+            "closed",
+            "accepted",
+            "open"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "verifierNote": {
+          "$ref": "#/$defs/tableCell"
+        }
+      }
+    },
+    "noThreatRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threatId",
+        "status",
+        "evidence",
+        "verifierNote"
+      ],
+      "properties": {
+        "threatId": {
+          "const": "none"
+        },
+        "status": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "verifierNote": {
+          "const": "none"
+        }
+      }
+    },
+    "evidenceCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "used",
+        "deferred",
+        "unavailable"
+      ]
+    },
+    "evidenceCoverageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "rationale"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/evidenceCoverageStatus"
+        },
+        "rationale": {
+          "$ref": "#/$defs/bulletString"
+        }
+      }
+    },
+    "acceptedRiskRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threatId",
+        "rationale",
+        "acceptedBy",
+        "acceptedAt",
+        "evidence"
+      ],
+      "properties": {
+        "threatId": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "rationale": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "acceptedBy": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "acceptedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCell"
+        }
+      }
+    },
+    "noAcceptedRiskRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threatId",
+        "rationale",
+        "acceptedBy",
+        "acceptedAt",
+        "evidence"
+      ],
+      "properties": {
+        "threatId": {
+          "const": "none"
+        },
+        "rationale": {
+          "const": "none"
+        },
+        "acceptedBy": {
+          "const": "none"
+        },
+        "acceptedAt": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        }
+      }
+    },
+    "findingRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "severity",
+        "threatId",
+        "evidence",
+        "recommendation",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "open-threat",
+            "missing-control",
+            "unregistered-flag",
+            "suspicious-artifact",
+            "hardening-follow-up"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        },
+        "threatId": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "recommendation": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "status": {
+          "enum": [
+            "open",
+            "follow-up",
+            "accepted",
+            "closed"
+          ]
+        }
+      }
+    },
+    "noFindingRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "severity",
+        "threatId",
+        "evidence",
+        "recommendation",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "none"
+        },
+        "severity": {
+          "const": "none"
+        },
+        "threatId": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "recommendation": {
+          "const": "none"
+        },
+        "status": {
+          "const": "none"
+        }
+      }
+    },
+    "manualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "followUp": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "status": {
+          "enum": [
+            "MANUAL",
+            "DEFERRED"
+          ]
+        }
+      }
+    },
+    "noManualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "reason": {
+          "const": "none"
+        },
+        "followUp": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "gapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "repair": {
+          "$ref": "#/$defs/tableCell"
+        },
+        "status": {
+          "enum": [
+            "OPEN",
+            "BLOCKED"
+          ]
+        }
+      }
+    },
+    "noGapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "repair": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "auditTrail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auditDate",
+        "executionMode",
+        "overwriteGate",
+        "verifyOrAcceptDecision",
+        "pendingOpenThreatStatus",
+        "verifierNote"
+      ],
+      "properties": {
+        "auditDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "executionMode": {
+          "enum": [
+            "inline",
+            "security-auditor-assisted"
+          ]
+        },
+        "overwriteGate": {
+          "enum": [
+            "none",
+            "confirmed",
+            "reused",
+            "not-needed"
+          ]
+        },
+        "verifyOrAcceptDecision": {
+          "enum": [
+            "none",
+            "verified",
+            "accepted",
+            "pending"
+          ]
+        },
+        "pendingOpenThreatStatus": {
+          "enum": [
+            "none",
+            "verifying",
+            "accepted",
+            "still-open"
+          ]
+        },
+        "verifierNote": {
+          "$ref": "#/$defs/bulletString"
+        }
+      }
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "pattern": "^/blu-[a-z0-9-]+(?:\\s+[A-Za-z0-9_.:-]+)?$"
+    },
+    "nextSafeAction": {
+      "type": "string",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/blueprintCommandAction"
+        },
+        {
+          "const": "Blocked: pending-open-threat"
+        }
+      ]
+    }
+  }
+}

@@ -34,10 +34,15 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_index")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_execution_targets")));
   assert.match(
     commandFile,
     new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
   );
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_authoring_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_validate_model")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, /XX-SECURITY\.md/);
   assert.match(commandFile, /phase_plan_index/i);
@@ -92,6 +97,11 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /ask_user/);
   assert.match(skillFile, /blueprint_phase_plan_index/);
   assert.match(skillFile, /blueprint_phase_plan_read/);
+  assert.match(skillFile, /blueprint_phase_summary_index/);
+  assert.match(skillFile, /blueprint_phase_summary_read/);
+  assert.match(skillFile, /blueprint_phase_execution_targets/);
+  assert.match(skillFile, /blueprint_review_authoring_context/);
+  assert.match(skillFile, /blueprint_review_validate_model/);
   assert.match(skillFile, /blueprint_review_record/);
   assert.match(skillFile, /XX-SECURITY\.md/);
   assert.match(skillFile, /blueprint_phase_plan_index/);
@@ -107,7 +117,7 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /pending-open-threat/i);
   assert.match(skillFile, /block\s+advancement when any threat remains open/i);
   assert.match(skillFile, /final threat-count consistency pass/i);
-  assert.match(skillFile, /repair against the `review\.security` authoring template\s+and retry once/i);
+  assert.match(skillFile, /repair against the `review\.security` model contract, narrowed task\s+schema, and diagnostics, then retry once/i);
   assert.match(skillFile, /do not emit next-step\s+routing while threats remain open/i);
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-progress/);
@@ -182,7 +192,12 @@ test("secure-phase local runtime contract locks retained threat verification beh
     "mcp_blueprint_blueprint_artifact_list",
     "mcp_blueprint_blueprint_phase_plan_index",
     "mcp_blueprint_blueprint_phase_plan_read",
+    "mcp_blueprint_blueprint_phase_summary_index",
+    "mcp_blueprint_blueprint_phase_summary_read",
+    "mcp_blueprint_blueprint_phase_execution_targets",
     "mcp_blueprint_blueprint_artifact_contract_read",
+    "mcp_blueprint_blueprint_review_authoring_context",
+    "mcp_blueprint_blueprint_review_validate_model",
     "mcp_blueprint_blueprint_review_record"
   ]) {
     assert.match(runtimeContract, new RegExp(tool));
@@ -202,6 +217,6 @@ test("secure-phase local runtime contract locks retained threat verification beh
   assert.match(runtimeContract, /## No-Subagent Fallback/);
   assert.match(runtimeContract, /Verify one declared threat at a time/i);
   assert.match(runtimeContract, /Run a final threat-count consistency pass before persistence/i);
-  assert.match(runtimeContract, /repair once against `review\.security` headings/i);
+  assert.match(runtimeContract, /repair once against `review\.security`, the narrowed task schema, and\s+returned diagnostics/i);
   assert.match(runtimeContract, /Persistence happens only through `blueprint_review_record`/i);
 });

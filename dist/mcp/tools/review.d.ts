@@ -146,6 +146,91 @@ type CodeReviewStructuredModel = {
     followUps: string[];
     nextSafeAction: string;
 };
+type SecurityReviewStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type SecurityReviewReadiness = "ready-for-routing" | "needs-follow-up" | "blocked";
+type SecurityReviewCompletionState = "complete" | "partial" | "blocked";
+type SecurityThreatStatus = "closed" | "accepted" | "open" | "none";
+type SecurityEvidenceCoverageStatus = "used" | "deferred" | "unavailable";
+type SecurityManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type SecurityGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type SecurityDeclaredThreat = {
+    threatId: string;
+    sourcePlan: string;
+    category: string;
+    component: string;
+    disposition: string;
+    mitigation: string;
+};
+type SecurityThreatRegisterRow = {
+    threatId: string;
+    status: SecurityThreatStatus;
+    evidence: string;
+    verifierNote: string;
+};
+type SecurityStructuredModel = {
+    status: SecurityReviewStatus;
+    readiness: SecurityReviewReadiness;
+    completionState: SecurityReviewCompletionState;
+    securitySummary: string[];
+    evidenceCoverage: Record<string, {
+        status: SecurityEvidenceCoverageStatus;
+        rationale: string;
+    }>;
+    threatRegister: SecurityThreatRegisterRow[];
+    acceptedRisks: Array<{
+        threatId: string;
+        rationale: string;
+        acceptedBy: string;
+        acceptedAt: string;
+        evidence: string;
+    }>;
+    findings: Array<{
+        kind: "open-threat" | "missing-control" | "unregistered-flag" | "suspicious-artifact" | "hardening-follow-up" | "none";
+        severity: ReviewFindingSeverity | "none";
+        threatId: string;
+        evidence: string;
+        recommendation: string;
+        status: "open" | "follow-up" | "accepted" | "closed" | "none";
+    }>;
+    manualOrDeferredWork: Array<{
+        item: string;
+        reason: string;
+        followUp: string;
+        status: SecurityManualStatus;
+    }>;
+    gapRoutes: Array<{
+        gap: string;
+        evidence: string;
+        repair: string;
+        status: SecurityGapStatus;
+    }>;
+    followUps: string[];
+    auditTrail: {
+        auditDate: string;
+        executionMode: "inline" | "security-auditor-assisted";
+        overwriteGate: "none" | "confirmed" | "reused" | "not-needed";
+        verifyOrAcceptDecision: "none" | "verified" | "accepted" | "pending";
+        pendingOpenThreatStatus: "none" | "verifying" | "accepted" | "still-open";
+        verifierNote: string;
+    };
+    nextSafeAction: string;
+};
+type SecurityAuthoringContext = {
+    phase: ReviewScopePhase;
+    path: string;
+    completedSummaries: string[];
+    pendingPlans: string[];
+    declaredThreats: SecurityDeclaredThreat[];
+    knownEvidenceArtifacts: string[];
+    existingSecurity: string | null;
+    allowedNextActions: string[];
+    completedNextSafeAction: string;
+    partialNextSafeAction: string;
+    blockedNextSafeAction: string;
+    schemaPath: string;
+    baseSchema: Record<string, unknown>;
+    taskSchema: Record<string, unknown>;
+};
 type ReviewDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
 type ReviewModelDiagnostic = {
     source: ReviewDiagnosticSource;
@@ -158,6 +243,7 @@ type ReviewModelDiagnostic = {
 type ReviewValidateModelArgs = {
     cwd?: string;
     phase?: NumericInput;
+    artifact?: "code-review" | "security";
     files?: string[];
     depth?: ReviewDepth;
     model: unknown;
@@ -176,11 +262,34 @@ type ReviewValidateModelResult = {
         bySource: Record<ReviewDiagnosticSource, number>;
         byCode: Record<string, number>;
     };
-    normalizedModel: CodeReviewStructuredModel | null;
+    normalizedModel: CodeReviewStructuredModel | SecurityStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
 };
+type ReviewAuthoringContextArgs = {
+    cwd?: string;
+    phase?: NumericInput;
+    artifact: "code-review" | "security";
+    files?: string[];
+    depth?: ReviewDepth;
+};
+type ReviewAuthoringContextResult = {
+    status: "ready" | "invalid";
+    artifact: "code-review" | "security";
+    phase: ReviewScopePhase | null;
+    files: string[];
+    reviewMode: ReviewScopeResult["reviewMode"] | null;
+    schemaPath: string | null;
+    baseSchema: Record<string, unknown> | null;
+    taskSchema: Record<string, unknown> | null;
+    modelOnly: boolean;
+    authoringContext: CodeReviewAuthoringContext | SecurityAuthoringContext | null;
+    prerequisiteBlockers: string[];
+    reason: string | null;
+    warnings: string[];
+};
 export declare function blueprintReviewScope(args: ReviewScopeArgs): Promise<ReviewScopeResult>;
+export declare function blueprintReviewAuthoringContext(args: ReviewAuthoringContextArgs): Promise<ReviewAuthoringContextResult>;
 export declare function blueprintReviewValidateModel(args: ReviewValidateModelArgs): Promise<ReviewValidateModelResult>;
 export declare function blueprintReviewRecord(args: ReviewRecordArgs): Promise<ReviewRecordResult>;
 export declare function blueprintReviewLoadFindings(args: ReviewLoadFindingsArgs): Promise<ReviewLoadFindingsResult>;
@@ -220,6 +329,10 @@ export declare const reviewToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        artifact: z.ZodOptional<z.ZodEnum<{
+            "code-review": "code-review";
+            security: "security";
+        }>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
             standard: "standard";
@@ -229,6 +342,24 @@ export declare const reviewToolDefinitions: ({
         model: z.ZodUnknown;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewValidateModelResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        artifact: z.ZodEnum<{
+            "code-review": "code-review";
+            security: "security";
+        }>;
+        files: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        depth: z.ZodOptional<z.ZodEnum<{
+            standard: "standard";
+            quick: "quick";
+            deep: "deep";
+        }>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<ReviewAuthoringContextResult>;
 } | {
     name: string;
     description: string;

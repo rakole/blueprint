@@ -18,7 +18,7 @@
 ## Purpose
 
 
-`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native threat-verification command: it reads saved phase evidence, loads the canonical `review.security` contract before drafting, uses the phase plan index and plan reader to parse the saved phase threat model from plan evidence, builds a threat register, and keeps the audit bounded to the declared threats and mitigations instead of running a generic security scan.
+`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native threat-verification command: it reads saved phase evidence, loads the canonical review.security JSON model contract before drafting, uses the phase plan index, plan reader, summary index/read tools, execution-targets helper, and review authoring context to parse the saved threat model and pending-plan state, builds a threat register, validates the structured model, and keeps the audit bounded to the declared threats and mitigations instead of running a generic security scan.
 
 The detailed behavior lives in `skills/blueprint-review/references/secure-phase-runtime-contract.md`. The command manifest should stay thin enough to point at the `blueprint-review` skill and this local reference while still naming the required MCP tools and visible gates.
 
@@ -48,7 +48,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 ## Blueprint And Global State Reads
 
 
-- Phase resolution, artifact inventory, phase plan index/read, and the saved phase threat model plus related phase evidence through the documented phase and artifact MCP tools
+- Phase resolution, artifact inventory, phase plan index/read, summary index/read, execution-target state, the narrowed review authoring context, and the saved phase threat model plus related phase evidence through the documented phase and artifact MCP tools
 
 
 ## Blueprint And Global State Writes
@@ -64,18 +64,28 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
-- `blueprint_artifact_contract_read` -> `{artifactId, contract, template, requiredHeadings}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, blockers, conflicts, warnings}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract, template, requiredHeadings, modelContract}`
+- `blueprint_review_authoring_context` -> `{status, phase, artifact, authoringContext, reason, warnings}`
+- `blueprint_review_validate_model` -> `{status, diagnostics, diagnosticCounts, normalizedModel, renderPreview, taskSchema}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
 ## Security Artifact Contract
 
-- Read the canonical `review.security` contract through `blueprint_artifact_contract_read` before drafting or revising `XX-SECURITY.md`, and use the returned template and required headings as the baseline instead of a copied prompt-local variant.
+- Read the canonical `review.security` contract through `blueprint_artifact_contract_read` before drafting or revising security evidence, and use `contract.modelContract.schemaPath`, `contract.modelContract.jsonSchema`, and the secure-phase task schema as the model-authoring authority instead of a copied prompt-local Markdown template.
 - Use `blueprint_phase_plan_index` and `blueprint_phase_plan_read` to parse the saved phase threat model from the executed plan evidence before building the threat register.
+- Use `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, and `blueprint_phase_execution_targets` to require completed execution summaries, block pending plans before persistence, and cite current completed-summary evidence rather than stale self-citations.
+- Use `blueprint_review_authoring_context` before drafting so missing required upstream context blocks authoring early and optional empty threat context narrows to exact sentinel rows.
 - Keep the threat-model-bounded behavior explicit: use saved plan evidence only to define the declared threats and mitigations, then audit against that register instead of widening into a generic security scan.
 - Incorporate execution-summary `## Threat Flags` when present. Map them to declared threats when possible, and record unregistered flags separately instead of converting them into invented plan threats.
 - Keep one threat-register row per declared saved-plan threat with threat id, category, component, disposition, mitigation, status, and evidence or note.
-- Keep the returned template's threat register, accepted risks, and audit-trail structure explicit even when the final audit concludes there are no open threats.
-- Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`.
+- Author only the structured `review.security` model fields: `status`, `readiness`, `completionState`, `securitySummary`, `evidenceCoverage`, `threatRegister`, `acceptedRisks`, `findings`, `manualOrDeferredWork`, `gapRoutes`, `followUps`, `auditTrail`, and `nextSafeAction`. `auditTrail` is an object.
+- Use lowercase threat statuses such as `closed`, `accepted`, `open`, and `none`, plus the exact empty-state sentinel entries and blocked next-action sentinels required by the model schema.
+- Validate the authored JSON through `blueprint_review_validate_model` before persistence. Repair all schema, truth-table, sentinel-entry, and residual diagnostics together; do not switch to Markdown fallback.
+- Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and the same structured `model`; treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`. Markdown `content` is invalid for `review.security`.
+- Markdown content fallback is not supported for `/blu-secure-phase`; rejected JSON must be repaired against the schema instead of hand-written as `XX-SECURITY.md`.
 - Do not compute a next action until all threats are closed or explicitly accepted.
 
 
@@ -149,7 +159,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - Preserve generated security artifacts when the audit needs revision or external context is incomplete.
 - Fall back to explicit evidence gaps and the safest implemented next step instead of guessing missing mitigations.
 - Keep prompt-boundary or suspicious-content concerns explicit in the saved artifact instead of silently trusting compromised evidence.
-- If `blueprint_review_record` rejects the artifact or reports missing headings, repair once against the canonical `review.security` authoring template and retry through MCP. If the retry fails, stop with the MCP reason and do not write `XX-SECURITY.md` by hand.
+- If `blueprint_review_validate_model` or `blueprint_review_record` rejects the model, repair once against the canonical `review.security` schema, narrowed task schema, and returned diagnostics, then retry through MCP. If the retry fails, stop with the MCP reason and do not write `XX-SECURITY.md` by hand.
 
 
 ## Acceptance Criteria
@@ -161,6 +171,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
+- Validates the model-only `review.security` JSON before `blueprint_review_record` and never uses Markdown fallback.
 - Uses Gemini-native `ask_user` confirmation for overwrite and verify-versus-accept decision paths.
 - Leaves unrelated repo files untouched.
 - Distinguishes confirmed mitigations, open threats, accepted risks, suspicious artifact content, and explicit hardening follow-ups inside the saved security evidence.

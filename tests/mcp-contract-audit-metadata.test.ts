@@ -33,7 +33,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   );
   assert.match(
     mcpToolsDoc,
-    /`secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_artifact_contract_read`, and `blueprint_review_record`/i
+    /`secure-phase` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_execution_targets`, `blueprint_artifact_contract_read`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/i
   );
   assert.match(mcpToolsDoc, /secure-phase-runtime-contract\.md/i);
 });

@@ -622,6 +622,8 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Threat Register",
     "Accepted Risks",
     "Findings",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
     "Follow-Ups",
     "Security Audit Trail",
     "Next Safe Action"
@@ -659,14 +661,34 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$"
   );
   assert.match(JSON.stringify(reviewContract.modelContract?.jsonSchema), /examples|evidenceCoverage/);
-  assert.match(securityContract.authoringTemplate, /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/);
+  assert.match(securityContract.authoringTemplate, /\*\*Status:\*\* COMPLETED\|PARTIAL\|BLOCKED/);
+  assert.match(securityContract.authoringTemplate, /\*\*Readiness:\*\* ready-for-routing\|needs-follow-up\|blocked/);
+  assert.match(securityContract.authoringTemplate, /\*\*Completion State:\*\* complete\|partial\|blocked/);
   assert.match(securityContract.authoringTemplate, /## Threat Register/);
   assert.match(
     securityContract.authoringTemplate,
-    /\| Threat ID \| Category \| Component \| Disposition \| Mitigation \| Status \| Evidence \/ Note \|/
+    /\| Threat ID \| Source Plan \| Category \| Component \| Disposition \| Mitigation \| Status \| Evidence \| Verifier Note \|/
   );
   assert.match(securityContract.authoringTemplate, /## Accepted Risks/);
+  assert.match(securityContract.authoringTemplate, /## Manual \/ Deferred Work/);
+  assert.match(securityContract.authoringTemplate, /## Gap \/ Repair Routes/);
   assert.match(securityContract.authoringTemplate, /## Security Audit Trail/);
+  assert.equal(securityContract.modelContract?.schemaId, "blueprint.review.security.model");
+  assert.equal(securityContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    securityContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/review.security.model.schema.json"
+  );
+  assert.ok(securityContract.modelContract?.renderedHeadings.includes("Manual / Deferred Work"));
+  assert.ok(
+    securityContract.modelContract?.qualityRules.some((rule) =>
+      /COMPLETED security reviews require all declared threats closed or accepted/i.test(rule)
+    )
+  );
+  assert.deepEqual(
+    (securityContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "securitySummary"]
+  );
   assert.deepEqual(
     pauseContract.requiredHeadings,
     [
@@ -1408,7 +1430,7 @@ test("review and report contracts validate canonical sections while keeping extr
   );
   assert.match(
     securityContract.authoringTemplate,
-    /\*\*Posture:\*\* PASS\|FOLLOW_UP\|BLOCKED/
+    /\*\*Status:\*\* COMPLETED\|PARTIAL\|BLOCKED/
   );
   assert.deepEqual(auditFixContract.requiredHeadings, [
     "Evidence Used",

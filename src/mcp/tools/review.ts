@@ -18,7 +18,14 @@ import {
   writeTextFile
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
-import { blueprintPhaseLocate } from "./phase.js";
+import {
+  blueprintPhaseExecutionTargets,
+  blueprintPhaseLocate,
+  blueprintPhasePlanIndex,
+  blueprintPhasePlanRead,
+  blueprintPhaseSummaryIndex,
+  blueprintPhaseSummaryRead
+} from "./phase.js";
 
 type ReviewArtifactKind =
   | "code-review"
@@ -199,6 +206,99 @@ type CodeReviewStructuredModel = {
   nextSafeAction: string;
 };
 
+type SecurityReviewStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type SecurityReviewReadiness = "ready-for-routing" | "needs-follow-up" | "blocked";
+type SecurityReviewCompletionState = "complete" | "partial" | "blocked";
+type SecurityThreatStatus = "closed" | "accepted" | "open" | "none";
+type SecurityEvidenceCoverageStatus = "used" | "deferred" | "unavailable";
+type SecurityManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type SecurityGapStatus = "OPEN" | "BLOCKED" | "NONE";
+
+type SecurityDeclaredThreat = {
+  threatId: string;
+  sourcePlan: string;
+  category: string;
+  component: string;
+  disposition: string;
+  mitigation: string;
+};
+
+type SecurityThreatRegisterRow = {
+  threatId: string;
+  status: SecurityThreatStatus;
+  evidence: string;
+  verifierNote: string;
+};
+
+type SecurityStructuredModel = {
+  status: SecurityReviewStatus;
+  readiness: SecurityReviewReadiness;
+  completionState: SecurityReviewCompletionState;
+  securitySummary: string[];
+  evidenceCoverage: Record<
+    string,
+    {
+      status: SecurityEvidenceCoverageStatus;
+      rationale: string;
+    }
+  >;
+  threatRegister: SecurityThreatRegisterRow[];
+  acceptedRisks: Array<{
+    threatId: string;
+    rationale: string;
+    acceptedBy: string;
+    acceptedAt: string;
+    evidence: string;
+  }>;
+  findings: Array<{
+    kind: "open-threat" | "missing-control" | "unregistered-flag" | "suspicious-artifact" | "hardening-follow-up" | "none";
+    severity: ReviewFindingSeverity | "none";
+    threatId: string;
+    evidence: string;
+    recommendation: string;
+    status: "open" | "follow-up" | "accepted" | "closed" | "none";
+  }>;
+  manualOrDeferredWork: Array<{
+    item: string;
+    reason: string;
+    followUp: string;
+    status: SecurityManualStatus;
+  }>;
+  gapRoutes: Array<{
+    gap: string;
+    evidence: string;
+    repair: string;
+    status: SecurityGapStatus;
+  }>;
+  followUps: string[];
+  auditTrail: {
+    auditDate: string;
+    executionMode: "inline" | "security-auditor-assisted";
+    overwriteGate: "none" | "confirmed" | "reused" | "not-needed";
+    verifyOrAcceptDecision: "none" | "verified" | "accepted" | "pending";
+    pendingOpenThreatStatus: "none" | "verifying" | "accepted" | "still-open";
+    verifierNote: string;
+  };
+  nextSafeAction: string;
+};
+
+type SecurityAuthoringContext = {
+  phase: ReviewScopePhase;
+  path: string;
+  completedSummaries: string[];
+  pendingPlans: string[];
+  declaredThreats: SecurityDeclaredThreat[];
+  knownEvidenceArtifacts: string[];
+  existingSecurity: string | null;
+  allowedNextActions: string[];
+  completedNextSafeAction: string;
+  partialNextSafeAction: string;
+  blockedNextSafeAction: string;
+  schemaPath: string;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+};
+
 type ReviewDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
 
 type ReviewModelDiagnostic = {
@@ -213,6 +313,7 @@ type ReviewModelDiagnostic = {
 type ReviewValidateModelArgs = {
   cwd?: string;
   phase?: NumericInput;
+  artifact?: "code-review" | "security";
   files?: string[];
   depth?: ReviewDepth;
   model: unknown;
@@ -232,8 +333,32 @@ type ReviewValidateModelResult = {
     bySource: Record<ReviewDiagnosticSource, number>;
     byCode: Record<string, number>;
   };
-  normalizedModel: CodeReviewStructuredModel | null;
+  normalizedModel: CodeReviewStructuredModel | SecurityStructuredModel | null;
   renderPreview: string | null;
+  warnings: string[];
+};
+
+type ReviewAuthoringContextArgs = {
+  cwd?: string;
+  phase?: NumericInput;
+  artifact: "code-review" | "security";
+  files?: string[];
+  depth?: ReviewDepth;
+};
+
+type ReviewAuthoringContextResult = {
+  status: "ready" | "invalid";
+  artifact: "code-review" | "security";
+  phase: ReviewScopePhase | null;
+  files: string[];
+  reviewMode: ReviewScopeResult["reviewMode"] | null;
+  schemaPath: string | null;
+  baseSchema: Record<string, unknown> | null;
+  taskSchema: Record<string, unknown> | null;
+  modelOnly: boolean;
+  authoringContext: CodeReviewAuthoringContext | SecurityAuthoringContext | null;
+  prerequisiteBlockers: string[];
+  reason: string | null;
   warnings: string[];
 };
 
@@ -286,9 +411,18 @@ const reviewLoadFindingsInputSchema = {
 const reviewValidateModelInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
+  artifact: z.enum(["code-review", "security"]).optional(),
   files: z.array(z.string()).optional(),
   depth: z.enum(["quick", "standard", "deep"]).optional(),
   model: z.unknown()
+};
+
+const reviewAuthoringContextInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  artifact: z.enum(["code-review", "security"]),
+  files: z.array(z.string()).optional(),
+  depth: z.enum(["quick", "standard", "deep"]).optional()
 };
 
 const CODE_REVIEW_MODEL_IDENTITY_KEYS = new Set([
@@ -302,6 +436,25 @@ const CODE_REVIEW_MODEL_IDENTITY_KEYS = new Set([
   "path",
   "reportPath",
   "content"
+]);
+
+const SECURITY_MODEL_IDENTITY_KEYS = new Set([
+  "cwd",
+  "phase",
+  "phaseNumber",
+  "phasePrefix",
+  "phaseName",
+  "phaseDir",
+  "artifact",
+  "path",
+  "reportPath",
+  "content",
+  "summaryPath",
+  "summaryPaths",
+  "linkedPlanPath",
+  "planPath",
+  "planPaths",
+  "threatCounts"
 ]);
 
 const CODE_REVIEW_LOCATION_PATTERN =
@@ -633,6 +786,607 @@ async function buildCodeReviewAuthoringContext(args: {
     schemaPath: modelContract.schemaPath,
     baseSchema,
     taskSchema
+  };
+}
+
+function uniqueSortedStrings(values: string[]): string[] {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+
+function exactObjectPropertyContains(
+  propertyName: string,
+  value: string
+): Record<string, unknown> {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+
+function exactArraySentinel(schema: Record<string, unknown>): Record<string, unknown> {
+  return {
+    minItems: 1,
+    maxItems: 1,
+    items: schema
+  };
+}
+
+async function buildAllowedSecurityNextActions(args: {
+  phaseNumber: string;
+  artifacts: {
+    verification: string | null;
+    uat: string | null;
+  };
+}): Promise<{
+  completedNextSafeAction: string;
+  partialNextSafeAction: string;
+  blockedNextSafeAction: string;
+  allowedNextActions: string[];
+}> {
+  const completedCandidate =
+    args.artifacts.verification === null
+      ? `/blu-validate-phase ${args.phaseNumber}`
+      : args.artifacts.uat === null
+        ? `/blu-verify-work ${args.phaseNumber}`
+        : "/blu-progress";
+  const partialCandidate = "/blu-progress";
+  const blockedNextSafeAction = "Blocked: pending-open-threat";
+  const implementedCommands = await getImplementedCommandNames();
+  const implementedOrProgress = (candidate: string): string => {
+    if (implementedCommands === null || implementedCommands.size === 0) {
+      return candidate;
+    }
+
+    const commands = extractBlueprintDirectCommands(candidate);
+
+    return commands.length > 0 && commands.every((command) => implementedCommands.has(command))
+      ? candidate
+      : "/blu-progress";
+  };
+  const completedNextSafeAction = implementedOrProgress(completedCandidate);
+  const partialNextSafeAction = implementedOrProgress(partialCandidate);
+
+  return {
+    completedNextSafeAction,
+    partialNextSafeAction,
+    blockedNextSafeAction,
+    allowedNextActions: uniqueSortedStrings([
+      completedNextSafeAction,
+      partialNextSafeAction,
+      blockedNextSafeAction
+    ])
+  };
+}
+
+function parseMarkdownTableRows(section: string): string[][] {
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("|"))
+    .map((line) =>
+      line
+        .split("|")
+        .map((cell) => cell.trim())
+        .slice(1, -1)
+    )
+    .filter((cells) => cells.length > 0)
+    .filter((cells) => !cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+}
+
+function normalizeThreatCell(value: string, fallback: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizeThreatId(value: string, fallback: string): string {
+  const normalized = value
+    .trim()
+    .replace(/`/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function extractThreatModelContent(content: string): string[] {
+  const blockSections = [...content.matchAll(/<threat_model\b[^>]*>([\s\S]*?)<\/threat_model>/gi)]
+    .map((match) => match[1]?.trim() ?? "")
+    .filter((section) => section.length > 0);
+
+  if (blockSections.length > 0) {
+    return blockSections;
+  }
+
+  return extractMarkdownSectionContent(
+    content,
+    /^(?:threat model|threat register|security threats?|security model)$/i
+  );
+}
+
+function planThreatIdPrefix(sourcePlan: string): string {
+  return sourcePlan.match(/(?:^|\/)(\d+(?:-\d+)*)-PLAN\.md$/)?.[1] ?? "plan";
+}
+
+function disambiguateDeclaredThreatIds(threats: SecurityDeclaredThreat[]): SecurityDeclaredThreat[] {
+  const seen = new Set<string>();
+
+  return threats.map((threat) => {
+    if (!seen.has(threat.threatId)) {
+      seen.add(threat.threatId);
+      return threat;
+    }
+
+    const baseThreatId = `${planThreatIdPrefix(threat.sourcePlan)}-${threat.threatId}`;
+    let uniqueThreatId = baseThreatId;
+    let suffix = 2;
+
+    while (seen.has(uniqueThreatId)) {
+      uniqueThreatId = `${baseThreatId}-${suffix}`;
+      suffix += 1;
+    }
+
+    seen.add(uniqueThreatId);
+
+    return {
+      ...threat,
+      threatId: uniqueThreatId
+    };
+  });
+}
+
+function parseThreatRowsFromPlanContent(content: string, sourcePlan: string): SecurityDeclaredThreat[] {
+  const sections = extractThreatModelContent(content);
+  const threats: SecurityDeclaredThreat[] = [];
+
+  for (const section of sections) {
+    const tableRows = parseMarkdownTableRows(section);
+
+    if (tableRows.length > 0) {
+      const header = tableRows[0].map((cell) =>
+        cell.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+      );
+      const rows = header.some((cell) => cell === "threat id" || cell === "id")
+        ? tableRows.slice(1)
+        : tableRows;
+      const findIndex = (patterns: RegExp[], fallback: number): number => {
+        const index = header.findIndex((cell) => patterns.some((pattern) => pattern.test(cell)));
+        return index >= 0 ? index : fallback;
+      };
+      const threatIdIndex = findIndex([/^(?:threat )?id$/], 0);
+      const categoryIndex = findIndex([/^category$/, /^stride$/], 1);
+      const componentIndex = findIndex([/^component$/, /^surface$/, /^boundary$/], 2);
+      const dispositionIndex = findIndex([/^disposition$/, /^decision$/], 3);
+      const mitigationIndex = findIndex([/^mitigation$/, /^control$/, /^evidence$/], 4);
+
+      rows.forEach((row, index) => {
+        const fallbackId = `T-${String(threats.length + index + 1).padStart(2, "0")}`;
+        const threatId = normalizeThreatId(row[threatIdIndex] ?? "", fallbackId);
+
+        if (/^(?:none|n\/a|na)$/i.test(threatId)) {
+          return;
+        }
+
+        threats.push({
+          threatId,
+          sourcePlan,
+          category: normalizeThreatCell(row[categoryIndex] ?? "", "unspecified"),
+          component: normalizeThreatCell(row[componentIndex] ?? "", "unspecified"),
+          disposition: normalizeThreatCell(row[dispositionIndex] ?? "", "mitigate"),
+          mitigation: normalizeThreatCell(row[mitigationIndex] ?? "", "No mitigation text found in the saved plan.")
+        });
+      });
+
+      continue;
+    }
+
+    const bullets = collectListItems(section);
+    bullets.forEach((item, index) => {
+      const match = item.match(/^`?([A-Za-z0-9._-]+)`?\s*[:\-]\s*(.+)$/);
+      const threatId = normalizeThreatId(match?.[1] ?? "", `T-${String(index + 1).padStart(2, "0")}`);
+      const mitigation = normalizeThreatCell(match?.[2] ?? item, "No mitigation text found in the saved plan.");
+
+      if (/^(?:none|n\/a|na)$/i.test(threatId)) {
+        return;
+      }
+
+      threats.push({
+        threatId,
+        sourcePlan,
+        category: "unspecified",
+        component: "unspecified",
+        disposition: "mitigate",
+        mitigation
+      });
+    });
+  }
+
+  return disambiguateDeclaredThreatIds(threats);
+}
+
+function buildSecurityTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  declaredThreats: SecurityDeclaredThreat[];
+  knownEvidenceArtifacts: string[];
+  allowedNextActions: string[];
+  completedNextSafeAction: string;
+  partialNextSafeAction: string;
+  blockedNextSafeAction: string;
+  allowCompleted: boolean;
+}): Record<string, unknown> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+
+  if (properties) {
+    const status = getJsonObjectProperty(properties, "status");
+    if (status && !args.allowCompleted) {
+      status.enum = ["PARTIAL", "BLOCKED"];
+    }
+
+    const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
+    if (evidenceCoverage) {
+      evidenceCoverage.additionalProperties = false;
+      evidenceCoverage.required = args.knownEvidenceArtifacts;
+      evidenceCoverage.properties = Object.fromEntries(
+        args.knownEvidenceArtifacts.map((artifactPath) => [
+          artifactPath,
+          { $ref: "#/$defs/evidenceCoverageEntry" }
+        ])
+      );
+    }
+
+    const threatRegister = getJsonObjectProperty(properties, "threatRegister");
+    if (threatRegister) {
+      if (args.declaredThreats.length === 0) {
+        Object.assign(threatRegister, exactArraySentinel({ $ref: "#/$defs/noThreatRow" }));
+      } else {
+        threatRegister.minItems = args.declaredThreats.length;
+        threatRegister.maxItems = args.declaredThreats.length;
+        const items = getJsonObjectProperty(threatRegister, "items");
+        const oneOf = Array.isArray(items?.oneOf) ? items.oneOf : null;
+        const realThreatRow = oneOf
+          ? oneOf.find((candidate) => asJsonObject(candidate)?.$ref === "#/$defs/threatRegisterRow")
+          : null;
+        const threatRowSchema = asJsonObject(realThreatRow);
+        const threatRow = threatRowSchema
+          ? getJsonObjectProperty(defs ?? {}, "threatRegisterRow")
+          : getJsonObjectProperty(defs ?? {}, "threatRegisterRow");
+        const threatProperties = threatRow ? getJsonObjectProperty(threatRow, "properties") : null;
+        const threatId = threatProperties ? getJsonObjectProperty(threatProperties, "threatId") : null;
+
+        if (threatId) {
+          threatId.enum = args.declaredThreats.map((threat) => threat.threatId);
+        }
+        threatRegister.allOf = args.declaredThreats.map((threat) =>
+          exactObjectPropertyContains("threatId", threat.threatId)
+        );
+      }
+    }
+
+    const acceptedRisks = getJsonObjectProperty(properties, "acceptedRisks");
+    const findings = getJsonObjectProperty(properties, "findings");
+    const threatIdEnum = args.declaredThreats.map((threat) => threat.threatId);
+
+    for (const definitionName of ["acceptedRiskRow", "findingRow"] as const) {
+      const definition = getJsonObjectProperty(defs ?? {}, definitionName);
+      const definitionProperties = definition ? getJsonObjectProperty(definition, "properties") : null;
+      const threatId = definitionProperties ? getJsonObjectProperty(definitionProperties, "threatId") : null;
+
+      if (threatId && threatIdEnum.length > 0) {
+        threatId.enum = definitionName === "findingRow"
+          ? [...threatIdEnum, "unregistered"]
+          : threatIdEnum;
+      }
+    }
+
+    if (acceptedRisks && threatIdEnum.length === 0) {
+      Object.assign(acceptedRisks, exactArraySentinel({ $ref: "#/$defs/noAcceptedRiskRow" }));
+    }
+    if (findings && threatIdEnum.length === 0) {
+      findings.minItems = 1;
+    }
+
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedNextActions;
+    }
+  }
+
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "COMPLETED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.completedNextSafeAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PARTIAL" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.partialNextSafeAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "BLOCKED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.blockedNextSafeAction }
+        }
+      }
+    }
+  ];
+
+  schema["x-blueprint-runtimeContext"] = {
+    declaredThreats: args.declaredThreats,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    completedNextSafeAction: args.completedNextSafeAction,
+    partialNextSafeAction: args.partialNextSafeAction,
+    blockedNextSafeAction: args.blockedNextSafeAction,
+    allowCompleted: args.allowCompleted
+  };
+
+  return schema;
+}
+
+async function buildSecurityAuthoringContext(args: {
+  projectRoot: string;
+  phase?: NumericInput;
+}): Promise<ReviewAuthoringContextResult> {
+  const located = await blueprintPhaseLocate({
+    cwd: args.projectRoot,
+    phase: args.phase
+  });
+  const modelContract = readArtifactContract("review.security").modelContract;
+  const baseSchema = modelContract ? cloneJsonObject(modelContract.jsonSchema) : null;
+
+  if (
+    !located.found ||
+    !located.phaseNumber ||
+    !located.phasePrefix ||
+    !located.phaseDir
+  ) {
+    const reason = located.reason ?? "Phase could not be resolved for security authoring.";
+
+    return {
+      status: "invalid",
+      artifact: "security",
+      phase: null,
+      files: [],
+      reviewMode: null,
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema,
+      taskSchema: null,
+      modelOnly: true,
+      authoringContext: null,
+      prerequisiteBlockers: [reason],
+      reason,
+      warnings: located.warnings
+    };
+  }
+
+  if (!modelContract || !modelContract.schemaPath) {
+    const reason = "review.security does not expose a modelContract schema path.";
+
+    return {
+      status: "invalid",
+      artifact: "security",
+      phase: null,
+      files: [],
+      reviewMode: null,
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema,
+      taskSchema: null,
+      modelOnly: true,
+      authoringContext: null,
+      prerequisiteBlockers: [reason],
+      reason,
+      warnings: located.warnings
+    };
+  }
+
+  const phaseNumber = located.phaseNumber;
+  const securityBaseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const phase: ReviewScopePhase = {
+    phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName:
+      located.phaseName ??
+      `Phase ${located.phasePrefix} ${path.basename(located.phaseDir)}`,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom
+  };
+  const artifacts = {
+    plans: located.artifacts
+      .filter((artifact) => artifact.endsWith("-PLAN.md"))
+      .sort((left, right) => left.localeCompare(right)),
+    summaries: located.artifacts
+      .filter((artifact) => artifact.endsWith("-SUMMARY.md"))
+      .sort((left, right) => left.localeCompare(right)),
+    verification: findPhaseArtifact(located.artifacts, "-VERIFICATION.md"),
+    uat: findPhaseArtifact(located.artifacts, "-UAT.md"),
+    existingSecurity: findPhaseArtifact(located.artifacts, "-SECURITY.md")
+  };
+  const [planIndex, summaryIndex, executionTargets] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
+    blueprintPhaseSummaryIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
+    blueprintPhaseExecutionTargets({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    })
+  ]);
+  const completedSummaries = summaryIndex.summaries
+    .filter((summary) => summaryIndex.completedPlans.includes(summary.planId))
+    .map((summary) => summary.path)
+    .sort((left, right) => left.localeCompare(right));
+  const blockers: string[] = [];
+
+  if (planIndex.plans.length === 0) {
+    blockers.push(
+      `Phase ${phaseNumber} has no saved PLAN artifacts, so review.security cannot bind to plan provenance.`
+    );
+  }
+
+  if (completedSummaries.length === 0) {
+    blockers.push(
+      `Phase ${phaseNumber} has no valid completed SUMMARY artifacts. Run /blu-execute-phase ${phaseNumber} before /blu-secure-phase.`
+    );
+  }
+
+  if (summaryIndex.pendingPlans.length > 0) {
+    blockers.push(
+      `Phase ${phaseNumber} still has pending execution plans: ${summaryIndex.pendingPlans.join(", ")}. Run /blu-execute-phase ${phaseNumber} before persisting security evidence.`
+    );
+  }
+
+  if (executionTargets.blockers.lowerWavePendingPlanIds.length > 0) {
+    blockers.push(
+      `Lower-wave pending plans block full security coverage: ${executionTargets.blockers.lowerWavePendingPlanIds.join(", ")}.`
+    );
+  }
+
+  const planReads = await Promise.all(
+    planIndex.plans.map((plan) =>
+      blueprintPhasePlanRead({
+        cwd: args.projectRoot,
+        phase: phaseNumber,
+        planId: plan.planId
+      })
+    )
+  );
+  const summaryReads = await Promise.all(
+    summaryIndex.completedPlans.map((planId) =>
+      blueprintPhaseSummaryRead({
+        cwd: args.projectRoot,
+        phase: phaseNumber,
+        planId
+      })
+    )
+  );
+
+  for (const planRead of planReads) {
+    if (!planRead.found || !planRead.path) {
+      blockers.push(planRead.reason ?? "A saved plan could not be read for security provenance.");
+      continue;
+    }
+
+    if (!planRead.validation?.valid) {
+      const issues = planRead.validation?.issues.length
+        ? planRead.validation.issues
+        : ["Linked plan artifact is invalid."];
+      blockers.push(...issues.map((issue) => `${planRead.path}: ${issue}`));
+    }
+  }
+
+  for (const summaryRead of summaryReads) {
+    if (!summaryRead.found || !summaryRead.path) {
+      blockers.push(summaryRead.reason ?? "A completed summary could not be read for security evidence.");
+      continue;
+    }
+
+    if (!summaryRead.validation?.valid) {
+      const issues = summaryRead.validation?.issues.length
+        ? summaryRead.validation.issues
+        : ["Completed summary artifact is invalid."];
+      blockers.push(...issues.map((issue) => `${summaryRead.path}: ${issue}`));
+    }
+  }
+
+  const declaredThreats = disambiguateDeclaredThreatIds(
+    planReads.flatMap((planRead) =>
+      planRead.path && planRead.content
+        ? parseThreatRowsFromPlanContent(planRead.content, planRead.path)
+        : []
+    )
+  );
+  const knownEvidenceArtifacts = uniqueSortedStrings([
+    ...planIndex.plans.map((plan) => plan.path),
+    ...completedSummaries,
+    ...(artifacts.verification ? [artifacts.verification] : []),
+    ...(artifacts.uat ? [artifacts.uat] : []),
+    ...(artifacts.existingSecurity ? [artifacts.existingSecurity] : [])
+  ]);
+  const allowedNextActions = await buildAllowedSecurityNextActions({
+    phaseNumber,
+    artifacts
+  });
+  const taskSchema =
+    blockers.length === 0
+      ? buildSecurityTaskSchema({
+          baseSchema: securityBaseSchema,
+          declaredThreats,
+          knownEvidenceArtifacts,
+          allowCompleted: declaredThreats.length > 0,
+          ...allowedNextActions
+        })
+      : null;
+  const authoringContext: SecurityAuthoringContext | null = taskSchema
+    ? {
+        phase,
+        path: `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES.security}`,
+        completedSummaries,
+        pendingPlans: summaryIndex.pendingPlans,
+        declaredThreats,
+        knownEvidenceArtifacts,
+        existingSecurity: artifacts.existingSecurity,
+        ...allowedNextActions,
+        schemaPath: modelContract.schemaPath,
+        baseSchema: securityBaseSchema,
+        taskSchema
+      }
+    : null;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "invalid",
+    artifact: "security",
+    phase,
+    files: [],
+    reviewMode: null,
+    schemaPath: modelContract.schemaPath,
+    baseSchema: securityBaseSchema,
+    taskSchema,
+    modelOnly: true,
+    authoringContext,
+    prerequisiteBlockers: blockers,
+    reason: blockers.length > 0 ? blockers.join(" ") : null,
+    warnings: uniqueSortedStrings([
+      ...located.warnings,
+      ...planIndex.warnings,
+      ...summaryIndex.warnings,
+      ...executionTargets.warnings
+    ])
   };
 }
 
@@ -1244,6 +1998,191 @@ ${renderBulletList(model.followUps)}
 `);
 }
 
+function markdownTableCell(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, " ").replace(/\|/g, "\\|").trim();
+}
+
+function renderMarkdownTable(headers: string[], rows: string[][]): string {
+  return [
+    headers,
+    headers.map(() => "---"),
+    ...rows
+  ]
+    .map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`)
+    .join("\n");
+}
+
+function securityThreatCounts(model: SecurityStructuredModel): {
+  declared: number;
+  closed: number;
+  accepted: number;
+  open: number;
+} {
+  const realThreats = model.threatRegister.filter((row) => row.threatId !== "none");
+
+  return {
+    declared: realThreats.length,
+    closed: realThreats.filter((row) => row.status === "closed").length,
+    accepted: realThreats.filter((row) => row.status === "accepted").length,
+    open: realThreats.filter((row) => row.status === "open").length
+  };
+}
+
+function renderSecurityEvidenceCoverage(args: {
+  model: SecurityStructuredModel;
+  knownEvidenceArtifacts: string[];
+}): string[] {
+  return args.knownEvidenceArtifacts.map((artifactPath) => {
+    const coverage = args.model.evidenceCoverage[artifactPath];
+    return `${artifactPath} - ${coverage.status}: ${coverage.rationale}`;
+  });
+}
+
+function renderSecurityModelContent(
+  model: SecurityStructuredModel,
+  located: LocatedReviewPhase,
+  authoringContext: SecurityAuthoringContext
+): string {
+  const threatById = new Map(
+    authoringContext.declaredThreats.map((threat) => [threat.threatId, threat])
+  );
+  const counts = securityThreatCounts(model);
+  const threatRows =
+    model.threatRegister.length > 0
+      ? model.threatRegister.map((row) => {
+          if (row.threatId === "none") {
+            return ["none", "none", "none", "none", "none", "none", "none", "none", "none"];
+          }
+
+          const declared = threatById.get(row.threatId);
+
+          return [
+            row.threatId,
+            declared?.sourcePlan ?? "unknown",
+            declared?.category ?? "unknown",
+            declared?.component ?? "unknown",
+            declared?.disposition ?? "unknown",
+            declared?.mitigation ?? "unknown",
+            row.status,
+            row.evidence,
+            row.verifierNote
+          ];
+        })
+      : [["none", "none", "none", "none", "none", "none", "none", "none", "none"]];
+  const acceptedRiskRows = model.acceptedRisks.map((row) => [
+    row.threatId,
+    row.rationale,
+    row.acceptedBy,
+    row.acceptedAt,
+    row.evidence
+  ]);
+  const findingRows = model.findings.map((row) => [
+    row.kind,
+    row.severity,
+    row.threatId,
+    row.status,
+    row.evidence,
+    row.recommendation
+  ]);
+  const manualRows = model.manualOrDeferredWork.map((row) => [
+    row.item,
+    row.reason,
+    row.followUp,
+    row.status
+  ]);
+  const gapRows = model.gapRoutes.map((row) => [
+    row.gap,
+    row.evidence,
+    row.repair,
+    row.status
+  ]);
+
+  return normalizeTextContent(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Security Review
+
+**Status:** ${model.status}
+**Readiness:** ${model.readiness}
+**Completion State:** ${model.completionState}
+**Next Safe Action:** ${model.nextSafeAction}
+
+## Security Summary
+
+- Declared threats: ${counts.declared}
+- Closed threats: ${counts.closed}
+- Accepted risks: ${counts.accepted}
+- Open threats: ${counts.open}
+${renderBulletList(model.securitySummary)}
+
+## Evidence Reviewed
+
+${renderBulletList(renderSecurityEvidenceCoverage({
+  model,
+  knownEvidenceArtifacts: authoringContext.knownEvidenceArtifacts
+}))}
+
+## Threat Register
+
+${renderMarkdownTable(
+  [
+    "Threat ID",
+    "Source Plan",
+    "Category",
+    "Component",
+    "Disposition",
+    "Mitigation",
+    "Status",
+    "Evidence",
+    "Verifier Note"
+  ],
+  threatRows
+)}
+
+## Accepted Risks
+
+${renderMarkdownTable(
+  ["Threat ID", "Rationale", "Accepted By", "Accepted At", "Evidence"],
+  acceptedRiskRows
+)}
+
+## Findings
+
+${renderMarkdownTable(
+  ["Kind", "Severity", "Threat ID", "Status", "Evidence", "Recommendation"],
+  findingRows
+)}
+
+## Manual / Deferred Work
+
+${renderMarkdownTable(
+  ["Item", "Reason", "Follow-Up", "Status"],
+  manualRows
+)}
+
+## Gap / Repair Routes
+
+${renderMarkdownTable(
+  ["Gap", "Evidence", "Repair", "Status"],
+  gapRows
+)}
+
+## Follow-Ups
+
+${renderBulletList(model.followUps)}
+
+## Security Audit Trail
+
+- Audit date: ${model.auditTrail.auditDate}
+- Execution mode: ${model.auditTrail.executionMode}
+- Overwrite gate: ${model.auditTrail.overwriteGate}
+- Verify-or-accept decision: ${model.auditTrail.verifyOrAcceptDecision}
+- Pending-open-threat status: ${model.auditTrail.pendingOpenThreatStatus}
+- Verifier note: ${model.auditTrail.verifierNote}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`);
+}
+
 function ajvPathToModelPath(instancePath: string): string {
   if (instancePath.length === 0) {
     return "model";
@@ -1286,7 +2225,7 @@ function schemaDiagnosticFromAjvError(error: ErrorObject): ReviewModelDiagnostic
     source: "schema",
     path: pathValue,
     code: `schema.${error.keyword}`,
-    message: error.message ?? "Model does not match the code-review task schema.",
+    message: error.message ?? "Model does not match the review task schema.",
     context: {
       keyword: error.keyword,
       params: error.params,
@@ -1427,6 +2366,197 @@ function normalizeCodeReviewModelForResiduals(
     nextSafeAction:
       typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
+}
+
+function normalizeSecurityEvidenceCoverage(
+  evidenceCoverage: Record<string, unknown>
+): SecurityStructuredModel["evidenceCoverage"] | null {
+  const normalized: SecurityStructuredModel["evidenceCoverage"] = {};
+
+  for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
+    const coverageObject = asJsonObject(coverage);
+
+    if (
+      !coverageObject ||
+      typeof coverageObject.status !== "string" ||
+      typeof coverageObject.rationale !== "string"
+    ) {
+      return null;
+    }
+
+    normalized[artifactPath] = {
+      status: coverageObject.status as SecurityEvidenceCoverageStatus,
+      rationale: coverageObject.rationale.trim()
+    };
+  }
+
+  return normalized;
+}
+
+function normalizeSecurityModel(model: Record<string, unknown>): SecurityStructuredModel | null {
+  const securitySummary = normalizeStringArray(model.securitySummary);
+  const followUps = normalizeStringArray(model.followUps);
+  const evidenceCoverage = asJsonObject(model.evidenceCoverage);
+  const threatRegister = Array.isArray(model.threatRegister) ? model.threatRegister : null;
+  const acceptedRisks = Array.isArray(model.acceptedRisks) ? model.acceptedRisks : null;
+  const findings = Array.isArray(model.findings) ? model.findings : null;
+  const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork)
+    ? model.manualOrDeferredWork
+    : null;
+  const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
+  const auditTrail = asJsonObject(model.auditTrail);
+
+  if (
+    typeof model.status !== "string" ||
+    typeof model.readiness !== "string" ||
+    typeof model.completionState !== "string" ||
+    securitySummary === null ||
+    evidenceCoverage === null ||
+    threatRegister === null ||
+    acceptedRisks === null ||
+    findings === null ||
+    manualOrDeferredWork === null ||
+    gapRoutes === null ||
+    followUps === null ||
+    !auditTrail ||
+    typeof auditTrail.auditDate !== "string" ||
+    typeof auditTrail.executionMode !== "string" ||
+    typeof auditTrail.overwriteGate !== "string" ||
+    typeof auditTrail.verifyOrAcceptDecision !== "string" ||
+    typeof auditTrail.pendingOpenThreatStatus !== "string" ||
+    typeof auditTrail.verifierNote !== "string" ||
+    typeof model.nextSafeAction !== "string"
+  ) {
+    return null;
+  }
+
+  const normalizedEvidenceCoverage = normalizeSecurityEvidenceCoverage(evidenceCoverage);
+  const normalizedThreatRegister = threatRegister.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.threatId === "string" &&
+      typeof rowObject.status === "string" &&
+      typeof rowObject.evidence === "string" &&
+      typeof rowObject.verifierNote === "string"
+      ? {
+          threatId: rowObject.threatId.trim(),
+          status: rowObject.status as SecurityThreatStatus,
+          evidence: rowObject.evidence.trim(),
+          verifierNote: rowObject.verifierNote.trim()
+        }
+      : null;
+  });
+  const normalizedAcceptedRisks = acceptedRisks.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.threatId === "string" &&
+      typeof rowObject.rationale === "string" &&
+      typeof rowObject.acceptedBy === "string" &&
+      typeof rowObject.acceptedAt === "string" &&
+      typeof rowObject.evidence === "string"
+      ? {
+          threatId: rowObject.threatId.trim(),
+          rationale: rowObject.rationale.trim(),
+          acceptedBy: rowObject.acceptedBy.trim(),
+          acceptedAt: rowObject.acceptedAt.trim(),
+          evidence: rowObject.evidence.trim()
+        }
+      : null;
+  });
+  const normalizedFindings = findings.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.kind === "string" &&
+      typeof rowObject.severity === "string" &&
+      typeof rowObject.threatId === "string" &&
+      typeof rowObject.evidence === "string" &&
+      typeof rowObject.recommendation === "string" &&
+      typeof rowObject.status === "string"
+      ? {
+          kind: rowObject.kind as SecurityStructuredModel["findings"][number]["kind"],
+          severity: rowObject.severity as SecurityStructuredModel["findings"][number]["severity"],
+          threatId: rowObject.threatId.trim(),
+          evidence: rowObject.evidence.trim(),
+          recommendation: rowObject.recommendation.trim(),
+          status: rowObject.status as SecurityStructuredModel["findings"][number]["status"]
+        }
+      : null;
+  });
+  const normalizedManual = manualOrDeferredWork.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.item === "string" &&
+      typeof rowObject.reason === "string" &&
+      typeof rowObject.followUp === "string" &&
+      typeof rowObject.status === "string"
+      ? {
+          item: rowObject.item.trim(),
+          reason: rowObject.reason.trim(),
+          followUp: rowObject.followUp.trim(),
+          status: rowObject.status as SecurityManualStatus
+        }
+      : null;
+  });
+  const normalizedGaps = gapRoutes.map((row) => {
+    const rowObject = asJsonObject(row);
+
+    return rowObject &&
+      typeof rowObject.gap === "string" &&
+      typeof rowObject.evidence === "string" &&
+      typeof rowObject.repair === "string" &&
+      typeof rowObject.status === "string"
+      ? {
+          gap: rowObject.gap.trim(),
+          evidence: rowObject.evidence.trim(),
+          repair: rowObject.repair.trim(),
+          status: rowObject.status as SecurityGapStatus
+        }
+      : null;
+  });
+
+  if (
+    normalizedEvidenceCoverage === null ||
+    normalizedThreatRegister.some((row) => row === null) ||
+    normalizedAcceptedRisks.some((row) => row === null) ||
+    normalizedFindings.some((row) => row === null) ||
+    normalizedManual.some((row) => row === null) ||
+    normalizedGaps.some((row) => row === null)
+  ) {
+    return null;
+  }
+
+  return {
+    status: model.status as SecurityReviewStatus,
+    readiness: model.readiness as SecurityReviewReadiness,
+    completionState: model.completionState as SecurityReviewCompletionState,
+    securitySummary,
+    evidenceCoverage: normalizedEvidenceCoverage,
+    threatRegister: normalizedThreatRegister as SecurityStructuredModel["threatRegister"],
+    acceptedRisks: normalizedAcceptedRisks as SecurityStructuredModel["acceptedRisks"],
+    findings: normalizedFindings as SecurityStructuredModel["findings"],
+    manualOrDeferredWork: normalizedManual as SecurityStructuredModel["manualOrDeferredWork"],
+    gapRoutes: normalizedGaps as SecurityStructuredModel["gapRoutes"],
+    followUps,
+    auditTrail: {
+      auditDate: auditTrail.auditDate.trim(),
+      executionMode: auditTrail.executionMode as SecurityStructuredModel["auditTrail"]["executionMode"],
+      overwriteGate: auditTrail.overwriteGate as SecurityStructuredModel["auditTrail"]["overwriteGate"],
+      verifyOrAcceptDecision: auditTrail.verifyOrAcceptDecision as SecurityStructuredModel["auditTrail"]["verifyOrAcceptDecision"],
+      pendingOpenThreatStatus: auditTrail.pendingOpenThreatStatus as SecurityStructuredModel["auditTrail"]["pendingOpenThreatStatus"],
+      verifierNote: auditTrail.verifierNote.trim()
+    },
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+
+function normalizeSecurityModelForResiduals(
+  model: Record<string, unknown>
+): SecurityStructuredModel | null {
+  return normalizeSecurityModel(model);
 }
 
 function parseCodeReviewLocation(location: string): {
@@ -1922,6 +3052,246 @@ async function collectCodeReviewResidualDiagnostics(args: {
   const nextSafeActionIssues = await validateImplementedNextSafeAction(
     args.normalizedModel.nextSafeAction
   );
+  for (const issue of nextSafeActionIssues) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_unimplemented",
+        message: issue,
+        context: { nextSafeAction: args.normalizedModel.nextSafeAction },
+        suggestion: "Use one of authoringContext.allowedNextActions."
+      })
+    );
+  }
+
+  return diagnostics;
+}
+
+function addSecurityPlaceholderDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  model: Record<string, unknown>;
+}): void {
+  const modelContract = readArtifactContract("review.security").modelContract;
+  const stringEntries = collectModelStringEntries(args.model);
+
+  for (const entry of stringEntries) {
+    if (hasPlaceholderLanguage(entry.value)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.placeholder_text",
+          message: "Security review model still contains placeholder language.",
+          context: { value: entry.value },
+          suggestion: "Replace placeholder wording with concrete security evidence."
+        })
+      );
+    }
+  }
+
+  if (!modelContract) {
+    return;
+  }
+
+  for (const signal of modelContract.exampleLeakageSignals) {
+    const leakedEntry = stringEntries.find((entry) => entry.value.includes(signal));
+
+    if (leakedEntry) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: leakedEntry.path,
+          code: "residual.example_leakage",
+          message: `Security review model copied example leakage signal from ${modelContract.schemaId}.`,
+          context: { signal },
+          suggestion: "Replace copied example wording with phase-specific security evidence."
+        })
+      );
+    }
+  }
+}
+
+function addSecurityGenericValueDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  model: SecurityStructuredModel;
+}): void {
+  args.model.securitySummary.forEach((value, index) => {
+    if (isGenericNoneValue(value)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.securitySummary[${index}]`,
+          code: "residual.generic_text",
+          message: "Security review summary cannot use generic none values.",
+          context: { value },
+          suggestion: "Replace the generic value with concrete security posture evidence."
+        })
+      );
+    }
+  });
+
+  for (const [artifactPath, coverage] of Object.entries(args.model.evidenceCoverage)) {
+    if (isGenericNoneValue(coverage.rationale)) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.evidenceCoverage.${artifactPath}.rationale`,
+          code: "residual.generic_text",
+          message: `Security review evidenceCoverage rationale for ${artifactPath} must be concrete.`,
+          context: { artifactPath, value: coverage.rationale },
+          suggestion: "Explain why this exact upstream artifact was used, deferred, or unavailable."
+        })
+      );
+    }
+  }
+
+  for (const [index, row] of args.model.threatRegister.entries()) {
+    if (row.threatId === "none") {
+      continue;
+    }
+
+    for (const field of ["evidence", "verifierNote"] as const) {
+      if (isGenericNoneValue(row[field])) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.threatRegister[${index}].${field}`,
+            code: "residual.generic_text",
+            message: `Security review threatRegister.${index}.${field} must be concrete.`,
+            context: { value: row[field] },
+            suggestion: "Use artifact, code, acceptance, or explicit gap evidence for each declared threat."
+          })
+        );
+      }
+    }
+  }
+}
+
+function addSecuritySemanticDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  model: SecurityStructuredModel;
+  authoringContext: SecurityAuthoringContext;
+}): void {
+  const declaredThreatIds = new Set(args.authoringContext.declaredThreats.map((threat) => threat.threatId));
+  const openThreats = args.model.threatRegister.filter((row) => row.status === "open");
+  const acceptedThreatRows = args.model.threatRegister
+    .filter((row) => row.status === "accepted")
+    .map((row) => row.threatId);
+  const acceptedRiskRows = args.model.acceptedRisks
+    .filter((row) => row.threatId !== "none")
+    .map((row) => row.threatId);
+  const missingAcceptedRisks = acceptedThreatRows.filter(
+    (threatId) => !acceptedRiskRows.includes(threatId)
+  );
+  const unexpectedAcceptedRisks = acceptedRiskRows.filter((threatId) => {
+    const threatRow = args.model.threatRegister.find((row) => row.threatId === threatId);
+    return !threatRow || threatRow.status !== "accepted";
+  });
+  const unknownThreatIds = args.model.threatRegister
+    .filter((row) => row.threatId !== "none")
+    .map((row) => row.threatId)
+    .filter((threatId) => !declaredThreatIds.has(threatId));
+
+  if (unknownThreatIds.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.threatRegister",
+        code: "residual.threat_unknown",
+        message: `Security review model contains threat ids outside the live saved-plan register: ${unknownThreatIds.join(", ")}.`,
+        context: { unknownThreatIds },
+        suggestion: "Use only exact threat ids from authoringContext.declaredThreats."
+      })
+    );
+  }
+
+  if (missingAcceptedRisks.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.acceptedRisks",
+        code: "residual.accepted_risk_missing",
+        message: `Accepted threat rows require matching acceptedRisks entries: ${missingAcceptedRisks.join(", ")}.`,
+        context: { missingAcceptedRisks },
+        suggestion: "Add accepted-risk rows with explicit acceptance source and date, or change the threat status."
+      })
+    );
+  }
+
+  if (unexpectedAcceptedRisks.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.acceptedRisks",
+        code: "residual.accepted_risk_contradiction",
+        message: `Accepted risk rows must map to threatRegister rows with status accepted: ${unexpectedAcceptedRisks.join(", ")}.`,
+        context: { unexpectedAcceptedRisks },
+        suggestion: "Remove stale accepted-risk rows or mark the matching threat status as accepted."
+      })
+    );
+  }
+
+  if (openThreats.length === 0 && args.model.nextSafeAction === args.authoringContext.blockedNextSafeAction) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_contradiction",
+        message: "Security review model uses the blocked pending-open-threat action without open threats.",
+        context: { nextSafeAction: args.model.nextSafeAction },
+        suggestion: "Use the status-safe next action from the runtime task schema."
+      })
+    );
+  }
+}
+
+async function collectSecurityResidualDiagnostics(args: {
+  model: Record<string, unknown>;
+  normalizedModel: SecurityStructuredModel | null;
+  authoringContext: SecurityAuthoringContext;
+}): Promise<ReviewModelDiagnostic[]> {
+  const diagnostics: ReviewModelDiagnostic[] = [];
+  const identityKeys = Object.keys(args.model).filter((key) =>
+    SECURITY_MODEL_IDENTITY_KEYS.has(key)
+  );
+
+  if (identityKeys.length > 0) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "residual.runtime_owned_field",
+        message: `Security review model must not include MCP-owned identity or provenance keys: ${identityKeys.join(", ")}.`,
+        context: { identityKeys },
+        suggestion: "Remove runtime-owned fields and author only the review.security model fields."
+      })
+    );
+  }
+
+  addSecurityPlaceholderDiagnostics({ diagnostics, model: args.model });
+
+  if (!args.normalizedModel) {
+    return diagnostics;
+  }
+
+  addSecurityGenericValueDiagnostics({
+    diagnostics,
+    model: args.normalizedModel
+  });
+  addSecuritySemanticDiagnostics({
+    diagnostics,
+    model: args.normalizedModel,
+    authoringContext: args.authoringContext
+  });
+
+  const nextSafeActionIssues =
+    args.normalizedModel.nextSafeAction === args.authoringContext.blockedNextSafeAction
+      ? []
+      : await validateImplementedNextSafeAction(
+          args.normalizedModel.nextSafeAction,
+          "Security review model nextSafeAction"
+        );
   for (const issue of nextSafeActionIssues) {
     diagnostics.push(
       modelDiagnostic({
@@ -2672,10 +4042,19 @@ export async function blueprintReviewScope(
   };
 }
 
-export async function blueprintReviewValidateModel(
-  args: ReviewValidateModelArgs
-): Promise<ReviewValidateModelResult> {
+export async function blueprintReviewAuthoringContext(
+  args: ReviewAuthoringContextArgs
+): Promise<ReviewAuthoringContextResult> {
+  const artifact = args.artifact;
   const projectRoot = await ensureRepoRoot(args.cwd);
+
+  if (artifact === "security") {
+    return buildSecurityAuthoringContext({
+      projectRoot,
+      phase: args.phase
+    });
+  }
+
   const scoped = await blueprintReviewScope({
     cwd: projectRoot,
     phase: args.phase,
@@ -2685,34 +4064,108 @@ export async function blueprintReviewValidateModel(
   });
 
   if (scoped.status !== "ready" || !scoped.phase || !scoped.authoringContext) {
-    const diagnostics = [
+    const reason = scoped.reason ?? "Code-review authoring context could not resolve a ready review scope.";
+
+    return {
+      status: "invalid",
+      artifact: "code-review",
+      phase: scoped.phase,
+      files: scoped.files,
+      reviewMode: scoped.reviewMode,
+      schemaPath: null,
+      baseSchema: readArtifactContract("review.code-review").modelContract
+        ? cloneJsonObject(readArtifactContract("review.code-review").modelContract!.jsonSchema)
+        : null,
+      taskSchema: null,
+      modelOnly: true,
+      authoringContext: null,
+      prerequisiteBlockers: [reason],
+      reason,
+      warnings: scoped.warnings
+    };
+  }
+
+  return {
+    status: "ready",
+    artifact: "code-review",
+    phase: scoped.phase,
+    files: scoped.files,
+    reviewMode: scoped.reviewMode,
+    schemaPath: scoped.authoringContext.schemaPath,
+    baseSchema: scoped.authoringContext.baseSchema,
+    taskSchema: scoped.authoringContext.taskSchema,
+    modelOnly: true,
+    authoringContext: scoped.authoringContext,
+    prerequisiteBlockers: [],
+    reason: null,
+    warnings: scoped.warnings
+  };
+}
+
+export async function blueprintReviewValidateModel(
+  args: ReviewValidateModelArgs
+): Promise<ReviewValidateModelResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const artifact = args.artifact ?? "code-review";
+  const context = await blueprintReviewAuthoringContext({
+    cwd: projectRoot,
+    phase: args.phase,
+    artifact,
+    files: args.files,
+    depth: args.depth
+  });
+
+  if (context.status !== "ready" || !context.phase || !context.taskSchema || !context.authoringContext) {
+    const diagnostics = context.prerequisiteBlockers.length > 0
+      ? context.prerequisiteBlockers.map((message) =>
+          modelDiagnostic({
+            source: "scope",
+            path: "phase",
+            code: "scope.invalid",
+            message,
+            context: {
+              reason: context.reason,
+              warnings: context.warnings
+            },
+            suggestion:
+              artifact === "security"
+                ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security."
+                : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+          })
+        )
+      : [
       modelDiagnostic({
         source: "scope",
         path: "phase",
         code: "scope.invalid",
-        message: scoped.reason ?? "Code-review model validation could not resolve a ready review scope.",
+        message: context.reason ?? "Review model validation could not resolve a ready authoring context.",
         context: {
-          reason: scoped.reason,
-          warnings: scoped.warnings
+          reason: context.reason,
+          warnings: context.warnings
         },
         suggestion:
-          "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+          artifact === "security"
+            ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security."
+            : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
       })
     ];
 
     return {
       status: "invalid",
       valid: false,
-      phase: scoped.phase,
-      files: scoped.files,
-      reviewMode: scoped.reviewMode,
-      schemaPath: null,
-      taskSchema: null,
+      phase: context.phase,
+      files: context.files,
+      reviewMode: context.reviewMode ?? {
+        depth: args.depth ?? "standard",
+        source: "phase-evidence"
+      },
+      schemaPath: context.schemaPath,
+      taskSchema: context.taskSchema,
       diagnostics,
       diagnosticCounts: countDiagnostics(diagnostics),
       normalizedModel: null,
       renderPreview: null,
-      warnings: scoped.warnings
+      warnings: context.warnings
     };
   }
 
@@ -2725,7 +4178,7 @@ export async function blueprintReviewValidateModel(
         source: "schema",
         path: "model",
         code: "schema.type",
-        message: "Code-review model must be a JSON object.",
+        message: `${artifact === "security" ? "Security review" : "Code-review"} model must be a JSON object.`,
         context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
         suggestion: "Return a JSON object that matches authoringContext.taskSchema."
       })
@@ -2733,56 +4186,63 @@ export async function blueprintReviewValidateModel(
   }
 
   let normalizedModel: CodeReviewStructuredModel | null = null;
+  let normalizedSecurityModel: SecurityStructuredModel | null = null;
 
   if (modelObject) {
-    normalizedModel = normalizeCodeReviewModel(modelObject);
-    const residualModel = normalizeCodeReviewModelForResiduals(modelObject);
-    const validate = createAjvValidator().compile(scoped.authoringContext.taskSchema);
+    const validate = createAjvValidator().compile(context.taskSchema);
     const schemaValid = validate(modelObject);
     if (!schemaValid) {
       diagnostics.push(...(validate.errors ?? []).map(schemaDiagnosticFromAjvError));
     }
 
-    diagnostics.push(
-      ...await collectCodeReviewResidualDiagnostics({
-        projectRoot,
-        model: modelObject,
-        normalizedModel: residualModel,
-        authoringContext: scoped.authoringContext
-      })
-    );
+    if (artifact === "security") {
+      normalizedSecurityModel = normalizeSecurityModel(modelObject);
+      diagnostics.push(
+        ...await collectSecurityResidualDiagnostics({
+          model: modelObject,
+          normalizedModel: normalizeSecurityModelForResiduals(modelObject),
+          authoringContext: context.authoringContext as SecurityAuthoringContext
+        })
+      );
+    } else {
+      normalizedModel = normalizeCodeReviewModel(modelObject);
+      const residualModel = normalizeCodeReviewModelForResiduals(modelObject);
+      diagnostics.push(
+        ...await collectCodeReviewResidualDiagnostics({
+          projectRoot,
+          model: modelObject,
+          normalizedModel: residualModel,
+          authoringContext: context.authoringContext as CodeReviewAuthoringContext
+        })
+      );
+    }
   }
 
   let renderPreview: string | null = null;
 
-  if (diagnostics.length === 0 && normalizedModel) {
+  if (artifact === "code-review" && diagnostics.length === 0 && normalizedModel) {
     const located: LocatedReviewPhase = {
-      phaseNumber: scoped.phase.phaseNumber,
-      phasePrefix: scoped.phase.phasePrefix,
-      phaseName: scoped.phase.phaseName,
-      phaseDir: scoped.phase.phaseDir,
+      phaseNumber: context.phase.phaseNumber,
+      phasePrefix: context.phase.phasePrefix,
+      phaseName: context.phase.phaseName,
+      phaseDir: context.phase.phaseDir,
       artifacts: [
-        ...scoped.artifacts.plans,
-        ...scoped.artifacts.summaries,
-        scoped.artifacts.verification,
-        scoped.artifacts.uat,
-        scoped.artifacts.existingReview,
-        scoped.artifacts.security
-      ].filter((artifactPath): artifactPath is string => artifactPath !== null)
+        ...(context.authoringContext as CodeReviewAuthoringContext).knownEvidenceArtifacts
+      ]
     };
     const rendered = renderCodeReviewModelContent(
       normalizedModel,
       located,
-      scoped.authoringContext
+      context.authoringContext as CodeReviewAuthoringContext
     );
     const markdownValidation = validateReviewArtifactContent(rendered, "code-review");
     const scopedValidation = validateReviewArtifactScopeCoverage(
       rendered,
-      scoped.authoringContext.files
+      (context.authoringContext as CodeReviewAuthoringContext).files
     );
     const evidenceCoverageIssues = validateCodeReviewEvidenceCoverage(
       rendered,
-      scoped.authoringContext.knownEvidenceArtifacts
+      (context.authoringContext as CodeReviewAuthoringContext).knownEvidenceArtifacts
     );
     const nextSafeActionIssues = await validateCodeReviewNextSafeAction(rendered);
     const markdownIssues = [
@@ -2810,21 +4270,61 @@ export async function blueprintReviewValidateModel(
     }
   }
 
+  if (artifact === "security" && diagnostics.length === 0 && normalizedSecurityModel) {
+    const securityContext = context.authoringContext as SecurityAuthoringContext;
+    const located: LocatedReviewPhase = {
+      phaseNumber: context.phase.phaseNumber,
+      phasePrefix: context.phase.phasePrefix,
+      phaseName: context.phase.phaseName,
+      phaseDir: context.phase.phaseDir,
+      artifacts: securityContext.knownEvidenceArtifacts
+    };
+    const rendered = renderSecurityModelContent(
+      normalizedSecurityModel,
+      located,
+      securityContext
+    );
+    const markdownValidation = validateReviewArtifactContent(rendered, "security");
+    const markdownIssues = [...markdownValidation.issues];
+
+    for (const issue of markdownIssues) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the canonical security artifact contract."
+        })
+      );
+    }
+
+    if (markdownIssues.length === 0) {
+      renderPreview = rendered;
+    }
+  }
+
   return {
     status: diagnostics.length === 0 ? "valid" : "invalid",
     valid: diagnostics.length === 0,
-    phase: scoped.phase,
-    files: scoped.files,
-    reviewMode: scoped.reviewMode,
-    schemaPath: scoped.authoringContext.schemaPath,
-    taskSchema: scoped.authoringContext.taskSchema,
+    phase: context.phase,
+    files: context.files,
+    reviewMode: context.reviewMode ?? {
+      depth: args.depth ?? "standard",
+      source: "phase-evidence"
+    },
+    schemaPath: context.schemaPath,
+    taskSchema: context.taskSchema,
     diagnostics,
     diagnosticCounts: countDiagnostics(diagnostics),
     normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
       ? null
-      : normalizedModel,
+      : artifact === "security"
+        ? normalizedSecurityModel
+        : normalizedModel,
     renderPreview,
-    warnings: scoped.warnings
+    warnings: context.warnings
   };
 }
 
@@ -2893,6 +4393,7 @@ export async function blueprintReviewRecord(
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
   const warnings: string[] = [];
+  const modelOnlyArtifact = args.artifact === "code-review" || args.artifact === "security";
   const locatedReviewPhase: LocatedReviewPhase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
@@ -2901,29 +4402,29 @@ export async function blueprintReviewRecord(
     artifacts: located.artifacts
   };
 
-  if (args.artifact === "code-review" && hasContent) {
+  if (modelOnlyArtifact && hasContent) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
       warnings: [
-        "review.code-review is model-only; content is invalid. Call blueprint_review_validate_model with JSON first, then persist the same model through blueprint_review_record."
+        `review.${args.artifact === "security" ? "security" : "code-review"} is model-only; content is invalid. Call blueprint_review_validate_model with JSON first, then persist the same model through blueprint_review_record.`
       ]
     });
   }
 
-  if (args.artifact === "code-review" && !hasModel) {
+  if (modelOnlyArtifact && !hasModel) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
       reportPath,
       warnings: [
-        "review.code-review requires a structured model. Markdown content fallback is not supported."
+        `review.${args.artifact === "security" ? "security" : "code-review"} requires a structured model. Markdown content fallback is not supported.`
       ]
     });
   }
 
-  if (args.artifact !== "code-review" && hasModel) {
+  if (!modelOnlyArtifact && hasModel) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
@@ -2934,7 +4435,7 @@ export async function blueprintReviewRecord(
     });
   }
 
-  if (args.artifact !== "code-review" && !hasContent) {
+  if (!modelOnlyArtifact && !hasContent) {
     return reviewRecordInvalidResult({
       located: locatedReviewPhase,
       artifact: args.artifact,
@@ -2948,14 +4449,19 @@ export async function blueprintReviewRecord(
   let content = args.content ?? "";
   let codeReviewScopeFiles: string[] = [];
 
-  if (args.artifact === "code-review") {
-    const validationFiles = await resolveCodeReviewRecordValidationFiles({
-      projectRoot,
-      recordArgs: args
-    });
+  if (modelOnlyArtifact) {
+    const modelArtifact = args.artifact === "security" ? "security" : "code-review";
+    const validationFiles =
+      args.artifact === "code-review"
+        ? await resolveCodeReviewRecordValidationFiles({
+            projectRoot,
+            recordArgs: args
+          })
+        : undefined;
     const validation = await blueprintReviewValidateModel({
       cwd: projectRoot,
       phase: args.phase,
+      artifact: modelArtifact,
       files: validationFiles,
       depth: args.depth,
       model: args.model
@@ -2974,7 +4480,7 @@ export async function blueprintReviewRecord(
     }
 
     content = validation.renderPreview;
-    codeReviewScopeFiles = validation.files;
+    codeReviewScopeFiles = args.artifact === "code-review" ? validation.files : [];
   }
 
   const prepared = prepareTextForPersistence(normalizeTextContent(content), {
@@ -3228,15 +4734,23 @@ export const reviewToolDefinitions = [
   {
     name: "blueprint_review_validate_model",
     description:
-      "Validate a model-authored review.code-review JSON payload against the scoped task schema, residual quality checks, and canonical Markdown render before persistence.",
+      "Validate a model-authored review.code-review or review.security JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
     inputSchema: reviewValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintReviewValidateModel(args as ReviewValidateModelArgs)
   },
   {
+    name: "blueprint_review_authoring_context",
+    description:
+      "Build the model-only review authoring context and narrowed task schema for review.code-review or review.security before model drafting.",
+    inputSchema: reviewAuthoringContextInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintReviewAuthoringContext(args as ReviewAuthoringContextArgs)
+  },
+  {
     name: "blueprint_review_record",
     description:
-      "Persist a phase-scoped Blueprint review artifact such as SECURITY, REVIEW, or UI-REVIEW with overwrite protection; code-review persists model-authored JSON only after validator replay.",
+      "Persist a phase-scoped Blueprint review artifact such as SECURITY, REVIEW, or UI-REVIEW with overwrite protection; code-review and security persist model-authored JSON only after validator replay.",
     inputSchema: reviewRecordInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintReviewRecord(args as ReviewRecordArgs)
