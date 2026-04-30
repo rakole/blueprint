@@ -797,6 +797,15 @@ test("peer-review lifecycle truth table keeps partial and blocked states resumab
 
   assert.equal(partial.status, "valid");
   assert.equal(blocked.status, "valid");
+  assert.match(blocked.renderPreview ?? "", /\*\*Reviewers:\*\* none/);
+  const reviewerCoverageSection =
+    (blocked.renderPreview ?? "").match(/## Reviewer Coverage\n\n([\s\S]*?)\n\n## Reviewer Results/)?.[1] ?? "";
+  const reviewerResultsSection =
+    (blocked.renderPreview ?? "").match(/## Reviewer Results\n\n([\s\S]*?)\n\n## Plan Reviews/)?.[1] ?? "";
+  assert.match(reviewerCoverageSection, /codex/);
+  assert.match(reviewerCoverageSection, /claude/);
+  assert.match(reviewerResultsSection, /none/);
+  assert.doesNotMatch(reviewerResultsSection, /codex|claude/);
   assert.equal(mixedSentinel.status, "invalid");
   assert.match(
     mixedSentinel.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
