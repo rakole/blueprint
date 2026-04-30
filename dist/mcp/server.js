@@ -19909,9 +19909,6 @@ function collectReferencedSummaryPaths(section, summaryPaths) {
     return normalizedSection.includes(summaryPath2) || normalizedSection.includes(fileName);
   });
 }
-function containsReferencedSummaryPath(section, summaryPaths) {
-  return collectReferencedSummaryPaths(section, summaryPaths).length > 0;
-}
 function validateRequiredMarkdownSections(content, artifactLabel, headings) {
   const issues = [];
   for (const heading of headings) {
@@ -21356,12 +21353,21 @@ function validateUatArtifactContent(content, summaryPaths = [], options = {}) {
   const resultSummary = extractMarkdownSection(content, "Result Summary");
   const structuredGaps = extractMarkdownSection(content, "Structured Gaps");
   const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
-  issues.push(...validateModelExampleLeakage(content, "phase.uat", "UAT artifact"));
-  if (!containsReferencedSummaryPath(`${uatSummary}
+  const summaryEvidenceSections = `${uatSummary}
 ${sessionState}
-${observedBehavior}`, summaryPaths)) {
+${observedBehavior}
+${testMatrix}`;
+  issues.push(...validateModelExampleLeakage(content, "phase.uat", "UAT artifact"));
+  const citedSummaries = new Set(collectReferencedSummaryPaths(summaryEvidenceSections, summaryPaths));
+  const missingSummaryCitations = summaryPaths.filter((summaryPath2) => !citedSummaries.has(summaryPath2));
+  if (summaryPaths.length > 0 && citedSummaries.size === 0) {
     issues.push(
-      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
+      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, ## Observed Behavior, or ## Test Matrix."
+    );
+  }
+  if (missingSummaryCitations.length > 0) {
+    issues.push(
+      `UAT artifact must cite every saved execution summary across ## UAT Summary, ## Session State, ## Observed Behavior, or ## Test Matrix. Missing: ${missingSummaryCitations.map((summaryPath2) => summaryPath2.split("/").pop() ?? summaryPath2).join(", ")}.`
     );
   }
   if (options.requireReadyVerificationEvidence === true && !/\b(?:ready[- ]verification(?:[- ](?:artifact|evidence))?|verification[- ]artifact|validation[- ]baseline|ready[- ]for[- ]UAT)\b/i.test(
@@ -30363,16 +30369,17 @@ function buildPhaseUatTaskSchema(args) {
     ...args.summaryPaths,
     ...args.verificationPath ? [args.verificationPath] : []
   ]);
+  const requiredEvidencePaths = evidencePaths;
   if (properties) {
     const testMatrix = getJsonObjectProperty(properties, "testMatrix");
     const evidence = testMatrixRowProperties ? getJsonObjectProperty(testMatrixRowProperties, "evidence") : null;
-    if (args.summaryPaths.length > 0) {
+    if (requiredEvidencePaths.length > 0) {
       if (evidence) {
         evidence.enum = evidencePaths;
       }
       if (testMatrix) {
-        testMatrix.allOf = args.summaryPaths.map(
-          (summaryPath2) => objectPropertyContainsAtLeast("evidence", summaryPath2)
+        testMatrix.allOf = requiredEvidencePaths.map(
+          (evidencePath) => objectPropertyContainsAtLeast("evidence", evidencePath)
         );
       }
     } else {
@@ -31102,7 +31109,7 @@ async function blueprintPhaseValidationRender(args) {
     summaryIndex.summaries,
     completedSummaryPlanIds
   );
-  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths) : validateUatArtifactContent(content, referencedSummaryPaths, {
+  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths) : validateUatArtifactContent(content, summaryEvidence.summaryPaths, {
     requireReadyVerificationEvidence: true
   });
   const payloadIssues = args.artifact === "verification" ? verificationPayloadIssues(args) : uatPayloadIssues(args);
@@ -32349,12 +32356,7 @@ async function blueprintPhaseValidationRead(args) {
     completedSummaryPlanIds
   );
   const { summaryPaths: completedSummaryPaths, warnings: completedSummaryWarnings } = await collectValidatedSummaryPaths(projectRoot, completedSummaries);
-  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
-    content,
-    summaryIndex.summaries,
-    completedSummaryPlanIds
-  );
-  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, completedSummaryPaths) : validateUatArtifactContent(content, referencedSummaryPaths, {
+  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, completedSummaryPaths) : validateUatArtifactContent(content, completedSummaryPaths, {
     requireReadyVerificationEvidence: true
   });
   const validationWithSummaryWarnings = {
@@ -32364,7 +32366,7 @@ async function blueprintPhaseValidationRead(args) {
   const uatState = args.artifact === "uat" ? readUatArtifactState(content) : null;
   const verificationReadyForUat = args.artifact === "verification" && validationWithSummaryWarnings.valid && completedSummaryPaths.length > 0 ? isVerificationArtifactReadyForUat(content) : false;
   const complete = args.artifact === "verification" ? validationWithSummaryWarnings.valid && verificationReadyForUat : validationWithSummaryWarnings.valid && Boolean(uatState?.complete);
-  const resultSummaryPaths = args.artifact === "verification" ? completedSummaryPaths : referencedSummaryPaths;
+  const resultSummaryPaths = completedSummaryPaths;
   return {
     phaseFound: true,
     found: true,
@@ -32480,16 +32482,12 @@ async function blueprintPhaseValidationWrite(args) {
   }
   const exists = await pathExists2(absolutePath);
   const completedSummaryPaths = summaryPaths;
-  const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
-    normalizedContent,
-    summaryIndex.summaries,
-    new Set(summaryIndex.completedPlans)
-  );
+  const validationSummaryPaths = completedSummaryPaths;
   const validation = normalizedContent.trim().length === 0 ? {
     valid: false,
     issues: [`${args.artifact} content must not be empty.`],
     warnings: []
-  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths) : validateUatArtifactContent(normalizedContent, referencedSummaryPaths, {
+  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths) : validateUatArtifactContent(normalizedContent, validationSummaryPaths, {
     requireReadyVerificationEvidence: true
   });
   if (args.artifact === "uat") {
@@ -32523,7 +32521,7 @@ async function blueprintPhaseValidationWrite(args) {
       summaryIndex.summaries,
       new Set(summaryIndex.completedPlans)
     );
-    const existingValidation = args.artifact === "verification" ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths) : validateUatArtifactContent(existingContent, existingReferencedSummaryPaths, {
+    const existingValidation = args.artifact === "verification" ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths) : validateUatArtifactContent(existingContent, validationSummaryPaths, {
       requireReadyVerificationEvidence: true
     });
     const existingUatState = args.artifact === "uat" ? readUatArtifactState(existingContent) : null;
@@ -32537,7 +32535,7 @@ async function blueprintPhaseValidationWrite(args) {
           phaseDir: resolved.phaseDir,
           artifact: args.artifact,
           path: artifactPath,
-          summaryPaths: referencedSummaryPaths,
+          summaryPaths: validationSummaryPaths,
           written: false,
           created: false,
           overwritten: false,
@@ -32557,7 +32555,7 @@ async function blueprintPhaseValidationWrite(args) {
         phaseDir: resolved.phaseDir,
         artifact: args.artifact,
         path: artifactPath,
-        summaryPaths: referencedSummaryPaths,
+        summaryPaths: validationSummaryPaths,
         written: false,
         created: false,
         overwritten: false,
@@ -32586,7 +32584,7 @@ async function blueprintPhaseValidationWrite(args) {
       phaseDir: resolved.phaseDir,
       artifact: args.artifact,
       path: artifactPath,
-      summaryPaths: referencedSummaryPaths,
+      summaryPaths: validationSummaryPaths,
       written: false,
       created: false,
       overwritten: false,
@@ -32613,7 +32611,7 @@ async function blueprintPhaseValidationWrite(args) {
     phaseDir: resolved.phaseDir,
     artifact: args.artifact,
     path: artifactPath,
-    summaryPaths: referencedSummaryPaths,
+    summaryPaths: validationSummaryPaths,
     written: true,
     created: !exists,
     overwritten: exists,

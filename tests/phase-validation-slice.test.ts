@@ -1039,11 +1039,11 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 ## UAT Summary
 
-- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` with ready verification evidence.
+- The user acceptance run passed against \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` and \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\` with ready verification evidence.
 
 ## Session State
 
-- Resume source: \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`
+- Resume source: \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` and \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\`
 - Current session step: Close the initial UAT pass.
 - Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
 
@@ -1058,12 +1058,13 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 | # | Test | Expected Behavior | Evidence | Result | Notes |
 |---|------|-------------------|----------|--------|-------|
-| 1 | Validation UAT smoke | Keep the validated summary-backed behavior stable. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | pass | none |
+| 1 | Validation UAT smoke | Keep the first validated summary-backed behavior stable. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | pass | none |
+| 2 | Validation UAT follow-up | Keep the second validated summary-backed behavior stable. | .blueprint/phases/04-phase-validation/04-02-SUMMARY.md | pass | none |
 
 ## Result Summary
 
-- Total: 1
-- Passed: 1
+- Total: 2
+- Passed: 2
 - Issues: 0
 - Pending: 0
 - Skipped: 0
@@ -1075,7 +1076,7 @@ test("validation phase artifacts can be written, read, and discovered alongside 
 
 ## Observed Behavior
 
-- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\`.
+- The observed behavior matched \`.blueprint/phases/04-phase-validation/04-01-SUMMARY.md\` and \`.blueprint/phases/04-phase-validation/04-02-SUMMARY.md\`.
 
 ## Unresolved Gaps
 

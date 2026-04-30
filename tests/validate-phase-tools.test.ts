@@ -565,6 +565,8 @@ function uatRenderInput(
   summaryPath: string,
   overrides: Partial<Extract<PhaseValidationRenderInput, { artifact: "uat" }>> = {}
 ): Extract<PhaseValidationRenderInput, { artifact: "uat" }> {
+  const verificationPath = ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md";
+
   return {
     artifact: "uat",
     phase: "3",
@@ -587,11 +589,19 @@ function uatRenderInput(
         evidence: summaryPath,
         result: "pass",
         notes: "User acceptance evidence confirmed."
+      },
+      {
+        number: "2",
+        test: "Ready verification provenance",
+        expectedBehavior: "Behavior described by the ready verification artifact is acceptable.",
+        evidence: verificationPath,
+        result: "pass",
+        notes: "Ready verification evidence confirmed."
       }
     ],
     resultSummary: {
-      total: 1,
-      passed: 1,
+      total: 2,
+      passed: 2,
       issues: 0,
       pending: 0,
       skipped: 0,
@@ -1065,6 +1075,7 @@ test("validation write accepts a structured UAT model after ready verification e
   });
 
   const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const verificationPath = ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md";
   const {
     artifact: _verificationArtifact,
     phase: _verificationPhase,
@@ -1097,13 +1108,95 @@ test("validation write accepts a structured UAT model after ready verification e
     artifact: "uat",
     model
   });
-  const optionalEmptyQuestions = await blueprintPhaseValidationValidateModel({
+  const missingReadyVerificationEvidence = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      testMatrix: model.testMatrix.filter((row) => row.evidence !== verificationPath),
+      resultSummary: {
+        total: 1,
+        passed: 1,
+        issues: 0,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      }
+    }
+  });
+  const explicitNoQuestions = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      questionsAsked: ["none"]
+    }
+  });
+  const emptyQuestionsRejected = await blueprintPhaseValidationValidateModel({
     cwd: repoPath,
     phase: "3",
     artifact: "uat",
     model: {
       ...model,
       questionsAsked: []
+    }
+  });
+  const partialCheckpointedWithoutFollowUpFix = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    model: {
+      ...model,
+      status: "PARTIAL",
+      checkpoint: "external-blocker-checkpoint",
+      uatSummary: [
+        `User acceptance partially completed for ${summaryPath} and ready verification ${verificationPath}; an external blocker remains.`
+      ],
+      sessionState: [
+        `Resume source: ${summaryPath}`,
+        "Current session step: checkpointed on the external blocker.",
+        `Continuity notes: ready verification artifact ${verificationPath} remains the validation baseline.`
+      ],
+      currentTest: {
+        number: "2",
+        name: "External dependency acceptance check",
+        expected: "The user can confirm the remaining behavior after the external dependency is unblocked.",
+        awaiting: "External dependency owner response."
+      },
+      testMatrix: [
+        model.testMatrix[0],
+        {
+          ...model.testMatrix[1],
+          result: "blocked",
+          notes: "External dependency blocks final user confirmation."
+        }
+      ],
+      resultSummary: {
+        total: 2,
+        passed: 1,
+        issues: 0,
+        pending: 0,
+        skipped: 0,
+        blocked: 1
+      },
+      observedBehavior: [
+        `Observed accepted behavior for ${summaryPath}; final confirmation against ${verificationPath} is externally blocked.`
+      ],
+      unresolvedGaps: ["External dependency still blocks final user acceptance confirmation."],
+      structuredGaps: [
+        {
+          test: "2",
+          truth: "External dependency still blocks final user acceptance confirmation.",
+          status: "blocked",
+          severity: "major",
+          reason: "The blocking dependency is outside this implementation pass.",
+          followUp: "Resume /blu-verify-work 3 when the dependency is available."
+        }
+      ],
+      followUpFixes: ["none"],
+      nextSafeAction: "/blu-verify-work 3"
     }
   });
   const uat = await blueprintPhaseValidationWrite({
@@ -1234,7 +1327,23 @@ test("validation write accepts a structured UAT model after ready verification e
   assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
   assert.equal(validated.schemaPath, "src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json");
   assert.match(validated.renderPreview ?? "", /# Phase 03: Phase Discovery - UAT/);
-  assert.equal(optionalEmptyQuestions.status, "valid", JSON.stringify(optionalEmptyQuestions.diagnostics, null, 2));
+  assert.match(validated.renderPreview ?? "", /03-VERIFICATION\.md/);
+  assert.equal(missingReadyVerificationEvidence.status, "invalid");
+  assert.match(
+    missingReadyVerificationEvidence.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /schema\.contains/
+  );
+  assert.equal(explicitNoQuestions.status, "valid", JSON.stringify(explicitNoQuestions.diagnostics, null, 2));
+  assert.equal(emptyQuestionsRejected.status, "invalid");
+  assert.match(
+    emptyQuestionsRejected.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.questionsAsked/
+  );
+  assert.equal(
+    partialCheckpointedWithoutFollowUpFix.status,
+    "valid",
+    JSON.stringify(partialCheckpointedWithoutFollowUpFix.diagnostics, null, 2)
+  );
   assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
   assert.equal(uat.written, true);
   assert.deepEqual(uat.summaryPaths, [summaryPath]);
@@ -1463,6 +1572,24 @@ test("validation render handles UAT prerequisites, summary citations, checkpoint
     ...uatRenderInput(summaryPath, {
       uatSummary: ["User acceptance run passed."],
       sessionState: ["Resume source: none"],
+      testMatrix: [
+        {
+          number: "1",
+          test: "Ready verification behavior",
+          expectedBehavior: "Behavior described by ready verification evidence is acceptable.",
+          evidence: ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md",
+          result: "pass",
+          notes: "User acceptance evidence confirmed."
+        }
+      ],
+      resultSummary: {
+        total: 1,
+        passed: 1,
+        issues: 0,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      },
       observedBehavior: ["Observed behavior matched expectations."]
     })
   });
@@ -1670,7 +1797,7 @@ test("validation render handles UAT prerequisites, summary citations, checkpoint
   assert.match(invalidGapEnums.issues.join("\n"), /unsupported status: unknown/);
   assert.match(invalidGapEnums.issues.join("\n"), /unsupported severity: urgent/);
   assert.equal(inconsistentCounts.readyToWrite, false);
-  assert.match(inconsistentCounts.issues.join("\n"), /passed count 0 does not match Test Matrix count 1/);
+  assert.match(inconsistentCounts.issues.join("\n"), /passed count 0 does not match Test Matrix count 2/);
   assert.equal(passWithActiveGap.readyToWrite, false);
   assert.match(passWithActiveGap.issues.join("\n"), /must not declare PASS/i);
   assert.equal(passWithUnresolvedGapOnly.readyToWrite, false);
@@ -2808,7 +2935,7 @@ Capture the second completed validation summary.
       ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"
     ])
   });
-  await blueprintPhaseValidationWrite({
+  const staleUat = await blueprintPhaseValidationWrite({
     cwd: repoPath,
     phase: "3",
     artifact: "uat",
@@ -2874,14 +3001,93 @@ Capture the second completed validation summary.
 
 ## Next Safe Action
 
+  - Return to \`/blu-progress\` for the next safe implemented action.
+  `
+  });
+
+  let roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(staleUat.status, "invalid");
+  assert.equal(staleUat.written, false);
+  assert.match(staleUat.issues.join("\n"), /03-02-SUMMARY\.md/);
+  assert.doesNotMatch(roadmapBody, /- \[x\] \*\*Phase 3: Phase Discovery\*\*/);
+
+  const uat = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "uat",
+    content: `# Phase 03: Phase Discovery - UAT
+
+**Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
+
+## UAT Summary
+
+- UAT closed without blocking issues against \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\` and \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\` with ready verification evidence.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\` and \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
+- Current session step: Close the full UAT pass.
+- Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.
+
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the validated summary-backed behavior stable.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Discovery UAT smoke | Keep the first summary-backed behavior stable. | .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md | pass | none |
+| 2 | Discovery UAT follow-up | Keep the second summary-backed behavior stable. | .blueprint/phases/03-phase-discovery/03-02-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 2
+- Passed: 2
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
+## Questions Asked
+
+- Did the delivered behavior match every saved execution summary?
+
+## Observed Behavior
+
+- The observed behavior matched \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\` and \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
+
+## Unresolved Gaps
+
+- none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
 - Return to \`/blu-progress\` for the next safe implemented action.
 `
   });
 
-  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
   const status = await blueprintProjectStatus({ cwd: repoPath });
   const state = await blueprintStateLoad({ cwd: repoPath });
 
+  assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
   assert.match(roadmapBody, /- \[x\] \*\*Phase 3: Phase Discovery\*\* - Validate the completed plans/);
   assert.match(roadmapBody, /### Phase 3: Phase Discovery[\s\S]*\*\*Status\*\*: completed/);
   assert.match(status.nextAction, /\/blu-audit-milestone v1/);
