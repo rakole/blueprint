@@ -15293,22 +15293,72 @@ function renderPeerReviewTemplate(context) {
   return `# ${phaseLabel(context)} - Peer Reviews
 
 **Reviewers:** <reviewer-cli-1>, <reviewer-cli-2>
+**Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-routing|not-ready-for-routing|blocked
+**Completion State:** complete|pending|blocked
+**Next Safe Action:** /blu-execute-phase <phase>|/blu-code-review <phase>|/blu-plan-phase <phase>|/blu-review <phase>|/blu-progress
 
 ## Review Summary
 
 - Concise synthesis of the saved reviewer outputs.
 
+## Reviewer Coverage
+
+| Reviewer | Status | Summary |
+|----------|--------|---------|
+| reviewer-cli | completed/unavailable/failed/blocked | reviewer outcome |
+
 ## Reviewer Results
 
 - Reviewer name: main conclusions.
+
+## Plan Reviews
+
+| Plan | Goal Fit | Summary |
+|------|----------|---------|
+| ${phasePrefix(context)}-01-PLAN.md | achieves-goal/needs-revision/blocked | plan-specific review result |
+
+## Findings
+
+| Severity | Source | Evidence | Recommendation | Status |
+|----------|--------|----------|----------------|--------|
+| unknown | none | none | none | NONE |
+
+## Consensus
+
+- Shared reviewer conclusion.
 
 ## Disagreements
 
 - Explicit reviewer disagreement, or \`none\`.
 
+## Risk Assessment
+
+| Level | Summary |
+|-------|---------|
+| LOW/MEDIUM/HIGH | concise risk posture |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
 ## Follow-Ups
 
 - Plan revision, execution change, or \`none\`.
+
+## Evidence Reviewed
+
+| Evidence | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/<phase>/XX-YY-PLAN.md | used/deferred/unavailable | why it mattered |
 
 ## Next Safe Action
 
@@ -16039,7 +16089,7 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, PHASE_SUMMARY_MODEL_SCHEMA_FILE, PHASE_SUMMARY_MODEL_SCHEMA_PATH, PHASE_SUMMARY_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, PHASE_SUMMARY_MODEL_SCHEMA_FILE, PHASE_SUMMARY_MODEL_SCHEMA_PATH, PHASE_SUMMARY_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, PEER_REVIEW_MODEL_SCHEMA_FILE, PEER_REVIEW_MODEL_SCHEMA_PATH, PEER_REVIEW_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
@@ -16403,6 +16453,110 @@ var init_artifact_contracts = __esm({
         "Added the negative-input guard required by the saved review finding.",
         "Focused regression command exited 0 after the fix.",
         "Saved review finding F-01 defined the remediation target."
+      ]
+    };
+    PEER_REVIEW_MODEL_SCHEMA_FILE = "review.peer-review.model.schema.json";
+    PEER_REVIEW_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/review.peer-review.model.schema.json";
+    PEER_REVIEW_MODEL_CONTRACT = {
+      schemaId: "blueprint.review.peer-review.model",
+      schemaVersion: "1.0.0",
+      schemaPath: PEER_REVIEW_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(PEER_REVIEW_MODEL_SCHEMA_FILE),
+      qualityRules: [
+        "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, content, planPaths, summaryPaths, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
+        "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so selected plans, evidence coverage, and status-safe next actions stay deterministic.",
+        "COMPLETED peer reviews must use exact none sentinel rows for findings, manual/deferred work, and gap routes, and must route only to the next implemented post-review action.",
+        "PARTIAL and BLOCKED peer reviews must include at least one concrete finding, gap route, and non-none follow-up so reviewer availability or plan-revision debt remains resumable.",
+        "Use concrete reviewer output, saved plan paths, and saved evidence paths; do not copy minimal example wording, scaffold prose, or generic none values where real reviewer evidence or gaps exist."
+      ],
+      contextBindings: [
+        "phase, phasePrefix, phaseName, phaseDir, canonical filename, report path, selected plan ids, selected plan paths, and saved evidence paths come from blueprint_phase_locate, blueprint_phase_plan_index/read, blueprint_artifact_list, and blueprint_review_record arguments.",
+        "Allowed nextSafeAction values come from the peer-review status truth table, pending-plan state, existing review evidence, and the implemented command catalog.",
+        "Existing peer-review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+      ],
+      renderedHeadings: [
+        "Review Summary",
+        "Reviewer Coverage",
+        "Reviewer Results",
+        "Plan Reviews",
+        "Findings",
+        "Consensus",
+        "Disagreements",
+        "Risk Assessment",
+        "Manual / Deferred Work",
+        "Gap / Repair Routes",
+        "Follow-Ups",
+        "Evidence Reviewed",
+        "Next Safe Action"
+      ],
+      minimalValidExample: {
+        status: "COMPLETED",
+        readiness: "ready-for-routing",
+        completionState: "complete",
+        reviewSummary: [
+          "Codex reviewed the saved phase plan and found it ready for execution."
+        ],
+        reviewerCoverage: [
+          {
+            reviewer: "codex",
+            status: "completed",
+            summary: "Saved plan evidence was reviewed successfully."
+          }
+        ],
+        planReviews: [
+          {
+            planId: "01",
+            path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+            goalFit: "achieves-goal",
+            summary: "The plan is scoped and ready for execution."
+          }
+        ],
+        findings: [
+          {
+            severity: "unknown",
+            source: "none",
+            evidence: "none",
+            recommendation: "none",
+            status: "NONE"
+          }
+        ],
+        consensus: [
+          "The saved plan can proceed to execution."
+        ],
+        disagreements: ["none"],
+        riskAssessment: {
+          level: "LOW",
+          summary: "No peer-review blockers remain."
+        },
+        manualOrDeferredWork: [
+          {
+            item: "none",
+            reason: "none",
+            followUp: "none",
+            status: "NONE"
+          }
+        ],
+        gapRoutes: [
+          {
+            gap: "none",
+            evidence: "none",
+            repair: "none",
+            status: "NONE"
+          }
+        ],
+        followUps: ["none"],
+        evidenceCoverage: {
+          ".blueprint/phases/03-review-phase/03-01-PLAN.md": {
+            status: "used",
+            rationale: "The saved plan was the peer-review source of truth."
+          }
+        },
+        nextSafeAction: "/blu-execute-phase 3"
+      },
+      exampleLeakageSignals: [
+        "Codex reviewed the saved phase plan and found it ready for execution.",
+        "Saved plan evidence was reviewed successfully.",
+        "The saved plan can proceed to execution."
       ]
     };
     SECURITY_MODEL_SCHEMA_FILE = "review.security.model.schema.json";
@@ -17730,10 +17884,23 @@ var init_artifact_contracts = __esm({
         canonicalName: "Peer Review",
         canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-REVIEWS.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Review Summary", "Reviewer Results", "Disagreements", "Follow-Ups", "Next Safe Action"],
-        lockedMarkers: ["**Reviewers:**"],
-        placeholderSignals: ["<reviewer-cli-1>", "<reviewer-cli-2>"],
-        notes: ["Preserve reviewer disagreement honestly instead of flattening it."],
+        requiredHeadings: PEER_REVIEW_MODEL_CONTRACT.renderedHeadings,
+        lockedMarkers: ["**Reviewers:**", "**Status:**", "**Next Safe Action:**"],
+        placeholderSignals: [
+          "<reviewer-cli-1>",
+          "<reviewer-cli-2>",
+          "COMPLETED|PARTIAL|BLOCKED",
+          "completed/unavailable/failed/blocked",
+          "achieves-goal/needs-revision/blocked",
+          "LOW/MEDIUM/HIGH",
+          ".blueprint/phases/<phase>/XX-YY-PLAN.md"
+        ],
+        notes: [
+          "Preserve reviewer disagreement honestly instead of flattening it.",
+          "Structured model authoring is schema-first: runtime context supplies selected plan inventory, saved evidence inventory, report path, and status-safe next actions.",
+          "`COMPLETED` peer reviews prove reviewer coverage is resolved and no actionable peer-review gaps remain; `PARTIAL` and `BLOCKED` preserve reviewer or plan-revision debt as resumable evidence."
+        ],
+        modelContract: PEER_REVIEW_MODEL_CONTRACT,
         renderScaffoldTemplate: renderPeerReviewTemplate,
         renderAuthoringTemplate: renderPeerReviewTemplate
       },
@@ -35582,6 +35749,312 @@ async function buildCodeReviewAuthoringContext(args) {
     taskSchema
   };
 }
+async function buildAllowedPeerReviewNextActions(args) {
+  const completedPreferred = args.pendingPlans.length > 0 ? `/blu-execute-phase ${args.phaseNumber}` : args.hasCodeReview ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  const completedCandidates = uniqueSortedStrings2([
+    completedPreferred,
+    `/blu-execute-phase ${args.phaseNumber}`,
+    `/blu-code-review ${args.phaseNumber}`,
+    "/blu-progress"
+  ]);
+  const partialCandidates = uniqueSortedStrings2([
+    `/blu-plan-phase ${args.phaseNumber}`,
+    `/blu-review ${args.phaseNumber}`
+  ]);
+  const blockedCandidates = uniqueSortedStrings2([
+    `/blu-review ${args.phaseNumber}`,
+    `/blu-plan-phase ${args.phaseNumber}`
+  ]);
+  const implementedCommands = await getImplementedCommandNames2();
+  const filterImplemented = (actions) => {
+    if (implementedCommands === null || implementedCommands.size === 0) {
+      return actions;
+    }
+    const filtered = actions.filter(
+      (action) => extractBlueprintDirectCommands2(action).every(
+        (command) => implementedCommands.has(command)
+      )
+    );
+    return filtered.length > 0 ? filtered : actions;
+  };
+  const completedNextSafeActions = filterImplemented(completedCandidates);
+  const partialNextSafeActions = filterImplemented(partialCandidates);
+  const blockedNextSafeActions = filterImplemented(blockedCandidates);
+  return {
+    completedNextSafeActions,
+    partialNextSafeActions,
+    blockedNextSafeActions,
+    allowedNextActions: uniqueSortedStrings2([
+      ...completedNextSafeActions,
+      ...partialNextSafeActions,
+      ...blockedNextSafeActions
+    ])
+  };
+}
+function collectPeerReviewEvidenceArtifacts(args) {
+  return uniqueSortedStrings2([
+    ...args.planPaths,
+    ...args.artifacts.filter((artifactPath) => artifactPath !== args.reportPath).filter(
+      (artifactPath) => /-(?:CONTEXT|RESEARCH|UI-SPEC|PLAN|SUMMARY|VERIFICATION|UAT|REVIEW|SECURITY|UI-REVIEW)\.md$/i.test(artifactPath)
+    )
+  ]);
+}
+function buildPeerReviewTaskSchema(args) {
+  const schema = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty2(schema, "properties");
+  if (properties) {
+    const planReviews = getJsonObjectProperty2(properties, "planReviews");
+    if (planReviews) {
+      planReviews.minItems = args.plans.length;
+      planReviews.maxItems = args.plans.length;
+      const items = getJsonObjectProperty2(planReviews, "items");
+      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
+      if (planId2) {
+        planId2.enum = args.plans.map((plan) => plan.planId);
+      }
+      if (pathProperty) {
+        pathProperty.enum = args.plans.map((plan) => plan.path);
+      }
+      planReviews.allOf = args.plans.map((plan) => ({
+        contains: {
+          type: "object",
+          required: ["planId", "path"],
+          properties: {
+            planId: { const: plan.planId },
+            path: { const: plan.path }
+          }
+        },
+        minContains: 1,
+        maxContains: 1
+      }));
+    }
+    const evidenceCoverage = getJsonObjectProperty2(properties, "evidenceCoverage");
+    if (evidenceCoverage) {
+      evidenceCoverage.additionalProperties = false;
+      evidenceCoverage.required = args.knownEvidenceArtifacts;
+      evidenceCoverage.properties = Object.fromEntries(
+        args.knownEvidenceArtifacts.map((artifactPath) => [
+          artifactPath,
+          { $ref: "#/$defs/evidenceCoverageEntry" }
+        ])
+      );
+    }
+    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedNextActions;
+    }
+  }
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "COMPLETED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: {
+            enum: args.completedNextSafeActions
+          }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PARTIAL" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: {
+            enum: args.partialNextSafeActions
+          }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "BLOCKED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: {
+            enum: args.blockedNextSafeActions
+          }
+        }
+      }
+    }
+  ];
+  schema["x-blueprint-runtimeContext"] = {
+    reportPath: args.reportPath,
+    plans: args.plans,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    completedNextSafeActions: args.completedNextSafeActions,
+    partialNextSafeActions: args.partialNextSafeActions,
+    blockedNextSafeActions: args.blockedNextSafeActions,
+    allowedNextActions: args.allowedNextActions
+  };
+  return schema;
+}
+async function buildPeerReviewAuthoringContext(args) {
+  const contract = readArtifactContract("review.peer-review");
+  const modelContract = contract.modelContract;
+  const baseSchema = modelContract ? cloneJsonObject3(modelContract.jsonSchema) : null;
+  const located = await blueprintPhaseLocate({
+    cwd: args.projectRoot,
+    phase: args.phase
+  });
+  if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
+    const reason = located.reason ?? "Phase could not be resolved for peer-review authoring.";
+    return {
+      status: "invalid",
+      artifact: "peer-review",
+      phase: null,
+      files: [],
+      reviewMode: null,
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema,
+      taskSchema: null,
+      modelOnly: true,
+      authoringContext: null,
+      prerequisiteBlockers: [reason],
+      reason,
+      warnings: located.warnings
+    };
+  }
+  const phase = {
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom
+  };
+  const phaseNumber = located.phaseNumber;
+  const reportPath = `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES["peer-review"]}`;
+  const [planIndex, summaryIndex, executionTargets] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
+    blueprintPhaseSummaryIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
+    blueprintPhaseExecutionTargets({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    })
+  ]);
+  const planReads = await Promise.all(
+    planIndex.plans.map(
+      (plan) => blueprintPhasePlanRead({
+        cwd: args.projectRoot,
+        phase: phaseNumber,
+        planId: plan.planId
+      })
+    )
+  );
+  const summaryReads = await Promise.all(
+    summaryIndex.summaries.map(
+      (summary) => blueprintPhaseSummaryRead({
+        cwd: args.projectRoot,
+        phase: phaseNumber,
+        planId: summary.planId
+      })
+    )
+  );
+  const blockers = [];
+  if (!modelContract?.schemaPath) {
+    blockers.push("review.peer-review does not expose a model schema contract.");
+  }
+  if (planIndex.plans.length === 0) {
+    blockers.push(
+      `Phase ${located.phaseNumber} has no saved plan artifacts; run /blu-plan-phase ${located.phaseNumber} before peer review.`
+    );
+  }
+  for (const planRead of planReads) {
+    if (!planRead.found || !planRead.path) {
+      blockers.push(
+        `${planRead.path ?? "A selected plan"} could not be read for peer-review authoring.`
+      );
+    } else if (!planRead.validation?.valid) {
+      const issues = planRead.validation?.issues.length ? planRead.validation.issues : ["Saved plan artifact is invalid."];
+      blockers.push(...issues.map((issue2) => `${planRead.path}: ${issue2}`));
+    }
+  }
+  const plans = planReads.filter((planRead) => planRead.found && planRead.path).map((planRead) => ({
+    planId: planRead.planId ?? "",
+    path: planRead.path ?? "",
+    title: planRead.metadata?.title ?? null
+  })).filter((plan) => plan.planId.length > 0 && plan.path.length > 0);
+  const knownEvidenceArtifacts = collectPeerReviewEvidenceArtifacts({
+    planPaths: plans.map((plan) => plan.path),
+    artifacts: located.artifacts,
+    reportPath
+  });
+  const nextActions = await buildAllowedPeerReviewNextActions({
+    phaseNumber,
+    pendingPlans: summaryIndex.pendingPlans,
+    hasCodeReview: located.artifacts.some(
+      (artifactPath) => artifactPath.endsWith(REVIEW_ARTIFACT_SUFFIXES["code-review"])
+    )
+  });
+  const taskSchema = blockers.length === 0 && baseSchema && modelContract?.schemaPath ? buildPeerReviewTaskSchema({
+    baseSchema,
+    plans,
+    knownEvidenceArtifacts,
+    reportPath,
+    ...nextActions
+  }) : null;
+  const authoringContext = blockers.length === 0 && taskSchema && baseSchema && modelContract?.schemaPath ? {
+    phase,
+    path: reportPath,
+    plans,
+    knownEvidenceArtifacts,
+    pendingPlans: summaryIndex.pendingPlans,
+    existingPeerReview: located.artifacts.find(
+      (artifactPath) => artifactPath.endsWith(REVIEW_ARTIFACT_SUFFIXES["peer-review"])
+    ) ?? null,
+    ...nextActions,
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema
+  } : null;
+  return {
+    status: blockers.length === 0 ? "ready" : "invalid",
+    artifact: "peer-review",
+    phase,
+    files: [],
+    reviewMode: {
+      depth: "standard",
+      source: "phase-plans"
+    },
+    schemaPath: modelContract?.schemaPath ?? null,
+    baseSchema,
+    taskSchema,
+    modelOnly: true,
+    authoringContext,
+    prerequisiteBlockers: blockers,
+    reason: blockers.length > 0 ? blockers.join(" ") : null,
+    warnings: uniqueSortedStrings2([
+      ...located.warnings,
+      ...planIndex.warnings,
+      ...summaryIndex.warnings,
+      ...executionTargets.warnings,
+      ...summaryReads.flatMap((summaryRead) => summaryRead.validation?.warnings ?? [])
+    ])
+  };
+}
 function allowOnlyEmptyArray2(schema) {
   schema.minItems = 0;
   schema.maxItems = 0;
@@ -37133,6 +37606,92 @@ ${renderBulletList2(model.followUps)}
 - ${model.nextSafeAction}
 `);
 }
+function renderPeerReviewModelContent(model, located, authoringContext) {
+  const reviewers = model.reviewerCoverage.map((row) => row.reviewer).join(", ");
+  const reviewerRows = model.reviewerCoverage.map((row) => [
+    row.reviewer,
+    row.status,
+    row.summary
+  ]);
+  const planRows = model.planReviews.map((row) => [
+    `${row.planId} (${row.path})`,
+    row.goalFit,
+    row.summary
+  ]);
+  const findings = model.findings.map(
+    (row) => row.status === "NONE" ? "none" : `[${row.severity}][${row.status}] ${row.source} - Evidence: ${row.evidence} Recommendation: ${row.recommendation}`
+  );
+  const evidenceRows = authoringContext.knownEvidenceArtifacts.map((artifactPath) => {
+    const coverage = model.evidenceCoverage[artifactPath];
+    return [artifactPath, coverage.status, coverage.rationale];
+  });
+  return normalizeTextContent3(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Peer Reviews
+
+**Reviewers:** ${reviewers}
+**Status:** ${model.status}
+**Readiness:** ${model.readiness}
+**Completion State:** ${model.completionState}
+**Next Safe Action:** ${model.nextSafeAction}
+
+## Review Summary
+
+${renderBulletList2(model.reviewSummary)}
+
+## Reviewer Coverage
+
+${renderMarkdownTable(["Reviewer", "Status", "Summary"], reviewerRows)}
+
+## Reviewer Results
+
+${renderBulletList2(model.reviewerCoverage.map((row) => `${row.reviewer}: ${row.summary}`))}
+
+## Plan Reviews
+
+${renderMarkdownTable(["Plan", "Goal Fit", "Summary"], planRows)}
+
+## Findings
+
+${renderBulletList2(findings)}
+
+## Consensus
+
+${renderBulletList2(model.consensus)}
+
+## Disagreements
+
+${renderBulletList2(model.disagreements)}
+
+## Risk Assessment
+
+${renderMarkdownTable(["Level", "Summary"], [[model.riskAssessment.level, model.riskAssessment.summary]])}
+
+## Manual / Deferred Work
+
+${renderMarkdownTable(
+    ["Item", "Reason", "Follow-Up", "Status"],
+    model.manualOrDeferredWork.map((row) => [row.item, row.reason, row.followUp, row.status])
+  )}
+
+## Gap / Repair Routes
+
+${renderMarkdownTable(
+    ["Gap", "Evidence", "Repair", "Status"],
+    model.gapRoutes.map((row) => [row.gap, row.evidence, row.repair, row.status])
+  )}
+
+## Follow-Ups
+
+${renderBulletList2(model.followUps)}
+
+## Evidence Reviewed
+
+${renderMarkdownTable(["Evidence", "Status", "Rationale"], evidenceRows)}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`);
+}
 function markdownTableCell(value) {
   return value.replace(/\r\n|\r|\n/g, " ").replace(/\|/g, "\\|").trim();
 }
@@ -37476,6 +38035,127 @@ function normalizeCodeReviewModelForResiduals(model) {
     findings,
     evidenceCoverage: evidenceCoverage ? normalizeEvidenceCoverage(evidenceCoverage) ?? {} : {},
     followUps: normalizeStringArray(model.followUps) ?? [],
+    nextSafeAction: typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
+  };
+}
+function normalizePeerReviewEvidenceCoverage(evidenceCoverage) {
+  const normalized = {};
+  for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
+    const coverageObject = asJsonObject2(coverage);
+    if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
+      return null;
+    }
+    normalized[artifactPath] = {
+      status: coverageObject.status,
+      rationale: coverageObject.rationale.trim()
+    };
+  }
+  return normalized;
+}
+function normalizePeerReviewModel(model) {
+  const reviewSummary = normalizeStringArray(model.reviewSummary);
+  const reviewerCoverage = Array.isArray(model.reviewerCoverage) ? model.reviewerCoverage : null;
+  const planReviews = Array.isArray(model.planReviews) ? model.planReviews : null;
+  const findings = Array.isArray(model.findings) ? model.findings : null;
+  const consensus = normalizeStringArray(model.consensus);
+  const disagreements = normalizeStringArray(model.disagreements);
+  const riskAssessment = asJsonObject2(model.riskAssessment);
+  const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork) ? model.manualOrDeferredWork : null;
+  const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
+  const followUps = normalizeStringArray(model.followUps);
+  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
+  if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || reviewSummary === null || reviewerCoverage === null || planReviews === null || findings === null || consensus === null || disagreements === null || !riskAssessment || typeof riskAssessment.level !== "string" || typeof riskAssessment.summary !== "string" || manualOrDeferredWork === null || gapRoutes === null || followUps === null || evidenceCoverage === null || typeof model.nextSafeAction !== "string") {
+    return null;
+  }
+  const normalizedReviewerCoverage = reviewerCoverage.map((row) => {
+    const rowObject = asJsonObject2(row);
+    return rowObject && typeof rowObject.reviewer === "string" && typeof rowObject.status === "string" && typeof rowObject.summary === "string" ? {
+      reviewer: rowObject.reviewer.trim(),
+      status: rowObject.status,
+      summary: rowObject.summary.trim()
+    } : null;
+  });
+  const normalizedPlanReviews = planReviews.map((row) => {
+    const rowObject = asJsonObject2(row);
+    return rowObject && typeof rowObject.planId === "string" && typeof rowObject.path === "string" && typeof rowObject.goalFit === "string" && typeof rowObject.summary === "string" ? {
+      planId: rowObject.planId.trim(),
+      path: rowObject.path.trim(),
+      goalFit: rowObject.goalFit,
+      summary: rowObject.summary.trim()
+    } : null;
+  });
+  const normalizedFindings = findings.map((row) => {
+    const rowObject = asJsonObject2(row);
+    return rowObject && typeof rowObject.severity === "string" && typeof rowObject.source === "string" && typeof rowObject.evidence === "string" && typeof rowObject.recommendation === "string" && typeof rowObject.status === "string" ? {
+      severity: rowObject.severity,
+      source: rowObject.source.trim(),
+      evidence: rowObject.evidence.trim(),
+      recommendation: rowObject.recommendation.trim(),
+      status: rowObject.status
+    } : null;
+  });
+  const normalizedManual = manualOrDeferredWork.map((row) => {
+    const rowObject = asJsonObject2(row);
+    return rowObject && typeof rowObject.item === "string" && typeof rowObject.reason === "string" && typeof rowObject.followUp === "string" && typeof rowObject.status === "string" ? {
+      item: rowObject.item.trim(),
+      reason: rowObject.reason.trim(),
+      followUp: rowObject.followUp.trim(),
+      status: rowObject.status
+    } : null;
+  });
+  const normalizedGaps = gapRoutes.map((row) => {
+    const rowObject = asJsonObject2(row);
+    return rowObject && typeof rowObject.gap === "string" && typeof rowObject.evidence === "string" && typeof rowObject.repair === "string" && typeof rowObject.status === "string" ? {
+      gap: rowObject.gap.trim(),
+      evidence: rowObject.evidence.trim(),
+      repair: rowObject.repair.trim(),
+      status: rowObject.status
+    } : null;
+  });
+  const normalizedEvidenceCoverage = normalizePeerReviewEvidenceCoverage(evidenceCoverage);
+  if (normalizedReviewerCoverage.some((row) => row === null) || normalizedPlanReviews.some((row) => row === null) || normalizedFindings.some((row) => row === null) || normalizedManual.some((row) => row === null) || normalizedGaps.some((row) => row === null) || normalizedEvidenceCoverage === null) {
+    return null;
+  }
+  return {
+    status: model.status,
+    readiness: model.readiness,
+    completionState: model.completionState,
+    reviewSummary,
+    reviewerCoverage: normalizedReviewerCoverage,
+    planReviews: normalizedPlanReviews,
+    findings: normalizedFindings,
+    consensus,
+    disagreements,
+    riskAssessment: {
+      level: riskAssessment.level,
+      summary: riskAssessment.summary.trim()
+    },
+    manualOrDeferredWork: normalizedManual,
+    gapRoutes: normalizedGaps,
+    followUps,
+    evidenceCoverage: normalizedEvidenceCoverage,
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+function normalizePeerReviewModelForResiduals(model) {
+  return normalizePeerReviewModel(model) ?? {
+    status: typeof model.status === "string" ? model.status : "",
+    readiness: typeof model.readiness === "string" ? model.readiness : "",
+    completionState: typeof model.completionState === "string" ? model.completionState : "",
+    reviewSummary: normalizeStringArray(model.reviewSummary) ?? [],
+    reviewerCoverage: [],
+    planReviews: [],
+    findings: [],
+    consensus: normalizeStringArray(model.consensus) ?? [],
+    disagreements: normalizeStringArray(model.disagreements) ?? [],
+    riskAssessment: {
+      level: "LOW",
+      summary: ""
+    },
+    manualOrDeferredWork: [],
+    gapRoutes: [],
+    followUps: normalizeStringArray(model.followUps) ?? [],
+    evidenceCoverage: {},
     nextSafeAction: typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
 }
@@ -38106,6 +38786,122 @@ async function collectCodeReviewResidualDiagnostics(args) {
   });
   const nextSafeActionIssues = await validateImplementedNextSafeAction(
     args.normalizedModel.nextSafeAction
+  );
+  for (const issue2 of nextSafeActionIssues) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_unimplemented",
+        message: issue2,
+        context: { nextSafeAction: args.normalizedModel.nextSafeAction },
+        suggestion: "Use one of authoringContext.allowedNextActions."
+      })
+    );
+  }
+  return diagnostics;
+}
+async function collectPeerReviewResidualDiagnostics(args) {
+  const diagnostics = [];
+  const modelContract = readArtifactContract("review.peer-review").modelContract;
+  const stringEntries = collectModelStringEntries2(args.model);
+  for (const key of Object.keys(args.model)) {
+    if (PEER_REVIEW_MODEL_IDENTITY_KEYS.has(key)) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `model.${key}`,
+          code: "residual.identity_key",
+          message: `Peer-review model must not include MCP-owned identity field ${key}.`,
+          context: { key },
+          suggestion: "Remove identity/provenance fields from the model and pass them as MCP tool arguments."
+        })
+      );
+    }
+  }
+  for (const entry of stringEntries) {
+    if (hasPlaceholderLanguage(entry.value)) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.placeholder_text",
+          message: "Peer-review model still contains placeholder language.",
+          context: { value: entry.value },
+          suggestion: "Replace placeholder wording with concrete reviewer, plan, or saved evidence."
+        })
+      );
+    }
+  }
+  if (modelContract) {
+    for (const signal of modelContract.exampleLeakageSignals) {
+      const leakedEntry = stringEntries.find((entry) => entry.value.includes(signal));
+      if (leakedEntry) {
+        diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: leakedEntry.path,
+            code: "residual.example_leakage",
+            message: `Peer-review model copied example leakage signal from ${modelContract.schemaId}.`,
+            context: { signal },
+            suggestion: "Replace copied example wording with reviewer-specific evidence."
+          })
+        );
+      }
+    }
+  }
+  const knownEvidence = new Set(args.authoringContext.knownEvidenceArtifacts);
+  const coverageKeys = Object.keys(args.normalizedModel.evidenceCoverage);
+  const missingEvidence = args.authoringContext.knownEvidenceArtifacts.filter(
+    (artifactPath) => !(artifactPath in args.normalizedModel.evidenceCoverage)
+  );
+  const unknownEvidence = coverageKeys.filter((artifactPath) => !knownEvidence.has(artifactPath));
+  if (missingEvidence.length > 0) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.evidenceCoverage",
+        code: "residual.evidence_missing",
+        message: `Peer-review model evidenceCoverage must include every saved peer-review evidence artifact. Missing: ${missingEvidence.join(", ")}.`,
+        context: { missingEvidence },
+        suggestion: "Use exact evidenceCoverage keys from authoringContext.knownEvidenceArtifacts."
+      })
+    );
+  }
+  if (unknownEvidence.length > 0) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.evidenceCoverage",
+        code: "residual.evidence_unknown",
+        message: `Peer-review model evidenceCoverage contains artifacts outside the live phase inventory: ${unknownEvidence.join(", ")}.`,
+        context: { unknownEvidence },
+        suggestion: "Remove invented or stale evidence keys and use only exact saved phase artifact paths."
+      })
+    );
+  }
+  const knownPlanKeys = new Set(
+    args.authoringContext.plans.map((plan) => `${plan.planId}:${plan.path}`)
+  );
+  const modelPlanKeys = args.normalizedModel.planReviews.map(
+    (plan) => `${plan.planId}:${plan.path}`
+  );
+  const unknownPlanKeys = modelPlanKeys.filter((key) => !knownPlanKeys.has(key));
+  if (unknownPlanKeys.length > 0) {
+    diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.planReviews",
+        code: "residual.plan_out_of_scope",
+        message: `Peer-review model planReviews contains plan rows outside the live selected plan inventory: ${unknownPlanKeys.join(", ")}.`,
+        context: { unknownPlanKeys },
+        suggestion: "Use only exact planId/path pairs from authoringContext.plans."
+      })
+    );
+  }
+  const nextSafeActionIssues = await validateImplementedNextSafeAction(
+    args.normalizedModel.nextSafeAction,
+    "Peer-review model nextSafeAction"
   );
   for (const issue2 of nextSafeActionIssues) {
     diagnostics.push(
@@ -39110,6 +39906,12 @@ async function blueprintReviewAuthoringContext(args) {
       targetIds: args.targetIds
     });
   }
+  if (artifact === "peer-review") {
+    return buildPeerReviewAuthoringContext({
+      projectRoot,
+      phase: args.phase
+    });
+  }
   const scoped = await blueprintReviewScope({
     cwd: projectRoot,
     phase: args.phase,
@@ -39173,7 +39975,7 @@ async function blueprintReviewValidateModel(args) {
           reason: context.reason,
           warnings: context.warnings
         },
-        suggestion: artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+        suggestion: artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : artifact === "peer-review" ? "Resolve saved phase plan artifacts before authoring review.peer-review." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
       })
     ) : [
       modelDiagnostic({
@@ -39185,7 +39987,7 @@ async function blueprintReviewValidateModel(args) {
           reason: context.reason,
           warnings: context.warnings
         },
-        suggestion: artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+        suggestion: artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : artifact === "peer-review" ? "Resolve saved phase plan artifacts before authoring review.peer-review." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
       })
     ];
     return {
@@ -39209,18 +40011,20 @@ async function blueprintReviewValidateModel(args) {
   const modelObject = asJsonObject2(args.model);
   const diagnostics = [];
   if (!modelObject) {
+    const modelLabel = artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : artifact === "peer-review" ? "Peer-review" : "Code-review";
     diagnostics.push(
       modelDiagnostic({
         source: "schema",
         path: "model",
         code: "schema.type",
-        message: `${artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : "Code-review"} model must be a JSON object.`,
+        message: `${modelLabel} model must be a JSON object.`,
         context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
         suggestion: "Return a JSON object that matches authoringContext.taskSchema."
       })
     );
   }
   let normalizedModel = null;
+  let normalizedPeerReviewModel = null;
   let normalizedReviewFixModel = null;
   let normalizedSecurityModel = null;
   if (modelObject) {
@@ -39245,6 +40049,15 @@ async function blueprintReviewValidateModel(args) {
           projectRoot,
           model: modelObject,
           normalizedModel: normalizeReviewFixModelForResiduals(modelObject),
+          authoringContext: context.authoringContext
+        })
+      );
+    } else if (artifact === "peer-review") {
+      normalizedPeerReviewModel = normalizePeerReviewModel(modelObject);
+      diagnostics.push(
+        ...await collectPeerReviewResidualDiagnostics({
+          model: modelObject,
+          normalizedModel: normalizePeerReviewModelForResiduals(modelObject),
           authoringContext: context.authoringContext
         })
       );
@@ -39341,6 +40154,42 @@ async function blueprintReviewValidateModel(args) {
       renderPreview = rendered;
     }
   }
+  if (artifact === "peer-review" && diagnostics.length === 0 && normalizedPeerReviewModel) {
+    const peerReviewContext = context.authoringContext;
+    const located = {
+      phaseNumber: context.phase.phaseNumber,
+      phasePrefix: context.phase.phasePrefix,
+      phaseName: context.phase.phaseName,
+      phaseDir: context.phase.phaseDir,
+      artifacts: peerReviewContext.knownEvidenceArtifacts
+    };
+    const rendered = renderPeerReviewModelContent(
+      normalizedPeerReviewModel,
+      located,
+      peerReviewContext
+    );
+    const markdownValidation = validateReviewArtifactContent(rendered, "peer-review");
+    const nextSafeActionIssues = await validateImplementedNextSafeAction(
+      normalizedPeerReviewModel.nextSafeAction,
+      "Peer-review render Next Safe Action"
+    );
+    const markdownIssues = [...markdownValidation.issues, ...nextSafeActionIssues];
+    for (const issue2 of markdownIssues) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue2,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the canonical peer-review artifact contract."
+        })
+      );
+    }
+    if (markdownIssues.length === 0) {
+      renderPreview = rendered;
+    }
+  }
   if (artifact === "security" && diagnostics.length === 0 && normalizedSecurityModel) {
     const securityContext = context.authoringContext;
     const located = {
@@ -39386,7 +40235,7 @@ async function blueprintReviewValidateModel(args) {
     taskSchema: context.taskSchema,
     diagnostics,
     diagnosticCounts: countDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : normalizedModel,
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : artifact === "peer-review" ? normalizedPeerReviewModel : normalizedModel,
     renderPreview,
     warnings: context.warnings
   };
@@ -39431,7 +40280,7 @@ async function blueprintReviewRecord(args) {
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   const warnings = [];
-  const modelOnlyArtifact = args.artifact === "code-review" || args.artifact === "review-fix" || args.artifact === "security";
+  const modelOnlyArtifact = args.artifact === "code-review" || args.artifact === "peer-review" || args.artifact === "review-fix" || args.artifact === "security";
   const locatedReviewPhase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
@@ -39702,7 +40551,7 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var import__2, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__2, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
@@ -39755,7 +40604,7 @@ var init_review = __esm({
     reviewValidateModelInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
-      artifact: _enum(["code-review", "review-fix", "security"]).optional(),
+      artifact: _enum(["code-review", "peer-review", "review-fix", "security"]).optional(),
       files: array(string2()).optional(),
       depth: _enum(["quick", "standard", "deep"]).optional(),
       targetIds: array(string2()).optional(),
@@ -39764,7 +40613,7 @@ var init_review = __esm({
     reviewAuthoringContextInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
-      artifact: _enum(["code-review", "review-fix", "security"]),
+      artifact: _enum(["code-review", "peer-review", "review-fix", "security"]),
       files: array(string2()).optional(),
       depth: _enum(["quick", "standard", "deep"]).optional(),
       targetIds: array(string2()).optional()
@@ -39799,6 +40648,22 @@ var init_review = __esm({
       "planPaths",
       "threatCounts"
     ]);
+    PEER_REVIEW_MODEL_IDENTITY_KEYS = /* @__PURE__ */ new Set([
+      "cwd",
+      "phase",
+      "phaseNumber",
+      "phasePrefix",
+      "phaseName",
+      "phaseDir",
+      "artifact",
+      "path",
+      "reportPath",
+      "content",
+      "planPath",
+      "planPaths",
+      "summaryPath",
+      "summaryPaths"
+    ]);
     CODE_REVIEW_LOCATION_PATTERN = /^((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
     CODE_REVIEW_NEXT_ACTION_BUILDERS = [
       (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
@@ -39829,19 +40694,19 @@ var init_review = __esm({
       },
       {
         name: "blueprint_review_validate_model",
-        description: "Validate a model-authored review.code-review, review.review-fix, or review.security JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
+        description: "Validate a model-authored review.code-review, review.peer-review, review.review-fix, or review.security JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
         inputSchema: reviewValidateModelInputSchema,
         handler: async (args) => blueprintReviewValidateModel(args)
       },
       {
         name: "blueprint_review_authoring_context",
-        description: "Build the model-only review authoring context and narrowed task schema for review.code-review, review.review-fix, or review.security before model drafting.",
+        description: "Build the model-only review authoring context and narrowed task schema for review.code-review, review.peer-review, review.review-fix, or review.security before model drafting.",
         inputSchema: reviewAuthoringContextInputSchema,
         handler: async (args) => blueprintReviewAuthoringContext(args)
       },
       {
         name: "blueprint_review_record",
-        description: "Persist a phase-scoped Blueprint review artifact with overwrite protection; code-review, review-fix, and security persist model-authored JSON only after validator replay.",
+        description: "Persist a phase-scoped Blueprint review artifact with overwrite protection; code-review, peer-review, review-fix, and security persist model-authored JSON only after validator replay.",
         inputSchema: reviewRecordInputSchema,
         handler: async (args) => blueprintReviewRecord(args)
       }

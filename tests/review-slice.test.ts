@@ -7,7 +7,11 @@ import path from "node:path";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
-import { blueprintReviewRecord } from "../src/mcp/tools/review.js";
+import {
+  blueprintReviewAuthoringContext,
+  blueprintReviewRecord,
+  blueprintReviewValidateModel
+} from "../src/mcp/tools/review.js";
 
 const repoRoot = process.cwd();
 
@@ -71,7 +75,7 @@ depends_on: []
 requirements: ["REV-01"]
 files_modified: ["src/mcp/tools/project.ts"]
 read_first: ["docs/commands/plan-phase.md"]
-acceptance_criteria: ["Peer review feedback is persisted visibly."]
+acceptance_criteria: ["npm test -- tests/review-slice.test.ts exits 0"]
 autonomous: true
 ---
 
@@ -80,11 +84,109 @@ autonomous: true
 ## Goal
 
 Capture cross-CLI peer review for the saved plan.
+
+## Scope
+
+- Update peer-review MCP persistence and metadata tests.
+
+## Tasks
+
+### Task 1: Persist peer review
+
+#### Read First
+
+- docs/commands/review.md
+
+#### Action
+
+- Keep peer review evidence MCP-owned.
+
+#### Acceptance Criteria
+
+- npm test -- tests/review-slice.test.ts exits 0
+
+## Verification
+
+- npm test -- tests/review-slice.test.ts
+
+## Must Haves
+
+- Peer review persistence remains phase-scoped.
 `,
     "utf8"
   );
 
   return repoPath;
+}
+
+function validPeerReviewModel(patch: Record<string, unknown> = {}): Record<string, unknown> {
+  const planPath = ".blueprint/phases/03-review-phase/03-01-PLAN.md";
+
+  return {
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    reviewSummary: [
+      "Codex reviewed the saved plan and found the peer-review packet ready for execution."
+    ],
+    reviewerCoverage: [
+      {
+        reviewer: "codex",
+        status: "completed",
+        summary: "Saved plan evidence was reviewed with no blocking concerns."
+      }
+    ],
+    planReviews: [
+      {
+        planId: "01",
+        path: planPath,
+        goalFit: "achieves-goal",
+        summary: "The saved plan has a clear objective and acceptance criterion."
+      }
+    ],
+    findings: [
+      {
+        severity: "unknown",
+        source: "none",
+        evidence: "none",
+        recommendation: "none",
+        status: "NONE"
+      }
+    ],
+    consensus: [
+      "The available reviewer found the saved plan ready for execution."
+    ],
+    disagreements: ["none"],
+    riskAssessment: {
+      level: "LOW",
+      summary: "No peer-review blockers remain for the saved plan."
+    },
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    evidenceCoverage: {
+      [planPath]: {
+        status: "used",
+        rationale: "The saved phase plan was the peer-review source of truth."
+      }
+    },
+    nextSafeAction: "/blu-execute-phase 3",
+    ...patch
+  };
 }
 
 test("review docs and catalog metadata promote the peer-review slice to implemented", async () => {
@@ -131,59 +233,46 @@ test("review docs and catalog metadata promote the peer-review slice to implemen
   );
 });
 
-test("blueprint_review_record writes a phase-scoped peer-review artifact with follow-up counts", async (t) => {
+test("peer-review model validates and records a phase-scoped artifact with MCP-owned provenance", async (t) => {
   const repoPath = await createPeerReviewRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const content = `# Phase 03: Review Phase - Peer Reviews
-
-**Reviewers:** codex, claude
-
-## Review Summary
-
-- Codex approved the phase direction, but reviewer availability still needs to be explicit before execution.
-
-## Reviewer Results
-
-- codex: requested a clearer fallback path when a requested reviewer CLI is unavailable.
-- claude: unavailable in this environment, so no second opinion was captured in this run.
-
-## Findings
-
-- The plan needs a clearer fallback path when a requested reviewer CLI is unavailable.
-
-## Disagreements
-
-- none
-
-## Follow-Ups
-
-- Revise the plan so reviewer availability is recorded explicitly before execution.
-
-## Next Safe Action
-
-- Run /blu-plan-phase 3 to tighten the saved plan before execution.
-`;
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review"
+  });
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel()
+  });
 
   const written = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "3",
     artifact: "peer-review",
-    content
+    model: validPeerReviewModel()
   });
 
+  assert.equal(context.status, "ready");
+  assert.equal(context.schemaPath, "src/mcp/artifact-contracts/schemas/review.peer-review.model.schema.json");
+  assert.match(JSON.stringify(context.taskSchema), /03-01-PLAN\.md/);
+  assert.equal(validation.status, "valid");
+  assert.match(validation.renderPreview ?? "", /\*\*Status:\*\* COMPLETED/);
+  assert.match(validation.renderPreview ?? "", /03-01-PLAN\.md/);
   assert.equal(written.status, "created");
   assert.equal(written.reportPath, ".blueprint/phases/03-review-phase/03-REVIEWS.md");
-  assert.equal(written.counts.findings, 1);
-  assert.equal(written.counts.followUps, 1);
-  assert.deepEqual(written.followUps, [
-    "Revise the plan so reviewer availability is recorded explicitly before execution."
-  ]);
+  assert.equal(written.counts.findings, 0);
+  assert.equal(written.counts.followUps, 0);
+  assert.deepEqual(written.followUps, []);
 
   const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");
-  assert.match(saved, /\*\*Reviewers:\*\* codex, claude/);
+  assert.match(saved, /\*\*Reviewers:\*\* codex/);
+  assert.match(saved, /\| 01 \(\.blueprint\/phases\/03-review-phase\/03-01-PLAN\.md\) \| achieves-goal \|/);
 
   await assert.rejects(
     () =>
@@ -191,17 +280,337 @@ test("blueprint_review_record writes a phase-scoped peer-review artifact with fo
         cwd: repoPath,
         phase: "3",
         artifact: "peer-review",
-        content: content.replace(
-          "requested a clearer fallback path",
-          "requested a documented reviewer fallback path"
-        )
+        model: validPeerReviewModel({
+          reviewSummary: [
+            "Codex reviewed the saved plan and found a slightly different peer-review result."
+          ]
+        })
       }),
     /explicit overwrite confirmation/
   );
 
+  const markdownRejected = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    content: saved,
+    overwrite: true
+  });
+  assert.equal(markdownRejected.status, "invalid");
+  assert.match(markdownRejected.warnings.join("\n"), /model-only|content is invalid/i);
+
   const artifactList = await blueprintArtifactList({ cwd: repoPath });
   assert.ok(
     artifactList.artifacts.phases.includes(".blueprint/phases/03-review-phase/03-REVIEWS.md")
+  );
+});
+
+test("peer-review schema rejects unsupported, missing, unsafe, and out-of-scope model data", async (t) => {
+  const repoPath = await createPeerReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const unsupported = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({ reportPath: ".blueprint/phases/03-review-phase/03-REVIEWS.md" })
+  });
+  const missingModel = validPeerReviewModel();
+  delete missingModel.evidenceCoverage;
+  const missing = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: missingModel
+  });
+  const injected = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({
+      reviewerCoverage: [
+        {
+          reviewer: "codex",
+          status: "completed",
+          summary: "Reviewed successfully.\n## Injected"
+        }
+      ]
+    })
+  });
+  const outOfScope = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({
+      planReviews: [
+        {
+          planId: "99",
+          path: ".blueprint/phases/03-review-phase/03-99-PLAN.md",
+          goalFit: "achieves-goal",
+          summary: "Invented plan row."
+        }
+      ]
+    })
+  });
+
+  assert.equal(unsupported.status, "invalid");
+  assert.match(
+    unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /additional properties|identity field reportPath/i
+  );
+  assert.equal(missing.status, "invalid");
+  assert.match(
+    missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must have required property 'evidenceCoverage'/i
+  );
+  assert.equal(injected.status, "invalid");
+  assert.match(
+    injected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must match pattern/i
+  );
+  assert.equal(outOfScope.status, "invalid");
+  assert.match(
+    outOfScope.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must contain at least 1 and no more than 1 valid item/i
+  );
+});
+
+test("peer-review authoring blocks missing upstream plan context and stale evidence inventory", async (t) => {
+  const repoPath = await createPeerReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await rm(path.join(repoPath, ".blueprint/phases/03-review-phase/03-01-PLAN.md"));
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review"
+  });
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel()
+  });
+
+  assert.equal(context.status, "invalid");
+  assert.equal(context.taskSchema, null);
+  assert.match(context.reason ?? "", /no saved plan artifacts/i);
+  assert.equal(validation.status, "invalid");
+  assert.match(
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /no saved plan artifacts/i
+  );
+});
+
+test("peer-review lifecycle truth table keeps partial and blocked states resumable", async (t) => {
+  const repoPath = await createPeerReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const partial = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({
+      status: "PARTIAL",
+      readiness: "not-ready-for-routing",
+      completionState: "pending",
+      reviewerCoverage: [
+        {
+          reviewer: "codex",
+          status: "completed",
+          summary: "Plan review completed with a follow-up concern."
+        }
+      ],
+      planReviews: [
+        {
+          planId: "01",
+          path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+          goalFit: "needs-revision",
+          summary: "The plan needs a reviewer availability note."
+        }
+      ],
+      findings: [
+        {
+          severity: "medium",
+          source: "03-01-PLAN.md",
+          evidence: "Reviewer availability fallback is not explicit.",
+          recommendation: "Add the fallback before execution.",
+          status: "OPEN"
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "Reviewer fallback note",
+          reason: "The plan does not say what happens when a requested reviewer is unavailable.",
+          followUp: "/blu-plan-phase 3",
+          status: "DEFERRED"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "Reviewer availability fallback missing",
+          evidence: "Peer-review concern remains open.",
+          repair: "Revise the saved plan and rerun review.",
+          status: "OPEN"
+        }
+      ],
+      followUps: ["Revise the saved plan with reviewer availability fallback."],
+      nextSafeAction: "/blu-plan-phase 3"
+    })
+  });
+  const blocked = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({
+      status: "BLOCKED",
+      readiness: "blocked",
+      completionState: "blocked",
+      reviewerCoverage: [
+        {
+          reviewer: "codex",
+          status: "failed",
+          summary: "The requested reviewer launched but returned no usable output."
+        }
+      ],
+      planReviews: [
+        {
+          planId: "01",
+          path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+          goalFit: "blocked",
+          summary: "Plan review is blocked on reviewer availability."
+        }
+      ],
+      findings: [
+        {
+          severity: "unknown",
+          source: "reviewer-availability",
+          evidence: "No requested reviewer completed.",
+          recommendation: "Authenticate or choose an available reviewer.",
+          status: "BLOCKED"
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "Reviewer availability",
+          reason: "No requested reviewer completed.",
+          followUp: "/blu-review 3",
+          status: "MANUAL"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "Reviewer coverage unavailable",
+          evidence: "No reviewer output exists.",
+          repair: "Authenticate a reviewer and retry.",
+          status: "BLOCKED"
+        }
+      ],
+      followUps: ["Authenticate or select an available reviewer."],
+      nextSafeAction: "/blu-review 3"
+    })
+  });
+  const mixedSentinel = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({
+      status: "PARTIAL",
+      readiness: "not-ready-for-routing",
+      completionState: "pending",
+      reviewerCoverage: [
+        {
+          reviewer: "codex",
+          status: "completed",
+          summary: "Plan review completed with a follow-up concern."
+        }
+      ],
+      planReviews: [
+        {
+          planId: "01",
+          path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+          goalFit: "needs-revision",
+          summary: "The plan needs a reviewer availability note."
+        }
+      ],
+      findings: [
+        {
+          severity: "unknown",
+          source: "none",
+          evidence: "none",
+          recommendation: "none",
+          status: "NONE"
+        },
+        {
+          severity: "medium",
+          source: "03-01-PLAN.md",
+          evidence: "Reviewer availability fallback is not explicit.",
+          recommendation: "Add the fallback before execution.",
+          status: "OPEN"
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "none",
+          reason: "none",
+          followUp: "none",
+          status: "NONE"
+        },
+        {
+          item: "Reviewer fallback note",
+          reason: "The plan does not say what happens when a requested reviewer is unavailable.",
+          followUp: "/blu-plan-phase 3",
+          status: "DEFERRED"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "none",
+          evidence: "none",
+          repair: "none",
+          status: "NONE"
+        },
+        {
+          gap: "Reviewer availability fallback missing",
+          evidence: "Peer-review concern remains open.",
+          repair: "Revise the saved plan and rerun review.",
+          status: "OPEN"
+        }
+      ],
+      followUps: ["none", "Revise the saved plan with reviewer availability fallback."],
+      nextSafeAction: "/blu-plan-phase 3"
+    })
+  });
+  const contradictory = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "peer-review",
+    model: validPeerReviewModel({
+      status: "PARTIAL",
+      readiness: "ready-for-routing",
+      completionState: "complete",
+      nextSafeAction: "/blu-execute-phase 3"
+    })
+  });
+
+  assert.equal(partial.status, "valid");
+  assert.equal(blocked.status, "valid");
+  assert.equal(mixedSentinel.status, "invalid");
+  assert.match(
+    mixedSentinel.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT be valid|must be equal to constant/i
+  );
+  assert.equal(contradictory.status, "invalid");
+  assert.match(
+    contradictory.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to constant|must be equal to one of the allowed values/i
   );
 });
 
@@ -220,6 +629,11 @@ test("review is exposed as an implemented peer-review command with the registere
     "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
+    "blueprint_phase_summary_index",
+    "blueprint_phase_summary_read",
+    "blueprint_phase_execution_targets",
+    "blueprint_review_authoring_context",
+    "blueprint_review_validate_model",
     "blueprint_review_record"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);

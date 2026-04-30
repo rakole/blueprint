@@ -67,7 +67,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     review,
-    /Read `review\.peer-review` through `blueprint_artifact_contract_read` before drafting or repairing the artifact/i
+    /Read `review\.peer-review` through `blueprint_artifact_contract_read` and `blueprint_review_authoring_context` before drafting or repairing the artifact/i
   );
   assert.match(
     review,
@@ -81,7 +81,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   const reviewRuntimeContract = files["skills/blueprint-review/references/review-runtime-contract.md"];
   assert.match(
     reviewRuntimeContract,
-    /contract\.authoringTemplate.*canonical shape for `XX-REVIEWS\.md`/is
+    /contract\.modelContract.*canonical shape\s+for model authoring and MCP-rendered `XX-REVIEWS\.md`/is
   );
   assert.match(
     reviewRuntimeContract,
@@ -89,7 +89,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     reviewRuntimeContract,
-    /If `blueprint_review_record` rejects the body or reports missing headings,\s+repair once against `review\.peer-review`/i
+    /If `blueprint_review_validate_model` or `blueprint_review_record` rejects the\s+model,\s+repair all diagnostics together once against `review\.peer-review`/i
   );
   assert.match(
     reviewRuntimeContract,

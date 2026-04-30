@@ -245,6 +245,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const summaryContract = readArtifactContract("phase.summary");
   const pauseContract = readArtifactContract("report.pause-work");
   const reviewContract = readArtifactContract("review.code-review");
+  const peerReviewContract = readArtifactContract("review.peer-review");
   const reviewFixContract = readArtifactContract("review.review-fix");
   const securityContract = readArtifactContract("review.security");
   const verificationContract = readArtifactContract("phase.verification");
@@ -673,6 +674,41 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "^(?:(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\\.[A-Za-z0-9._-]+):\\d+(?:-\\d+)?$"
   );
   assert.match(JSON.stringify(reviewContract.modelContract?.jsonSchema), /examples|evidenceCoverage/);
+  assert.deepEqual(peerReviewContract.requiredHeadings, [
+    "Review Summary",
+    "Reviewer Coverage",
+    "Reviewer Results",
+    "Plan Reviews",
+    "Findings",
+    "Consensus",
+    "Disagreements",
+    "Risk Assessment",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Evidence Reviewed",
+    "Next Safe Action"
+  ]);
+  assert.equal(peerReviewContract.modelContract?.schemaId, "blueprint.review.peer-review.model");
+  assert.equal(peerReviewContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    peerReviewContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/review.peer-review.model.schema.json"
+  );
+  assert.ok(peerReviewContract.modelContract?.renderedHeadings.includes("Plan Reviews"));
+  assert.ok(
+    peerReviewContract.modelContract?.qualityRules.some((rule) =>
+      /narrowed taskSchema returned by blueprint_review_authoring_context/i.test(rule)
+    )
+  );
+  assert.deepEqual(
+    (peerReviewContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "reviewSummary"]
+  );
+  assert.match(
+    JSON.stringify(peerReviewContract.modelContract?.jsonSchema),
+    /reviewerCoverage|failed|evidenceCoverage|manualOrDeferredWork/
+  );
   assert.deepEqual(reviewFixContract.requiredHeadings, [
     "Remediation Summary",
     "Findings Addressed",

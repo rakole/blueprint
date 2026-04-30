@@ -1,0 +1,932 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.review.peer-review.model",
+  "title": "Blueprint Peer Review Model",
+  "description": "Model-authored payload for review.peer-review. Runtime-owned phase identity, canonical review path, selected plan inventory, saved evidence inventory, status-safe next actions, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "readiness",
+    "completionState",
+    "reviewSummary",
+    "reviewerCoverage",
+    "planReviews",
+    "findings",
+    "consensus",
+    "disagreements",
+    "riskAssessment",
+    "manualOrDeferredWork",
+    "gapRoutes",
+    "followUps",
+    "evidenceCoverage",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/status"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "completionState": {
+      "$ref": "#/$defs/completionState"
+    },
+    "reviewSummary": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "reviewerCoverage": {
+      "type": "array",
+      "description": "One row per reviewer outcome that actually happened or was explicitly unavailable.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/reviewerCoverageRow"
+      }
+    },
+    "planReviews": {
+      "type": "array",
+      "description": "Plan-by-plan review posture. The task schema narrows planId and path to the exact selected phase plan set.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/planReviewRow"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Reviewer concerns, gaps, or explicit pass sentinel. COMPLETED peer reviews may use only the exact none sentinel row when no concerns remain.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/findingRow"
+      }
+    },
+    "consensus": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "disagreements": {
+      "type": "array",
+      "description": "Material reviewer disagreements, or the exact single none sentinel when no disagreement exists.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "riskAssessment": {
+      "$ref": "#/$defs/riskAssessment"
+    },
+    "manualOrDeferredWork": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/manualOrDeferredRow"
+      }
+    },
+    "gapRoutes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/gapRouteRow"
+      }
+    },
+    "followUps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "evidenceCoverage": {
+      "type": "object",
+      "description": "Coverage decisions keyed by exact saved evidence artifact paths returned by blueprint_review_authoring_context. The task schema narrows this to exhaustive exact keys.",
+      "additionalProperties": {
+        "$ref": "#/$defs/evidenceCoverageEntry"
+      }
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/blueprintCommandAction"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "ready-for-routing"
+          },
+          "completionState": {
+            "const": "complete"
+          },
+          "reviewerCoverage": {
+            "items": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "completed"
+                }
+              }
+            }
+          },
+          "planReviews": {
+            "items": {
+              "type": "object",
+              "required": [
+                "goalFit"
+              ],
+              "properties": {
+                "goalFit": {
+                  "const": "achieves-goal"
+                }
+              }
+            }
+          },
+          "findings": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noFindingRow"
+            }
+          },
+          "manualOrDeferredWork": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          },
+          "gapRoutes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noGapRouteRow"
+            }
+          },
+          "followUps": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "not-ready-for-routing"
+          },
+          "completionState": {
+            "const": "pending"
+          },
+          "reviewerCoverage": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "completed",
+                    "unavailable",
+                    "failed",
+                    "blocked"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "findings": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noFindingRow"
+              }
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "OPEN",
+                    "BLOCKED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noGapRouteRow"
+              }
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "OPEN",
+                    "BLOCKED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "manualOrDeferredWork": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noManualOrDeferredRow"
+              }
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUps": {
+            "not": {
+              "contains": {
+                "const": "none"
+              }
+            },
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "blocked"
+          },
+          "completionState": {
+            "const": "blocked"
+          },
+          "reviewerCoverage": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "unavailable",
+                    "failed",
+                    "blocked"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "findings": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noFindingRow"
+              }
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noGapRouteRow"
+              }
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "manualOrDeferredWork": {
+            "not": {
+              "contains": {
+                "$ref": "#/$defs/noManualOrDeferredRow"
+              }
+            },
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUps": {
+            "not": {
+              "contains": {
+                "const": "none"
+              }
+            },
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "ready-for-routing",
+        "not-ready-for-routing",
+        "blocked"
+      ]
+    },
+    "completionState": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "pending",
+        "blocked"
+      ]
+    },
+    "reviewerStatus": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "unavailable",
+        "failed",
+        "blocked"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ]
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
+    "planFit": {
+      "type": "string",
+      "enum": [
+        "achieves-goal",
+        "needs-revision",
+        "blocked"
+      ]
+    },
+    "findingStatus": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "BLOCKED",
+        "NONE"
+      ]
+    },
+    "manualOrDeferredStatus": {
+      "type": "string",
+      "enum": [
+        "MANUAL",
+        "DEFERRED",
+        "NONE"
+      ]
+    },
+    "gapRouteStatus": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "BLOCKED",
+        "NONE"
+      ]
+    },
+    "evidenceCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "used",
+        "deferred",
+        "unavailable"
+      ]
+    },
+    "bulletString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line Markdown bullet text. CR/LF is rejected so a model value cannot inject extra list items or headings."
+    },
+    "tableCellString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
+      "description": "Non-empty single-line Markdown table cell. CR/LF and pipe delimiters are rejected to preserve table shape."
+    },
+    "reviewerName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "planId": {
+      "type": "string",
+      "pattern": "^\\d{2,}$"
+    },
+    "phasePlanPath": {
+      "type": "string",
+      "pattern": "^\\.blueprint/phases/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+-PLAN\\.md$"
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*)(?:\\s+[A-Za-z0-9._:/=@+-]+)*$",
+      "description": "Single Blueprint command token plus optional tokenized arguments. Natural-language wrapping, backticks, pipes, and multi-line text are rejected."
+    },
+    "reviewerCoverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer",
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "reviewer": {
+          "$ref": "#/$defs/reviewerName"
+        },
+        "status": {
+          "$ref": "#/$defs/reviewerStatus"
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "planReviewRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "path",
+        "goalFit",
+        "summary"
+      ],
+      "properties": {
+        "planId": {
+          "$ref": "#/$defs/planId"
+        },
+        "path": {
+          "$ref": "#/$defs/phasePlanPath"
+        },
+        "goalFit": {
+          "$ref": "#/$defs/planFit"
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "findingRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "source",
+        "evidence",
+        "recommendation",
+        "status"
+      ],
+      "properties": {
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "source": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "recommendation": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/findingStatus"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "NONE"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/noFindingRow"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "OPEN",
+                  "BLOCKED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "not": {
+                  "const": "none"
+                }
+              },
+              "evidence": {
+                "not": {
+                  "const": "none"
+                }
+              },
+              "recommendation": {
+                "not": {
+                  "const": "none"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "noFindingRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "source",
+        "evidence",
+        "recommendation",
+        "status"
+      ],
+      "properties": {
+        "severity": {
+          "const": "unknown"
+        },
+        "source": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "recommendation": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "riskAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "summary"
+      ],
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/riskLevel"
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "manualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "followUp": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/manualOrDeferredStatus"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "NONE"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/noManualOrDeferredRow"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "MANUAL",
+                  "DEFERRED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "item": {
+                "not": {
+                  "const": "none"
+                }
+              },
+              "reason": {
+                "not": {
+                  "const": "none"
+                }
+              },
+              "followUp": {
+                "not": {
+                  "const": "none"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "noManualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "reason": {
+          "const": "none"
+        },
+        "followUp": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "gapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "repair": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/gapRouteStatus"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "NONE"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/noGapRouteRow"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "OPEN",
+                  "BLOCKED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "gap": {
+                "not": {
+                  "const": "none"
+                }
+              },
+              "evidence": {
+                "not": {
+                  "const": "none"
+                }
+              },
+              "repair": {
+                "not": {
+                  "const": "none"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "noGapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "repair": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "evidenceCoverageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "rationale"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/evidenceCoverageStatus"
+        },
+        "rationale": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    }
+  }
+}
