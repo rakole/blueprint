@@ -2451,7 +2451,7 @@ const IMPACT_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
   contextBindings: [
     "impactId may be supplied by blueprint_impact_report_write arguments, but it must match the report impactId when both are present.",
     "The analyzer supplies scope fingerprint, resolved files, risk, confidence, findings, obligations, unknowns, and evidence before persistence.",
-    "blueprint_impact_report_write narrows validation to the exact report impactId, scope fingerprint, files, evidence ids, and finding projections before writing.",
+    "blueprint_impact_report_write narrows validation to the exact report impactId, optional expected scope fingerprint/source/description, expected files, evidence ids and paths, finding ids, and blocking/warning finding projections before writing.",
     "Bundle paths and rendered Markdown are MCP-owned and derived under .blueprint/impact/<impact-id>/."
   ],
   renderedHeadings: [

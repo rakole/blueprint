@@ -203,6 +203,23 @@ function lowNoiseConfig(): Record<string, unknown> {
   };
 }
 
+function expectedReportContext(report: ImpactAnalysis["report"]) {
+  return {
+    impactId: report.impactId,
+    expectedScopeFingerprint: report.scope.fingerprint,
+    expectedScopeSource: report.scope.source,
+    expectedScopeDescription: report.scope.description,
+    expectedFiles: report.files,
+    expectedEvidenceIds: report.evidence.map((evidence) => evidence.id),
+    expectedEvidencePathsById: Object.fromEntries(
+      report.evidence.map((evidence) => [evidence.id, evidence.paths])
+    ),
+    expectedFindingIds: report.findings.map((finding) => finding.id),
+    expectedBlockingFindingIds: report.blockingFindings.map((finding) => finding.id),
+    expectedWarningFindingIds: report.warningFindings.map((finding) => finding.id)
+  };
+}
+
 function scrubImpactIds(value: string): string {
   return value.replace(/impact-[a-f0-9]{12}/gu, "impact-<id>");
 }
@@ -2520,7 +2537,22 @@ test("impact report task schema narrows report provenance and evidence refs", as
         fingerprint: "stale-fingerprint"
       }
     };
+    const staleSourceReport = {
+      ...analysis.report,
+      scope: {
+        ...analysis.report.scope,
+        source: "forged-source"
+      }
+    };
+    const staleDescriptionReport = {
+      ...analysis.report,
+      scope: {
+        ...analysis.report.scope,
+        description: "forged description"
+      }
+    };
     const staleEvidenceReport = structuredClone(analysis.report) as ImpactAnalysis["report"];
+    const expectedContext = expectedReportContext(analysis.report);
 
     staleEvidenceReport.ownership.matches[0] = {
       ...staleEvidenceReport.ownership.matches[0],
@@ -2529,13 +2561,23 @@ test("impact report task schema narrows report provenance and evidence refs", as
 
     const staleFiles = await blueprintImpactReportWrite({
       cwd: repoPath,
-      expectedFiles: analysis.report.files,
+      ...expectedContext,
       report: staleFilesReport
     });
     const staleFingerprint = await blueprintImpactReportWrite({
       cwd: repoPath,
-      expectedScopeFingerprint: analysis.report.scope.fingerprint,
+      ...expectedContext,
       report: staleFingerprintReport
+    });
+    const staleSource = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      ...expectedContext,
+      report: staleSourceReport
+    });
+    const staleDescription = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      ...expectedContext,
+      report: staleDescriptionReport
     });
     const staleEvidence = await blueprintImpactReportWrite({
       cwd: repoPath,
@@ -2546,6 +2588,10 @@ test("impact report task schema narrows report provenance and evidence refs", as
     assert.match(staleFiles.errors.join("\n"), /files: must be equal to constant/);
     assert.equal(staleFingerprint.status, "invalid");
     assert.match(staleFingerprint.errors.join("\n"), /scope\.fingerprint: must be equal to constant/);
+    assert.equal(staleSource.status, "invalid");
+    assert.match(staleSource.errors.join("\n"), /scope\.source: must be equal to constant/);
+    assert.equal(staleDescription.status, "invalid");
+    assert.match(staleDescription.errors.join("\n"), /scope\.description: must be equal to constant/);
     assert.equal(staleEvidence.status, "invalid");
     assert.match(staleEvidence.errors.join("\n"), /must be equal to one of the allowed values/);
   } finally {
@@ -2714,6 +2760,162 @@ test("impact report writer rejects inconsistent blocking and warning finding pro
     assert.match(hiddenWarning.errors.join("\n"), /warningFindings: must be equal to constant/);
     assert.equal(mismatchedEvidence.status, "invalid");
     assert.match(mismatchedEvidence.errors.join("\n"), /must NOT have fewer than 1 items/);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer rejects trimmed analyzer findings with expected context", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["secrets/prod.token"],
+      config: {
+        ownership: {
+          sources: [],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        },
+        risk: {
+          blockOnSensitiveUnknownOwner: true
+        }
+      }
+    });
+    const removedFinding = analysis.report.blockingFindings[0];
+    const trimmedReport = structuredClone(analysis.report) as ImpactAnalysis["report"];
+
+    assert.ok(removedFinding, "sensitive owner analysis should emit a blocking finding");
+    trimmedReport.findings = trimmedReport.findings.filter(
+      (finding) => finding.id !== removedFinding.id
+    );
+    trimmedReport.blockingFindings = trimmedReport.blockingFindings.filter(
+      (finding) => finding.id !== removedFinding.id
+    );
+    trimmedReport.requiredActions = trimmedReport.requiredActions.filter(
+      (action) => !removedFinding.requiredActions.includes(action)
+    );
+
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      ...expectedReportContext(analysis.report),
+      report: trimmedReport
+    });
+
+    assert.equal(write.status, "invalid");
+    assert.match(write.errors.join("\n"), /report\.findings must match expected analyzer ids/);
+    await assert.rejects(access(path.join(repoPath, write.paths.impactMarkdown)));
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer rejects nested files outside expected scope", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: lowNoiseConfig()
+    });
+    const forgedReport = structuredClone(analysis.report) as ImpactAnalysis["report"];
+
+    forgedReport.surfaces[0] = {
+      ...forgedReport.surfaces[0],
+      path: "docs/out-of-scope.md"
+    };
+    forgedReport.ownership.matches[0] = {
+      ...forgedReport.ownership.matches[0],
+      path: "docs/out-of-scope.md"
+    };
+    forgedReport.dependencyGraph.coverage.filesUncovered = ["docs/out-of-scope.md"];
+    forgedReport.evidence[0] = {
+      ...forgedReport.evidence[0],
+      paths: ["docs/out-of-scope.md"]
+    };
+
+    const write = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      ...expectedReportContext(analysis.report),
+      report: forgedReport
+    });
+
+    assert.equal(write.status, "invalid");
+    assert.match(write.errors.join("\n"), /report\.surfaces\[0\]\.path is outside expectedFiles scope/);
+    assert.match(
+      write.errors.join("\n"),
+      /report\.ownership\.matches\[0\]\.path is outside expectedFiles scope/
+    );
+    assert.match(
+      write.errors.join("\n"),
+      /report\.dependencyGraph\.coverage\.filesUncovered\[0\] is outside expectedFiles scope/
+    );
+    assert.match(
+      write.errors.join("\n"),
+      /report\.evidence\[0\]\.paths must match expected analyzer paths/
+    );
+    await assert.rejects(access(path.join(repoPath, write.paths.impactMarkdown)));
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact report writer reuses canonical bundles for reordered report arrays", async () => {
+  const repoPath = await createTempRepo();
+
+  try {
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: [
+        "commands/blu-impact.toml",
+        "docs/commands/impact.md",
+        "src/mcp/tools/impact.ts"
+      ],
+      config: lowNoiseConfig()
+    });
+    const reorderedReport = structuredClone(analysis.report) as ImpactAnalysis["report"];
+
+    reorderedReport.files.reverse();
+    reorderedReport.topImpactedAreas.reverse();
+    reorderedReport.areaSummary.reverse();
+    reorderedReport.surfaceSummary.reverse();
+    reorderedReport.requiredReviewers.reverse();
+    reorderedReport.requiredTests.reverse();
+    reorderedReport.requiredActions.reverse();
+    reorderedReport.blockingFindings.reverse();
+    reorderedReport.warningFindings.reverse();
+    reorderedReport.surfaces.reverse();
+    reorderedReport.findings.reverse();
+    reorderedReport.obligations.reverse();
+    reorderedReport.unknowns.reverse();
+    reorderedReport.evidence.reverse();
+    reorderedReport.ownership.metadataPaths.reverse();
+    reorderedReport.ownership.rules.reverse();
+    reorderedReport.ownership.matches.reverse();
+    reorderedReport.dependencyGraph.coverage.filesCovered.reverse();
+    reorderedReport.dependencyGraph.coverage.filesUncovered.reverse();
+    reorderedReport.dependencyGraph.nodes.reverse();
+    reorderedReport.dependencyGraph.edges.reverse();
+
+    const expectedContext = expectedReportContext(analysis.report);
+    const first = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      ...expectedContext,
+      report: analysis.report
+    });
+    const reused = await blueprintImpactReportWrite({
+      cwd: repoPath,
+      ...expectedContext,
+      report: reorderedReport
+    });
+
+    assert.equal(first.status, "written");
+    assert.equal(reused.status, "reused");
+    assert.equal(reused.written, false);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

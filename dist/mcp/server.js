@@ -16665,7 +16665,7 @@ var init_artifact_contracts = __esm({
       contextBindings: [
         "impactId may be supplied by blueprint_impact_report_write arguments, but it must match the report impactId when both are present.",
         "The analyzer supplies scope fingerprint, resolved files, risk, confidence, findings, obligations, unknowns, and evidence before persistence.",
-        "blueprint_impact_report_write narrows validation to the exact report impactId, scope fingerprint, files, evidence ids, and finding projections before writing.",
+        "blueprint_impact_report_write narrows validation to the exact report impactId, optional expected scope fingerprint/source/description, expected files, evidence ids and paths, finding ids, and blocking/warning finding projections before writing.",
         "Bundle paths and rendered Markdown are MCP-owned and derived under .blueprint/impact/<impact-id>/."
       ],
       renderedHeadings: [
@@ -44043,8 +44043,16 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
   const scope = defs ? getJsonObjectProperty3(defs, "scope") : null;
   const scopeProperties = scope ? getJsonObjectProperty3(scope, "properties") : null;
   const fingerprint = scopeProperties ? getJsonObjectProperty3(scopeProperties, "fingerprint") : null;
+  const source = scopeProperties ? getJsonObjectProperty3(scopeProperties, "source") : null;
+  const description = scopeProperties ? getJsonObjectProperty3(scopeProperties, "description") : null;
   if (fingerprint) {
     fingerprint.const = expectedScopeFingerprint;
+  }
+  if (source && Object.prototype.hasOwnProperty.call(expectations, "scopeSource")) {
+    source.const = expectations.scopeSource ?? null;
+  }
+  if (description && Object.prototype.hasOwnProperty.call(expectations, "scopeDescription")) {
+    description.const = expectations.scopeDescription ?? null;
   }
   const evidenceIds = report.evidence.map((evidence) => evidence.id);
   for (const definitionName of ["finding", "obligation", "unknown"]) {
@@ -44073,10 +44081,13 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
   schema["x-blueprint-runtimeContext"] = {
     impactId: expectedImpactId,
     scopeFingerprint: expectedScopeFingerprint,
+    scopeSource: Object.prototype.hasOwnProperty.call(expectations, "scopeSource") ? expectations.scopeSource ?? null : report.scope.source,
+    scopeDescription: Object.prototype.hasOwnProperty.call(expectations, "scopeDescription") ? expectations.scopeDescription ?? null : report.scope.description,
     files: expectedFiles,
-    evidenceIds,
-    blockingFindingIds: report.findings.filter((finding) => finding.status === "BLOCK").map((finding) => finding.id),
-    warningFindingIds: report.findings.filter((finding) => finding.status === "WARN").map((finding) => finding.id)
+    evidenceIds: expectations.evidenceIds ?? evidenceIds,
+    findingIds: expectations.findingIds ?? report.findings.map((finding) => finding.id),
+    blockingFindingIds: expectations.blockingFindingIds ?? report.findings.filter((finding) => finding.status === "BLOCK").map((finding) => finding.id),
+    warningFindingIds: expectations.warningFindingIds ?? report.findings.filter((finding) => finding.status === "WARN").map((finding) => finding.id)
   };
   return schema;
 }
@@ -47132,6 +47143,392 @@ async function blueprintImpactAnalyze(args = {}) {
     warnings: [...new Set(warnings)].sort()
   };
 }
+function sortedStrings(values) {
+  return [...values].sort();
+}
+function compareCanonicalAreaNames(left, right) {
+  const areaOrder = [
+    "sensitive-config",
+    "blueprint-runtime",
+    "tests",
+    "docs",
+    "generated",
+    "config",
+    "source",
+    "repo-root",
+    "unknown"
+  ];
+  const leftIndex = areaOrder.indexOf(left);
+  const rightIndex = areaOrder.indexOf(right);
+  const normalizedLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+  const normalizedRightIndex = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+  return normalizedLeftIndex - normalizedRightIndex || left.localeCompare(right);
+}
+function compareCanonicalSurfaceNames(left, right) {
+  const leftRank = Object.prototype.hasOwnProperty.call(IMPACT_SURFACE_PRIORITY, left) ? IMPACT_SURFACE_PRIORITY[left] : Number.MAX_SAFE_INTEGER;
+  const rightRank = Object.prototype.hasOwnProperty.call(IMPACT_SURFACE_PRIORITY, right) ? IMPACT_SURFACE_PRIORITY[right] : Number.MAX_SAFE_INTEGER;
+  return leftRank - rightRank || left.localeCompare(right);
+}
+function canonicalizeSummaryRecords(records, compareNames = (left, right) => left.localeCompare(right)) {
+  return records.map((record2) => ({
+    ...record2,
+    files: sortedStrings(record2.files)
+  })).sort(
+    (left, right) => compareNames(left.name, right.name) || left.count - right.count || left.files.join("\0").localeCompare(right.files.join("\0"))
+  );
+}
+function canonicalizeSurfaceRecords(records) {
+  return records.map((record2) => ({
+    ...record2,
+    surfaces: [...record2.surfaces].sort(compareImpactSurfaces),
+    reasons: sortedStrings(record2.reasons)
+  })).sort(
+    (left, right) => left.path.localeCompare(right.path) || compareImpactSurfaces(left.primarySurface, right.primarySurface) || left.surfaces.join("\0").localeCompare(right.surfaces.join("\0"))
+  );
+}
+function canonicalizeFindingRecords(records) {
+  return records.map((record2) => ({
+    ...record2,
+    impactedFiles: sortedStrings(record2.impactedFiles),
+    impactedAreas: sortedStrings(record2.impactedAreas),
+    owners: sortedStrings(record2.owners),
+    requiredActions: sortedStrings(record2.requiredActions),
+    evidenceRefs: sortedStrings(record2.evidenceRefs)
+  })).sort(
+    (left, right) => findingStatusRank(left.status) - findingStatusRank(right.status) || findingSeverityRank(left.severity) - findingSeverityRank(right.severity) || left.impactedAreas.join(",").localeCompare(right.impactedAreas.join(",")) || left.checkId.localeCompare(right.checkId) || left.id.localeCompare(right.id)
+  );
+}
+function canonicalizeObligationRecords(records) {
+  return records.map((record2) => ({
+    ...record2,
+    impactedFiles: sortedStrings(record2.impactedFiles),
+    sourceSurfaces: [...record2.sourceSurfaces].sort(compareImpactSurfaces),
+    requiredActions: sortedStrings(record2.requiredActions),
+    evidenceRefs: sortedStrings(record2.evidenceRefs)
+  })).sort(
+    (left, right) => findingStatusRank(left.status) - findingStatusRank(right.status) || findingSeverityRank(left.severity) - findingSeverityRank(right.severity) || left.category.localeCompare(right.category) || left.title.localeCompare(right.title) || left.id.localeCompare(right.id)
+  );
+}
+function canonicalizeUnknownRecords(records) {
+  return records.map((record2) => ({
+    ...record2,
+    impactedFiles: sortedStrings(record2.impactedFiles),
+    evidenceRefs: sortedStrings(record2.evidenceRefs)
+  })).sort((left, right) => left.id.localeCompare(right.id));
+}
+function canonicalizeEvidenceRecords(records) {
+  return records.map((record2) => ({
+    ...record2,
+    paths: sortedStrings(record2.paths)
+  })).sort((left, right) => left.id.localeCompare(right.id));
+}
+function canonicalizeOwnershipRule(rule) {
+  return {
+    ...rule,
+    owners: sortedStrings(rule.owners)
+  };
+}
+function compareOwnershipRules(left, right) {
+  return left.sourcePath.localeCompare(right.sourcePath) || left.order - right.order || left.pattern.localeCompare(right.pattern) || left.source.localeCompare(right.source) || left.owners.join("\0").localeCompare(right.owners.join("\0"));
+}
+function canonicalizeOwnershipAnalysis(ownership) {
+  return {
+    coverage: {
+      ...ownership.coverage,
+      sourcesConfigured: sortedStrings(ownership.coverage.sourcesConfigured),
+      sourcesUsed: sortedStrings(ownership.coverage.sourcesUsed),
+      fallbackReviewers: sortedStrings(ownership.coverage.fallbackReviewers),
+      gaps: sortedStrings(ownership.coverage.gaps)
+    },
+    codeownersPath: ownership.codeownersPath,
+    metadataPaths: sortedStrings(ownership.metadataPaths),
+    rules: ownership.rules.map(canonicalizeOwnershipRule).sort(compareOwnershipRules),
+    matches: ownership.matches.map((match) => ({
+      ...match,
+      owners: sortedStrings(match.owners),
+      matchedRules: match.matchedRules.map(canonicalizeOwnershipRule).sort(compareOwnershipRules),
+      fallbackReviewers: sortedStrings(match.fallbackReviewers),
+      evidenceRefs: sortedStrings(match.evidenceRefs)
+    })).sort((left, right) => left.path.localeCompare(right.path))
+  };
+}
+function canonicalizeDependencyGraph(dependencyGraph) {
+  return {
+    coverage: {
+      ...dependencyGraph.coverage,
+      sourcesConfigured: sortedStrings(dependencyGraph.coverage.sourcesConfigured),
+      sourcesUsed: sortedStrings(dependencyGraph.coverage.sourcesUsed),
+      filesCovered: sortedStrings(dependencyGraph.coverage.filesCovered),
+      filesUncovered: sortedStrings(dependencyGraph.coverage.filesUncovered),
+      gaps: sortedStrings(dependencyGraph.coverage.gaps)
+    },
+    nodes: [...dependencyGraph.nodes].sort(
+      (left, right) => left.id.localeCompare(right.id) || (left.path ?? "").localeCompare(right.path ?? "") || left.kind.localeCompare(right.kind) || left.source.localeCompare(right.source)
+    ),
+    edges: [...dependencyGraph.edges].sort(
+      (left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to) || left.type.localeCompare(right.type) || left.source.localeCompare(right.source)
+    ),
+    reverseDependentsByPath: Object.fromEntries(
+      Object.entries(dependencyGraph.reverseDependentsByPath).sort(([left], [right]) => left.localeCompare(right)).map(([filePath, dependents]) => [filePath, sortedStrings(dependents)])
+    )
+  };
+}
+function canonicalizeImpactReport(report) {
+  return {
+    ...report,
+    scope: {
+      ...report.scope,
+      confidence: {
+        ...report.scope.confidence,
+        reasons: sortedStrings(report.scope.confidence.reasons)
+      }
+    },
+    files: sortedStrings(report.files),
+    risk: {
+      ...report.risk,
+      reasons: sortedStrings(report.risk.reasons)
+    },
+    confidence: {
+      ...report.confidence,
+      reasons: sortedStrings(report.confidence.reasons)
+    },
+    scoring: {
+      ...report.scoring,
+      drivers: sortedStrings(report.scoring.drivers),
+      reducers: sortedStrings(report.scoring.reducers)
+    },
+    topImpactedAreas: canonicalizeSummaryRecords(
+      report.topImpactedAreas,
+      compareCanonicalAreaNames
+    ),
+    requiredReviewers: sortedStrings(report.requiredReviewers),
+    requiredTests: sortedStrings(report.requiredTests),
+    requiredActions: sortedStrings(report.requiredActions),
+    blockingFindings: canonicalizeFindingRecords(report.blockingFindings),
+    warningFindings: canonicalizeFindingRecords(report.warningFindings),
+    surfaces: canonicalizeSurfaceRecords(report.surfaces),
+    areaSummary: canonicalizeSummaryRecords(report.areaSummary, compareCanonicalAreaNames),
+    surfaceSummary: canonicalizeSummaryRecords(
+      report.surfaceSummary,
+      compareCanonicalSurfaceNames
+    ),
+    ownership: canonicalizeOwnershipAnalysis(report.ownership),
+    dependencyGraph: canonicalizeDependencyGraph(report.dependencyGraph),
+    findings: canonicalizeFindingRecords(report.findings),
+    obligations: canonicalizeObligationRecords(report.obligations),
+    unknowns: canonicalizeUnknownRecords(report.unknowns),
+    evidence: canonicalizeEvidenceRecords(report.evidence)
+  };
+}
+function normalizeExpectedFilePath(value) {
+  return path10.posix.normalize(value.trim().replaceAll("\\", "/"));
+}
+function normalizeExpectedEvidencePathsById(expectedPathsById) {
+  if (expectedPathsById === void 0) {
+    return void 0;
+  }
+  return Object.fromEntries(
+    Object.entries(expectedPathsById).sort(([left], [right]) => left.localeCompare(right)).map(([evidenceId, paths]) => [
+      evidenceId,
+      sortedStrings(paths.map(normalizeExpectedFilePath))
+    ])
+  );
+}
+function validateExpectedNullableString(label, actual, expected, expectations, expectationKey, errors) {
+  if (!Object.prototype.hasOwnProperty.call(expectations, expectationKey)) {
+    return;
+  }
+  if (actual !== expected) {
+    errors.push(`${label} must match expected analyzer value.`);
+  }
+}
+function validateExpectedStringSet(label, actualValues, expectedValues, errors) {
+  if (expectedValues === void 0) {
+    return;
+  }
+  const actual = sortedStrings(actualValues);
+  const expected = sortedStrings(expectedValues);
+  if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index])) {
+    errors.push(
+      `${label} must match expected analyzer ids. Expected: ${expected.join(", ") || "(none)"}; actual: ${actual.join(", ") || "(none)"}.`
+    );
+  }
+}
+function validateExpectedEvidencePaths(report, expectedPathsById, errors) {
+  if (expectedPathsById === void 0) {
+    return;
+  }
+  for (const [expectedId, expectedPaths] of Object.entries(expectedPathsById)) {
+    if (!report.evidence.some((evidence) => evidence.id === expectedId)) {
+      errors.push(`report.evidence is missing expected analyzer evidence ${expectedId}.`);
+    }
+  }
+  report.evidence.forEach((evidence, index) => {
+    const expectedPaths = expectedPathsById[evidence.id];
+    if (expectedPaths === void 0) {
+      errors.push(`report.evidence[${index}] has no expected analyzer paths for ${evidence.id}.`);
+      return;
+    }
+    const actual = sortedStrings(evidence.paths.map(normalizeExpectedFilePath));
+    const expected = sortedStrings(expectedPaths.map(normalizeExpectedFilePath));
+    if (actual.length !== expected.length || actual.some((value, pathIndex) => value !== expected[pathIndex])) {
+      errors.push(
+        `report.evidence[${index}].paths must match expected analyzer paths for ${evidence.id}. Expected: ${expected.join(", ") || "(none)"}; actual: ${actual.join(", ") || "(none)"}.`
+      );
+    }
+  });
+}
+function validateUniqueRecordIds(label, records, errors) {
+  const seen = /* @__PURE__ */ new Set();
+  const duplicates = /* @__PURE__ */ new Set();
+  for (const record2 of records) {
+    if (seen.has(record2.id)) {
+      duplicates.add(record2.id);
+    }
+    seen.add(record2.id);
+  }
+  if (duplicates.size > 0) {
+    errors.push(`${label} must not contain duplicate ids: ${[...duplicates].sort().join(", ")}.`);
+  }
+}
+function validateExpectedFilePath(label, value, expectedFileSet, errors) {
+  const normalizedValue = normalizeExpectedFilePath(value);
+  if (!expectedFileSet.has(normalizedValue)) {
+    errors.push(`${label} is outside expectedFiles scope: ${value}`);
+  }
+}
+function validateExpectedFilePaths(label, values, expectedFileSet, errors) {
+  values.forEach(
+    (value, index) => validateExpectedFilePath(`${label}[${index}]`, value, expectedFileSet, errors)
+  );
+}
+function validateReportExpectedFiles(report, expectedFiles, errors) {
+  if (expectedFiles === void 0) {
+    return;
+  }
+  const expectedFileSet = new Set(expectedFiles.map(normalizeExpectedFilePath));
+  validateExpectedFilePaths("report.files", report.files, expectedFileSet, errors);
+  for (const [summaryLabel, records] of [
+    ["report.topImpactedAreas", report.topImpactedAreas],
+    ["report.areaSummary", report.areaSummary],
+    ["report.surfaceSummary", report.surfaceSummary]
+  ]) {
+    records.forEach(
+      (record2, index) => validateExpectedFilePaths(`${summaryLabel}[${index}].files`, record2.files, expectedFileSet, errors)
+    );
+  }
+  report.surfaces.forEach(
+    (surface, index) => validateExpectedFilePath(`report.surfaces[${index}].path`, surface.path, expectedFileSet, errors)
+  );
+  for (const [findingLabel, findings] of [
+    ["report.findings", report.findings],
+    ["report.blockingFindings", report.blockingFindings],
+    ["report.warningFindings", report.warningFindings]
+  ]) {
+    findings.forEach(
+      (finding, index) => validateExpectedFilePaths(
+        `${findingLabel}[${index}].impactedFiles`,
+        finding.impactedFiles,
+        expectedFileSet,
+        errors
+      )
+    );
+  }
+  report.obligations.forEach(
+    (obligation, index) => validateExpectedFilePaths(
+      `report.obligations[${index}].impactedFiles`,
+      obligation.impactedFiles,
+      expectedFileSet,
+      errors
+    )
+  );
+  report.unknowns.forEach(
+    (unknown2, index) => validateExpectedFilePaths(
+      `report.unknowns[${index}].impactedFiles`,
+      unknown2.impactedFiles,
+      expectedFileSet,
+      errors
+    )
+  );
+  validateExpectedFilePaths(
+    "report.ownership.coverage.gaps",
+    report.ownership.coverage.gaps,
+    expectedFileSet,
+    errors
+  );
+  report.ownership.matches.forEach(
+    (match, index) => validateExpectedFilePath(
+      `report.ownership.matches[${index}].path`,
+      match.path,
+      expectedFileSet,
+      errors
+    )
+  );
+  validateExpectedFilePaths(
+    "report.dependencyGraph.coverage.filesCovered",
+    report.dependencyGraph.coverage.filesCovered,
+    expectedFileSet,
+    errors
+  );
+  validateExpectedFilePaths(
+    "report.dependencyGraph.coverage.filesUncovered",
+    report.dependencyGraph.coverage.filesUncovered,
+    expectedFileSet,
+    errors
+  );
+  Object.keys(report.dependencyGraph.reverseDependentsByPath).forEach(
+    (filePath, index) => validateExpectedFilePath(
+      `report.dependencyGraph.reverseDependentsByPath key[${index}]`,
+      filePath,
+      expectedFileSet,
+      errors
+    )
+  );
+}
+function validateImpactReportExpectedContext(report, expectations, errors) {
+  validateExpectedNullableString(
+    "report.scope.source",
+    report.scope.source,
+    expectations.expectedScopeSource,
+    expectations,
+    "expectedScopeSource",
+    errors
+  );
+  validateExpectedNullableString(
+    "report.scope.description",
+    report.scope.description,
+    expectations.expectedScopeDescription,
+    expectations,
+    "expectedScopeDescription",
+    errors
+  );
+  validateExpectedStringSet(
+    "report.evidence",
+    report.evidence.map((evidence) => evidence.id),
+    expectations.expectedEvidenceIds,
+    errors
+  );
+  validateExpectedEvidencePaths(report, expectations.expectedEvidencePathsById, errors);
+  validateExpectedStringSet(
+    "report.findings",
+    report.findings.map((finding) => finding.id),
+    expectations.expectedFindingIds,
+    errors
+  );
+  validateExpectedStringSet(
+    "report.blockingFindings",
+    report.blockingFindings.map((finding) => finding.id),
+    expectations.expectedBlockingFindingIds,
+    errors
+  );
+  validateExpectedStringSet(
+    "report.warningFindings",
+    report.warningFindings.map((finding) => finding.id),
+    expectations.expectedWarningFindingIds,
+    errors
+  );
+  validateReportExpectedFiles(report, expectations.expectedFiles, errors);
+}
 function normalizeImpactReportForPersistence(rawReport, requestedImpactId, projectRoot, expectations = {}) {
   const fallbackImpactId = requestedImpactId ?? (isPlainObject6(rawReport) && typeof rawReport.impactId === "string" ? rawReport.impactId : "impact-invalid");
   const impactIdParse = impactIdSchema.safeParse(fallbackImpactId);
@@ -47155,13 +47552,19 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
     errors.push(...baseErrors);
     return { impactId, report: null, errors: uniqueSorted2(errors), warnings };
   }
-  const report = rawReport;
+  const report = canonicalizeImpactReport(rawReport);
   const taskErrors = validateImpactReportAgainstSchema(
     report,
     buildImpactReportTaskSchema(report, {
       impactId: requestedImpactId,
       scopeFingerprint: expectations.expectedScopeFingerprint,
-      files: expectations.expectedFiles
+      ...Object.prototype.hasOwnProperty.call(expectations, "expectedScopeSource") ? { scopeSource: expectations.expectedScopeSource ?? null } : {},
+      ...Object.prototype.hasOwnProperty.call(expectations, "expectedScopeDescription") ? { scopeDescription: expectations.expectedScopeDescription ?? null } : {},
+      files: expectations.expectedFiles,
+      evidenceIds: expectations.expectedEvidenceIds,
+      findingIds: expectations.expectedFindingIds,
+      blockingFindingIds: expectations.expectedBlockingFindingIds,
+      warningFindingIds: expectations.expectedWarningFindingIds
     })
   );
   if (taskErrors.length > 0) {
@@ -47173,6 +47576,7 @@ function normalizeImpactReportForPersistence(rawReport, requestedImpactId, proje
       `Requested impactId ${requestedImpactId} does not match report impactId ${report.impactId}.`
     );
   }
+  validateImpactReportExpectedContext(report, expectations, errors);
   const quality = validateImpactReportQuality(report, projectRoot);
   errors.push(...quality.errors);
   warnings.push(...quality.warnings);
@@ -47187,6 +47591,12 @@ function validateImpactReportQuality(report, projectRoot) {
   const errors = [];
   const warnings = [];
   validateImpactReportRepoPaths(report, projectRoot, errors);
+  validateUniqueRecordIds("report.evidence", report.evidence, errors);
+  validateUniqueRecordIds("report.findings", report.findings, errors);
+  validateUniqueRecordIds("report.blockingFindings", report.blockingFindings, errors);
+  validateUniqueRecordIds("report.warningFindings", report.warningFindings, errors);
+  validateUniqueRecordIds("report.obligations", report.obligations, errors);
+  validateUniqueRecordIds("report.unknowns", report.unknowns, errors);
   validateEvidenceBackedRecords(report, errors);
   validateRequiredSignalGrounding(report, errors);
   validateSummaryCounts(report, errors);
@@ -47991,11 +48401,27 @@ async function readSavedImpactReport(projectRoot, impactId) {
 }
 async function blueprintImpactReportWrite(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot, {
+  const expectations = {
     expectedScopeFingerprint: args.expectedScopeFingerprint,
-    expectedFiles: args.expectedFiles ? uniqueSorted2(args.expectedFiles.map(
-      (file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact report expected file")
-    )) : void 0
+    expectedFiles: args.expectedFiles ? sortedStrings(
+      args.expectedFiles.map(
+        (file2) => toRepoRelativeInputPath(projectRoot, file2, "Impact report expected file")
+      )
+    ) : void 0,
+    expectedEvidenceIds: args.expectedEvidenceIds ? sortedStrings(args.expectedEvidenceIds) : void 0,
+    expectedEvidencePathsById: normalizeExpectedEvidencePathsById(args.expectedEvidencePathsById),
+    expectedFindingIds: args.expectedFindingIds ? sortedStrings(args.expectedFindingIds) : void 0,
+    expectedBlockingFindingIds: args.expectedBlockingFindingIds ? sortedStrings(args.expectedBlockingFindingIds) : void 0,
+    expectedWarningFindingIds: args.expectedWarningFindingIds ? sortedStrings(args.expectedWarningFindingIds) : void 0
+  };
+  if (Object.prototype.hasOwnProperty.call(args, "expectedScopeSource")) {
+    expectations.expectedScopeSource = args.expectedScopeSource ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(args, "expectedScopeDescription")) {
+    expectations.expectedScopeDescription = args.expectedScopeDescription ?? null;
+  }
+  const parsed = normalizeImpactReportForPersistence(args.report, args.impactId, projectRoot, {
+    ...expectations
   });
   const impactId = parsed.impactId;
   const paths = impactBundleRelativePaths(impactId, parsed.report, args.writeEvidenceLog);
@@ -48270,7 +48696,14 @@ var init_impact = __esm({
       cwd: string2().optional(),
       impactId: impactIdSchema.optional(),
       expectedScopeFingerprint: nonEmptyStringSchema.optional(),
+      expectedScopeSource: union([nonEmptyStringSchema, _null3()]).optional(),
+      expectedScopeDescription: union([nonEmptyStringSchema, _null3()]).optional(),
       expectedFiles: array(nonEmptyStringSchema).optional(),
+      expectedEvidenceIds: array(nonEmptyStringSchema).optional(),
+      expectedEvidencePathsById: record(string2(), array(nonEmptyStringSchema)).optional(),
+      expectedFindingIds: array(nonEmptyStringSchema).optional(),
+      expectedBlockingFindingIds: array(nonEmptyStringSchema).optional(),
+      expectedWarningFindingIds: array(nonEmptyStringSchema).optional(),
       report: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
       writeEvidenceLog: boolean2().optional()
