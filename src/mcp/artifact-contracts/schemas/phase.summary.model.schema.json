@@ -356,6 +356,12 @@
       "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
       "description": "Non-empty single-line Markdown table cell. CR/LF and pipe delimiters are rejected to preserve table shape."
     },
+    "verificationCheckString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line verification check copied from the selected plan acceptance criteria. CR/LF is rejected; literal pipes are allowed because the runtime renderer escapes them before Markdown persistence."
+    },
     "planId": {
       "type": "string",
       "pattern": "^\\d{2,}$"
@@ -382,7 +388,7 @@
       ],
       "properties": {
         "check": {
-          "$ref": "#/$defs/tableCellString"
+          "$ref": "#/$defs/verificationCheckString"
         },
         "command": {
           "$ref": "#/$defs/tableCellString"
