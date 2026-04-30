@@ -512,6 +512,17 @@ test("artifact contract registry exposes canonical contract ids and templates", 
       /ready verification content/i.test(binding)
     )
   );
+  const uatModelSchema = uatContract.modelContract?.jsonSchema as
+    | {
+        properties?: Record<string, Record<string, unknown>>;
+        allOf?: Array<{ then?: { properties?: Record<string, unknown> } }>;
+      }
+    | undefined;
+  assert.equal(uatModelSchema?.properties?.questionsAsked?.minItems, 1);
+  assert.equal(
+    Boolean(uatModelSchema?.allOf?.[1]?.then?.properties?.followUpFixes),
+    false
+  );
   assert.deepEqual(milestoneAuditContract.requiredHeadings, [
     "Audit Verdict",
     "Milestone Evidence Dimensions",

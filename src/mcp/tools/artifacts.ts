@@ -2375,10 +2375,6 @@ function collectReferencedSummaryPaths(section: string, summaryPaths: string[]):
   });
 }
 
-function containsReferencedSummaryPath(section: string, summaryPaths: string[]): boolean {
-  return collectReferencedSummaryPaths(section, summaryPaths).length > 0;
-}
-
 function validateRequiredMarkdownSections(
   content: string,
   artifactLabel: string,
@@ -4640,12 +4636,20 @@ export function validateUatArtifactContent(
   const resultSummary = extractMarkdownSection(content, "Result Summary");
   const structuredGaps = extractMarkdownSection(content, "Structured Gaps");
   const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
+  const summaryEvidenceSections = `${uatSummary}\n${sessionState}\n${observedBehavior}\n${testMatrix}`;
   issues.push(...validateModelExampleLeakage(content, "phase.uat", "UAT artifact"));
-  if (
-    !containsReferencedSummaryPath(`${uatSummary}\n${sessionState}\n${observedBehavior}`, summaryPaths)
-  ) {
+  const citedSummaries = new Set(collectReferencedSummaryPaths(summaryEvidenceSections, summaryPaths));
+  const missingSummaryCitations = summaryPaths.filter((summaryPath) => !citedSummaries.has(summaryPath));
+  if (summaryPaths.length > 0 && citedSummaries.size === 0) {
     issues.push(
-      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, or ## Observed Behavior."
+      "UAT artifact must cite at least one saved execution summary path or filename in ## UAT Summary, ## Session State, ## Observed Behavior, or ## Test Matrix."
+    );
+  }
+  if (missingSummaryCitations.length > 0) {
+    issues.push(
+      `UAT artifact must cite every saved execution summary across ## UAT Summary, ## Session State, ## Observed Behavior, or ## Test Matrix. Missing: ${missingSummaryCitations
+        .map((summaryPath) => summaryPath.split("/").pop() ?? summaryPath)
+        .join(", ")}.`
     );
   }
   if (
